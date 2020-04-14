@@ -3274,10 +3274,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Collects and determines new owners of partitions for all nodes for given {@code top}.
      *
      * @param top Topology to assign.
+     * @return Partitons supplay info list.
      */
-    private void assignPartitionStates(GridDhtPartitionTopology top) {
+    private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
-        Map<Integer, Long> minCntrs = new HashMap<>();
+        Map<Integer, T2<UUID, Long>> minCntrs = new HashMap<>();
 
         for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e : msgs.entrySet()) {
             CachePartitionPartialCountersMap nodeCntrs = e.getValue().partitionUpdateCounters(top.groupId(),
@@ -3288,9 +3289,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             for (int i = 0; i < nodeCntrs.size(); i++) {
                 int p = nodeCntrs.partitionAt(i);
 
-                UUID uuid = e.getKey();
+                UUID remoteNodeId = e.getKey();
 
-                GridDhtPartitionState state = top.partitionState(uuid, p);
+                GridDhtPartitionState state = top.partitionState(remoteNodeId, p);
 
                 if (state != GridDhtPartitionState.OWNING && state != GridDhtPartitionState.MOVING)
                     continue;
@@ -3299,10 +3300,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     nodeCntrs.initialUpdateCounterAt(i) :
                     nodeCntrs.updateCounterAt(i);
 
-                Long minCntr = minCntrs.get(p);
+                T2<UUID, Long> minCntr = minCntrs.get(p);
 
-                if (minCntr == null || minCntr > cntr)
-                    minCntrs.put(p, cntr);
+                if (minCntr == null || minCntr.get2() > cntr)
+                    minCntrs.put(p, new T2(remoteNodeId, cntr));
 
                 if (state != GridDhtPartitionState.OWNING)
                     continue;
@@ -3310,9 +3311,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 CounterWithNodes maxCntr = maxCntrs.get(p);
 
                 if (maxCntr == null || cntr > maxCntr.cnt)
-                    maxCntrs.put(p, new CounterWithNodes(cntr, e.getValue().partitionSizes(top.groupId()).get(p), uuid));
+                    maxCntrs.put(p, new CounterWithNodes(cntr, e.getValue().partitionSizes(top.groupId()).get(p), remoteNodeId));
                 else if (cntr == maxCntr.cnt)
-                    maxCntr.nodes.add(uuid);
+                    maxCntr.nodes.add(remoteNodeId);
             }
         }
 
@@ -3325,10 +3326,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             final long cntr = state == GridDhtPartitionState.MOVING ? part.initialUpdateCounter() : part.updateCounter();
 
-            Long minCntr = minCntrs.get(part.id());
+            T2<UUID, Long> minCntr = minCntrs.get(part.id());
 
-            if (minCntr == null || minCntr > cntr)
-                minCntrs.put(part.id(), cntr);
+            if (minCntr == null || minCntr.get2() > cntr)
+                minCntrs.put(part.id(), new T2(cctx.localNodeId(), cntr));
 
             if (state != GridDhtPartitionState.OWNING)
                 continue;
@@ -3357,9 +3358,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         Set<Integer> haveHistory = new HashSet<>();
 
-        for (Map.Entry<Integer, Long> e : minCntrs.entrySet()) {
+        List<SupplyPartitionInfo> list = new ArrayList<>();
+
+        for (Map.Entry<Integer, T2<UUID, Long>> e : minCntrs.entrySet()) {
             int p = e.getKey();
-            long minCntr = e.getValue();
+            long minCntr = e.getValue().get2();
 
             CounterWithNodes maxCntrObj = maxCntrs.get(p);
 
@@ -3369,32 +3372,51 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (minCntr == 0 || minCntr == maxCntr)
                 continue;
 
+            T2<UUID, Long> deepestReserved = new T2<>(null, Long.MAX_VALUE);
+
             if (localReserved != null) {
                 Long localHistCntr = localReserved.get(p);
 
-                if (localHistCntr != null && localHistCntr <= minCntr) {
-                    if (maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                    if (localHistCntr <= minCntr) {
+
                         partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, localHistCntr);
 
                         haveHistory.add(p);
 
                         continue;
                     }
+
+                    if (deepestReserved.get2() > localHistCntr)
+                        deepestReserved.set(cctx.localNodeId(), localHistCntr);
                 }
             }
 
             for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e0 : msgs.entrySet()) {
                 Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
 
-                if (histCntr != null && histCntr <= minCntr) {
-                    if (maxCntrObj.nodes.contains(e0.getKey())) {
+                if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
+                    if (histCntr <= minCntr) {
                         partHistSuppliers.put(e0.getKey(), top.groupId(), p, histCntr);
 
                         haveHistory.add(p);
 
                         break;
                     }
+
+                    if (deepestReserved.get2() > histCntr)
+                        deepestReserved.set(e0.getKey(), histCntr);
                 }
+            }
+
+            if (!haveHistory.contains(p)) {
+                list.add(new SupplyPartitionInfo(
+                    p,
+                    minCntr,
+                    e.getValue().get1(),
+                    deepestReserved.get2(),
+                    deepestReserved.get1()
+                ));
             }
         }
 
@@ -3419,6 +3441,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             for (int part : parts)
                 partsToReload.put(nodeId, top.groupId(), part);
         }
+
+        return list;
     }
 
     /**
@@ -4018,6 +4042,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      */
     private void assignPartitionsStates() {
+        Map<String, List<SupplyPartitionInfo>> supplayInfoMap = log.isInfoEnabled() ?
+            new ConcurrentHashMap<>() : null;
+
         try {
             U.doInParallel(
                 cctx.kernalContext().getSystemExecutorService(),
@@ -4031,8 +4058,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     if (!CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration()))
                         assignPartitionSizes(top);
-                    else
-                        assignPartitionStates(top);
+                    else {
+                        List<SupplyPartitionInfo> list = assignPartitionStates(top);
+
+                        if (supplayInfoMap != null && !F.isEmpty(list))
+                            supplayInfoMap.put(grpDesc.cacheOrGroupName(), list);
+                    }
 
                     return null;
                 }
@@ -4042,7 +4073,59 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to assign partition states", e);
         }
 
+        if (log.isInfoEnabled() && !F.isEmpty(supplayInfoMap))
+            printPartitionRebalancingFully(supplayInfoMap);
+
         timeBag.finishGlobalStage("Assign partitions states");
+    }
+
+    /**
+     * Prints detail information about partitions which did not have reservation
+     * history enough for historical rebalance.
+     *
+     * @param supplayInfoMap Map contains information about supplying partitions.
+     */
+    private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplayInfoMap) {
+        if (hasPartitonToLog(supplayInfoMap, false)) {
+            log.info("Partitions weren't any history reservation: [" +
+                supplayInfoMap.entrySet().stream().map(entry ->
+                    "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
+                        .filter(info -> !info.isHistoryReserved())
+                        .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
+                ).collect(Collectors.joining(", ")) + ']');
+        }
+
+        if (hasPartitonToLog(supplayInfoMap, true)) {
+            log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
+                supplayInfoMap.entrySet().stream().map(entry ->
+                    "[grp=" + entry.getKey() + ' ' +
+                        entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
+                            "[part=" + info.part() +
+                                ", minCntr=" + info.minCntr() +
+                                ", minNodeId=" + info.minNodeId() +
+                                ", maxReserved=" + info.maxReserved() +
+                                ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
+                        ).collect(Collectors.joining(", ")) + ']'
+                ).collect(Collectors.joining(", ")) + ']');
+        }
+    }
+
+    /**
+     * Does information contain partitions which will print to log.
+     *
+     * @param supplayInfoMap Map contains information about supplying partitions.
+     * @param reserved Reservation flag.
+     * @return True if map has partitions with same reserved flag, false otherwise.
+     */
+    private boolean hasPartitonToLog(Map<String, List<SupplyPartitionInfo>> supplayInfoMap, boolean reserved) {
+        for (List<SupplyPartitionInfo> infos : supplayInfoMap.values()) {
+            for (SupplyPartitionInfo info : infos) {
+                if (info.isHistoryReserved() == reserved)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /**
