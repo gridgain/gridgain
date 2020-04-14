@@ -557,7 +557,7 @@
                             </group>
                             <group>
                                 <title>Control Center</title>
-                                <packages>org.apache.ignite.agent*</packages>
+                                <packages>org.apache.ignite.internal.agent*</packages>
                             </group>
                             <group>
                                 <title>System view SPI</title>
@@ -897,12 +897,10 @@
                         <configuration>
                             <addDefaultLicenseMatchers>false</addDefaultLicenseMatchers>
                             <licenses>
-                                <license implementation="org.apache.rat.analysis.license.FullTextMatchingLicense">
-                                    <licenseFamilyCategory>IAL20</licenseFamilyCategory>
-                                    <licenseFamilyName>Ignite Apache License 2.0</licenseFamilyName>
+                                <license implementation="org.apache.ignite.tools.rat.GridGainLicense">
+                                    <!-- Allow 2019+ years in the copyright -->
+                                    <copyright>.*Copyright (2019|20[2-9][0-9]|[2-9][1-9]\d{2,}|[1-9]\d{4,}) GridGain Systems, Inc\. and Contributors\..*</copyright>
                                     <fullText>
-                                        Copyright 2019 GridGain Systems, Inc. and Contributors.
-
                                         Licensed under the GridGain Community Edition License (the "License");
                                         you may not use this file except in compliance with the License.
                                         You may obtain a copy of the License at
@@ -923,6 +921,13 @@
                                 </licenseFamily>
                             </licenseFamilies>
                         </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.gridgain</groupId>
+                                <artifactId>ignite-tools</artifactId>
+                                <version>${project.version}</version>
+                            </dependency>
+                        </dependencies>
                         <executions>
                             <execution>
                                 <phase>validate</phase>
