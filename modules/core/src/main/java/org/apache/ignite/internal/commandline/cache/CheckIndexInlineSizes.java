@@ -61,21 +61,20 @@ public class CheckIndexInlineSizes implements Command<Void> {
 
     /** Predicate to filter server nodes. */
     private static final Predicate<GridClientNode> SRV_NODES = node ->
-        Objects.equals(node.attribute(ATTR_CLIENT_MODE), false) &&
-            Objects.equals(node.attribute(ATTR_DAEMON), false);
+        Objects.equals(node.attribute(ATTR_CLIENT_MODE), false) && !"true".equals(node.attribute(ATTR_DAEMON));
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Set<UUID> serverNodes = client.compute().nodes().stream()
+            Set<GridClientNode> serverNodes = client.compute().nodes().stream()
                 .filter(SRV_NODES)
-                .map(GridClientNode::nodeId)
                 .collect(toSet());
 
-            Set<GridClientNode> supportedServerNodes = client.compute().nodes().stream()
-                .filter(n -> checkIndexInlineSizesSupported(log, n))
+            Set<GridClientNode> supportedServerNodes = serverNodes.stream()
+                .filter(n -> checkIndexInlineSizesSupported(n))
                 .collect(toSet());
 
+            Collection<UUID> serverNodeIds = F.transform(serverNodes, GridClientNode::nodeId);
             Collection<UUID> supportedServerNodeIds = F.transform(supportedServerNodes, GridClientNode::nodeId);
 
             CheckIndexInlineSizesResult res = client.compute().projection(supportedServerNodes).execute(
@@ -83,7 +82,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
                 new VisorTaskArgument<>(supportedServerNodeIds, false)
             );
 
-            Set<UUID> unsupportedNodes = serverNodes.stream()
+            Set<UUID> unsupportedNodes = serverNodeIds.stream()
                 .filter(n -> !supportedServerNodeIds.contains(n))
                 .collect(toSet());
 
@@ -171,7 +170,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
     }
 
     /** */
-    private static boolean checkIndexInlineSizesSupported(Logger log, GridClientNode node) {
+    private static boolean checkIndexInlineSizesSupported(GridClientNode node) {
         return nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.CHECK_INDEX_INLINE_SIZES);
     }
 }
