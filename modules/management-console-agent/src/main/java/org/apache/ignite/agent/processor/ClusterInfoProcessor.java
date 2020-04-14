@@ -127,7 +127,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
      */
     void sendClusterInfo(Event evt) {
         if (log.isDebugEnabled())
-            log.debug("Sending cluster info to Control Center");
+            log.debug("Sending cluster info to Control Center for event: " + evt);
 
         ClusterInfo clusterInfo = createClusterInfo();
 

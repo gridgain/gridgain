@@ -87,7 +87,7 @@ public class TopologySnapshot {
      * @param crdConsistentId Coordinator node consistent id.
      * @param nodes List of cluster nodes.
      */
-    private TopologySnapshot(long topVer, Object crdConsistentId, Collection<Node> nodes) {
+    public TopologySnapshot(long topVer, Object crdConsistentId, Collection<Node> nodes) {
         this.topVer = topVer;
         this.crdConsistentId = String.valueOf(crdConsistentId);
         this.nodes = nodes;
