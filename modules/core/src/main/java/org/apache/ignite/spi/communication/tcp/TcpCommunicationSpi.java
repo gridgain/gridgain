@@ -635,7 +635,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             locNodeSupplier,
             this,
             isStopped,
-            super.getSpiContext(),
+            () -> super.getSpiContext(),
             log,
             igniteExSupplier
         );
