@@ -186,6 +186,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         for (int i = 0; i < ccfgs.length; i++) {
             ccfgs[i] = new CacheConfiguration(CACHES[i])
+                .setAtomicityMode(atomicityMode)
                 .setCacheMode(PARTITIONED)
                 .setBackups(backups)
                 .setWriteSynchronizationMode(FULL_SYNC)
