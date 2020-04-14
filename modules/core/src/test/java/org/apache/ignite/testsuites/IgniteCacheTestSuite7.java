@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCacheSt
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingWithAsyncClearingTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionMultinodeMixedRegionsTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteLostPartitionsOnLeaveBaselineSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheAssignmentNodeRestartsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.CheckpointBufferDeadlockTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicPartitionCounterStateConsistencyHistoryRebalanceTest;
@@ -121,6 +122,7 @@ public class IgniteCacheTestSuite7 {
 
         GridTestUtils.addTestIfNeeded(suite, CachePartitionLostAfterSupplierHasLeftTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CachePartitionLossWithPersistenceTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteLostPartitionsOnLeaveBaselineSelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridTransactionsSystemUserTimeMetricsTest.class, ignoredTests);
 
