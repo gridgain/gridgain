@@ -808,6 +808,27 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
+        /// Tests affinity call with partition.
+        /// </summary>
+        [Test]
+        public void TestAffinityCallWithPartition()
+        {
+            // TODO: Test with 0, 1, and multiple caches.
+            // TODO: Test with invalid partition.
+            // TODO: Verify that partition is locked.
+
+            var cacheName = DefaultCacheName;
+            var aff = _grid1.GetAffinity(cacheName);
+            var localNode = _grid1.GetCluster().GetLocalNode();
+            var part = aff.GetPrimaryPartitions(localNode).First();
+
+            var res = _grid1.GetCompute().AffinityCall(new[] {cacheName}, part, new ComputeFunc());
+            
+            Assert.AreEqual(res, ComputeFunc.InvokeCount);
+            Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
+        }
+
+        /// <summary>
         /// Test simple dotNet task execution.
         /// </summary>
         [Test]
