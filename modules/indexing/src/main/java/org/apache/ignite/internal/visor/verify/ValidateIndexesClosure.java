@@ -89,7 +89,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 import static org.apache.ignite.internal.util.IgniteUtils.error;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.getUpdateCountersSnapshot;
 
@@ -628,7 +628,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             long updateCntrAfter = part.updateCounter();
 
             if (updateCntrBefore != updateCntrAfter) {
-                throw new GridNotIdleException(IDLE_DATA_ALTERATION_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
                     ", grpId=" + grpCtx.groupId() + ", partId=" + part.id() + "] changed during index validation " +
                     "[before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
             }
@@ -927,7 +927,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                     long updateCntrAfter = locPart.updateCounter();
 
                     if (updateCntrBefore != updateCntrAfter) {
-                        throw new GridNotIdleException(IDLE_DATA_ALTERATION_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                        throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
                             ", grpId=" + grpCtx.groupId() + ", partId=" + locPart.id() + "] changed during size " +
                             "calculation [before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
                     }

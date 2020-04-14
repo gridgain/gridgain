@@ -55,7 +55,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 
 /**
  * Task for comparing update counters and checksums between primary and backup partitions of specified caches.
@@ -331,7 +331,7 @@ public class VerifyBackupPartitionsTask extends ComputeTaskAdapter<Set<String>,
                 long updateCntrAfter = part.updateCounter();
 
                 if (updateCntrBefore != updateCntrAfter) {
-                    throw new GridNotIdleException(IDLE_DATA_ALTERATION_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                    throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
                         ", grpId=" + grpCtx.groupId() + ", partId=" + part.id() + "] changed during hash calculation " +
                         "[before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
                 }

@@ -39,7 +39,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
@@ -97,7 +97,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
         String out = testOut.toString();
 
         assertContains(log, out, "Index validation failed");
-        assertContains(log, out, IDLE_DATA_ALTERATION_MSG + "[\"" + GROUP_NAME + "\"]");
+        assertContains(log, out, GRID_NOT_IDLE_MSG + "[\"" + GROUP_NAME + "\"]");
     }
 
 
@@ -202,7 +202,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         String out = testOut.toString();
 
-        assertContains(log, out, IDLE_DATA_ALTERATION_MSG);
+        assertContains(log, out, GRID_NOT_IDLE_MSG);
 
         testOut.reset();
 
@@ -213,7 +213,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         out = testOut.toString();
 
-        assertNotContains(log, out, IDLE_DATA_ALTERATION_MSG);
+        assertNotContains(log, out, GRID_NOT_IDLE_MSG);
     }
 
     /**

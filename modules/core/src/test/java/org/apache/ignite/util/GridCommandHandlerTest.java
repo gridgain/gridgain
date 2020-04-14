@@ -114,7 +114,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IN
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
@@ -1334,7 +1334,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String logFile = new String(Files.readAllBytes(new File(logFileName + ".txt").toPath()));
 
-        assertContains(log, logFile, IDLE_DATA_ALTERATION_MSG);
+        assertContains(log, logFile, GRID_NOT_IDLE_MSG);
     }
 
     /**

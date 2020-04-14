@@ -45,7 +45,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class IdleVerifyUtility {
     /** Cluster not idle message. */
-    public static final String IDLE_DATA_ALTERATION_MSG =
+    public static final String GRID_NOT_IDLE_MSG =
         "Cluster not idle. Modifications found in caches or groups: ";
 
     /**
@@ -114,7 +114,8 @@ public class IdleVerifyUtility {
             CacheGroupContext grpCtx = ign.context().cache().cacheGroup(grpId);
 
             if (grpCtx == null)
-                throw new GridNotIdleException("Possibly rebalance in progress? Group not found: " + grpId);
+                throw new GridNotIdleException("Group not found: " + grpId + "."
+                        + " Possible reasons: rebalance in progress or concurrent cache destroy.");
 
             GridDhtPartitionTopology top = grpCtx.topology();
 
@@ -141,7 +142,7 @@ public class IdleVerifyUtility {
      * @param grpId Group id to compare.
      * @return Diff with grpId info between two sets.
      */
-    public static List<Integer> compareUpdCounters(
+    public static List<Integer> compareUpdateCounters(
         IgniteEx ign,
         Map<Integer, Map<Integer, Long>> cntrsIn,
         Integer grpId
@@ -150,14 +151,15 @@ public class IdleVerifyUtility {
             getUpdateCountersSnapshot(ign, Collections.singleton(grpId));
 
         if (curCntrs.isEmpty())
-            throw new GridNotIdleException("No OWNING partitions for group=" + grpId);
+            throw new GridNotIdleException("No OWNING partitions for group: " + grpId);
 
         List<Integer> diff = new ArrayList<>();
 
         Map<Integer, Long> partsWithCntrsCur = curCntrs.get(grpId);
 
         if (partsWithCntrsCur == null)
-            throw new GridNotIdleException("Possibly rebalance in progress? Group not found: " + grpId);
+            throw new GridNotIdleException("Group not found: " + grpId + "."
+                    + " Possible reasons: rebalance in progress or concurrent cache destroy.");
 
         Map<Integer, Long> partsWithCntrsIn = cntrsIn.get(grpId);
 
@@ -190,7 +192,7 @@ public class IdleVerifyUtility {
         @Override public void apply(Integer grpId) {
             List<Integer> diff;
 
-            diff = compareUpdCounters(ig, partsWithCntrsPerGrp, grpId);
+            diff = compareUpdateCounters(ig, partsWithCntrsPerGrp, grpId);
 
             SB sb = new SB();
 
@@ -210,7 +212,7 @@ public class IdleVerifyUtility {
 
                 sb.a("\"");
 
-                throw new GridNotIdleException(IDLE_DATA_ALTERATION_MSG + "[" + sb.toString() + "]");
+                throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[" + sb.toString() + "]");
             }
         }
     }
