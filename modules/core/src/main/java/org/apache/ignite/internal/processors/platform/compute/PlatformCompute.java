@@ -159,6 +159,12 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 Collection<String> cacheNames = PlatformUtils.readStrings(reader);
                 int part = reader.readInt();
                 Object func = reader.readObjectDetached();
+
+                // TODO: This is going to be similar for Call/Run/AffinityCall/... overloads
+                // Difference is in:
+                // - called Ignite API
+                // - passed interface
+                // Implement AffinityRun to see what is in common
                 PlatformCallable callable = new PlatformCallable(func);
 
                 IgniteFuture future = compute.affinityCallAsync(cacheNames, part, callable);
