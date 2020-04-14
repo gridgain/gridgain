@@ -42,7 +42,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.QueryRetryException;
-import org.apache.ignite.cache.query.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;

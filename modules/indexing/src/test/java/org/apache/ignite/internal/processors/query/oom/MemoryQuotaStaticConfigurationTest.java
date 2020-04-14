@@ -16,7 +16,7 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
 import org.junit.Test;
 
 /**

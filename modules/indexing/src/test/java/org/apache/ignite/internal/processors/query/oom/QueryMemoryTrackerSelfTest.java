@@ -21,7 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.SqlCacheException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;

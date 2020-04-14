@@ -13,34 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.cache.query;
+package org.apache.ignite.cache.query.exceptions;
 
 import java.sql.SQLException;
 import javax.cache.CacheException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 
 /**
- * TODO: Add class description.
+ * General SQL query exception.
  */
 public class SqlCacheException extends CacheException {
-    private String sqlState;
-    private int errCode;
+    /** */
+    private static final long serialVersionUID = 0L;
 
+    /** State to return as {@link SQLException#getSQLState()}. */
+    private final String sqlState;
+
+    /** Code to return as {@link SQLException#getErrorCode()}. */
+    private final int errCode;
+
+    /**
+     * @param message Error message.
+     * @param errCode Error code.
+     * @param cause Cause.
+     */
     public SqlCacheException(String message, int errCode, Throwable cause) {
         super(message, cause);
         this.errCode = errCode;
         this.sqlState = IgniteQueryErrorCode.codeToSqlState(errCode);
-
     }
 
+    /**
+     * @return Error code.
+     */
     public int statusCode() {
-        return errCode;  // TODO: implement.
+        return errCode;
     }
 
+    /**
+     * @return SQL state.
+     */
     public String sqlState() {
-        return sqlState;  // TODO: implement.
+        return sqlState;
     }
 
+    /**
+     * Converts this exception to {@link SQLException}.
+     *
+     * @return Converted {@link SQLException}
+     */
     public SQLException toJdbcException() {
         return new SQLException(getMessage(), sqlState, errCode, this);
     }

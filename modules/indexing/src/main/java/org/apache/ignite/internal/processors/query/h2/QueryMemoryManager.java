@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.query.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlMemoryStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;

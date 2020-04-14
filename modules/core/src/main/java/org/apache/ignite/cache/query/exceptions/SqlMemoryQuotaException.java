@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.cache.query;
+package org.apache.ignite.cache.query.exceptions;
 
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 
 /**
- * TODO: Add class description.
+ * The exception is thrown when query memory quota is exceeded.
  */
 public class SqlMemoryQuotaException extends SqlCacheException {
-
+    /**
+     * @param message Error message.
+     */
     public SqlMemoryQuotaException(String message) {
         super(message, IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, null);
     }

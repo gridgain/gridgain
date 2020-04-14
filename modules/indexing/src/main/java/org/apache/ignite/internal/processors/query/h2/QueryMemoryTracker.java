@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import org.apache.ignite.cache.query.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
