@@ -36,10 +36,10 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  */
 public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractTest {
     /** */
-    private static long DFLT_GLOBAL_QUOTA = U.parseBytes(SqlConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA);
+    private static final long DFLT_GLOBAL_QUOTA = U.parseBytes("60%");
 
     /** */
-    private static long DFLT_QUERY_QUOTA = U.parseBytes(SqlConfiguration.DFLT_SQL_QUERY_MEMORY_QUOTA);
+    private static final long DFLT_QUERY_QUOTA = U.parseBytes("0");
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {

@@ -78,7 +78,7 @@ public class IgniteSqlSchemasDiffConfigurationsTest extends AbstractIndexingComm
                 .setSqlSchemas(SCHEMA_NAME_1, SCHEMA_NAME_2))
         );
 
-        startGrid(getConfiguration("ign2")  .setSqlConfiguration(new SqlConfiguration()
+        startGrid(getConfiguration("ign2").setSqlConfiguration(new SqlConfiguration()
             .setSqlSchemas(SCHEMA_NAME_3, SCHEMA_NAME_4))
         );
 

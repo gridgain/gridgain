@@ -244,7 +244,7 @@ public class IgniteConfiguration {
      * @deprecated Please use {@link SqlConfiguration#DFLT_LONG_QRY_WARN_TIMEOUT}.
      */
     @Deprecated
-    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = 3000;
+    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = SqlConfiguration.DFLT_LONG_QRY_WARN_TIMEOUT;
 
     /** Default number of MVCC vacuum threads.. */
     public static final int DFLT_MVCC_VACUUM_THREAD_CNT = 2;
@@ -258,7 +258,7 @@ public class IgniteConfiguration {
      * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_HISTORY_SIZE}.
      */
     @Deprecated
-    public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
+    public static final int DFLT_SQL_QUERY_HISTORY_SIZE = SqlConfiguration.DFLT_SQL_QUERY_HISTORY_SIZE;
 
     /**
      *  Default SQL query global memory quota.
@@ -266,7 +266,7 @@ public class IgniteConfiguration {
      * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
      */
     @Deprecated
-    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%";
+    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = SqlConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
 
     /**
      *  Default SQL per query memory quota.
@@ -274,7 +274,7 @@ public class IgniteConfiguration {
      * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_MEMORY_QUOTA}.
      */
     @Deprecated
-    public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = "0";
+    public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = SqlConfiguration.DFLT_SQL_QUERY_MEMORY_QUOTA;
 
     /**
      *  Default value for SQL offloading flag.
@@ -282,7 +282,7 @@ public class IgniteConfiguration {
      * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_OFFLOADING_ENABLED}.
      */
     @Deprecated
-    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
+    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED;
 
     /** Default value of environment type is {@link EnvironmentType#STANDALONE}. */
     private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STANDALONE;
@@ -1101,7 +1101,7 @@ public class IgniteConfiguration {
      *
      * @return SQL query history size.
      *
-     * @deprecated Use {@link SqlConfiguration#setSqlQueryHistorySize(int)} instead.
+     * @deprecated Use {@link SqlConfiguration#getSqlQueryHistorySize()} instead.
      */
     @Deprecated
     public int getSqlQueryHistorySize() {
@@ -3246,7 +3246,7 @@ public class IgniteConfiguration {
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#setLongQueryWarningTimeout(long)} ()} instead.
      */
     @Deprecated
     public IgniteConfiguration setLongQueryWarningTimeout(long longQryWarnTimeout) {
