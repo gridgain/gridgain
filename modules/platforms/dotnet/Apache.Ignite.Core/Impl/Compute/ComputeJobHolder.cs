@@ -75,19 +75,21 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// <param name="cancel">Cancel flag.</param>
         public void ExecuteLocal(bool cancel)
         {
-            object res;
-            bool success;
+            var nodeId = _ignite.GetIgnite().GetCluster().GetLocalNode().Id;
 
-            Execute0(cancel, out res, out success);
+            try
+            {
+                var res = Execute0(cancel);
 
-            _jobRes = new ComputeJobResultImpl(
-                success ? res : null, 
-                success ? null : new IgniteException("Compute job has failed on local node, " +
-                                                     "examine InnerException for details.", (Exception) res), 
-                _job, 
-                _ignite.GetIgnite().GetCluster().GetLocalNode().Id, 
-                cancel
-            );
+                _jobRes = new ComputeJobResultImpl(res, null, _job, nodeId, cancel);
+            }
+            catch (Exception e)
+            {
+                var ex = new IgniteException(
+                    "Compute job has failed on local node, examine InnerException for details.", e);
+
+                _jobRes = new ComputeJobResultImpl(null, ex, _job, nodeId, cancel);
+            }
         }
 
         /// <summary>
@@ -103,7 +105,16 @@ namespace Apache.Ignite.Core.Impl.Compute
 
             using (PeerAssemblyResolver.GetInstance(_ignite, Guid.Empty))
             {
-                Execute0(cancel, out res, out success);
+                try
+                {
+                    res = Execute0(cancel);
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    res = e;
+                    success = false;
+                }
             }
 
             // 2. Try writing result to the stream.
@@ -180,11 +191,7 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// Internal job execution routine.
         /// </summary>
         /// <param name="cancel">Cancel flag.</param>
-        /// <param name="res">Result.</param>
-        /// <param name="success">Success flag.</param>
-        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
-            Justification = "User job can throw any exception")]
-        private void Execute0(bool cancel, out object res, out bool success)
+        private object Execute0(bool cancel)
         {
             // 1. Inject resources.
             IComputeResourceInjector injector = _job as IComputeResourceInjector;
@@ -195,21 +202,10 @@ namespace Apache.Ignite.Core.Impl.Compute
                 ResourceProcessor.Inject(_job, _ignite);
 
             // 2. Execute.
-            try
-            {
-                if (cancel)
-                    _job.Cancel();
+            if (cancel)
+                _job.Cancel();
 
-                res = _job.Execute();
-
-                success = true;
-            }
-            catch (Exception e)
-            {
-                res = e;
-
-                success = false;
-            }
+            return _job.Execute();
         }
 
         /** <inheritDoc /> */
