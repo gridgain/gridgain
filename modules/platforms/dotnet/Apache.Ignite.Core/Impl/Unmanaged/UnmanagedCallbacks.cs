@@ -638,6 +638,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 */
                 
                 var func = _ignite.Marshaller.Unmarshal<object>(stream);
+                
+                stream.Reset();
+                var writer = _ignite.Marshaller.StartMarshal(stream);
+
 
                 ResourceProcessor.Inject(func, _ignite);
 
@@ -647,10 +651,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 using (PeerAssemblyResolver.GetInstance(_ignite, Guid.Empty))
                 {
                     var res = invoker(func);
-                    var writer = _ignite.Marshaller.StartMarshal(stream);
                     BinaryUtils.WriteInvocationResult(writer, true, res);
-                    _ignite.Marshaller.FinishMarshal(writer);
                 }
+                
+                _ignite.Marshaller.FinishMarshal(writer);
             }
 
             return 0;
