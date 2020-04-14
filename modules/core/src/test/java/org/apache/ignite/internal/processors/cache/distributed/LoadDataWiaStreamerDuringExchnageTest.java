@@ -177,7 +177,7 @@ public class LoadDataWiaStreamerDuringExchnageTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
-    public void testInMemoty() throws Exception {
+    public void testInMemory() throws Exception {
         persistenceEnabled = false;
 
         IgniteEx ignite0 = startGrids(2);
