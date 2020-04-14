@@ -145,7 +145,7 @@ public class IdleVerifyUtility {
         IgniteEx ign,
         Map<Integer, Map<Integer, Long>> cntrsIn,
         Integer grpId
-    ) throws IgniteCheckedException {
+    ) {
         Map<Integer, Map<Integer, Long>> curCntrs =
             getUpdateCountersSnapshot(ign, Collections.singleton(grpId));
 
@@ -190,12 +190,7 @@ public class IdleVerifyUtility {
         @Override public void apply(Integer grpId) {
             List<Integer> diff;
 
-            try {
-                diff = compareUpdCounters(ig, partsWithCntrsPerGrp, grpId);
-            }
-            catch (IgniteCheckedException e) {
-                throw new GridNotIdleException("Requested group not found: grpId=" + grpId);
-            }
+            diff = compareUpdCounters(ig, partsWithCntrsPerGrp, grpId);
 
             SB sb = new SB();
 
