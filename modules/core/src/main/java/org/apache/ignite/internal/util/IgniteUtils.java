@@ -1828,6 +1828,18 @@ public abstract class IgniteUtils {
 
     /**
      *
+     * @param s Set to seal.
+     * @param <K> Key type.
+     * @return Sealed set.
+     */
+    public static <K> Set<K> sealSet(Set<K> s) {
+        assert s != null;
+
+        return Collections.unmodifiableSet(new HashSet<>(s));
+    }
+
+    /**
+     *
      * @param m Map to seal.
      * @param <K> Key type.
      * @param <V> Value type

@@ -26,6 +26,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -98,7 +99,10 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
         // No-op.
     }
 
-    public boolean snapshotOperationInProgress(){
+    /**
+     *
+     */
+    public boolean snapshotOperationInProgress() {
         return false;
     }
 
@@ -110,9 +114,9 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
     }
 
     /**
-     *
+     * @param cpRecordPtr Written checkpoint start record.
      */
-    public void afterCheckpointPageWritten() {
+    public void afterCheckpointPageWritten(WALPointer cpRecordPtr) {
         // No-op.
     }
 

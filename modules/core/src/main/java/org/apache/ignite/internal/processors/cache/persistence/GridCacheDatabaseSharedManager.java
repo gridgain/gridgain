@@ -3173,7 +3173,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         tracker.onFsyncStart();
                     }
 
-                    snapshotMgr.afterCheckpointPageWritten();
+                    snapshotMgr.afterCheckpointPageWritten(chp.cpEntry == null ? null : chp.cpEntry.checkpointMark());
 
                     try {
                         destroyedPartitionsCnt = destroyEvictedPartitions();

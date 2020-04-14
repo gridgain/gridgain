@@ -17,6 +17,7 @@
 
 package org.apache.ignite.internal.pagemem.wal.record;
 
+import java.io.Serializable;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -28,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Represents Data Entry ({@link #key}, {@link #val value}) pair update {@link #op operation} in WAL log.
  */
-public class DataEntry {
+public class DataEntry implements Serializable { // todo gg-13416 remove Serializable
     /** Cache ID. */
     @GridToStringInclude
     protected int cacheId;
