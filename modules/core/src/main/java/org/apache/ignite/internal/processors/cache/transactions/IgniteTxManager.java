@@ -183,7 +183,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
 
     /** Collisions dump interval. */
-    private static volatile int collisionsDumpInterval =
+    private volatile int collisionsDumpInterval =
         IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL,1000);
 
     /** Committing transactions. */
@@ -290,8 +290,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** Timeout operations. */
     private static final Map<String, GridTimeoutProcessor.CancelableTask> TIMEOUT_OPS =
         new HashMap<String, GridTimeoutProcessor.CancelableTask>() {{
-       put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, null);
-       put(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, null);
+            put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, null);
+            put(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, null);
     }};
 
     /** {@inheritDoc} */
@@ -376,11 +376,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         cctx.txMetrics().onTxManagerStarted();
 
-        long longOpDumpTimeout = cctx.kernalContext().cache().context().tm().longOperationsDumpTimeout();
+        long longOpDumpTimeout = longOperationsDumpTimeout();
 
-        scheduleLongOperationsDumpTask(
+        scheduleDumpTask(
+            IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
+
+        scheduleDumpTask(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, () -> {}, collisionsDumpInterval);
     }
 
     /**
@@ -2080,43 +2083,49 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void longOperationsDumpTimeout(long longOpsDumpTimeout) {
         this.longOpsDumpTimeout = longOpsDumpTimeout;
 
-        scheduleLongOperationsDumpTask(
+        scheduleDumpTask(
+            IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpsDumpTimeout),
+            longOpsDumpTimeout);
+    }
+
+    /** */
+    void txCollisionsDumpInterval(int timeout) {
+        collisionsDumpInterval = timeout;
+
+        scheduleDumpTask(
+            IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
+            () -> {}, // todo !!!
             longOpsDumpTimeout);
     }
 
     /**
      * Scheduling tasks for dumping long operations. Closes current task
-     * (if any) and if the {@code longOpDumpTimeout > 0} schedules a new task
+     * (if any) and if the {@code timeout > 0} schedules a new task
      * with a new timeout, delay and start period equal to
-     * {@code longOpDumpTimeout}, otherwise task is deleted.
+     * {@code timeout}, otherwise task is deleted.
      *
+     * @param taskKey Appropriate key in {@link IgniteTxManager#TIMEOUT_OPS}
      * @param r Task.
-     * @param longOpDumpTimeout Long operations dump timeout.
+     * @param timeout Long operations dump timeout.
      */
-    void scheduleLongOperationsDumpTask(Runnable r, long longOpDumpTimeout) {
+    void scheduleDumpTask(String taskKey, Runnable r, long timeout) {
         if (isStopping())
             return;
 
+        GridTimeoutProcessor.CancelableTask longOpDumpTask;
+
+        GridTimeoutProcessor timeoutProc = cctx.kernalContext().timeout();
+
         synchronized (TIMEOUT_OPS) {
-            GridTimeoutProcessor.CancelableTask task = TIMEOUT_OPS.get(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT);
+            GridTimeoutProcessor.CancelableTask task = TIMEOUT_OPS.get(taskKey);
 
             if (nonNull(task))
                 task.close();
 
-            GridTimeoutProcessor.CancelableTask longOpDumpTask;
+            longOpDumpTask = timeout > 0 ? timeoutProc.schedule(r, timeout, timeout) : null;
 
-            if (longOpDumpTimeout > 0) {
-                longOpDumpTask = cctx.kernalContext().timeout().schedule(
-                    () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
-                    longOpDumpTimeout,
-                    longOpDumpTimeout
-                );
-            }
-            else
-                longOpDumpTask = null;
-
-            TIMEOUT_OPS.put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, longOpDumpTask);
+            TIMEOUT_OPS.put(taskKey, longOpDumpTask);
         }
     }
 
@@ -3005,17 +3014,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /**
      * @param collisionsDumpInterval New collisions dump interval or -1 for disabling.
      */
-    public void collisionsDumpInterval(int collisionsDumpInterval) {
+    public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
         broadcastToNodesSupportingFeature(
             cctx.kernalContext(),
             new TxCollisionsDumpSettingsClosure(collisionsDumpInterval),
             false,
             TX_COLLISIONS_DUMP
         );
-    }
-
-    void changeCollisionsDumpInterval(int collisionsDumpInterval) {
-        this.collisionsDumpInterval = collisionsDumpInterval;
     }
 
     /**

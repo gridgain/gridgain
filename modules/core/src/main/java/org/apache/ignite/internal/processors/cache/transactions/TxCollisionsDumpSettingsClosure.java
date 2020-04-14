@@ -41,6 +41,6 @@ public class TxCollisionsDumpSettingsClosure implements IgniteRunnable {
 
     /** {@inheritDoc} */
     @Override public void run() {
-        ignite.context().cache().context().tm().changeCollisionsDumpInterval(interval);
+        ignite.context().cache().context().tm().txCollisionsDumpInterval(interval);
     }
 }
