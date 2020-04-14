@@ -18,9 +18,11 @@ package org.apache.ignite.internal.agent.processor.export;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.dto.IgniteConfigurationWrapper;
 import org.apache.ignite.internal.agent.dto.NodeConfiguration;
-import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 import static org.apache.ignite.internal.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
@@ -57,9 +59,7 @@ public class NodesConfigurationExporter extends GridProcessorAdapter {
 
             NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, json);
 
-            ClusterGroup oldestNode = cluster.forOldest();
-
-            ignite.message(oldestNode).send(TOPIC_MANAGEMENT_CONSOLE, nodeCfg);
+            ignite.message(cluster.forOldest()).send(TOPIC_MANAGEMENT_CONSOLE, nodeCfg);
         }
         catch (JsonProcessingException e) {
             log.error("Failed to serialize the IgniteConfiguration to JSON", e);
