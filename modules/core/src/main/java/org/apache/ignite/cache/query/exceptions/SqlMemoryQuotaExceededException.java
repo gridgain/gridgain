@@ -21,6 +21,9 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
  * The exception is thrown when query memory quota is exceeded.
  */
 public class SqlMemoryQuotaExceededException extends SqlCacheException {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /**
      * @param message Error message.
      */
