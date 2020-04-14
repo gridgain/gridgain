@@ -2052,7 +2052,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         }
     }
 
-    /** */
+    /**
+     * Check if some local moving partitions have no suitable supplier and own them.
+     * This can happen if a partition has been created by affinity assignment on new node and no supplier exists.
+     * For example, if a node joins topology being a first data node for cache with node filter configured.
+     */
     private void ownOrphans() {
         for (int p = 0; p < grp.affinity().partitions(); p++) {
             boolean hasOwner = false;
