@@ -624,37 +624,12 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
-                /*
-                var job = ComputeJobHolder.CreateJob(_ignite, stream);
-                
-                stream.Reset();
-                
-                // TODO: Get rid of all the wrappers. Extract logic to static methods.
-                // 1. Deserialize delegate: add things to DelegateTypeDescriptor.
-                // 2. Inject resources
-                // 3. Execute with peer class loading, under try-catch
-                // 4. Write result.
-                job.ExecuteRemote(stream, false);
-                */
-                
                 var func = _ignite.Marshaller.Unmarshal<object>(stream);
-                
-                stream.Reset();
-                var writer = _ignite.Marshaller.StartMarshal(stream);
-
-
-                ResourceProcessor.Inject(func, _ignite);
-
                 var invoker = DelegateTypeDescriptor.GetComputeOutFunc(func.GetType());
                 
-                // TODO: Exception handling (exception during execution, during result serialization)
-                using (PeerAssemblyResolver.GetInstance(_ignite, Guid.Empty))
-                {
-                    var res = invoker(func);
-                    BinaryUtils.WriteInvocationResult(writer, true, res);
-                }
+                stream.Reset();
                 
-                _ignite.Marshaller.FinishMarshal(writer);
+                ComputeRunner.ExecuteJobAndWriteResults(_ignite, stream, func, invoker);
             }
 
             return 0;
