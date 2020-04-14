@@ -15,9 +15,9 @@
  */
 package org.apache.ignite.internal.processors.query.oom;
 
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
@@ -150,7 +150,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
         GridTestUtils.assertThrows(log, () -> {
             grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
-        }, CacheException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query run out of memory: Query quota exceeded.");
 
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
     }

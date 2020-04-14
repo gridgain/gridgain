@@ -32,6 +32,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
@@ -986,7 +987,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
      * @param err Error tuple containing error code and error message.
      */
     private static void extractBatchError(Exception e, List<Long> rowsAffected, IgniteBiTuple<Integer, String> err) {
-        if (e instanceof IgniteSQLException) {
+        if (e instanceof IgniteSQLException || e instanceof SqlCacheException) {
             BatchUpdateException batchCause = X.cause(e, BatchUpdateException.class);
 
             if (batchCause != null) {
@@ -997,8 +998,12 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
 
                 err.set(batchCause.getErrorCode(), batchCause.getMessage());
             }
-            else
-                err.set(((IgniteSQLException)e).statusCode(), OdbcUtils.tryRetrieveH2ErrorMessage(e));
+            else {
+                int statusCode = e instanceof IgniteSQLException ?
+                    ((IgniteSQLException)e).statusCode() : ((SqlCacheException)e).statusCode();
+
+                err.set(statusCode, OdbcUtils.tryRetrieveH2ErrorMessage(e));
+            }
         }
         else
             err.set(IgniteQueryErrorCode.UNKNOWN, e.getMessage());

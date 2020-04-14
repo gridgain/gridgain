@@ -40,7 +40,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinParameterMetadata;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
@@ -314,7 +314,7 @@ public class JdbcPreparedStatement extends JdbcStatement implements PreparedStat
         catch (IgniteSQLException ex) {
             throw ex.toJdbcException();
         }
-        catch (SqlMemoryQuotaException e) {
+        catch (SqlCacheException e) {
             throw e.toJdbcException();
         }
     }
@@ -375,7 +375,7 @@ public class JdbcPreparedStatement extends JdbcStatement implements PreparedStat
         catch (IgniteSQLException ex) {
             throw ex.toJdbcException();
         }
-        catch (SqlMemoryQuotaException e) {
+        catch (SqlCacheException e) {
             throw e.toJdbcException();
         }
     }

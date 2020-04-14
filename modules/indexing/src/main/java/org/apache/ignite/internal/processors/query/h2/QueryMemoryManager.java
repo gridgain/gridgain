@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlMemoryStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
@@ -211,7 +211,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (offloadingEnabled)
             return false;
         else {
-            throw new SqlMemoryQuotaException("SQL query run out of memory: Global quota exceeded.");
+            throw new SqlMemoryQuotaExceededException("SQL query run out of memory: Global quota exceeded.");
         }
     }
 

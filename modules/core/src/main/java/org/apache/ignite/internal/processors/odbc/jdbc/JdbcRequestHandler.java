@@ -1046,7 +1046,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             if (X.cause(e, QueryCancelledException.class) != null)
                 throw new QueryCancelledException();
-            else if (e instanceof IgniteSQLException) {
+            else if (e instanceof IgniteSQLException || e instanceof SqlCacheException) {
                 BatchUpdateException batchCause = X.cause(e, BatchUpdateException.class);
 
                 if (batchCause != null) {
@@ -1065,7 +1065,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
                     msg = e.getMessage();
 
-                    code = ((IgniteSQLException)e).statusCode();
+                    if (e instanceof IgniteSQLException)
+                        code = ((IgniteSQLException)e).statusCode();
+                    else
+                        code =  ((SqlCacheException)e).statusCode();
                 }
             }
             else {

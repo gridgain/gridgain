@@ -25,10 +25,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.junit.Test;
@@ -124,14 +126,18 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Override protected void checkQueryExpectOOM(String sql, boolean lazy) {
-        SQLException ex = (SQLException)GridTestUtils.assertThrows(log, () -> {
+        try {
             execQuery(sql, lazy);
 
-            return null;
-        }, SQLException.class, "SQL query run out of memory: Query quota exceeded.");
-
-        assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
-        assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
+            fail("Exception is not thrown.");
+        } catch (SqlMemoryQuotaExceededException e) {
+            assertTrue(e.getMessage().contains("SQL query run out of memory: Query quota exceeded."));
+            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.statusCode());
+            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.sqlState());
+        }
+        catch (Exception e) {
+            fail("Wrong exception: " + X.getFullStackTrace(e));
+        }
     }
 
     /**

@@ -78,9 +78,8 @@ public class GridQueryFailResponse implements Message {
         else
             this.failCode = GENERAL_ERROR;
 
-        if (err instanceof SqlCacheException) {
+        if (err instanceof SqlCacheException)
             sqlErrCode = ((SqlCacheException)err).statusCode();
-        }
         else {
             IgniteSQLException igniteSqlEx = X.cause(err, IgniteSQLException.class);
 

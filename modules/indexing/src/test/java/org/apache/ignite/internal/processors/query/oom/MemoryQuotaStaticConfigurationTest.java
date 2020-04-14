@@ -16,7 +16,7 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.junit.Test;
 
 /**
@@ -67,7 +67,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
                 break;
             }
-            catch (SqlMemoryQuotaException e) {
+            catch (SqlMemoryQuotaExceededException e) {
                 assertTrue("Wrong message:" + e.getMessage(), e.getMessage().contains("Query quota exceeded."));
             }
         }
@@ -116,9 +116,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
         checkQuery(Result.ERROR_GLOBAL_QUOTA, qryMore60Percent);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry10Percent, 3, 1);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry10Percent, 4, 1);
 
-        checkQuery(Result.ERROR_GLOBAL_QUOTA, qry25Percent, 3, 1);
+        checkQuery(Result.ERROR_GLOBAL_QUOTA, qry25Percent, 4, 1);
     }
 
     /**
@@ -165,7 +165,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 2, 1);
 
-        checkQuery(Result.ERROR_QUERY_QUOTA, qry50Percent, 2, 1);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry50Percent, 2, 1);
     }
 
     /**
@@ -266,7 +266,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
         try {
             initGrid(null, null, null);
 
-            checkQuery(Result.ERROR_QUERY_QUOTA, qry25Percent);
+            checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent);
         }
         finally {
             System.clearProperty("IGNITE_SQL_USE_DISK_OFFLOAD");

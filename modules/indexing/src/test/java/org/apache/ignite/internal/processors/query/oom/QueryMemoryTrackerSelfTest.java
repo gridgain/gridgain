@@ -19,13 +19,11 @@ package org.apache.ignite.internal.processors.query.oom;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.exceptions.SqlCacheException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
@@ -201,22 +199,20 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         final List<QueryCursor> cursors = new ArrayList<>();
 
         try {
-            SqlCacheException ex = (SqlCacheException)GridTestUtils.assertThrows(log, () -> {
-                for (int i = 0; i < 100; i++) {
-                    QueryCursor<List<?>> cur = query("select DISTINCT T.name, T.id from T ORDER BY T.name",
-                        true);
+            for (int i = 0; i < 100; i++) {
+                QueryCursor<List<?>> cur = query("select DISTINCT T.name, T.id from T ORDER BY T.name",
+                    true);
 
-                    cursors.add(cur);
+                cursors.add(cur);
 
-                    Iterator<List<?>> iter = cur.iterator();
-                    iter.next();
-                }
+                Iterator<List<?>> iter = cur.iterator();
+                iter.next();
+            }
 
-                return null;
-            }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
-
-
-            assertNotNull("SQL exception missed.", ex);
+            fail("Exception not thrown.");
+        }
+        catch (SqlMemoryQuotaExceededException ex) {
+            assertTrue(ex.getMessage().contains("SQL query run out of memory: Global quota exceeded."));
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.statusCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.sqlState());
 
