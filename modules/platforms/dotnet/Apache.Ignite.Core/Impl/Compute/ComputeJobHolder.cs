@@ -166,8 +166,6 @@ namespace Apache.Ignite.Core.Impl.Compute
             if (cancel)
             {
                 _job.Cancel();
-                
-                return null;
             }
 
             return _job.Execute();
