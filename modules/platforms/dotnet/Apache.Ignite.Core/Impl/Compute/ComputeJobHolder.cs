@@ -23,10 +23,8 @@ namespace Apache.Ignite.Core.Impl.Compute
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
-    using Apache.Ignite.Core.Impl.Compute.Closure;
     using Apache.Ignite.Core.Impl.Deployment;
     using Apache.Ignite.Core.Impl.Memory;
-    using Apache.Ignite.Core.Impl.Resource;
 
     /// <summary>
     /// Holder for user-provided compute job.
@@ -75,6 +73,8 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// <param name="cancel">Cancel flag.</param>
         public void ExecuteLocal(bool cancel)
         {
+            ComputeRunner.InjectResources(_ignite, _job);
+
             var nodeId = _ignite.GetIgnite().GetCluster().GetLocalNode().Id;
 
             try
@@ -99,37 +99,7 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// <param name="stream">Stream.</param>
         public void ExecuteRemote(PlatformMemoryStream stream, bool cancel)
         {
-            // 1. Execute job.
-            object res;
-            bool success;
-
-            using (PeerAssemblyResolver.GetInstance(_ignite, Guid.Empty))
-            {
-                try
-                {
-                    res = Execute0(cancel);
-                    success = true;
-                }
-                catch (Exception e)
-                {
-                    res = e;
-                    success = false;
-                }
-            }
-
-            // 2. Try writing result to the stream.
-            var writer = _ignite.Marshaller.StartMarshal(stream);
-
-            try
-            {
-                // 3. Marshal results.
-                BinaryUtils.WriteInvocationResult(writer, success, res);
-            }
-            finally
-            {
-                // 4. Process metadata.
-                _ignite.Marshaller.FinishMarshal(writer);
-            }
+            ComputeRunner.ExecuteJobAndWriteResults(_ignite, stream, _job, _ => Execute0(cancel));
         }
 
         /// <summary>
@@ -193,17 +163,12 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// <param name="cancel">Cancel flag.</param>
         private object Execute0(bool cancel)
         {
-            // 1. Inject resources.
-            IComputeResourceInjector injector = _job as IComputeResourceInjector;
-
-            if (injector != null)
-                injector.Inject(_ignite);
-            else
-                ResourceProcessor.Inject(_job, _ignite);
-
-            // 2. Execute.
             if (cancel)
+            {
                 _job.Cancel();
+                
+                return null;
+            }
 
             return _job.Execute();
         }
