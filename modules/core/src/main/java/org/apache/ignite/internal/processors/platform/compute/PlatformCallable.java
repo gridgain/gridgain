@@ -16,7 +16,11 @@
 
 package org.apache.ignite.internal.processors.platform.compute;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.processors.platform.PlatformContext;
+import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import org.apache.ignite.lang.IgniteCallable;
+import org.apache.ignite.resources.IgniteInstanceResource;
 
 @SuppressWarnings("rawtypes")
 public class PlatformCallable implements IgniteCallable {
@@ -25,6 +29,10 @@ public class PlatformCallable implements IgniteCallable {
 
     /** Serialized platform func. */
     private final Object func;
+
+    /** Ignite instance. */
+    @IgniteInstanceResource
+    protected transient Ignite ignite;
 
     /**
      * Constructor.
@@ -39,6 +47,12 @@ public class PlatformCallable implements IgniteCallable {
 
     /** <inheritdoc /> */
     @Override public Object call() throws Exception {
+        assert ignite != null;
+
+        PlatformContext ctx = PlatformUtils.platformContext(ignite);
+
+        ctx.gateway().com
+
         return null;
     }
 }

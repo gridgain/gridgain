@@ -216,6 +216,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PlatformCacheUpdateFromThreadLocal, PlatformCacheUpdateFromThreadLocal);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
             AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
+            AddHandler(UnmanagedCallbackOp.ComputeJobReadAndExecute, ComputeJobReadAndExecute);
         }
 
         /// <summary>
@@ -612,6 +613,24 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         private ComputeJobHolder Job(long jobPtr)
         {
             return _handleRegistry.Get<ComputeJobHolder>(jobPtr);
+        }
+        
+        /// <summary>
+        /// Executes <see cref="IComputeOutFunc"/>.
+        /// </summary>
+        /// <param name="memPtr">Memory pointer.</param>
+        private long ComputeJobReadAndExecute(long memPtr)
+        {
+            using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
+            {
+                var job = ComputeJobHolder.CreateJob(_ignite, stream);
+                
+                stream.Reset();
+                
+                job.ExecuteRemote(stream, false);
+            }
+
+            return 0;
         }
 
         #endregion
