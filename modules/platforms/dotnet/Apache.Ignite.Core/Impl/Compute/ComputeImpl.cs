@@ -521,6 +521,8 @@ namespace Apache.Ignite.Core.Impl.Compute
                 }
                 
                 w.WriteInt(partition);
+
+                // TODO: Local call optimization? Add to handles?
                 w.WriteObject(func);
             });
         }

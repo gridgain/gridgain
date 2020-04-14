@@ -37,8 +37,10 @@ import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.utils.PlatformFutureUtils;
 import org.apache.ignite.internal.processors.platform.utils.PlatformListenable;
+import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID;
@@ -77,6 +79,12 @@ public class PlatformCompute extends PlatformAbstractTarget {
 
     /** */
     private static final int OP_WITH_EXECUTOR = 10;
+
+    /** */
+    private static final int OP_AFFINITY_CALL = 11;
+
+    /** */
+    private static final int OP_AFFINITY_CALL_ASYNC = 12;
 
     /** Compute instance. */
     private final IgniteComputeImpl compute;
@@ -148,6 +156,18 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 return new PlatformCompute(platformCtx,
                         (IgniteComputeImpl)compute.withExecutor(executorName),
                         (IgniteComputeImpl)computeForPlatform.withExecutor(executorName));
+            }
+
+            case OP_AFFINITY_CALL_ASYNC: {
+                Collection<String> cacheNames = PlatformUtils.readStrings(reader);
+                int part = reader.readInt();
+                Object func = reader.readObjectDetached();
+                PlatformCallable callable = new PlatformCallable(func);
+
+                IgniteFuture future = compute.affinityCallAsync(cacheNames, part, callable);
+                PlatformListenable listenable = readAndListenFuture(reader, future);
+
+                return wrapListenable(listenable);
             }
 
             default:
