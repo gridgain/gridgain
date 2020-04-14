@@ -627,6 +627,11 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 
                 stream.Reset();
                 
+                // TODO: Get rid of all the wrappers. Extract logic to static methods.
+                // 1. Deserialize delegate: add things to DelegateTypeDescriptor.
+                // 2. Inject resources
+                // 3. Execute with peer class loading, under try-catch
+                // 4. Write result.
                 job.ExecuteRemote(stream, false);
             }
 
