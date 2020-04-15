@@ -23,7 +23,6 @@ namespace Apache.Ignite.Core.Impl.Compute
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
-    using Apache.Ignite.Core.Impl.Deployment;
     using Apache.Ignite.Core.Impl.Memory;
 
     /// <summary>
