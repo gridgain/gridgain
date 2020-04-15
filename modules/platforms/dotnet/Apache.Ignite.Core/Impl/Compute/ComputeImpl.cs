@@ -537,6 +537,22 @@ namespace Apache.Ignite.Core.Impl.Compute
             });
         }
 
+        /// <summary>
+        /// Performs affinity operation with partition.
+        /// </summary>
+        private Future<TJobRes> DoAffinityOp<TJobRes>(string cacheName, object key,
+            object func, int op)
+        {
+            IgniteArgumentCheck.NotNull(cacheName, "cacheName");
+            IgniteArgumentCheck.NotNull(func, "func");
+            
+            return DoOutOpObjectAsync<TJobRes>(op, w =>
+            {
+                w.WriteString(cacheName);
+                w.WriteObject(key);
+                w.WriteObject(func);
+            });
+        }
 
         /** <inheritDoc /> */
         protected override T Unmarshal<T>(IBinaryStream stream)
