@@ -74,7 +74,10 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalAdapter;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalState;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxStateImpl;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyRollbackOnlyImpl;
@@ -360,7 +363,48 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** {@inheritDoc} */
     @Override protected void sendFinishReply(@Nullable Throwable err) {
-        // We are in near transaction, do not send finish reply to local node.
+/*        final IgniteTxStateImpl state = (IgniteTxStateImpl)txState();
+
+        final Collection<IgniteTxEntry> entries = state.allEntriesCopy();*/
+
+/*        Collection<IgniteTxEntry> txEntries =
+            state instanceof IgniteTxStateImpl ? ((IgniteTxStateImpl)state).allEntriesCopy() : state.allEntries();*/
+
+        IgniteTxManager txManager = cctx.tm();
+
+        int qSize = 0;
+
+        for (IgniteTxEntry txEntry : allEntries()) {
+            Collection<GridCacheMvccCandidate> locs;
+
+            GridCacheEntryEx cached = txEntry.cached();
+
+            while(true) {
+                try {
+                    locs = cached.localCandidates();
+
+                    break;
+                }
+                catch (GridCacheEntryRemovedException ignored) {
+                    cached = txEntry.context().cache().entryEx(txEntry.key());
+                }
+            }
+
+            qSize += locs.size();
+
+            final Collection<GridCacheMvccCandidate> rmts = cached.remoteMvccSnapshot();
+
+            qSize += rmts.size();
+
+            if (qSize >= 100) { // todo !!!
+                txManager.pushCollidingKeysWithQueueSize(txEntry.key(), 0);
+
+                break;
+            }
+            else
+                qSize = 0;
+        }
+
     }
 
     /** {@inheritDoc} */

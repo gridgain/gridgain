@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.io.Externalizable;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,6 +26,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +60,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWra
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.GridDeferredAckMessageSender;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.LongRunningTxTimeDumpSettingsClosure;
 import org.apache.ignite.internal.processors.cache.TxOwnerDumpRequestAllowedSettingClosure;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
@@ -87,6 +90,7 @@ import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedExceptio
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
+import org.apache.ignite.internal.util.GridBoundedPriorityQueue;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -293,6 +297,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, null);
             put(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, null);
     }};
+
+    /** Key collisions info holder. */
+    private final KeyCollisionsInfo<Map.Entry<KeyCacheObject, Integer>> keyCollisionsInfo = new KeyCollisionsInfo<>();
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -753,6 +760,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
 
         return onCreated(sysCacheCtx, tx);
+    }
+
+    /** */
+    private <T extends IgniteInternalTx> void processTxKeys(T tx) {
+
     }
 
     /**
@@ -3016,6 +3028,41 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             false,
             DISTRIBUTED_TX_COLLISIONS_DUMP
         );
+    }
+
+    /** */
+    public void pushCollidingKeysWithQueueSize(KeyCacheObject key, int queueSize) {
+        keyCollisionsInfo.put(new AbstractMap.SimpleImmutableEntry<>(key, queueSize));
+    }
+
+    /** */
+    private static final class KeyCollisionsInfo<T extends Map.Entry<?, Integer>> {
+        /** Stripes count. */
+        private static final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
+
+        /** Max objects per map. */
+        private static final int MAX_OBJS = 5;
+
+        /** Mutexes for each stripe. */
+        private final Object[] stripeLocks = new Object[STRIPES_COUNT];
+
+        /** Store per stripe. */
+        private final PriorityQueue<T> store[] = new PriorityQueue[STRIPES_COUNT];
+
+        /** Constructor. */
+        private KeyCollisionsInfo() {
+            for (int i = 0; i < STRIPES_COUNT; ++i)
+                store[i] = new GridBoundedPriorityQueue<>(MAX_OBJS, (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
+        }
+
+        /** */
+        public void put(T item) {
+            int stripeIdx = item.hashCode() & (STRIPES_COUNT - 1);
+
+            synchronized (stripeLocks[stripeIdx]) {
+                store[stripeIdx].offer(item);
+            }
+        }
     }
 
     /**
