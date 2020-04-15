@@ -82,7 +82,7 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// </summary>
         public static void InjectResources(IIgniteInternal ignite, object job)
         {
-            IComputeResourceInjector injector = job as IComputeResourceInjector;
+            var injector = job as IComputeResourceInjector;
 
             if (injector != null)
                 injector.Inject(ignite);
