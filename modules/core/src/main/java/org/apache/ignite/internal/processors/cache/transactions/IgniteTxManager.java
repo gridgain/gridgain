@@ -3052,8 +3052,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         /** Constructor. */
         private KeyCollisionsInfo() {
-            for (int i = 0; i < STRIPES_COUNT; ++i)
+            for (int i = 0; i < STRIPES_COUNT; ++i) {
                 stores[i] = new GridBoundedPriorityQueue<>(MAX_OBJS, (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
+
+                stripeLocks[i] = new Object();
+            }
         }
 
         /**
