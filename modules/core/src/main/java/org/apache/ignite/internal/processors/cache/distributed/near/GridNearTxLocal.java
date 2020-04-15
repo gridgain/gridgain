@@ -396,7 +396,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             qSize += rmts.size();
 
-            if (qSize >= 100) { // todo !!!
+            if (qSize >= 100) { // todo no need to limit here !!!
                 txManager.pushCollidingKeysWithQueueSize(txEntry.key(), 0);
 
                 break;

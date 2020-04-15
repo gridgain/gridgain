@@ -100,6 +100,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteOutClosure;
@@ -385,7 +386,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
 
-        scheduleDumpTask(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, () -> {}, collisionsDumpInterval);
+        scheduleDumpTask(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, keyCollisionsInfo::collectInfo, collisionsDumpInterval);
     }
 
     /**
@@ -2102,7 +2103,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
-            () -> {}, // todo !!!
+            keyCollisionsInfo::collectInfo,
             longOpsDumpTimeout);
     }
 
@@ -3047,20 +3048,43 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         private final Object[] stripeLocks = new Object[STRIPES_COUNT];
 
         /** Store per stripe. */
-        private final PriorityQueue<T> store[] = new PriorityQueue[STRIPES_COUNT];
+        private final PriorityQueue<T> stores[] = new PriorityQueue[STRIPES_COUNT];
 
         /** Constructor. */
         private KeyCollisionsInfo() {
             for (int i = 0; i < STRIPES_COUNT; ++i)
-                store[i] = new GridBoundedPriorityQueue<>(MAX_OBJS, (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
+                stores[i] = new GridBoundedPriorityQueue<>(MAX_OBJS, (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
         }
 
-        /** */
+        /**
+         * @param item Pair to collect.
+         * */
         public void put(T item) {
             int stripeIdx = item.hashCode() & (STRIPES_COUNT - 1);
 
             synchronized (stripeLocks[stripeIdx]) {
-                store[stripeIdx].offer(item);
+                stores[stripeIdx].offer(item);
+            }
+        }
+
+        /** Print hot keys info. */
+        private void collectInfo() {
+            SB sb = new SB("Collisions found:"); // todo freq
+            sb.a(U.nl());
+
+            for (int i = 0; i < STRIPES_COUNT; ++i) {
+                synchronized (stripeLocks[i]) {
+                    PriorityQueue<T> store = stores[i];
+                    for (T info : store) {
+                        sb.a("key=");
+                        sb.a(info.getKey());
+                        sb.a(", queueSize=");
+                        sb.a(info.getValue());
+                        sb.a(U.nl());
+                    }
+
+                    store.clear();
+                }
             }
         }
     }
