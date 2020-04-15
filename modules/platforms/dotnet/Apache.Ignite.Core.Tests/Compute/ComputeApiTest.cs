@@ -843,7 +843,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, new ComputeAction());
             
-            Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
+            Assert.AreEqual(localNode.Id, ComputeAction.LastNodeId);
         }
 
         /// <summary>
