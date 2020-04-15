@@ -76,6 +76,12 @@ namespace Apache.Ignite.Core.Impl.Compute
         /** */
         private const int OpAffinityRunPartition = 12;
 
+        /** */
+        private const int OpAffinityCall = 13;
+
+        /** */
+        private const int OpAffinityRun = 14;
+
         /** Underlying projection. */
         private readonly ClusterGroupImpl _prj;
 
@@ -460,9 +466,7 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheName, "cacheName");
             IgniteArgumentCheck.NotNull(action, "action");
 
-            return ExecuteClosures0(new ComputeSingleClosureTask<object, object, object>(),
-                new ComputeActionJob(action), opId: OpAffinity,
-                writeAction: w => WriteAffinity(w, cacheName, affinityKey));
+            return DoAffinityOp<object>(cacheName, affinityKey, action, OpAffinityRun);
         }
 
         /// <summary>
@@ -479,9 +483,7 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheName, "cacheName");
             IgniteArgumentCheck.NotNull(clo, "clo");
 
-            return ExecuteClosures0(new ComputeSingleClosureTask<object, TJobRes, TJobRes>(),
-                new ComputeOutFuncJob(clo.ToNonGeneric()), opId: OpAffinity,
-                writeAction: w => WriteAffinity(w, cacheName, affinityKey));
+            return DoAffinityOp<TJobRes>(cacheName, affinityKey, clo, OpAffinityCall);
         }
 
         /// <summary>
