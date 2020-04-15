@@ -405,20 +405,20 @@ namespace Apache.Ignite.Core.Impl.Compute
         /** <inheritDoc /> */
         public void AffinityRun(IEnumerable<string> cacheNames, int partition, IComputeAction action)
         {
-            throw new NotImplementedException();
+            _compute.AffinityRun(cacheNames, partition, action).Get();
         }
 
         /** <inheritDoc /> */
         public Task AffinityRunAsync(IEnumerable<string> cacheNames, int partition, IComputeAction action)
         {
-            throw new NotImplementedException();
+            return _compute.AffinityRun(cacheNames, partition, action).Task;
         }
 
         /** <inheritDoc /> */
         public Task AffinityRunAsync(IEnumerable<string> cacheNames, int partition, IComputeAction action,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return _compute.AffinityRun(cacheNames, partition, action).GetTask(cancellationToken);
         }
 
         /** <inheritDoc /> */
