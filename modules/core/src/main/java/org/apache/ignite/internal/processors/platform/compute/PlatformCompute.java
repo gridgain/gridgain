@@ -163,17 +163,11 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 int part = reader.readInt();
                 Object func = reader.readObjectDetached();
 
-                // TODO: This is going to be similar for Call/Run/AffinityCall/... overloads
-                // Difference is in:
-                // - called Ignite API
-                // - passed interface
-                // Implement AffinityRun to see what is in common
                 PlatformCallable callable = new PlatformCallable(func);
 
                 IgniteFuture future = compute.affinityCallAsync(cacheNames, part, callable);
-                PlatformListenable listenable = readAndListenFuture(reader, future);
 
-                return wrapListenable(listenable);
+                return wrapListenable(readAndListenFuture(reader, future));
             }
 
             case OP_AFFINITY_RUN_PARTITION: {
@@ -184,9 +178,8 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 PlatformRunnable runnable = new PlatformRunnable(func);
 
                 IgniteFuture future = compute.affinityRunAsync(cacheNames, part, runnable);
-                PlatformListenable listenable = readAndListenFuture(reader, future);
 
-                return wrapListenable(listenable);
+                return wrapListenable(readAndListenFuture(reader, future));
             }
 
             default:
