@@ -41,7 +41,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         private const string JavaBinaryCls = "PlatformComputeJavaBinarizable";
 
         /** */
-        private const string DefaultCacheName = "default";
+        public const string DefaultCacheName = "default";
 
         /** First node. */
         private IIgnite _grid1;
@@ -763,10 +763,12 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                 var affinityKey = aff.GetAffinityKey<int, int>(primaryKey);
 
-                _grid1.GetCompute().AffinityRun(cacheName, affinityKey, new ComputeAction());
+                var computeAction = new ComputeAction {ReservedPartition = aff.GetPartition(primaryKey)};
+                
+                _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
                 Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
 
-                _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, new ComputeAction()).Wait();
+                _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
                 Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
             }
         }
@@ -841,7 +843,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             var localNode = _grid1.GetCluster().GetLocalNode();
             var part = aff.GetPrimaryPartitions(localNode).First();
 
-            _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, new ComputeAction());
+            _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, new ComputeAction{ReservedPartition = part});
             
             Assert.AreEqual(localNode.Id, ComputeAction.LastNodeId);
         }
@@ -1061,6 +1063,8 @@ namespace Apache.Ignite.Core.Tests.Compute
         public static Guid LastNodeId;
 
         public Guid Id { get; set; }
+        
+        public int? ReservedPartition { get; set; }
 
         public ComputeAction()
         {
@@ -1077,6 +1081,12 @@ namespace Apache.Ignite.Core.Tests.Compute
             Thread.Sleep(10);
             Invokes.Add(Id);
             LastNodeId = _grid.GetCluster().GetLocalNode().Id;
+
+            if (ReservedPartition != null)
+            {
+                Assert.IsTrue(
+                    TestUtils.IsPartitionReserved(_grid, ComputeApiTest.DefaultCacheName, ReservedPartition.Value));
+            }
         }
 
         public static int InvokeCount(Guid id)
