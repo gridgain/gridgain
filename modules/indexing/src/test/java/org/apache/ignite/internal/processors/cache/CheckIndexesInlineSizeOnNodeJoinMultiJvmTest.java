@@ -60,7 +60,7 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
     private static final int INITIAL_PAYLOAD_SIZE = 1;
 
     /** */
-    private static ListeningTestLogger testLog;
+    private ListeningTestLogger testLog;
 
     /** Max payload inline index size. */
     private int payloadSize;
@@ -87,8 +87,8 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
         stopAllGrids();
 
@@ -105,22 +105,12 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
 
-        super.afterTestsStopped();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
-        if (testLog != null)
-            testLog.clearListeners();
-
-        nodeId = null;
+        super.afterTest();
     }
 
     /** {@inheritDoc} */
