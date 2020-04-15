@@ -51,9 +51,6 @@ import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKe
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class PlatformCompute extends PlatformAbstractTarget {
     /** */
-    private static final int OP_AFFINITY = 1;
-
-    /** */
     private static final int OP_BROADCAST = 2;
 
     /** */
@@ -136,13 +133,10 @@ public class PlatformCompute extends PlatformAbstractTarget {
         throws IgniteCheckedException {
         switch (type) {
             case OP_UNICAST:
-                return processClosures(reader.readLong(), reader, false, false);
+                return processClosures(reader.readLong(), reader, false);
 
             case OP_BROADCAST:
-                return processClosures(reader.readLong(), reader, true, false);
-
-            case OP_AFFINITY:
-                return processClosures(reader.readLong(), reader, false, true);
+                return processClosures(reader.readLong(), reader, true);
 
             case OP_EXEC_NATIVE: {
                 long taskPtr = reader.readLong();
@@ -251,8 +245,7 @@ public class PlatformCompute extends PlatformAbstractTarget {
      * @param reader Reader.
      * @param broadcast broadcast flag.
      */
-    private PlatformTarget processClosures(long taskPtr, BinaryRawReaderEx reader, boolean broadcast,
-        boolean affinity) {
+    private PlatformTarget processClosures(long taskPtr, BinaryRawReaderEx reader, boolean broadcast) {
         PlatformAbstractTask task;
 
         int size = reader.readInt();
@@ -263,16 +256,6 @@ public class PlatformCompute extends PlatformAbstractTarget {
                     new PlatformBroadcastingSingleClosureTask(platformCtx, taskPtr);
 
                 task0.job(nextClosureJob(task0, reader));
-
-                task = task0;
-            }
-            else if (affinity) {
-                PlatformBalancingSingleClosureAffinityTask task0 =
-                    new PlatformBalancingSingleClosureAffinityTask(platformCtx, taskPtr);
-
-                task0.job(nextClosureJob(task0, reader));
-
-                task0.affinity(reader.readString(), reader.readObjectDetached(), platformCtx.kernalContext());
 
                 task = task0;
             }

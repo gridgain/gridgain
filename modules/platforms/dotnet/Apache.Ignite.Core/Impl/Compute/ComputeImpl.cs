@@ -41,9 +41,6 @@ namespace Apache.Ignite.Core.Impl.Compute
     internal class ComputeImpl : PlatformTargetAdapter
     {
         /** */
-        private const int OpAffinity = 1;
-
-        /** */
         private const int OpBroadcast = 2;
 
         /** */
@@ -723,19 +720,6 @@ namespace Apache.Ignite.Core.Impl.Compute
                 foreach (IClusterNode node in nodes)
                     writer.WriteGuid(node.Id);
             }
-        }
-
-        /// <summary>
-        /// Writes the affinity info.
-        /// </summary>
-        /// <param name="writer">The writer.</param>
-        /// <param name="cacheName">Name of the cache to use for affinity co-location.</param>
-        /// <param name="affinityKey">Affinity key.</param>
-        private static void WriteAffinity(BinaryWriter writer, string cacheName, object affinityKey)
-        {
-            writer.WriteString(cacheName);
-
-            writer.WriteObject(affinityKey);
         }
 
         /// <summary>
