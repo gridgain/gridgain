@@ -53,9 +53,7 @@ public class NodesConfigurationExporter extends GridProcessorAdapter {
 
             String consistentId = cluster.localNode().consistentId().toString();
 
-            IgniteConfigurationWrapper cfgWrapper = new IgniteConfigurationWrapper(ctx.config());
-
-            String json = mapper.writeValueAsString(cfgWrapper);
+            String json = mapper.writeValueAsString(new IgniteConfigurationWrapper(ctx.config()));
 
             NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, json);
 
