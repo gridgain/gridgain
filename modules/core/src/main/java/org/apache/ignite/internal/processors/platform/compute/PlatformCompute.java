@@ -86,6 +86,12 @@ public class PlatformCompute extends PlatformAbstractTarget {
     /** */
     private static final int OP_AFFINITY_RUN_PARTITION = 12;
 
+    /** */
+    private static final int OP_AFFINITY_CALL = 13;
+
+    /** */
+    private static final int OP_AFFINITY_RUN = 14;
+
     /** Compute instance. */
     private final IgniteComputeImpl compute;
 
@@ -170,6 +176,18 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 return wrapListenable(readAndListenFuture(reader, future));
             }
 
+            case OP_AFFINITY_CALL: {
+                String cacheName = reader.readString();
+                Object key = reader.readObjectDetached();
+                Object func = reader.readObjectDetached();
+
+                PlatformCallable callable = new PlatformCallable(func);
+
+                IgniteFuture future = compute.affinityCallAsync(cacheName, key, callable);
+
+                return wrapListenable(readAndListenFuture(reader, future));
+            }
+
             case OP_AFFINITY_RUN_PARTITION: {
                 Collection<String> cacheNames = PlatformUtils.readStrings(reader);
                 int part = reader.readInt();
@@ -178,6 +196,18 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 PlatformRunnable runnable = new PlatformRunnable(func);
 
                 IgniteFuture future = compute.affinityRunAsync(cacheNames, part, runnable);
+
+                return wrapListenable(readAndListenFuture(reader, future));
+            }
+
+            case OP_AFFINITY_RUN: {
+                String cacheName = reader.readString();
+                Object key = reader.readObjectDetached();
+                Object func = reader.readObjectDetached();
+
+                PlatformRunnable runnable = new PlatformRunnable(func);
+
+                IgniteFuture future = compute.affinityRunAsync(cacheName, key, runnable);
 
                 return wrapListenable(readAndListenFuture(reader, future));
             }
