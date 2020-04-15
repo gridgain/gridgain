@@ -71,7 +71,10 @@ namespace Apache.Ignite.Core.Impl.Compute
         private const int OpWithExecutor = 10;
 
         /** */
-        private const int OpAffinityCallAsync = 11;
+        private const int OpAffinityCallPartition = 11;
+
+        /** */
+        private const int OpAffinityRunPartition = 12;
 
         /** Underlying projection. */
         private readonly ClusterGroupImpl _prj;
@@ -482,7 +485,7 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /// <summary>
-        /// Executes given func on a node where specified partition is located,
+        /// Executes given func on a node where specified partition is located.
         /// </summary>
         /// <param name="cacheNames">Cache names. First cache is used for co-location.</param>
         /// <param name="partition">Partition.</param>
@@ -492,13 +495,34 @@ namespace Apache.Ignite.Core.Impl.Compute
         public Future<TJobRes> AffinityCall<TJobRes>(IEnumerable<string> cacheNames, int partition,
             IComputeFunc<TJobRes> func)
         {
+            return DoAffinityOpWithPartition<TJobRes>(cacheNames, partition, func, OpAffinityCallPartition);
+        }
+
+        /// <summary>
+        /// Executes given func on a node where specified partition is located.
+        /// </summary>
+        /// <param name="cacheNames">Cache names. First cache is used for co-location.</param>
+        /// <param name="partition">Partition.</param>
+        /// <param name="func">Func to execute.</param>
+        /// <returns>Result.</returns>
+        public Future<object> AffinityRun(IEnumerable<string> cacheNames, int partition, IComputeAction func)
+        {
+            return DoAffinityOpWithPartition<object>(cacheNames, partition, func, OpAffinityRunPartition);
+        }
+
+        /// <summary>
+        /// Performs affinity operation with partition.
+        /// </summary>
+        private Future<TJobRes> DoAffinityOpWithPartition<TJobRes>(IEnumerable<string> cacheNames, int partition,
+            object func, int op)
+        {
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
             
             // TODO: Local call optimization: try to reserve partition locally.
             // When successful, run the computation directly without Java. 
 
-            return DoOutOpObjectAsync<TJobRes>(OpAffinityCallAsync, w =>
+            return DoOutOpObjectAsync<TJobRes>(op, w =>
             {
                 var cacheCount = w.WriteStrings(cacheNames);
 
@@ -512,6 +536,7 @@ namespace Apache.Ignite.Core.Impl.Compute
                 w.WriteObject(func);
             });
         }
+
 
         /** <inheritDoc /> */
         protected override T Unmarshal<T>(IBinaryStream stream)

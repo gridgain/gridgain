@@ -81,7 +81,10 @@ public class PlatformCompute extends PlatformAbstractTarget {
     private static final int OP_WITH_EXECUTOR = 10;
 
     /** */
-    private static final int OP_AFFINITY_CALL_ASYNC = 11;
+    private static final int OP_AFFINITY_CALL_PARTITION = 11;
+
+    /** */
+    private static final int OP_AFFINITY_RUN_PARTITION = 12;
 
     /** Compute instance. */
     private final IgniteComputeImpl compute;
@@ -155,7 +158,7 @@ public class PlatformCompute extends PlatformAbstractTarget {
                         (IgniteComputeImpl)computeForPlatform.withExecutor(executorName));
             }
 
-            case OP_AFFINITY_CALL_ASYNC: {
+            case OP_AFFINITY_CALL_PARTITION: {
                 Collection<String> cacheNames = PlatformUtils.readStrings(reader);
                 int part = reader.readInt();
                 Object func = reader.readObjectDetached();
@@ -168,6 +171,19 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 PlatformCallable callable = new PlatformCallable(func);
 
                 IgniteFuture future = compute.affinityCallAsync(cacheNames, part, callable);
+                PlatformListenable listenable = readAndListenFuture(reader, future);
+
+                return wrapListenable(listenable);
+            }
+
+            case OP_AFFINITY_RUN_PARTITION: {
+                Collection<String> cacheNames = PlatformUtils.readStrings(reader);
+                int part = reader.readInt();
+                Object func = reader.readObjectDetached();
+
+                PlatformRunnable runnable = new PlatformRunnable(func);
+
+                IgniteFuture future = compute.affinityRunAsync(cacheNames, part, runnable);
                 PlatformListenable listenable = readAndListenFuture(reader, future);
 
                 return wrapListenable(listenable);
