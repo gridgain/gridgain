@@ -16,32 +16,17 @@
 
 package org.apache.ignite.internal.processors.platform.compute;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.binary.BinaryRawReaderEx;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.processors.platform.PlatformContext;
-import org.apache.ignite.internal.processors.platform.memory.PlatformInputStream;
-import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
-import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStream;
-import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
+import org.apache.ignite.internal.processors.platform.callback.PlatformCallbackGateway;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
- * TODO: What is this class? Very similar to PlatformClosureJob. Consolidate.
+ * Runnable implementation that delegates to native platform.
  */
-public class PlatformRunnable implements IgniteRunnable {
+public class PlatformRunnable extends PlatformAbstractFunc implements IgniteRunnable {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Serialized platform func. */
-    private final Object func;
-
-    /** Ignite instance. */
-    @IgniteInstanceResource
-    protected transient Ignite ignite;
 
     /**
      * Constructor.
@@ -49,39 +34,20 @@ public class PlatformRunnable implements IgniteRunnable {
      * @param func Platform func.
      */
     public PlatformRunnable(Object func) {
-        assert func != null;
+        super(func);
+    }
 
-        this.func = func;
+    /** <inheritdoc /> */
+    @Override protected void platformCallback(PlatformCallbackGateway gate, long memPtr) {
+        gate.computeActionExecute(memPtr);
     }
 
     /** <inheritdoc /> */
     @Override public void run() {
-        assert ignite != null;
-
-        PlatformContext ctx = PlatformUtils.platformContext(ignite);
-
-        try (PlatformMemory mem = ctx.memory().allocate()) {
-            PlatformOutputStream out = mem.output();
-
-            BinaryRawWriterEx writer = ctx.writer(out);
-
-            writer.writeObject(func);
-
-            out.synchronize();
-
-            ctx.gateway().computeActionExecute(mem.pointer());
-
-            PlatformInputStream in = mem.input();
-
-            in.synchronize();
-
-            BinaryRawReaderEx reader = ctx.reader(in);
-
-            try {
-                PlatformUtils.readInvocationResult(ctx, reader);
-            } catch (IgniteCheckedException e) {
-                throw U.convertException(e);
-            }
+        try {
+            invoke();
+        } catch (IgniteCheckedException e) {
+            throw U.convertException(e);
         }
     }
 }

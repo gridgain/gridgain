@@ -16,31 +16,16 @@
 
 package org.apache.ignite.internal.processors.platform.compute;
 
-import org.apache.ignite.Ignite;
-import org.apache.ignite.internal.binary.BinaryRawReaderEx;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.processors.platform.PlatformContext;
-import org.apache.ignite.internal.processors.platform.memory.PlatformInputStream;
-import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
-import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStream;
-import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
+import org.apache.ignite.internal.processors.platform.callback.PlatformCallbackGateway;
 import org.apache.ignite.lang.IgniteCallable;
-import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
- * TODO: What is this class? Very similar to PlatformClosureJob. Consolidate.
+ * Callable implementation that delegates to native platform.
  */
 @SuppressWarnings("rawtypes")
-public class PlatformCallable implements IgniteCallable {
+public class PlatformCallable extends PlatformAbstractFunc implements IgniteCallable {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Serialized platform func. */
-    private final Object func;
-
-    /** Ignite instance. */
-    @IgniteInstanceResource
-    protected transient Ignite ignite;
 
     /**
      * Constructor.
@@ -48,35 +33,16 @@ public class PlatformCallable implements IgniteCallable {
      * @param func Platform func.
      */
     public PlatformCallable(Object func) {
-        assert func != null;
+        super(func);
+    }
 
-        this.func = func;
+    /** <inheritdoc /> */
+    @Override protected void platformCallback(PlatformCallbackGateway gate, long memPtr) {
+        gate.computeOutFuncExecute(memPtr);
     }
 
     /** <inheritdoc /> */
     @Override public Object call() throws Exception {
-        assert ignite != null;
-
-        PlatformContext ctx = PlatformUtils.platformContext(ignite);
-
-        try (PlatformMemory mem = ctx.memory().allocate()) {
-            PlatformOutputStream out = mem.output();
-
-            BinaryRawWriterEx writer = ctx.writer(out);
-
-            writer.writeObject(func);
-
-            out.synchronize();
-
-            ctx.gateway().computeOutFuncExecute(mem.pointer());
-
-            PlatformInputStream in = mem.input();
-
-            in.synchronize();
-
-            BinaryRawReaderEx reader = ctx.reader(in);
-
-            return PlatformUtils.readInvocationResult(ctx, reader);
-        }
+        return invoke();
     }
 }
