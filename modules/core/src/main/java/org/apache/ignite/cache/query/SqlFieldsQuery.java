@@ -51,7 +51,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private static final int DFLT_UPDATE_BATCH_SIZE = 1;
 
     /** Default lazy mode. */
-    private static final boolean DFLT_LAZY = !IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_LAZY_QUERY_EXECUTION, false);
+    private static final boolean DFLT_LAZY = !IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_LAZY_QUERY_EXECUTION, true);
 
     /** Threaded query originator. */
     private static ThreadLocal<String> threadedQryInitiatorId = new ThreadLocal<>();
