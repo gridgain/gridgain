@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,16 +34,19 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -162,7 +166,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             );
         }
 
-        return igniteCfg;
+        return igniteCfg
+            .setFailureHandler(new StopNodeFailureHandler());
     }
 
     /** {@inheritDoc} */
@@ -1441,6 +1446,35 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testStopNodeOnSqlQueryWithIncompatibleType() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ OTHER)");
+        sql("CREATE INDEX TEST_VAL_INT ON TEST(VAL_INT)");
+        sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_OBJ)");
+
+        sql("INSERT INTO TEST VALUES (0, 0, ?)", Instant.now());
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_OBJ < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_INT < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        assertFalse(grid().context().isStopping());
+    }
+
+    /**
      * Checks index creation does not affect used index.
      *
      * @param wrongIdx1Name Wrong index name.
@@ -1731,6 +1765,26 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Value object factory method.*/
     private static Val val(long i) {
         return new Val(String.format("bar%03d", i), i, new Pojo(i));
+    }
+
+    /**
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
+        return sql(grid(), sql, args);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
+            .setArgs(args), false);
     }
 
     /** Key object. */
