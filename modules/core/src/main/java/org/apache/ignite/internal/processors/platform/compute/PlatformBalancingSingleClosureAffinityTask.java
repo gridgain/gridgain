@@ -31,6 +31,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Interop single-closure task with node balancing.
+ *
+ * NOTE: This class is not used, but preserved for compat during rolling upgrades.
  */
 @ComputeTaskNoResultCache
 public class PlatformBalancingSingleClosureAffinityTask extends PlatformAbstractTask {
