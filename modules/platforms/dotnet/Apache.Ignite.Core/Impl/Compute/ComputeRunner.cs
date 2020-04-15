@@ -33,8 +33,8 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// Performs full job execution routine: injects resources, wraps in try-catch and PeerAssemblyLoader,
         /// writes results to the stream.
         /// </summary>
-        public static void ExecuteJobAndWriteResults(IIgniteInternal ignite, PlatformMemoryStream stream, object job,
-            Func<object, object> execFunc)
+        public static void ExecuteJobAndWriteResults<T>(IIgniteInternal ignite, PlatformMemoryStream stream, T job,
+            Func<T, object> execFunc)
         {
             Debug.Assert(stream != null);
             Debug.Assert(ignite != null);

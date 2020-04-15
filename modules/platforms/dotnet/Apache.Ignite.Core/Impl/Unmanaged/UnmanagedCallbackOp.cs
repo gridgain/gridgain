@@ -89,6 +89,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         PlatformCacheUpdateFromThreadLocal = 71,
         OnCacheStopped = 72,
         OnAffinityTopologyVersionChanged = 73,
-        ComputeJobReadAndExecute = 74
+        ComputeOutFuncExecute = 74,
+        ComputeActionExecute = 75
     }
 }

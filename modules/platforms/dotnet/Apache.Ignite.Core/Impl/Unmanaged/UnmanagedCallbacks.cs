@@ -26,6 +26,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Common;
+    using Apache.Ignite.Core.Compute;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache;
@@ -217,7 +218,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PlatformCacheUpdateFromThreadLocal, PlatformCacheUpdateFromThreadLocal);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
             AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
-            AddHandler(UnmanagedCallbackOp.ComputeJobReadAndExecute, ComputeJobReadAndExecute);
+            AddHandler(UnmanagedCallbackOp.ComputeOutFuncExecute, ComputeOutFuncExecute);
+            AddHandler(UnmanagedCallbackOp.ComputeActionExecute, ComputeActionExecute);
         }
 
         /// <summary>
@@ -620,16 +622,36 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// Executes <see cref="IComputeOutFunc"/>.
         /// </summary>
         /// <param name="memPtr">Memory pointer.</param>
-        private long ComputeJobReadAndExecute(long memPtr)
+        private long ComputeOutFuncExecute(long memPtr)
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
                 var func = _ignite.Marshaller.Unmarshal<object>(stream);
-                var invoker = DelegateTypeDescriptor.GetComputeOutFunc(func.GetType());
-                
                 stream.Reset();
                 
+                var invoker = DelegateTypeDescriptor.GetComputeOutFunc(func.GetType());
                 ComputeRunner.ExecuteJobAndWriteResults(_ignite, stream, func, invoker);
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Executes <see cref="IComputeAction"/>.
+        /// </summary>
+        /// <param name="memPtr">Memory pointer.</param>
+        private long ComputeActionExecute(long memPtr)
+        {
+            using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
+            {
+                var action = _ignite.Marshaller.Unmarshal<IComputeAction>(stream);
+                stream.Reset();
+                
+                ComputeRunner.ExecuteJobAndWriteResults(_ignite, stream, action, act =>
+                {
+                    act.Invoke();
+                    return null;
+                });
             }
 
             return 0;
