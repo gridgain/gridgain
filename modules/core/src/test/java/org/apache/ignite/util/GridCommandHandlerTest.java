@@ -558,6 +558,24 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * Test connectivity command works via control.sh
+     */
+    @Test
+    public void testConnectivityCommand() throws Exception {
+        IgniteEx ignite = startGrids(5);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "connectivity"));
+
+        assertContains(log, testOut.toString(), "All nodes are connected");
+    }
+
+    /**
      * Test baseline remove works via control.sh
      *
      * @throws Exception If failed.
