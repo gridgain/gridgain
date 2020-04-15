@@ -48,6 +48,9 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
         return new StopNodeFailureHandler();
     }
 
+    /**
+     * Tests --cache check_index_inline_sizes works in case of all indexes have the same inline size.
+     */
     @Test
     public void testCheckIndexInlineSizesNoError() {
         injectTestSystemOut();

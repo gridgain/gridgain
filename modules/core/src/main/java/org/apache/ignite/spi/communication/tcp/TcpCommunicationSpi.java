@@ -4384,7 +4384,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if remote nodes support {@link HandshakeWaitMessage}.
      */
     private boolean isHandshakeWaitSupported() {
-        GridKernalContext ctx = (ignite instanceof IgniteEx)? ((IgniteEx)ignite).context() : null;
+        GridKernalContext ctx = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context() : null;
 
         DiscoverySpi discoSpi = ignite().configuration().getDiscoverySpi();
 

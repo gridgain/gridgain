@@ -131,6 +131,14 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
         return node.context().query().querySqlFields(new SqlFieldsQuery(stmt).setArgs(args), true).getAll();
     }
 
+    /**
+     * Checks that control.sh output as expected.
+     *
+     * @param log Logger.
+     * @param output Uitlity output.
+     * @param localNodeId Local node id.
+     * @param remoteNodeId Remote node id.
+     */
     public static void checkUtilityOutput(IgniteLogger log, String output, UUID localNodeId, UUID remoteNodeId) {
         assertContains(log, output, "Found 4 secondary indexes.");
         assertContains(log, output, "3 indexes have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
