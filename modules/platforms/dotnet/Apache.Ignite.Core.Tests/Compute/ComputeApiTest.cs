@@ -831,6 +831,22 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
+        /// Tests affinity run with partition.
+        /// </summary>
+        [Test]
+        public void TestAffinityRunWithPartition()
+        {
+            var cacheName = DefaultCacheName;
+            var aff = _grid1.GetAffinity(cacheName);
+            var localNode = _grid1.GetCluster().GetLocalNode();
+            var part = aff.GetPrimaryPartitions(localNode).First();
+
+            _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, new ComputeAction());
+            
+            Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
+        }
+
+        /// <summary>
         /// Test simple dotNet task execution.
         /// </summary>
         [Test]
