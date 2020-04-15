@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
