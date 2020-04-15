@@ -36,7 +36,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Compute;
     using Apache.Ignite.Core.Impl.Datastream;
-    using Apache.Ignite.Core.Impl.Deployment;
     using Apache.Ignite.Core.Impl.Events;
     using Apache.Ignite.Core.Impl.Handle;
     using Apache.Ignite.Core.Impl.Log;

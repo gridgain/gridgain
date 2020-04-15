@@ -518,9 +518,6 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
             
-            // TODO: Local call optimization: try to reserve partition locally.
-            // When successful, run the computation directly without Java. 
-
             return DoOutOpObjectAsync<TJobRes>(op, w =>
             {
                 var cacheCount = w.WriteStrings(cacheNames);
