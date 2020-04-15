@@ -333,15 +333,31 @@ public class PlatformCallbackGateway {
     }
 
     /**
-     * Read compute job from stream, execute, and write results back to the same stream.
+     * Read compute func from stream, execute, and write results back to the same stream.
      *
      * @param memPtr Memory pointer.
      */
-    public void computeJobReadAndExecute(long memPtr) {
+    public void computeOutFuncExecute(long memPtr) {
         enter();
 
         try {
-            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.ComputeJobReadAndExecute, memPtr);
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.ComputeOutFuncExecute, memPtr);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
+     * Read compute action from stream, execute, and write results back to the same stream.
+     *
+     * @param memPtr Memory pointer.
+     */
+    public void computeActionExecute(long memPtr) {
+        enter();
+
+        try {
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.ComputeActionExecute, memPtr);
         }
         finally {
             leave();

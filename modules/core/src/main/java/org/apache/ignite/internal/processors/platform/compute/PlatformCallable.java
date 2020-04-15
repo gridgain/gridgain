@@ -68,7 +68,7 @@ public class PlatformCallable implements IgniteCallable {
 
             out.synchronize();
 
-            ctx.gateway().computeJobReadAndExecute(mem.pointer());
+            ctx.gateway().computeOutFuncExecute(mem.pointer());
 
             PlatformInputStream in = mem.input();
 

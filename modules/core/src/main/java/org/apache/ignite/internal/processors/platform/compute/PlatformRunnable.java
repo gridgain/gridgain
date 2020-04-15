@@ -25,9 +25,7 @@ import org.apache.ignite.internal.processors.platform.memory.PlatformInputStream
 import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
 import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStream;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
@@ -71,7 +69,7 @@ public class PlatformRunnable implements IgniteRunnable {
 
             out.synchronize();
 
-            ctx.gateway().computeJobReadAndExecute(mem.pointer());
+            ctx.gateway().computeActionExecute(mem.pointer());
 
             PlatformInputStream in = mem.input();
 

@@ -240,5 +240,8 @@ class PlatformCallbackOp {
     public static final int OnAffinityTopologyVersionChanged = 73;
 
     /** */
-    public static final int ComputeJobReadAndExecute = 74;
+    public static final int ComputeOutFuncExecute = 74;
+
+    /** */
+    public static final int ComputeActionExecute = 75;
 }
