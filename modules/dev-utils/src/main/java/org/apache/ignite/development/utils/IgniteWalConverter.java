@@ -54,6 +54,11 @@ public class IgniteWalConverter {
     static final String PRINT_RECORDS = "PRINT_RECORDS";
 
     /**
+     * System property for printing {@link WalStat}. By default, {@code true}.
+     */
+    static final String PRINT_STAT = "PRINT_STAT";
+
+    /**
      * System property for setting {@link ProcessSensitiveData strategy} of output sensitive data.
      * By default, {@link ProcessSensitiveData#SHOW}.
      */
@@ -75,7 +80,7 @@ public class IgniteWalConverter {
         H2ExtrasLeafIO.register();
 
         boolean printRecords = getBoolean(PRINT_RECORDS, false); //TODO read them from argumetns
-        boolean printStat = getBoolean("PRINT_STAT", true); //TODO read them from argumetns
+        boolean printStat = getBoolean(PRINT_STAT, true); //TODO read them from argumetns
         ProcessSensitiveData sensitiveData = getEnum(SENSITIVE_DATA, SHOW); //TODO read them from argumetns
 
         if (printRecords && HIDE == sensitiveData)

@@ -72,29 +72,29 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     private static final String SENSITIVE_DATA_VALUE_PREFIX = "must_hide_it_";
 
     /** Path to directory where WAL is stored. */
-    private static String WAL_DIR_PATH;
+    private static String walDirPath;
 
     /** Page size. */
-    private static int PAGE_SIZE;
+    private static int pageSize;
 
     /** System out. */
-    private static PrintStream SYS_OUT;
+    private static PrintStream sysOut;
 
     /** Sensitive data values. */
-    private static List<String> SENSITIVE_DATA_VALUES = new ArrayList<>();
+    private static List<String> sensitiveValues = new ArrayList<>();
 
     /**
      * Test out - can be injected via {@link #injectTestSystemOut()} instead
      * of System.out and analyzed in test.
      */
-    private static ByteArrayOutputStream TEST_OUT;
+    private static ByteArrayOutputStream testOut;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        SYS_OUT = System.out;
-        TEST_OUT = new ByteArrayOutputStream(16 * 1024);
+        sysOut = System.out;
+        testOut = new ByteArrayOutputStream(16 * 1024);
 
         int nodeId = 0;
 
@@ -104,13 +104,13 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         try (Transaction tx = crd.transactions().txStart()) {
             IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
 
-            SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX + 0);
-            SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX + 1);
-            SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX + 2);
+            sensitiveValues.add(SENSITIVE_DATA_VALUE_PREFIX + 0);
+            sensitiveValues.add(SENSITIVE_DATA_VALUE_PREFIX + 1);
+            sensitiveValues.add(SENSITIVE_DATA_VALUE_PREFIX + 2);
 
-            String val0 = SENSITIVE_DATA_VALUES.get(0);
-            String val1 = SENSITIVE_DATA_VALUES.get(1);
-            String val2 = SENSITIVE_DATA_VALUES.get(2);
+            String val0 = sensitiveValues.get(0);
+            String val1 = sensitiveValues.get(1);
+            String val2 = sensitiveValues.get(2);
 
             cache.put(val0, val0);
             cache.withKeepBinary().put(val1, val1);
@@ -127,7 +127,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
                 wal.log(walRecord);
         }
 
-        SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX);
+        sensitiveValues.add(SENSITIVE_DATA_VALUE_PREFIX);
 
         wal.flush(null, true);
 
@@ -137,8 +137,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         String wp = cfg.getDataStorageConfiguration().getWalPath();
         String fn = kernalCtx.pdsFolderResolver().resolveFolders().folderName();
 
-        WAL_DIR_PATH = wd + File.separator + wp + File.separator + fn;
-        PAGE_SIZE = cfg.getDataStorageConfiguration().getPageSize();
+        walDirPath = wd + File.separator + wp + File.separator + fn;
+        pageSize = cfg.getDataStorageConfiguration().getPageSize();
 
         stopGrid(nodeId);
     }
@@ -157,9 +157,9 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         log.info("Test output for " + currentTestMethod());
         log.info("----------------------------------------");
 
-        setOut(SYS_OUT);
+        setOut(sysOut);
 
-        log.info(TEST_OUT.toString());
+        log.info(testOut.toString());
         resetTestOut();
     }
 
@@ -266,9 +266,9 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     /**
      * Executing {@link IgniteWalConverter} with checking the content of its output.
      *
-     * @param containsData Contains or not elements {@link #SENSITIVE_DATA_VALUES} in utility output.
+     * @param containsData Contains or not elements {@link #sensitiveValues} in utility output.
      * @param containsPrefix Contains or not {@link #SENSITIVE_DATA_VALUE_PREFIX} in utility output.
-     * @param converter Converting elements {@link #SENSITIVE_DATA_VALUES} for checking in utility output.
+     * @param converter Converting elements {@link #sensitiveValues} for checking in utility output.
      * @throws Exception If failed.
      */
     private void exeWithCheck(
@@ -280,16 +280,16 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
         injectTestSystemOut();
 
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+        IgniteWalConverter.main(new String[] {valueOf(pageSize), walDirPath});
 
-        String testOutStr = TEST_OUT.toString();
+        String testOutStr = testOut.toString();
 
         if (containsPrefix)
             assertContains(log, testOutStr, SENSITIVE_DATA_VALUE_PREFIX);
         else
             assertNotContains(log, testOutStr, SENSITIVE_DATA_VALUE_PREFIX);
 
-        for (String sensitiveDataValue : SENSITIVE_DATA_VALUES) {
+        for (String sensitiveDataValue : sensitiveValues) {
             if (containsData)
                 assertContains(log, testOutStr, converter.apply(sensitiveDataValue));
             else
@@ -298,17 +298,17 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Inject {@link #TEST_OUT} to System.out for analyze in test.
+     * Inject {@link #testOut} to System.out for analyze in test.
      */
     private void injectTestSystemOut() {
-        setOut(new PrintStream(TEST_OUT));
+        setOut(new PrintStream(testOut));
     }
 
     /**
-     * Reset {@link #TEST_OUT}.
+     * Reset {@link #testOut}.
      */
     private void resetTestOut() {
-        TEST_OUT.reset();
+        testOut.reset();
     }
 
     /**

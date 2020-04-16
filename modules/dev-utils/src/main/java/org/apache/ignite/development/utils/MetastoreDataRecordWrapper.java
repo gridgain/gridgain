@@ -16,9 +16,11 @@
 
 package org.apache.ignite.development.utils;
 
+import java.util.Arrays;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 
 import static java.lang.String.valueOf;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.development.utils.ProcessSensitiveData.HASH;
 import static org.apache.ignite.development.utils.ProcessSensitiveData.MD5;
 import static org.apache.ignite.development.utils.ProcessSensitiveDataUtils.md5;
@@ -37,7 +39,9 @@ class MetastoreDataRecordWrapper extends MetastoreDataRecord {
         super(
             HASH == sensitiveData ? valueOf(metastoreRecord.key().hashCode()) :
                 MD5 == sensitiveData ? md5(metastoreRecord.key()) : metastoreRecord.key(),
-            metastoreRecord.value()
+            HASH == sensitiveData ? valueOf(Arrays.hashCode(metastoreRecord.value())).getBytes(UTF_8) :
+                MD5 == sensitiveData ? md5(Arrays.toString(metastoreRecord.value())).getBytes(UTF_8) :
+                    metastoreRecord.value()
         );
 
         size(metastoreRecord.size());
