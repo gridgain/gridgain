@@ -21,6 +21,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -293,14 +294,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         new ConcurrentHashMap<>();
 
     /** Timeout operations. */
-    private static final Map<String, GridTimeoutProcessor.CancelableTask> TIMEOUT_OPS =
+    private final Map<String, GridTimeoutProcessor.CancelableTask> TIMEOUT_OPS =
         new HashMap<String, GridTimeoutProcessor.CancelableTask>() {{
             put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, null);
             put(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, null);
     }};
 
     /** Key collisions info holder. */
-    private final KeyCollisionsInfo<Map.Entry<KeyCacheObject, Integer>> keyCollisionsInfo = new KeyCollisionsInfo<>();
+    private KeyCollisionsInfo<Map.Entry<KeyCacheObject, Integer>> keyCollisionsInfo;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -374,6 +375,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         this.pendingTracker = new LocalPendingTransactionsTracker(cctx);
 
+        keyCollisionsInfo = new KeyCollisionsInfo<>();
+
         // todo gg-13416 unhardcode
         this.logTxRecords = IgniteSystemProperties.getBoolean(IGNITE_WAL_LOG_TX_RECORDS, false);
 
@@ -386,7 +389,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
 
-        scheduleDumpTask(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, keyCollisionsInfo::collectInfo, collisionsDumpInterval);
+        scheduleDumpTask(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, keyCollisionsInfo::collectInfo,
+            collisionsDumpInterval);
     }
 
     /**
@@ -2104,7 +2108,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
             keyCollisionsInfo::collectInfo,
-            longOpsDumpTimeout);
+            collisionsDumpInterval);
     }
 
     /**
@@ -3037,9 +3041,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /** */
-    private static final class KeyCollisionsInfo<T extends Map.Entry<?, Integer>> {
+    private final class KeyCollisionsInfo<T extends Map.Entry<?, Integer>> {
         /** Stripes count. */
-        private static final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
+        private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
 
         /** Max objects per map. */
         private static final int MAX_OBJS = 5;
@@ -3063,7 +3067,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
          * @param item Pair to collect.
          * */
         public void put(T item) {
-            int stripeIdx = item.hashCode() & (STRIPES_COUNT - 1);
+            int stripeIdx = item.getKey().hashCode() & (STRIPES_COUNT - 1);
 
             synchronized (stripeLocks[stripeIdx]) {
                 stores[stripeIdx].offer(item);
@@ -3072,12 +3076,18 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         /** Print hot keys info. */
         private void collectInfo() {
-            SB sb = new SB("Collisions found:"); // todo freq
-            sb.a(U.nl());
+            SB sb = null; // todo freq
 
             for (int i = 0; i < STRIPES_COUNT; ++i) {
                 synchronized (stripeLocks[i]) {
                     PriorityQueue<T> store = stores[i];
+
+                    if (store.isEmpty())
+                        continue;
+
+                    if (sb == null)
+                        sb = new SB("Collisions found:" + U.nl());
+
                     for (T info : store) {
                         sb.a("key=");
                         sb.a(info.getKey());
@@ -3089,6 +3099,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     store.clear();
                 }
             }
+
+            if (sb != null)
+                log.warning(sb.toString());
         }
     }
 

@@ -367,6 +367,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 /*        Collection<IgniteTxEntry> txEntries =
             state instanceof IgniteTxStateImpl ? ((IgniteTxStateImpl)state).allEntriesCopy() : state.allEntries();*/
 
+        // todo what with err ?
+
         IgniteTxManager txManager = cctx.tm();
 
         int qSize = 0;
@@ -394,14 +396,13 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             qSize += rmts.size();
 
             if (qSize >= 100) { // todo no need to limit here !!!
-                txManager.pushCollidingKeysWithQueueSize(txEntry.key(), 0);
+                txManager.pushCollidingKeysWithQueueSize(txEntry.key(), qSize);
 
                 break;
             }
             else
                 qSize = 0;
         }
-
     }
 
     /** {@inheritDoc} */

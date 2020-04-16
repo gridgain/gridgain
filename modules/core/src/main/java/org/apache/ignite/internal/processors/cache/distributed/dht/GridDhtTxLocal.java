@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheMappedVersion;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPr
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
@@ -657,6 +659,43 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
                     ", dhtTxId=" + xidVersion() +
                     ", node=" + nearNodeId() + ']');
             }
+        }
+
+        // *****************************
+
+        IgniteTxManager txManager = cctx.tm();
+
+        int qSize = 0;
+
+        for (IgniteTxEntry txEntry : allEntries()) {
+            Collection<GridCacheMvccCandidate> locs;
+
+            GridCacheEntryEx cached = txEntry.cached();
+
+            while(true) {
+                try {
+                    locs = cached.localCandidates();
+
+                    break;
+                }
+                catch (GridCacheEntryRemovedException ignored) {
+                    cached = txEntry.context().cache().entryEx(txEntry.key());
+                }
+            }
+
+            qSize += locs.size();
+
+            final Collection<GridCacheMvccCandidate> rmts = cached.remoteMvccSnapshot();
+
+            qSize += rmts.size();
+
+            if (qSize >= 5) { // todo no need to limit here !!!
+                txManager.pushCollidingKeysWithQueueSize(txEntry.key(), qSize);
+
+                break;
+            }
+            else
+                qSize = 0;
         }
     }
 
