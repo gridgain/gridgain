@@ -229,8 +229,10 @@ public class GridReduceQueryExecutor {
                 e = new CacheException(mapperFailedMsg, new QueryCancelledException());
             else if (failCode == GridQueryFailResponse.RETRY_QUERY)
                 e = new CacheException(mapperFailedMsg, new QueryRetryException(msg));
-            else if (sqlErrCode == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY)
+            else if (sqlErrCode == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY) {
                 e = new SqlMemoryQuotaExceededException(msg);
+                e.addSuppressed(new IgniteSQLMapStepException(msg));
+            }
             else {
                 Throwable mapExc = sqlErrCode > 0
                     ? new IgniteSQLMapStepException(mapperFailedMsg, new IgniteSQLException(msg, sqlErrCode))
