@@ -23,9 +23,6 @@ import java.util.Map;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.util.typedef.internal.A;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-
 /**
  * Class for accumulation of record types and number of indexed records in index tree.
  */
@@ -85,14 +82,5 @@ public class SchemaIndexCacheStat {
      */
     public Collection<QueryTypeDescriptorImpl> types() {
         return Collections.unmodifiableCollection(types.values());
-    }
-
-    /**
-     * Return is extra index create/rebuild logging enabled.
-     *
-     * @return Is extra index create/rebuild logging enabled.
-     */
-    public static boolean extraIndexBuildLogging() {
-        return getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false);
     }
 }
