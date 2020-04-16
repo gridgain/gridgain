@@ -819,6 +819,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             // TODO: Test with invalid cache name.
             // TODO: Test with invalid partition.
             // TODO: Test exception
+            // TODO: Test local and remote execution.
 
             var cacheName = DefaultCacheName;
             var aff = _grid1.GetAffinity(cacheName);
