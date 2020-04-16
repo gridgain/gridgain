@@ -1019,7 +1019,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean detectLostPartitions(AffinityTopologyVersion affVer, @Nullable GridDhtPartitionsExchangeFuture fut) {
+    @Override public boolean detectLostPartitions(AffinityTopologyVersion affVer, GridDhtPartitionsExchangeFuture fut) {
         lock.writeLock().lock();
 
         try {

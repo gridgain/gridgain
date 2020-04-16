@@ -1560,18 +1560,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         fullMapUpdated = !node2part.containsKey(part.nodeId());
                     }
 
-                    // Remove entry if node left.
-                    for (Iterator<UUID> it = partMap.keySet().iterator(); it.hasNext(); ) {
-                        UUID nodeId = it.next();
-
-                        if (!ctx.discovery().alive(nodeId)) {
-                            if (log.isTraceEnabled())
-                                log.trace("Removing left node from full map update [grp=" + grp.cacheOrGroupName() +
-                                    ", nodeId=" + nodeId + ", partMap=" + partMap + ']');
-
-                            it.remove();
-                        }
-                    }
+                    // Should not remove dead nodes from the map here because this will break partition loss calculation.
+                    // Map entry will be removed on next exchange.
                 }
                 else {
                     GridDhtPartitionMap locNodeMap = partMap.get(ctx.localNodeId());
@@ -2169,7 +2159,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, @Nullable GridDhtPartitionsExchangeFuture fut) {
+    @Override public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, GridDhtPartitionsExchangeFuture fut) {
         ctx.database().checkpointReadLock();
 
         try {
@@ -2180,10 +2170,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     return false;
 
                 // Do not trigger lost partition events on activation.
-                boolean evt = fut != null && !fut.activateCluster();
-
-                // TODO consider merged events.
-                DiscoveryEvent discoEvt = evt ? fut.firstEvent() : null;
+                DiscoveryEvent discoEvt = fut.activateCluster() ? null : fut.firstEvent();
 
                 final GridClusterStateProcessor state = grp.shared().kernalContext().state();
 

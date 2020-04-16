@@ -334,7 +334,7 @@ public interface GridDhtPartitionTopology {
      *
      * @return {@code True} if partitions state got updated.
      */
-    public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, @Nullable GridDhtPartitionsExchangeFuture fut);
+    public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, GridDhtPartitionsExchangeFuture fut);
 
     /**
      * Resets the state of all LOST partitions to OWNING.

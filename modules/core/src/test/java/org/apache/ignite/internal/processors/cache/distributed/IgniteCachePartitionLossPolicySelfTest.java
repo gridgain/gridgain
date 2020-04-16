@@ -124,6 +124,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             // Test always scenarios.
             params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, false});
             params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, true});
+            params.add(new Object[]{mode, READ_ONLY_SAFE, 1, true, 4, new int[]{2, 0}, false});
 
             // Random scenarios.
             for (Integer backups : Arrays.asList(0, 1, 2)) {

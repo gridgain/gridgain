@@ -1513,6 +1513,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             CachePartitionFullCountersMap.toCountersMap(cntrsMap));
                     }
 
+                    // Lost partitions can be skipped on node left or activation.
                     m.addLostPartitions(grp.groupId(), grp.topology().lostPartitions());
                 }
             }
