@@ -45,7 +45,7 @@ namespace ignite
                  * @param params SQL params.
                  * @param timeout Timeout.
                  */
-                DataQuery(diagnostic::DiagnosableAdapter& diag, Connection& connection, const std::string& sql,
+                DataQuery(diagnostic::Diagnosable& diag, Connection& connection, const std::string& sql,
                     const app::ParameterSet& params, int32_t& timeout);
 
                 /**
@@ -65,7 +65,7 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector* GetMeta();
+                virtual const meta::ColumnMetaVector& GetMeta() const;
 
                 /**
                  * Fetch next result row to application buffers.
@@ -133,14 +133,6 @@ namespace ignite
                 bool IsClosedRemotely() const;
 
                 /**
-                 * Make query prepare request and use response to set internal
-                 * state.
-                 *
-                 * @return Result.
-                 */
-                SqlResult::Type MakeRequestPrepare();
-
-                /**
                  * Make query execute request and use response to set internal
                  * state.
                  *
@@ -170,13 +162,6 @@ namespace ignite
                 SqlResult::Type MakeRequestMoreResults();
 
                 /**
-                 * Make result set metadata request.
-                 *
-                 * @return Result.
-                 */
-                SqlResult::Type MakeRequestResultsetMeta();
-
-                /**
                  * Process column conversion operation result.
                  *
                  * @param convRes Conversion result.
@@ -185,17 +170,7 @@ namespace ignite
                  * @return General SQL result.
                  */
                 SqlResult::Type ProcessConversionResult(app::ConversionResult::Type convRes, int32_t rowIdx,
-                    int32_t columnIdx);;
-
-                /**
-                 * Process column conversion operation result.
-                 *
-                 * @param convRes Conversion result.
-                 * @param rowIdx Row index.
-                 * @param columnIdx Column index.
-                 * @return General SQL result.
-                 */
-                void SetResultsetMeta(const meta::ColumnMetaVector& value);
+                    int32_t columnIdx);
 
                 /**
                  * Close query.
@@ -213,10 +188,7 @@ namespace ignite
                 /** Parameter bindings. */
                 const app::ParameterSet& params;
 
-                /** Result set metadata is available */
-                bool resultMetaAvailable;
-
-                /** Result set metadata. */
+                /** Columns metadata. */
                 meta::ColumnMetaVector resultMeta;
 
                 /** Cursor. */

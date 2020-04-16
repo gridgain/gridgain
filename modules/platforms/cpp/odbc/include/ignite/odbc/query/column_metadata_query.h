@@ -44,7 +44,7 @@ namespace ignite
                  * @param table Table search pattern.
                  * @param column Column search pattern.
                  */
-                ColumnMetadataQuery(diagnostic::DiagnosableAdapter& diag,
+                ColumnMetadataQuery(diagnostic::Diagnosable& diag,
                     Connection& connection, const std::string& schema,
                     const std::string& table, const std::string& column);
 
@@ -65,7 +65,7 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector* GetMeta();
+                virtual const meta::ColumnMetaVector& GetMeta() const;
 
                 /**
                  * Fetch next result row to application buffers.

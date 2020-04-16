@@ -44,7 +44,7 @@ namespace
             /** SQL data type. */
             DATA_TYPE,
 
-            /** Data source-dependent data type name. */
+            /** Data source�dependent data type name. */
             TYPE_NAME,
 
             /** Column size. */
@@ -74,7 +74,7 @@ namespace ignite
     {
         namespace query
         {
-            ColumnMetadataQuery::ColumnMetadataQuery(diagnostic::DiagnosableAdapter& diag,
+            ColumnMetadataQuery::ColumnMetadataQuery(diagnostic::Diagnosable& diag, 
                 Connection& connection, const std::string& schema,
                 const std::string& table, const std::string& column) :
                 Query(diag, QueryType::COLUMN_METADATA),
@@ -134,9 +134,9 @@ namespace ignite
                 return result;
             }
 
-            const meta::ColumnMetaVector* ColumnMetadataQuery::GetMeta()
+            const meta::ColumnMetaVector& ColumnMetadataQuery::GetMeta() const
             {
-                return &columnsMeta;
+                return columnsMeta;
             }
 
             SqlResult::Type ColumnMetadataQuery::FetchNextRow(app::ColumnBindingMap & columnBindings)
@@ -310,7 +310,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(err.GetText());
+                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }

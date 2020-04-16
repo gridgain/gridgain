@@ -43,7 +43,7 @@ namespace ignite
                  * @param params SQL params.
                  */
                 StreamingQuery(
-                    diagnostic::DiagnosableAdapter& diag,
+                    diagnostic::Diagnosable& diag,
                     Connection& connection,
                     const app::ParameterSet& params);
 
@@ -64,7 +64,7 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector* GetMeta();
+                virtual const meta::ColumnMetaVector& GetMeta() const;
 
                 /**
                  * Fetch next result row to application buffers.

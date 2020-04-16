@@ -122,7 +122,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    connection->AddStatusRecord(err.GetText());
+                    connection->AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }

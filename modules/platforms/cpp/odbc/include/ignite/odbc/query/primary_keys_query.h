@@ -42,7 +42,7 @@ namespace ignite
                  * @param schema Schema name.
                  * @param table Table name.
                  */
-                PrimaryKeysQuery(diagnostic::DiagnosableAdapter& diag,
+                PrimaryKeysQuery(diagnostic::Diagnosable& diag,
                     Connection& connection, const std::string& catalog,
                     const std::string& schema, const std::string& table);
 
@@ -63,7 +63,7 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector* GetMeta();
+                virtual const meta::ColumnMetaVector& GetMeta() const;
 
                 /**
                  * Fetch next result row to application buffers.

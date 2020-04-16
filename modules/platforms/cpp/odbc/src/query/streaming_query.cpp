@@ -28,7 +28,7 @@ namespace ignite
         namespace query
         {
             StreamingQuery::StreamingQuery(
-                diagnostic::DiagnosableAdapter& diag,
+                diagnostic::Diagnosable& diag,
                 Connection& connection,
                 const app::ParameterSet& params) :
                 Query(diag, QueryType::STREAMING),
@@ -48,9 +48,11 @@ namespace ignite
                 return connection.GetStreamingContext().Execute(sql, params);
             }
 
-            const meta::ColumnMetaVector* StreamingQuery::GetMeta()
+            const meta::ColumnMetaVector& StreamingQuery::GetMeta() const
             {
-                return 0;
+                static meta::ColumnMetaVector empty;
+
+                return empty;
             }
 
             SqlResult::Type StreamingQuery::FetchNextRow(app::ColumnBindingMap&)
