@@ -90,7 +90,7 @@
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-tools</artifactId>
             <version>${project.version}</version>
-            <scope>compile,test</scope>
+            <scope>test</scope>
         </dependency>
         <!-- END TEST DEPENDENCIES !-->
     </dependencies>
