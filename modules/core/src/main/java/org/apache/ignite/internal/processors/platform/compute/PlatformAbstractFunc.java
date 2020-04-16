@@ -18,8 +18,6 @@ package org.apache.ignite.internal.processors.platform.compute;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.binary.BinaryRawReaderEx;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.callback.PlatformCallbackGateway;
 import org.apache.ignite.internal.processors.platform.memory.PlatformInputStream;
@@ -42,6 +40,10 @@ public abstract class PlatformAbstractFunc implements Serializable {
     /** Serialized platform func. */
     private final Object func;
 
+    /** Handle for local execution. */
+    @SuppressWarnings("TransientFieldNotInitialized")
+    private final transient long ptr;
+
     /** Ignite instance. */
     @IgniteInstanceResource
     protected transient Ignite ignite;
@@ -50,8 +52,10 @@ public abstract class PlatformAbstractFunc implements Serializable {
      * Constructor.
      *
      * @param func Platform func.
+     * @param ptr Handle for local execution.
      */
-    protected PlatformAbstractFunc(Object func) {
+    protected PlatformAbstractFunc(Object func, long ptr) {
+        this.ptr = ptr;
         assert func != null;
 
         this.func = func;
@@ -70,21 +74,21 @@ public abstract class PlatformAbstractFunc implements Serializable {
         try (PlatformMemory mem = ctx.memory().allocate()) {
             PlatformOutputStream out = mem.output();
 
-            BinaryRawWriterEx writer = ctx.writer(out);
-
-            writer.writeObject(func);
+            if (ptr != 0) {
+                out.writeBoolean(true);
+                out.writeLong(ptr);
+            } else {
+                out.writeBoolean(false);
+                ctx.writer(out).writeObject(func);
+            }
 
             out.synchronize();
-
             platformCallback(ctx.gateway(), mem.pointer());
 
             PlatformInputStream in = mem.input();
-
             in.synchronize();
 
-            BinaryRawReaderEx reader = ctx.reader(in);
-
-            return PlatformUtils.readInvocationResult(ctx, reader);
+            return PlatformUtils.readInvocationResult(ctx, ctx.reader(in));
         }
     }
 

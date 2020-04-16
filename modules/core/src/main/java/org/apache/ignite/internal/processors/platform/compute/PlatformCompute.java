@@ -162,8 +162,9 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 Collection<String> cacheNames = PlatformUtils.readStrings(reader);
                 int part = reader.readInt();
                 Object func = reader.readObjectDetached();
+                long ptr = reader.readLong();
 
-                PlatformCallable callable = new PlatformCallable(func);
+                PlatformCallable callable = new PlatformCallable(func, ptr);
 
                 IgniteFuture future = compute.affinityCallAsync(cacheNames, part, callable);
 
@@ -174,8 +175,9 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 String cacheName = reader.readString();
                 Object key = reader.readObjectDetached();
                 Object func = reader.readObjectDetached();
+                long ptr = reader.readLong();
 
-                PlatformCallable callable = new PlatformCallable(func);
+                PlatformCallable callable = new PlatformCallable(func, ptr);
 
                 IgniteFuture future = compute.affinityCallAsync(cacheName, key, callable);
 
@@ -186,8 +188,9 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 Collection<String> cacheNames = PlatformUtils.readStrings(reader);
                 int part = reader.readInt();
                 Object func = reader.readObjectDetached();
+                long ptr = reader.readLong();
 
-                PlatformRunnable runnable = new PlatformRunnable(func);
+                PlatformRunnable runnable = new PlatformRunnable(func, ptr);
 
                 IgniteFuture future = compute.affinityRunAsync(cacheNames, part, runnable);
 
@@ -198,8 +201,9 @@ public class PlatformCompute extends PlatformAbstractTarget {
                 String cacheName = reader.readString();
                 Object key = reader.readObjectDetached();
                 Object func = reader.readObjectDetached();
+                long ptr = reader.readLong();
 
-                PlatformRunnable runnable = new PlatformRunnable(func);
+                PlatformRunnable runnable = new PlatformRunnable(func, ptr);
 
                 IgniteFuture future = compute.affinityRunAsync(cacheName, key, runnable);
 
