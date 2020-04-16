@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Compute
 {
     using System;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Compute.Closure;
     using Apache.Ignite.Core.Impl.Deployment;
@@ -33,6 +34,8 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// Performs full job execution routine: injects resources, wraps in try-catch and PeerAssemblyLoader,
         /// writes results to the stream.
         /// </summary>
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
+            Justification = "User code can throw any exception type.")]
         public static void ExecuteJobAndWriteResults<T>(IIgniteInternal ignite, PlatformMemoryStream stream, T job,
             Func<T, object> execFunc)
         {

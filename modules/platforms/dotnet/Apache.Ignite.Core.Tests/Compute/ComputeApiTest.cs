@@ -817,9 +817,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             // TODO: Test with 0, 1, and multiple caches.
             // TODO: Test with invalid partition.
-            // TODO: Verify that partition is locked.
             // TODO: Test exception
-            // TODO: Test peer assembly loading
 
             var cacheName = DefaultCacheName;
             var aff = _grid1.GetAffinity(cacheName);

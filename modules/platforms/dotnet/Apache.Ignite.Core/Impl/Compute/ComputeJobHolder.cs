@@ -70,6 +70,8 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// Executes local job.
         /// </summary>
         /// <param name="cancel">Cancel flag.</param>
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
+            Justification = "User code can throw any exception type.")]
         public void ExecuteLocal(bool cancel)
         {
             ComputeRunner.InjectResources(_ignite, _job);
