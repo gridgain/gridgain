@@ -102,7 +102,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         assert nonNull(fut);
 
         this.stop = stop;
-        wrappedClo = new SchemaIndexCacheVisitorClosureWrapper(clo, rowFilter);
+        wrappedClo = new SchemaIndexCacheVisitorClosureWrapper(clo);
         this.fut = fut;
     }
 
@@ -262,22 +262,15 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         /** Object for collecting statistics about index update. */
         @Nullable private final SchemaIndexCacheStat indexCacheStat;
 
-        /** Row filter. */
-        @Nullable private final SchemaIndexCacheFilter rowFilter;
-
         /** */
-        private SchemaIndexCacheVisitorClosureWrapper(
-            SchemaIndexCacheVisitorClosure clo,
-            @Nullable SchemaIndexCacheFilter filter
-        ) {
+        private SchemaIndexCacheVisitorClosureWrapper(SchemaIndexCacheVisitorClosure clo) {
             this.clo = clo;
             indexCacheStat = getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false) ? new SchemaIndexCacheStat() : null;
-            rowFilter = filter;
         }
 
         /** {@inheritDoc} */
         @Override public void apply(CacheDataRow row) throws IgniteCheckedException {
-            if (row != null && (rowFilter == null || rowFilter.apply(row))) {
+            if (row != null) {
                 clo.apply(row);
 
                 if (indexCacheStat != null) {

@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
@@ -161,44 +160,6 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         final GridQueryIndexing idx = cctx.kernalContext().query().getIndexing();
 
         for (QueryTypeDescriptorImpl type : stat.types()) {
-            res.a("        Type name=" + type.name());
-            res.a(U.nl());
-
-            final String pk = "_key_PK";
-
-            res.a("            Index: name=" + pk + ", size=" + idx.indexSize(type.schemaName(), pk));
-            res.a(U.nl());
-
-            final Map<String, GridQueryIndexDescriptor> indexes = type.indexes();
-
-            for (GridQueryIndexDescriptor descriptor : indexes.values()) {
-                final long size = idx.indexSize(type.schemaName(), descriptor.name());
-
-                res.a("            Index: name=" + descriptor.name() + ", size=" + size);
-                res.a(U.nl());
-            }
-        }
-
-        return res.toString();
-    }
-
-    /**
-     * Prints index cache stats to log.
-     *
-     * @param stat Index cache stats.
-     * @throws IgniteCheckedException if failed to get index size.
-     */
-    private String indexStatStr(SchemaIndexCacheStat stat) throws IgniteCheckedException {
-        SB res = new SB();
-
-        res.a("Details for cache rebuilding [name=" + cctx.cache().name() + ", grpName=" + cctx.group().name() + ']');
-        res.a(U.nl());
-        res.a("   Scanned rows " + stat.scanned + ", visited types " + stat.types.keySet());
-        res.a(U.nl());
-
-        final GridQueryIndexing idx = cctx.kernalContext().query().getIndexing();
-
-        for (QueryTypeDescriptorImpl type : stat.types.values()) {
             res.a("        Type name=" + type.name());
             res.a(U.nl());
 
