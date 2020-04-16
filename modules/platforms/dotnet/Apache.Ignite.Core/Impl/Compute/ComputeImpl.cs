@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Impl.Compute
     using System.Linq;
     using System.Runtime.Serialization;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Common;
@@ -518,22 +519,33 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
             
-            // TODO: Write local handle.
-            // Old impl uses ComputeTaskHolder.Clean for cleanup.
-            // Here we'll have to use ContWith.
-            return DoOutOpObjectAsync<TJobRes>(op, w =>
-            {
-                var cacheCount = w.WriteStrings(cacheNames);
+            var handleRegistry = Marshaller.Ignite.HandleRegistry;
+            var handle = handleRegistry.Allocate(func);
 
-                if (cacheCount == 0)
+            try
+            {
+                var fut = DoOutOpObjectAsync<TJobRes>(op, w =>
                 {
-                    throw new ArgumentException("cacheNames can not be empty", "cacheNames");
-                }
+                    var cacheCount = w.WriteStrings(cacheNames);
+                    if (cacheCount == 0)
+                    {
+                        throw new ArgumentException("cacheNames can not be empty", "cacheNames");
+                    }
                 
-                w.WriteInt(partition);
-                
-                w.WriteObject(func);
-            });
+                    w.WriteInt(partition);
+                    w.WriteObject(func);
+                    w.WriteLong(handle);
+                });
+
+                // fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
+
+                return fut;
+            }
+            catch
+            {
+                handleRegistry.Release(handle);
+                throw;
+            }
         }
 
         /// <summary>
@@ -544,13 +556,30 @@ namespace Apache.Ignite.Core.Impl.Compute
         {
             IgniteArgumentCheck.NotNull(cacheName, "cacheName");
             IgniteArgumentCheck.NotNull(func, "func");
-            
-            return DoOutOpObjectAsync<TJobRes>(op, w =>
+
+            // TODO: Code duplication with the method above.
+            var handleRegistry = Marshaller.Ignite.HandleRegistry;
+            var handle = handleRegistry.Allocate(func);
+
+            try
             {
-                w.WriteString(cacheName);
-                w.WriteObject(key);
-                w.WriteObject(func);
-            });
+                var fut = DoOutOpObjectAsync<TJobRes>(op, w =>
+                {
+                    w.WriteString(cacheName);
+                    w.WriteObject(key);
+                    w.WriteObject(func);
+                    w.WriteLong(handle);
+                });
+                
+                // fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
+
+                return fut;
+            }
+            catch
+            {
+                handleRegistry.Release(handle);
+                throw;
+            }
         }
 
         /** <inheritDoc /> */
