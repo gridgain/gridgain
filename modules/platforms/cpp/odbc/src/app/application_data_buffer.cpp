@@ -1700,35 +1700,27 @@ namespace ignite
                         return buflen;
 
                     case OdbcNativeType::AI_SIGNED_SHORT:
-                        return static_cast<SqlLen>(sizeof(SQLSMALLINT));
-
                     case OdbcNativeType::AI_UNSIGNED_SHORT:
-                        return static_cast<SqlLen>(sizeof(SQLUSMALLINT));
+                        return static_cast<SqlLen>(sizeof(short));
 
                     case OdbcNativeType::AI_SIGNED_LONG:
-                        return static_cast<SqlLen>(sizeof(SQLUINTEGER));
-
                     case OdbcNativeType::AI_UNSIGNED_LONG:
-                        return static_cast<SqlLen>(sizeof(SQLINTEGER));
+                        return static_cast<SqlLen>(sizeof(long));
 
                     case OdbcNativeType::AI_FLOAT:
-                        return static_cast<SqlLen>(sizeof(SQLREAL));
+                        return static_cast<SqlLen>(sizeof(float));
 
                     case OdbcNativeType::AI_DOUBLE:
-                        return static_cast<SqlLen>(sizeof(SQLDOUBLE));
-
-                    case OdbcNativeType::AI_SIGNED_TINYINT:
-                        return static_cast<SqlLen>(sizeof(SQLSCHAR));
+                        return static_cast<SqlLen>(sizeof(double));
 
                     case OdbcNativeType::AI_BIT:
+                    case OdbcNativeType::AI_SIGNED_TINYINT:
                     case OdbcNativeType::AI_UNSIGNED_TINYINT:
-                        return static_cast<SqlLen>(sizeof(SQLCHAR));
+                        return static_cast<SqlLen>(sizeof(char));
 
                     case OdbcNativeType::AI_SIGNED_BIGINT:
-                        return static_cast<SqlLen>(sizeof(SQLBIGINT));
-
                     case OdbcNativeType::AI_UNSIGNED_BIGINT:
-                        return static_cast<SqlLen>(sizeof(SQLUBIGINT));
+                        return static_cast<SqlLen>(sizeof(SQLBIGINT));
 
                     case OdbcNativeType::AI_TDATE:
                         return static_cast<SqlLen>(sizeof(SQL_DATE_STRUCT));

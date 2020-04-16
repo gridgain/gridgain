@@ -112,7 +112,7 @@ struct ApiRobustnessTestSuiteFixture : public odbc::OdbcTestSuite
         // Operation is not supported. However, there should be no crash.
         BOOST_CHECK(ret == SQL_ERROR);
 
-        CheckSQLStatementDiagnosticError("HYC00");
+        CheckSQLStatementDiagnosticError("HY106");
     }
 
     /**

@@ -295,28 +295,28 @@ namespace ignite
              *
              * @param ptr Rows fetched buffer pointer.
              */
-            void SetRowsFetchedPtr(SQLINTEGER* ptr);
+            void SetRowsFetchedPtr(size_t* ptr);
 
             /**
              * Get rows fetched buffer pointer.
              *
              * @return Rows fetched buffer pointer.
              */
-            SQLINTEGER* GetRowsFetchedPtr();
+            size_t* GetRowsFetchedPtr();
 
             /**
              * Set row statuses array pointer.
              *
              * @param ptr Row statuses array pointer.
              */
-            void SetRowStatusesPtr(SQLUSMALLINT* ptr);
+            void SetRowStatusesPtr(uint16_t* ptr);
 
             /**
              * Get row statuses array pointer.
              *
              * @return Row statuses array pointer.
              */
-            SQLUSMALLINT* GetRowStatusesPtr();
+            uint16_t* GetRowStatusesPtr();
 
             /**
              * Select next parameter data for which is required.
@@ -670,13 +670,6 @@ namespace ignite
             SqlResult::Type UpdateParamsMeta();
 
             /**
-             * Convert SQLRESULT to SQL_ROW_RESULT.
-             *
-             * @return Operation result.
-             */
-            uint16_t SqlResultToRowResult(SqlResult::Type value);
-
-            /**
              * Constructor.
              * Called by friend classes.
              *
@@ -693,17 +686,17 @@ namespace ignite
             /** Underlying query. */
             std::auto_ptr<query::Query> currentQuery;
 
+            /** Row bind type. */
+            SqlUlen rowBindType;
+
             /** Buffer to store number of rows fetched by the last fetch. */
-            SQLINTEGER* rowsFetched;
+            size_t* rowsFetched;
 
             /** Array to store statuses of rows fetched by the last fetch. */
-            SQLUSMALLINT* rowStatuses;
+            uint16_t* rowStatuses;
 
             /** Offset added to pointers to change binding of column data. */
             int* columnBindOffset;
-
-            /** Row array size. */
-            SqlUlen rowArraySize;
 
             /** Parameters. */
             app::ParameterSet parameters;
