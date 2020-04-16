@@ -518,6 +518,9 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
             
+            // TODO: Write local handle.
+            // Old impl uses ComputeTaskHolder.Clean for cleanup.
+            // Here we'll have to use ContWith.
             return DoOutOpObjectAsync<TJobRes>(op, w =>
             {
                 var cacheCount = w.WriteStrings(cacheNames);

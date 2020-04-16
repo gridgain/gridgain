@@ -816,6 +816,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         public void TestAffinityCallWithPartition()
         {
             // TODO: Test with 0, 1, and multiple caches.
+            // TODO: Test with invalid cache name.
             // TODO: Test with invalid partition.
             // TODO: Test exception
 
