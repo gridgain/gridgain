@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query.oom;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -79,7 +79,7 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
         GridTestUtils.assertThrows(
             log,
             () -> new QueryMemoryTracker(null, 128L, 256L, false).reserve(512L),
-            IgniteSQLException.class,
+            SqlMemoryQuotaExceededException.class,
             "SQL query run out of memory: Query quota exceeded."
         );
     }
@@ -245,7 +245,7 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
         assertEquals(1000, tracker.reserved());
 
         // throws error since parents quota exceeded
-        GridTestUtils.assertThrowsWithCause(() -> child1.reserve(200), IgniteException.class);
+        GridTestUtils.assertThrowsWithCause(() -> child1.reserve(200), SqlMemoryQuotaExceededException.class);
 
         assertEquals(400, child1.reserved());
         assertEquals(800, child2.reserved());
