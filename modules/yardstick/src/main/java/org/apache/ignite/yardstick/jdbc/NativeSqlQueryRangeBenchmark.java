@@ -31,11 +31,15 @@ public class NativeSqlQueryRangeBenchmark extends AbstractNativeBenchmark {
     /** Prepares SELECT query and it's parameters. */
     private SelectCommand select;
 
+    private boolean lazy;
+
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
         super.setUp(cfg);
 
         select = args.selectCommand();
+
+        lazy = args.getBooleanParameter("lazy", false);
     }
 
     /**
@@ -68,6 +72,8 @@ public class NativeSqlQueryRangeBenchmark extends AbstractNativeBenchmark {
 
             expRsSize = args.sqlRange();
         }
+
+        qry.setLazy(lazy);
 
         long rsSize = 0;
 
