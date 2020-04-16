@@ -537,7 +537,7 @@ namespace Apache.Ignite.Core.Impl.Compute
                     w.WriteLong(handle);
                 });
 
-                // fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
+                fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
 
                 return fut;
             }
@@ -571,7 +571,7 @@ namespace Apache.Ignite.Core.Impl.Compute
                     w.WriteLong(handle);
                 });
                 
-                // fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
+                fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
 
                 return fut;
             }

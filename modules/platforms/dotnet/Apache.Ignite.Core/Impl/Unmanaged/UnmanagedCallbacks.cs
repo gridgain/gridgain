@@ -625,7 +625,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
-                var func = _ignite.Marshaller.Unmarshal<object>(stream);
+                var func = stream.ReadBool()
+                    ? _handleRegistry.Get<object>(stream.ReadLong(), true)
+                    : _ignite.Marshaller.Unmarshal<object>(stream);
+                
                 stream.Reset();
                 
                 var invoker = DelegateTypeDescriptor.GetComputeOutFunc(func.GetType());
@@ -643,7 +646,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
-                var action = _ignite.Marshaller.Unmarshal<IComputeAction>(stream);
+                var action = stream.ReadBool()
+                    ? _handleRegistry.Get<IComputeAction>(stream.ReadLong(), true)
+                    : _ignite.Marshaller.Unmarshal<IComputeAction>(stream);
+                
                 stream.Reset();
                 
                 ComputeRunner.ExecuteJobAndWriteResults(_ignite, stream, action, act =>
