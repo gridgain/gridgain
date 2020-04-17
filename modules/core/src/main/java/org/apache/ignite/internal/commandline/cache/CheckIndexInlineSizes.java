@@ -54,7 +54,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
         "All secondary indexes have the same effective inline size on all cluster nodes.";
 
     /** Predicate to filter server nodes. */
-    private static final Predicate<GridClientNode> SRV_NODES = node -> !node.isClient() && !node.isClient();
+    private static final Predicate<GridClientNode> SRV_NODES = node -> !node.isClient() && !node.isDaemon();
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
