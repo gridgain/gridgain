@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     using System.Linq;
     using System.Net;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Client;
@@ -903,9 +904,43 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Tests affinity operations with cancellation.
         /// </summary>
         [Test]
-        public void TestAffinityOpAsyncWithCancellation()
+        public void TestAffinityOpAsyncWithCancellation([Values(true, false)] bool callOrRun,
+            [Values(true, false)] bool keyOrPart)
         {
-            // TODO
+            var compute = _grid1.GetCompute();
+            
+            Action<CancellationToken> action = token =>
+            {
+                if (callOrRun)
+                {
+                    if (keyOrPart)
+                    {
+                        compute.AffinityCallAsync(DefaultCacheName, 1, new ComputeFunc(), token).Wait();
+                    }
+                    else
+                    {
+                        compute.AffinityCallAsync(new[] {DefaultCacheName}, 1, new ComputeFunc(), token).Wait();
+                    }
+                }
+                else
+                {
+                    if (keyOrPart)
+                    {
+                        compute.AffinityRunAsync(DefaultCacheName, 1, new ComputeAction(), token).Wait();
+                    }
+                    else
+                    {
+                        compute.AffinityRunAsync(new[] {DefaultCacheName}, 1, new ComputeAction(), token).Wait();
+                    }
+                }
+            };
+
+            // Not cancelled.
+            Assert.DoesNotThrow(() => action(CancellationToken.None));
+            
+            // Cancelled.
+            var ex = Assert.Throws<AggregateException>(() => action(new CancellationToken(true)));
+            Assert.IsInstanceOf<TaskCanceledException>(ex.GetInnermostException());
         }
 
         /// <summary>
