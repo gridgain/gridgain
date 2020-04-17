@@ -1560,20 +1560,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         fullMapUpdated = !node2part.containsKey(part.nodeId());
                     }
 
-                    // Should remove entry for dead nodes if non-exchange message.
-                    // Should not remove such entries for exchange full messages because they are needed to
-                    // compute partition lost state.
-                    if (exchangeVer == null) {
-                        for (Iterator<UUID> it = partMap.keySet().iterator(); it.hasNext(); ) {
-                            UUID nodeId = it.next();
+                    GridDhtPartitionsExchangeFuture topFut =
+                        exchFut == null ? ctx.exchange().lastFinishedFuture() : exchFut;
 
-                            if (!ctx.discovery().alive(nodeId)) {
-                                if (log.isTraceEnabled())
-                                    log.trace("Removing left node from full map update [grp=" + grp.cacheOrGroupName() +
-                                        ", nodeId=" + nodeId + ", partMap=" + partMap + ']');
+                    for (Iterator<UUID> it = partMap.keySet().iterator(); it.hasNext(); ) {
+                        UUID nodeId = it.next();
 
-                                it.remove();
-                            }
+                        if (!topFut.firstEventCache().alive(nodeId)) {
+                            if (log.isTraceEnabled())
+                                log.trace("Removing left node from full map update [grp=" + grp.cacheOrGroupName() +
+                                    ", nodeId=" + nodeId + ", partMap=" + partMap + ']');
+
+                            it.remove();
                         }
                     }
                 }
