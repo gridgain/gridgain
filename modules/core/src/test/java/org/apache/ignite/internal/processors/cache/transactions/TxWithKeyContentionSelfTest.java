@@ -196,7 +196,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         latch.await();
 
-        List<IgniteInternalFuture> futs = new ArrayList<>(1000);
+        List<IgniteInternalFuture> futs = new ArrayList<>(100);
 
         for (int i = 1; i < 100; ++i) {
             int finalI = i;

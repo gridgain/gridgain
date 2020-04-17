@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
@@ -311,6 +312,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
         CacheObject val;
 
+        cctx.tm().detectPossibleCollidingKeys(this, remoteMvccSnapshot().size());
+
         lockEntry();
 
         try {
@@ -370,6 +373,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         GridCacheVersion deferredDelVer;
 
         CacheObject val;
+
+        cctx.tm().detectPossibleCollidingKeys(this, remoteMvccSnapshot().size());
 
         lockEntry();
 

@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.TxOwnerDumpRequestAllowedSett
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheMappedVersion;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryFuture;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocal;
@@ -298,7 +299,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }};
 
     /** Key collisions info holder. */
-    private KeyCollisionsDetector<KeyCacheObject, Integer> keyCollisionsInfo;
+    private KeyCollisionsDetector<GridCacheEntryEx, Integer> keyCollisionsInfo;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -3033,52 +3034,33 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /** */
-    public void pushCollidingKeysWithQueueSize(KeyCacheObject key, int queueSize) {
+    public void pushCollidingKeysWithQueueSize(GridCacheEntryEx key, int queueSize) {
         keyCollisionsInfo.put(key, queueSize);
     }
 
     /**
      * @param state tx State.
      * */
-    public void detectPossibleCollidingKeys(IgniteTxLocalState state) {
-        /*        final IgniteTxStateImpl state = (IgniteTxStateImpl)txState();
+    public void detectPossibleCollidingKeys(GridDistributedCacheEntry entry, int remoteSize) {
+        Collection<GridCacheMvccCandidate> locs;
 
-        final Collection<IgniteTxEntry> entries = state.allEntriesCopy();*/
+        GridCacheEntryEx cached = entry;
 
-/*        Collection<IgniteTxEntry> txEntries =
-            state instanceof IgniteTxStateImpl ? ((IgniteTxStateImpl)state).allEntriesCopy() : state.allEntries();*/
-
-        int qSize = 0;
-
-        Collection<IgniteTxEntry> txEntries =
-            state instanceof IgniteTxStateImpl ? ((IgniteTxStateImpl)state).allEntriesCopy() : state.allEntries();
-
-        for (IgniteTxEntry txEntry : txEntries) {
-            Collection<GridCacheMvccCandidate> locs;
-
-            GridCacheEntryEx cached = txEntry.cached();
-
+        while (true) {
             try {
                 locs = cached.localCandidates();
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                continue;
-            }
-
-            qSize += locs.size();
-
-            final Collection<GridCacheMvccCandidate> rmts = cached.remoteMvccSnapshot();
-
-            qSize += rmts.size();
-
-            if (qSize >= 5) { // todo no need to limit here !!!
-                pushCollidingKeysWithQueueSize(txEntry.key(), qSize);
 
                 break;
             }
-            else
-                qSize = 0;
+            catch (GridCacheEntryRemovedException ignored) {
+                cached = entry.context().cache().entryEx(entry.key());
+            }
         }
+
+        int qSize = locs.size() + remoteSize;
+
+        if (qSize >= 5) // todo no need to limit here !!!
+            pushCollidingKeysWithQueueSize(entry, qSize);
     }
 
     /** */
