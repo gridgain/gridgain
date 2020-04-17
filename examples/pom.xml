@@ -103,6 +103,12 @@
             <artifactId>ignite-tools</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.rat</groupId>
+                    <artifactId>apache-rat-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
