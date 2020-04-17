@@ -33,6 +33,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFini
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -151,101 +153,38 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         final Integer keyId2 = primaryKey(cache);
 
-        TestRecordingCommunicationSpi commSpi0 =
-            (TestRecordingCommunicationSpi)ig.configuration().getCommunicationSpi();
-
         CountDownLatch latch = new CountDownLatch(1);
 
-        commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode node, Message msg) {
-                  System.err.println("!!! " + msg);
+        for (Ignite ig0 : G.allGrids()) {
+            if (ig0.configuration().isClientMode())
+                continue;
 
-                  if (msg instanceof GridNearTxFinishResponse)
-                      return true;
+            TestRecordingCommunicationSpi commSpi0 =
+                (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
 
-                if (msg instanceof GridDhtTxFinishRequest) {
-                    latch.countDown();
+            commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode node, Message msg) {
+                    System.err.println("!!! " + msg);
+
+/*                    if (msg instanceof GridNearTxFinishResponse)
+                        return true;
+
+                    if (msg instanceof GridDhtTxFinishRequest) {
+                        latch.countDown();
+
+                        return false;
+                    }*/
+
+                    if (msg instanceof GridDhtTxFinishRequest)
+                        return true;
+
+                    if (msg instanceof GridNearTxPrepareResponse)
+                        latch.countDown();
 
                     return false;
                 }
-
-                return false;
-            }
-        });
-
-        IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
-            Transaction tx2 = txMgr.txStart(getConcurrency(), getIsolation());
-            //cache0.put(keyId2, 0);
-            cache0.put(keyId1, 0);
-            tx2.commit();
-            tx2.close();
-        });
-
-        latch.await();
-
-        List<IgniteInternalFuture> futs = new ArrayList<>(1000);
-
-/*        for (int i = 1; i < 100; ++i) {
-            int finalI = i;
-            IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
-                Transaction tx = txMgr.txStart(getConcurrency(), getIsolation());
-
-                cache0.put(keyId1, finalI);
-
-                cache0.put(keyId2, finalI);
-
-                tx.commit();
-                tx.close();
             });
-
-            futs.add(f0);
-        }*/
-
-        commSpi0.stopBlock();
-
-        U.sleep(4000);
-
-        f.get();
-    }
-
-    /** */
-    @Test
-    public void test0() throws Exception {
-        Ignite ig = startGridsMultiThreaded(3);
-
-        ig.cluster().active(true);
-
-        client = true;
-
-        Ignite cl = startGrid();
-
-        IgniteTransactions txMgr = cl.transactions();
-
-        IgniteCache<Integer, Integer> cache = ig.cache(DEFAULT_CACHE_NAME);
-
-        IgniteCache<Integer, Integer> cache0 = cl.cache(DEFAULT_CACHE_NAME);
-
-        for (int i = 0 ; i < 4; ++i)
-            cache.put(i, i);
-
-        final Integer keyId1 = backupKey(cache);
-
-        final Integer keyId2 = primaryKey(cache);
-
-        TestRecordingCommunicationSpi commSpi0 =
-            (TestRecordingCommunicationSpi)ig.configuration().getCommunicationSpi();
-
-        assert cache.getConfiguration(CacheConfiguration.class).getBackups() == 2;
-
-        commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode node, Message msg) {
-                System.err.println("comm msg:" + msg);
-
-                assert msg instanceof GridDhtTxPrepareResponse || msg instanceof GridDhtTxFinishResponse;
-
-                return false;
-            }
-        });
+        }
 
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
             try (Transaction tx2 = txMgr.txStart(getConcurrency(), getIsolation())) {
@@ -254,6 +193,37 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
                 tx2.commit();
             }
         });
+
+        latch.await();
+
+        List<IgniteInternalFuture> futs = new ArrayList<>(1000);
+
+        for (int i = 1; i < 100; ++i) {
+            int finalI = i;
+            IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
+                try (Transaction tx = txMgr.txStart(getConcurrency(), getIsolation())) {
+
+                    cache0.put(keyId1, finalI);
+                    //cache0.put(keyId2, finalI);
+
+                    tx.commit();
+                }
+            });
+
+            futs.add(f0);
+        }
+
+        for (Ignite ig0 : G.allGrids()) {
+            if (ig0.configuration().isClientMode())
+                continue;
+
+            TestRecordingCommunicationSpi commSpi0 =
+                (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
+
+            commSpi0.stopBlock();
+        }
+
+        U.sleep(4000);
 
         f.get();
     }
