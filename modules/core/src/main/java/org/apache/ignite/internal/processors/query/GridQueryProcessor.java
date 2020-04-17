@@ -456,7 +456,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @return Serialiazible information about secondary indexes inline size.
+     * @return Serializable information about secondary indexes inline size.
      * @see #secondaryIndexesInlineSize()
      */
     private Serializable collectSecondaryIndexesInlineSize() {

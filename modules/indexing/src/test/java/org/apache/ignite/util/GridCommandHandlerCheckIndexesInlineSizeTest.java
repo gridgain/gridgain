@@ -147,6 +147,6 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "S1_IDX", localNodeId, remoteNodeId));
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "I_IDX", localNodeId, remoteNodeId));
         assertContains(log, output, "  Check that value of property IGNITE_MAX_INDEX_PAYLOAD_SIZE are the same on all nodes.");
-        assertContains(log, output, "  Recreate indexes with different inline size.");
+        assertContains(log, output, "  Recreate indexes (execute DROP INDEX, CREATE INDEX commands) with different inline size.");
     }
 }

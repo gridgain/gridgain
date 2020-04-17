@@ -21,7 +21,7 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes.INDEXES_INLINE_SIZE_ARE_SAME;
+import static org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes.INDEXES_INLINE_SIZE_ARE_THE_SAME;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakCacheDataTree;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakSqlIndex;
@@ -60,7 +60,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
         String output = testOut.toString();
 
         assertContains(log, output, "Found 2 secondary indexes.");
-        assertContains(log, output, INDEXES_INLINE_SIZE_ARE_SAME);
+        assertContains(log, output, INDEXES_INLINE_SIZE_ARE_THE_SAME);
     }
 
     /**

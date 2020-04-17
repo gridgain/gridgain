@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -40,8 +39,6 @@ import org.apache.ignite.internal.visor.VisorTaskArgument;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DAEMON;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
@@ -53,15 +50,14 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.CHEC
 public class CheckIndexInlineSizes implements Command<Void> {
     /** Warn message format. */
     public static final String NOT_ALL_NODES_SUPPORT_FEATURE_WARN_MSG_FMT =
-        "Indexes inline size were not checked on all nodes because the few nodes aren't support this feature. Skipped nodes: %s";
+        "Indexes inline size have been checked on limited nodes. Skipped nodes: %s";
 
     /** Success message. */
-    public static final String INDEXES_INLINE_SIZE_ARE_SAME =
+    public static final String INDEXES_INLINE_SIZE_ARE_THE_SAME =
         "All secondary indexes have the same effective inline size on all cluster nodes.";
 
     /** Predicate to filter server nodes. */
-    private static final Predicate<GridClientNode> SRV_NODES = node ->
-        Objects.equals(node.attribute(ATTR_CLIENT_MODE), false) && !"true".equals(node.attribute(ATTR_DAEMON));
+    private static final Predicate<GridClientNode> SRV_NODES = node -> !node.isClient() && !node.isClient();
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
@@ -86,14 +82,20 @@ public class CheckIndexInlineSizes implements Command<Void> {
                 .filter(n -> !supportedServerNodeIds.contains(n))
                 .collect(toSet());
 
-            analizeResults(log, unsupportedNodes, res);
+            analyzeResults(log, unsupportedNodes, res);
         }
 
         return null;
     }
 
-    /** */
-    private void analizeResults(
+    /**
+     * Compares inline sizes from nodes and print to log information about "problem" indexes.
+     *
+     * @param log Logger
+     * @param unsupportedNodes Skipped nodes.
+     * @param res Indexes inline size.
+     */
+    private void analyzeResults(
         Logger log,
         Set<UUID> unsupportedNodes,
         CheckIndexInlineSizesResult res
@@ -118,7 +120,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         if (F.isEmpty(problems))
-            log.info(INDEXES_INLINE_SIZE_ARE_SAME);
+            log.info(INDEXES_INLINE_SIZE_ARE_THE_SAME);
         else
             printProblemsAndShowRecommendations(problems, log);
     }
@@ -146,7 +148,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
 
         log.info("Recommendations:");
         log.info(INDENT + "Check that value of property " + IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE + " are the same on all nodes.");
-        log.info(INDENT + "Recreate indexes with different inline size.");
+        log.info(INDENT + "Recreate indexes (execute DROP INDEX, CREATE INDEX commands) with different inline size.");
     }
 
     /** {@inheritDoc} */
