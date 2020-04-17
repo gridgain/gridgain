@@ -23,6 +23,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     OpenCensusMetricExporterSpiTest.class,
     OpenCensusTracingSpiTest.class,
+    OpenCensusTxTracingTest.class,
     MixedTracingSpiTest.class
 })
 /**
