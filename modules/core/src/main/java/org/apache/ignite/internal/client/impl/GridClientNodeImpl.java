@@ -237,7 +237,7 @@ public class GridClientNodeImpl implements GridClientNode {
 
     /** {@inheritDoc} */
     @Override public boolean isClient() {
-        return Objects.equals(attribute(ATTR_CLIENT_MODE), false);
+        return Objects.equals(attribute(ATTR_CLIENT_MODE), true);
     }
 
     /** {@inheritDoc} */
