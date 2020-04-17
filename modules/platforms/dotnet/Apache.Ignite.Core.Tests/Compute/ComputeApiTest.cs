@@ -857,7 +857,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// </summary>
         [Test]
         public void TestAffinityRunWithPartition([Values(true, false)] bool local,
-            [Values(true, false)] bool multiCache)
+            [Values(true, false)] bool multiCache, [Values(true, false)] bool async)
         {
             var cacheNames = new List<string> {DefaultCacheName};
 
@@ -874,20 +874,23 @@ namespace Apache.Ignite.Core.Tests.Compute
             var aff = _grid1.GetAffinity(cacheNames[0]);
             var part = aff.GetPrimaryPartitions(node).First();
 
-            var action = new ComputeAction
+            var computeAction = new ComputeAction
             {
                 ReservedPartition = part,
                 CacheNames = cacheNames
             };
+
+            var action = async
+                ? (Action) (() => _grid1.GetCompute().AffinityRunAsync(cacheNames, part, computeAction).Wait())
+                : () => _grid1.GetCompute().AffinityRun(cacheNames, part, computeAction);
             
             // Good case.
-            _grid1.GetCompute().AffinityRun(cacheNames, part, action);
+            action();
             Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
             
             // Exception in user code.
-            action.ShouldThrow = true;
-            var aex = Assert.Throws<AggregateException>(
-                () => _grid1.GetCompute().AffinityRun(cacheNames, part, action));
+            computeAction.ShouldThrow = true;
+            var aex = Assert.Throws<AggregateException>(() => action());
 
             var ex = aex.GetBaseException();
             StringAssert.StartsWith("Remote job threw user exception", ex.Message);
