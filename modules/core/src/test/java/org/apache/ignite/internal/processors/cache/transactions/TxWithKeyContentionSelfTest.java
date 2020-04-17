@@ -30,6 +30,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -221,8 +223,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache = ig.cache(DEFAULT_CACHE_NAME);
 
-        assert cache.getConfiguration(CacheConfiguration.class).getBackups() == 2;
-
         IgniteCache<Integer, Integer> cache0 = cl.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0 ; i < 4; ++i)
@@ -235,9 +235,13 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi commSpi0 =
             (TestRecordingCommunicationSpi)ig.configuration().getCommunicationSpi();
 
+        assert cache.getConfiguration(CacheConfiguration.class).getBackups() == 2;
+
         commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode node, Message msg) {
                 System.err.println("comm msg:" + msg);
+
+                assert msg instanceof GridDhtTxPrepareResponse || msg instanceof GridDhtTxFinishResponse;
 
                 return false;
             }
