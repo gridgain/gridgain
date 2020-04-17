@@ -135,6 +135,9 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaOperation
  * Indexing processor.
  */
 public class GridQueryProcessor extends GridProcessorAdapter {
+    /** */
+    private static final String INLINE_SIZES_DISCO_BAG_KEY = "inline_sizes";
+
     /** Warn message if some indexes have different inline sizes on the nodes. */
     public static final String INLINE_SIZES_DIFFER_WARN_MSG_FORMAT = "Inline sizes on local node and node %s are different. Please drop and create again these indexes, for avoinding performance problems with SQL queries. Problem indexes: %s";
 
@@ -357,22 +360,41 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), proposals);
 
-        if (nodeSupportedCheckIndexInlineSize(dataBag.joiningNodeId()))
-            dataBag.addNodeSpecificData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectSecondaryIndexesInlineSize());
+        if (nodeSupportedCheckIndexInlineSize(dataBag.joiningNodeId())) {
+            HashMap<String, Serializable> nodeSpecificMap = new HashMap<>();
+
+            Serializable oldVal = nodeSpecificMap.put(INLINE_SIZES_DISCO_BAG_KEY, collectSecondaryIndexesInlineSize());
+
+            assert oldVal == null : oldVal;
+
+            dataBag.addNodeSpecificData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), nodeSpecificMap);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void onJoiningNodeDataReceived(DiscoveryDataBag.JoiningNodeDiscoveryData data) {
         if (data.hasJoiningNodeData() && data.joiningNodeData() instanceof Map) {
-            Map<String, Integer> joiningNodeIndexesInlineSize = (Map<String, Integer>)data.joiningNodeData();
+            Map<String, Serializable> nodeSpecificDataMap = (Map<String, Serializable>)data.joiningNodeData();
 
-            checkInlineSizes(secondaryIndexesInlineSize(), joiningNodeIndexesInlineSize, data.joiningNodeId());
+            if (nodeSpecificDataMap.containsKey(INLINE_SIZES_DISCO_BAG_KEY)) {
+                Serializable serializable = nodeSpecificDataMap.get(INLINE_SIZES_DISCO_BAG_KEY);
+
+                assert serializable instanceof Map : serializable;
+
+                Map<String, Integer> joiningNodeIndexesInlineSize = (Map<String, Integer>)serializable;
+
+                checkInlineSizes(secondaryIndexesInlineSize(), joiningNodeIndexesInlineSize, data.joiningNodeId());
+            }
         }
     }
 
     /** {@inheritDoc} */
     @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
-        dataBag.addJoiningNodeData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectSecondaryIndexesInlineSize());
+        HashMap<String, Serializable> dataMap = new HashMap<>();
+
+        dataMap.put(INLINE_SIZES_DISCO_BAG_KEY, collectSecondaryIndexesInlineSize());
+
+        dataBag.addJoiningNodeData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), dataMap);
     }
 
     /** {@inheritDoc} */
@@ -393,11 +415,15 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             Map<String, Integer> indexesInlineSize = secondaryIndexesInlineSize();
 
             if (!F.isEmpty(indexesInlineSize)) {
-                Map<UUID, Serializable> nodeSpecific = data.nodeSpecificData();
+                for (UUID nodeId : data.nodeSpecificData().keySet()) {
+                    Serializable serializable = data.nodeSpecificData().get(nodeId);
 
-                for (UUID nodeId : nodeSpecific.keySet()) {
-                    if (nodeSpecific.get(nodeId) instanceof Map)
-                        checkInlineSizes(indexesInlineSize, (Map<String, Integer>)nodeSpecific.get(nodeId), nodeId);
+                    assert serializable instanceof Map : serializable;
+
+                    Map<String, Serializable> nodeSpecificData = (Map<String, Serializable>)serializable;
+
+                    if (nodeSpecificData.containsKey(INLINE_SIZES_DISCO_BAG_KEY))
+                        checkInlineSizes(indexesInlineSize, (Map<String, Integer>)nodeSpecificData.get(INLINE_SIZES_DISCO_BAG_KEY), nodeId);
                 }
             }
         }
