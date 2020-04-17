@@ -150,14 +150,14 @@ class JdbcBatchUpdateTask implements IgniteCallable<int[]> {
         }
         catch (Exception e) {
             IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
-            SqlCacheException ex = X.cause(e, SqlCacheException.class);
-
             if (sqlEx != null)
                 throw new BatchUpdateException(sqlEx.getMessage(), sqlEx.sqlState(), Arrays.copyOf(updCntrs, idx), e);
-            else if (ex != null)
+
+            SqlCacheException ex = X.cause(e, SqlCacheException.class);
+            if (ex != null)
                 throw new BatchUpdateException(ex.getMessage(), ex.sqlState(), Arrays.copyOf(updCntrs, idx), e);
-            else
-                throw new BatchUpdateException(Arrays.copyOf(updCntrs, idx), e);
+
+            throw new BatchUpdateException(Arrays.copyOf(updCntrs, idx), e);
         }
 
         return updCntrs;
