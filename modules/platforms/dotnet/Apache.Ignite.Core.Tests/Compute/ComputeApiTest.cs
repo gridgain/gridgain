@@ -763,7 +763,11 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                 var affinityKey = aff.GetAffinityKey<int, int>(primaryKey);
 
-                var computeAction = new ComputeAction {ReservedPartition = aff.GetPartition(primaryKey)};
+                var computeAction = new ComputeAction
+                {
+                    ReservedPartition = aff.GetPartition(primaryKey),
+                    CacheNames = new[] {cacheName}
+                };
                 
                 _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
                 Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
@@ -825,11 +829,25 @@ namespace Apache.Ignite.Core.Tests.Compute
             var aff = _grid1.GetAffinity(cacheName);
             var localNode = _grid1.GetCluster().GetLocalNode();
             var part = aff.GetPrimaryPartitions(localNode).First();
-
-            var res = _grid1.GetCompute().AffinityCall(new[] {cacheName}, part, new ComputeFunc());
+            var compute = _grid1.GetCompute();
+            
+            // Good case.
+            var res = compute.AffinityCall(new[] {cacheName}, part, new ComputeFunc());
             
             Assert.AreEqual(res, ComputeFunc.InvokeCount);
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
+            
+            // Empty caches.
+            var ex = Assert.Throws<ArgumentException>(
+                () => compute.AffinityCall(new string[0], part, new ComputeFunc()));
+            
+            StringAssert.StartsWith("cacheNames can not be empty", ex.Message);
+            
+            // Invalid cache name.
+             Assert.Throws<AggregateException>(() => compute.AffinityCall(new []{"bad"}, part, new ComputeFunc()));
+            
+            // Invalid partition.
+             Assert.Throws<ArgumentException>(() => compute.AffinityCall(new []{cacheName}, -1, new ComputeFunc()));
         }
 
         /// <summary>
@@ -843,7 +861,13 @@ namespace Apache.Ignite.Core.Tests.Compute
             var localNode = _grid1.GetCluster().GetLocalNode();
             var part = aff.GetPrimaryPartitions(localNode).First();
 
-            _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, new ComputeAction{ReservedPartition = part});
+            var action = new ComputeAction
+            {
+                ReservedPartition = part,
+                CacheNames = new[] {cacheName}
+            };
+            
+            _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, action);
             
             Assert.AreEqual(localNode.Id, ComputeAction.LastNodeId);
         }
@@ -1065,6 +1089,8 @@ namespace Apache.Ignite.Core.Tests.Compute
         public Guid Id { get; set; }
         
         public int? ReservedPartition { get; set; }
+        
+        public ICollection<string> CacheNames { get; set; }
 
         public ComputeAction()
         {
@@ -1084,8 +1110,12 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             if (ReservedPartition != null)
             {
-                Assert.IsTrue(
-                    TestUtils.IsPartitionReserved(_grid, ComputeApiTest.DefaultCacheName, ReservedPartition.Value));
+                Assert.IsNotNull(CacheNames);
+
+                foreach (var cacheName in CacheNames)
+                {
+                    Assert.IsTrue(TestUtils.IsPartitionReserved(_grid, cacheName, ReservedPartition.Value));
+                }
             }
         }
 
