@@ -1560,8 +1560,22 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         fullMapUpdated = !node2part.containsKey(part.nodeId());
                     }
 
-                    // Should not remove dead nodes from the map here because this will break partition loss calculation.
-                    // Map entry will be removed on next exchange.
+                    // Should remove entry for dead nodes if non-exchange message.
+                    // Should not remove such entries for exchange full messages because they are needed to
+                    // compute partition lost state.
+                    if (exchangeVer == null) {
+                        for (Iterator<UUID> it = partMap.keySet().iterator(); it.hasNext(); ) {
+                            UUID nodeId = it.next();
+
+                            if (!ctx.discovery().alive(nodeId)) {
+                                if (log.isTraceEnabled())
+                                    log.trace("Removing left node from full map update [grp=" + grp.cacheOrGroupName() +
+                                        ", nodeId=" + nodeId + ", partMap=" + partMap + ']');
+
+                                it.remove();
+                            }
+                        }
+                    }
                 }
                 else {
                     GridDhtPartitionMap locNodeMap = partMap.get(ctx.localNodeId());
@@ -1610,6 +1624,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 node2part = partMap;
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Partition map after processFullMessage [grp=" + grp.cacheOrGroupName() +
+                        ", exchId=" + (exchFut == null ? null : exchFut.exchangeId()) +
+                        ", fullMap=" + fullMapString() + ']');
+                }
 
                 if (exchangeVer == null && !grp.isReplicated() &&
                         (readyTopVer.initialized() && readyTopVer.compareTo(diffFromAffinityVer) >= 0)) {
