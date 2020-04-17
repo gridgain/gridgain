@@ -143,7 +143,7 @@ public class JdbcStatement implements Statement {
             }
         }
         catch (Exception e) {
-            throw convertToSqlException(e, e instanceof SecurityException ? e.getMessage() : "Failed to query Ignite.");
+            throw convertToSqlException(e, "Failed to query Ignite.");
         }
     }
 
