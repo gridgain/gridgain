@@ -464,7 +464,7 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheName, "cacheName");
             IgniteArgumentCheck.NotNull(action, "action");
 
-            return DoAffinityOp<object>(cacheName, affinityKey, action, OpAffinityRun);
+            return DoAffinityOp<object>(cacheName, null, affinityKey, action, OpAffinityRun);
         }
 
         /// <summary>
@@ -481,7 +481,7 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheName, "cacheName");
             IgniteArgumentCheck.NotNull(clo, "clo");
 
-            return DoAffinityOp<TJobRes>(cacheName, affinityKey, clo, OpAffinityCall);
+            return DoAffinityOp<TJobRes>(cacheName, null, affinityKey, clo, OpAffinityCall);
         }
 
         /// <summary>
@@ -495,7 +495,7 @@ namespace Apache.Ignite.Core.Impl.Compute
         public Future<TJobRes> AffinityCall<TJobRes>(IEnumerable<string> cacheNames, int partition,
             IComputeFunc<TJobRes> func)
         {
-            return DoAffinityOpWithPartition<TJobRes>(cacheNames, partition, func, OpAffinityCallPartition);
+            return DoAffinityOp<TJobRes>(cacheNames, partition, null, func, OpAffinityCallPartition);
         }
 
         /// <summary>
@@ -507,14 +507,13 @@ namespace Apache.Ignite.Core.Impl.Compute
         /// <returns>Result.</returns>
         public Future<object> AffinityRun(IEnumerable<string> cacheNames, int partition, IComputeAction func)
         {
-            return DoAffinityOpWithPartition<object>(cacheNames, partition, func, OpAffinityRunPartition);
+            return DoAffinityOp<object>(cacheNames, partition, null, func, OpAffinityRunPartition);
         }
 
         /// <summary>
-        /// Performs affinity operation with partition.
+        /// Performs affinity operation with.
         /// </summary>
-        private Future<TJobRes> DoAffinityOpWithPartition<TJobRes>(IEnumerable<string> cacheNames, int partition,
-            object func, int op)
+        private Future<TJobRes> DoAffinityOp<TJobRes>(object cacheNames, int? partition, object key, object func, int op)
         {
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
@@ -526,51 +525,33 @@ namespace Apache.Ignite.Core.Impl.Compute
             {
                 var fut = DoOutOpObjectAsync<TJobRes>(op, w =>
                 {
-                    var cacheCount = w.WriteStrings(cacheNames);
-                    if (cacheCount == 0)
+                    var cacheName = cacheNames as string;
+                    if (cacheName != null)
                     {
-                        throw new ArgumentException("cacheNames can not be empty", "cacheNames");
+                        w.WriteString(cacheName);
                     }
-                
-                    w.WriteInt(partition);
+                    else
+                    {
+                        var cacheCount = w.WriteStrings((IEnumerable<string>) cacheNames);
+                        if (cacheCount == 0)
+                        {
+                            throw new ArgumentException("cacheNames can not be empty", "cacheNames");
+                        }
+                    }
+
+                    if (partition != null)
+                    {
+                        w.WriteInt(partition.Value);
+                    }
+                    else
+                    {
+                        w.WriteObjectDetached(key);
+                    }
+
                     w.WriteObject(func);
                     w.WriteLong(handle);
                 });
 
-                fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
-
-                return fut;
-            }
-            catch
-            {
-                handleRegistry.Release(handle);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Performs affinity operation with partition.
-        /// </summary>
-        private Future<TJobRes> DoAffinityOp<TJobRes>(string cacheName, object key,
-            object func, int op)
-        {
-            IgniteArgumentCheck.NotNull(cacheName, "cacheName");
-            IgniteArgumentCheck.NotNull(func, "func");
-
-            // TODO: Code duplication with the method above.
-            var handleRegistry = Marshaller.Ignite.HandleRegistry;
-            var handle = handleRegistry.Allocate(func);
-
-            try
-            {
-                var fut = DoOutOpObjectAsync<TJobRes>(op, w =>
-                {
-                    w.WriteString(cacheName);
-                    w.WriteObject(key);
-                    w.WriteObject(func);
-                    w.WriteLong(handle);
-                });
-                
                 fut.Task.ContWith(_ => handleRegistry.Release(handle), TaskContinuationOptions.ExecuteSynchronously);
 
                 return fut;
