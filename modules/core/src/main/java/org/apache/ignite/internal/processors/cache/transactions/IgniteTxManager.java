@@ -17,17 +17,15 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.io.Externalizable;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,7 +89,6 @@ import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedExceptio
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
-import org.apache.ignite.internal.util.GridBoundedPriorityQueue;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -301,7 +298,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }};
 
     /** Key collisions info holder. */
-    private KeyCollisionsInfo<Map.Entry<KeyCacheObject, Integer>> keyCollisionsInfo;
+    private KeyCollisionsInfo<KeyCacheObject, Integer> keyCollisionsInfo;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -3037,50 +3034,56 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** */
     public void pushCollidingKeysWithQueueSize(KeyCacheObject key, int queueSize) {
-        keyCollisionsInfo.put(new AbstractMap.SimpleImmutableEntry<>(key, queueSize));
+        keyCollisionsInfo.put(key, queueSize);
     }
 
     /** */
-    private final class KeyCollisionsInfo<T extends Map.Entry<?, Integer>> {
+    private final class KeyCollisionsInfo<K, V> {
         /** Stripes count. */
         private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
 
-        /** Max objects per map. */
+        /** Max objects per store. */
         private static final int MAX_OBJS = 5;
 
         /** Mutexes for each stripe. */
         private final Object[] stripeLocks = new Object[STRIPES_COUNT];
 
         /** Store per stripe. */
-        private final PriorityQueue<T> stores[] = new PriorityQueue[STRIPES_COUNT];
+        private final Map<K, V> stores[] = new LinkedHashMap[STRIPES_COUNT];
 
         /** Constructor. */
         private KeyCollisionsInfo() {
             for (int i = 0; i < STRIPES_COUNT; ++i) {
-                stores[i] = new GridBoundedPriorityQueue<>(MAX_OBJS, (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
+                stores[i] = new LinkedHashMap<K, V>() {
+                    @Override
+                    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                        return size() > MAX_OBJS;
+                    }
+                };
 
                 stripeLocks[i] = new Object();
             }
         }
 
         /**
-         * @param item Pair to collect.
-         * */
-        public void put(T item) {
-            int stripeIdx = item.getKey().hashCode() & (STRIPES_COUNT - 1);
+         * @param key Key to store.
+         * @param val Value to store.
+         **/
+        public void put(K key, V val) {
+            int stripeIdx = key.hashCode() & (STRIPES_COUNT - 1);
 
             synchronized (stripeLocks[stripeIdx]) {
-                stores[stripeIdx].offer(item);
+                stores[stripeIdx].put(key, val);
             }
         }
 
         /** Print hot keys info. */
         private void collectInfo() {
-            SB sb = null; // todo freq
+            SB sb = null;
 
             for (int i = 0; i < STRIPES_COUNT; ++i) {
                 synchronized (stripeLocks[i]) {
-                    PriorityQueue<T> store = stores[i];
+                    Map<K, V> store = stores[i];
 
                     if (store.isEmpty())
                         continue;
@@ -3088,7 +3091,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     if (sb == null)
                         sb = new SB("Collisions found:" + U.nl());
 
-                    for (T info : store) {
+                    for (Map.Entry<K, V> info : store.entrySet()) {
                         sb.a("key=");
                         sb.a(info.getKey());
                         sb.a(", queueSize=");
