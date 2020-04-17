@@ -856,40 +856,41 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Tests affinity run with partition.
         /// </summary>
         [Test]
-        public void TestAffinityRunWithPartition()
+        public void TestAffinityRunWithPartition([Values(true, false)] bool local,
+            [Values(true, false)] bool multiCache)
         {
-            // TODO: Test with 0, 1, and multiple caches.
-            // TODO: Test exception
-            // TODO: Test local and remote execution.
+            var cacheNames = new List<string> {DefaultCacheName};
 
-            var cacheName = DefaultCacheName;
-            var cache2 = _grid1.CreateCache<int, int>(TestUtils.TestName);
+            if (multiCache)
+            {
+                var cache2 = _grid1.CreateCache<int, int>(TestUtils.TestName);
+                cacheNames.Add(cache2.Name);
+            }
+
+            var node = local
+                ? _grid1.GetCluster().GetLocalNode()
+                : _grid1.GetCluster().ForRemotes().ForServers().GetNode();
             
-            var localNode = _grid1.GetCluster().GetLocalNode();
-            var remoteNode = _grid1.GetCluster().ForRemotes().ForServers().GetNode();
-            
-            var aff = _grid1.GetAffinity(cacheName);
-            var localPart = aff.GetPrimaryPartitions(localNode).First();
-            var remotePart = aff.GetPrimaryPartitions(remoteNode).First();
+            var aff = _grid1.GetAffinity(cacheNames[0]);
+            var part = aff.GetPrimaryPartitions(node).First();
 
             var action = new ComputeAction
             {
-                ReservedPartition = localPart,
-                CacheNames = new[] {cacheName}
+                ReservedPartition = part,
+                CacheNames = cacheNames
             };
             
-            // Local node.
-            _grid1.GetCompute().AffinityRun(new[] {cacheName}, localPart, action);
-            Assert.AreEqual(localNode.Id, ComputeAction.LastNodeId);
-            
-            // Remote node.
-            action.ReservedPartition = remotePart;
-            _grid1.GetCompute().AffinityRun(new[] {cacheName}, remotePart, action);
-            Assert.AreEqual(remoteNode.Id, ComputeAction.LastNodeId);
-            
-            // Multiple caches.
+            // Good case.
+            _grid1.GetCompute().AffinityRun(cacheNames, part, action);
+            Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
             
             // Exception in user code.
+            action.ShouldThrow = true;
+            var aex = Assert.Throws<AggregateException>(
+                () => _grid1.GetCompute().AffinityRun(cacheNames, part, action));
+
+            var ex = aex.GetBaseException();
+            StringAssert.StartsWith("Remote job threw user exception", ex.Message);
         }
 
         /// <summary>
