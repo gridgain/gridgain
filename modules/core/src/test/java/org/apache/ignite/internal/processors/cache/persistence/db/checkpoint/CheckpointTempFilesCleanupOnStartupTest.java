@@ -20,8 +20,6 @@ import java.io.File;
 import java.util.UUID;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.EventType;
-import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -29,7 +27,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 
 /**
- *
+ *  Test to make sure that all temporary checkpoint files getting deleted on startup of the node.
  */
 public class CheckpointTempFilesCleanupOnStartupTest extends GridCommonAbstractTest {
 
@@ -64,15 +62,12 @@ public class CheckpointTempFilesCleanupOnStartupTest extends GridCommonAbstractT
 
         cfg.setDataStorageConfiguration(storageCfg);
 
-        cfg.setFailureHandler(new StopNodeFailureHandler());
-
-        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
-
         return cfg;
     }
 
     /**
      * Test that tmp checkpoints are getting deleted on startup
+     *
      * @throws Exception
      */
     @Test
@@ -81,7 +76,7 @@ public class CheckpointTempFilesCleanupOnStartupTest extends GridCommonAbstractT
 
         String nodeId = UUID.randomUUID().toString();
 
-        File nodeDir = new File(new File(dbDir.getAbsolutePath(),U.maskForFileName(nodeId)), "cp");
+        File nodeDir = new File(new File(dbDir.getAbsolutePath(), U.maskForFileName(nodeId)), "cp");
 
         nodeDir.mkdirs();
 
