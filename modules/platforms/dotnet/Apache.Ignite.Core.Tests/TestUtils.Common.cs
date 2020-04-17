@@ -503,5 +503,18 @@ namespace Apache.Ignite.Core.Tests
 
             return ignite.GetCompute().ExecuteJavaTask<bool>(taskName, new object[] {cacheName, part});
         }
+
+        /// <summary>
+        /// Gets the innermost exception.
+        /// </summary>
+        public static Exception GetInnermostException(this Exception ex)
+        {
+            while (ex.InnerException != null)
+            {
+                ex = ex.InnerException;
+            }
+
+            return ex;
+        }
     }
 }

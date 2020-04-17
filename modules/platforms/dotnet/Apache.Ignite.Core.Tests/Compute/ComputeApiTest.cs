@@ -891,6 +891,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             var ex = aex.GetBaseException();
             StringAssert.StartsWith("Remote job threw user exception", ex.Message);
+            Assert.AreEqual("Error in ComputeAction", ex.GetInnermostException().Message);
         }
 
         /// <summary>
