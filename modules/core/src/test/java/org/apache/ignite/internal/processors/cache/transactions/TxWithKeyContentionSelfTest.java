@@ -104,7 +104,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
                 .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
                 .setAffinity(new RendezvousAffinityFunction(false, 16))
-                .setBackups(1);
+                .setBackups(2);
     }
 
     /** {@inheritDoc} */
@@ -128,7 +128,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void test() throws Exception {
-        Ignite ig = startGridsMultiThreaded(2);
+        Ignite ig = startGridsMultiThreaded(3);
 
         ig.cluster().active(true);
 
@@ -156,7 +156,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode node, Message msg) {
-                  //System.err.println("!!! " + msg);
+                  System.err.println("!!! " + msg);
 
                   if (msg instanceof GridNearTxFinishResponse)
                       return true;
@@ -173,18 +173,17 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
             Transaction tx2 = txMgr.txStart(getConcurrency(), getIsolation());
-            cache0.put(keyId2, 0);
+            //cache0.put(keyId2, 0);
             cache0.put(keyId1, 0);
             tx2.commit();
             tx2.close();
         });
 
-
         latch.await();
 
         List<IgniteInternalFuture> futs = new ArrayList<>(1000);
 
-        for (int i = 1; i < 100; ++i) {
+/*        for (int i = 1; i < 100; ++i) {
             int finalI = i;
             IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
                 Transaction tx = txMgr.txStart(getConcurrency(), getIsolation());
@@ -198,15 +197,60 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
             });
 
             futs.add(f0);
-        }
-
-        System.err.println();
+        }*/
 
         commSpi0.stopBlock();
 
         U.sleep(4000);
 
         f.get();
+    }
 
+    /** */
+    @Test
+    public void test0() throws Exception {
+        Ignite ig = startGridsMultiThreaded(3);
+
+        ig.cluster().active(true);
+
+        client = true;
+
+        Ignite cl = startGrid();
+
+        IgniteTransactions txMgr = cl.transactions();
+
+        IgniteCache<Integer, Integer> cache = ig.cache(DEFAULT_CACHE_NAME);
+
+        assert cache.getConfiguration(CacheConfiguration.class).getBackups() == 2;
+
+        IgniteCache<Integer, Integer> cache0 = cl.cache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0 ; i < 4; ++i)
+            cache.put(i, i);
+
+        final Integer keyId1 = backupKey(cache);
+
+        final Integer keyId2 = primaryKey(cache);
+
+        TestRecordingCommunicationSpi commSpi0 =
+            (TestRecordingCommunicationSpi)ig.configuration().getCommunicationSpi();
+
+        commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode node, Message msg) {
+                System.err.println("comm msg:" + msg);
+
+                return false;
+            }
+        });
+
+        IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
+            try (Transaction tx2 = txMgr.txStart(getConcurrency(), getIsolation())) {
+                //cache0.put(keyId2, 0);
+                cache0.put(keyId1, 0);
+                tx2.commit();
+            }
+        });
+
+        f.get();
     }
 }

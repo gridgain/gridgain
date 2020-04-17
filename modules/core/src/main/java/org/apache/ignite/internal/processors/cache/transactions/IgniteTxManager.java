@@ -3150,10 +3150,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             if (sb != null)
                 log.warning(sb.toString());
         }
-
-        public void analyze() {
-
-        }
     }
 
     /**
