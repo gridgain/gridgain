@@ -3046,25 +3046,23 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         GridCacheEntryEx cached = entry;
 
-        while (true) {
-            try {
-                locs = cached.localCandidates();
+        int qSize = 0;
 
-                break;
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                cached = entry.context().cache().entryEx(entry.key());
-            }
+        try {
+            qSize += cached.localCandidates().size();
+        }
+        catch (GridCacheEntryRemovedException ignored) {
+            // No-op, obsolete vers found.
         }
 
-        int qSize = locs.size() + remoteSize;
+        qSize += remoteSize;
 
         if (qSize >= 5) // todo no need to limit here !!!
             pushCollidingKeysWithQueueSize(entry, qSize);
     }
 
     /** */
-    private final class KeyCollisionsDetector<K, V> {
+    final class KeyCollisionsDetector<K, V> {
         /** Stripes count. */
         private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
 

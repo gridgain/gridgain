@@ -312,7 +312,9 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
         CacheObject val;
 
-        cctx.tm().detectPossibleCollidingKeys(this, remoteMvccSnapshot().size());
+        int remoteCandidatesSize = remoteMvccSnapshot().size();
+
+        cctx.tm().detectPossibleCollidingKeys(this, remoteCandidatesSize);
 
         lockEntry();
 
@@ -374,7 +376,9 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
         CacheObject val;
 
-        cctx.tm().detectPossibleCollidingKeys(this, remoteMvccSnapshot().size());
+        int remoteCandidatesSize = remoteMvccSnapshot().size();
+
+        cctx.tm().detectPossibleCollidingKeys(this, remoteCandidatesSize);
 
         lockEntry();
 

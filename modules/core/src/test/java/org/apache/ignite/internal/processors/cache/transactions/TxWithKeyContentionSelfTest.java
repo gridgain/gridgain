@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -27,18 +28,25 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
+import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -50,6 +58,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
@@ -131,8 +141,11 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void test() throws Exception {
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30_000")
+    public void testA() throws Exception {
         Ignite ig = startGridsMultiThreaded(3);
+
+        int contCnt = 100;
 
         ig.cluster().active(true);
 
@@ -153,11 +166,13 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         final Integer keyId2 = primaryKey(cache);
 
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch startOneKeyTx = new CountDownLatch(1);
+
+        CountDownLatch neadLockReq = new CountDownLatch(contCnt);
 
         for (Ignite ig0 : G.allGrids()) {
-            if (ig0.configuration().isClientMode())
-                continue;
+/*            if (ig0.configuration().isClientMode())
+                continue;*/
 
             TestRecordingCommunicationSpi commSpi0 =
                 (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
@@ -179,7 +194,10 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
                         return true;
 
                     if (msg instanceof GridNearTxPrepareResponse)
-                        latch.countDown();
+                        startOneKeyTx.countDown();
+
+                    if (msg instanceof GridNearLockRequest)
+                        neadLockReq.countDown();
 
                     return false;
                 }
@@ -194,11 +212,11 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
             }
         });
 
-        latch.await();
+        startOneKeyTx.await();
 
-        List<IgniteInternalFuture> futs = new ArrayList<>(100);
+        GridCompoundFuture<?, ?> finishFut = new GridCompoundFuture<>();
 
-        for (int i = 1; i < 100; ++i) {
+        for (int i = 1; i < contCnt; ++i) {
             int finalI = i;
             IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
                 try (Transaction tx = txMgr.txStart(getConcurrency(), getIsolation())) {
@@ -210,12 +228,18 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
                 }
             });
 
-            futs.add(f0);
+            finishFut.add(f0);
         }
 
+        finishFut.markInitialized();
+
+        neadLockReq.await();
+
+        U.sleep(500);
+
         for (Ignite ig0 : G.allGrids()) {
-            if (ig0.configuration().isClientMode())
-                continue;
+/*            if (ig0.configuration().isClientMode())
+                continue;*/
 
             TestRecordingCommunicationSpi commSpi0 =
                 (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
@@ -223,8 +247,21 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
             commSpi0.stopBlock();
         }
 
-        U.sleep(4000);
+        IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
+
+        IgniteTxManager.KeyCollisionsDetector<GridCacheEntryEx, Integer> detector =
+            U.field(txManager, "keyCollisionsInfo");
+
+        U.invoke(IgniteTxManager.KeyCollisionsDetector.class, detector, "collectInfo", null, null);
+
+        U.sleep(1000);
+
+        System.err.println("**************************8");
+
+        U.invoke(IgniteTxManager.KeyCollisionsDetector.class, detector, "collectInfo", null, null);
 
         f.get();
+
+        finishFut.get();
     }
 }
