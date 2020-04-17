@@ -863,8 +863,12 @@ namespace Apache.Ignite.Core.Tests.Compute
             // TODO: Test local and remote execution.
 
             var cacheName = DefaultCacheName;
-            var aff = _grid1.GetAffinity(cacheName);
+            var cache2 = _grid1.CreateCache<int, int>(TestUtils.TestName);
+            
             var localNode = _grid1.GetCluster().GetLocalNode();
+            var remoteNode = _grid1.GetCluster().ForRemotes().ForServers().GetNode();
+            
+            var aff = _grid1.GetAffinity(cacheName);
             var part = aff.GetPrimaryPartitions(localNode).First();
 
             var action = new ComputeAction
@@ -873,9 +877,15 @@ namespace Apache.Ignite.Core.Tests.Compute
                 CacheNames = new[] {cacheName}
             };
             
+            // Local node.
             _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, action);
-            
             Assert.AreEqual(localNode.Id, ComputeAction.LastNodeId);
+            
+            // Remote node.
+            
+            // Multiple caches.
+            
+            // Exception in user code.
         }
 
         /// <summary>
