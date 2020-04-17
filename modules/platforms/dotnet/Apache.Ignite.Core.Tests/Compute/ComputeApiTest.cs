@@ -869,19 +869,23 @@ namespace Apache.Ignite.Core.Tests.Compute
             var remoteNode = _grid1.GetCluster().ForRemotes().ForServers().GetNode();
             
             var aff = _grid1.GetAffinity(cacheName);
-            var part = aff.GetPrimaryPartitions(localNode).First();
+            var localPart = aff.GetPrimaryPartitions(localNode).First();
+            var remotePart = aff.GetPrimaryPartitions(remoteNode).First();
 
             var action = new ComputeAction
             {
-                ReservedPartition = part,
+                ReservedPartition = localPart,
                 CacheNames = new[] {cacheName}
             };
             
             // Local node.
-            _grid1.GetCompute().AffinityRun(new[] {cacheName}, part, action);
+            _grid1.GetCompute().AffinityRun(new[] {cacheName}, localPart, action);
             Assert.AreEqual(localNode.Id, ComputeAction.LastNodeId);
             
             // Remote node.
+            action.ReservedPartition = remotePart;
+            _grid1.GetCompute().AffinityRun(new[] {cacheName}, remotePart, action);
+            Assert.AreEqual(remoteNode.Id, ComputeAction.LastNodeId);
             
             // Multiple caches.
             
