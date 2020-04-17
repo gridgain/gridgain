@@ -156,7 +156,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode node, Message msg) {
-                  System.err.println("!!! " + msg);
+                  //System.err.println("!!! " + msg);
 
                   if (msg instanceof GridNearTxFinishResponse)
                       return true;
@@ -170,9 +170,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
                 return false;
             }
         });
-
-        //commSpi0.blockMessages(GridNearTxFinishResponse.class, ig.name());
-        //commSpi0.blockMessages(GridNearTxPrepareResponse.class, ig.name());
 
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
             Transaction tx2 = txMgr.txStart(getConcurrency(), getIsolation());

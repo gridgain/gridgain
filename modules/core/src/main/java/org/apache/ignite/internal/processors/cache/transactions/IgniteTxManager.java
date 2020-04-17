@@ -298,7 +298,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }};
 
     /** Key collisions info holder. */
-    private KeyCollisionsInfo<KeyCacheObject, Integer> keyCollisionsInfo;
+    private KeyCollisionsDetector<KeyCacheObject, Integer> keyCollisionsInfo;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -372,7 +372,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         this.pendingTracker = new LocalPendingTransactionsTracker(cctx);
 
-        keyCollisionsInfo = new KeyCollisionsInfo<>();
+        keyCollisionsInfo = new KeyCollisionsDetector<>();
 
         // todo gg-13416 unhardcode
         this.logTxRecords = IgniteSystemProperties.getBoolean(IGNITE_WAL_LOG_TX_RECORDS, false);
@@ -3037,8 +3037,56 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         keyCollisionsInfo.put(key, queueSize);
     }
 
+    /**
+     * @param state tx State.
+     * */
+    public void detectPossibleCollidingKeys(IgniteTxLocalState state) {
+        /*        final IgniteTxStateImpl state = (IgniteTxStateImpl)txState();
+
+        final Collection<IgniteTxEntry> entries = state.allEntriesCopy();*/
+
+/*        Collection<IgniteTxEntry> txEntries =
+            state instanceof IgniteTxStateImpl ? ((IgniteTxStateImpl)state).allEntriesCopy() : state.allEntries();*/
+
+        int qSize = 0;
+
+        Collection<IgniteTxEntry> txEntries =
+            state instanceof IgniteTxStateImpl ? ((IgniteTxStateImpl)state).allEntriesCopy() : state.allEntries();
+
+        for (IgniteTxEntry txEntry : txEntries) {
+            Collection<GridCacheMvccCandidate> locs;
+
+            GridCacheEntryEx cached = txEntry.cached();
+
+            while(true) {
+                try {
+                    locs = cached.localCandidates();
+
+                    break;
+                }
+                catch (GridCacheEntryRemovedException ignored) {
+                    cached = txEntry.context().cache().entryEx(txEntry.key());
+                }
+            }
+/*
+            qSize += locs.size();
+
+            final Collection<GridCacheMvccCandidate> rmts = cached.remoteMvccSnapshot();
+
+            qSize += rmts.size();
+
+            if (qSize >= 5) { // todo no need to limit here !!!
+                pushCollidingKeysWithQueueSize(txEntry.key(), qSize);
+
+                break;
+            }
+            else
+                qSize = 0;*/
+        }
+    }
+
     /** */
-    private final class KeyCollisionsInfo<K, V> {
+    private final class KeyCollisionsDetector<K, V> {
         /** Stripes count. */
         private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
 
@@ -3052,11 +3100,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         private final Map<K, V> stores[] = new LinkedHashMap[STRIPES_COUNT];
 
         /** Constructor. */
-        private KeyCollisionsInfo() {
+        private KeyCollisionsDetector() {
             for (int i = 0; i < STRIPES_COUNT; ++i) {
                 stores[i] = new LinkedHashMap<K, V>() {
-                    @Override
-                    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                    /** */
+                    @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
                         return size() > MAX_OBJS;
                     }
                 };
@@ -3105,6 +3153,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             if (sb != null)
                 log.warning(sb.toString());
+        }
+
+        public void analyze() {
+
         }
     }
 

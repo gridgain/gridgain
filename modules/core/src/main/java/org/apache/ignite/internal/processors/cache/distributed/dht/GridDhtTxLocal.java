@@ -661,42 +661,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
             }
         }
 
-        // *****************************
-
-        IgniteTxManager txManager = cctx.tm();
-
-        int qSize = 0;
-
-        for (IgniteTxEntry txEntry : allEntries()) {
-            Collection<GridCacheMvccCandidate> locs;
-
-            GridCacheEntryEx cached = txEntry.cached();
-
-            while(true) {
-                try {
-                    locs = cached.localCandidates();
-
-                    break;
-                }
-                catch (GridCacheEntryRemovedException ignored) {
-                    cached = txEntry.context().cache().entryEx(txEntry.key());
-                }
-            }
-
-            qSize += locs.size();
-
-            final Collection<GridCacheMvccCandidate> rmts = cached.remoteMvccSnapshot();
-
-            qSize += rmts.size();
-
-            if (qSize >= 5) { // todo no need to limit here !!!
-                txManager.pushCollidingKeysWithQueueSize(txEntry.key(), qSize);
-
-                break;
-            }
-            else
-                qSize = 0;
-        }
+        cctx.tm().detectPossibleCollidingKeys(txState());
     }
 
     /** {@inheritDoc} */
