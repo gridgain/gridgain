@@ -817,7 +817,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Tests affinity call with partition.
         /// </summary>
         [Test]
-        public void TestAffinityCallWithPartition()
+        public void TestAffinityCallWithPartition([Values(true, false)] bool async)
         {
             var cacheName = DefaultCacheName;
             var aff = _grid1.GetAffinity(cacheName);
@@ -825,8 +825,12 @@ namespace Apache.Ignite.Core.Tests.Compute
             var part = aff.GetPrimaryPartitions(localNode).First();
             var compute = _grid1.GetCompute();
 
+            Func<IEnumerable<string>, int> action = names => async
+                ? compute.AffinityCallAsync(names, part, new ComputeFunc()).Result
+                : compute.AffinityCall(names, part, new ComputeFunc());
+
             // One cache.
-            var res = compute.AffinityCall(new[] {cacheName}, part, new ComputeFunc());
+            var res = action(new[] {cacheName});
 
             Assert.AreEqual(res, ComputeFunc.InvokeCount);
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
@@ -834,19 +838,17 @@ namespace Apache.Ignite.Core.Tests.Compute
             // Two caches.
             var cache = _grid1.CreateCache<int, int>(TestUtils.TestName);
 
-            res = compute.AffinityCall(new[] {cacheName, cache.Name}, part, new ComputeFunc());
+            res = action(new[] {cacheName, cache.Name});
 
             Assert.AreEqual(res, ComputeFunc.InvokeCount);
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
 
             // Empty caches.
-            var ex = Assert.Throws<ArgumentException>(
-                () => compute.AffinityCall(new string[0], part, new ComputeFunc()));
-
+            var ex = Assert.Throws<ArgumentException>(() => action(new string[0]));
             StringAssert.StartsWith("cacheNames can not be empty", ex.Message);
 
             // Invalid cache name.
-            Assert.Throws<AggregateException>(() => compute.AffinityCall(new[] {"bad"}, part, new ComputeFunc()));
+            Assert.Throws<AggregateException>(() => action(new[] {"bad"}));
 
             // Invalid partition.
             Assert.Throws<ArgumentException>(() => compute.AffinityCall(new[] {cacheName}, -1, new ComputeFunc()));
@@ -895,6 +897,15 @@ namespace Apache.Ignite.Core.Tests.Compute
             var ex = aex.GetBaseException();
             StringAssert.StartsWith("Remote job threw user exception", ex.Message);
             Assert.AreEqual("Error in ComputeAction", ex.GetInnermostException().Message);
+        }
+
+        /// <summary>
+        /// Tests affinity operations with cancellation.
+        /// </summary>
+        [Test]
+        public void TestAffinityOpAsyncWithCancellation()
+        {
+            // TODO
         }
 
         /// <summary>
