@@ -872,7 +872,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             var node = local
                 ? _grid1.GetCluster().GetLocalNode()
-                : _grid1.GetCluster().ForRemotes().ForServers().GetNode();
+                : _grid2.GetCluster().GetLocalNode();
             
             var aff = _grid1.GetAffinity(cacheNames[0]);
             var part = aff.GetPrimaryPartitions(node).First();
