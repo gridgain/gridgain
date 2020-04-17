@@ -819,35 +819,37 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestAffinityCallWithPartition()
         {
-            // TODO: Test with 0, 1, and multiple caches.
-            // TODO: Test with invalid cache name.
-            // TODO: Test with invalid partition.
-            // TODO: Test exception
-            // TODO: Test local and remote execution.
-
             var cacheName = DefaultCacheName;
             var aff = _grid1.GetAffinity(cacheName);
             var localNode = _grid1.GetCluster().GetLocalNode();
             var part = aff.GetPrimaryPartitions(localNode).First();
             var compute = _grid1.GetCompute();
-            
-            // Good case.
+
+            // One cache.
             var res = compute.AffinityCall(new[] {cacheName}, part, new ComputeFunc());
-            
+
             Assert.AreEqual(res, ComputeFunc.InvokeCount);
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
-            
+
+            // Two caches.
+            var cache = _grid1.CreateCache<int, int>(TestUtils.TestName);
+
+            res = compute.AffinityCall(new[] {cacheName, cache.Name}, part, new ComputeFunc());
+
+            Assert.AreEqual(res, ComputeFunc.InvokeCount);
+            Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
+
             // Empty caches.
             var ex = Assert.Throws<ArgumentException>(
                 () => compute.AffinityCall(new string[0], part, new ComputeFunc()));
-            
+
             StringAssert.StartsWith("cacheNames can not be empty", ex.Message);
-            
+
             // Invalid cache name.
-             Assert.Throws<AggregateException>(() => compute.AffinityCall(new []{"bad"}, part, new ComputeFunc()));
-            
+            Assert.Throws<AggregateException>(() => compute.AffinityCall(new[] {"bad"}, part, new ComputeFunc()));
+
             // Invalid partition.
-             Assert.Throws<ArgumentException>(() => compute.AffinityCall(new []{cacheName}, -1, new ComputeFunc()));
+            Assert.Throws<ArgumentException>(() => compute.AffinityCall(new[] {cacheName}, -1, new ComputeFunc()));
         }
 
         /// <summary>
@@ -856,6 +858,10 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestAffinityRunWithPartition()
         {
+            // TODO: Test with 0, 1, and multiple caches.
+            // TODO: Test exception
+            // TODO: Test local and remote execution.
+
             var cacheName = DefaultCacheName;
             var aff = _grid1.GetAffinity(cacheName);
             var localNode = _grid1.GetCluster().GetLocalNode();
@@ -1091,6 +1097,8 @@ namespace Apache.Ignite.Core.Tests.Compute
         public int? ReservedPartition { get; set; }
         
         public ICollection<string> CacheNames { get; set; }
+        
+        public bool ShouldThrow { get; set; }
 
         public ComputeAction()
         {
@@ -1116,6 +1124,11 @@ namespace Apache.Ignite.Core.Tests.Compute
                 {
                     Assert.IsTrue(TestUtils.IsPartitionReserved(_grid, cacheName, ReservedPartition.Value));
                 }
+            }
+
+            if (ShouldThrow)
+            {
+                throw new Exception("Error in ComputeAction");
             }
         }
 
