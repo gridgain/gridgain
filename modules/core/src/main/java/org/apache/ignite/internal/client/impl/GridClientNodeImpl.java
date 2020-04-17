@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClientCacheMode;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.client.GridClientNodeMetrics;
@@ -34,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DAEMON;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 
 /**
  * Client node implementation.
@@ -241,6 +243,11 @@ public class GridClientNodeImpl implements GridClientNode {
     /** {@inheritDoc} */
     @Override public boolean isDaemon() {
         return "true".equals(attribute(ATTR_DAEMON));
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean supports(IgniteFeatures feature) {
+        return IgniteFeatures.nodeSupports(attribute(ATTR_IGNITE_FEATURES), feature);
     }
 
     /** {@inheritDoc} */

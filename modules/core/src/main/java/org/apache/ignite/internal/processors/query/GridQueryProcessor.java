@@ -459,10 +459,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param remoteNodeId Remote node id.
      */
     private void checkInlineSizes(Map<String, Integer> local, Map<String, Integer> remote, UUID remoteNodeId) {
-        SB sb = new SB();
-
         if (log.isDebugEnabled())
             log.debug("Check inline sizes on remote node with node id: " + remoteNodeId + ". Local: " + local + ", remote: " + remote);
+
+        if (F.isEmpty(local) || F.isEmpty(remote))
+            return;
+
+        SB sb = new SB();
 
         for (String indexFullname : local.keySet()) {
             if (remote.containsKey(indexFullname)) {

@@ -26,7 +26,6 @@ import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
@@ -38,11 +37,9 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+import static org.apache.ignite.internal.IgniteFeatures.CHECK_INDEX_INLINE_SIZES;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
-import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.CHECK_INDEX_INLINE_SIZES;
 
 /**
  * Command for check secondary indexes inline size on the different nodes.
@@ -67,7 +64,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
                 .collect(toSet());
 
             Set<GridClientNode> supportedServerNodes = serverNodes.stream()
-                .filter(n -> checkIndexInlineSizesSupported(n))
+                .filter(n -> n.supports(CHECK_INDEX_INLINE_SIZES))
                 .collect(toSet());
 
             Collection<UUID> serverNodeIds = F.transform(serverNodes, GridClientNode::nodeId);
@@ -128,8 +125,8 @@ public class CheckIndexInlineSizes implements Command<Void> {
     /** */
     private void printProblemsAndShowRecommendations(Map<String, Map<Integer, Set<UUID>>> problems, Logger log) {
         log.info(problems.size() +
-            " indexes have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
-        log.info("Indexes:");
+            " index(es) have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
+        log.info("Index(es):");
 
         for (Map.Entry<String, Map<Integer, Set<UUID>>> entry : problems.entrySet()) {
             SB sb = new SB();
@@ -160,7 +157,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
     @Override public void printUsage(Logger logger) {
         usageCache(
             logger,
-            CHECK_INDEX_INLINE_SIZES,
+            CacheSubcommands.CHECK_INDEX_INLINE_SIZES,
             "Checks that secondary indexes inline size are same on the cluster nodes.",
             null
         );
@@ -168,11 +165,6 @@ public class CheckIndexInlineSizes implements Command<Void> {
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return CHECK_INDEX_INLINE_SIZES.text().toUpperCase();
-    }
-
-    /** */
-    private static boolean checkIndexInlineSizesSupported(GridClientNode node) {
-        return nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.CHECK_INDEX_INLINE_SIZES);
+        return CacheSubcommands.CHECK_INDEX_INLINE_SIZES.text().toUpperCase();
     }
 }
