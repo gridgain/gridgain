@@ -3058,17 +3058,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             GridCacheEntryEx cached = txEntry.cached();
 
-            while(true) {
-                try {
-                    locs = cached.localCandidates();
-
-                    break;
-                }
-                catch (GridCacheEntryRemovedException ignored) {
-                    cached = txEntry.context().cache().entryEx(txEntry.key());
-                }
+            try {
+                locs = cached.localCandidates();
             }
-/*
+            catch (GridCacheEntryRemovedException ignored) {
+                continue;
+            }
+
             qSize += locs.size();
 
             final Collection<GridCacheMvccCandidate> rmts = cached.remoteMvccSnapshot();
@@ -3081,7 +3077,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 break;
             }
             else
-                qSize = 0;*/
+                qSize = 0;
         }
     }
 
