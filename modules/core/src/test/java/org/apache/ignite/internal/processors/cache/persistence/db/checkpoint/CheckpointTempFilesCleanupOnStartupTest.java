@@ -30,7 +30,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
  *  Test to make sure that all temporary checkpoint files getting deleted on startup of the node.
  */
 public class CheckpointTempFilesCleanupOnStartupTest extends GridCommonAbstractTest {
-
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
