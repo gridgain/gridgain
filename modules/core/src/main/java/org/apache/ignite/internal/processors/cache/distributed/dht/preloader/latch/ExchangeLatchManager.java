@@ -378,13 +378,6 @@ public class ExchangeLatchManager {
         try {
             CompletableLatchUid latchUid = new CompletableLatchUid(message.latchId(), message.topVer());
 
-            if (ctx.cache().context().exchange().readyAffinityVersion().after(message.topVer())) {
-                if (log.isInfoEnabled())
-                    log.info("Ignoring stale latch's acknowledge [latch=" + latchUid + ", from=" + from + "]");
-
-                return;
-            }
-
             if(discovery.topologyVersionEx().compareTo(message.topVer()) < 0) {
                 // It means that this node doesn't receive changed topology version message yet
                 // but received ack message from client latch.
@@ -403,7 +396,12 @@ public class ExchangeLatchManager {
                 if (log.isDebugEnabled())
                     log.debug("Process final ack [latch=" + latchUid + ", from=" + from + "]");
 
-                assert serverLatches.containsKey(latchUid) || clientLatches.containsKey(latchUid);
+                if (!serverLatches.containsKey(latchUid) && !clientLatches.containsKey(latchUid)) {
+                    log.warning("Latch for this acknowledge is completed or never have existed " +
+                        "[latch=" + latchUid + ", from=" + from + "]");
+
+                    return;
+                }
 
                 if (clientLatches.containsKey(latchUid)) {
                     ClientLatch latch = clientLatches.get(latchUid);

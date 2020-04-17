@@ -43,7 +43,7 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
     private static final String LATCH_NAME = "test";
 
     /** Message are meaning that node getting a stale acknowledge message. */
-    private static final String STALE_ACK_LOG_MSG = "Ignoring stale latch's acknowledge";
+    private static final String STALE_ACK_LOG_MSG = "Latch for this acknowledge is completed or never have existed";
 
     /** Message happens when assertion was broken. */
     public static final Pattern ERROR_MSG = Pattern.compile("An error occurred processing the message.*"
