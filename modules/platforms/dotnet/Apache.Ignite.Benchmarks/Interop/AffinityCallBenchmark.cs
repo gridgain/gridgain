@@ -1,17 +1,12 @@
 namespace Apache.Ignite.Benchmarks.Interop
 {
     using System.Collections.Generic;
-    using System.Linq;
     using Apache.Ignite.Benchmarks.Model;
-    using Apache.Ignite.Core;
     using Apache.Ignite.Core.Cache;
-    using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Compute;
-    using Apache.Ignite.Core.Resource;
 
     /// <summary>
-    /// Benchmark that uses AffinityCall + Platform Cache + Partition Scan.
-    /// This is one of the fastest ways to do map-reduce style computation from .NET.
+    /// AffinityCall benchmark.
     /// </summary>
     internal sealed class AffinityCallBenchmark : PlatformBenchmarkBase
     {
@@ -43,44 +38,19 @@ namespace Apache.Ignite.Benchmarks.Interop
         private void AffinityCall()
         {
             var compute = Node.GetCompute();
-            
-            var func = new CharCountFunc
-            {
-                CacheName = _cache.Name,
-                Char = 'e',
-            };
 
-            var cacheNames = new[] {_cache.Name};
+            var func = new TestComputeFunc {Partition = 1};
 
-            var maxPart = Node.GetAffinity(_cache.Name).Partitions;
-            
-            for (int part = 0; part < maxPart; part++)
-            {
-                func.Partition = part;
-
-                compute.AffinityCall(cacheNames, part, func);
-            }
+            compute.AffinityCall(new[] {_cache.Name}, func.Partition, func);
         }
 
-        private class CharCountFunc : IComputeFunc<long>
+        private class TestComputeFunc : IComputeFunc<int>
         {
-            public char Char { get; set; }
-            
             public int Partition { get; set; }
             
-            public string CacheName { get; set; }
-            
-            [InstanceResource]
-            public IIgnite Grid { get; set; }
-
-            public long Invoke()
+            public int Invoke()
             {
-                var cache = Grid.GetCache<int, Employee>(CacheName);
-
-                // Local scan query with partition is served from Platform Cache.
-                var scanQuery = new ScanQuery<int, Employee> {Local = true, Partition = Partition};
-
-                return cache.Query(scanQuery).Sum(e => e.Value.Name.Count(c => c == Char));
+                return Partition;
             }
         }
     }
