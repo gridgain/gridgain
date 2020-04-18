@@ -387,8 +387,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
 
-        scheduleDumpTask(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, keyCollisionsInfo::collectInfo,
-            collisionsDumpInterval);
+        if (!cctx.gridConfig().isClientMode())
+            scheduleDumpTask(
+                IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
+                this::collectTxCollisionsInfo,
+                collisionsDumpInterval);
     }
 
     /**
@@ -3038,6 +3041,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         keyCollisionsInfo.put(key, queueSize);
     }
 
+    private void collectTxCollisionsInfo() {
+        keyCollisionsInfo.collectInfo();
+    }
+
     /**
      * @param state tx State.
      * */
@@ -3062,7 +3069,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /** */
-    final class KeyCollisionsDetector<K, V> {
+    private final class KeyCollisionsDetector<K, V> {
         /** Stripes count. */
         private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
 

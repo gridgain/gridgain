@@ -46,6 +46,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -68,6 +70,9 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** */
     private boolean client;
 
+    /** Logger. */
+    ListeningTestLogger logger;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
@@ -89,6 +94,9 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
         cfg.setCommunicationSpi(commSpi);
+
+        if (logger != null)
+            cfg.setGridLogger(logger);
 
         cfg.setCacheConfiguration(getCacheConfiguration(DEFAULT_CACHE_NAME));
 
@@ -141,8 +149,14 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30_000")
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testA() throws Exception {
+        logger = new ListeningTestLogger(false, log);
+
+        LogListener lstn = LogListener.matches("Collisions found").build();
+
+        logger.registerListener(lstn);
+
         Ignite ig = startGridsMultiThreaded(3);
 
         int contCnt = 100;
@@ -179,8 +193,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
             commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
-                    System.err.println("!!! " + msg);
-
 /*                    if (msg instanceof GridNearTxFinishResponse)
                         return true;
 
@@ -249,16 +261,9 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
 
-        IgniteTxManager.KeyCollisionsDetector<GridCacheEntryEx, Integer> detector =
-            U.field(txManager, "keyCollisionsInfo");
+        U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo", null, null);
 
-        U.invoke(IgniteTxManager.KeyCollisionsDetector.class, detector, "collectInfo", null, null);
-
-        U.sleep(1000);
-
-        System.err.println("**************************8");
-
-        U.invoke(IgniteTxManager.KeyCollisionsDetector.class, detector, "collectInfo", null, null);
+        assertTrue(lstn.check());
 
         f.get();
 
