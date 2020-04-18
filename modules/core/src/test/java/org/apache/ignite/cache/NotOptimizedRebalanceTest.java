@@ -32,8 +32,11 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
 
 /**
  * Test checks rebalance behavior when several exchanges trigger sequence.
@@ -84,6 +87,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      * @throws Exception
      */
     @Test
+    @WithSystemProperty(key = IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, value = "true")
     public void testRebalanceWithPersistence() throws Exception {
         testRebalance(true, true);
     }
@@ -94,6 +98,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, value = "true")
     public void testRebalanceWithoutPersistence() throws Exception {
         testRebalance(false, true);
     }

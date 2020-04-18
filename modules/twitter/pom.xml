@@ -62,6 +62,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.twitter</groupId>
             <artifactId>hbc-twitter4j</artifactId>
             <version>${twitter.hbc.version}</version>
