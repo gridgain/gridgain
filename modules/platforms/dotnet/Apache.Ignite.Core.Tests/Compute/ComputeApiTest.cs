@@ -875,6 +875,9 @@ namespace Apache.Ignite.Core.Tests.Compute
                 : _grid2.GetCluster().GetLocalNode();
             
             var aff = _grid1.GetAffinity(cacheNames[0]);
+            
+            // Wait for some partitions to be assigned to the node.
+            TestUtils.WaitForTrueCondition(() => aff.GetPrimaryPartitions(node).Any());
             var part = aff.GetPrimaryPartitions(node).First();
 
             var computeAction = new ComputeAction
