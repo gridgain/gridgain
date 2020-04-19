@@ -19,7 +19,6 @@ package org.apache.ignite.util;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -28,10 +27,12 @@ import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -86,12 +87,16 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
+        cleanPersistenceDir();
+
         startupTestCluster();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         shutdownTestCluster();
+
+        cleanPersistenceDir();
 
         super.afterTestsStopped();
     }
@@ -117,6 +122,7 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
         createAndFillCache(ignite, CACHE_NAME_1_1, GRP_NAME_1);
         createAndFillCache(ignite, CACHE_NAME_1_2, GRP_NAME_1);
         createAndFillCache(ignite, CACHE_NAME_2_1, GRP_NAME_2);
+
         createAndFillThreeFieldsEntryCache(ignite, CACHE_NAME_NO_GRP, null, Collections.singletonList(complexIndexEntry()));
     }
 
@@ -275,13 +281,13 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
         String outputStr = testOut.toString();
 
         assertTrue(outputStr.contains("WARNING: These caches were not found:\n" +
-                                      "  " + CACHE_NAME_NON_EXISTING));
+            "  " + CACHE_NAME_NON_EXISTING));
 
         assertTrue(outputStr.contains("WARNING: These caches have indexes rebuilding in progress:\n" +
-                                      "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_2 + ", cacheName=" + CACHE_NAME_2_1 + "]"));
+            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_2 + ", cacheName=" + CACHE_NAME_2_1 + "]"));
 
         assertTrue(outputStr.contains("Indexes rebuild was started for these caches:\n" +
-                                      "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_1 + "]"));
+            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_1 + "]"));
 
         assertEquals("Unexpected number of lines in output.", 19, outputStr.split("\n").length);
     }
@@ -360,7 +366,6 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
             new MessageOrderLogListener.MessageGroup(true)
                 .add("Started indexes rebuilding for cache \\[name=" + cacheName + ".*")
                 .add("Finished indexes rebuilding for cache \\[name=" + cacheName + ".*")
-                .add("Indexes rebuilding completed for all caches\\.")
         );
 
         ListeningTestLogger impl = GridTestUtils.getFieldValue(ignite.log(), "impl");
@@ -384,12 +389,38 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
      */
     private static class BlockingIndexing extends IgniteH2Indexing {
         /** {@inheritDoc} */
-        @Override protected void rebuildIndexesFromHash0(GridCacheContext cctx, SchemaIndexCacheVisitorClosure clo)
-            throws IgniteCheckedException
+        @Override protected void rebuildIndexesFromHash0(GridCacheContext cctx, SchemaIndexCacheVisitorClosure clo, GridFutureAdapter<Void> rebuildIdxFut)
         {
-            GridTestUtils.waitForCondition(() -> !cacheNamesBlockedIdxRebuild.contains(cctx.name()), 60_000);
+            super.rebuildIndexesFromHash0(cctx, clo, new BlockingRebuildIdxFuture(rebuildIdxFut, cctx));
+        }
+    }
 
-            super.rebuildIndexesFromHash0(cctx, clo);
+    /**
+     * Modified rebuild indexes future which is blocked right before finishing for specific caches.
+     */
+    private static class BlockingRebuildIdxFuture extends GridFutureAdapter<Void> {
+        /** */
+        private final GridFutureAdapter<Void> original;
+
+        /** */
+        private final GridCacheContext cctx;
+
+        /** */
+        BlockingRebuildIdxFuture(GridFutureAdapter<Void> original, GridCacheContext cctx) {
+            this.original = original;
+            this.cctx = cctx;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean onDone(@Nullable Void res, @Nullable Throwable err) {
+            try {
+                GridTestUtils.waitForCondition(() -> !cacheNamesBlockedIdxRebuild.contains(cctx.name()), 60_000);
+            }
+            catch (IgniteInterruptedCheckedException e) {
+                e.printStackTrace();
+            }
+
+            return original.onDone(res, err);
         }
     }
 }

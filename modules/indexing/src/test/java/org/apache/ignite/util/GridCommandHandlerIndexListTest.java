@@ -35,7 +35,7 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFi
 /**
  * Test for --cache index_list command. Uses single cluster per suite.
  */
-public class GridCommanHandlerIndexListTest extends GridCommandHandlerAbstractTest {
+public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractTest {
     /** Grids number. */
     public static final int GRIDS_NUM = 2;
 

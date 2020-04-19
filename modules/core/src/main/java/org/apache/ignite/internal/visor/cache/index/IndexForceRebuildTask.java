@@ -35,6 +35,9 @@ import org.jetbrains.annotations.Nullable;
  * Task that triggers indexes force rebuild for cpecified caches or cache groups.
  */
 public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTaskArg, IndexForceRebuildTaskRes> {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** {@inheritDoc} */
     @Override protected IndexForceRebuildJob job(IndexForceRebuildTaskArg arg) {
         return new IndexForceRebuildJob(arg, debug);
@@ -42,6 +45,9 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
 
     /** */
     private static class IndexForceRebuildJob extends VisorJob<IndexForceRebuildTaskArg, IndexForceRebuildTaskRes> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /**
          * Create job with specified argument.
          *

@@ -24,11 +24,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusInfoContainer;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -47,11 +52,11 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
     /** Number of indexes that are being rebuilt. */
     private static AtomicInteger idxRebuildsStartedNum = new AtomicInteger();
 
-    /** Is set to {@code True} when connamd was completed. */
+    /** Is set to {@code True} when command was completed. */
     private static AtomicBoolean statusRequestingFinished = new AtomicBoolean();
 
-    /** Is set to {@code True} if cluster should be resterted before next test*/
-    private static boolean clusterRestartRequeired;
+    /** Is set to {@code True} if cluster should be restored before next test. */
+    private static boolean clusterRestartRequired;
 
     /** Grids number. */
     public static final int GRIDS_NUM = 3;
@@ -74,12 +79,12 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        if (clusterRestartRequeired) {
+        if (clusterRestartRequired) {
             shutdownTestCluster();
 
             startupTestCluster();
 
-            clusterRestartRequeired = false;
+            clusterRestartRequired = false;
         }
 
         idxRebuildsStartedNum.set(0);
@@ -93,7 +98,7 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
         super.afterTest();
 
         if (!allIndexesRebuilt) {
-            clusterRestartRequeired = true;
+            clusterRestartRequired = true;
 
             fail("Failed to wait for index rebuild");
         }
@@ -203,7 +208,7 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
 
     /**
      * Checks that info about all {@code nodeIds} and only about them is present
-     * in {@code handler} last operetion result and in {@code testOut}.
+     * in {@code handler} last operation result and in {@code testOut}.
      *
      * @param handler CommandHandler used to run command.
      * @param nodeIds Ids to check.
@@ -216,9 +221,9 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
         assertEquals("Unexpected number of nodes in result", nodeIds.length, cmdResult.size());
 
         for (UUID nodeId: nodeIds) {
-            Set<IndexRebuildStatusInfoContainer> cacheIndos = cmdResult.get(nodeId);
-            assertNotNull(cacheIndos);
-            assertEquals("Unexpected number of cacheIndos in result", 3, cacheIndos.size());
+            Set<IndexRebuildStatusInfoContainer> cacheInfos = cmdResult.get(nodeId);
+            assertNotNull(cacheInfos);
+            assertEquals("Unexpected number of cacheInfos in result", 3, cacheInfos.size());
 
             final String nodeStr = "node_id=" + nodeId + ", groupName=group1, cacheName=cache2\n" +
                 "node_id=" + nodeId + ", groupName=group2, cacheName=cache1\n" +
@@ -229,20 +234,47 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
     }
 
     /**
-     * Indexing that blocks index rebuild until starus request is completed.
+     * Indexing that blocks index rebuild until status request is completed.
      */
     private static class BlockingIndexing extends IgniteH2Indexing {
         /** {@inheritDoc} */
-        @Override protected void rebuildIndexesFromHash0(GridCacheContext cctx,SchemaIndexCacheVisitorClosure clo)
-            throws IgniteCheckedException
+        @Override protected void rebuildIndexesFromHash0(
+            GridCacheContext cctx,
+            SchemaIndexCacheVisitorClosure clo,
+            GridFutureAdapter<Void> rebuildIdxFut)
         {
             idxRebuildsStartedNum.incrementAndGet();
 
-            GridTestUtils.waitForCondition(() -> statusRequestingFinished.get(), 60_000);
+            rebuildIdxFut.listen((CI1<IgniteInternalFuture<?>>)f -> idxRebuildsStartedNum.decrementAndGet());
 
-            super.rebuildIndexesFromHash0(cctx, clo);
+            super.rebuildIndexesFromHash0(cctx, new BlockingSchemaIndexCacheVisitorClosure(clo), rebuildIdxFut);
+        }
+    }
 
-            idxRebuildsStartedNum.decrementAndGet();
+    /** */
+    private static class BlockingSchemaIndexCacheVisitorClosure implements SchemaIndexCacheVisitorClosure {
+        /** */
+        private SchemaIndexCacheVisitorClosure original;
+
+        /**
+         * @param original Original.
+         */
+        BlockingSchemaIndexCacheVisitorClosure(SchemaIndexCacheVisitorClosure original) {
+            this.original = original;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void apply(CacheDataRow row) throws IgniteCheckedException {
+            try {
+                GridTestUtils.waitForCondition(() -> statusRequestingFinished.get(), 60_000);
+            }
+            catch (IgniteInterruptedCheckedException e) {
+                log.error("Waiting for indexes rebuild was interrupted", e);
+
+                statusRequestingFinished.set(true);
+            }
+
+            original.apply(row);
         }
     }
 }

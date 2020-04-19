@@ -18,8 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.cache.StartCachesInParallelTest;
 import org.apache.ignite.internal.processors.cache.index.IoStatisticsBasicIndexSelfTest;
-//TODO: fix typo
-import org.apache.ignite.util.GridCommanHandlerIndexListTest;
+import org.apache.ignite.util.GridCommandHandlerIndexListTest;
 import org.apache.ignite.util.GridCommandHandlerBrokenIndexTest;
 import org.apache.ignite.util.GridCommandHandlerIndexingCheckSizeTest;
 import org.apache.ignite.util.GridCommandHandlerIndexingClusterByClassTest;
@@ -34,9 +33,9 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     GridCommandHandlerBrokenIndexTest.class,
     GridCommandHandlerIndexingTest.class,
-    GridCommandHandlerIndexingClusterByClassTest.class,
     GridCommandHandlerIndexingCheckSizeTest.class,
-    GridCommanHandlerIndexListTest.class,
+    GridCommandHandlerIndexingClusterByClassTest.class,
+    GridCommandHandlerIndexListTest.class,
     StartCachesInParallelTest.class,
     IoStatisticsBasicIndexSelfTest.class
 })
