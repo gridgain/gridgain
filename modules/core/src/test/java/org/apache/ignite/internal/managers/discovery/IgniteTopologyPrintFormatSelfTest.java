@@ -105,15 +105,15 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
         String nodeId8;
 
         try {
-            Ignite server = startGrid("server");
+            Ignite srv = startGrid("server");
 
-            nodeId8 = U.id8(server.cluster().localNode().id());
+            nodeId8 = U.id8(srv.cluster().localNode().id());
 
-            setLogger(log, server);
+            setLogger(log, srv);
 
-            Ignite server1 = startGrid("server1");
+            Ignite srv1 = startGrid("server1");
 
-            waitForDiscovery(server, server1);
+            waitForDiscovery(srv, srv1);
         }
         finally {
             stopAllGrids();
@@ -125,6 +125,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
                     || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 0"));
             }
         }));
+
+        checkNodesAdditionalLogging(log);
     }
 
     /**
@@ -159,17 +161,17 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
         String nodeId8;
 
         try {
-            Ignite server = startGrid("server");
+            Ignite srv = startGrid("server");
 
-            nodeId8 = U.id8(server.cluster().localNode().id());
+            nodeId8 = U.id8(srv.cluster().localNode().id());
 
-            setLogger(log, server);
+            setLogger(log, srv);
 
-            Ignite server1 = startGrid("server1");
+            Ignite srv1 = startGrid("server1");
             Ignite client1 = startGrid("first client");
             Ignite client2 = startGrid("second client");
 
-            waitForDiscovery(server, server1, client1, client2);
+            waitForDiscovery(srv, srv1, client1, client2);
         }
         finally {
             stopAllGrids();
@@ -181,6 +183,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
                     || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 2"));
             }
         }));
+
+        checkNodesAdditionalLogging(log);
     }
 
     /**
@@ -215,18 +219,18 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
         String nodeId8;
 
         try {
-            Ignite server = startGrid("server");
+            Ignite srv = startGrid("server");
 
-            nodeId8 = U.id8(server.cluster().localNode().id());
+            nodeId8 = U.id8(srv.cluster().localNode().id());
 
-            setLogger(log, server);
+            setLogger(log, srv);
 
-            Ignite server1 = startGrid("server1");
+            Ignite srv1 = startGrid("server1");
             Ignite client1 = startGrid("first client");
             Ignite client2 = startGrid("second client");
             Ignite forceServClnt3 = startGrid("third client_force_server");
 
-            waitForDiscovery(server, server1, client1, client2, forceServClnt3);
+            waitForDiscovery(srv, srv1, client1, client2, forceServClnt3);
         }
         finally {
             stopAllGrids();
@@ -238,18 +242,41 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
                     || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 3"));
             }
         }));
+
+        checkNodesAdditionalLogging(log);
+    }
+
+    /**
+     * Check
+     *
+     * @param log log.
+     */
+    private void checkNodesAdditionalLogging(MockLogger log){
+        if (log.isDebugEnabled()) {
+            assertFalse(F.exist(log.logs(), new IgnitePredicate<String>() {
+                @Override public boolean apply(String s) {
+                    return s.contains("nodes=[");
+                }
+            }));
+        } else if (log.isInfoEnabled()) {
+            assertTrue(F.exist(log.logs(), new IgnitePredicate<String>() {
+                @Override public boolean apply(String s) {
+                    return s.contains("nodes=[");
+                }
+            }));
+        }
     }
 
     /**
      * Set log.
      *
      * @param log Log.
-     * @param server Ignite.
+     * @param srv Ignite.
      */
-    private void setLogger(MockLogger log, Ignite server) {
-        IgniteKernal server0 = (IgniteKernal)server;
+    private void setLogger(MockLogger log, Ignite srv) {
+        IgniteKernal srv0 = (IgniteKernal)srv;
 
-        GridDiscoveryManager discovery = server0.context().discovery();
+        GridDiscoveryManager discovery = srv0.context().discovery();
 
         GridTestUtils.setFieldValue(discovery, GridManagerAdapter.class, "log", log);
     }
