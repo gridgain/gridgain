@@ -701,6 +701,73 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     }
 
     /**
+     * 1. Execute sql query action: SELECT count(*), can_fail() FROM "TestCache".STRING and wait completion.
+     * 2. Send the "QueryActions.history" action with "since" argument equals to 1.
+     * 3. Assert that query history contains 1 query.
+     * 4. Assert that history query contains a correct query text presentation.
+     */
+    @Test
+    public void shouldReturnQueryHistoryWithFailedQuery() {
+        IgniteCache<Object, Object> cache = cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setQueryDetailMetricsSize(1)
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        for (Integer i = 0; i < 1_000; i++)
+            cache.put(i, i.toString());
+
+        GridTestUtils.SqlTestFunctions.fail = true;
+
+        Request sqlQryReq = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId(UUID.randomUUID().toString())
+                    .setQueryText("SELECT count(*), can_fail() FROM \"TestCache\".STRING")
+                    .setPageSize(1)
+                    .setDefaultSchema("TestCache")
+            );
+
+        executeAction(sqlQryReq, (res) -> {
+            TaskResponse taskRes = taskResult(sqlQryReq.getId());
+
+            return taskRes != null && taskRes.getStatus() == FAILED;
+        });
+
+        GridTestUtils.SqlTestFunctions.fail = false;
+
+        Request req = new Request()
+            .setAction("QueryActions.history")
+            .setId(UUID.randomUUID())
+            .setArgument(1)
+            .setNodeIds(singleton(cluster.localNode().id()));
+
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            TaskResponse taskRes = taskResult(req.getId());
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 1) {
+                DocumentContext ctx = parse(r.getResult());
+
+                JSONArray results = ctx.read("$[*]");
+                JSONArray queries = ctx.read("$[*].query");
+
+                return results.size() == 1 &&
+                    queries.stream().allMatch(
+                        q -> q.equals("SELECT count(*), can_fail() FROM \"TestCache\".STRING")
+                    );
+            }
+
+            return false;
+        });
+    }
+
+    /**
      * @return Create table query string.
      */
     private String getCreateQuery() {
