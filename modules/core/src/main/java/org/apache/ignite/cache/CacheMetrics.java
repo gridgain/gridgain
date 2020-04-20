@@ -20,9 +20,6 @@ import javax.cache.Cache;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.internal.processors.metric.impl.ObjectGauge;
-
-import java.util.Map;
 
 /**
  * Cache metrics used to obtain statistics on cache itself.

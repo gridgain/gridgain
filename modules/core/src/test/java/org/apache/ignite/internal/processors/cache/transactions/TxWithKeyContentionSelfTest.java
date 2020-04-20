@@ -56,7 +56,6 @@ import java.lang.management.ManagementFactory;
 import java.util.concurrent.CountDownLatch;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.COLLISIONS_QUEUE_THRESHOLD;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
@@ -78,7 +77,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
             new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
-                        .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
+                        .setMaxSize(20 * 1024 * 1024)
                 )
         );
 
@@ -139,7 +138,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void test() throws Exception {
+    public void testKeyCollisionsMetric() throws Exception {
         Ignite ig = startGridsMultiThreaded(3);
 
         int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 2;

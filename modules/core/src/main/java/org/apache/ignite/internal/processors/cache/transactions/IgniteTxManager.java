@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -2113,7 +2114,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
-            keyCollisionsInfo::collectInfo,
+            this::collectTxCollisionsInfo,
             collisionsDumpInterval);
     }
 
@@ -3093,6 +3094,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         private final Map<GridCacheAdapter<?, ?>, List<Map.Entry<GridCacheMapEntry, Integer>>> metricPerCacheStore =
             new HashMap<>();
 
+        /** Guard. */
+        AtomicBoolean alreadyRun = new AtomicBoolean();
+
         /** Constructor. */
         private KeyCollisionsHolder() {
             for (int i = 0; i < STRIPES_COUNT; ++i) {
@@ -3121,9 +3125,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         /** Print hot keys info. */
         private void collectInfo() {
-            synchronized (metricPerCacheStore) {
-                metricPerCacheStore.clear();
-            }
+            if (!alreadyRun.compareAndSet(false, true))
+                return;
+
+            metricPerCacheStore.clear();
 
             for (int i = 0; i < STRIPES_COUNT; ++i) {
                 synchronized (stripeLocks[i]) {
@@ -3135,34 +3140,26 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     for (Map.Entry<GridCacheMapEntry, Integer> info : store.entrySet()) {
                         GridCacheAdapter<Object, Object> cacheCtx = info.getKey().context().cache();
 
-                        synchronized (metricPerCacheStore) {
-                            metricPerCacheStore.computeIfAbsent(cacheCtx, k -> new ArrayList<>()).add(info);
-                        }
+                        metricPerCacheStore.computeIfAbsent(cacheCtx, k -> new ArrayList<>()).add(info);
                     }
 
                     store.clear();
                 }
             }
 
-            synchronized (metricPerCacheStore) {
-                metricPerCacheStore.forEach((k, v) -> {
-                    if (k.metrics0().keyCollisionsInfo() == null) {
-                        k.metrics0().keyCollisionsInfo(
-                            new Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>>() {
-                                @Override public List<Map.Entry<GridCacheMapEntry, Integer>> get() {
-                                    List<Map.Entry<GridCacheMapEntry, Integer>> ret;
-
-                                    synchronized (metricPerCacheStore) {
-                                        ret = metricPerCacheStore.get(k);
-                                    }
-
-                                    return ret;
-                                }
+            metricPerCacheStore.forEach((k, v) -> {
+                if (k.metrics0().keyCollisionsInfo() == null) {
+                    k.metrics0().keyCollisionsInfo(
+                        new Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>>() {
+                            @Override public List<Map.Entry<GridCacheMapEntry, Integer>> get() {
+                                return metricPerCacheStore.get(k);
                             }
-                        );
-                    }
-                });
-            }
+                        }
+                    );
+                }
+            });
+
+            alreadyRun.getAndSet(false);
         }
     }
 

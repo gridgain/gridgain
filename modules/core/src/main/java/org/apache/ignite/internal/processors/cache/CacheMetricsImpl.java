@@ -208,7 +208,7 @@ public class CacheMetricsImpl implements CacheMetrics {
     private GridCacheWriteBehindStore store;
 
     /** Tx collisions info. */
-    private Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> txKeyCollisionInfo;
+    private volatile Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> txKeyCollisionInfo;
 
     /**
      * Creates cache metrics.
@@ -858,6 +858,9 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** todo */
     public void keyCollisionsInfo(Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> coll) {
         txKeyCollisionInfo = coll;
+
+        if (delegate != null)
+            delegate.keyCollisionsInfo(coll);
     }
 
     /** todo */
