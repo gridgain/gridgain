@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -259,6 +260,24 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             for (int i = 0, j = 0; i < cols.length && j < inlineIdxs.size(); i++) {
                 if (cols[i].column.getColumnId() == inlineIdxs.get(j).columnIndex())
                     inlineCols[j++] = cols[i];
+            }
+
+            boolean inlineDecimalSupported = inlineSize > 0 && metaInfo.inlineDecimalSupported();
+
+            // remove tail if inlining of decimals is not supported
+            if (!inlineDecimalSupported) {
+                boolean decimal = false;
+
+                Iterator<InlineIndexColumn> it = inlineIdxs.iterator();
+                while (it.hasNext()) {
+                    InlineIndexColumn ih = it.next();
+
+                    if (ih.type() == Value.DECIMAL)
+                        decimal = true;
+
+                    if (decimal)
+                        it.remove();
+                }
             }
 
             if (!metaInfo.flagsSupported())
@@ -759,6 +778,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         boolean inlineObjHash;
 
         /** */
+        boolean inlineDecimalSupported;
+
+        /** */
         IgniteProductVersion createdVer;
 
         /**
@@ -773,6 +795,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             if (flagsSupported) {
                 inlineObjSupported = io.inlineObjectSupported(pageAddr);
                 inlineObjHash = io.inlineObjectHash(pageAddr);
+                inlineDecimalSupported = io.inlineDecimalSupported(pageAddr);
             }
 
             createdVer = io.createdVersion(pageAddr);
@@ -811,6 +834,13 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
          */
         public boolean inlineObjectHash() {
             return inlineObjHash;
+        }
+
+        /**
+         * @return {@code true} In case inline decimal is supported.
+         */
+        public boolean inlineDecimalSupported() {
+            return inlineDecimalSupported;
         }
     }
 
