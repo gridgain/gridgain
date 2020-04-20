@@ -22,6 +22,7 @@ import java.sql.Statement;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingAbstractTest;
@@ -43,9 +44,11 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setSqlOffloadingEnabled(IgniteConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED);
-        cfg.setSqlQueryMemoryQuota("1024");
-        cfg.setSqlGlobalMemoryQuota(IgniteConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA);
+        cfg.setSqlConfiguration(new SqlConfiguration()
+            .setSqlOffloadingEnabled(SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED)
+            .setSqlQueryMemoryQuota("1024")
+            .setSqlGlobalMemoryQuota(SqlConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA)
+        );
 
         return cfg;
     }

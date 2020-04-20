@@ -24,6 +24,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -92,7 +93,9 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
 
             final long maxMem = Runtime.getRuntime().maxMemory();
 
-            cfg.setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1));
+            cfg.setSqlConfiguration(new SqlConfiguration()
+                .setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1))
+            );
 
             startGrid(cfg);
         }, IgniteException.class, "Ouch! Argument is invalid: Sql global memory quota can't be more than heap size");

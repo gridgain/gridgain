@@ -19,6 +19,7 @@ package org.apache.ignite.p2p;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.compute.ComputeJobAdapter;
@@ -92,7 +93,7 @@ public class GridP2PTestJob extends ComputeJobAdapter {
             return -3;
         }
 
-        String rsrcVal = new String(bytes).trim();
+        String rsrcVal = new String(bytes, StandardCharsets.UTF_8).trim();
 
         if (log.isInfoEnabled())
             log.info("Remote resource content is : " + rsrcVal);

@@ -39,6 +39,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
@@ -86,7 +87,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-        cfg.setSqlOffloadingEnabled(true);
+        cfg.setSqlConfiguration(new SqlConfiguration().setSqlOffloadingEnabled(true));
 
         // Dummy cache.
         CacheConfiguration<?,?> cache = defaultCacheConfiguration();

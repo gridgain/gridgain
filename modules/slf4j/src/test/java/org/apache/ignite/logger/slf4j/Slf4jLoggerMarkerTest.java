@@ -17,6 +17,7 @@
 package org.apache.ignite.logger.slf4j;
 
 import java.io.File;
+import java.nio.charset.Charset;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.After;
 import org.junit.Before;
@@ -71,7 +72,7 @@ public class Slf4jLoggerMarkerTest {
         // check file with all messages
         File allFile = U.resolveIgnitePath(LOG_ALL);
         assertNotNull(allFile);
-        String all = U.readFileToString(allFile.getPath(), "UTF-8");
+        String all = U.readFileToString(allFile.getPath(), Charset.defaultCharset().name());
 
         assertTrue(all.contains("[IGNORE_ME] Ignored error"));
         assertTrue(all.contains("[IGNORE_ME] Ignored warning"));
@@ -88,7 +89,7 @@ public class Slf4jLoggerMarkerTest {
         // check file with one marker filtered out
         File filteredFile = U.resolveIgnitePath(LOG_FILTERED);
         assertNotNull(filteredFile);
-        String filtered = U.readFileToString(filteredFile.getPath(), "UTF-8");
+        String filtered = U.readFileToString(filteredFile.getPath(), Charset.defaultCharset().name());
 
         assertFalse(filtered.contains("[IGNORE_ME] Ignored error"));
         assertFalse(filtered.contains("[IGNORE_ME] Ignored warning"));

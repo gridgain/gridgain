@@ -31,6 +31,7 @@ import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -847,7 +848,7 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
     public void testReadLine() throws Exception {
         OptimizedObjectInputStream in = new OptimizedObjectInputStream(new GridUnsafeDataInput());
 
-        byte[] bytes = "line1\nline2\r\nli\rne3\nline4".getBytes();
+        byte[] bytes = "line1\nline2\r\nli\rne3\nline4".getBytes(StandardCharsets.UTF_8);
 
         in.in().bytes(bytes, bytes.length);
 
