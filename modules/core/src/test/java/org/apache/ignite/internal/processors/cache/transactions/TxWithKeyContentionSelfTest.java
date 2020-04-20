@@ -56,8 +56,11 @@ import java.lang.management.ManagementFactory;
 import java.util.concurrent.CountDownLatch;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /** */
 public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
@@ -122,8 +125,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         super.beforeTest();
 
         stopAllGrids();
-
-        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -131,14 +132,55 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         super.afterTest();
 
         stopAllGrids();
-
-        cleanPersistenceDir();
     }
 
-    /** */
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void testKeyCollisionsMetric() throws Exception {
+    public void testPessimisticRepeatableReadRollbacksNoData() throws Exception {
+        testKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testPessimisticSerializableRollbacksNoData() throws Exception {
+        testKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testOptimisticSuspendedReadCommittedTxTimeoutRollbacks() throws Exception {
+        testKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testOptimisticSuspendedRepeatableReadTxTimeoutRollbacks() throws Exception {
+        testKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testOptimisticSuspendedSerializableTxTimeoutRollbacks() throws Exception {
+        testKeyCollisionsMetric(OPTIMISTIC, SERIALIZABLE);
+    }
+
+    /** Tests metric correct results while tx collisions occured. */
+    private void testKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         Ignite ig = startGridsMultiThreaded(3);
 
         int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 2;
@@ -185,7 +227,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         }
 
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
-            try (Transaction tx2 = txMgr.txStart(getConcurrency(), getIsolation())) {
+            try (Transaction tx2 = txMgr.txStart(concurrency, isolation)) {
                 cache0.put(keyId, 0);
                 tx2.commit();
             }
@@ -198,7 +240,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         for (int i = 1; i < contCnt; ++i) {
             int i0 = i;
             IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
-                try (Transaction tx = txMgr.txStart(getConcurrency(), getIsolation())) {
+                try (Transaction tx = txMgr.txStart(concurrency, isolation)) {
                     cache0.put(keyId, i0);
 
                     tx.commit();
