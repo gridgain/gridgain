@@ -318,6 +318,9 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
      */
     private boolean isValidForWriting;
 
+    /** */
+    private String txKeyCollisions;
+
     /**
      * Default constructor.
      */
@@ -427,6 +430,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         rebalanceStartTime = m.rebalancingStartTime();
         rebalanceFinishTime = m.estimateRebalancingFinishTime();
         rebalanceClearingPartitionsLeft = m.getRebalanceClearingPartitionsLeft();
+        txKeyCollisions = m.getTxKeyCollisions();
     }
 
     /**
@@ -1043,6 +1047,11 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return txKeyCollisions;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheMetricsSnapshotV2.class, this);
     }
@@ -1123,6 +1132,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         out.writeBoolean(isEmpty);
         out.writeInt(size);
         out.writeInt(keySize);
+        out.writeUTF(txKeyCollisions);
     }
 
     /** {@inheritDoc} */
@@ -1201,5 +1211,6 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         isEmpty = in.readBoolean();
         size = in.readInt();
         keySize = in.readInt();
+        txKeyCollisions = in.readUTF();
     }
 }

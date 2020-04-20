@@ -34,7 +34,13 @@ import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -201,6 +207,9 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Write-behind store, if configured. */
     private GridCacheWriteBehindStore store;
 
+    /** Tx collisions info. */
+    private Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> txKeyCollisionInfo;
+
     /**
      * Creates cache metrics.
      *
@@ -347,6 +356,8 @@ public class CacheMetricsImpl implements CacheMetrics {
         commitTime = mreg.histogram("CommitTime", HISTOGRAM_BUCKETS, "Commit time in nanoseconds.");
 
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
+
+        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions.");
     }
 
     /**
@@ -842,6 +853,38 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         if (delegate != null)
             delegate.onRead(isHit);
+    }
+
+    /** todo */
+    public void keyCollisionsInfo(Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> coll) {
+        txKeyCollisionInfo = coll;
+    }
+
+    /** todo */
+    public @Nullable Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> keyCollisionsInfo() {
+        return txKeyCollisionInfo;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        SB sb = null;
+
+        if (txKeyCollisionInfo != null) {
+            List<Map.Entry<GridCacheMapEntry, Integer>> result = txKeyCollisionInfo.get();
+
+            if (!result.isEmpty())
+                sb = new SB();
+
+            for (Map.Entry<GridCacheMapEntry, Integer> info : result) {
+                sb.a("key=");
+                sb.a(info.getKey());
+                sb.a(", queueSize=");
+                sb.a(info.getValue());
+                sb.a(U.nl());
+            }
+        }
+
+        return sb != null ? sb.toString() : "";
     }
 
     /**

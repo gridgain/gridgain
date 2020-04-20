@@ -20,6 +20,9 @@ import javax.cache.Cache;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.internal.processors.metric.impl.ObjectGauge;
+
+import java.util.Map;
 
 /**
  * Cache metrics used to obtain statistics on cache itself.
@@ -705,4 +708,11 @@ public interface CacheMetrics {
      * @return {@code true} when cache topology is valid for writing.
      */
     public boolean isValidForWriting();
+
+    /**
+     * Checks if there were any tx key collisions last time.
+     *
+     * @return String representation.
+     */
+    public String getTxKeyCollisions();
 }

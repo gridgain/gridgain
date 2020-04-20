@@ -1018,6 +1018,10 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
         return isValidForWriting;
     }
 
+    @Override public String getTxKeyCollisions() {
+        return null;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheMetricsSnapshot.class, this);

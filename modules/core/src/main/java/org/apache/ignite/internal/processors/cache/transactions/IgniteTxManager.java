@@ -31,6 +31,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
@@ -49,6 +51,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObjectsReleaseFuture;
+import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -59,7 +62,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWra
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.GridDeferredAckMessageSender;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.LongRunningTxTimeDumpSettingsClosure;
 import org.apache.ignite.internal.processors.cache.TxOwnerDumpRequestAllowedSettingClosure;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
@@ -99,7 +101,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteOutClosure;
@@ -189,6 +190,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** Collisions dump interval. */
     private volatile int collisionsDumpInterval =
         IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL,1000);
+
+    /** Lower tx collisions queue size threshold. */
+    static final int COLLISIONS_QUEUE_THRESHOLD = 100;
 
     /** Committing transactions. */
     private final ThreadLocal<IgniteInternalTx> threadCtx = new ThreadLocal<>();
@@ -299,7 +303,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }};
 
     /** Key collisions info holder. */
-    private KeyCollisionsDetector<GridCacheEntryEx, Integer> keyCollisionsInfo;
+    private KeyCollisionsHolder keyCollisionsInfo;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -373,8 +377,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         this.pendingTracker = new LocalPendingTransactionsTracker(cctx);
 
-        keyCollisionsInfo = new KeyCollisionsDetector<>();
-
         // todo gg-13416 unhardcode
         this.logTxRecords = IgniteSystemProperties.getBoolean(IGNITE_WAL_LOG_TX_RECORDS, false);
 
@@ -387,11 +389,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
 
-        if (!cctx.gridConfig().isClientMode())
+        if (!cctx.gridConfig().isClientMode()) {
+            keyCollisionsInfo = new KeyCollisionsHolder();
+
             scheduleDumpTask(
                 IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
                 this::collectTxCollisionsInfo,
                 collisionsDumpInterval);
+        }
     }
 
     /**
@@ -3036,21 +3041,23 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         );
     }
 
-    /** */
-    public void pushCollidingKeysWithQueueSize(GridCacheEntryEx key, int queueSize) {
+    /** Collect queue size per key collisions info. */
+    public void pushCollidingKeysWithQueueSize(GridCacheMapEntry key, int queueSize) {
         keyCollisionsInfo.put(key, queueSize);
     }
 
+    /** Wrapper for inner collect logic. */
     private void collectTxCollisionsInfo() {
         keyCollisionsInfo.collectInfo();
     }
 
     /**
-     * @param state tx State.
-     * */
+     * Check local and remote candidates queue size.
+     *
+     * @param entry CacheEntry.
+     * @param remoteSize Remore candidates size.
+     **/
     public void detectPossibleCollidingKeys(GridDistributedCacheEntry entry, int remoteSize) {
-        Collection<GridCacheMvccCandidate> locs;
-
         GridCacheEntryEx cached = entry;
 
         int qSize = 0;
@@ -3064,12 +3071,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         qSize += remoteSize;
 
-        if (qSize >= 5) // todo no need to limit here !!!
+        if (qSize >= COLLISIONS_QUEUE_THRESHOLD)
             pushCollidingKeysWithQueueSize(entry, qSize);
     }
 
-    /** */
-    private final class KeyCollisionsDetector<K, V> {
+    /** Tx key collisions info holder. */
+    private static final class KeyCollisionsHolder {
         /** Stripes count. */
         private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
 
@@ -3080,14 +3087,18 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         private final Object[] stripeLocks = new Object[STRIPES_COUNT];
 
         /** Store per stripe. */
-        private final Map<K, V> stores[] = new LinkedHashMap[STRIPES_COUNT];
+        private final Map<GridCacheMapEntry, Integer> stores[] = new LinkedHashMap[STRIPES_COUNT];
+
+        /** Metric per cache store. */
+        private final Map<GridCacheAdapter<?, ?>, List<Map.Entry<GridCacheMapEntry, Integer>>> metricPerCacheStore =
+            new HashMap<>();
 
         /** Constructor. */
-        private KeyCollisionsDetector() {
+        private KeyCollisionsHolder() {
             for (int i = 0; i < STRIPES_COUNT; ++i) {
-                stores[i] = new LinkedHashMap<K, V>() {
+                stores[i] = new LinkedHashMap<GridCacheMapEntry, Integer>() {
                     /** */
-                    @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                    @Override protected boolean removeEldestEntry(Map.Entry<GridCacheMapEntry, Integer> eldest) {
                         return size() > MAX_OBJS;
                     }
                 };
@@ -3100,7 +3111,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
          * @param key Key to store.
          * @param val Value to store.
          **/
-        public void put(K key, V val) {
+        public void put(GridCacheMapEntry key, Integer val) {
             int stripeIdx = key.hashCode() & (STRIPES_COUNT - 1);
 
             synchronized (stripeLocks[stripeIdx]) {
@@ -3110,32 +3121,48 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         /** Print hot keys info. */
         private void collectInfo() {
-            SB sb = null;
+            synchronized (metricPerCacheStore) {
+                metricPerCacheStore.clear();
+            }
 
             for (int i = 0; i < STRIPES_COUNT; ++i) {
                 synchronized (stripeLocks[i]) {
-                    Map<K, V> store = stores[i];
+                    Map<GridCacheMapEntry, Integer> store = stores[i];
 
                     if (store.isEmpty())
                         continue;
 
-                    if (sb == null)
-                        sb = new SB("Collisions found:" + U.nl());
+                    for (Map.Entry<GridCacheMapEntry, Integer> info : store.entrySet()) {
+                        GridCacheAdapter<Object, Object> cacheCtx = info.getKey().context().cache();
 
-                    for (Map.Entry<K, V> info : store.entrySet()) {
-                        sb.a("key=");
-                        sb.a(info.getKey());
-                        sb.a(", queueSize=");
-                        sb.a(info.getValue());
-                        sb.a(U.nl());
+                        synchronized (metricPerCacheStore) {
+                            metricPerCacheStore.computeIfAbsent(cacheCtx, k -> new ArrayList<>()).add(info);
+                        }
                     }
 
                     store.clear();
                 }
             }
 
-            if (sb != null)
-                log.warning(sb.toString());
+            synchronized (metricPerCacheStore) {
+                metricPerCacheStore.forEach((k, v) -> {
+                    if (k.metrics0().keyCollisionsInfo() == null) {
+                        k.metrics0().keyCollisionsInfo(
+                            new Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>>() {
+                                @Override public List<Map.Entry<GridCacheMapEntry, Integer>> get() {
+                                    List<Map.Entry<GridCacheMapEntry, Integer>> ret;
+
+                                    synchronized (metricPerCacheStore) {
+                                        ret = metricPerCacheStore.get(k);
+                                    }
+
+                                    return ret;
+                                }
+                            }
+                        );
+                    }
+                });
+            }
         }
     }
 
