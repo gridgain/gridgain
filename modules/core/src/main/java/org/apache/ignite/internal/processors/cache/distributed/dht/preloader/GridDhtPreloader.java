@@ -70,8 +70,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
     /** Disable rebalancing cancellation optimization. */
-    private final boolean disableRebalancingCancellationOptimization = IgniteSystemProperties.getBoolean(
-        IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
+    private final boolean disableRebalancingCancellationOptimization =
+        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
 
     /** */
     private GridDhtPartitionTopology top;
