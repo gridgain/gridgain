@@ -381,6 +381,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** This future finished with 'cluster is fully rebalanced' state. */
     private volatile boolean rebalanced;
 
+    /** Some of owned by affinity partitions were changed state to moving on this exchange. */
+    private volatile boolean affinityReassign;
+
     /**
      * @param cctx Cache context.
      * @param busyLock Busy lock.
@@ -5181,6 +5184,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         rebalanced = true;
     }
+
+    /**
+     * Marks this future as affinity reassign.
+     */
+    public void markAffinityReassign() {
+        affinityReassign = true;
+    }
+
+    /**
+     * @return True if some owned partition was reassigned, false otherwise.
+     */
+    public boolean affinityReassign() {
+        return affinityReassign;
+    }
+
+
 
     /**
      * Add or merge updates received from coordinator while exchange in progress.
