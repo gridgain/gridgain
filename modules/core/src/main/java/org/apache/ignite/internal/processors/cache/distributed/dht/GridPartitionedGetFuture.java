@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridLeanMap;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -148,16 +149,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
             topVer = topVer.topologyVersion() > 0 ? topVer : cctx.affinity().affinityTopologyVersion();
         }
 
-        initialMap(topVer);
-    }
-
-    /**
-     * @param topVer Topology version.
-     */
-    private void initialMap(AffinityTopologyVersion topVer) {
         map(keys, Collections.emptyMap(), topVer);
-
-        markInitialized();
     }
 
     /** {@inheritDoc} */
@@ -200,8 +192,13 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                         if (fut.error() != null)
                             onDone(fut.error());
-                        else
-                            map(keys, mapped, topVer);
+                        else {
+                            cctx.closures().runLocalSafe(new GridPlainRunnable() {
+                                @Override public void run() {
+                                    map(keys, mapped, topVer);
+                                }
+                            }, true);
+                        }
                     }
                 });
 
@@ -326,6 +323,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                 }
             }
         }
+
+        markInitialized();
     }
 
     /**

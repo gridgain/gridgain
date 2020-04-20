@@ -259,8 +259,13 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                         if (fut.error() != null)
                             onDone(fut.error());
-                        else
-                            map(topVer);
+                        else {
+                            cctx.closures().runLocalSafe(new GridPlainRunnable() {
+                                @Override public void run() {
+                                    map(topVer);
+                                }
+                            }, true);
+                        }
                     }
                 });
 
