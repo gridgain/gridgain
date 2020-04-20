@@ -87,20 +87,17 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
 
+    /** Management configuration instance. */
+    private ManagementConfiguration cfg = new ManagementConfiguration();
+
     /** Websocket manager. */
     protected WebSocketManager mgr;
 
     /** Cluster processor. */
     protected ClusterInfoProcessor clusterProc;
 
-    /** Actions dispatcher. */
-    private ActionDispatcher actDispatcher;
-
-    /** Cache processor. */
-    private CacheChangesProcessor cacheProc;
-
-    /** Distributed action processor. */
-    private DistributedActionProcessor distributedActProc;
+    /** Span exporter. */
+    private SpanExporter spanExporter;
 
     /** Events exporter. */
     private EventsExporter evtsExporter;
@@ -111,14 +108,17 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     /** Metric processor. */
     private MetricsProcessor metricProc;
 
+    /** Actions dispatcher. */
+    private ActionDispatcher actDispatcher;
+
+    /** Distributed action processor. */
+    private DistributedActionProcessor distributedActProc;
+
     /** Topic processor. */
     private ManagementConsoleMessagesProcessor messagesProc;
 
-    /** Session registry. */
-    private SessionRegistry sesRegistry;
-
-    /** Span exporter. */
-    private SpanExporter spanExporter;
+    /** Cache processor. */
+    private CacheChangesProcessor cacheProc;
 
     /** Execute service. */
     private ExecutorService connectPool;
@@ -126,8 +126,8 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     /** Meta storage. */
     private DistributedMetaStorage metaStorage;
 
-    /** Management configuration instance. */
-    private ManagementConfiguration cfg = new ManagementConfiguration();
+    /** Session registry. */
+    private SessionRegistry sesRegistry;
 
     /** Active server URI. */
     private String curSrvUri;
