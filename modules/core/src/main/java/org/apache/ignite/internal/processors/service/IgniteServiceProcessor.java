@@ -239,26 +239,37 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        opsLock.writeLock().lock();
+        IgniteInternalFuture<?> fut = null;
 
+        opsLock.writeLock().lock();
         try {
             if (disconnected)
                 return;
 
-            stopProcessor(new IgniteCheckedException("Operation has been cancelled (node is stopping)."));
+            fut = stopProcessor(new IgniteCheckedException("Operation has been cancelled (node is stopping)."));
         }
         finally {
             opsLock.writeLock().unlock();
+
+            if (fut != null) {
+                try {
+                    fut.get();
+                }
+                catch (IgniteCheckedException e) {
+                    log.error("Failed to wait for IgniteServiceProcessor stop future.", e);
+                }
+            }
         }
     }
 
     /**
      * @param stopError Error to shutdown resources.
+     * @return Future that you should not wait for while holding "opsLock.writeLock()".
      */
-    private void stopProcessor(IgniteCheckedException stopError) {
+    private IgniteInternalFuture<?> stopProcessor(IgniteCheckedException stopError) {
         assert opsLock.isWriteLockedByCurrentThread();
 
-        depMgr.stopProcessing(stopError);
+        IgniteInternalFuture<?> stopFut = depMgr.stopProcessing(stopError);
 
         cancelDeployedServices();
 
@@ -279,6 +290,8 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
 
         if (log.isDebugEnabled())
             log.debug("Stopped service processor.");
+
+        return stopFut;
     }
 
     /**
@@ -421,19 +434,29 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
         assert !disconnected;
 
-        opsLock.writeLock().lock();
+        IgniteInternalFuture<?> fut = null;
 
+        opsLock.writeLock().lock();
         try {
             if (ctx.isStopping())
                 return;
 
             disconnected = true;
 
-            stopProcessor(new IgniteClientDisconnectedCheckedException(
+            fut = stopProcessor(new IgniteClientDisconnectedCheckedException(
                 ctx.cluster().clientReconnectFuture(), "Client node disconnected, the operation's result is unknown."));
         }
         finally {
             opsLock.writeLock().unlock();
+
+            if (fut != null) {
+                try {
+                    fut.get();
+                }
+                catch (IgniteCheckedException e) {
+                    log.error("Failed to wait for IgniteServiceProcessor stop future.", e);
+                }
+            }
         }
     }
 
