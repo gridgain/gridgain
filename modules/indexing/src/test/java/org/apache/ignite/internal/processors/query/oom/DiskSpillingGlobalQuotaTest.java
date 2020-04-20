@@ -24,7 +24,6 @@ import java.nio.file.WatchService;
 import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.SqlConfiguration;
 import org.junit.Test;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
