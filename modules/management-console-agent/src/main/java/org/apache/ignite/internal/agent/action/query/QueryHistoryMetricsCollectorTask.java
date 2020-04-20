@@ -41,7 +41,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
-import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
+import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SCAN;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 
 /**
@@ -116,8 +116,7 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
                 .map(cacheProc::cache)
                 .filter(cache -> cache != null && cache.context().started())
                 .flatMap(cache -> cache.context().queries().detailMetrics().stream())
-                .filter(m -> m.lastStartTime() > since)
-                .filter(m -> m.key().getQueryType() != SQL || m.key().getQueryType() != SQL_FIELDS);
+                .filter(m -> m.lastStartTime() > since && m.key().getQueryType() == SCAN);
 
             if (indexing instanceof IgniteH2Indexing) {
                 Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)indexing)
