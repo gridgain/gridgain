@@ -113,12 +113,14 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      * Ctor.
      *
      * @param ctx Kernal context.
+     * @param ses Client's NIO session.
      * @param connId Connection ID.
      * @param maxCursors Max active cursors.
      * @param thinCfg Thin-client configuration.
      */
-    public ClientConnectionContext(GridKernalContext ctx, long connId, int maxCursors, ThinClientConfiguration thinCfg) {
-        super(ctx, connId);
+    public ClientConnectionContext(GridKernalContext ctx, GridNioSession ses, long connId, int maxCursors,
+        ThinClientConfiguration thinCfg) {
+        super(ctx, ses, connId);
 
         this.maxCursors = maxCursors;
         maxActiveTxCnt = thinCfg.getMaxActiveTxPerConnection();
@@ -174,6 +176,8 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
         }
 
         AuthorizationContext authCtx = authenticate(ses.certificates(), user, pwd);
+
+        initClientDescriptor("cli");
 
         currentVer = ver;
 

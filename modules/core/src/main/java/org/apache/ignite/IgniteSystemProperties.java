@@ -39,6 +39,7 @@ import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -1004,7 +1005,7 @@ public final class IgniteSystemProperties {
      * If last rebalance is equivalent with new possible one, new rebalance does not trigger.
      * Set the property {@code true} and each exchange will try to trigger new rebalance.
      *
-     * Default is {@code true}.
+     * Default is {@code false}.
      */
     public static final String IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION = "IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION";
 
@@ -1315,13 +1316,6 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
 
-    /** Enable write rebalnce statistics into log. Default: false */
-    public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
-
-    /**  Enable write rebalnce statistics by partitions into log. Default: false */
-    public static final String IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS =
-        "IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS";
-
     /**
      * Threshold timeout for long transactions, if transaction exceeds it, it will be dumped in log with
      * information about how much time did it spent in system time (time while aquiring locks, preparing,
@@ -1383,6 +1377,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
 
     /**
+     * Time threshold (in milliseconds) of rebalance after which partition
+     * distribution will be present in rebalance statistics.
+     * Default value is {@code 10} min.
+     */
+    public static final String IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD =
+        "IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD";
+
+    /**
      * Choose the index cost function. May be used to compatibility with old version
      * .
      * The possible values:
@@ -1393,6 +1395,14 @@ public final class IgniteSystemProperties {
      * The last cost function is used by default.
      */
     public static final String IGNITE_INDEX_COST_FUNCTION = "IGNITE_INDEX_COST_FUNCTION";
+
+    /**
+     * Enables setting attribute value of {@link
+     * TcpCommunicationSpi#ATTR_HOST_NAMES ATTR_HOST_NAMES} when value {@link
+     * IgniteConfiguration#getLocalHost getLocalHost} is ip, for backward
+     * compatibility. By default, {@code false}.
+     */
+    public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
 
     /**
      * Enforces singleton.
@@ -1432,7 +1442,12 @@ public final class IgniteSystemProperties {
         if (val == null)
             return dflt;
 
-        return Enum.valueOf(enumCls, val);
+        try {
+            return Enum.valueOf(enumCls, val);
+        }
+        catch (IllegalArgumentException ignore) {
+            return dflt;
+        }
     }
 
     /**

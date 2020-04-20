@@ -986,6 +986,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         qry.setNestedTxMode(nestedTxMode);
         qry.setSchema(schemaName);
         qry.setMaxMemory(cliCtx.maxMemory());
+        qry.setQueryInitiatorId(connCtx.clientDescriptor());
 
         if (cliCtx.updateBatchSize() != null)
             qry.setUpdateBatchSize(cliCtx.updateBatchSize());
@@ -1009,7 +1010,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     qry.getSchema(),
                     cliCtx,
                     qry.getSql(),
-                    qry.batchedArguments()
+                    qry.batchedArguments(),
+                    connCtx.clientDescriptor()
                 );
 
                 for (int i = 0; i < cnt.size(); i++)
@@ -1493,17 +1495,20 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return Node time zome identifier.
      */
     private String nodeTimeZoneId() {
-        return TimeZone.getDefault().getID();
+        if (connCtx.kernalContext().query().moduleEnabled())
+            return connCtx.kernalContext().query().getIndexing().clusterTimezone().getID();
+        else
+            return TimeZone.getDefault().getID();
     }
 
     /**
-     * @param partResRequested Boolean flag that signals whether client requested partiton result.
-     * @param partRes Direved partition result.
-     * @return True if applicable to jdbc thin client side Partition Awareness:
-     *   1. Partitoin result was requested;
+     * @param partResRequested Boolean flag that signals whether client requested partition result.
+     * @param partRes Derived partition result.
+     * @return True if applicable to JDBC thin client side Partition Awareness:
+     *   1. Partition result was requested;
      *   2. Partition result either null or
      *     a. Rendezvous affinity function without map filters was used;
-     *     b. Partition result tree neither PartitoinAllNode nor PartitionNoneNode;
+     *     b. Partition result tree neither PartitionAllNode nor PartitionNoneNode;
      */
     private static boolean isClientPartitionAwarenessApplicable(boolean partResRequested, PartitionResult partRes) {
         return partResRequested && (partRes == null || partRes.isClientPartitionAwarenessApplicable());

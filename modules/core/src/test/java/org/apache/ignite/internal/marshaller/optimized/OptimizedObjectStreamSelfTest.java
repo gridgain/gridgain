@@ -31,6 +31,7 @@ import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -847,7 +848,7 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
     public void testReadLine() throws Exception {
         OptimizedObjectInputStream in = new OptimizedObjectInputStream(new GridUnsafeDataInput());
 
-        byte[] bytes = "line1\nline2\r\nli\rne3\nline4".getBytes();
+        byte[] bytes = "line1\nline2\r\nli\rne3\nline4".getBytes(StandardCharsets.UTF_8);
 
         in.in().bytes(bytes, bytes.length);
 
@@ -1025,7 +1026,9 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testReadToArray() throws Exception {
-        OptimizedObjectInputStream in = OptimizedObjectStreamRegistry.in();
+        OptimizedObjectStreamRegistry reg = new OptimizedObjectSharedStreamRegistry();
+
+        OptimizedObjectInputStream in = reg.in();
 
         try {
             byte[] arr = new byte[50];
@@ -1064,7 +1067,7 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
                 assertEquals(i < 10 ? 40 + i : 0, buf[i]);
         }
         finally {
-            OptimizedObjectStreamRegistry.closeIn(in);
+            reg.closeIn(in);
         }
     }
 
@@ -1177,8 +1180,10 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
         OptimizedObjectOutputStream out = null;
         OptimizedObjectInputStream in = null;
 
+        OptimizedObjectStreamRegistry reg = new OptimizedObjectSharedStreamRegistry();
+
         try {
-            out = OptimizedObjectStreamRegistry.out();
+            out = reg.out();
 
             out.context(clsMap, CTX, null, true);
 
@@ -1186,7 +1191,7 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
 
             byte[] arr = out.out().array();
 
-            in = OptimizedObjectStreamRegistry.in();
+            in = reg.in();
 
             in.context(clsMap, CTX, null, getClass().getClassLoader());
 
@@ -1199,8 +1204,8 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
             return (T)obj0;
         }
         finally {
-            OptimizedObjectStreamRegistry.closeOut(out);
-            OptimizedObjectStreamRegistry.closeIn(in);
+            reg.closeOut(out);
+            reg.closeIn(in);
         }
     }
 
@@ -1209,10 +1214,8 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
      *
      * @param out Output stream.
      * @param in Input stream.
-     * @throws Exception If failed.
      */
-    private void checkHandles(OptimizedObjectOutputStream out, OptimizedObjectInputStream in)
-        throws Exception {
+    private void checkHandles(OptimizedObjectOutputStream out, OptimizedObjectInputStream in) {
         Object[] outHandles = out.handledObjects();
         Object[] inHandles = in.handledObjects();
 

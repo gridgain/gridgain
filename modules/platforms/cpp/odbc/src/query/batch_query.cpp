@@ -26,7 +26,7 @@ namespace ignite
     {
         namespace query
         {
-            BatchQuery::BatchQuery(diagnostic::Diagnosable& diag, Connection& connection, const std::string& sql,
+            BatchQuery::BatchQuery(diagnostic::DiagnosableAdapter& diag, Connection& connection, const std::string& sql,
                 const app::ParameterSet& params, int32_t& timeout) :
                 Query(diag, QueryType::BATCH),
                 connection(connection),
@@ -74,9 +74,9 @@ namespace ignite
                 return res;
             }
 
-            const meta::ColumnMetaVector& BatchQuery::GetMeta() const
+            const meta::ColumnMetaVector* BatchQuery::GetMeta()
             {
-                return resultMeta;
+                return &resultMeta;
             }
 
             SqlResult::Type BatchQuery::FetchNextRow(app::ColumnBindingMap& columnBindings)
@@ -169,7 +169,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                    diag.AddStatusRecord(err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }

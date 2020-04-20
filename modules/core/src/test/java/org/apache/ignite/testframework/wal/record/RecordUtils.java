@@ -564,4 +564,14 @@ public class RecordUtils {
     public static ConsistentCutRecord buildConsistentCutRecord() {
         return new ConsistentCutRecord();
     }
+
+    /**
+     * Return {@code true} if include to write-ahead log.
+     *
+     * @param walRecord Instance of {@link WALRecord}.
+     * @return {@code True} if include to write-ahead log.
+     */
+    public static boolean isIncludeIntoLog(WALRecord walRecord) {
+        return !UnsupportedWalRecord.class.isInstance(walRecord) && !SwitchSegmentRecord.class.isInstance(walRecord);
+    }
 }
