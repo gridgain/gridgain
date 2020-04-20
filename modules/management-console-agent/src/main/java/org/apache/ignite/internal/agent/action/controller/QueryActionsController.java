@@ -93,20 +93,12 @@ public class QueryActionsController {
      * @param globalQryId Global query id.
      * @return Kill query result.
      */
-    public IgniteInternalFuture<QueryResult> kill(String globalQryId) {
-        return ctx.closure().callLocalSafe(() -> {
-            SqlFieldsQuery qryFields = new SqlFieldsQuery("KILL QUERY '" + globalQryId + "';");
+    public IgniteInternalFuture<?> kill(String globalQryId) {
+        return ctx.closure().runLocalSafe(() -> {
+            SqlFieldsQuery qryFields = new SqlFieldsQuery("KILL QUERY '" + globalQryId + "';")
+                .setLazy(false);
 
-            try (
-                FieldsQueryCursor<List<?>> cur = qryProc.querySqlFields(qryFields, true);
-                CursorHolder cursorHolder = new CursorHolder(cur)
-            ) {
-                QueryResult res = fetchSqlQueryResult(cursorHolder, 1);
-
-                res.setResultNodeId(ctx.localNodeId().toString());
-
-                return res;
-            }
+            qryProc.querySqlFields(qryFields, true).close();
         }, MANAGEMENT_POOL);
     }
 

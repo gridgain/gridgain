@@ -23,7 +23,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Descriptor of running query.
  */
 public class RunningQuery {
-    /** ID. */
+    /** Query ID. */
     private long id;
 
     /** Global query ID. */
