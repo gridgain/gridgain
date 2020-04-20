@@ -1805,7 +1805,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Gets timeout in milliseconds after which long query warning will be printed.
      *
      * @return Timeout in milliseconds.
-     * @deprecated Use {@link IgniteConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
      */
     @Deprecated
     public long getLongQueryWarningTimeout() {
@@ -1817,7 +1817,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
-     * @deprecated Use {@link IgniteConfiguration#setLongQueryWarningTimeout(long)} instead.
+     * @deprecated Use {@link SqlConfiguration#setLongQueryWarningTimeout(long)} instead.
      */
     @Deprecated
     public CacheConfiguration<K, V> setLongQueryWarningTimeout(long longQryWarnTimeout) {

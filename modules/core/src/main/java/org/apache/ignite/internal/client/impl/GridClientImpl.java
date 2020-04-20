@@ -478,9 +478,13 @@ public class GridClientImpl implements GridClient {
                         connSrvs.addAll(resolvedEndpoints);
                     }
                     else {
-                        for (InetSocketAddress endpoint : resolvedEndpoints)
+                        for (InetSocketAddress endpoint : resolvedEndpoints) {
                             if (!endpoint.getAddress().isLoopbackAddress())
                                 connSrvs.add(endpoint);
+                        }
+
+                        if (connSrvs.isEmpty())
+                            connSrvs.addAll(resolvedEndpoints);
                     }
                 }
             }

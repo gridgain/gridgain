@@ -51,6 +51,13 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-clients</artifactId>
             <version>${project.version}</version>
         </dependency>
