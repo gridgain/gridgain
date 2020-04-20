@@ -670,6 +670,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 exchId = exchangeId(n.id(), affinityTopologyVersion(evt), evt);
 
                 exchFut = exchangeFuture(exchId, evt, null, null, null);
+
+                exchFut.listen(fut ->
+                    cctx.exchange().forceRebalance(((GridDhtPartitionsExchangeFuture)fut).exchangeId()));
             }
             else if (customMsg instanceof WalStateAbstractMessage
                 && ((WalStateAbstractMessage)customMsg).needExchange()) {
