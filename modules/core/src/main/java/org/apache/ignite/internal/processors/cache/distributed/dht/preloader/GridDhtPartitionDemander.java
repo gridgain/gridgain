@@ -1743,6 +1743,14 @@ public class GridDhtPartitionDemander {
                 return false;
             }
 
+            if (otherAssignments.affinityReassign()) {
+                if (log.isDebugEnabled())
+                    log.debug("Some of owned partitions were reassigned through coordinator [grp="
+                        + grp.cacheOrGroupName() + ", " + "init=" + topVer + " ,other=" + otherAssignments.topologyVersion() + ']');
+
+                return false;
+            }
+
             Set<Integer> p0 = new HashSet<>();
             Set<Integer> p1 = new HashSet<>();
 
