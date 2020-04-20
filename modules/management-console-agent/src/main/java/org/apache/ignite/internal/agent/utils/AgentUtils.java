@@ -246,7 +246,7 @@ public final class AgentUtils {
             return (T)mgrCls.getConstructor(paramTypes).newInstance(args);
         }
         catch (Exception ex) {
-            U.warn(log, ex.getMessage(), ex);
+            U.warn(log, "Failed to initialize GridGain Control Center agent processor: " + clsName, ex);
         }
 
         return null;
