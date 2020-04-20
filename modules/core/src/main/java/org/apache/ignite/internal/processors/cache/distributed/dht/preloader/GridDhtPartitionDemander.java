@@ -1741,6 +1741,15 @@ public class GridDhtPartitionDemander {
                 return false;
             }
 
+            if (assignments.affinityReassign()) {
+                if (log.isDebugEnabled())
+                    log.debug("Some of owned partitions were reassigned through coordinator [grp="
+                        + grp.cacheOrGroupName() + ", " + "top=" + topVer + ']');
+
+                return false;
+            }
+
+
             Set<Integer> p0 = new HashSet<>();
             Set<Integer> p1 = new HashSet<>();
 
