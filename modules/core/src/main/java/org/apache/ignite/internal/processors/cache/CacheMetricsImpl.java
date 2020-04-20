@@ -671,6 +671,8 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         if (delegate != null)
             delegate.clear();
+
+        txKeyCollisionInfo = null;
     }
 
     /** {@inheritDoc} */

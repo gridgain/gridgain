@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -72,6 +73,9 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
     /** Persistence. */
     private boolean persistence;
+
+    /** Use test spi flag.  */
+    private boolean useTestCommSpi;
 
     /**
      * @throws Exception If failed.
@@ -505,6 +509,9 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
 
         cfg.setCacheConfiguration(cacheCfg);
+
+        if (useTestCommSpi)
+            cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         if (persistence)
             cfg.setDataStorageConfiguration(new DataStorageConfiguration()

@@ -3092,7 +3092,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         /** Metric per cache store. */
         private final Map<GridCacheAdapter<?, ?>, List<Map.Entry<GridCacheMapEntry, Integer>>> metricPerCacheStore =
-            new HashMap<>();
+            new ConcurrentHashMap<>();
 
         /** Guard. */
         AtomicBoolean alreadyRun = new AtomicBoolean();
