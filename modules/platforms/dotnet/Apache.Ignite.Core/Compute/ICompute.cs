@@ -340,7 +340,7 @@ namespace Apache.Ignite.Core.Compute
             CancellationToken cancellationToken);
 
         /// <summary>
-        /// Executes given job on the primary node for the specified partition.
+        /// Executes given job on the node where data for provided partition is located.
         /// </summary>
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
         /// The first cache is used for affinity co-location.</param>
@@ -351,7 +351,7 @@ namespace Apache.Ignite.Core.Compute
         TRes AffinityCall<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> func);
 
         /// <summary>
-        /// Executes given job on the primary node for the specified partition.
+        /// Executes given job on the node where data for provided partition is located.
         /// </summary>
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
         /// The first cache is used for affinity co-location.</param>
@@ -362,7 +362,7 @@ namespace Apache.Ignite.Core.Compute
         Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> func);
 
         /// <summary>
-        /// Executes given job on the primary node for the specified partition.
+        /// Executes given job on the node where data for provided partition is located.
         /// </summary>
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
         /// The first cache is used for affinity co-location.</param>
@@ -569,7 +569,7 @@ namespace Apache.Ignite.Core.Compute
             CancellationToken cancellationToken);
         
         /// <summary>
-        /// Executes given job on primary node for the given partition.
+        /// Executes given job on the node where data for provided partition is located
         /// (a.k.a. affinity co-location).
         /// </summary>
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
@@ -579,7 +579,7 @@ namespace Apache.Ignite.Core.Compute
         void AffinityRun(IEnumerable<string> cacheNames, int partition, IComputeAction action);
 
         /// <summary>
-        /// Executes given job on primary node for the given partition.
+        /// Executes given job on the node where data for provided partition is located
         /// (a.k.a. affinity co-location).
         /// </summary>
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
@@ -589,7 +589,7 @@ namespace Apache.Ignite.Core.Compute
         Task AffinityRunAsync(IEnumerable<string> cacheNames, int partition, IComputeAction action);
 
         /// <summary>
-        /// Executes given job on primary node for the given partition.
+        /// Executes given job on the node where data for provided partition is located
         /// (a.k.a. affinity co-location).
         /// </summary>
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
