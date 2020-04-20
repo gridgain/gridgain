@@ -188,8 +188,10 @@ namespace Apache.Ignite.Core.Tests.Deployment
 
             // Start separate Ignite process without loading current dll.
             // ReSharper disable once AssignNullToNotNullAttribute
-            var config = Path.Combine(Path.GetDirectoryName(typeof(PeerAssemblyLoadingTest).Assembly.Location),
-                "Deployment\\peer_assembly_app.config");
+            var config = Path.Combine(
+                Path.GetDirectoryName(typeof(PeerAssemblyLoadingTest).Assembly.Location),
+                "Deployment",
+                "peer_assembly_app.config");
 
             var proc = IgniteProcess.Start(exePath, IgniteHome.Resolve(), null,
                 "-ConfigFileName=" + config, "-ConfigSectionName=igniteConfiguration");
