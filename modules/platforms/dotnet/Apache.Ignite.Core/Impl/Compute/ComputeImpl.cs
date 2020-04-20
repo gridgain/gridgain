@@ -34,6 +34,7 @@ namespace Apache.Ignite.Core.Impl.Compute
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Compute.Closure;
+    using Apache.Ignite.Core.Impl.Deployment;
 
     /// <summary>
     /// Compute implementation.
@@ -548,7 +549,7 @@ namespace Apache.Ignite.Core.Impl.Compute
                         w.WriteObjectDetached(key);
                     }
 
-                    w.WriteObject(func);
+                    w.WriteWithPeerDeployment(func);
                     w.WriteLong(handle);
                 });
 
