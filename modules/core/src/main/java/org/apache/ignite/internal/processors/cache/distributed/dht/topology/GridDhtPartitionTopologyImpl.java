@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.GridAtomicLong;
@@ -2810,10 +2811,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         ", grp=" + grp.cacheOrGroupName() + "]");
                 }
 
-                // We should not force rebalancing here, otherwise a race is possible when single messages with partition
-                // states are send to coordinator after partitions are owned on checkpoint and forced rebalancing starts on
-                // the same topology and begins to send single message after each group rebalancing completion.
-                // This can trigger preliminary late affinity switching before forced rebalancing is completed.
+                if (!((GridDhtPreloader)grp.preloader()).disableRebalancingCancellationOptimization())
+                    grp.preloader().forceRebalance();
 
                 return;
             }

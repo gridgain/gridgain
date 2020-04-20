@@ -1662,9 +1662,12 @@ public class GridDhtPartitionDemander {
                 }
 
                 if (!m.isEmpty()) {
-                    U.log(log, ("Reassigning partitions that were missed: " + m));
+                    U.log(log, "Reassigning partitions that were missed [parts=" + m +
+                        ", grpId=" + grp.groupId() +
+                        ", grpName=" + grp.cacheOrGroupName() +
+                        ", topVer=" + topVer + ']');
 
-                    onDone(false); //Finished but has missed partitions, will force dummy exchange
+                    onDone(false); // Finished but has missed partitions, will force dummy exchange
 
                     ctx.exchange().forceReassign(exchId);
 

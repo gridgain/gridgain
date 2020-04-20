@@ -19,8 +19,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -379,9 +379,11 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
 
         startGrid("client");
 
+        assertFalse(grid(1).cache(CACHE2_NAME).lostPartitions().isEmpty());
+
         fileIoBlockingSemaphore.release(Integer.MAX_VALUE);
 
-        ig0.resetLostPartitions(Arrays.asList(CACHE1_NAME, CACHE2_NAME, CACHE3_NAME));
+        ig0.resetLostPartitions(Collections.singleton(CACHE2_NAME));
 
         awaitPartitionMapExchange();
 
