@@ -665,10 +665,24 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M3</version>
+                <version>3.0.0-M4</version>
                 <configuration>
                     <forkCount>0</forkCount>
+                    <statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>org.apache.ignite.tools.junit.JUnitTeamcityReporter</value>
+                        </property>
+                    </properties>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.gridgain</groupId>
+                        <artifactId>ignite-tools</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>

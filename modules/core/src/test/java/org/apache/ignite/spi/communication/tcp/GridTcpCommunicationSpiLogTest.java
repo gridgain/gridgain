@@ -167,7 +167,6 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
 
         LogListener logLsnr2 = LogListener.matches("The client was removed")
             .atLeast(1)
-            .atMost(1)
             .build();
 
         LogListener logLsnr3 = LogListener.matches("The node client was replaced")
