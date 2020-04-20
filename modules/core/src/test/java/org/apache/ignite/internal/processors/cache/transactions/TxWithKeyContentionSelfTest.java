@@ -31,8 +31,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.G;
@@ -60,7 +60,6 @@ import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
-import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /** */
 public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
@@ -139,7 +138,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void testPessimisticRepeatableReadRollbacksNoData() throws Exception {
+    public void testPessimisticRepeatableReadCheckContentionTxMetric() throws Exception {
         testKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
     }
 
@@ -148,7 +147,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void testPessimisticSerializableRollbacksNoData() throws Exception {
+    public void testPessimisticReadCommitedCheckContentionTxMetric() throws Exception {
         testKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
     }
 
@@ -157,7 +156,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void testOptimisticSuspendedReadCommittedTxTimeoutRollbacks() throws Exception {
+    public void testOptimisticReadCommittedCheckContentionTxMetric() throws Exception {
         testKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
     }
 
@@ -166,24 +165,15 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void testOptimisticSuspendedRepeatableReadTxTimeoutRollbacks() throws Exception {
+    public void testOptimisticRepeatableReadCheckContentionTxMetric() throws Exception {
         testKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
-    public void testOptimisticSuspendedSerializableTxTimeoutRollbacks() throws Exception {
-        testKeyCollisionsMetric(OPTIMISTIC, SERIALIZABLE);
     }
 
     /** Tests metric correct results while tx collisions occured. */
     private void testKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         Ignite ig = startGridsMultiThreaded(3);
 
-        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 2;
+        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 10;
 
         ig.cluster().active(true);
 
@@ -204,7 +194,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         CountDownLatch startOneKeyTx = new CountDownLatch(1);
 
-        CountDownLatch neadLockReq = new CountDownLatch(contCnt);
+        CountDownLatch nearLockReq = new CountDownLatch(contCnt);
 
         for (Ignite ig0 : G.allGrids()) {
             TestRecordingCommunicationSpi commSpi0 =
@@ -212,14 +202,14 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
             commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
-                    if (msg instanceof GridDhtTxFinishRequest)
+                    if (msg instanceof GridNearTxFinishResponse)
                         return true;
 
                     if (msg instanceof GridNearTxPrepareResponse)
                         startOneKeyTx.countDown();
 
-                    if (msg instanceof GridNearLockRequest)
-                        neadLockReq.countDown();
+                    if (msg instanceof GridNearTxFinishRequest)
+                        nearLockReq.countDown();
 
                     return false;
                 }
@@ -252,7 +242,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         finishFut.markInitialized();
 
-        neadLockReq.await();
+        nearLockReq.await();
 
         for (Ignite ig0 : G.allGrids()) {
             TestRecordingCommunicationSpi commSpi0 =
@@ -275,7 +265,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         assertEquals(coll1, coll2);
 
         assertTrue(coll1.contains("queueSize"));
-
         f.get();
 
         finishFut.get();
