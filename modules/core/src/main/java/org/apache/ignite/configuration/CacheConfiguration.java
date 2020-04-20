@@ -55,6 +55,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
@@ -258,8 +259,8 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Near cache configuration. */
     private NearCacheConfiguration<K, V> nearCfg;
 
-    /** Platform near cache configuration. Enables native near cache in platforms (.NET, ...). */
-    private PlatformNearCacheConfiguration platformNearCfg;
+    /** Platform cache configuration. Enables native cache in platforms (.NET, ...). */
+    private PlatformCacheConfiguration platformCfg;
 
     /** Default value for 'copyOnRead' flag. */
     public static final boolean DFLT_COPY_ON_READ = true;
@@ -472,7 +473,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         memPlcName = cc.getDataRegionName();
         name = cc.getName();
         nearCfg = cc.getNearConfiguration();
-        platformNearCfg = cc.getPlatformNearConfiguration();
+        platformCfg = cc.getPlatformCacheConfiguration();
         nodeFilter = cc.getNodeFilter();
         onheapCache = cc.isOnheapCacheEnabled();
         partLossPlc = cc.getPartitionLossPolicy();
@@ -763,17 +764,18 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     }
 
     /**
-     * Gets platform near cache configuration.
+     * Gets platform cache configuration.
      *
-     * @return Platform near cache configuration or null.
+     * @return Platform cache configuration or null.
      */
-    public PlatformNearCacheConfiguration getPlatformNearConfiguration() {
-        return platformNearCfg;
+    @IgniteExperimental
+    public PlatformCacheConfiguration getPlatformCacheConfiguration() {
+        return platformCfg;
     }
 
     /**
-     * Sets platform near cache configuration.
-     * Enables native platform (only .NET currently) near cache when not null.
+     * Sets platform cache configuration.
+     * Enables native platform (only .NET currently) cache when not null.
      * Cache entries will be stored in deserialized form in native platform memory (e.g. .NET objects in CLR heap).
      * <p>
      * When enabled on server nodes, all primary keys will be stored in platform memory as well.
@@ -786,8 +788,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @return {@code this} for chaining.
      */
-    public CacheConfiguration<K, V> setPlatformNearConfiguration(PlatformNearCacheConfiguration platformNearCfg) {
-        this.platformNearCfg = platformNearCfg;
+    @IgniteExperimental
+    public CacheConfiguration<K, V> setPlatformCacheConfiguration(PlatformCacheConfiguration platformCfg) {
+        this.platformCfg = platformCfg;
 
         return this;
     }
@@ -1802,7 +1805,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Gets timeout in milliseconds after which long query warning will be printed.
      *
      * @return Timeout in milliseconds.
-     * @deprecated Use {@link IgniteConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
      */
     @Deprecated
     public long getLongQueryWarningTimeout() {
@@ -1814,7 +1817,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
-     * @deprecated Use {@link IgniteConfiguration#setLongQueryWarningTimeout(long)} instead.
+     * @deprecated Use {@link SqlConfiguration#setLongQueryWarningTimeout(long)} instead.
      */
     @Deprecated
     public CacheConfiguration<K, V> setLongQueryWarningTimeout(long longQryWarnTimeout) {

@@ -28,6 +28,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
@@ -105,9 +106,10 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(defaultCacheConfiguration())
-            .setSqlGlobalMemoryQuota("0")
-            .setSqlQueryMemoryQuota("0")
-            .setSqlOffloadingEnabled(true);
+            .setSqlConfiguration(new SqlConfiguration()
+                .setSqlGlobalMemoryQuota("0")
+                .setSqlQueryMemoryQuota("0")
+                .setSqlOffloadingEnabled(true));
     }
 
     /** {@inheritDoc} */

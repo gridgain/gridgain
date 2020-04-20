@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
@@ -72,9 +73,14 @@ public class IgniteSqlSchemasDiffConfigurationsTest extends AbstractIndexingComm
     /** */
     @Test
     public void testDiffSqlSchemasCfgProp() throws Exception {
-        startGrid(getConfiguration("ign1").setSqlSchemas(SCHEMA_NAME_1, SCHEMA_NAME_2));
+        startGrid(getConfiguration("ign1")
+            .setSqlConfiguration(new SqlConfiguration()
+                .setSqlSchemas(SCHEMA_NAME_1, SCHEMA_NAME_2))
+        );
 
-        startGrid(getConfiguration("ign2").setSqlSchemas(SCHEMA_NAME_3, SCHEMA_NAME_4));
+        startGrid(getConfiguration("ign2").setSqlConfiguration(new SqlConfiguration()
+            .setSqlSchemas(SCHEMA_NAME_3, SCHEMA_NAME_4))
+        );
 
         List<List<String>> exp = Arrays.asList(
             Arrays.asList(SCHEMA_NAME_1, "cache_1"),
