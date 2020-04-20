@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -65,7 +66,10 @@ public class IgniteSqlSchemaNameValidationTest extends AbstractIndexingCommonTes
     public void testStartNodeWithIllegalSchemaNameCfg() {
         for (String name : INVALID_SCHEMA_NAMES) {
             GridTestUtils.assertThrowsWithCause(
-                () -> startGrid(getConfiguration().setSqlSchemas(name)),
+                () -> startGrid(getConfiguration()
+                    .setSqlConfiguration(new SqlConfiguration()
+                        .setSqlSchemas(name))
+                ),
                 IllegalArgumentException.class
             );
         }
