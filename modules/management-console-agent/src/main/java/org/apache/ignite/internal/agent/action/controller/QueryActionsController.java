@@ -226,6 +226,6 @@ public class QueryActionsController {
      */
     public ComputeTaskFuture<Collection<QueryDetailMetrics>> history(long since) {
         return ctx.grid().compute(ctx.grid().cluster().forServers())
-            .executeAsync(new QueryHistoryMetricsCollectorTask(), since);
+            .executeAsync(QueryHistoryMetricsCollectorTask.class, since);
     }
 }

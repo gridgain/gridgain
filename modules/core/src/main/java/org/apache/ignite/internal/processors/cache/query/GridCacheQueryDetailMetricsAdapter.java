@@ -157,6 +157,24 @@ public class GridCacheQueryDetailMetricsAdapter implements QueryDetailMetrics, E
         );
     }
 
+    /**
+     * Aggregate metrics.
+     *
+     * @param m Other metrics to take into account.
+     * @return Aggregated metrics.
+     */
+    public GridCacheQueryDetailMetricsAdapter merge(QueryDetailMetrics m) {
+        execs += m.executions();
+        completions += m.completions();
+        failures += m.failures();
+        minTime = minTime < 0 || minTime > m.minimumTime() ? m.minimumTime() : minTime;
+        maxTime = maxTime < m.maximumTime() ? m.maximumTime() : maxTime;
+        totalTime += m.totalTime();
+        lastStartTime = lastStartTime < m.lastStartTime() ? m.lastStartTime() : lastStartTime;
+
+        return this;
+    }
+
     /** {@inheritDoc} */
     @Override public String queryType() {
         return qryType.name();

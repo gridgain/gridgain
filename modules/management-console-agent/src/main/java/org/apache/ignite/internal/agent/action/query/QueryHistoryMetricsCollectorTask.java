@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMet
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
 import static java.util.function.Function.identity;
@@ -47,7 +48,11 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
 /**
  * Query history metrics collector task.
  */
+@GridInternal
 public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, Collection<QueryDetailMetrics>> {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Long arg) throws IgniteException {
        return subgrid.stream().collect(toMap(n -> new QueryHistoryMetricsCollectorJob(arg), identity()));
@@ -62,7 +67,7 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
                 throw res.getException();
 
             res.<Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter>>getData()
-                .forEach((key, value) -> taskRes.merge(key, value, GridCacheQueryDetailMetricsAdapter::aggregate));
+                .forEach((key, value) -> taskRes.merge(key, value, GridCacheQueryDetailMetricsAdapter::merge));
         }
 
         return taskRes.values().stream()
@@ -92,6 +97,9 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
      * Query history metrics collector job.
      */
     private static class QueryHistoryMetricsCollectorJob extends ComputeJobAdapter {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Ignite. */
         @IgniteInstanceResource
         private IgniteEx ignite;
@@ -133,7 +141,7 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
                     toMap(
                         GridCacheQueryDetailMetricsAdapter::key,
                         identity(),
-                        GridCacheQueryDetailMetricsAdapter::aggregate
+                        GridCacheQueryDetailMetricsAdapter::merge
                     )
                 );
         }
