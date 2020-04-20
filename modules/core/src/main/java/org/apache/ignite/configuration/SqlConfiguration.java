@@ -167,7 +167,7 @@ public class SqlConfiguration {
      * <p>
      * There are two options of query behaviour when either query or global memory quota is exceeded:
      * <ul>
-     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota was exceeded. </li>
      *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
      * </ul>
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
@@ -212,7 +212,7 @@ public class SqlConfiguration {
      * It is the maximum amount of memory intended for the particular single query execution.
      * If a query execution exceeds this bound, the either would happen:
      * <ul>
-     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota was exceeded. </li>
      *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
      * </ul>
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
