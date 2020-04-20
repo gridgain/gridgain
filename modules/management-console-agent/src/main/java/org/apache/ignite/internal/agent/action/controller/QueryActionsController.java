@@ -90,6 +90,27 @@ public class QueryActionsController {
     }
 
     /**
+     * @param globalQryId Global query id.
+     * @return Kill query result.
+     */
+    public IgniteInternalFuture<QueryResult> kill(String globalQryId) {
+        return ctx.closure().callLocalSafe(() -> {
+            SqlFieldsQuery qryFields = new SqlFieldsQuery("KILL QUERY '" + globalQryId + "';");
+
+            try (
+                FieldsQueryCursor<List<?>> cur = qryProc.querySqlFields(qryFields, true);
+                CursorHolder cursorHolder = new CursorHolder(cur)
+            ) {
+                QueryResult res = fetchSqlQueryResult(cursorHolder, 1);
+
+                res.setResultNodeId(ctx.localNodeId().toString());
+
+                return res;
+            }
+        }, MANAGEMENT_POOL);
+    }
+
+    /**
      * @param arg Argument.
      * @return Next page with result.
      */
@@ -206,6 +227,7 @@ public class QueryActionsController {
             .stream()
             .map(q -> new RunningQuery()
                 .setId(q.id())
+                .setGlobalQueryId(q.globalQueryId())
                 .setQuery(q.query())
                 .setQryType(q.queryType())
                 .setSchemaName(q.schemaName())

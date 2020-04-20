@@ -23,8 +23,11 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Descriptor of running query.
  */
 public class RunningQuery {
-    /** */
+    /** ID. */
     private long id;
+
+    /** Global query ID. */
+    private String globalQryId;
 
     /** Query text. */
     private String qry;
@@ -60,6 +63,22 @@ public class RunningQuery {
      */
     public RunningQuery setId(long id) {
         this.id = id;
+
+        return this;
+    }
+
+    /**
+     * @return Global query ID.
+     */
+    public String getGlobalQueryId() {
+        return globalQryId;
+    }
+
+    /**
+     * @param globalQryId Global query ID.
+     */
+    public RunningQuery setGlobalQueryId(String globalQryId) {
+        this.globalQryId = globalQryId;
 
         return this;
     }
