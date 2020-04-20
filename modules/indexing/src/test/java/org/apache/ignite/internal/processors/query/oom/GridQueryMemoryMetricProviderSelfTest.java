@@ -80,7 +80,7 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
             log,
             () -> new QueryMemoryTracker(null, 128L, 256L, false).reserve(512L),
             SqlMemoryQuotaExceededException.class,
-            "SQL query run out of memory: Query quota exceeded."
+            "SQL query ran out of memory: Query quota was exceeded."
         );
     }
 

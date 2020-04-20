@@ -68,7 +68,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
                 break;
             }
             catch (SqlMemoryQuotaExceededException e) {
-                assertTrue("Wrong message:" + e.getMessage(), e.getMessage().contains("Query quota exceeded."));
+                assertTrue("Wrong message:" + e.getMessage(), e.getMessage().contains("Query quota was exceeded."));
             }
         }
 

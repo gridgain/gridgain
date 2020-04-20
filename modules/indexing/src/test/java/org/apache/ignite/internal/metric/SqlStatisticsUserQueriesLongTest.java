@@ -80,7 +80,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        final String mapFailMsg = "SQL query run out of memory: Global quota exceeded.";
+        final String mapFailMsg = "SQL query ran out of memory: Global quota was exceeded.";
 
         // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
@@ -128,7 +128,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        final String mapFailMsg = "SQL query run out of memory: Global quota exceeded.";
+        final String mapFailMsg = "SQL query ran out of memory: Global quota was exceeded.";
 
         // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
@@ -177,7 +177,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         IgniteCache cache = createCacheFrom(grid(REDUCER_IDX));
 
-        final String rdcFailMsg = "SQL query run out of memory: Global quota exceeded.";
+        final String rdcFailMsg = "SQL query ran out of memory: Global quota was exceeded.";
 
         // general failure
         SuspendQuerySqlFunctions.refresh();

@@ -89,7 +89,7 @@ public class ClientQueryQuotaTest extends DiskSpillingAbstractTest {
 
         GridTestUtils.assertThrows(log, () -> {
             runQueryFromClient(QUERY_1024_TO_2048, 1);
-        }, SqlMemoryQuotaExceededException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
         defaultQryQuota = "512";
 
@@ -98,7 +98,7 @@ public class ClientQueryQuotaTest extends DiskSpillingAbstractTest {
 
         GridTestUtils.assertThrows(log, () -> {
             runQueryFromClient(QUERY_512_TO_1024, 2);
-        }, SqlMemoryQuotaExceededException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
     }
 

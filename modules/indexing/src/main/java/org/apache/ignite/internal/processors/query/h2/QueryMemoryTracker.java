@@ -167,7 +167,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         if (offloadingEnabled)
             return false;
         else
-            throw new SqlMemoryQuotaExceededException("SQL query run out of memory: Query quota exceeded.");
+            throw new SqlMemoryQuotaExceededException("SQL query ran out of memory: Query quota was exceeded.");
     }
 
     /** {@inheritDoc} */

@@ -150,7 +150,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
         GridTestUtils.assertThrows(log, () -> {
             grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
-        }, SqlMemoryQuotaExceededException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
     }

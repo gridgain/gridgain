@@ -212,7 +212,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
             fail("Exception not thrown.");
         }
         catch (SqlMemoryQuotaExceededException ex) {
-            assertTrue(ex.getMessage().contains("SQL query run out of memory: Global quota exceeded."));
+            assertTrue(ex.getMessage().contains("SQL query ran out of memory: Global quota was exceeded."));
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.statusCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.sqlState());
 

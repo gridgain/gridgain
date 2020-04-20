@@ -211,7 +211,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (offloadingEnabled)
             return false;
         else {
-            throw new SqlMemoryQuotaExceededException("SQL query run out of memory: Global quota exceeded.");
+            throw new SqlMemoryQuotaExceededException("SQL query ran out of memory: Global quota was exceeded.");
         }
     }
 

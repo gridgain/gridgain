@@ -92,7 +92,7 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
                     throw sqlEx;
 
                 return null;
-            }, SQLException.class, "SQL query run out of memory: Global quota exceeded.");
+            }, SQLException.class, "SQL query ran out of memory: Global quota was exceeded.");
 
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
@@ -130,7 +130,7 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
 
             fail("Exception is not thrown.");
         } catch (SQLException e) {
-            assertTrue(e.getMessage().contains("SQL query run out of memory: Query quota exceeded."));
+            assertTrue(e.getMessage().contains("SQL query ran out of memory: Query quota was exceeded."));
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.getErrorCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.getSQLState());
         }

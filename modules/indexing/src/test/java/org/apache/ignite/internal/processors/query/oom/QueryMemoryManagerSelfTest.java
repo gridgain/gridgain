@@ -78,7 +78,7 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
                 fail("Exception not thrown.");
             }
             catch (SqlMemoryQuotaExceededException e) {
-                assertTrue(e.getMessage().contains("SQL query run out of memory: Global quota exceeded"));
+                assertTrue(e.getMessage().contains("SQL query ran out of memory: Global quota was exceeded"));
             }
         }
     }

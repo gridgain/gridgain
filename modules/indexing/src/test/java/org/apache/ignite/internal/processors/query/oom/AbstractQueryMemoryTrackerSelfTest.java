@@ -265,7 +265,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
             fail("Exception is not thrown.");
         } catch (SqlMemoryQuotaExceededException e) {
-            assertTrue(e.getMessage().contains("SQL query run out of memory: Query quota exceeded."));
+            assertTrue(e.getMessage().contains("SQL query ran out of memory: Query quota was exceeded."));
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.statusCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.sqlState());
         }

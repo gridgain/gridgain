@@ -536,9 +536,9 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                     assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
 
                     if (res == Result.ERROR_GLOBAL_QUOTA)
-                        assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Global quota exceeded."));
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Global quota was exceeded."));
                     else
-                        assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Query quota exceeded."));
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Query quota was exceeded."));
                 }
                 catch (Throwable t) {
                     log.error("Caught exception:" + X.getFullStackTrace(t));

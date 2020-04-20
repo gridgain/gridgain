@@ -158,7 +158,7 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
 
             fail("Exception is not thrown.");
         } catch (SqlMemoryQuotaExceededException e) {
-            assertTrue(e.getMessage().contains("SQL query run out of memory: "));
+            assertTrue(e.getMessage().contains("SQL query ran out of memory: "));
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.statusCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.sqlState());
         }
