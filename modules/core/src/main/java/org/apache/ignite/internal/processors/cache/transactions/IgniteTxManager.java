@@ -2690,11 +2690,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void trackPendingTxs() {
         pendingTracker.enable();
 
-        if (!logTxRecords) {
+        /*if (!logTxRecords) {
             logTxRecords = true;
 
             U.warn(log, "Transaction wal logging is enabled, because pending transaction tracker is enabled.");
-        }
+        }*/
     }
 
     /**
