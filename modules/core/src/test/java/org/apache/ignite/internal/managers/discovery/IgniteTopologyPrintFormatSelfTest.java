@@ -247,24 +247,23 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check
+     * Check nodes details in log.
      *
      * @param log log.
      */
     private void checkNodesAdditionalLogging(MockLogger log){
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled())
             assertFalse(F.exist(log.logs(), new IgnitePredicate<String>() {
                 @Override public boolean apply(String s) {
                     return s.contains("nodes=[");
                 }
             }));
-        } else if (log.isInfoEnabled()) {
+        else if (log.isInfoEnabled())
             assertTrue(F.exist(log.logs(), new IgnitePredicate<String>() {
                 @Override public boolean apply(String s) {
                     return s.contains("nodes=[");
                 }
             }));
-        }
     }
 
     /**
