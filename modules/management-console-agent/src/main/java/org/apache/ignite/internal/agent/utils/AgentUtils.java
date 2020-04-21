@@ -212,9 +212,9 @@ public final class AgentUtils {
     }
 
     /**
-     * Quietly closes given processor ignoring possible checked exception.
+     * Closes given processor ignoring possible checked exception.
      *
-     * @param proc Process.
+     * @param proc Processor.
      * @param log Logger.
      */
     public static void stopProcessor(GridProcessor proc, IgniteLogger log) {
@@ -222,8 +222,8 @@ public final class AgentUtils {
             try {
                 proc.stop(true);
             }
-            catch (Exception ex) {
-                U.warn(log, ex.getMessage(), ex);
+            catch (Exception e) {
+                U.warn(log, "Failed to stop GridGain Control Center agent processor: " + proc.getClass(), e);
             }
         }
     }
@@ -245,15 +245,15 @@ public final class AgentUtils {
 
             return (T)mgrCls.getConstructor(paramTypes).newInstance(args);
         }
-        catch (Exception ex) {
-            U.warn(log, "Failed to initialize GridGain Control Center agent processor: " + clsName, ex);
+        catch (Exception e) {
+            U.error(log, "Failed to initialize GridGain Control Center agent processor: " + clsName, e);
         }
 
         return null;
     }
 
     /**
-     * Quietly start given processor ignoring possible checked exception.
+     * Start given processor ignoring possible checked exception.
      *
      * @param proc Processor.
      * @param log Logger.
@@ -263,8 +263,8 @@ public final class AgentUtils {
             try {
                 proc.start();
             }
-            catch (Exception ex) {
-                U.warn(log, ex.getMessage(), ex);
+            catch (Exception e) {
+                U.error(log, "Failed to start GridGain Control Center agent processor: " + proc.getClass(), e);
             }
         }
     }
