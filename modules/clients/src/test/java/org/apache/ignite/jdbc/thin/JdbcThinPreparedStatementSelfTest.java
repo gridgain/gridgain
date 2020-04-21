@@ -225,27 +225,27 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
 
         stmt.execute();
 
-        try (Connection anotherConn = createConnection(false)) {
-            try (PreparedStatement stmt = anotherConn.prepareStatement("SELECT id, objVal FROM test WHERE id = ?")) {
-                stmt.setInt(1, exp.a);
+        try (Connection anotherConn = createConnection(false);
+             PreparedStatement stmt = anotherConn.prepareStatement("SELECT id, objVal FROM test WHERE id = ?")
+        ) {
+            stmt.setInt(1, exp.a);
 
-                int cnt = 0;
+            int cnt = 0;
 
-                ResultSet rs = stmt.executeQuery();
+            ResultSet rs = stmt.executeQuery();
 
-                while (rs.next()) {
-                    if (cnt == 0) {
-                        Assert.assertTrue("Result's value type mismatch",
-                            rs.getObject("objVal") instanceof TestObjectField);
+            while (rs.next()) {
+                if (cnt == 0) {
+                    Assert.assertTrue("Result's value type mismatch",
+                        rs.getObject("objVal") instanceof TestObjectField);
 
-                        Assert.assertEquals("Result's value mismatch", exp, rs.getObject("objVal", TestObjectField.class));
-                    }
-
-                    cnt++;
+                    Assert.assertEquals("Result's value mismatch", exp, rs.getObject("objVal", TestObjectField.class));
                 }
 
-                Assert.assertEquals("There should be exactly 1 result", 1, cnt);
+                cnt++;
             }
+
+            Assert.assertEquals("There should be exactly 1 result", 1, cnt);
         }
     }
 

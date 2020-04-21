@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.sql.Array;
 import java.sql.BatchUpdateException;
 import java.sql.Blob;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +69,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.cache.query.QueryCancelledException;
@@ -130,6 +133,8 @@ import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CLIENT_CON
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_CLOSED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_FAILURE;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
+import static org.apache.ignite.marshaller.MarshallerUtils.JDK_CLS_NAMES_FILE;
+import static org.apache.ignite.marshaller.MarshallerUtils.readSysTypes;
 
 /**
  * JDBC connection implementation.
@@ -2131,6 +2136,24 @@ public class JdbcThinConnection implements Connection {
         /** Type ID -> class name map. */
         private final Map<Integer, String> cache = new ConcurrentHashMap<>();
 
+        /** */
+        private final Set<String> sysTypesSet = new HashSet<>();
+
+        /**
+         * Default constructor.
+         */
+        public JdbcMarshallerContext() {
+            ClassLoader ldr = U.gridClassLoader();
+
+            URL jdkClsNames = ldr.getResource(JDK_CLS_NAMES_FILE);
+
+            if (jdkClsNames == null)
+                throw new IgniteException("Failed to load class names properties file packaged with ignite binaries " +
+                    "[file=" + JDK_CLS_NAMES_FILE + ", ldr=" + ldr + ']');
+
+            readSysTypes(jdkClsNames, name -> sysTypesSet.add(name.className()));
+        }
+
         /** {@inheritDoc} */
         @Override public boolean registerClassName(
             byte platformId,
@@ -2225,7 +2248,7 @@ public class JdbcThinConnection implements Connection {
 
         /** {@inheritDoc} */
         @Override public boolean isSystemType(String typeName) {
-            return false;
+            return sysTypesSet.contains(typeName);
         }
 
         /** {@inheritDoc} */

@@ -61,7 +61,7 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
     /** SQL query. */
     private static final String SQL =
         "select id, boolVal, byteVal, shortVal, intVal, longVal, floatVal, " +
-            "doubleVal, bigVal, strVal, arrVal, dateVal, timeVal, tsVal, f1 " +
+            "doubleVal, bigVal, strVal, arrVal, dateVal, timeVal, tsVal, objVal " +
             "from TestObject where id = 1";
 
     /** Statement. */
@@ -705,7 +705,7 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
 
         while (rs.next()) {
             if (cnt == 0) {
-                Assert.assertEquals("Result by column label mismatch", exp, rs.getObject("f1"));
+                Assert.assertEquals("Result by column label mismatch", exp, rs.getObject("objVal"));
 
                 Assert.assertEquals("Result by column index mismatch", exp, rs.getObject(15));
 
@@ -1634,13 +1634,13 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
 
         checkResultSetClosed(new RunnableX() {
             @Override public void runx() throws Exception {
-                rs.getObject("f1");
+                rs.getObject("objVal");
             }
         });
 
         checkResultSetClosed(new RunnableX() {
             @Override public void runx() throws Exception {
-                rs.getObject("f1", TestObjectField.class);
+                rs.getObject("objVal", TestObjectField.class);
             }
         });
 
@@ -1765,7 +1765,7 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
 
         /** */
         @QuerySqlField
-        private TestObjectField f1 = new TestObjectField(100, "AAAA");
+        private TestObjectField objVal = new TestObjectField(100, "AAAA");
 
         /** */
         @QuerySqlField
@@ -1802,7 +1802,7 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
             if (byteVal != null ? !byteVal.equals(that.byteVal) : that.byteVal != null) return false;
             if (dateVal != null ? !dateVal.equals(that.dateVal) : that.dateVal != null) return false;
             if (doubleVal != null ? !doubleVal.equals(that.doubleVal) : that.doubleVal != null) return false;
-            if (f1 != null ? !f1.equals(that.f1) : that.f1 != null) return false;
+            if (objVal != null ? !objVal.equals(that.objVal) : that.objVal != null) return false;
             if (f2 != null ? !f2.equals(that.f2) : that.f2 != null) return false;
             if (f3 != null ? !f3.equals(that.f3) : that.f3 != null) return false;
             if (floatVal != null ? !floatVal.equals(that.floatVal) : that.floatVal != null) return false;
@@ -1836,7 +1836,7 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
             res = 31 * res + (timeVal != null ? timeVal.hashCode() : 0);
             res = 31 * res + (tsVal != null ? tsVal.hashCode() : 0);
             res = 31 * res + (urlVal != null ? urlVal.hashCode() : 0);
-            res = 31 * res + (f1 != null ? f1.hashCode() : 0);
+            res = 31 * res + (objVal != null ? objVal.hashCode() : 0);
             res = 31 * res + (f2 != null ? f2.hashCode() : 0);
             res = 31 * res + (f3 != null ? f3.hashCode() : 0);
 

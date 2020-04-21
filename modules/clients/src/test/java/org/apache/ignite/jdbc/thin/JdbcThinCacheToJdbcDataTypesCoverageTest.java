@@ -31,6 +31,7 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -105,7 +106,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     }
 
     /** As stmt parameter. */
-    private boolean asStmtParam;
+    private boolean usePrepared;
 
     /** URL. */
     private String url = affinityAwareness ?
@@ -126,7 +127,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     @Override public void init() throws Exception {
         super.init();
 
-        asStmtParam = false;
+        usePrepared = false;
     }
 
     /**
@@ -216,8 +217,6 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     @Ignore()
     @Test
     @Override public void testObjectArrayDataType() throws Exception {
-        asStmtParam = true;
-
         super.testObjectArrayDataType();
     }
 
@@ -226,12 +225,11 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testListDataType() throws Exception {
-        asStmtParam = true;
+        usePrepared = true;
 
-//        checkBasicCacheOperations(new ArrayList<>());
-//        checkBasicCacheOperations((Serializable)Collections.singletonList("Aaa"));
-//        checkBasicCacheOperations((Serializable)Arrays.asList("String", Boolean.TRUE, 'A', 1));
-        checkBasicCacheOperations((Serializable)Arrays.asList("String"));
+        checkBasicCacheOperations(new ArrayList<>());
+        checkBasicCacheOperations((Serializable)Collections.singletonList("Aaa"));
+        checkBasicCacheOperations((Serializable)Arrays.asList("String", Boolean.TRUE, 'A', 1));
     }
 
     /**
@@ -239,7 +237,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testSetDataType() throws Exception {
-        asStmtParam = true;
+        usePrepared = true;
 
         checkBasicCacheOperations(new HashSet<>());
         checkBasicCacheOperations((Serializable)Collections.singleton("Aaa"));
@@ -251,7 +249,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testObjectBasedOnPrimitivesDataType() throws Exception {
-        asStmtParam = true;
+        usePrepared = true;
 
         super.testObjectBasedOnPrimitivesDataType();
     }
@@ -261,7 +259,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testObjectBasedOnPrimitivesAndCollectionsDataType() throws Exception {
-        asStmtParam = true;
+        usePrepared = true;
 
         super.testObjectBasedOnPrimitivesAndCollectionsDataType();
     }
@@ -271,7 +269,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testObjectBasedOnPrimitivesAndCollectionsAndNestedObjectsDataType() throws Exception {
-        asStmtParam = true;
+        usePrepared = true;
 
         super.testObjectBasedOnPrimitivesAndCollectionsAndNestedObjectsDataType();
     }
@@ -301,10 +299,20 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23663")
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23663")
     @Test
     @Override public void testInstantDataType() throws Exception {
+        usePrepared = true;
+
         super.testInstantDataType();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testCalendarDataType() throws Exception {
+        usePrepared = true;
+
+        super.testCalendarDataType();
     }
 
     /**
@@ -359,6 +367,8 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testBigIntegerDataType() throws Exception {
+        usePrepared = true;
+
         checkBasicCacheOperations(
             new BigInteger("1"),
             BigInteger.ONE,
@@ -462,11 +472,11 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
             }
 
             // Check SELECT query with where clause.
-            if (asStmtParam) {
+            if (usePrepared) {
                 try (PreparedStatement stmt = prepareStatement(cacheName, "SELECT * FROM " + tblName + " WHERE _key = ?")) {
-//                    if (originalKey.getClass().isArray())
-//                        stmt.setArray(1, conn.createArrayOf("OTHER", (Object[])originalKey));
-//                    else
+                    if (originalKey.getClass().isArray())
+                        stmt.setArray(1, conn.createArrayOf("OTHER", (Object[])originalKey));
+                    else
                         stmt.setObject(1, originalKey);
 
                     checkQuery(converterToSqlExpVal, equalsProcessor, originalVal.getClass(), originalKey, originalVal, stmt);

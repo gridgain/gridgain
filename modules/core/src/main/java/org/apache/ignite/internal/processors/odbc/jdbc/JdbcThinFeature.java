@@ -32,7 +32,9 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
      */
     TIME_ZONE(1),
 
-    /** */
+    /**
+     * Whether to allow sending custom object through Thin JDBC protocol.
+     */
     CUSTOM_OBJECT(2);
 
     /** */

@@ -49,8 +49,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
      * @param ctx Context.
      * @param protoCtx Protocol context.
      */
-    public JdbcMessageParser(GridKernalContext ctx,
-        JdbcProtocolContext protoCtx) {
+    public JdbcMessageParser(GridKernalContext ctx, JdbcProtocolContext protoCtx) {
         this.ctx = ctx;
         this.protoCtx = protoCtx;
         this.binCtx = ((CacheObjectBinaryProcessorImpl)ctx.cacheObjects()).marshaller().context();
