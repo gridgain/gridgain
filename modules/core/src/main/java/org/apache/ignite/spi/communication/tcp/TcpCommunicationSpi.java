@@ -669,7 +669,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 }
 
                 @Override public void onDisconnected(UUID nodeId) {
-                    throw new UnsupportedOperationException("On disconnected isn't supported.");
+                    if (lsnr != null)
+                        lsnr.onDisconnected(nodeId);
                 }
             }
         );
