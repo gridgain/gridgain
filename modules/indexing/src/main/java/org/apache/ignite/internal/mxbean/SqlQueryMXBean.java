@@ -163,7 +163,7 @@ public interface SqlQueryMXBean {
     @MXBeanDescription("Gets SQL query memory quota. Query memory quota is the maximum amount of memory intended" +
         " for the particular single query execution." +
         " If a query execution exceeds this bound, the either would happen:\n" +
-        " If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>\n" +
+        " If disk offloading is disabled, the query caller gets an error that quota was exceeded. </li>\n" +
         " If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>\n" +
         " See SqlOffloadingEnabled for details")
     @MXBeanParametersNames("size")

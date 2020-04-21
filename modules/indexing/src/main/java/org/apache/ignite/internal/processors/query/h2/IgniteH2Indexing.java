@@ -824,6 +824,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (e.getCause() instanceof IgniteSQLException)
                 throw (IgniteSQLException)e.getCause();
 
+            if (e.getCause() instanceof CacheException)
+                throw (CacheException)e.getCause();
+
             throw new IgniteSQLException(e);
         }
     }
@@ -2164,7 +2167,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         parser = new QueryParser(this, connections());
 
         schemaMgr = new SchemaManager(ctx, connections());
-        schemaMgr.start(ctx.config().getSqlSchemas());
+        schemaMgr.start(ctx.config().getSqlConfiguration().getSqlSchemas());
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
