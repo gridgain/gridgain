@@ -23,7 +23,6 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.junit.Test;
 
 /**
@@ -34,8 +33,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
     private final ListeningTestLogger listeningLog = new ListeningTestLogger(false, log);
 
     /** */
-    private static final String CRD_CHANGE_MSG  = "Coordinator changed \\[prev=TcpDiscoveryNode " +
-        "\\[id=%s.*cur=TcpDiscoveryNode \\[id=%s.*";
+    private static final String CRD_CHANGE_MSG  = "Coordinator changed";
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -71,24 +69,15 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
     public void testChangeCoordinatorLogging() throws Exception {
         //Start 2 server nodes
         IgniteEx srv1 = startGrid("server1");
+        IgniteEx client = startGrid("client");
         startGrid("server2");
 
         srv1.cluster().active();
 
-        IgniteEx client = startGrid("client");
-
         stopGrid("server1");
-        srv1 = startGrid("server1");
+        startGrid("server1");
 
-        stopGrid("server2");
-        startGrid("server2");
-
-        UUID clientClusterNode = client.localNode().id();
-        UUID srv1ClusterNode = srv1.localNode().id();
-
-        Pattern ptrn = Pattern.compile(String.format(CRD_CHANGE_MSG, srv1ClusterNode, clientClusterNode));
-
-        LogListener lsnr = LogListener.matches(ptrn).build();
+        LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
 
         listeningLog.registerListener(lsnr);
 
@@ -114,17 +103,12 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
         // Check coordinator = server1
         assertTrue(((TcpDiscoverySpi) srv1.context().config().getDiscoverySpi()).isLocalNodeCoordinator());
 
-        // Add a client node, daemon node and 3-d server node, which is not in the baseline
+        // Add a client node, daemon node and 3rd server node, which is not in the baseline
         startGrid("client");
         IgniteEx daemon = startGrid("daemon");
         IgniteEx srv3 = startGrid("server3");
 
-        UUID srv1ClusterNode = srv1.localNode().id();
-        UUID srv2ClusterNode = srv2.localNode().id();
-
-        Pattern ptrn = Pattern.compile(String.format(CRD_CHANGE_MSG, srv1ClusterNode, srv2ClusterNode));
-
-        LogListener lsnr = LogListener.matches(ptrn).build();
+        LogListener lsnr = LogListener.matches(CRD_CHANGE_MSG).build();
 
         listeningLog.registerListener(lsnr);
 
@@ -138,11 +122,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
         // Check that there is message like "coordinator changed server1 -> server2"
         assertTrue(lsnr.check());
 
-        ptrn = Pattern.compile(String.format(CRD_CHANGE_MSG, srv2ClusterNode, srv1ClusterNode));
-
-        lsnr = LogListener.matches(ptrn).build();
-
-        listeningLog.registerListener(lsnr);
+        lsnr.reset();
 
         srv1 = startGrid("server1");
 
@@ -154,11 +134,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
         // Check that there are no messages like "coordinator changed server2 -> server1"
         assertFalse(lsnr.check());
 
-        ptrn = Pattern.compile(String.format(CRD_CHANGE_MSG, srv2ClusterNode, daemon.localNode().id()));
-
-        lsnr = LogListener.matches(ptrn).build();
-
-        listeningLog.registerListener(lsnr);
+        lsnr.reset();
 
         stopGrid("server2");
 
@@ -170,9 +146,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
         // Check that there is message like "coordinator changed server2 -> daemon"
         assertTrue(lsnr.check());
 
-        lsnr = LogListener.matches("Coordinator changed").build();
-
-        listeningLog.registerListener(lsnr);
+        lsnr.reset();
 
         stopGrid("client");
 
@@ -183,6 +157,8 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
 
         // Check that there are no messages like "coordinator changed"
         assertFalse(lsnr.check());
+
+        lsnr.reset();
 
         stopGrid("server3");
 
