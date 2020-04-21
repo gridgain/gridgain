@@ -129,7 +129,11 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         if (log.isDebugEnabled())
             log.debug("Sending cluster info to Control Center");
 
-        mgr.send(buildClusterDest(cluster.id()), buildClusterInfo());
+        ClusterInfo clusterInfo = createClusterInfo();
+
+        populateClusterInfo(clusterInfo);
+
+        mgr.send(buildClusterDest(cluster.id()), clusterInfo);
     }
 
     /**
@@ -140,10 +144,10 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Build Cluster info.
+     * @param clusterInfo Cluster info to populate with data.
      */
-    private ClusterInfo buildClusterInfo() {
-        return createClusterInfo()
+    private void populateClusterInfo(ClusterInfo clusterInfo) {
+        clusterInfo
             .setId(cluster.id())
             .setTag(cluster.tag())
             .setActive(cluster.active())
