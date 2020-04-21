@@ -1756,8 +1756,15 @@ public class GridDhtPartitionDemander {
                 .collect(toSet());
 
             // Not compatible if owners are different.
-            if (p0.equals(p1))
+            if (p0.equals(p1)) {
+                if (log.isDebugEnabled())
+                    log.debug("Previous rebalance is compatible with new topology [grp=" + grp.cacheOrGroupName() +
+                        ", init=" + topVer + ", " +
+                        ", compatible=" + previousTopVer +
+                        ", new=" + otherAssignments.topologyVersion() + ']');
+
                 return true;
+            }
 
             return false;
         }

@@ -1150,13 +1150,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
-     * @return {@code True} if pending future queue contains server exchange task.
-     */
-    public boolean hasPendingServerExchange() {
-        return exchWorker.hasPendingServerExchange();
-    }
-
-    /**
      *
      * @param topVer Topology version.
      * @return Last topology version before the provided one when affinity was modified.
@@ -3063,26 +3056,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 for (CachePartitionExchangeWorkerTask task : futQ) {
                     if (isExchangeTask(task))
                         return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @return Whether pending exchange future triggered by non client node exists.
-         */
-        boolean hasPendingServerExchange() {
-            if (!futQ.isEmpty()) {
-                for (CachePartitionExchangeWorkerTask task : futQ) {
-                    if (task instanceof GridDhtPartitionsExchangeFuture) {
-                        // First event is enough to check,
-                        // because only current exchange future can have multiple discovery events (exchange merge).
-                        ClusterNode triggeredBy = ((GridDhtPartitionsExchangeFuture) task).firstEvent().eventNode();
-
-                        if (!triggeredBy.isClient())
-                            return true;
-                    }
                 }
             }
 

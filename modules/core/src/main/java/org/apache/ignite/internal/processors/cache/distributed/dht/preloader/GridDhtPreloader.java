@@ -71,7 +71,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** Disable rebalancing cancellation optimization. */
     private final boolean disableRebalancingCancellationOptimization =
-        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
+        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -221,16 +221,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         boolean changed = false;
 
         for (int p = 0; p < partitions; p++) {
-            if (ctx.exchange().hasPendingServerExchange()) {
-                if (log.isDebugEnabled())
-                    log.debug("Skipping assignments creation, exchange worker has pending assignments: " +
-                        exchId);
-
-                assignments.cancelled(true);
-
-                return assignments;
-            }
-
             // If partition belongs to local node.
             if (aff.get(p).contains(ctx.localNode())) {
                 GridDhtLocalPartition part = top.localPartition(p);
