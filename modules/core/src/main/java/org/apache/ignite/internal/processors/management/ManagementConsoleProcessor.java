@@ -35,4 +35,9 @@ public interface ManagementConsoleProcessor extends GridProcessor {
      * @return Management configuration instance.
      */
     public ManagementConfiguration configuration();
+
+    /**
+     * @return Control Center sender.
+     */
+    public ControlCenterSender sender();
 }

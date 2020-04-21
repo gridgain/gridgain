@@ -34,7 +34,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.processors.management.ManagementConsoleSender;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.glassfish.tyrus.client.ClientManager;
@@ -67,9 +67,9 @@ import static org.glassfish.tyrus.container.grizzly.client.GrizzlyClientProperti
 import static org.springframework.util.Base64Utils.encodeToString;
 
 /**
- * Web socket manager.
+ * Websocket manager.
  */
-public class WebSocketManager extends GridProcessorAdapter implements ManagementConsoleSender {
+public class WebSocketManager extends GridProcessorAdapter implements ControlCenterSender {
     /** Mapper. */
     private final ObjectMapper mapper = binaryMapper();
 

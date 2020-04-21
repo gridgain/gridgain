@@ -17,9 +17,9 @@
 package org.apache.ignite.internal.processors.management;
 
 /**
- * Control Center sender.
+ * Represents abstraction for Control Center communication.
  */
-public interface ManagementConsoleSender {
+public interface ControlCenterSender {
     /**
      * @param dest Destination.
      * @param payload Payload.

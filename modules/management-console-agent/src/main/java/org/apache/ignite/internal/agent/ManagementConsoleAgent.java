@@ -46,6 +46,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
@@ -247,18 +248,16 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public ControlCenterSender sender() {
+        return mgr;
+    }
+
     /**
      * @return Session registry.
      */
     public SessionRegistry sessionRegistry() {
         return sesRegistry;
-    }
-
-    /**
-     * @return Weboscket manager.
-     */
-    public WebSocketManager webSocketManager() {
-        return mgr;
     }
 
     /**
