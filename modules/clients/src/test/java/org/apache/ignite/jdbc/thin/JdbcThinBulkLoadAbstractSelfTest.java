@@ -981,13 +981,6 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     *
-     */
-    private void checkCSVEntryContent(ResultSet rs) {
-
-    }
-
-    /**
      * Checks cache contents after bulk loading data in the above tests:
      * national charset version.
      * <p>
