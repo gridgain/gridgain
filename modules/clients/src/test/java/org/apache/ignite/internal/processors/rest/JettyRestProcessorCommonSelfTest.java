@@ -18,8 +18,6 @@ package org.apache.ignite.internal.processors.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.Map;
 import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
 
@@ -36,7 +34,7 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
     protected static final ObjectMapper JSON_MAPPER = new GridJettyObjectMapper();
 
     /** Rest client. */
-    private final TestRestClient restClient = new TestRestClient(this::signature);
+    private final TestRestClient restClient = createRestClient();
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -58,17 +56,17 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
     }
 
     /**
+     * @return Rest client, you may override some function of it.
+     */
+    protected TestRestClient createRestClient() {
+        return new TestRestClient(this::signature);
+    }
+
+    /**
      * @return Port to use for rest. Needs to be changed over time because Jetty has some delay before port unbind.
      */
     protected int restPort() {
         return restClient.restPort();
-    }
-
-    /**
-     * @return Test URL
-     */
-    protected String restUrl() {
-        return "http://" + LOC_HOST + ":" + restPort() + "/ignite?";
     }
 
     /**
@@ -93,17 +91,6 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
      */
     protected String content(Map<String, String> params) throws Exception {
         return restClient.content(params);
-    }
-
-    /**
-     * Open REST connection, set signature header if needed.
-     *
-     * @param url URL to open.
-     * @return URL connection.
-     * @throws Exception If failed.
-     */
-    protected URLConnection openConnection(URL url) throws Exception {
-        return restClient.openConnection(url);
     }
 
     /**
