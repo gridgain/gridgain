@@ -15,13 +15,12 @@
  */
 package org.apache.ignite.internal.processors.query.oom;
 
-import javax.cache.CacheException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -82,15 +81,15 @@ public class ClientQueryQuotaTest extends DiskSpillingAbstractTest {
 
         // Check queries correctness.
         GridTestUtils.assertThrowsWithCause(() -> runQueryWithMemLimit(QUERY_512_TO_1024, 511),
-            IgniteSQLException.class);
+            SqlMemoryQuotaExceededException.class);
         runQueryWithMemLimit(QUERY_512_TO_1024, 1024);
         GridTestUtils.assertThrowsWithCause(() -> runQueryWithMemLimit(QUERY_1024_TO_2048, 1023),
-            IgniteSQLException.class);
+            SqlMemoryQuotaExceededException.class);
         runQueryWithMemLimit(QUERY_1024_TO_2048, 2048);
 
         GridTestUtils.assertThrows(log, () -> {
             runQueryFromClient(QUERY_1024_TO_2048, 1);
-        }, CacheException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
         defaultQryQuota = "512";
 
@@ -99,7 +98,7 @@ public class ClientQueryQuotaTest extends DiskSpillingAbstractTest {
 
         GridTestUtils.assertThrows(log, () -> {
             runQueryFromClient(QUERY_512_TO_1024, 2);
-        }, CacheException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
     }
 
