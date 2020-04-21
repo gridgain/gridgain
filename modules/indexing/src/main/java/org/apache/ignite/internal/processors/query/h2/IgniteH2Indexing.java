@@ -824,6 +824,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (e.getCause() instanceof IgniteSQLException)
                 throw (IgniteSQLException)e.getCause();
 
+            if (e.getCause() instanceof CacheException)
+                throw (CacheException)e.getCause();
+
             throw new IgniteSQLException(e);
         }
     }

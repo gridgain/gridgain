@@ -22,10 +22,10 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -72,10 +72,14 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3";
 
         try (FieldsQueryCursor<List<?>> cursor = query(sql, false)) {
-            Throwable t = GridTestUtils.assertThrowsWithCause(cursor::getAll, IgniteSQLException.class);
+            try {
+                cursor.getAll();
 
-            assertNotNull(t);
-            assertTrue(t.getMessage().contains("SQL query run out of memory: Global quota exceeded"));
+                fail("Exception not thrown.");
+            }
+            catch (SqlMemoryQuotaExceededException e) {
+                assertTrue(e.getMessage().contains("SQL query ran out of memory: Global quota was exceeded"));
+            }
         }
     }
 

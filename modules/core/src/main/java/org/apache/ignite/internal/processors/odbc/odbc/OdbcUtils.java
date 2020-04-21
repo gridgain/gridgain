@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
@@ -189,7 +190,9 @@ public class OdbcUtils {
         int errorCode = IgniteQueryErrorCode.UNKNOWN;
 
         if (err instanceof IgniteSQLException)
-            errorCode = ((IgniteSQLException) err).statusCode();
+            errorCode = ((IgniteSQLException)err).statusCode();
+        else if (err instanceof SqlCacheException)
+            errorCode = ((SqlCacheException)err).statusCode();
 
         return errorCode;
     }

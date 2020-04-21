@@ -81,13 +81,13 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
                 Statement stmt = conn4096.createStatement();
 
                 stmt.execute(QUERY_2048_TO_4096);
-            }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
+            }, IgniteException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
             GridTestUtils.assertThrows(log, () -> {
                 Statement stmt = conn512.createStatement();
 
                 stmt.execute(QUERY_1024_TO_2048);
-            }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
+            }, IgniteException.class, "SQL query ran out of memory: Query quota was exceeded.");
         }
     }
 

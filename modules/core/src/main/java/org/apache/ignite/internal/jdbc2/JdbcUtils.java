@@ -25,6 +25,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcColumnMeta;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcIndexMeta;
@@ -198,11 +199,15 @@ public class JdbcUtils {
             if (t instanceof SQLException) {
                 if (t.getCause() instanceof IgniteSQLException)
                     return ((IgniteSQLException)t.getCause()).toJdbcException();
+                else if (t.getCause() instanceof SqlCacheException)
+                    return ((SqlCacheException)t.getCause()).toJdbcException();
                 else
                     return (SQLException)t;
             }
             else if (t instanceof IgniteSQLException)
                 return ((IgniteSQLException)t).toJdbcException();
+            else if (t instanceof SqlCacheException)
+                return ((SqlCacheException)t).toJdbcException();
 
             t = t.getCause();
         }
