@@ -20,7 +20,9 @@ import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.CacheManager;
@@ -32,27 +34,41 @@ import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Assume;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
  *
@@ -76,6 +92,12 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
     /** Use test spi flag.  */
     private boolean useTestCommSpi;
+
+    /** Backups count. */
+    private int backups = -1;
+
+    /** Client flag. */
+    private boolean client;
 
     /**
      * @throws Exception If failed.
@@ -497,16 +519,26 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
             true);
     }
 
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        CacheConfiguration cacheCfg = new CacheConfiguration()
+    /** Default cache config. */
+    private CacheConfiguration<?, ?> getCacheConfiguration() {
+        CacheConfiguration<?, ?> cacheCfg = new CacheConfiguration<>()
             .setName(CACHE1)
             .setGroupName(GROUP)
             .setCacheMode(CacheMode.PARTITIONED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+
+        if (backups != -1)
+            cacheCfg.setBackups(2);
+
+        return cacheCfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        CacheConfiguration<?, ?> cacheCfg = getCacheConfiguration();
 
         cfg.setCacheConfiguration(cacheCfg);
 
@@ -524,6 +556,134 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
             );
 
         return cfg;
+    }
+
+    /** Test correct metric for tx key contention. */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testTxContentionMetric() throws Exception {
+        backups = 1;
+
+        useTestCommSpi = true;
+
+        Ignite ig = startGridsMultiThreaded(2);
+
+        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 10;
+
+        CountDownLatch txLatch = new CountDownLatch(contCnt * 2);
+
+        ig.cluster().active(true);
+
+        client = true;
+
+        Ignite cl = startGrid();
+
+        CacheConfiguration<?, ?> dfltCacheCfg = getCacheConfiguration();
+
+        dfltCacheCfg.setStatisticsEnabled(true);
+
+        String cacheName = dfltCacheCfg.getName();
+
+        IgniteCache<Integer, Integer> cache = ig.cache(cacheName);
+
+        IgniteCache<Integer, Integer> cache0 = cl.cache(cacheName);
+
+        CacheMetricsMXBean mxBeanCache = mxBean(0, cacheName, CacheLocalMetricsMXBeanImpl.class);
+
+        final List<Integer> priKeys = primaryKeys(cache, 2, 1);
+
+        final Integer backKey = backupKey(cache);
+
+        IgniteTransactions txMgr = cl.transactions();
+
+        for (Ignite ig0 : G.allGrids()) {
+            TestRecordingCommunicationSpi commSpi0 =
+                (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
+
+            commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode node, Message msg) {
+                    return msg instanceof GridNearTxFinishResponse;
+                }
+            });
+        }
+
+        IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
+            try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
+                cache0.put(priKeys.get(0), 0);
+                cache0.put(priKeys.get(1), 0);
+                tx.commit();
+            }
+        });
+
+        GridCompoundFuture<?, ?> finishFut = new GridCompoundFuture<>();
+
+        for (int i = 0; i < contCnt; ++i) {
+            IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
+                try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
+                    cache0.put(priKeys.get(0), 0);
+                    cache0.put(priKeys.get(1), 0);
+
+                    tx.commit();
+
+                    txLatch.countDown();
+                }
+
+                try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
+                    cache0.put(priKeys.get(1), 0);
+                    cache0.put(backKey, 0);
+
+                    tx.commit();
+
+                    txLatch.countDown();
+                }
+            });
+
+            finishFut.add(f0);
+        }
+
+        finishFut.markInitialized();
+
+        for (Ignite ig0 : G.allGrids()) {
+            TestRecordingCommunicationSpi commSpi0 =
+                (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
+
+            commSpi0.stopBlock();
+        }
+
+        IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
+
+        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            /** */
+            boolean key1;
+
+            /** */
+            boolean key2;
+
+            @Override public boolean apply() {
+                try {
+                    U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
+                }
+                catch (IgniteCheckedException e) {
+                    fail(e.toString());
+                }
+
+                String coll = mxBeanCache.getTxKeyCollisions();
+
+                if (coll.contains("val=" + priKeys.get(0)));
+                    key1 = true;
+
+                if (coll.contains("val=" + priKeys.get(1)))
+                    key2 = true;
+
+                return key1 && key2;
+            }
+        }, 10_000);
+
+        f.get();
+
+        finishFut.get();
+
+        txLatch.await();
     }
 
     /**

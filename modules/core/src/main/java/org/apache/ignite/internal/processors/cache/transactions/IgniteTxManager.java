@@ -3049,6 +3049,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** Wrapper for inner collect logic. */
     private void collectTxCollisionsInfo() {
+        System.err.println("collectTxCollisionsInfo");
+
         keyCollisionsInfo.collectInfo();
     }
 
@@ -3064,7 +3066,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         int qSize = 0;
 
         try {
-            qSize += cached.localCandidates().size();
+            qSize = cached.localCandidates().size();
         }
         catch (GridCacheEntryRemovedException ignored) {
             // No-op, obsolete vers found.

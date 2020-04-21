@@ -111,8 +111,8 @@ public class GridToStringBuilder {
         });
 
     /** */
-    private static final int COLLECTION_LIMIT =
-        IgniteSystemProperties.getInteger(IGNITE_TO_STRING_COLLECTION_LIMIT, 100);
+    private static final int COLLECTION_LIMIT = 10_000;
+        //IgniteSystemProperties.getInteger(IGNITE_TO_STRING_COLLECTION_LIMIT, 100);
 
     /** */
     private static final boolean THROW_RUNTIME_EXCEPTION =

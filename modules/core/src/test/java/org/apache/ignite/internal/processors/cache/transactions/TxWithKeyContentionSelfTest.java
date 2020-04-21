@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMetrics;
@@ -35,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFi
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -187,9 +189,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache0 = cl.cache(DEFAULT_CACHE_NAME);
 
-        for (int i = 0 ; i < 4; ++i)
-            cache.put(i, i);
-
         final Integer keyId = primaryKey(cache);
 
         CountDownLatch startOneKeyTx = new CountDownLatch(1);
@@ -253,18 +252,34 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
 
-        U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
+        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                try {
+                    U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
+                }
+                catch (IgniteCheckedException e) {
+                    fail(e.toString());
+                }
 
-        CacheMetrics metrics = ig.cache(DEFAULT_CACHE_NAME).localMetrics();
+                CacheMetrics metrics = ig.cache(DEFAULT_CACHE_NAME).localMetrics();
 
-        String coll1 = metrics.getTxKeyCollisions();
+                String coll1 = metrics.getTxKeyCollisions();
 
-        String coll2 = metrics.getTxKeyCollisions();
+                if (!coll1.isEmpty()) {
+                    String coll2 = metrics.getTxKeyCollisions();
 
-        // check idempotent
-        assertEquals(coll1, coll2);
+                    // check idempotent
+                    assertEquals(coll1, coll2);
 
-        assertTrue(coll1.contains("queueSize"));
+                    assertTrue(coll1.contains("queueSize"));
+
+                    return true;
+                }
+                else
+                    return false;
+            }
+        }, 10_000);
+
         f.get();
 
         finishFut.get();

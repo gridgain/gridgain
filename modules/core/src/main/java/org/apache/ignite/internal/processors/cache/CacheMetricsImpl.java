@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -857,7 +858,7 @@ public class CacheMetricsImpl implements CacheMetrics {
             delegate.onRead(isHit);
     }
 
-    /** todo */
+    /** Set callback for tx key collisions detection. */
     public void keyCollisionsInfo(Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> coll) {
         txKeyCollisionInfo = coll;
 
@@ -865,7 +866,7 @@ public class CacheMetricsImpl implements CacheMetrics {
             delegate.keyCollisionsInfo(coll);
     }
 
-    /** todo */
+    /** Get existing callback. */
     public @Nullable Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> keyCollisionsInfo() {
         return txKeyCollisionInfo;
     }
@@ -877,15 +878,17 @@ public class CacheMetricsImpl implements CacheMetrics {
         if (txKeyCollisionInfo != null) {
             List<Map.Entry<GridCacheMapEntry, Integer>> result = txKeyCollisionInfo.get();
 
-            if (!result.isEmpty())
+            if (!F.isEmpty(result)) {
                 sb = new SB();
 
-            for (Map.Entry<GridCacheMapEntry, Integer> info : result) {
-                sb.a("key=");
-                sb.a(info.getKey());
-                sb.a(", queueSize=");
-                sb.a(info.getValue());
-                sb.a(U.nl());
+                for (Map.Entry<GridCacheMapEntry, Integer> info : result) {
+                    if (sb.length() > 0)
+                        sb.a(U.nl());
+                    sb.a("key=");
+                    sb.a(info.getKey().key());
+                    sb.a(", queueSize=");
+                    sb.a(info.getValue());
+                }
             }
         }
 
