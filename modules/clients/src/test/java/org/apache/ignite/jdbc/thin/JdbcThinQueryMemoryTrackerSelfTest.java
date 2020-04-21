@@ -29,6 +29,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.junit.Test;
@@ -91,7 +92,7 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
                     throw sqlEx;
 
                 return null;
-            }, SQLException.class, "SQL query run out of memory: Global quota exceeded.");
+            }, SQLException.class, "SQL query ran out of memory: Global quota was exceeded.");
 
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
@@ -124,14 +125,18 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
 
     /** {@inheritDoc} */
     @Override protected void checkQueryExpectOOM(String sql, boolean lazy) {
-        SQLException ex = (SQLException)GridTestUtils.assertThrows(log, () -> {
+        try {
             execQuery(sql, lazy);
 
-            return null;
-        }, SQLException.class, "SQL query run out of memory: Query quota exceeded.");
-
-        assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
-        assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
+            fail("Exception is not thrown.");
+        } catch (SQLException e) {
+            assertTrue(e.getMessage().contains("SQL query ran out of memory: Query quota was exceeded."));
+            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.getErrorCode());
+            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.getSQLState());
+        }
+        catch (Exception e) {
+            fail("Wrong exception: " + X.getFullStackTrace(e));
+        }
     }
 
     /**

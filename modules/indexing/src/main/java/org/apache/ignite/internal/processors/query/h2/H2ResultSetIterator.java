@@ -26,6 +26,7 @@ import java.util.NoSuchElementException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
@@ -188,6 +189,9 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
 
                     if (e.getCause() instanceof IgniteSQLException)
                         throw (IgniteSQLException)e.getCause();
+
+                    if (e.getCause() instanceof SqlCacheException)
+                        throw (SqlCacheException)e.getCause();
 
                     if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                         throw new QueryCancelledException();
