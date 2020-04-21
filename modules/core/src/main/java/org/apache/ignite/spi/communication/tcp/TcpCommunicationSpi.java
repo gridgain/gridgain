@@ -349,6 +349,24 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Incoming message listener. */
     private volatile CommunicationListener<Message> lsnr;
 
+    /** Client pool. */
+    private volatile ConnectionClientPool clientPool;
+
+    /** Recovery and idle clients handler. */
+    private volatile CommunicationWorker commWorker;
+
+    /** Server listener. */
+    private volatile InboundConnectionHandler srvLsnr;
+
+    /** Disco listener. */
+    private volatile GridLocalEventListener discoLsnr;
+
+    /** Nio server wrapper. */
+    private volatile GridNioServerWrapper nioSrvWrapper;
+
+    /** State provider. */
+    private volatile ClusterStateProvider stateProvider;
+
     /** Logger. */
     @LoggerResource
     private IgniteLogger log;
@@ -356,24 +374,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Logger. */
     @LoggerResource(categoryName = "org.apache.ignite.internal.diagnostic")
     private IgniteLogger diagnosticLog;
-
-    /** Client pool. */
-    private ConnectionClientPool clientPool;
-
-    /** Recovery and idle clients handler. */
-    private CommunicationWorker commWorker;
-
-    /** Server listener. */
-    private InboundConnectionHandler srvLsnr;
-
-    /** Disco listener. */
-    private GridLocalEventListener discoLsnr;
-
-    /** Nio server wrapper. */
-    private GridNioServerWrapper nioSrvWrapper;
-
-    /** State provider. */
-    private ClusterStateProvider stateProvider;
 
     /**
      * {@inheritDoc} This call should be change after refactoring. It produces dependency hell. Because {@link
@@ -847,7 +847,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         nioSrvWrapper.start();
 
-        commWorker = new CommunicationWorker(
+        this.commWorker = new CommunicationWorker(
             igniteInstanceName,
             log,
             cfg,
@@ -916,24 +916,30 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         unregisterMBean();
 
         // Stop TCP server.
-        nioSrvWrapper.stop();
+        if (nioSrvWrapper != null)
+            nioSrvWrapper.stop();
 
-        commWorker.stop();
-        U.cancel(commWorker);
-        U.join(commWorker, log);
+        if (commWorker != null) {
+            commWorker.stop();
+            U.cancel(commWorker);
+            U.join(commWorker, log);
+        }
 
         U.cancel(shmemAcceptWorker);
         U.join(shmemAcceptWorker, log);
 
-        srvLsnr.stop();
+        if (srvLsnr != null)
+            srvLsnr.stop();
 
         // Force closing on stop (safety).
-        clientPool.stop();
-        clientPool.forceClose();
+        if (clientPool != null) {
+            clientPool.stop();
+            clientPool.forceClose();
+        }
 
         // Clear resources.
-        nioSrvWrapper.clear();
-        commWorker = null;
+        if (nioSrvWrapper != null)
+            nioSrvWrapper.clear();
 
         cfg.boundTcpPort(-1);
 
