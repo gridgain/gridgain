@@ -390,14 +390,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
 
-        if (!cctx.gridConfig().isClientMode()) {
-            keyCollisionsInfo = new KeyCollisionsHolder();
+        keyCollisionsInfo = new KeyCollisionsHolder();
 
-            scheduleDumpTask(
-                IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
-                this::collectTxCollisionsInfo,
-                collisionsDumpInterval);
-        }
+        scheduleDumpTask(
+            IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
+            this::collectTxCollisionsInfo,
+            collisionsDumpInterval);
     }
 
     /**

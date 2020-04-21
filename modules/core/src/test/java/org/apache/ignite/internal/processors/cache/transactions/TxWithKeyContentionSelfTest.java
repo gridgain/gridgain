@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
@@ -59,8 +60,11 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 
 /** */
 public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
-    /** */
+    /** Client flag. */
     private boolean client;
+
+    /** Near cache flag. */
+    private boolean nearCache;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
@@ -96,13 +100,17 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
     /** */
     protected CacheConfiguration<?, ?> getCacheConfiguration(String name) {
-        return
-            new CacheConfiguration<>(name)
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-                .setAffinity(new RendezvousAffinityFunction(false, 16))
-                .setBackups(2)
-                .setStatisticsEnabled(true);
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(name)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
+            .setAffinity(new RendezvousAffinityFunction(false, 16))
+            .setBackups(2)
+            .setStatisticsEnabled(true);
+
+        if (nearCache)
+            ccfg.setNearConfiguration(new NearCacheConfiguration<>());
+
+        return ccfg;
     }
 
     /** {@inheritDoc} */
@@ -133,7 +141,29 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testPessimisticRepeatableReadCheckContentionTxMetricNear() throws Exception {
+        nearCache = true;
+
+        testKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testPessimisticReadCommitedCheckContentionTxMetric() throws Exception {
+        testKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testPessimisticReadCommitedCheckContentionTxMetricNear() throws Exception {
+        nearCache = true;
+
         testKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
     }
 
@@ -151,7 +181,29 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testOptimisticReadCommittedCheckContentionTxMetricNear() throws Exception {
+        nearCache = true;
+
+        testKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testOptimisticRepeatableReadCheckContentionTxMetric() throws Exception {
+        testKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
+    public void testOptimisticRepeatableReadCheckContentionTxMetricNear() throws Exception {
+        nearCache = true;
+
         testKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
     }
 
