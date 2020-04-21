@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.rest.model;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,12 +33,13 @@ import org.apache.ignite.internal.visor.compute.VisorGatewayTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.sql.SqlKeyword.CHARSET;
-
 /**
  * Helper for build {@link VisorGatewayTask} arguments.
  */
 public class VisorGatewayArgument extends HashMap<String, String> {
+    /** Used to sent request charset. */
+    private static final String CHARSET = StandardCharsets.UTF_8.name();
+
     /** Latest argument index. */
     private int idx = 3;
 
