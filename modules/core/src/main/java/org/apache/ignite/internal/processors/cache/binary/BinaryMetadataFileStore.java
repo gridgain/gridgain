@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache.binary;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -49,8 +51,11 @@ import org.jetbrains.annotations.Nullable;
  * segmentation of nodes from cluster.
  */
 class BinaryMetadataFileStore {
+    /** Default path (relative to working directory) of binary metadata folder */
+    private static final String BINARY_METADATA_DFLT_PATH = "db/binary_meta";
+
     /** Link to resolved binary metadata directory. Null for non persistent mode */
-    private File workDir;
+    private File metadataDir;
 
     /** */
     private final ConcurrentMap<Integer, BinaryMetadataHolder> metadataLocCache;
@@ -93,20 +98,20 @@ class BinaryMetadataFileStore {
 
         fileIOFactory = ctx.config().getDataStorageConfiguration().getFileIOFactory();
 
+        final String nodeFolderName = ctx.pdsFolderResolver().resolveFolders().folderName();
+
         if (binaryMetadataFileStoreDir != null)
-            workDir = binaryMetadataFileStoreDir;
-        else {
-            final String subFolder = ctx.pdsFolderResolver().resolveFolders().folderName();
-
-            workDir = new File(U.resolveWorkDirectory(
+            metadataDir = binaryMetadataFileStoreDir;
+        else
+            metadataDir = new File(U.resolveWorkDirectory(
                 ctx.config().getWorkDirectory(),
-                "binary_meta",
+                BINARY_METADATA_DFLT_PATH,
                 false
-            ),
-                subFolder);
-        }
+            ), nodeFolderName);
 
-        U.ensureDirectory(workDir, "directory for serialized binary metadata", log);
+        fixLegacyFolder(nodeFolderName);
+
+        U.ensureDirectory(metadataDir, "directory for serialized binary metadata", log);
 
         writer = new BinaryMetadataAsyncWriter();
         new IgniteThread(writer).start();
@@ -127,7 +132,7 @@ class BinaryMetadataFileStore {
             return;
 
         try {
-            File file = new File(workDir, binMeta.typeId() + ".bin");
+            File file = new File(metadataDir, binMeta.typeId() + ".bin");
 
             byte[] marshalled = U.marshal(ctx, binMeta);
 
@@ -160,7 +165,7 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
-        for (File file : workDir.listFiles()) {
+        for (File file : metadataDir.listFiles()) {
             try (FileInputStream in = new FileInputStream(file)) {
                 BinaryMetadata meta = U.unmarshal(ctx.config().getMarshaller(), in, U.resolveClassLoader(ctx.config()));
 
@@ -197,7 +202,7 @@ class BinaryMetadataFileStore {
      * @param typeId typeId of BinaryMetadata to be read.
      */
     private BinaryMetadata readMetadata(int typeId) {
-        File file = new File(workDir, Integer.toString(typeId) + ".bin");
+        File file = new File(metadataDir, Integer.toString(typeId) + ".bin");
 
         if (!file.exists())
             return null;
@@ -263,6 +268,29 @@ class BinaryMetadataFileStore {
             return;
 
         writer.finishWriteFuture(typeId, typeVer);
+    }
+
+    /**
+     * Try looking for legacy directory with binary metadata and move it to new directory
+     */
+    private void fixLegacyFolder(String consistendId) throws IgniteCheckedException {
+        File legacyDir = new File(U.resolveWorkDirectory(
+            ctx.config().getWorkDirectory(),
+            "binary_meta",
+            false
+        ), consistendId);
+
+        if (legacyDir.exists()) {
+            try {
+                IgniteUtils.copy(legacyDir, metadataDir, true);
+            }
+            catch (IOException e) {
+                throw new IgniteCheckedException("Failed to copy legacy binary metadata dir to new location", e);
+            }
+
+            if (!IgniteUtils.delete(legacyDir))
+                throw new IgniteCheckedException("Failed to delete legacy binary metadata dir");
+        }
     }
 
     /**
