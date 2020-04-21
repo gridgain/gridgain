@@ -1749,7 +1749,6 @@ public class GridDhtPartitionDemander {
                 return false;
             }
 
-
             Set<Integer> p0 = new HashSet<>();
             Set<Integer> p1 = new HashSet<>();
 
