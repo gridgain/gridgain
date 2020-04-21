@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.h2.index.Index;
@@ -39,6 +40,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_
 /**
  * Task that collects indexes information.
  */
+@GridInternal
 public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexListInfoContainer>> {
     /** */
     private static final long serialVersionUID = 0L;

@@ -67,7 +67,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
 
         usageCache(
             logger,
-            INDEX_LIST,
+            INDEX_FORCE_REBUILD,
             desc,
             map,
             NODE_ID.argName(),
