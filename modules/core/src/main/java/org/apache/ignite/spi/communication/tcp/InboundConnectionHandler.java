@@ -126,11 +126,11 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     /** Ignite ex supplier. */
     private final Supplier<Ignite> igniteExSupplier;
 
+    /** SPI listener. */
+    private final CommunicationListener<Message> lsnr;
+
     /** NIO server. */
     private volatile GridNioServerWrapper nioSrvWrapper;
-
-    /** SPI listener. */
-    private volatile CommunicationListener<Message> lsnr;
 
     /** Communication worker. */
     private volatile CommunicationWorker commWorker;
@@ -157,6 +157,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * @param ctxInitLatch Context initialize latch.
      * @param client Client.
      * @param igniteExSupplier Returns already exists instance from spi.
+     * @param lsnr Message listener
      */
     public InboundConnectionHandler(
         IgniteLogger log,
@@ -172,7 +173,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         GridNioServerWrapper nioSrvWrapper,
         CountDownLatch ctxInitLatch,
         boolean client,
-        Supplier<Ignite> igniteExSupplier
+        Supplier<Ignite> igniteExSupplier,
+        CommunicationListener<Message> lsnr
     ) {
         this.log = log;
         this.cfg = cfg;
@@ -189,6 +191,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         this.ctxInitLatch = ctxInitLatch;
         this.client = client;
         this.igniteExSupplier = igniteExSupplier;
+        this.lsnr = lsnr;
     }
 
     /**
@@ -203,20 +206,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      */
     public void setClientPool(ConnectionClientPool pool) {
         this.clientPool = pool;
-    }
-
-    /**
-     * @return SPI listener.
-     */
-    public CommunicationListener<Message> listener() {
-        return lsnr;
-    }
-
-    /**
-     * @param lsnr New sPI listener.
-     */
-    public void listener(CommunicationListener<Message> lsnr) {
-        this.lsnr = lsnr;
     }
 
     /** {@inheritDoc} */
@@ -378,7 +367,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             else
                 c = NOOP;
 
-            notifyListener(connKey.nodeId(), msg, c);
+            lsnr.onMessage(connKey.nodeId(), msg, c);
         }
     }
 
@@ -737,24 +726,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to send message: " + e, e);
         }
-    }
-
-    /**
-     * @param sndId Sender ID.
-     * @param msg Communication message.
-     * @param msgC Closure to call when message processing finished.
-     */
-    protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
-        CommunicationListener<Message> lsnr = this.lsnr;
-
-        trace("Communication listeners notified");
-
-        if (lsnr != null)
-            // Notify listener of a new message.
-            lsnr.onMessage(sndId, msg, msgC);
-        else if (log.isDebugEnabled())
-            log.debug("Received communication message without any registered listeners (will ignore, " +
-                "is node stopping?) [senderNodeId=" + sndId + ", msg=" + msg + ']');
     }
 
     /**

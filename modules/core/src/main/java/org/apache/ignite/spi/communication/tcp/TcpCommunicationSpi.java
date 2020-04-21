@@ -347,7 +347,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     private volatile boolean stopping;
 
     /** Incoming message listener. */
-    private CommunicationListener<Message> lsnr;
+    private volatile CommunicationListener<Message> lsnr;
 
     /** Logger. */
     @LoggerResource
@@ -381,19 +381,14 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      */
     @Deprecated
     @Override public void setListener(CommunicationListener<Message> lsnr) {
-        synchronized (this) {
-            if(srvLsnr == null)
-                this.lsnr = lsnr;
-            else
-                this.srvLsnr.listener(lsnr);
-        }
+        this.lsnr = lsnr;
     }
 
     /**
      * @return Listener.
      */
     public CommunicationListener getListener() {
-        return this.srvLsnr.listener();
+        return lsnr;
     }
 
     /** {@inheritDoc} */
@@ -652,28 +647,32 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
-        synchronized (this) {
-            this.srvLsnr = new InboundConnectionHandler(
-                log,
-                cfg,
-                nodeGetter,
-                locNodeSupplier,
-                stateProvider,
-                clientPool,
-                commWorker,
-                connectGate,
-                failureProcessorSupplier,
-                attributeNames,
-                metricsLsnr,
-                nioSrvWrapper,
-                ctxInitLatch,
-                client,
-                igniteExSupplier
-            );
+        this.srvLsnr = new InboundConnectionHandler(
+            log,
+            cfg,
+            nodeGetter,
+            locNodeSupplier,
+            stateProvider,
+            clientPool,
+            commWorker,
+            connectGate,
+            failureProcessorSupplier,
+            attributeNames,
+            metricsLsnr,
+            nioSrvWrapper,
+            ctxInitLatch,
+            client,
+            igniteExSupplier,
+            new CommunicationListener<Message>() {
+                @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
+                    notifyListener(nodeId, msg, msgC);
+                }
 
-            if (lsnr != null)
-                this.srvLsnr.listener(lsnr);
-        }
+                @Override public void onDisconnected(UUID nodeId) {
+                    throw new UnsupportedOperationException("On disconnected isn't supported.");
+                }
+            }
+        );
 
         TimeObjectProcessorWrapper timeObjProcessorWrapper = new TimeObjectProcessorWrapper(stateProvider);
 
@@ -1179,13 +1178,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      * @param msgC Closure to call when message processing finished.
      */
     protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
-        CommunicationListener<Message> lsnr = this.srvLsnr.listener();
-
         trace("Communication listeners notified");
 
-        if (lsnr != null)
+        if (this.lsnr != null)
             // Notify listener of a new message.
-            lsnr.onMessage(sndId, msg, msgC);
+            this.lsnr.onMessage(sndId, msg, msgC);
         else if (log.isDebugEnabled())
             log.debug("Received communication message without any registered listeners (will ignore, " +
                 "is node stopping?) [senderNodeId=" + sndId + ", msg=" + msg + ']');
