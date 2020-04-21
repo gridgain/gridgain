@@ -139,7 +139,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     private static final String INLINE_SIZES_DISCO_BAG_KEY = "inline_sizes";
 
     /** Warn message if some indexes have different inline sizes on the nodes. */
-    public static final String INLINE_SIZES_DIFFER_WARN_MSG_FORMAT = "Inline sizes on local node and node %s are different. Please drop and create again these indexes, for avoinding performance problems with SQL queries. Problem indexes: %s";
+    public static final String INLINE_SIZES_DIFFER_WARN_MSG_FORMAT = "Inline sizes on local node and node %s are different. Please drop and create again these indexes to avoid performance problems with SQL queries. Problem indexes: %s";
 
     /** Queries detail metrics eviction frequency. */
     private static final int QRY_DETAIL_METRICS_EVICTION_FREQ = 3_000;
@@ -360,7 +360,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), proposals);
 
-        if (nodeSupportedCheckIndexInlineSize(dataBag.joiningNodeId())) {
+        // We should send inline index sizes information only to server nodes, but we can't distinguish easily daemon
+        // node from server node.
+        if (!dataBag.isJoiningNodeClient() && nodeSupportedCheckIndexInlineSize(dataBag.joiningNodeId())) {
             HashMap<String, Serializable> nodeSpecificMap = new HashMap<>();
 
             Serializable oldVal = nodeSpecificMap.put(INLINE_SIZES_DISCO_BAG_KEY, collectSecondaryIndexesInlineSize());
@@ -439,14 +441,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Checks that server node with {@code nodeId} is supported {@link IgniteFeatures#CHECK_INDEX_INLINE_SIZES}.
+     * Checks that node with {@code nodeId} is supported {@link IgniteFeatures#CHECK_INDEX_INLINE_SIZES}.
      *
      * @param nodeId Node id.
-     * @return {@code true} if node with {@code nodeId} is server node and the node supports feature, {@code false}
-     * otherwise.
+     * @return {@code true} if node with {@code nodeId} supports feature, {@code false} otherwise.
      */
     private boolean nodeSupportedCheckIndexInlineSize(UUID nodeId) {
-        IgnitePredicate<ClusterNode> nodeFilter = n -> !n.isClient() && !n.isDaemon() && nodeId.equals(n.id());
+        IgnitePredicate<ClusterNode> nodeFilter = n -> nodeId.equals(n.id());
 
         return IgniteFeatures.allNodesSupport(ctx, CHECK_INDEX_INLINE_SIZES, nodeFilter);
     }
