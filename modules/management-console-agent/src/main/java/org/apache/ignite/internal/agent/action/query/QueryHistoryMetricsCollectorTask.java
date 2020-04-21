@@ -32,6 +32,7 @@ import org.apache.ignite.internal.agent.dto.action.query.QueryDetailMetrics;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsAdapter;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsKey;
+import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -39,7 +40,6 @@ import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SCAN;
@@ -60,37 +60,17 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
 
     /** {@inheritDoc} */
     @Override public Collection<QueryDetailMetrics> reduce(List<ComputeJobResult> results) throws IgniteException {
-        Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter> taskRes = new HashMap<>();
+        Map<GridCacheQueryDetailMetricsKey, QueryDetailMetrics> taskRes = new HashMap<>();
 
         for (ComputeJobResult res : results) {
             if (res.getException() != null)
                 throw res.getException();
 
-            res.<Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter>>getData()
-                .forEach((key, value) -> taskRes.merge(key, value, GridCacheQueryDetailMetricsAdapter::merge));
+            res.<Map<GridCacheQueryDetailMetricsKey, QueryDetailMetrics>>getData()
+                .forEach((key, value) -> taskRes.merge(key, value, QueryDetailMetrics::merge));
         }
 
-        return taskRes.values().stream()
-            .map(this::mapMetric)
-            .collect(toList());
-    }
-
-    /**
-     * @param m Metrics adapter.
-     * @return Query detail metrics.
-     */
-    private QueryDetailMetrics mapMetric(GridCacheQueryDetailMetricsAdapter m) {
-        return new QueryDetailMetrics()
-            .setQuery(m.query())
-            .setQueryType(m.queryType())
-            .setExecutions(m.executions())
-            .setFailures(m.failures())
-            .setLastStartTime(m.lastStartTime())
-            .setCompletions(m.completions())
-            .setCache(m.cache())
-            .setMaxTime(m.maximumTime())
-            .setMinTime(m.minimumTime())
-            .setTotalTime(m.totalTime());
+        return taskRes.values();
     }
 
     /**
@@ -112,19 +92,20 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
         }
 
         /** {@inheritDoc} */
-        @Override public Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter> execute() {
+        @Override public Map<GridCacheQueryDetailMetricsKey, QueryDetailMetrics> execute() {
             long since = argument(0);
 
             GridQueryIndexing indexing = ignite.context().query().getIndexing();
 
             GridCacheProcessor cacheProc = ignite.context().cache();
 
-            Stream<GridCacheQueryDetailMetricsAdapter> cacheMetricsStream = cacheProc.cacheNames().stream()
+            Stream<QueryDetailMetrics> cacheMetricsStream = cacheProc.cacheNames().stream()
                 .filter(name -> !isSystemCache(name))
                 .map(cacheProc::cache)
                 .filter(cache -> cache != null && cache.context().started())
                 .flatMap(cache -> cache.context().queries().detailMetrics().stream())
-                .filter(m -> m.lastStartTime() > since && m.key().getQueryType() == SCAN);
+                .filter(m -> m.lastStartTime() > since && m.key().getQueryType() == SCAN)
+                .map(this::toQueryDetailMetrics);
 
             if (indexing instanceof IgniteH2Indexing) {
                 Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)indexing)
@@ -132,16 +113,16 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
 
                 cacheMetricsStream = Stream.concat(
                     cacheMetricsStream,
-                    metrics.stream().map(this::toMetricAdapter)
+                    metrics.stream().map(this::toQueryDetailMetrics)
                 );
             }
 
             return cacheMetricsStream
                 .collect(
                     toMap(
-                        GridCacheQueryDetailMetricsAdapter::key,
+                        this::toMetricKey,
                         identity(),
-                        GridCacheQueryDetailMetricsAdapter::merge
+                        QueryDetailMetrics::merge
                     )
                 );
         }
@@ -150,28 +131,42 @@ public class QueryHistoryMetricsCollectorTask extends ComputeTaskAdapter<Long, C
          * @param m Query history metric.
          * @return Query detail metrics key.
          */
-        private GridCacheQueryDetailMetricsKey toMetricKey(QueryHistoryMetrics m) {
-            return new GridCacheQueryDetailMetricsKey(SQL_FIELDS, m.query());
+        private GridCacheQueryDetailMetricsKey toMetricKey(QueryDetailMetrics m) {
+            return new GridCacheQueryDetailMetricsKey(GridCacheQueryType.valueOf(m.getQueryType()), m.getQuery());
         }
 
         /**
          * @param m Query history metric.
          * @return Query detail metrics adapter.
          */
-        private GridCacheQueryDetailMetricsAdapter toMetricAdapter(QueryHistoryMetrics m) {
-            return new GridCacheQueryDetailMetricsAdapter(
-                SQL_FIELDS,
-                m.query(),
-                null,
-                (int)m.executions(),
-                (int)(m.executions() - m.failures()),
-                (int)m.failures(),
-                m.minimumTime(),
-                m.maximumTime(),
-                0L,
-                m.lastStartTime(),
-                toMetricKey(m)
-            );
+        private QueryDetailMetrics toQueryDetailMetrics(QueryHistoryMetrics m) {
+            return new QueryDetailMetrics()
+                .setQuery(m.query())
+                .setQueryType(SQL_FIELDS.name())
+                .setExecutions(m.executions())
+                .setFailures(m.failures())
+                .setLastStartTime(m.lastStartTime())
+                .setCompletions(m.executions() - m.failures())
+                .setMaxTime(m.maximumTime())
+                .setMinTime(m.minimumTime());
+        }
+
+        /**
+         * @param m Metrics adapter.
+         * @return Query detail metrics.
+         */
+        private QueryDetailMetrics toQueryDetailMetrics(GridCacheQueryDetailMetricsAdapter m) {
+            return new QueryDetailMetrics()
+                .setQuery(m.query())
+                .setQueryType(m.queryType())
+                .setExecutions(m.executions())
+                .setFailures(m.failures())
+                .setLastStartTime(m.lastStartTime())
+                .setCompletions(m.completions())
+                .setCache(m.cache())
+                .setMaxTime(m.maximumTime())
+                .setMinTime(m.minimumTime())
+                .setTotalTime(m.totalTime());
         }
     }
 }

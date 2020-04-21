@@ -32,13 +32,13 @@ public class QueryDetailMetrics {
     private String cache;
 
     /** Number of executions. */
-    private int execs;
+    private long execs;
 
     /** Number of completions executions. */
-    private int completions;
+    private long completions;
 
     /** Number of failures. */
-    private int failures;
+    private long failures;
 
     /** Minimum time of execution. */
     private long minTime = -1;
@@ -98,7 +98,7 @@ public class QueryDetailMetrics {
      * @return {@code This} for chaining method calls.
      */
     public QueryDetailMetrics setMinTime(long minTime) {
-        this.minTime = minTime;
+        this.minTime = this.minTime;
 
         return this;
     }
@@ -157,7 +157,7 @@ public class QueryDetailMetrics {
     /**
      * @return Number of executions.
      */
-    public int getExecutions() {
+    public long getExecutions() {
         return execs;
     }
 
@@ -165,7 +165,7 @@ public class QueryDetailMetrics {
      * @param execs Number of executions.
      * @return {@code This} for chaining method calls.
      */
-    public QueryDetailMetrics setExecutions(int execs) {
+    public QueryDetailMetrics setExecutions(long execs) {
         this.execs = execs;
 
         return this;
@@ -174,7 +174,7 @@ public class QueryDetailMetrics {
     /**
      * @return Number of completions.
      */
-    public int getCompletions() {
+    public long getCompletions() {
         return completions;
     }
 
@@ -182,7 +182,7 @@ public class QueryDetailMetrics {
      * @param completions Number of completions.
      * @return {@code This} for chaining method calls.
      */
-    public QueryDetailMetrics setCompletions(int completions) {
+    public QueryDetailMetrics setCompletions(long completions) {
         this.completions = completions;
 
         return this;
@@ -191,7 +191,7 @@ public class QueryDetailMetrics {
     /**
      * @return Number of failures.
      */
-    public int getFailures() {
+    public long getFailures() {
         return failures;
     }
 
@@ -199,7 +199,7 @@ public class QueryDetailMetrics {
      * @param failures Number of failures.
      * @return {@code This} for chaining method calls.
      */
-    public QueryDetailMetrics setFailures(int failures) {
+    public QueryDetailMetrics setFailures(long failures) {
         this.failures = failures;
 
         return this;
@@ -218,6 +218,24 @@ public class QueryDetailMetrics {
      */
     public QueryDetailMetrics setTotalTime(long totalTime) {
         this.totalTime = totalTime;
+
+        return this;
+    }
+
+    /**
+     * Aggregate metrics.
+     *
+     * @param m Other metrics to take into account.
+     * @return Aggregated metrics.
+     */
+    public QueryDetailMetrics merge(QueryDetailMetrics m) {
+        execs += m.execs;
+        completions += m.completions;
+        failures += m.failures;
+        minTime = minTime < 0 || minTime > m.minTime ? m.minTime : minTime;
+        maxTime = maxTime < m.maxTime ? m.maxTime : maxTime;
+        totalTime += m.totalTime;
+        lastStartTime = lastStartTime < m.lastStartTime ? m.lastStartTime : lastStartTime;
 
         return this;
     }
