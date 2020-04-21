@@ -33,9 +33,7 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
@@ -66,6 +64,9 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** Near cache flag. */
     private boolean nearCache;
 
+    /** Atomic flag. */
+    private boolean atomic;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
@@ -89,7 +90,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(getCacheConfiguration(DEFAULT_CACHE_NAME));
 
-        if (client){
+        if (client) {
             cfg.setConsistentId("Client");
 
             cfg.setClientMode(client);
@@ -101,7 +102,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** */
     protected CacheConfiguration<?, ?> getCacheConfiguration(String name) {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(name)
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setAtomicityMode(atomic ? CacheAtomicityMode.ATOMIC : CacheAtomicityMode.TRANSACTIONAL)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setBackups(2)
@@ -211,7 +212,9 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     private void testKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         Ignite ig = startGridsMultiThreaded(3);
 
-        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 10;
+        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 5;
+
+        CountDownLatch txLatch = new CountDownLatch(contCnt);
 
         ig.cluster().active(true);
 
@@ -227,24 +230,22 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         final Integer keyId = primaryKey(cache);
 
-        CountDownLatch startOneKeyTx = new CountDownLatch(1);
-
-        CountDownLatch nearLockReq = new CountDownLatch(contCnt);
+        CountDownLatch blockOnce = new CountDownLatch(1);
 
         for (Ignite ig0 : G.allGrids()) {
+            if (ig0.configuration().isClientMode())
+                continue;
+
             TestRecordingCommunicationSpi commSpi0 =
                 (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
 
             commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
-                    if (msg instanceof GridNearTxFinishResponse)
+                    if (msg instanceof GridNearTxFinishResponse && blockOnce.getCount() > 0) {
+                        blockOnce.countDown();
+
                         return true;
-
-                    if (msg instanceof GridNearTxPrepareResponse)
-                        startOneKeyTx.countDown();
-
-                    if (msg instanceof GridNearTxFinishRequest)
-                        nearLockReq.countDown();
+                    }
 
                     return false;
                 }
@@ -258,17 +259,18 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
             }
         });
 
-        startOneKeyTx.await();
+        blockOnce.await();
 
         GridCompoundFuture<?, ?> finishFut = new GridCompoundFuture<>();
 
-        for (int i = 1; i < contCnt; ++i) {
-            int i0 = i;
+        for (int i = 0; i < contCnt; ++i) {
             IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
                 try (Transaction tx = txMgr.txStart(concurrency, isolation)) {
-                    cache0.put(keyId, i0);
+                    cache0.put(keyId, 0);
 
                     tx.commit();
+
+                    txLatch.countDown();
                 }
             });
 
@@ -277,18 +279,19 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         finishFut.markInitialized();
 
-        nearLockReq.await();
-
         for (Ignite ig0 : G.allGrids()) {
             TestRecordingCommunicationSpi commSpi0 =
                 (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
+
+            if (ig0.configuration().isClientMode())
+                continue;
 
             commSpi0.stopBlock();
         }
 
         IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
 
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 try {
                     U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
@@ -314,10 +317,12 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
                 else
                     return false;
             }
-        }, 10_000);
+        }, 10_000));
 
         f.get();
 
         finishFut.get();
+
+        txLatch.await();
     }
 }

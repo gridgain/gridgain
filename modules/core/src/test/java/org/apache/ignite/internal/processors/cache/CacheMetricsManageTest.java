@@ -50,6 +50,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -545,6 +546,9 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         if (useTestCommSpi)
             cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
+        if (client)
+            cfg.setClientMode(client);
+
         if (persistence)
             cfg.setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
@@ -568,9 +572,11 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
         Ignite ig = startGridsMultiThreaded(2);
 
-        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 10;
+        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 20;
 
         CountDownLatch txLatch = new CountDownLatch(contCnt * 2);
+
+        CountDownLatch txLatch0 = new CountDownLatch(contCnt * 2);
 
         ig.cluster().active(true);
 
@@ -590,11 +596,13 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
         CacheMetricsMXBean mxBeanCache = mxBean(0, cacheName, CacheLocalMetricsMXBeanImpl.class);
 
-        final List<Integer> priKeys = primaryKeys(cache, 2, 1);
+        final List<Integer> priKeys = primaryKeys(cache, 3, 1);
 
         final Integer backKey = backupKey(cache);
 
         IgniteTransactions txMgr = cl.transactions();
+
+        CountDownLatch blockOnce = new CountDownLatch(1);
 
         for (Ignite ig0 : G.allGrids()) {
             TestRecordingCommunicationSpi commSpi0 =
@@ -602,7 +610,15 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
             commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
-                    return msg instanceof GridNearTxFinishResponse;
+                    //System.err.println("!!! " + msg);
+
+                    if (msg instanceof GridNearTxPrepareResponse && blockOnce.getCount() > 0) {
+                        blockOnce.countDown();
+
+                        return true;
+                    }
+
+                    return false;
                 }
             });
         }
@@ -610,10 +626,12 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
             try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
                 cache0.put(priKeys.get(0), 0);
-                cache0.put(priKeys.get(1), 0);
+                cache0.put(priKeys.get(2), 0);
                 tx.commit();
             }
         });
+
+        blockOnce.await();
 
         GridCompoundFuture<?, ?> finishFut = new GridCompoundFuture<>();
 
@@ -623,14 +641,18 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
                     cache0.put(priKeys.get(0), 0);
                     cache0.put(priKeys.get(1), 0);
 
+                    txLatch0.countDown();
+
                     tx.commit();
 
                     txLatch.countDown();
                 }
 
                 try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
-                    cache0.put(priKeys.get(1), 0);
+                    cache0.put(priKeys.get(2), 0);
                     cache0.put(backKey, 0);
+
+                    txLatch0.countDown();
 
                     tx.commit();
 
@@ -643,6 +665,8 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
         finishFut.markInitialized();
 
+        txLatch0.await();
+
         for (Ignite ig0 : G.allGrids()) {
             TestRecordingCommunicationSpi commSpi0 =
                 (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
@@ -652,13 +676,7 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
         IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
 
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            /** */
-            boolean key1;
-
-            /** */
-            boolean key2;
-
+        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 try {
                     U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
@@ -669,15 +687,10 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
                 String coll = mxBeanCache.getTxKeyCollisions();
 
-                if (coll.contains("val=" + priKeys.get(0)));
-                    key1 = true;
-
-                if (coll.contains("val=" + priKeys.get(1)))
-                    key2 = true;
-
-                return key1 && key2;
+                if (coll.contains("val=" + priKeys.get(2)));
+                    return true;
             }
-        }, 10_000);
+        }, 10_000));
 
         f.get();
 
