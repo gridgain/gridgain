@@ -284,25 +284,4 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
 
         finishFut.get();
     }
-
-    /**
-     * Gets CacheGroupMetricsMXBean for given node and group name.
-     *
-     * @param nodeIdx Node index.
-     * @param cacheName Cache name.
-     * @return MBean instance.
-     */
-    private CacheMetricsMXBean mxBean(int nodeIdx, String cacheName, Class<? extends CacheMetricsMXBean> clazz)
-        throws MalformedObjectNameException {
-        ObjectName mbeanName = U.makeMBeanName(getTestIgniteInstanceName(nodeIdx), cacheName,
-            clazz.getName());
-
-        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
-
-        if (!mbeanSrv.isRegistered(mbeanName))
-            fail("MBean is not registered: " + mbeanName.getCanonicalName());
-
-        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, CacheMetricsMXBean.class,
-            true);
-    }
 }

@@ -774,11 +774,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         return onCreated(sysCacheCtx, tx);
     }
 
-    /** */
-    private <T extends IgniteInternalTx> void processTxKeys(T tx) {
-
-    }
-
     /**
      * @param cacheCtx Cache context.
      * @param tx Created transaction.
@@ -3037,7 +3032,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         broadcastToNodesSupportingFeature(
             cctx.kernalContext(),
             new TxCollisionsDumpSettingsClosure(collisionsDumpInterval),
-            false,
+            true,
             DISTRIBUTED_TX_COLLISIONS_DUMP
         );
     }
@@ -3049,8 +3044,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** Wrapper for inner collect logic. */
     private void collectTxCollisionsInfo() {
-        System.err.println("collectTxCollisionsInfo");
-
         keyCollisionsInfo.collectInfo();
     }
 
@@ -3058,30 +3051,25 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Check local and remote candidates queue size.
      *
      * @param entry CacheEntry.
-     * @param remoteSize Remore candidates size.
      **/
-    public void detectPossibleCollidingKeys(GridDistributedCacheEntry entry, int remoteSize) {
-        GridCacheEntryEx cached = entry;
-
-        int qSize = 0;
+    public void detectPossibleCollidingKeys(GridDistributedCacheEntry entry) {
+        int qSize = entry.remoteMvccSnapshot().size();
 
         try {
-            qSize = cached.localCandidates().size();
+            qSize += entry.localCandidates().size();
         }
         catch (GridCacheEntryRemovedException ignored) {
             // No-op, obsolete vers found.
         }
-
-        qSize += remoteSize;
 
         if (qSize >= COLLISIONS_QUEUE_THRESHOLD)
             pushCollidingKeysWithQueueSize(entry, qSize);
     }
 
     /** Tx key collisions info holder. */
-    private static final class KeyCollisionsHolder {
+    private final class KeyCollisionsHolder {
         /** Stripes count. */
-        private final int STRIPES_COUNT = Runtime.getRuntime().availableProcessors();
+        private final int STRIPES_COUNT = cctx.kernalContext().config().getSystemThreadPoolSize();
 
         /** Max objects per store. */
         private static final int MAX_OBJS = 5;

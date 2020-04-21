@@ -18,10 +18,8 @@ package org.apache.ignite.internal.processors.cache.verify;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 
 /**
  */
@@ -34,9 +32,6 @@ public class ContentionInfo implements Serializable {
 
     /** */
     private List<String> entries;
-
-    /** */
-    private Map<KeyCacheObject, Integer> cont;
 
     /**
      * @return Node.

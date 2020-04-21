@@ -360,6 +360,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** {@inheritDoc} */
     @Override protected void sendFinishReply(@Nullable Throwable err) {
+        // We are in near transaction, do not send finish reply to local node.
     }
 
     /** {@inheritDoc} */
