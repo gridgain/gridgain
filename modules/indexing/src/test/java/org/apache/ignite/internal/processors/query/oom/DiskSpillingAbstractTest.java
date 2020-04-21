@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
@@ -33,6 +34,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -40,7 +42,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
@@ -518,6 +519,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
 
+            final AtomicBoolean oomExThrown = new AtomicBoolean();
+
             multithreaded(() -> {
                 try {
                     for (int i = 0; i < iterations; i++) {
@@ -527,20 +530,26 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                             .getAll();
                     }
                 }
-                catch (Exception e) {
+                catch (SqlMemoryQuotaExceededException e) {
+                    oomExThrown.set(true);
+
                     assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
 
-                    IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
-
-                    assertNotNull(sqlEx);
-
                     if (res == Result.ERROR_GLOBAL_QUOTA)
-                        assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Global quota was exceeded."));
                     else
-                        assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Query quota was exceeded."));
+                }
+                catch (Throwable t) {
+                    log.error("Caught exception:" + X.getFullStackTrace(t));
+
+                    throw t;
                 }
 
             }, threadNum);
+
+            assertEquals("Exception expected=" + !res.success + ", exception thrown=" + oomExThrown.get(),
+                !res.success,  oomExThrown.get());
         }
         catch (Exception e) {
             fail(X.getFullStackTrace(e));
