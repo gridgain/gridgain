@@ -751,14 +751,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
             baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
         );
-
-        for (int g = 0; g < 3; g++) {
-            IgniteEx grid = grid(g);
-
-            ListeningTestLogger log = U.field(grid.configuration().getGridLogger(), "impl");
-
-            log.clearListeners();
-        }
     }
 
     /**
