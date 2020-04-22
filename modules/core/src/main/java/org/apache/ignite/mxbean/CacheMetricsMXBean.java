@@ -328,7 +328,7 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
 
     /** {@inheritDoc} */
     @MXBeanDescription("Tx key collisions. Shows key and collisions queue size for the last " +
-        "IGNITE_DUMP_TX_COLLISIONS_INTERVAL. Default is 1 sec. ")
+        "IGNITE_DUMP_TX_COLLISIONS_INTERVAL. Default is 1 sec.")
     @Override public String getTxKeyCollisions();
 
     /**
