@@ -358,7 +358,8 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
 
-        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions.");
+        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
+            "Shows key and collisions queue size for the last IGNITE_DUMP_TX_COLLISIONS_INTERVAL. Default is 1 sec.");
     }
 
     /**
