@@ -19,7 +19,6 @@ package org.apache.ignite.internal.agent.ws;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -33,8 +32,8 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ControlCenterSender;
+import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.glassfish.tyrus.client.ClientManager;
@@ -53,6 +52,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import static java.net.Proxy.NO_PROXY;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.agent.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.apache.ignite.internal.agent.utils.AgentUtils.EMPTY;
@@ -331,7 +331,7 @@ public class WebSocketManager extends GridProcessorAdapter implements ControlCen
             Map<String, String> proxyHeaders = new HashMap<>();
 
             proxyHeaders.put("Proxy-Authorization", "Basic " +
-                encodeToString((user + ':' + pwd).getBytes(StandardCharsets.UTF_8)));
+                encodeToString((user + ':' + pwd).getBytes(UTF_8)));
 
             mgr.getProperties().put(ClientProperties.PROXY_HEADERS, proxyHeaders);
         }
