@@ -1549,8 +1549,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
-            if (tx != null && cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                logPtr = logTxUpdate(tx, val, expireTime, updateCntr0);
+            if (tx != null && cctx.group().persistenceEnabled())
+                logPtr = logTxUpdate(tx, val, expireTime, updateCntr0, cctx.group().walEnabled());
 
             update(val, expireTime, ttl, newVer, true);
 
@@ -1771,8 +1771,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
-            if (tx != null && cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                logPtr = logTxUpdate(tx, null, 0, updateCntr0);
+            if (tx != null && cctx.group().persistenceEnabled())
+                logPtr = logTxUpdate(tx, null, 0, updateCntr0, cctx.group().walEnabled());
 
             drReplicate(drType, null, newVer, topVer);
 
@@ -4335,31 +4335,36 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param val Value.
      * @param expireTime Expire time (or 0 if not applicable).
      * @param updCntr Update counter.
+     * @param walEnabled Whether WAL is enabled.
      * @throws IgniteCheckedException In case of log failure.
      */
-    protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr)
+    protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr, boolean walEnabled)
         throws IgniteCheckedException {
         assert cctx.transactional() && !cctx.transactionalSnapshot();
 
         if (tx.local()) { // For remote tx we log all updates in batch: GridDistributedTxRemoteAdapter.commitIfLocked()
-            GridCacheOperation op;
-            if (val == null)
-                op = DELETE;
-            else
-                op = this.val == null ? GridCacheOperation.CREATE : UPDATE;
-
             cctx.tm().pendingTxsTracker().onKeysWritten(tx.nearXidVersion(), Collections.singletonList(key));
 
-            return cctx.shared().wal().log(new DataRecord(new DataEntry(
-                cctx.cacheId(),
-                key,
-                val,
-                op,
-                tx.nearXidVersion(),
-                tx.writeVersion(),
-                expireTime,
-                key.partition(),
-                updCntr)));
+            if (walEnabled) {
+                GridCacheOperation op;
+                if (val == null)
+                    op = DELETE;
+                else
+                    op = this.val == null ? GridCacheOperation.CREATE : UPDATE;
+
+                return cctx.shared().wal().log(new DataRecord(new DataEntry(
+                    cctx.cacheId(),
+                    key,
+                    val,
+                    op,
+                    tx.nearXidVersion(),
+                    tx.writeVersion(),
+                    expireTime,
+                    key.partition(),
+                    updCntr)));
+            }
+            else
+                return null;
         }
         else
             return null;
