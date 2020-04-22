@@ -94,11 +94,11 @@ public class QueryDetailMetrics {
     }
 
     /**
-     * @param minTime Mininimal time.
+     * @param minTime Minimal time.
      * @return {@code This} for chaining method calls.
      */
     public QueryDetailMetrics setMinTime(long minTime) {
-        this.minTime = this.minTime;
+        this.minTime = minTime;
 
         return this;
     }
