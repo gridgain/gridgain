@@ -39,6 +39,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
@@ -142,7 +143,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
 
         GridDhtPartitionState partState = locPart.state();
         if (partState != EVICTED)
-            reserved = (partState == OWNING || partState == RENTING || partState == MOVING) && locPart.reserve();
+            reserved = (partState == OWNING || partState == MOVING || partState == LOST) && locPart.reserve();
 
         if (!reserved)
             return;

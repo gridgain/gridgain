@@ -55,7 +55,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
-import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
@@ -71,8 +70,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
     /** Disable rebalancing cancellation optimization. */
-    private final boolean disableRebalancingCancellationOptimization = IgniteSystemProperties.getBoolean(
-        IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
+    private final boolean disableRebalancingCancellationOptimization =
+        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -188,8 +187,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtPreloaderAssignments generateAssignments(GridDhtPartitionExchangeId exchId,
-        GridDhtPartitionsExchangeFuture exchFut) {
+    @Override public GridDhtPreloaderAssignments generateAssignments(
+        GridDhtPartitionExchangeId exchId,
+        GridDhtPartitionsExchangeFuture exchFut
+    ) {
         assert exchFut == null || exchFut.isDone();
 
         // No assignments for disabled preloader.
@@ -304,21 +305,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
                     List<ClusterNode> picked = remoteOwners(p, topVer);
 
-                    if (picked.isEmpty()) {
-                        changed |= top.own(part);
-
-                        if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_DATA_LOST)) {
-                            grp.addRebalanceEvent(p,
-                                EVT_CACHE_REBALANCE_PART_DATA_LOST,
-                                exchId.eventNode(),
-                                exchId.event(),
-                                exchId.eventTimestamp());
-                        }
-
-                        if (log.isDebugEnabled())
-                            log.debug("Owning partition as there are no other owners: " + part);
-                    }
-                    else {
+                    if (!picked.isEmpty()) {
                         ClusterNode n = picked.get(p % picked.size());
 
                         GridDhtPartitionDemandMessage msg = assignments.get(n);
@@ -337,16 +324,16 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         }
 
         if (log.isInfoEnabled()) {
-            if (!skippedPartitionsLackHistSupplier.isEmpty()) {
-                log.info("Unable to perform historical rebalance cause " +
-                    "history supplier is not available [grpId=" + grp.groupId() + ", grpName=" + grp.name() +
+            if (!skippedPartitionsLackHistSupplier.isEmpty() && grp.persistenceEnabled()) {
+                log.info("Unable to perform historical rebalancing because " +
+                    "a history supplier is not available [grpId=" + grp.groupId() + ", grpName=" + grp.name() +
                     ", parts=" + S.compact(
                         Arrays.stream(skippedPartitionsLackHistSupplier.array()).boxed().collect(Collectors.toList())) +
                     ", topVer=" + topVer + ']');
             }
 
-            if (!skippedPartitionsCleared.isEmpty()) {
-                log.info("Unable to perform historical rebalance because clearing is required for partitions" +
+            if (!skippedPartitionsCleared.isEmpty() && grp.persistenceEnabled()) {
+                log.info("Unable to perform historical rebalancing because a clearing is required for partitions " +
                     "[grpId=" + grp.groupId() + ", grpName=" + grp.name() +
                     ", parts=" + S.compact(
                         Arrays.stream(skippedPartitionsCleared.array()).boxed().collect(Collectors.toList())) +
@@ -361,9 +348,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 "Unexpected rebalance on rebalanced cluster " +
                     "[top=" + topVer + ", grp=" + grp.groupId() + ", assignments=" + assignments + "]";
         }
-
-        if (changed)
-            ctx.exchange().scheduleResendPartitions();
 
         return assignments;
     }
