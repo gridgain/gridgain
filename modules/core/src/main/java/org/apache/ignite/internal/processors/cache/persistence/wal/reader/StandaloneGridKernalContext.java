@@ -110,7 +110,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class StandaloneGridKernalContext implements GridKernalContext {
     /** Binary metadata file store folder. */
-    public static final String BINARY_META_FOLDER = "binary_meta";
+    public static final String BINARY_META_FOLDER = "db/binary_meta";
 
     /** Config for fake Ignite instance. */
     private final IgniteConfiguration cfg;

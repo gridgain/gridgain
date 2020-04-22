@@ -52,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
  */
 class BinaryMetadataFileStore {
     /** Default path (relative to working directory) of binary metadata folder */
-    private static final String BINARY_METADATA_DFLT_PATH = "db/binary_meta";
+    public static final String BINARY_METADATA_DFLT_PATH = "db/binary_meta";
 
     /** Link to resolved binary metadata directory. Null for non persistent mode */
     private File metadataDir;

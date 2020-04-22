@@ -79,7 +79,7 @@ public class IgniteLaunchInModularEnvTest {
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "db/binary_meta", false));
     }
 
     /**

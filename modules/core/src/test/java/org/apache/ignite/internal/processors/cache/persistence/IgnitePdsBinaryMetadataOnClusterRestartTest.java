@@ -339,7 +339,7 @@ public class IgnitePdsBinaryMetadataOnClusterRestartTest extends GridCommonAbstr
         String expectedMsg = String.format(
             "Type '%s' with typeId %d has a different/incorrect type for field '%s'. Expected 'int' but 'long' was " +
                 "provided. Field type's modification is unsupported, clean {root_path}/marshaller and " +
-                "{root_path}/binary_meta directories if the type change is required.",
+                "{root_path}/db/binary_meta directories if the type change is required.",
             DYNAMIC_TYPE_NAME,
             createdTypeId,
             decimalFieldName);
@@ -371,8 +371,8 @@ public class IgnitePdsBinaryMetadataOnClusterRestartTest extends GridCommonAbstr
     ) throws Exception {
         String workDir = U.defaultWorkDirectory();
 
-        Path fromFile = Paths.get(workDir, fromWorkDir, "binary_meta", fromConsId, fileName);
-        Path toFile = Paths.get(workDir, toWorkDir, "binary_meta", toConsId, fileName);
+        Path fromFile = Paths.get(workDir, fromWorkDir, "db/binary_meta", fromConsId, fileName);
+        Path toFile = Paths.get(workDir, toWorkDir, "db/binary_meta", toConsId, fileName);
 
         Files.copy(fromFile, toFile, StandardCopyOption.REPLACE_EXISTING);
     }

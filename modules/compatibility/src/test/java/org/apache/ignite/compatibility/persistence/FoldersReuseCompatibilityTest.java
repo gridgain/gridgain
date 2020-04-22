@@ -217,7 +217,7 @@ public class FoldersReuseCompatibilityTest extends IgnitePersistenceCompatibilit
      * @throws IgniteCheckedException if IO error occur
      */
     private void assertPdsDirsDefaultExist(String subDirName) throws IgniteCheckedException {
-        assertDirectoryExist("binary_meta", subDirName);
+        assertDirectoryExist("db/binary_meta", subDirName);
         assertDirectoryExist(PersistentStoreConfiguration.DFLT_WAL_STORE_PATH, subDirName);
         assertDirectoryExist(PersistentStoreConfiguration.DFLT_WAL_ARCHIVE_PATH, subDirName);
         assertDirectoryExist(PdsConsistentIdProcessor.DB_DEFAULT_FOLDER, subDirName);
