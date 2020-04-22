@@ -706,7 +706,7 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
     @Test
     public void testKeyCollisionsMetricDifferentTimeout() throws Exception {
         Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-9224", MvccFeatureChecker.forcedMvcc());
-        
+
         backups = 2;
 
         useTestCommSpi = true;
