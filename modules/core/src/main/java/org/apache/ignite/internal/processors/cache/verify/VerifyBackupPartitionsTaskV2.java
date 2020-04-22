@@ -249,6 +249,13 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
 
         /** {@inheritDoc} */
         @Override public Map<PartitionKeyV2, PartitionHashRecordV2> execute() throws IgniteException {
+            try {
+                ignite.context().cache().context().database().waitForCheckpoint("VerifyBackupPartitions");
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+
             Set<Integer> grpIds = getGroupIds();
 
             completionCntr.set(0);
