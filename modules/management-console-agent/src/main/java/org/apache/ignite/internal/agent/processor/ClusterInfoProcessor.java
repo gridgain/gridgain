@@ -64,7 +64,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     /** Cluster. */
     protected IgniteClusterEx cluster;
 
-    /** Manager. */
+    /** Control center sender. */
     private ControlCenterSender snd;
 
     /** Send full topology to Control Center on baseline change. */

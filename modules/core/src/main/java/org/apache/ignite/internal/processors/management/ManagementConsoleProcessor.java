@@ -37,7 +37,7 @@ public interface ManagementConsoleProcessor extends GridProcessor {
     public ManagementConfiguration configuration();
 
     /**
-     * @return Control Center sender.
+     * @return Sender that responsible for communication with the Control Center backend.
      */
     public ControlCenterSender sender();
 }
