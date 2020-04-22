@@ -1038,6 +1038,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             setWriteSynchronizationMode(FULL_SYNC).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
 
+        awaitPartitionMapExchange();
+
         for (Ignite client : clients) {
             assertTrue(client.configuration().isClientMode());
 
