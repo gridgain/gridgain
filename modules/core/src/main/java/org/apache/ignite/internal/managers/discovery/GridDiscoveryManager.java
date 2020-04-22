@@ -1515,10 +1515,21 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      * @param totalCpus Total cpu number.
      * @param heap Heap size.
      * @param offheap Offheap size.
+     * @param needNodesDetails Flag for additional alive nodes logging.
      */
-    private void topologySnapshotMessage(IgniteClosure<String, Void> clo, long topVer, DiscoCache discoCache,
-        int evtType, ClusterNode evtNode, int srvNodesNum, int clientNodesNum, int totalCpus, double heap,
-        double offheap, boolean needNodesDetails) {
+    private void topologySnapshotMessage(
+        IgniteClosure<String, Void> clo,
+        long topVer,
+        DiscoCache discoCache,
+        int evtType,
+        ClusterNode evtNode,
+        int srvNodesNum,
+        int clientNodesNum,
+        int totalCpus,
+        double heap,
+        double offheap,
+        boolean needNodesDetails
+    ) {
         DiscoveryDataClusterState state = discoCache.state();
 
         SB summary = new SB(PREFIX);
@@ -1534,17 +1545,13 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         summary.a(", heap=").a(heap).a("GB");
 
         if (evtType == EVT_NODE_JOINED && needNodesDetails) {
-            summary.a(", nodes=[");
+            summary.a(", aliveNodes=[");
 
-            String prefix = "";
+            for (ClusterNode clusterNode : discoCache.allNodes())
+                if (discoCache.alive(clusterNode.id()))
+                    summary.a(clusterNode.toString()).a(", ");
 
-            for (ClusterNode clusterNode : discoCache.allNodes()) {
-                summary.a(prefix);
-
-                prefix = ",";
-
-                summary.a(clusterNode.toString());
-            }
+            summary.setLength(summary.length() - 2);
 
             summary.a("]");
         }
