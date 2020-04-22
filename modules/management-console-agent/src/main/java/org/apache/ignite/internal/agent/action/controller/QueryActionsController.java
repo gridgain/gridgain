@@ -101,7 +101,9 @@ public class QueryActionsController {
             SqlFieldsQuery qryFields = new SqlFieldsQuery("KILL QUERY '" + globalQryId + "';")
                 .setLazy(false);
 
-            qryProc.querySqlFields(qryFields, true).close();
+            try (FieldsQueryCursor<List<?>> cursor = qryProc.querySqlFields(qryFields, true)) {
+                cursor.getAll();
+            }
         }, MANAGEMENT_POOL);
     }
 
