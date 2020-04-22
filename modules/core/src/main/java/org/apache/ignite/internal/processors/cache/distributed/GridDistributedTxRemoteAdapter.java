@@ -825,7 +825,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         cctx.mvccCaching().onTxFinished(this, true);
 
-                        if (!near() && !F.isEmpty(dataEntries) && cctx.tm().pendingTxsTracker().enabled()) {
+                        if (!near() && !F.isEmpty(dataEntries)) {
                             // Set new update counters for data entries received from persisted tx entries.
                             List<DataEntry> entriesWithCounters = dataEntries.stream()
                                 .map(tuple -> tuple.get1().partitionCounter(tuple.get2().updateCounter()))
