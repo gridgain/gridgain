@@ -796,10 +796,14 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
         IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
 
-        final TransactionsMXBean txMXBean = txMXBean(0);
+        final TransactionsMXBean txMXBean1 = txMXBean(0);
+
+        final TransactionsMXBean txMXBean2 = txMXBean(1);
 
         for (int i = 0; i < 10; ++i) {
-            txMXBean.setTxKeyCollisionsInterval(ThreadLocalRandom.current().nextInt(1000, 1100));
+            txMXBean1.setTxKeyCollisionsInterval(ThreadLocalRandom.current().nextInt(1000, 1100));
+
+            txMXBean2.setTxKeyCollisionsInterval(ThreadLocalRandom.current().nextInt(1000, 1100));
 
             mxBeanCache.getTxKeyCollisions();
 
