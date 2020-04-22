@@ -30,11 +30,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ListeningTestLogger implements IgniteLogger {
     /**
-     * If set to {@code true}, enables debug and trace log messages processing.
-     */
-    private final boolean dbg;
-
-    /**
      * Logger to echo all messages, limited by {@code dbg} flag.
      */
     private final IgniteLogger echo;
@@ -63,7 +58,6 @@ public class ListeningTestLogger implements IgniteLogger {
      * @param echo Logger to echo all messages, limited by {@code dbg} flag.
      */
     public ListeningTestLogger(boolean dbg, @Nullable IgniteLogger echo) {
-        this.dbg = dbg;
         this.echo = echo;
     }
 
@@ -139,9 +133,6 @@ public class ListeningTestLogger implements IgniteLogger {
 
     /** {@inheritDoc} */
     @Override public void trace(String msg) {
-        if (!dbg)
-            return;
-
         if (echo != null)
             echo.trace(msg);
 
@@ -150,9 +141,6 @@ public class ListeningTestLogger implements IgniteLogger {
 
     /** {@inheritDoc} */
     @Override public void debug(String msg) {
-        if (!dbg)
-            return;
-
         if (echo != null)
             echo.debug(msg);
 
@@ -191,12 +179,12 @@ public class ListeningTestLogger implements IgniteLogger {
 
     /** {@inheritDoc} */
     @Override public boolean isTraceEnabled() {
-        return dbg;
+        return echo != null && echo.isTraceEnabled();
     }
 
     /** {@inheritDoc} */
     @Override public boolean isDebugEnabled() {
-        return dbg;
+        return echo != null && echo.isDebugEnabled();
     }
 
     /** {@inheritDoc} */

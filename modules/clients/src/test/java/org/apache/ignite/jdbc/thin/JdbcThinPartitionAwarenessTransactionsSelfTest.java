@@ -59,8 +59,7 @@ public class JdbcThinPartitionAwarenessTransactionsSelfTest extends JdbcThinAbst
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(cacheConfiguration(DEFAULT_CACHE_NAME).setNearConfiguration(null))
-            .setMarshaller(new BinaryMarshaller())
-            .setGridLogger(log = new GridStringLogger());
+            .setMarshaller(new BinaryMarshaller());
     }
 
     /**

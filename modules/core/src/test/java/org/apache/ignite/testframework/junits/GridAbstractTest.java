@@ -39,6 +39,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -112,6 +113,8 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.configvariations.VariationsTestsConfig;
@@ -170,6 +173,9 @@ import static org.apache.ignite.testframework.config.GridTestProperties.IGNITE_C
     "TransientFieldInNonSerializableClass"
 })
 public abstract class GridAbstractTest extends JUnitAssertAware {
+    /** */
+    private static final String UNGUARDED_LOG_USAGE_WARN_MSG = "Logging at TRACE level without checking if TRACE level is enabled";
+
     /**************************************************************
      * DO NOT REMOVE TRANSIENT - THIS OBJECT MIGHT BE TRANSFERRED *
      *                  TO ANOTHER NODE.                          *
@@ -243,6 +249,19 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /** */
     protected static transient IgniteLogger log;
+
+    /** */
+    protected static final transient LinkedBlockingQueue<String> unguardedMessages = new LinkedBlockingQueue<>();
+
+    /** */
+    protected static final transient LogListener warnUnguardedLogUsagelister = LogListener.matches(s -> {
+        boolean success = isUnguardedLogUsageMessage(s);
+
+        if (success)
+            unguardedMessages.add(s);
+
+        return success;
+    }).build();
 
     /** */
     private static transient ClassLoader clsLdr;
@@ -2748,5 +2767,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             throw new IgniteException("MBean not registered.");
 
         return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, DynamicMBean.class, false);
+    }
+
+    /**
+     * Checks that given message is warning about unguarded log usage.
+     *
+     * @param msg Message for check.
+     * @return {@code True} if message is warn message about unguarded log usage and {@code false} otherwise.
+     */
+    private static boolean isUnguardedLogUsageMessage(String msg) {
+        // Logging at <LEVEL> level without checking if <LEVEL> level is enabled
+        return msg.startsWith("Logging at ") && msg.contains(" level without checking if ") && msg.contains(" level is enabled");
     }
 }
