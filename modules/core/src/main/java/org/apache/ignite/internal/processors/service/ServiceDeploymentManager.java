@@ -29,7 +29,6 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
@@ -45,7 +44,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
@@ -134,7 +132,7 @@ public class ServiceDeploymentManager {
      *
      * @param stopErr Cause error of deployment manager stop.
      */
-    IgniteInternalFuture<?> stopProcessing(IgniteCheckedException stopErr) {
+    void stopProcessing(IgniteCheckedException stopErr) {
         busyLock.block();
 
         try {
@@ -144,27 +142,15 @@ public class ServiceDeploymentManager {
 
             U.cancel(depWorker);
 
-            GridFutureAdapter<?> fut = new GridFutureAdapter<>();
-            ctx.getSystemExecutorService().submit(() -> {
-                try {
-                    U.join(depWorker, log);
+            U.join(depWorker, log);
 
-                    depWorker.tasksQueue.clear();
-
-                    fut.onDone();
-                }
-                catch (Throwable t) {
-                    fut.onDone(t);
-                }
-            });
+            depWorker.tasksQueue.clear();
 
             pendingEvts.clear();
 
             tasks.values().forEach(t -> t.completeError(stopErr));
 
             tasks.clear();
-
-            return fut;
         }
         finally {
             busyLock.unblock();
