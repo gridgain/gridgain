@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.cache.CacheException;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
@@ -1475,6 +1476,41 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testNodeStopInInsertInvalidKey() throws Exception {
+        inlineSize = 10;
+
+        Ignite ign = startGrid();
+
+        sql("CREATE TABLE IF NOT EXISTS MyTable (" +
+            "first INTEGER, " +
+            "second INTEGER, " +
+            "v INTEGER, " +
+            "PRIMARY KEY (first, second)" +
+            ") " +
+            "WITH \"" +
+            "template=replicated," +
+            "atomicity=transactional," +
+            "key_type=" + Key0.class.getName() + ',' +
+            "value_type=" + Value0.class.getName() + ',' +
+            "cache_name=test" +
+            "\"");
+
+        sql("CREATE INDEX IF NOT EXISTS my_idx ON MyTable (first)");
+
+        IgniteCache<Key0, Value0> cache = ign.cache("test");
+
+        cache.put(new Key0(0, 0), new Value0(0));
+        cache.put(new Key0(0, 1), new Value0(1));
+
+        cache.clear();
+
+        cache.put(new Key0(0, 0), new Value0(0));
+        cache.put(new Key0(0, 1), new Value0(1));
+    }
+
+    /**
      * Checks index creation does not affect used index.
      *
      * @param wrongIdx1Name Wrong index name.
@@ -1977,6 +2013,38 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         /** */
         SqlDataType(Object javaType) {
             this.javaType = javaType;
+        }
+    }
+
+    /**
+     *
+     */
+    public static class Key0 {
+        /** */
+        int first;
+
+        /** Note the misspelling, special for the test. */
+        int saecond;
+
+        /**
+         */
+        public Key0(int first, int second) {
+            this.first = first;
+            this.saecond = second;
+        }
+    }
+
+    /**
+     *
+     */
+    public static class Value0 {
+        /** */
+        int v;
+
+        /**
+         */
+        public Value0(int v) {
+            this.v = v;
         }
     }
 }

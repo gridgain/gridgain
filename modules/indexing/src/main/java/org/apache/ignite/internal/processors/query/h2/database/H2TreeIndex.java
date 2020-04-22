@@ -425,6 +425,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
     /** {@inheritDoc} */
     @Override public boolean putx(H2CacheRow row) {
+        log.info("+++ putx " + idxName + ", " + row);
         try {
             int seg = segmentForRow(cctx, row);
 
