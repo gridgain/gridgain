@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -49,6 +50,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
@@ -58,6 +60,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
+import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -610,8 +613,6 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
             commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
-                    //System.err.println("!!! " + msg);
-
                     if (msg instanceof GridNearTxPrepareResponse && blockOnce.getCount() > 0) {
                         blockOnce.countDown();
 
@@ -687,7 +688,7 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
                 String coll = mxBeanCache.getTxKeyCollisions();
 
-                if (coll.contains("val=" + priKeys.get(2)));
+                if (coll.contains("val=" + priKeys.get(2)) || coll.contains("val=" + priKeys.get(0)));
                     return true;
             }
         }, 10_000));
@@ -697,6 +698,141 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         finishFut.get();
 
         txLatch.await();
+    }
+
+    /** Tests metric change interval. */
+    @Test
+    public void testKeyCollisionsMetricDifferentTimeout() throws Exception {
+        backups = 2;
+
+        useTestCommSpi = true;
+
+        Ignite ig = startGridsMultiThreaded(3);
+
+        int contCnt = (int)U.staticField(IgniteTxManager.class, "COLLISIONS_QUEUE_THRESHOLD") * 5;
+
+        CountDownLatch txLatch = new CountDownLatch(contCnt);
+
+        ig.cluster().active(true);
+
+        client = true;
+
+        Ignite cl = startGrid();
+
+        IgniteTransactions txMgr = cl.transactions();
+
+        CacheConfiguration<?, ?> dfltCacheCfg = getCacheConfiguration();
+
+        dfltCacheCfg.setStatisticsEnabled(true);
+
+        String cacheName = dfltCacheCfg.getName();
+
+        IgniteCache<Integer, Integer> cache = ig.cache(cacheName);
+
+        IgniteCache<Integer, Integer> cache0 = cl.cache(cacheName);
+
+        final Integer keyId = primaryKey(cache);
+
+        CountDownLatch blockOnce = new CountDownLatch(1);
+
+        for (Ignite ig0 : G.allGrids()) {
+            if (ig0.configuration().isClientMode())
+                continue;
+
+            TestRecordingCommunicationSpi commSpi0 =
+                (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
+
+            commSpi0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode node, Message msg) {
+                    if (msg instanceof GridNearTxFinishResponse && blockOnce.getCount() > 0) {
+                        blockOnce.countDown();
+
+                        return true;
+                    }
+
+                    return false;
+                }
+            });
+        }
+
+        IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
+            try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
+                cache0.put(keyId, 0);
+                tx.commit();
+            }
+        });
+
+        blockOnce.await();
+
+        GridCompoundFuture<?, ?> finishFut = new GridCompoundFuture<>();
+
+        for (int i = 0; i < contCnt; ++i) {
+            IgniteInternalFuture f0 = GridTestUtils.runAsync(() -> {
+                try (Transaction tx = txMgr.txStart(PESSIMISTIC, READ_COMMITTED)) {
+                    cache0.put(keyId, 0);
+
+                    tx.commit();
+
+                    txLatch.countDown();
+                }
+            });
+
+            finishFut.add(f0);
+        }
+
+        finishFut.markInitialized();
+
+        for (Ignite ig0 : G.allGrids()) {
+            TestRecordingCommunicationSpi commSpi0 =
+                (TestRecordingCommunicationSpi)ig0.configuration().getCommunicationSpi();
+
+            if (ig0.configuration().isClientMode())
+                continue;
+
+            commSpi0.stopBlock();
+        }
+
+        CacheMetricsMXBean mxBeanCache = mxBean(0, cacheName, CacheLocalMetricsMXBeanImpl.class);
+
+        IgniteTxManager txManager = ((IgniteEx) ig).context().cache().context().tm();
+
+        final TransactionsMXBean txMXBean = txMXBean(0);
+
+        for (int i = 0; i < 10; ++i) {
+            txMXBean.setTxKeyCollisionsInterval(ThreadLocalRandom.current().nextInt(1000, 1100));
+
+            mxBeanCache.getTxKeyCollisions();
+
+            try {
+                U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
+            }
+            catch (IgniteCheckedException e) {
+                fail(e.toString());
+            }
+
+            U.sleep(500);
+        }
+
+        f.get();
+
+        finishFut.get();
+
+        txLatch.await();
+    }
+
+    /**
+     *
+     */
+    private TransactionsMXBean txMXBean(int igniteInt) throws Exception {
+        ObjectName mbeanName = U.makeMBeanName(getTestIgniteInstanceName(igniteInt), "Transactions",
+            TransactionsMXBeanImpl.class.getSimpleName());
+
+        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
+
+        if (!mbeanSrv.isRegistered(mbeanName))
+            fail("MBean is not registered: " + mbeanName.getCanonicalName());
+
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, TransactionsMXBean.class, true);
     }
 
     /**

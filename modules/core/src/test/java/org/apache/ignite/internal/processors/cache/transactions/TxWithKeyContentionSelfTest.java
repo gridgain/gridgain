@@ -253,9 +253,9 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         }
 
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
-            try (Transaction tx2 = txMgr.txStart(concurrency, isolation)) {
+            try (Transaction tx = txMgr.txStart(concurrency, isolation)) {
                 cache0.put(keyId, 0);
-                tx2.commit();
+                tx.commit();
             }
         });
 

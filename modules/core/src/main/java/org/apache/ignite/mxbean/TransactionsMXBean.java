@@ -253,11 +253,11 @@ public interface TransactionsMXBean {
      */
     @MXBeanParametersNames("timeout")
     @MXBeanDescription("Timeout interval (in millis) for printing tx key contention queue size info.")
-    void setShowKeyCollisionsInterval(int timeout);
+    void setTxKeyCollisionsInterval(int timeout);
 
     /**
      * @return Current interval in millis.
      */
     @MXBeanDescription("Returns a timeout (in millis) for printing tx key contention queue size info.")
-    int getShowKeyCollisionsInterval();
+    int getTxKeyCollisionsInterval();
 }
