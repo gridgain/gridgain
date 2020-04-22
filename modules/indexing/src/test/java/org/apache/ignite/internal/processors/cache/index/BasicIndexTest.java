@@ -16,11 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.sql.Date;
@@ -41,14 +37,11 @@ import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -1482,53 +1475,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     */
-    @Test
-    public void testStopNodeOnPutAttachedKey() throws Exception {
-        inlineSize = 10;
-
-        startGrid();
-
-        final CacheConfiguration<EmployeeId, Employee> cacheConfig =
-            new CacheConfiguration<EmployeeId, Employee>("Employee")
-            .setIndexedTypes(EmployeeId.class, Employee.class)
-            ;
-
-        IgniteCache<EmployeeId, Employee> cache =
-            grid().getOrCreateCache(cacheConfig);
-        IgniteCache<BinaryObject, BinaryObject> employeeCache =
-            cache.withKeepBinary();
-
-        BinaryObjectBuilder key1Builder =
-            grid().binary().builder(EmployeeId.class.getName());
-        key1Builder.setField("employeeNumber", 0, Integer.class);
-        key1Builder.setField("departmentNumber", 1, Integer.class);
-        BinaryObject key1 = key1Builder.build();
-
-        // create a new value
-        BinaryObjectBuilder emp1Builder =
-            grid().binary().builder(Employee.class.getName());
-        emp1Builder.setField("firstName", "John", String.class);
-        emp1Builder.setField("lastName", "Smith", String.class);
-        emp1Builder.setField("id", key1); // The composite key is also a part of the    value !
-        BinaryObject emp1 = emp1Builder.build();
-
-        // put the record to the DB - OK
-        employeeCache.put(key1, emp1);
-
-        BinaryObject key2 = emp1.field("id");
-
-        try {
-            employeeCache.put(key2, emp1); // CRASH!!! CorruptedTreeException: B+Tree is corrupted
-        }
-        catch (Exception ignored) {
-            // No-op.
-        }
-
-        assertFalse(grid().context().isStopping());
-    }
-
-    /**
      * Checks index creation does not affect used index.
      *
      * @param wrongIdx1Name Wrong index name.
@@ -2032,63 +1978,5 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         SqlDataType(Object javaType) {
             this.javaType = javaType;
         }
-    }
-
-    /**
-     *
-     */
-    public static class EmployeeId {
-        /** */
-        public Integer employeeNumber;
-
-        /** */
-        public Integer departmentNumber;
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            EmployeeId that = (EmployeeId) o;
-            return Objects.equals(employeeNumber, that.employeeNumber) &&
-                Objects.equals(departmentNumber, that.departmentNumber);
-        }
-
-
-        /** {@inheritDoc} */
-        @Override protected Object clone() throws CloneNotSupportedException {
-            try {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(baos);
-                oos.writeObject(this);
-                ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-                ObjectInputStream ois = new ObjectInputStream(bais);
-                return ois.readObject();
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return Objects.hash(employeeNumber, departmentNumber);
-        }
-    }
-
-    /**
-     *
-     */
-    public static class Employee {
-        /** */
-        @QuerySqlField
-        public String firstName;
-
-        /** */
-        @QuerySqlField
-        public String lastName;
-
-        /** */
-        public EmployeeId id;
     }
 }
