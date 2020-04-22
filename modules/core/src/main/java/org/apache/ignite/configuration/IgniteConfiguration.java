@@ -2674,7 +2674,7 @@ public class IgniteConfiguration {
      * Sets flag indicating whether the cluster will be active on start. This value should be the same on all
      * nodes in the cluster.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
+     * This flag is ignored when {@link DataStorageConfiguration} has at least one configured persistent region:
      * cluster is always inactive on start when Ignite Persistence is enabled.
      *
      * @param activeOnStart Active on start flag value.
@@ -3458,7 +3458,7 @@ public class IgniteConfiguration {
      * <p>
      * There are two options of query behaviour when either query or global memory quota is exceeded:
      * <ul>
-     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota was exceeded. </li>
      *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
      * </ul>
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
@@ -3509,7 +3509,7 @@ public class IgniteConfiguration {
      * It is the maximum amount of memory intended for the particular single query execution.
      * If a query execution exceeds this bound, the either would happen:
      * <ul>
-     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota was exceeded. </li>
      *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
      * </ul>
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
