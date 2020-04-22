@@ -23,14 +23,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlMemoryStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
-import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.disk.ExternalResultData;
 import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalResult;
 import org.apache.ignite.internal.processors.query.h2.disk.PlainExternalResult;
@@ -124,10 +123,10 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
         log = ctx.log(QueryMemoryManager.class);
 
-        setGlobalQuota(ctx.config().getSqlGlobalMemoryQuota());
-        setQueryQuota(ctx.config().getSqlQueryMemoryQuota());
+        setGlobalQuota(ctx.config().getSqlConfiguration().getSqlGlobalMemoryQuota());
+        setQueryQuota(ctx.config().getSqlConfiguration().getSqlQueryMemoryQuota());
 
-        offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
+        offloadingEnabled = ctx.config().getSqlConfiguration().isSqlOffloadingEnabled();
         metrics = new SqlMemoryStatisticsHolder(this, ctx.metric());
         blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
@@ -212,8 +211,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (offloadingEnabled)
             return false;
         else {
-            throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
-                IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            throw new SqlMemoryQuotaExceededException("SQL query ran out of memory: Global quota was exceeded.");
         }
     }
 
@@ -417,7 +415,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     @Override public GroupByData newManagedGroupByData(Session ses, ArrayList<Expression> expressions,
         boolean isGrpQry, int[] grpIdx) {
 
-        boolean spillingEnabled = ctx.config().isSqlOffloadingEnabled();
+        boolean spillingEnabled = ctx.config().getSqlConfiguration().isSqlOffloadingEnabled();
 
         if (!spillingEnabled)
             return null;

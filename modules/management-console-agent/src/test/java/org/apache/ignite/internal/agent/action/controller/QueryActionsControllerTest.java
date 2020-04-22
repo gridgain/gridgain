@@ -35,8 +35,12 @@ import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.dto.action.JobResponse;
 import org.apache.ignite.internal.agent.dto.action.Request;
@@ -45,6 +49,7 @@ import org.apache.ignite.internal.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.internal.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.internal.agent.dto.action.query.ScanQueryArgument;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Before;
@@ -650,6 +655,223 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .allMatch(r -> ((Collection<Map<String, String>>)r.getResult()).isEmpty());
 
                 return hasCorrectRes && isOtherResponsesEmpty;
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * 1. Create and fill the cache with Integer key and String value.
+     * 2. Execute sql query action: SELECT count(*), sleep() FROM "TestCache".STRING and wait completion.
+     * 3. Execute scan query action for TestCache and wait completion.
+     * 4. Send the "QueryActions.history" action with "since" argument equals to 1.
+     * 5. Assert that query history contains 2 queries.
+     * 6. Assert that SCAN and SQL_FIELDS query present in query history.
+     * 7. Assert that history queries contains a correct queries text presentation.
+     */
+    @Test
+    public void shouldReturnQueryHistory() {
+        IgniteCache<Object, Object> cache = cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setQueryDetailMetricsSize(1)
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        for (Integer i = 0; i < 1_000; i++)
+            cache.put(i, i.toString());
+
+        GridTestUtils.SqlTestFunctions.sleepMs = 5_000;
+
+        Request sqlQryReq = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId(UUID.randomUUID().toString())
+                    .setQueryText("SELECT count(*), sleep() FROM \"TestCache\".STRING")
+                    .setPageSize(1)
+                    .setDefaultSchema("TestCache")
+            );
+
+        executeAction(sqlQryReq, (res) -> {
+            TaskResponse taskRes = taskResult(sqlQryReq.getId());
+
+            return taskRes != null && taskRes.getStatus() == COMPLETED;
+        });
+
+        Request scanQryReq = new Request()
+            .setAction("QueryActions.executeScanQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new ScanQueryArgument()
+                    .setQueryId(UUID.randomUUID().toString())
+                    .setCacheName("TestCache")
+                    .setPageSize(1_000)
+            );
+
+        executeAction(scanQryReq, (res) -> {
+            TaskResponse taskRes = taskResult(scanQryReq.getId());
+
+            return taskRes != null && taskRes.getStatus() == COMPLETED;
+        });
+
+        Request req = new Request()
+            .setAction("QueryActions.history")
+            .setId(UUID.randomUUID())
+            .setArgument(1)
+            .setNodeIds(singleton(cluster.localNode().id()));
+
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            TaskResponse taskRes = taskResult(req.getId());
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 1) {
+                DocumentContext ctx = parse(r.getResult());
+
+                JSONArray results = ctx.read("$[*]");
+                JSONArray qryTypes = ctx.read("$[*].queryType");
+                JSONArray queries = ctx.read("$[*].query");
+
+                return results.size() == 2 &&
+                    qryTypes.stream().allMatch(t -> t.equals("SCAN") || t.equals("SQL_FIELDS")) &&
+                    queries.stream().allMatch(
+                        q -> q.equals("SELECT count(*), sleep() FROM \"TestCache\".STRING") || q.equals("TestCache")
+                    );
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * 1. Create and fill the cache with Integer key and String value.
+     * 2. Execute sql query: SELECT count(*), sleep() FROM "TestCache".STRING and wait completion.
+     * 3. Execute scan query for TestCache and wait completion.
+     * 4. Send the "QueryActions.history" action with "since" argument equals to 1.
+     * 5. Assert that query history contains 2 queries.
+     * 6. Assert that SCAN and SQL_FIELDS query present in query history.
+     * 7. Assert that history queries contains a correct queries text presentation.
+     */
+    @Test
+    public void shouldReturnQueryHistoryForQueriesInvokedByDirectApi() {
+        GridQueryProcessor qryProc = ((IgniteEx) cluster.ignite()).context().query();
+
+        IgniteCache<Object, Object> cache = cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setQueryDetailMetricsSize(1)
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        for (Integer i = 0; i < 1_000; i++)
+            cache.put(i, i.toString());
+
+        GridTestUtils.SqlTestFunctions.sleepMs = 5_000;
+
+        SqlFieldsQuery qry = new SqlFieldsQuery("SELECT count(*), sleep() FROM \"TestCache\".STRING");
+        qry.setSchema("TestCache");
+
+        try (FieldsQueryCursor<List<?>> lists = qryProc.querySqlFields(qry, true)) {
+            lists.getAll();
+        }
+
+        cache.withKeepBinary().query(new ScanQuery<>()).getAll();
+
+        Request req = new Request()
+            .setAction("QueryActions.history")
+            .setId(UUID.randomUUID())
+            .setArgument(1)
+            .setNodeIds(singleton(cluster.localNode().id()));
+
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            TaskResponse taskRes = taskResult(req.getId());
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 1) {
+                DocumentContext ctx = parse(r.getResult());
+
+                JSONArray results = ctx.read("$[*]");
+                JSONArray qryTypes = ctx.read("$[*].queryType");
+                JSONArray queries = ctx.read("$[*].query");
+
+                return results.size() == 2 &&
+                    qryTypes.stream().allMatch(t -> t.equals("SCAN") || t.equals("SQL_FIELDS")) &&
+                    queries.stream().allMatch(
+                        q -> q.equals("SELECT count(*), sleep() FROM \"TestCache\".STRING") || q.equals("TestCache")
+                    );
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * 1. Execute sql query action: SELECT count(*), can_fail() FROM "TestCache".STRING and wait completion.
+     * 2. Send the "QueryActions.history" action with "since" argument equals to 1.
+     * 3. Assert that query history contains 1 query.
+     * 4. Assert that history query contains a correct query text presentation.
+     */
+    @Test
+    public void shouldReturnQueryHistoryWithFailedQuery() {
+        IgniteCache<Object, Object> cache = cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setQueryDetailMetricsSize(1)
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        for (Integer i = 0; i < 1_000; i++)
+            cache.put(i, i.toString());
+
+        GridTestUtils.SqlTestFunctions.fail = true;
+
+        Request sqlQryReq = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId(UUID.randomUUID().toString())
+                    .setQueryText("SELECT count(*), can_fail() FROM \"TestCache\".STRING")
+                    .setPageSize(1)
+                    .setDefaultSchema("TestCache")
+            );
+
+        executeAction(sqlQryReq, (res) -> {
+            TaskResponse taskRes = taskResult(sqlQryReq.getId());
+
+            return taskRes != null && taskRes.getStatus() == FAILED;
+        });
+
+        GridTestUtils.SqlTestFunctions.fail = false;
+
+        Request req = new Request()
+            .setAction("QueryActions.history")
+            .setId(UUID.randomUUID())
+            .setArgument(1)
+            .setNodeIds(singleton(cluster.localNode().id()));
+
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            TaskResponse taskRes = taskResult(req.getId());
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 1) {
+                DocumentContext ctx = parse(r.getResult());
+
+                JSONArray results = ctx.read("$[*]");
+                JSONArray queries = ctx.read("$[*].query");
+
+                return results.size() == 1 &&
+                    queries.stream().allMatch(
+                        q -> q.equals("SELECT count(*), can_fail() FROM \"TestCache\".STRING")
+                    );
             }
 
             return false;

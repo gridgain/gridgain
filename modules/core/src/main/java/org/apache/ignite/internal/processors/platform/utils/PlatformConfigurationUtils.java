@@ -1279,7 +1279,7 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(false);
         }
         w.writeBoolean(true);
-        w.writeInt(cfg.getSqlQueryHistorySize());
+        w.writeInt(cfg.getSqlConfiguration().getSqlQueryHistorySize());
 
         if (cfg.getSqlSchemas() == null)
             w.writeInt(0);

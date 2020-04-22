@@ -16,22 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.util.Collection;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.junit.Ignore;
-
-import java.util.Collection;
-
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Test partitions consistency in various scenarios when all rebalance is in-memory.
  */
 public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxPartitionCounterStateConsistencyTest {
-    /** */
-    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
-
     /** {@inheritDoc} */
     @Override protected boolean persistenceEnabled() {
         return false;
@@ -57,11 +50,5 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
     /** {@inheritDoc} */
     @Override protected int partitions() {
         return 1024;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void resetBaselineTopology() {
-        if (bltForInMemoryCachesSup)
-            super.resetBaselineTopology();
     }
 }

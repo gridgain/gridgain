@@ -32,13 +32,14 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
-import org.apache.ignite.internal.processors.query.*;
+import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.transactions.TransactionMixedModeException;
 import org.apache.ignite.transactions.TransactionUnsupportedConcurrencyException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -50,6 +51,11 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.odbc.odbc.escape.OdbcEscapeUtils;
+import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.NestedTxMode;
+import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
@@ -61,7 +67,16 @@ import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.apache.ignite.transactions.TransactionSerializationException;
 
-import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.*;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.META_COLS;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.META_PARAMS;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.META_RESULTSET;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.META_TBLS;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.MORE_RESULTS;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.QRY_CLOSE;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.QRY_EXEC;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.QRY_EXEC_BATCH;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.QRY_FETCH;
+import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.STREAMING_BATCH;
 
 /**
  * SQL query handler.
@@ -163,7 +178,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
             skipReducerOnUpdate,
             null,
             null,
-            U.parseBytes(ctx.config().getSqlQueryMemoryQuota())
+            U.parseBytes(ctx.config().getSqlConfiguration().getSqlQueryMemoryQuota())
         );
 
         this.busyLock = busyLock;
@@ -986,7 +1001,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
      * @param err Error tuple containing error code and error message.
      */
     private static void extractBatchError(Exception e, List<Long> rowsAffected, IgniteBiTuple<Integer, String> err) {
-        if (e instanceof IgniteSQLException) {
+        if (e instanceof IgniteSQLException || e instanceof SqlCacheException) {
             BatchUpdateException batchCause = X.cause(e, BatchUpdateException.class);
 
             if (batchCause != null) {
@@ -997,8 +1012,12 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
 
                 err.set(batchCause.getErrorCode(), batchCause.getMessage());
             }
-            else
-                err.set(((IgniteSQLException)e).statusCode(), OdbcUtils.tryRetrieveH2ErrorMessage(e));
+            else {
+                int statusCode = e instanceof IgniteSQLException ?
+                    ((IgniteSQLException)e).statusCode() : ((SqlCacheException)e).statusCode();
+
+                err.set(statusCode, OdbcUtils.tryRetrieveH2ErrorMessage(e));
+            }
         }
         else
             err.set(IgniteQueryErrorCode.UNKNOWN, e.getMessage());

@@ -22,6 +22,7 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -135,6 +136,7 @@ public class DiskSpillingWithBaselineTest extends DiskSpillingAbstractTest {
         Collection<ClusterNode> aliveNodes = grid(0).cluster().forServers().nodes();
 
         grid(0).cluster().setBaselineTopology(aliveNodes);
+        grid(0).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
         awaitPartitionMapExchange();
 

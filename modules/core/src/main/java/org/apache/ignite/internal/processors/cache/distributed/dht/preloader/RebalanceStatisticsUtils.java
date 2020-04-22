@@ -16,61 +16,45 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
-import org.apache.ignite.IgniteCheckedException;
+import java.util.HashMap;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.StringJoiner;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.ToLongFunction;
-import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
-
-import static java.lang.String.valueOf;
-import static java.lang.System.currentTimeMillis;
 import static java.time.ZoneId.systemDefault;
 import static java.time.format.DateTimeFormatter.ofPattern;
-import static java.util.Comparator.comparingInt;
-import static java.util.Comparator.comparingLong;
-import static java.util.Objects.nonNull;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.Comparator.comparing;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 
 /**
  * Utility class for rebalance statistics.
  */
-class RebalanceStatisticsUtils {
-    /** To format the date and time. */
-    private static final DateTimeFormatter REBALANCE_STATISTICS_DTF = ofPattern("YYYY-MM-dd HH:mm:ss,SSS");
+public class RebalanceStatisticsUtils {
+    /** Formatter for date-time objects. */
+    private static final DateTimeFormatter DTF = ofPattern("YYYY-MM-dd HH:mm:ss,SSS");
 
-    /** Text for successful or not rebalances. */
-    private static final String SUCCESSFUL_OR_NOT_REBALANCE_TEXT = "including successful and not rebalances";
+    /** Supplier statistics header. */
+    private static final String SUP_STAT_HEAD = "Supplier statistics: ";
 
-    /** Text successful rebalance. */
-    private static final String SUCCESSFUL_REBALANCE_TEXT = "successful rebalance";
+    /** Supplier statistics aliases. */
+    private static final String SUP_STAT_ALIASES = "Aliases: p - partitions, e - entries, b - bytes, d - duration, " +
+        "h - historical, nodeId mapping (nodeId=id,consistentId) ";
 
     /**
      * Private constructor.
@@ -79,428 +63,232 @@ class RebalanceStatisticsUtils {
         throw new RuntimeException("don't create");
     }
 
-    /** Rebalance future statistics. */
-    static class RebalanceFutureStatistics {
-        /** Start rebalance time in mills. */
-        private final long startTime = currentTimeMillis();
-
-        /** End rebalance time in mills. */
-        private volatile long endTime = startTime;
-
-        /** Per node stats. */
-        private final Map<ClusterNode, RebalanceMessageStatistics> msgStats = new ConcurrentHashMap<>();
-
-        /** Is needed or not to print rebalance statistics. */
-        private final boolean printRebalanceStatistics = printRebalanceStatistics();
-
-        /**
-         * Add new message statistics.
-         * Requires to be invoked before demand message sending.
-         * This method required for {@code addReceivePartitionStatistics}.
-         * This method add new message statistics if
-         * {@link #printRebalanceStatistics} == true.
-         *
-         * @param supplierNode Supplier node, require not null.
-         * @see RebalanceMessageStatistics
-         * @see #addReceivePartitionStatistics(ClusterNode, GridDhtPartitionSupplyMessage)
-         */
-        public void addMessageStatistics(final @NotNull ClusterNode supplierNode) {
-            if (!printRebalanceStatistics)
-                return;
-
-            msgStats.putIfAbsent(supplierNode, new RebalanceMessageStatistics(currentTimeMillis()));
-        }
-
-        /**
-         * Add new statistics by receive message with partitions from supplier
-         * node. Require invoke {@code addMessageStatistics} before send
-         * demand message. This method add new message statistics if
-         * {@link #printRebalanceStatistics} == true.
-         *
-         * @param supplierNode Supplier node, require not null.
-         * @param supplyMsg Supply message, require not null.
-         * @see ReceivePartitionStatistics
-         * @see #addMessageStatistics(ClusterNode)
-         */
-        public void addReceivePartitionStatistics(
-            final ClusterNode supplierNode,
-            final GridDhtPartitionSupplyMessage supplyMsg
-        ) {
-            assert nonNull(supplierNode);
-            assert nonNull(supplyMsg);
-
-            if (!printRebalanceStatistics)
-                return;
-
-            List<PartitionStatistics> partStats = supplyMsg.infos().entrySet().stream()
-                .map(entry -> new PartitionStatistics(entry.getKey(), entry.getValue().infos().size()))
-                .collect(toList());
-
-            msgStats.get(supplierNode).receivePartStats
-                .add(new ReceivePartitionStatistics(currentTimeMillis(), supplyMsg.messageSize(), partStats));
-        }
-
-        /**
-         * Clear statistics.
-         */
-        public void clear() {
-            msgStats.clear();
-        }
-
-        /**
-         * Set end rebalance time in mills.
-         *
-         * @param endTime End rebalance time in mills.
-         */
-        public void endTime(final long endTime) {
-            this.endTime = endTime;
-        }
-    }
-
-    /** Rebalance messages statistics. */
-    static class RebalanceMessageStatistics {
-        /** Time send demand message in mills. */
-        private final long sndMsgTime;
-
-        /** Statistics by received partitions. */
-        private final Collection<ReceivePartitionStatistics> receivePartStats = new ConcurrentLinkedQueue<>();
-
-        /**
-         * Constructor.
-         *
-         * @param sndMsgTime time send demand message.
-         */
-        public RebalanceMessageStatistics(final long sndMsgTime) {
-            this.sndMsgTime = sndMsgTime;
-        }
-    }
-
-    /** Receive partition statistics. */
-    static class ReceivePartitionStatistics {
-        /** Time receive message(on demand message) with partition in mills. */
-        private final long rcvMsgTime;
-
-        /** Size receive message in bytes. */
-        private final long msgSize;
-
-        /** Received partitions. */
-        private final List<PartitionStatistics> parts;
-
-        /**
-         * Constructor.
-         *
-         * @param rcvMsgTime time receive message in mills.
-         * @param msgSize message size in bytes.
-         * @param parts received partitions, require not null.
-         */
-        public ReceivePartitionStatistics(
-            final long rcvMsgTime,
-            final long msgSize,
-            final List<PartitionStatistics> parts
-        ) {
-            assert nonNull(parts);
-
-            this.rcvMsgTime = rcvMsgTime;
-            this.msgSize = msgSize;
-            this.parts = parts;
-        }
-    }
-
-    /** Received partition info. */
-    static class PartitionStatistics {
-        /** Partition id. */
-        private final int id;
-
-        /** Count entries in partition. */
-        private final int entryCount;
-
-        /**
-         * Constructor.
-         *
-         * @param id partition id.
-         * @param entryCount count entries in partitions.
-         */
-        public PartitionStatistics(final int id, final int entryCount) {
-            this.id = id;
-            this.entryCount = entryCount;
-        }
+    /**
+     * Returns ability to print statistics for rebalance. {@code True} if
+     * {@link IgniteSystemProperties#IGNITE_QUIET IGNITE_QUIET} == {@code false}.
+     *
+     * @return {@code True} if printing statistics for rebalance is available.
+     */
+    public static boolean availablePrintRebalanceStatistics() {
+        return !getBoolean(IGNITE_QUIET, true);
     }
 
     /**
-     * Finds out if statistics can be printed regarding
-     * {@link IgniteSystemProperties#IGNITE_QUIET},
-     * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS}.
+     * Creating a string representation of group cache rebalance statistics for
+     * logging.
      *
-     * @return Is print statistics enabled.
+     * @param cacheGrpCtx Cache group context.
+     * @param stat Rebalance statistics.
+     * @param suc Flag for successful rebalancing.
+     * @param top Topology version.
+     * @return String representation of rebalance statistics for cache group.
      */
-    public static boolean printRebalanceStatistics() {
-        return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
-    }
-
-    /**
-     * Finds out if partitions distribution can be printed regarding
-     * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
-     *
-     * @return Is print partitions distribution enabled.
-     */
-    public static boolean printPartitionsDistribution() {
-        return getBoolean(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, false);
-    }
-
-    /**
-     * Return rebalance statistics. Required to call this method if
-     * {@link #printRebalanceStatistics()} == true.
-     * <p/>
-     * Flag {@code finish} should reflect was full rebalance finished or not.
-     * <br/>
-     * If {@code finish} == true then expected {@code rebFutrs} contains
-     * successful or not {@code RebalanceFuture} per cache group, else expected
-     * {@code rebFutrs} contains only one successful {@code RebalanceFuture}.
-     * <br/>
-     * If {@code finish} == true then print total statistics.
-     * <p/>
-     * Partition distribution is printed only for last success rebalance,
-     * per cache group.
-     *
-     * @param finish Is the whole rebalance finished or not.
-     * @param rebFutrs Involved in rebalance, require not null.
-     * @return String with printed rebalance statistics.
-     * @throws IgniteCheckedException Could be thrown while getting result of
-     *      {@code RebalanceFuture}.
-     * @see RebalanceFuture RebalanceFuture
-     */
-    public static String rebalanceStatistics(
-        final boolean finish,
-        final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs
-    ) throws IgniteCheckedException {
-        assert nonNull(rebFutrs);
-        assert printRebalanceStatistics() : "Can't print statistics";
-
-        AtomicInteger nodeCnt = new AtomicInteger();
-
-        Map<ClusterNode, Integer> nodeAliases = toRebalanceFutureStream(rebFutrs)
-            .flatMap(future -> future.stat.msgStats.keySet().stream())
-            .distinct()
-            .collect(toMap(identity(), node -> nodeCnt.getAndIncrement()));
-
-        StringJoiner joiner = new StringJoiner(" ");
-
-        if (finish)
-            writeTotalRebalanceStatistics(rebFutrs, nodeAliases, joiner);
-
-        writeCacheGroupsRebalanceStatistics(rebFutrs, nodeAliases, finish, joiner);
-        writeAliasesRebalanceStatistics("p - partitions, e - entries, b - bytes, d - duration", nodeAliases, joiner);
-        writePartitionsDistributionRebalanceStatistics(rebFutrs, nodeAliases, nodeCnt, joiner);
-
-        return joiner.toString();
-    }
-
-    /**
-     * Write total statistics for rebalance.
-     *
-     * @param rebFutrs Participating in successful and not rebalances, require not null.
-     * @param nodeAliases For print nodeId=1 instead long string, require not null.
-     * @param joiner For write statistics, require not null.
-     */
-    private static void writeTotalRebalanceStatistics(
-        final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs,
-        final Map<ClusterNode, Integer> nodeAliases,
-        final StringJoiner joiner
+    public static String cacheGroupRebalanceStatistics(
+        CacheGroupContext cacheGrpCtx,
+        RebalanceStatistics stat,
+        boolean suc,
+        AffinityTopologyVersion top
     ) {
-        assert nonNull(rebFutrs);
-        assert nonNull(nodeAliases);
-        assert nonNull(joiner);
+        SB sb = new SB();
 
-        long minStartTime = minStartTime(toRebalanceFutureStream(rebFutrs));
-        long maxEndTime = maxEndTime(toRebalanceFutureStream(rebFutrs));
+        sb.a("Rebalance information per cache group (").a(suc ? "successful" : "interrupted").a(" rebalance): [")
+            .a(grpInfo(cacheGrpCtx)).a(", ").a(time(stat.start(), stat.end())).a(", restarted=")
+            .a(stat.attempt() - 1).a("] ");
 
-        joiner.add("Total information (" + SUCCESSFUL_OR_NOT_REBALANCE_TEXT + "):")
-            .add("[" + toStartEndDuration(minStartTime, maxEndTime) + "]");
+        Map<ClusterNode, SupplierRebalanceStatistics> supStats = stat.supplierStatistics();
+        if (supStats.isEmpty())
+            return sb.toString();
 
-        Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat =
-            toSupplierStatistics(toRebalanceFutureStream(rebFutrs));
+        sb.a(SUP_STAT_HEAD);
 
-        writeSupplierRebalanceStatistics(supplierStat, nodeAliases, joiner);
-    }
+        int nodeId = 0;
+        for (SupplierRebalanceStatistics supStat : supStats.values()) {
+            long fp = supStat.fullParts(), hp = supStat.histParts();
+            long fe = supStat.fullEntries(), he = supStat.histEntries();
+            long fb = supStat.fullBytes(), hb = supStat.histBytes();
 
-    /**
-     * Write rebalance statistics per cache group.
-     * <p/>
-     * If {@code finish} == true then add {@link #SUCCESSFUL_OR_NOT_REBALANCE_TEXT} else add {@link
-     * #SUCCESSFUL_REBALANCE_TEXT} into header.
-     *
-     * @param rebFuts Participating in successful and not rebalances, require not null.
-     * @param nodeAliases For print nodeId=1 instead long string, require not null.
-     * @param joiner For write statistics, require not null.
-     * @param finish Is finish rebalance.
-     */
-    private static void writeCacheGroupsRebalanceStatistics(
-        final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFuts,
-        final Map<ClusterNode, Integer> nodeAliases,
-        final boolean finish,
-        final StringJoiner joiner
-    ) {
-        assert nonNull(rebFuts);
-        assert nonNull(nodeAliases);
-        assert nonNull(joiner);
+            sb.a(supInfo(nodeId++, fp, hp, fe, he, fb, hb, supStat.start(), supStat.end()));
+        }
 
-        joiner.add("Information per cache group (" +
-            (finish ? SUCCESSFUL_OR_NOT_REBALANCE_TEXT : SUCCESSFUL_REBALANCE_TEXT) + "):");
+        sb.a(SUP_STAT_ALIASES);
 
-        rebFuts.forEach((context, futures) -> {
-            long minStartTime = minStartTime(futures.stream());
-            long maxEndTime = maxEndTime(futures.stream());
+        nodeId = 0;
+        for (ClusterNode supNode : supStats.keySet())
+            sb.a(supInfo(nodeId++, supNode));
 
-            joiner.add("[id=" + context.groupId() + ",")
-                .add("name=" + context.cacheOrGroupName() + ",")
-                .add(toStartEndDuration(minStartTime, maxEndTime) + "]");
+        String thresholdPropName = IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
+        long threshold = getLong(thresholdPropName, MINUTES.toMillis(10));
 
-            Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat = toSupplierStatistics(futures.stream());
-            writeSupplierRebalanceStatistics(supplierStat, nodeAliases, joiner);
-        });
-    }
+        if ((stat.end() - stat.start()) < threshold)
+            return sb.toString();
 
-    /**
-     * Write partitions distribution per cache group. Only for last success rebalance.
-     * Works if {@link #printPartitionsDistribution()} return true.
-     *
-     * @param rebFutrs Participating in successful and not rebalances, require not null.
-     * @param nodeAliases For print nodeId=1 instead long string, require not null.
-     * @param nodeCnt For adding new nodes into {@code nodeAliases}, require not null.
-     * @param joiner For write statistics, require not null.
-     * @throws IgniteCheckedException When get result of
-     *      {@link RebalanceFuture}.
-     */
-    private static void writePartitionsDistributionRebalanceStatistics(
-        final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs,
-        final Map<ClusterNode, Integer> nodeAliases,
-        final AtomicInteger nodeCnt,
-        final StringJoiner joiner
-    ) throws IgniteCheckedException {
-        assert nonNull(rebFutrs);
-        assert nonNull(nodeAliases);
-        assert nonNull(nodeCnt);
-        assert nonNull(joiner);
+        sb.a("Rebalance duration was greater than ").a(threshold).a(" ms, printing detailed information about " +
+            "partitions distribution (threshold can be changed by setting number of milliseconds into " +
+            thresholdPropName + ") ");
 
-        if (!printPartitionsDistribution())
-            return;
+        SortedMap<Integer, Boolean> parts = new TreeMap<>();
+        for (SupplierRebalanceStatistics supStat : supStats.values())
+            parts.putAll(supStat.partitions());
 
-        joiner.add("Partitions distribution per cache group (" + SUCCESSFUL_REBALANCE_TEXT + "):");
+        AffinityAssignment aff = cacheGrpCtx.affinity().cachedAffinity(top);
 
-        Comparator<RebalanceFuture> startTimeCmp = comparingLong(fut -> fut.stat.startTime);
-        Comparator<RebalanceFuture> startTimeCmpReversed = startTimeCmp.reversed();
+        Map<ClusterNode, Integer> affNodes = new HashMap<>();
+        nodeId = 0;
+        for (ClusterNode affNode : aff.nodes())
+            affNodes.put(affNode, nodeId++);
 
-        Comparator<PartitionStatistics> partIdCmp = comparingInt(value -> value.id);
-        Comparator<ClusterNode> nodeAliasesCmp = comparingInt(nodeAliases::get);
+        SortedSet<ClusterNode> partNodes = new TreeSet<>(comparing(affNodes::get));
+        boolean f;
 
-        for (Entry<CacheGroupContext, Collection<RebalanceFuture>> rebFutrsEntry : rebFutrs.entrySet()) {
-            CacheGroupContext cacheGrpCtx = rebFutrsEntry.getKey();
+        for (Entry<Integer, Boolean> part : parts.entrySet()) {
+            partNodes.clear();
 
-            joiner.add("[id=" + cacheGrpCtx.groupId() + ",")
-                .add("name=" + cacheGrpCtx.cacheOrGroupName() + "]");
+            int p = part.getKey();
+            partNodes.addAll(aff.get(p));
 
-            List<RebalanceFuture> successFutures = new ArrayList<>();
+            f = true;
 
-            for (RebalanceFuture rebalanceFuture : rebFutrsEntry.getValue()) {
-                if (rebalanceFuture.isDone() && rebalanceFuture.get())
-                    successFutures.add(rebalanceFuture);
+            sb.a(p).a(" = ");
+            for (ClusterNode partNode : partNodes) {
+                if (!f)
+                    sb.a(',');
+                else
+                    f = false;
+
+                sb.a('[').a(affNodes.get(partNode)).a(aff.primaryPartitions(partNode.id()).contains(p) ? ",pr" : ",bu")
+                    .a(supStats.containsKey(partNode) ? ",su" : "").a("]");
+
             }
-
-            if (successFutures.isEmpty())
-                return;
-
-            successFutures.sort(startTimeCmpReversed);
-
-            RebalanceFuture lastSuccessFuture = successFutures.get(0);
-
-            AffinityAssignment affinity = cacheGrpCtx.affinity().cachedAffinity(lastSuccessFuture.topologyVersion());
-
-            Map<PartitionStatistics, ClusterNode> supplierNodeRcvParts = new TreeMap<>(partIdCmp);
-
-            for (Entry<ClusterNode, RebalanceMessageStatistics> entry : lastSuccessFuture.stat.msgStats.entrySet()) {
-                for (ReceivePartitionStatistics receivePartStat : entry.getValue().receivePartStats) {
-                    for (PartitionStatistics partStat : receivePartStat.parts)
-                        supplierNodeRcvParts.put(partStat, entry.getKey());
-                }
-            }
-
-            affinity.nodes().forEach(node -> nodeAliases.computeIfAbsent(node, node1 -> nodeCnt.getAndIncrement()));
-
-            for (Entry<PartitionStatistics, ClusterNode> supplierNodeRcvPart : supplierNodeRcvParts.entrySet()) {
-                int partId = supplierNodeRcvPart.getKey().id;
-
-                String nodes = affinity.get(partId).stream()
-                    .sorted(nodeAliasesCmp)
-                    .map(node -> "[" + nodeAliases.get(node) +
-                        (affinity.primaryPartitions(node.id()).contains(partId) ? ",pr" : ",bu") +
-                        (node.equals(supplierNodeRcvPart.getValue()) ? ",su" : "") + "]"
-                    )
-                    .collect(joining(","));
-
-                joiner.add(valueOf(partId)).add("=").add(nodes);
-            }
+            sb.a(!part.getValue() ? " h " : " ");
         }
 
-        writeAliasesRebalanceStatistics("pr - primary, bu - backup, su - supplier node", nodeAliases, joiner);
+        sb.a("Aliases: pr - primary, bu - backup, su - supplier node, h - historical, nodeId mapping ")
+            .a("(nodeId=id,consistentId) ");
+
+        partNodes.addAll(affNodes.keySet());
+
+        for (ClusterNode affNode : partNodes)
+            sb.a(supInfo(affNodes.get(affNode), affNode));
+
+        return sb.toString();
     }
 
     /**
-     * Write stattistics per supplier node.
+     * Creating a string representation of total rebalance statistics for all
+     * cache groups for logging.
      *
-     * @param supplierStat Statistics by supplier (in successful and not rebalances), require not null.
-     * @param nodeAliases For print nodeId=1 instead long string, require not null.
-     * @param joiner For write statistics, require not null.
+     * @param totalStat Statistics of rebalance for cache groups.
+     * @return String representation of total rebalance statistics
+     *      for all cache groups.
      */
-    private static void writeSupplierRebalanceStatistics(
-        final Map<ClusterNode, List<RebalanceMessageStatistics>> supplierStat,
-        final Map<ClusterNode, Integer> nodeAliases,
-        final StringJoiner joiner
-    ) {
-        assert nonNull(supplierStat);
-        assert nonNull(nodeAliases);
-        assert nonNull(joiner);
+    public static String totalRebalanceStatistic(Map<CacheGroupContext, RebalanceStatistics> totalStat) {
+        SB sb = new SB();
 
-        joiner.add("Supplier statistics:");
+        long start = totalStat.values().stream().mapToLong(RebalanceStatistics::start).min().orElse(0);
+        long end = totalStat.values().stream().mapToLong(RebalanceStatistics::end).max().orElse(0);
 
-        supplierStat.forEach((supplierNode, msgStats) -> {
-            long partCnt = sum(msgStats, rps -> rps.parts.size());
-            long byteSum = sum(msgStats, rps -> rps.msgSize);
-            long entryCount = sum(msgStats, rps -> rps.parts.stream().mapToLong(ps -> ps.entryCount).sum());
+        sb.a("Rebalance total information (including successful and not rebalances): [").a(time(start, end)).a("] ");
 
-            long durationSum = msgStats.stream()
-                .flatMapToLong(msgStat -> msgStat.receivePartStats.stream()
-                    .mapToLong(rps -> rps.rcvMsgTime - msgStat.sndMsgTime)
-                )
-                .sum();
+        RebalanceStatistics total = new RebalanceStatistics();
+        totalStat.values().forEach(total::merge);
 
-            joiner.add("[nodeId=" + nodeAliases.get(supplierNode) + ",")
-                .add(toPartitionsEntriesBytes(partCnt, entryCount, byteSum) + ",")
-                .add("d=" + durationSum + " ms]");
-        });
+        Map<ClusterNode, SupplierRebalanceStatistics> supStats = total.supplierStatistics();
+
+        if (supStats.isEmpty())
+            return sb.toString();
+
+        sb.a(SUP_STAT_HEAD);
+
+        int nodeId = 0;
+        for (SupplierRebalanceStatistics supStat : supStats.values()) {
+            long fp = supStat.fullParts(), hp = supStat.histParts();
+            long fe = supStat.fullEntries(), he = supStat.histEntries();
+            long fb = supStat.fullBytes(), hb = supStat.histBytes();
+            long s = supStat.start(), e = supStat.end();
+
+            sb.a(supInfo(nodeId++, fp, hp, fe, he, fb, hb, s, e));
+        }
+
+        sb.a(SUP_STAT_ALIASES);
+
+        nodeId = 0;
+        for (ClusterNode supNode : supStats.keySet())
+            sb.a(supInfo(nodeId++, supNode));
+
+        return sb.toString();
     }
 
     /**
-     * Write statistics aliases, for reducing output string.
+     * Creation of information by supplier in format:
+     * [{@code nodeId} = Consistent id].
      *
-     * @param nodeAliases for print nodeId=1 instead long string, require not null.
-     * @param abbreviations Abbreviations ex. b - bytes, require not null.
-     * @param joiner For write statistics, require not null.
+     * @param nodeId       Supplier node id.
+     * @param supplierNode Supplier node.
+     * @return Supplier info string.
      */
-    private static void writeAliasesRebalanceStatistics(
-        final String abbreviations,
-        final Map<ClusterNode, Integer> nodeAliases,
-        final StringJoiner joiner
-    ) {
-        assert nonNull(abbreviations);
-        assert nonNull(nodeAliases);
-        assert nonNull(joiner);
+    private static String supInfo(int nodeId, ClusterNode supplierNode) {
+        return new SB("[").a(nodeId).a('=').a(supplierNode.consistentId().toString()).a("] ").toString();
+    }
 
-        String nodes = nodeAliases.entrySet().stream()
-            .sorted(comparingInt(Entry::getValue))
-            .map(entry -> "[" + entry.getValue() + "=" + entry.getKey().id() + "," + entry.getKey().consistentId() + "]")
-            .collect(joining(", "));
+    /**
+     * Creating a rebalance statistics string for supplier.
+     *
+     * @param nodeId Supplier node id.
+     * @param fp Counter of partitions received by full rebalance.
+     * @param hp Counter of partitions received by historical rebalance.
+     * @param fe Counter of entries received by full rebalance.
+     * @param he Counter of entries received by historical rebalance.
+     * @param fb Counter of bytes received by full rebalance.
+     * @param hb Counter of bytes received by historical rebalance.
+     * @param s Start time of rebalance in milliseconds.
+     * @param e End time of rebalance in milliseconds.
+     * @return Supplier info string.
+     */
+    private static String supInfo(int nodeId, long fp, long hp, long fe, long he, long fb, long hb, long s, long e) {
+        SB sb = new SB();
+        sb.a("[nodeId=").a(nodeId);
 
-        joiner.add("Aliases:").add(abbreviations + ",").add("nodeId mapping (nodeId=id,consistentId)").add(nodes);
+        if (fp > 0)
+            sb.a(", p=").a(fp);
+
+        if (hp > 0)
+            sb.a(", hp=").a(hp);
+
+        if (fe > 0)
+            sb.a(", e=").a(fe);
+
+        if (he > 0)
+            sb.a(", he=").a(he);
+
+        if (fb > 0)
+            sb.a(", b=").a(fb);
+
+        if (hb > 0)
+            sb.a(", hb=").a(hb);
+
+        return sb.a(", d=").a(e - s).a(" ms] ").toString();
+    }
+
+    /**
+     * Creating a string with time information.
+     *
+     * @param start Start time in milliseconds.
+     * @param end   End time in milliseconds.
+     * @return String with time information.
+     */
+    private static String time(long start, long end) {
+        return new SB().a("startTime=").a(DTF.format(toLocalDateTime(start))).a(", finishTime=")
+            .a(DTF.format(toLocalDateTime(end))).a(", d=").a(end - start).a(" ms").toString();
+    }
+
+    /**
+     * Creating information for a cache group.
+     *
+     * @param cacheGrpCtx Cache group context.
+     * @return Group info.
+     */
+    private static String grpInfo(CacheGroupContext cacheGrpCtx) {
+        return new SB().a("id=").a(cacheGrpCtx.groupId()).a(", name=").a(cacheGrpCtx.cacheOrGroupName()).toString();
     }
 
     /**
@@ -511,104 +299,5 @@ class RebalanceStatisticsUtils {
      */
     private static LocalDateTime toLocalDateTime(final long time) {
         return new Date(time).toInstant().atZone(systemDefault()).toLocalDateTime();
-    }
-
-    /**
-     * Get min {@link RebalanceFutureStatistics#startTime} in stream rebalance future's.
-     *
-     * @param stream Stream rebalance future, require not null.
-     * @return Min start time.
-     */
-    private static long minStartTime(final Stream<RebalanceFuture> stream) {
-        assert nonNull(stream);
-
-        return stream.mapToLong(value -> value.stat.startTime).min().orElse(0);
-    }
-
-    /**
-     * Get max {@link RebalanceFutureStatistics#endTime} in stream rebalance future's.
-     *
-     * @param stream Stream rebalance future's, require not null.
-     * @return Max end time.
-     */
-    private static long maxEndTime(final Stream<RebalanceFuture> stream) {
-        assert nonNull(stream);
-
-        return stream.mapToLong(value -> value.stat.endTime).max().orElse(0);
-    }
-
-    /**
-     * Prepare stream rebalance future's of each cache groups.
-     *
-     * @param rebFutrs Rebalance future's by cache groups, require not null.
-     * @return Stream rebalance future's.
-     */
-    private static Stream<RebalanceFuture> toRebalanceFutureStream(
-        final Map<CacheGroupContext, Collection<RebalanceFuture>> rebFutrs
-    ) {
-        assert nonNull(rebFutrs);
-
-        return rebFutrs.entrySet().stream().flatMap(entry -> entry.getValue().stream());
-    }
-
-    /**
-     * Aggregates statistics by supplier node.
-     *
-     * @param stream Stream rebalance future's, require not null.
-     * @return Statistic by supplier.
-     */
-    private static Map<ClusterNode, List<RebalanceMessageStatistics>> toSupplierStatistics(
-        final Stream<RebalanceFuture> stream
-    ) {
-        assert nonNull(stream);
-
-        return stream.flatMap(future -> future.stat.msgStats.entrySet().stream())
-            .collect(groupingBy(Entry::getKey, mapping(Entry::getValue, toList())));
-    }
-
-    /**
-     * Creates a string containing the beginning, end, and duration of the rebalance.
-     *
-     * @param start Start time in ms.
-     * @param end End time in ms.
-     * @return Formatted string of rebalance time.
-     * @see #REBALANCE_STATISTICS_DTF
-     */
-    private static String toStartEndDuration(final long start, final long end) {
-        return "startTime=" + REBALANCE_STATISTICS_DTF.format(toLocalDateTime(start)) + ", finishTime=" +
-            REBALANCE_STATISTICS_DTF.format(toLocalDateTime(end)) + ", d=" + (end - start) + " ms";
-    }
-
-    /**
-     * Summarizes long values.
-     *
-     * @param msgStats Message statistics, require not null.
-     * @param longExtractor Long extractor, require not null.
-     * @return Sum of long values.
-     */
-    private static long sum(
-        final List<RebalanceMessageStatistics> msgStats,
-        final ToLongFunction<? super ReceivePartitionStatistics> longExtractor
-    ) {
-        assert nonNull(msgStats);
-        assert nonNull(longExtractor);
-
-        return msgStats.stream()
-            .flatMap(msgStat -> msgStat.receivePartStats.stream())
-            .mapToLong(longExtractor)
-            .sum();
-    }
-
-    /**
-     * Create a string containing count received partitions,
-     * count received entries and sum received bytes.
-     *
-     * @param parts Count received partitions.
-     * @param entries Count received entries.
-     * @param bytes Sum received bytes.
-     * @return Formatted string of received rebalance partitions.
-     */
-    private static String toPartitionsEntriesBytes(final long parts, final long entries, final long bytes) {
-        return "p=" + parts + ", e=" + entries + ", b=" + bytes;
     }
 }
