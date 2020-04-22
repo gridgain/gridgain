@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -1298,6 +1299,25 @@ public class PlatformUtils {
         out.writeString(productVersion.stage());
         out.writeLong(productVersion.revisionTimestamp());
         out.writeByteArray(productVersion.revisionHash());
+    }
+
+
+    /**
+     * Reads collection of strings.
+     *
+     * @param reader Reader.
+     */
+    public static Collection<String> readStrings(BinaryRawReader reader) {
+        assert reader != null;
+
+        int cnt = reader.readInt();
+
+        Collection<String> strings = new ArrayList<>(cnt);
+
+        for (int i = 0; i < cnt; i++)
+            strings.add(reader.readString());
+
+        return strings;
     }
 
     /**
