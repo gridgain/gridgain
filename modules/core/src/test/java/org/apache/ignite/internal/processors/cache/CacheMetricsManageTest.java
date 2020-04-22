@@ -569,6 +569,8 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testTxContentionMetric() throws Exception {
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-9224", MvccFeatureChecker.forcedMvcc());
+
         backups = 1;
 
         useTestCommSpi = true;
@@ -703,6 +705,8 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
     /** Tests metric change interval. */
     @Test
     public void testKeyCollisionsMetricDifferentTimeout() throws Exception {
+        Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-9224", MvccFeatureChecker.forcedMvcc());
+        
         backups = 2;
 
         useTestCommSpi = true;
