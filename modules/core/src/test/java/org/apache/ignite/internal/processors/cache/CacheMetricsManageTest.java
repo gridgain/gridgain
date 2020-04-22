@@ -807,6 +807,8 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
             mxBeanCache.getTxKeyCollisions();
 
+            mxBeanCache.clear();
+
             try {
                 U.invoke(IgniteTxManager.class, txManager, "collectTxCollisionsInfo");
             }
