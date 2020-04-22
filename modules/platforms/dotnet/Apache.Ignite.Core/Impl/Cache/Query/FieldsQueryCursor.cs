@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// Constructor.
         /// </summary>
         /// <param name="target">Target.</param>
-        /// <param name="keepBinary">Keep poratble flag.</param>
+        /// <param name="keepBinary">Keep binary flag.</param>
         /// <param name="readerFunc">The reader function.</param>
         public FieldsQueryCursor(IPlatformTargetInternal target, bool keepBinary, 
             Func<IBinaryRawReader, int, T> readerFunc)
@@ -60,13 +60,19 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private const int OpGetFieldNames = 7;
 
         /** */
+        private const int OpGetFieldsMeta = 8;
+
+        /** */
         private IList<string> _fieldNames;
+
+        /** */
+        private IList<IQueryCursorField> _fieldsMeta;
 
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="target">Target.</param>
-        /// <param name="keepBinary">Keep poratble flag.</param>
+        /// <param name="keepBinary">Keep binary flag.</param>
         /// <param name="readerFunc">The reader function.</param>
         public FieldsQueryCursor(IPlatformTargetInternal target, bool keepBinary, 
             Func<IBinaryRawReader, int, IList<object>> readerFunc) : base(target, keepBinary, readerFunc)
@@ -82,6 +88,25 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 return _fieldNames ??
                        (_fieldNames = new ReadOnlyCollection<string>(
                            Target.OutStream(OpGetFieldNames, reader => reader.ReadStringCollection())));
+            }
+        }
+
+        /** <inheritdoc /> */
+        public IList<IQueryCursorField> Fields
+        {
+            get
+            {
+                if (_fieldsMeta == null)
+                {
+                    var metadata = Target.OutStream(
+                        OpGetFieldsMeta,
+                        reader => reader.ReadCollectionRaw(stream =>
+                            new QueryCursorField(stream) as IQueryCursorField));
+
+                    _fieldsMeta = new ReadOnlyCollection<IQueryCursorField>(metadata ?? new List<IQueryCursorField>());
+                }
+
+                return _fieldsMeta;
             }
         }
     }
