@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.transactions;
+package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteRunnable;
@@ -41,7 +41,7 @@ public class LongOperationsDumpSettingsClosure implements IgniteRunnable {
      *
      * @param longOpsDumpTimeout Long operations dump timeout.
      */
-    LongOperationsDumpSettingsClosure(long longOpsDumpTimeout) {
+    public LongOperationsDumpSettingsClosure(long longOpsDumpTimeout) {
         this.longOpsDumpTimeout = longOpsDumpTimeout;
     }
 
