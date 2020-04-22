@@ -186,7 +186,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         " The transaction was rolled back.";
 
     /** Deadlock detection maximum iterations. */
-    static final int DEADLOCK_MAX_ITERS =
+    static int DEADLOCK_MAX_ITERS =
         IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
 
     /** Collisions dump interval. */
