@@ -1544,7 +1544,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         summary.a(", offheap=").a(offheap).a("GB");
         summary.a(", heap=").a(heap).a("GB");
 
-        if (evtType == EVT_NODE_JOINED && needNodesDetails) {
+        if ((evtType == EVT_NODE_JOINED
+            || evtType == EVT_NODE_LEFT
+            || evtType == EVT_NODE_FAILED)
+            && needNodesDetails) {
             summary.a(", aliveNodes=[");
 
             for (ClusterNode clusterNode : discoCache.allNodes())
