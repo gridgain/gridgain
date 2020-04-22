@@ -1483,11 +1483,12 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         Ignite ign = startGrid();
 
-        sql("CREATE TABLE IF NOT EXISTS MyTable (" +
+        sql("CREATE TABLE IF NOT EXISTS test (" +
             "first INTEGER, " +
             "second INTEGER, " +
             "v INTEGER, " +
             "PRIMARY KEY (first, second)" +
+//            "PRIMARY KEY (first)" +
             ") " +
             "WITH \"" +
             "template=replicated," +
@@ -1497,12 +1498,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             "cache_name=test" +
             "\"");
 
-        sql("CREATE INDEX IF NOT EXISTS my_idx ON MyTable (first)");
+        sql("CREATE INDEX IF NOT EXISTS my_idx ON test (first)");
 
         IgniteCache<Key0, Value0> cache = ign.cache("test");
 
         cache.put(new Key0(0, 0), new Value0(0));
         cache.put(new Key0(0, 1), new Value0(1));
+
+        System.out.println("+++" + cache.size());
+
+        List<List<?>> res = sql("select * from test").getAll();
+
+        System.out.println("+++ " + res);
 
         cache.clear();
 
