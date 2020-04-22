@@ -210,7 +210,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     }
 
     /** Tests metric correct results while tx collisions occured. */
-    @Test
     private void testKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         if (MvccFeatureChecker.forcedMvcc())
             return; // Not supported.
