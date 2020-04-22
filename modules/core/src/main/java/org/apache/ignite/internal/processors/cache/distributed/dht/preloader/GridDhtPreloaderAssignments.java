@@ -39,7 +39,7 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
     private boolean cancelled;
 
     /** Some of owned by affinity partitions were changed state to moving. */
-    private volatile boolean affinityReassign;
+    private final boolean affinityReassign;
 
     /**
      * @param exchangeId Exchange ID.
