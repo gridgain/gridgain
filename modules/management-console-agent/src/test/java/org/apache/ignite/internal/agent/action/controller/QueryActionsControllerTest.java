@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal.agent.action.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -26,16 +23,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.dto.action.JobResponse;
 import org.apache.ignite.internal.agent.dto.action.Request;
@@ -43,6 +48,7 @@ import org.apache.ignite.internal.agent.dto.action.TaskResponse;
 import org.apache.ignite.internal.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.internal.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.internal.agent.dto.action.query.ScanQueryArgument;
+import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -392,6 +398,111 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 return res != null && res.getStatus() == FAILED;
             }
         );
+    }
+
+    /**
+     * 1. Execute a query action with sleep function.
+     * 2. Send kill query action with global query id for a query from 1.
+     * 3. Assert that action was completed and no one running queries exists in a cluster.
+     */
+    @Test
+    public void shouldKillRunningQuery() {
+        GridKernalContext ctx = ((IgniteEx) cluster.ignite()).context();
+
+        cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        GridTestUtils.SqlTestFunctions.sleepMs = 20_000;
+
+        Request req = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId(UUID.randomUUID().toString())
+                    .setQueryText("SELECT count(*), sleep() AS SLEEP FROM \"TestCache\".STRING")
+                    .setPageSize(1)
+                    .setDefaultSchema("TestCache")
+            );
+
+        executeAction(req, (res) -> {
+            TaskResponse taskRes = taskResult(req.getId());
+
+            return taskRes != null && taskRes.getStatus() == RUNNING;
+        });
+
+        GridRunningQueryInfo runQry = F.first(ctx.query().runningQueries(-1));
+
+        Request killReq = new Request()
+            .setAction("QueryActions.kill")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(runQry.globalQueryId());
+
+        executeAction(killReq, (res) -> {
+            TaskResponse taskRes = taskResult(killReq.getId());
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED) {
+                Collection<GridRunningQueryInfo> infos = ctx.query().runningQueries(-1);
+
+                return infos.isEmpty();
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * 1. Execute a query with sleep function in another thread.
+     * 2. Send kill query action with global query id for a query from 1.
+     * 3. Assert that action was completed and no one running queries exists in a cluster.
+     */
+    @Test
+    public void shouldKillRunningQueryWhichRunByDirectApi() {
+        GridKernalContext ctx = ((IgniteEx) cluster.ignite()).context();
+
+        cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        GridTestUtils.SqlTestFunctions.sleepMs = 20_000;
+
+        CompletableFuture.runAsync(() -> {
+            SqlFieldsQuery qry = new SqlFieldsQuery("SELECT count(*), sleep() AS SLEEP FROM \"TestCache\".STRING");
+            qry.setSchema("TestCache");
+
+            try (FieldsQueryCursor<List<?>> cursor = ctx.query().querySqlFields(qry, true)) {
+                cursor.iterator().next();
+            }
+        });
+
+        assertWithPoll(() -> !ctx.query().runningQueries(-1).isEmpty());
+
+        GridRunningQueryInfo runQry = F.first(ctx.query().runningQueries(-1));
+
+        Request killReq = new Request()
+            .setAction("QueryActions.kill")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(runQry.globalQueryId());
+
+        executeAction(killReq, (res) -> {
+            TaskResponse taskRes = taskResult(killReq.getId());
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED) {
+                Collection<GridRunningQueryInfo> infos = ctx.query().runningQueries(-1);
+
+                return infos.isEmpty();
+            }
+
+            return false;
+        });
     }
 
     /**
