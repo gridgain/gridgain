@@ -330,9 +330,13 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
             srvs.addAll(resolvedEndpoints);
         }
         else {
-            for (InetSocketAddress endpoint : resolvedEndpoints)
+            for (InetSocketAddress endpoint : resolvedEndpoints) {
                 if (!endpoint.getAddress().isLoopbackAddress())
                     srvs.add(endpoint);
+            }
+
+            if (srvs.isEmpty())
+                srvs.addAll(resolvedEndpoints);
         }
 
         return connection(node.nodeId(), srvs);

@@ -22,15 +22,17 @@ import java.util.UUID;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -174,8 +176,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setClientMode(client)
-            .setSqlOffloadingEnabled(false)
-            .setSqlGlobalMemoryQuota(Long.toString(globalQuotaSize()));
+            .setSqlConfiguration(new SqlConfiguration()
+                .setSqlOffloadingEnabled(false)
+                .setSqlGlobalMemoryQuota(Long.toString(globalQuotaSize())));
     }
 
     /** */
@@ -257,15 +260,18 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      * @param lazy Lazy flag.
      */
     protected void checkQueryExpectOOM(String sql, boolean lazy) {
-        IgniteSQLException sqlEx = (IgniteSQLException)GridTestUtils.assertThrowsAnyCause(log, () -> {
+        try {
             execQuery(sql, lazy);
 
-            return null;
-        }, IgniteSQLException.class, "SQL query run out of memory: Query quota exceeded.");
-
-        assertNotNull("SQL exception missed.", sqlEx);
-        assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
-        assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), sqlEx.sqlState());
+            fail("Exception is not thrown.");
+        } catch (SqlMemoryQuotaExceededException e) {
+            assertTrue(e.getMessage().contains("SQL query ran out of memory: Query quota was exceeded."));
+            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.statusCode());
+            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.sqlState());
+        }
+        catch (Exception e) {
+            fail("Wrong exception: " + X.getFullStackTrace(e));
+        }
     }
 
     /**

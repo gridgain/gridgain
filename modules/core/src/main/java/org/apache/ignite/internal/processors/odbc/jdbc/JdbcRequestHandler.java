@@ -36,6 +36,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.BulkLoadContextCursor;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteVersionUtils;
@@ -1045,7 +1046,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             if (X.cause(e, QueryCancelledException.class) != null)
                 throw new QueryCancelledException();
-            else if (e instanceof IgniteSQLException) {
+            else if (e instanceof IgniteSQLException || e instanceof SqlCacheException) {
                 BatchUpdateException batchCause = X.cause(e, BatchUpdateException.class);
 
                 if (batchCause != null) {
@@ -1064,7 +1065,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
                     msg = e.getMessage();
 
-                    code = ((IgniteSQLException)e).statusCode();
+                    if (e instanceof IgniteSQLException)
+                        code = ((IgniteSQLException)e).statusCode();
+                    else
+                        code =  ((SqlCacheException)e).statusCode();
                 }
             }
             else {
@@ -1232,6 +1236,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             return new JdbcResponse(IgniteQueryErrorCode.UNSUPPORTED_OPERATION, e.getMessage());
         if (e instanceof IgniteSQLException)
             return new JdbcResponse(((IgniteSQLException)e).statusCode(), e.getMessage());
+        if (e instanceof SqlCacheException)
+            return new JdbcResponse(((SqlCacheException)e).statusCode(), e.getMessage());
         else
             return new JdbcResponse(IgniteQueryErrorCode.UNKNOWN, e.getMessage());
     }

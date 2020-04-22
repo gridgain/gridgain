@@ -30,7 +30,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -43,16 +42,13 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.IgnitePair;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -65,17 +61,14 @@ import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_GRP_DIR_PREFIX;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
  *
  */
-public class IgniteIndexReaderTest {
+public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /** Page size. */
     private static final int PAGE_SIZE = 4096;
 
@@ -130,41 +123,25 @@ public class IgniteIndexReaderTest {
     /** Work directory, containing cache group directories. */
     private static File workDir;
 
-    /** */
-    @BeforeClass
-    public static void before() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
         cleanPersistenceDir();
 
         workDir = prepareIndex();
     }
 
-    /** */
-    @AfterClass
-    public static void after() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
         cleanPersistenceDir();
     }
 
-    /**
-     * Cleans persistent directory.
-     *
-     * @throws Exception If failed.
-     */
-    protected static void cleanPersistenceDir() throws Exception {
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false));
-    }
-
-    /**
-     * Generates a grid configuration.
-     *
-     * @return Ignite configuration.
-     */
-    private static IgniteConfiguration getConfiguration() {
-        IgniteConfiguration cfg = new IgniteConfiguration();
-
-        cfg.setDataStorageConfiguration(
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName).setDataStorageConfiguration(
             new DataStorageConfiguration()
                 .setPageSize(PAGE_SIZE)
                 .setDefaultDataRegionConfiguration(
@@ -173,41 +150,39 @@ public class IgniteIndexReaderTest {
                         .setInitialSize(10 * 1024L * 1024L)
                         .setMaxSize(50 * 1024L * 1024L)
                 )
-            )
-            .setCacheConfiguration(
-                new CacheConfiguration(CACHE_NAME)
-                    .setGroupName(CACHE_GROUP_NAME)
-                    .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
-                    .setSqlSchema("PUBLIC"),
-                new CacheConfiguration(EMPTY_CACHE_NAME)
-                    .setGroupName(EMPTY_CACHE_GROUP_NAME),
-                new CacheConfiguration(QUERY_CACHE_NAME)
-                    .setGroupName(QUERY_CACHE_GROUP_NAME)
-                    .setQueryEntities(asList(
-                        new QueryEntity(Integer.class, TestClass1.class)
-                            .addQueryField("id", Integer.class.getName(), null)
-                            .addQueryField("f", Integer.class.getName(), null)
-                            .addQueryField("s", String.class.getName(), null)
-                            .setIndexes(singleton(new QueryIndex("f")))
-                            .setTableName("QT1"),
-                        new QueryEntity(Integer.class, TestClass2.class)
-                            .addQueryField("id", Integer.class.getName(), null)
-                            .addQueryField("f", Integer.class.getName(), null)
-                            .addQueryField("s", String.class.getName(), null)
-                            .setIndexes(singleton(new QueryIndex("s")))
-                            .setTableName("QT2")
-                    ))
-            );
-
-        return cfg;
+        ).setCacheConfiguration(
+            new CacheConfiguration(CACHE_NAME)
+                .setGroupName(CACHE_GROUP_NAME)
+                .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
+                .setSqlSchema("PUBLIC"),
+            new CacheConfiguration(EMPTY_CACHE_NAME)
+                .setGroupName(EMPTY_CACHE_GROUP_NAME),
+            new CacheConfiguration(QUERY_CACHE_NAME)
+                .setGroupName(QUERY_CACHE_GROUP_NAME)
+                .setQueryEntities(asList(
+                    new QueryEntity(Integer.class, TestClass1.class)
+                        .addQueryField("id", Integer.class.getName(), null)
+                        .addQueryField("f", Integer.class.getName(), null)
+                        .addQueryField("s", String.class.getName(), null)
+                        .setIndexes(singleton(new QueryIndex("f")))
+                        .setTableName("QT1"),
+                    new QueryEntity(Integer.class, TestClass2.class)
+                        .addQueryField("id", Integer.class.getName(), null)
+                        .addQueryField("f", Integer.class.getName(), null)
+                        .addQueryField("s", String.class.getName(), null)
+                        .setIndexes(singleton(new QueryIndex("s")))
+                        .setTableName("QT2")
+                ))
+        );
     }
 
     /**
      * Runs a grid to prepare directory with index and data partitions.
      *
      * @return Work directory.
+     * @throws Exception If fails.
      */
-    private static File prepareIndex() {
+    private File prepareIndex() throws Exception {
         IgniteEx ignite = (IgniteEx)Ignition.start(getConfiguration());
 
         ignite.cluster().active(true);
@@ -411,37 +386,6 @@ public class IgniteIndexReaderTest {
     }
 
     /**
-     * Makes a force checkpoint for given Ignite instance.
-     *
-     * @param ignite Ignite instance.
-     */
-    private static void forceCheckpoint(IgniteEx ignite) {
-        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)(ignite).context()
-            .cache().context().database();
-
-        try {
-            dbMgr.waitForCheckpoint("test");
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-    }
-
-    /**
-     * Checks that first string contains the second.
-     *
-     * @param str String.
-     * @param substr String.
-     */
-    private static void assertContains(String str, String substr) {
-        try {
-            assertTrue(str != null && str.contains(substr));
-        } catch (AssertionError e) {
-            throw new AssertionError(String.format("String does not contain substring: '%s'. String: %s", substr, str));
-        }
-    }
-
-    /**
      * Checks the index reader output.
      *
      * @param output Output.
@@ -457,23 +401,23 @@ public class IgniteIndexReaderTest {
         int pageListsErrCnt,
         int seqErrCnt
     ) {
-        assertContains(output, RECURSIVE_TRAVERSE_NAME + "Total trees: " + treesCnt);
-        assertContains(output, HORIZONTAL_SCAN_NAME + "Total trees: " + treesCnt);
-        assertContains(output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " +
+        assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total trees: " + treesCnt);
+        assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total trees: " + treesCnt);
+        assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " +
             (travErrCnt >= 0 ? travErrCnt : ""));
-        assertContains(output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " +
+        assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " +
             (travErrCnt >= 0 ? travErrCnt : ""));
-        assertContains(output, "Total errors during lists scan: " + pageListsErrCnt);
+        assertContains(log, output, "Total errors during lists scan: " + pageListsErrCnt);
 
         if (travErrCnt == 0)
-            assertContains(output, "No index size consistency errors found.");
+            assertContains(log, output, "No index size consistency errors found.");
         else if (travErrCnt > 0)
-            assertContains(output, "Index size inconsistency");
+            assertContains(log, output, "Index size inconsistency");
 
         if (seqErrCnt >= 0)
-            assertContains(output, "Total errors occurred during sequential scan: " + seqErrCnt);
+            assertContains(log, output, "Total errors occurred during sequential scan: " + seqErrCnt);
         else
-            assertContains(output, "Orphan pages were not reported due to --indexes filter.");
+            assertContains(log, output, "Orphan pages were not reported due to --indexes filter.");
 
         if (travErrCnt == 0 && pageListsErrCnt == 0 && seqErrCnt == 0)
             assertFalse(output.contains(ERROR_PREFIX));
@@ -601,8 +545,8 @@ public class IgniteIndexReaderTest {
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
 
-        assertContains(output, "Partitions check detected no errors.");
-        assertContains(output, "Partition check finished, total errors: 0, total problem partitions: 0");
+        assertContains(log, output, "Partitions check detected no errors.");
+        assertContains(log, output, "Partition check finished, total errors: 0, total problem partitions: 0");
     }
 
     /** */
@@ -700,7 +644,7 @@ public class IgniteIndexReaderTest {
 
             assertTrue(output, ptrn.matcher(output).find());
 
-            assertContains(output, "Total errors during lists scan: 0");
+            assertContains(log, output, "Total errors during lists scan: 0");
         }
         finally {
             restoreFile(INDEX_PARTITION);

@@ -63,6 +63,21 @@ public class GridMessageCollectionTest {
      */
     @Test
     public void testMarshal() {
+        proto = 2;
+        doTestMarshal();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testMarshalLegacyMode() {
+        proto = 1;
+        doTestMarshal();
+    }
+
+    /** */
+    private void doTestMarshal() {
         UUIDCollectionMessage um0 = UUIDCollectionMessage.of();
         UUIDCollectionMessage um1 = UUIDCollectionMessage.of(randomUUID());
         UUIDCollectionMessage um2 = UUIDCollectionMessage.of(randomUUID(), randomUUID());
@@ -71,25 +86,6 @@ public class GridMessageCollectionTest {
         assertNull(um0);
         assertEquals(3, um3.uuids().size());
 
-        proto = 2;
-        doTestMarshal(um0, um1, um2, um3);
-
-        proto = 1;
-        doTestMarshal(um0, um1, um2, um3);
-    }
-
-    /**
-     * @param um0 Null.
-     * @param um1 One uuid list.
-     * @param um2 Two uuid list.
-     * @param um3 Three uuid list.
-     */
-    private void doTestMarshal(
-        UUIDCollectionMessage um0,
-        UUIDCollectionMessage um1,
-        UUIDCollectionMessage um2,
-        UUIDCollectionMessage um3
-    ) {
         doTestMarshal(um1);
         doTestMarshal(um2);
         doTestMarshal(um3);
