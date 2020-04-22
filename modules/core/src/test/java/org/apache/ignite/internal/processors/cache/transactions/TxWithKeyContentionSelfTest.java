@@ -135,7 +135,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testPessimisticRepeatableReadCheckContentionTxMetric() throws Exception {
-        testKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
+        runKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
     }
 
     /**
@@ -146,7 +146,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     public void testPessimisticRepeatableReadCheckContentionTxMetricNear() throws Exception {
         nearCache = true;
 
-        testKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
+        runKeyCollisionsMetric(PESSIMISTIC, REPEATABLE_READ);
     }
 
     /**
@@ -155,7 +155,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testPessimisticReadCommitedCheckContentionTxMetric() throws Exception {
-        testKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
+        runKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
     }
 
     /**
@@ -166,7 +166,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     public void testPessimisticReadCommitedCheckContentionTxMetricNear() throws Exception {
         nearCache = true;
 
-        testKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
+        runKeyCollisionsMetric(PESSIMISTIC, READ_COMMITTED);
     }
 
     /**
@@ -175,7 +175,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testOptimisticReadCommittedCheckContentionTxMetric() throws Exception {
-        testKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
+        runKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
     }
 
     /**
@@ -186,7 +186,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     public void testOptimisticReadCommittedCheckContentionTxMetricNear() throws Exception {
         nearCache = true;
 
-        testKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
+        runKeyCollisionsMetric(OPTIMISTIC, READ_COMMITTED);
     }
 
     /**
@@ -195,7 +195,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_DUMP_TX_COLLISIONS_INTERVAL, value = "30000")
     public void testOptimisticRepeatableReadCheckContentionTxMetric() throws Exception {
-        testKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
+        runKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
     }
 
     /**
@@ -206,11 +206,11 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     public void testOptimisticRepeatableReadCheckContentionTxMetricNear() throws Exception {
         nearCache = true;
 
-        testKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
+        runKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
     }
 
     /** Tests metric correct results while tx collisions occured. */
-    private void testKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
+    private void runKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         if (MvccFeatureChecker.forcedMvcc())
             return; // Not supported.
 

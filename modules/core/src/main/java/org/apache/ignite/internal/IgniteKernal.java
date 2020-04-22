@@ -367,10 +367,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @GridToStringExclude
     private GridTimeoutProcessor.CancelableTask metricsLogTask;
 
-    /** */
-    @GridToStringExclude
-    private GridTimeoutProcessor.CancelableTask longOpDumpTask;
-
     /** Indicate error on grid stop. */
     @GridToStringExclude
     private boolean errOnStop;
@@ -2485,9 +2481,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             if (metricsLogTask != null)
                 metricsLogTask.close();
-
-            if (longOpDumpTask != null)
-                longOpDumpTask.close();
 
             if (longJVMPauseDetector != null)
                 longJVMPauseDetector.stop();

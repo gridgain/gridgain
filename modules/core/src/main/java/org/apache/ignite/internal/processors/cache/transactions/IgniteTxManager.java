@@ -3001,6 +3001,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         );
     }
 
+    /** {@inheritDoc} */
+    @Override protected void stop0(boolean cancel) {
+        super.stop0(cancel);
+
+        synchronized (TIMEOUT_OPS) {
+            TIMEOUT_OPS.forEach((k, v) -> v.close());
+        }
+    }
+
     /**
      * Setting (for all nodes) a timeout (in millis) for printing long-running
      * transactions as well as transactions that cannot receive locks for all
