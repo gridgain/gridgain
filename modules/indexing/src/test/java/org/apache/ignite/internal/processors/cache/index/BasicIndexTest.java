@@ -54,6 +54,9 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -61,6 +64,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.h2.index.Index;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
@@ -1488,7 +1492,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             "second INTEGER, " +
             "v INTEGER, " +
             "PRIMARY KEY (first, second)" +
-//            "PRIMARY KEY (first)" +
             ") " +
             "WITH \"" +
             "template=replicated," +
@@ -1505,11 +1508,22 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cache.put(new Key0(0, 0), new Value0(0));
         cache.put(new Key0(0, 1), new Value0(1));
 
-        System.out.println("+++" + cache.size());
+        log.info("+++ cache size = " + cache.size());
 
         List<List<?>> res = sql("select * from test").getAll();
 
-        System.out.println("+++ " + res);
+        log.info("+++ select * from test\n" + res);
+
+        IgniteH2Indexing h2 = ((IgniteH2Indexing)((IgniteEx)ign).context().query().getIndexing());
+
+        for (GridH2Table tbl : h2.schemaManager().dataTables()) {
+            for (Index idx : tbl.getIndexes()) {
+                if (idx instanceof H2TreeIndex) {
+                    log.info("+++ idx size(" + tbl.getName() + "." + idx.getName() +
+                        ") = " + ((H2TreeIndex)idx).totalRowCount(null));
+                }
+            }
+        }
 
         cache.clear();
 
