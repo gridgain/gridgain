@@ -26,7 +26,7 @@ import org.apache.ignite.yardstick.cache.model.SampleValue;
 public class IgnitePutBenchmark extends IgniteCacheAbstractBenchmark<Integer, Object> {
     /** {@inheritDoc} */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
-        int key = nextRandom(args.range());
+        int key = getNextKey();
 
         IgniteCache<Integer, Object> cache = cacheForOperation();
 

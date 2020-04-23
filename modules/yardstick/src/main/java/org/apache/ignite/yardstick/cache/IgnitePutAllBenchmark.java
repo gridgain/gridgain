@@ -82,7 +82,7 @@ public class IgnitePutAllBenchmark extends IgniteCacheAbstractBenchmark<Integer,
         else {
             vals = new TreeMap<>();
 
-            ClusterNode node = args.collocated() ? aff.mapKeyToNode(nextRandom(args.range())) : null;
+            ClusterNode node = args.collocated() ? aff.mapKeyToNode(getNextKey()) : null;
 
             Map<ClusterNode, Integer> stripesMap = null;
 
@@ -90,7 +90,7 @@ public class IgnitePutAllBenchmark extends IgniteCacheAbstractBenchmark<Integer,
                 stripesMap = U.newHashMap(srvrCnt);
 
             for (; vals.size() < args.batch(); ) {
-                int key = nextRandom(args.range());
+                int key = getNextKey();
 
                 if (args.collocated() && !aff.isPrimary(
                     node,

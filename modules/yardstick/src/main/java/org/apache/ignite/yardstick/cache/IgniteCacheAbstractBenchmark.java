@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSemaphore;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -48,6 +49,7 @@ import static org.yardstickframework.BenchmarkUtils.println;
  * Abstract class for Ignite benchmarks which use cache.
  */
 public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractBenchmark {
+    public static final String DEAD_NODE_ATTR = "DEAD_NODE";
     /** Cache. */
     protected IgniteCache<K, V> cache;
 
@@ -340,6 +342,39 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
      * @return IgniteCache Cache to use.
      */
     protected abstract IgniteCache<K, V> cache();
+
+    protected int getNextKey() {
+        if (IgniteSystemProperties.getBoolean("BENCHMARK_PRELOAD", false))
+            return nextRandom(args.range());
+
+        int key;
+        String cacheName = cache().getName();
+
+        // If some partitions are lost, then pick a key from a non-lost partiton.
+        if (!cache().lostPartitions().isEmpty()) {
+            do {
+                key = nextRandom(args.range());
+            } while (cache().lostPartitions().contains(
+                    ignite().affinity(cacheName).partition(key)
+            ));
+        } else {
+            // If no partitions are lost, then pick a key whose primary and backup partitions
+            // does not belong to restarted nodes.
+            Collection<ClusterNode> deadNodes = ignite().cluster().forAttribute(DEAD_NODE_ATTR, "true").nodes();
+
+            if (deadNodes.isEmpty()) {
+                throw new IllegalStateException("Zero nodes with attribute " + DEAD_NODE_ATTR + " exist");
+            }
+
+            do {
+                key = nextRandom(args.range());
+            } while (deadNodes.containsAll(
+                    ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key)
+            ));
+        }
+
+        return key;
+    }
 
     /**
      *
