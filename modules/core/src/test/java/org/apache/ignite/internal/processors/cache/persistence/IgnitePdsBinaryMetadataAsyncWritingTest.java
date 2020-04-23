@@ -577,7 +577,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     private void cleanBinaryMetaFolderForNode(String consId) throws IgniteCheckedException {
         String dfltWorkDir = U.defaultWorkDirectory();
-        File metaDir = U.resolveWorkDirectory(dfltWorkDir, "db/binary_meta", false);
+        File metaDir = U.resolveWorkDirectory(dfltWorkDir, DataStorageConfiguration.BINARY_METADATA_DFLT_PATH, false);
 
         for (File subDir : metaDir.listFiles()) {
             if (subDir.getName().contains(consId)) {

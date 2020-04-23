@@ -30,7 +30,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -132,7 +131,7 @@ public class IgnitePdsNoSpaceLeftOnDeviceTest extends GridCommonAbstractTest {
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             if (unluckyConsistentId.get() != null
                 && file.getAbsolutePath().contains(unluckyConsistentId.get())
-                && file.getAbsolutePath().contains(StandaloneGridKernalContext.BINARY_META_FOLDER))
+                && file.getAbsolutePath().contains(DataStorageConfiguration.BINARY_METADATA_DFLT_PATH))
                 throw new IOException("No space left on device");
 
             return delegateFactory.create(file, modes);

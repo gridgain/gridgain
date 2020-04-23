@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
@@ -51,9 +52,6 @@ import org.jetbrains.annotations.Nullable;
  * segmentation of nodes from cluster.
  */
 class BinaryMetadataFileStore {
-    /** Default path (relative to working directory) of binary metadata folder */
-    public static final String BINARY_METADATA_DFLT_PATH = "db/binary_meta";
-
     /** Link to resolved binary metadata directory. Null for non persistent mode */
     private File metadataDir;
 
@@ -105,7 +103,7 @@ class BinaryMetadataFileStore {
         else
             metadataDir = new File(U.resolveWorkDirectory(
                 ctx.config().getWorkDirectory(),
-                BINARY_METADATA_DFLT_PATH,
+                DataStorageConfiguration.BINARY_METADATA_DFLT_PATH,
                 false
             ), nodeFolderName);
 

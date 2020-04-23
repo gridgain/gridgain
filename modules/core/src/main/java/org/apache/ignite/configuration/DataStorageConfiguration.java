@@ -157,6 +157,9 @@ public class DataStorageConfiguration implements Serializable {
     /** Default wal archive directory. */
     public static final String DFLT_WAL_ARCHIVE_PATH = "db/wal/archive";
 
+    /** Default path (relative to working directory) of binary metadata folder */
+    public static final String BINARY_METADATA_DFLT_PATH = "db/binary_meta";
+
     /** Default write throttling enabled. */
     public static final boolean DFLT_WRITE_THROTTLING_ENABLED = false;
 

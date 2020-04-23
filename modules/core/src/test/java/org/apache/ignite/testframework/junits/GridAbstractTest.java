@@ -640,7 +640,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     private void resolveWorkDirectory() throws Exception {
         U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", true);
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), "db/binary_meta", true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.BINARY_METADATA_DFLT_PATH, true);
     }
 
     /** */
