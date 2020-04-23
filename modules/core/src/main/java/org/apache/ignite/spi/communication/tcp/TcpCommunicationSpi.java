@@ -693,7 +693,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             this.srvLsnr,
             getName(),
             getWorkersRegistry(ignite),
-            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null
+            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
+            this::createTcpClient
         );
 
         this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
@@ -1160,7 +1161,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      * @throws IgniteCheckedException If failed.
      */
     protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
-        return nioSrvWrapper.createTcpClient(node, connIdx);
+        return nioSrvWrapper.createTcpClient(node, connIdx, false);
     }
 
     /**

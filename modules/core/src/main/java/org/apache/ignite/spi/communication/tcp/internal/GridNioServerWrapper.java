@@ -161,6 +161,9 @@ public class GridNioServerWrapper {
     /** Metric manager. */
     private final GridMetricManager metricMgr;
 
+    /** Create tcp client fun. */
+    private final ThrowableBiFunction<ClusterNode, Integer, GridCommunicationClient, IgniteCheckedException> createTcpClientFun;
+
     /** Recovery descs. */
     private final ConcurrentMap<ConnectionKey, GridNioRecoveryDescriptor> recoveryDescs = GridConcurrentFactory.newMap();
 
@@ -191,6 +194,7 @@ public class GridNioServerWrapper {
     private ConnectionClientPool clientPool;
 
     /**
+     * @param metricMgrSupplier Metric manager supplier.
      * @param log Logger.
      * @param cfg Config.
      * @param timeObjProcessor Time object processor.
@@ -206,7 +210,7 @@ public class GridNioServerWrapper {
      * @param srvLsnr Server listener.
      * @param igniteInstanceName Ignite instance name.
      * @param workersRegistry Workers registry.
-     * @param metricMgrSupplier Metric manager supplier.
+     * @param createTcpClientFun
      */
     public GridNioServerWrapper(
         IgniteLogger log,
@@ -224,7 +228,8 @@ public class GridNioServerWrapper {
         GridNioServerListener<Message> srvLsnr,
         String igniteInstanceName,
         WorkersRegistry workersRegistry,
-        @Nullable GridMetricManager metricMgr
+        @Nullable GridMetricManager metricMgr,
+        ThrowableBiFunction<ClusterNode, Integer, GridCommunicationClient, IgniteCheckedException> createTcpClientFun
     ) {
         this.log = log;
         this.cfg = cfg;
@@ -242,6 +247,7 @@ public class GridNioServerWrapper {
         this.igniteInstanceName = igniteInstanceName;
         this.workersRegistry = workersRegistry;
         this.metricMgr = metricMgr;
+        this.createTcpClientFun = createTcpClientFun;
     }
 
     /**
@@ -646,14 +652,19 @@ public class GridNioServerWrapper {
      *
      * @param node Remote node.
      * @param connIdx Connection index.
+     * @param backwardCompatibility It calls the method from protected class.
      * @return Client.
      * @throws IgniteCheckedException If failed.
      */
-    public GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
-        GridNioSession ses = createNioSession(node, connIdx);
+    public GridCommunicationClient createTcpClient(ClusterNode node, int connIdx, boolean backwardCompatibility) throws IgniteCheckedException {
+        if(backwardCompatibility)
+            return createTcpClientFun.apply(node, connIdx);
+        else {
+            GridNioSession ses = createNioSession(node, connIdx);
 
-        return ses == null ?
-            null : new GridTcpNioCommunicationClient(connIdx, ses, log);
+            return ses == null ?
+                null : new GridTcpNioCommunicationClient(connIdx, ses, log);
+        }
     }
 
     /**

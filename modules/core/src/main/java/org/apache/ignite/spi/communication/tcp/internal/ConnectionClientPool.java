@@ -345,7 +345,7 @@ public class ConnectionClientPool {
 
         final long start = System.currentTimeMillis();
 
-        GridCommunicationClient client = nioSrvWrapper.createTcpClient(node, connIdx);
+        GridCommunicationClient client = nioSrvWrapper.createTcpClient(node, connIdx, true);
 
         final long time = System.currentTimeMillis() - start;
 
