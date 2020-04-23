@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.agent.config;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -147,7 +148,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
      */
     private <T> List<T> mapListPayload(Object payload, Class<T> clazz) {
         if (payload == null)
-            return null;
+            return Collections.emptyList();
 
         JavaType type = mapper.getTypeFactory().constructCollectionType(List.class, clazz);
 
