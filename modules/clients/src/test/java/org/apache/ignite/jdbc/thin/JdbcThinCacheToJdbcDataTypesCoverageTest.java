@@ -106,7 +106,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     }
 
     /** As stmt parameter. */
-    private boolean usePrepared;
+    private boolean asPreparedParam;
 
     /** URL. */
     private String url = affinityAwareness ?
@@ -127,7 +127,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     @Override public void init() throws Exception {
         super.init();
 
-        usePrepared = false;
+        asPreparedParam = false;
     }
 
     /**
@@ -214,7 +214,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-    @Ignore()
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28896")
     @Test
     @Override public void testObjectArrayDataType() throws Exception {
         super.testObjectArrayDataType();
@@ -225,7 +225,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testListDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         checkBasicCacheOperations(new ArrayList<>());
         checkBasicCacheOperations((Serializable)Collections.singletonList("Aaa"));
@@ -237,7 +237,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testSetDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         checkBasicCacheOperations(new HashSet<>());
         checkBasicCacheOperations((Serializable)Collections.singleton("Aaa"));
@@ -249,7 +249,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testObjectBasedOnPrimitivesDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         super.testObjectBasedOnPrimitivesDataType();
     }
@@ -259,7 +259,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testObjectBasedOnPrimitivesAndCollectionsDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         super.testObjectBasedOnPrimitivesAndCollectionsDataType();
     }
@@ -269,7 +269,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testObjectBasedOnPrimitivesAndCollectionsAndNestedObjectsDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         super.testObjectBasedOnPrimitivesAndCollectionsAndNestedObjectsDataType();
     }
@@ -299,10 +299,9 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /**
      * @throws Exception If failed.
      */
-//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23663")
     @Test
     @Override public void testInstantDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         super.testInstantDataType();
     }
@@ -310,7 +309,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /** {@inheritDoc} */
     @Test
     @Override public void testCalendarDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
         super.testCalendarDataType();
     }
@@ -367,13 +366,9 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      */
     @Test
     @Override public void testBigIntegerDataType() throws Exception {
-        usePrepared = true;
+        asPreparedParam = true;
 
-        checkBasicCacheOperations(
-            new BigInteger("1"),
-            BigInteger.ONE,
-            BigInteger.ZERO,
-            new BigInteger("123456789"));
+        super.testBigIntegerDataType();
     }
 
     /**
@@ -472,7 +467,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
             }
 
             // Check SELECT query with where clause.
-            if (usePrepared) {
+            if (asPreparedParam) {
                 try (PreparedStatement stmt = prepareStatement(cacheName, "SELECT * FROM " + tblName + " WHERE _key = ?")) {
                     if (originalKey.getClass().isArray())
                         stmt.setArray(1, conn.createArrayOf("OTHER", (Object[])originalKey));

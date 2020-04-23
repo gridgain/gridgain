@@ -89,7 +89,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
     private static final boolean[] BOOLEANS = {true, false};
 
     /** */
-    protected static final int NODES_CNT = 1;
+    protected static final int NODES_CNT = 3;
 
     /** */
     protected static final int TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE = 4_000;
@@ -230,7 +230,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 300_000;
+        return 30_000;
     }
 
     /** {@inheritDoc} */
