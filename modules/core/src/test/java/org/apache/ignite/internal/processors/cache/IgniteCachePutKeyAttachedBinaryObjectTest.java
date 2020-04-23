@@ -17,12 +17,11 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -41,61 +40,38 @@ public class IgniteCachePutKeyAttachedBinaryObjectTest extends GridCommonAbstrac
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
 
-        startGrid();
+        stopAllGrids();
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void test() throws Exception {
-        IgniteCache<BinaryObject, BinaryObject> binCache = grid().cache(CACHE_NAME).withKeepBinary();
+    public void testAttachedBinaryKeyStoredSuccessfullyToNotEmptyCache() throws Exception {
+        startGrid(0);
 
-        BinaryObjectBuilder keyBuilder = grid().binary().builder(AttachedKey.class.getName());
+        IgniteCache<Object, Object> binCache = grid(0).cache(CACHE_NAME);
 
-        keyBuilder.setField("id", 0);
+        //Ensure that cache not empty.
+        AttachedKey ordinaryKey = new AttachedKey(0);
 
-        BinaryObject key = keyBuilder.build();
+        binCache.put(ordinaryKey, 1);
 
-        // create a new value
-        BinaryObjectBuilder empBuilder = grid().binary().builder(ValueWithKey.class.getName());
+        BinaryObjectBuilder holdBuilder = grid(0).binary().builder(HolderKey.class.getName());
 
-        empBuilder.setField("val", "val_0", String.class);
-        empBuilder.setField("id", key); // The composite key is also a part of the    value !
+        //Creating attached key which stores as byte array.
+        BinaryObjectImpl attachedKey = holdBuilder.setField("id", new AttachedKey(1))
+            .build()
+            .field("id");
 
-        BinaryObject emp = empBuilder.build();
+        //Put data with attached key.
+        binCache.put(attachedKey, 2);
 
-        // put the first entry
-        binCache.put(emp.field("id"), emp);
-
-        // create a new key / value
-        keyBuilder = grid().binary().builder(AttachedKey.class.getName());
-
-        keyBuilder.setField("id", 1, Integer.class);
-
-        key = keyBuilder.build();
-
-        empBuilder = grid().binary().builder(ValueWithKey.class.getName());
-
-        empBuilder.setField("val", "val_1", String.class);
-        empBuilder.setField("id", key); // The composite key is also a part of the    value !
-
-        emp = empBuilder.build();
-
-        // put the second entry.
-        try {
-            binCache.put(emp.field("id"), emp); // CRASH!!! CorruptedTreeException: B+Tree is corrupted
-        }
-        catch (Exception ignored) {
-            // No-op.
-        }
-
-        U.sleep(500);
-
-        assertFalse(grid().context().isStopping());
+        assertEquals(1, binCache.get(ordinaryKey));
+        assertEquals(2, binCache.get(attachedKey));
     }
 
 
@@ -105,17 +81,18 @@ public class IgniteCachePutKeyAttachedBinaryObjectTest extends GridCommonAbstrac
     public static class AttachedKey {
         /** */
         public int id;
+
+        /** **/
+        public AttachedKey(int id) {
+            this.id = id;
+        }
     }
 
     /**
      *
      */
-    public static class ValueWithKey {
-        /** */
-        public String val;
-
+    public static class HolderKey {
         /** */
         public AttachedKey key;
     }
-
 }
