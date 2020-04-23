@@ -1670,8 +1670,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                     assert exchFut != null;
 
-                    boolean affReassigned = false;
-
                     for (Map.Entry<Integer, GridDhtPartitionState> e : nodeMap.entrySet()) {
                         int p = e.getKey();
                         GridDhtPartitionState state = e.getValue();
@@ -1692,18 +1690,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         else if (state == MOVING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
-                            if (locPart.state() == OWNING)
-                                affReassigned = true;
-
                             rebalancePartition(p, partsToReload.contains(p) ||
                                 locPart != null && locPart.state() == MOVING && exchFut.localJoinExchange(), exchFut);
 
                             changed = true;
                         }
                     }
-
-                    if (affReassigned)
-                        exchFut.markAffinityReassign();
                 }
 
                 long updateSeq = this.updateSeq.incrementAndGet();
@@ -2395,8 +2387,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 // First process local partitions.
                 UUID locNodeId = ctx.localNodeId();
 
-                boolean affReassigned = false;
-
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                     int part = entry.getKey();
                     Set<UUID> maxCntrPartOwners = entry.getValue();
@@ -2410,14 +2400,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     if (joinedNodes.isEmpty() && !maxCntrPartOwners.contains(locNodeId)) {
                         rebalancePartition(part, !haveHist.contains(part), exchFut);
 
-                        affReassigned = true;
-
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
                     }
                 }
-
-                if (affReassigned)
-                    exchFut.markAffinityReassign();
 
                 // Then process node maps.
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {

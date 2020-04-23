@@ -3814,8 +3814,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
                 }
                 else if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage
-                        && ((SnapshotDiscoveryMessage)discoveryCustomMessage).needAssignPartitions())
+                        && ((SnapshotDiscoveryMessage)discoveryCustomMessage).needAssignPartitions()) {
+                    markAffinityReassign();
+
                     assignPartitionsStates();
+                }
             }
             else if (exchCtx.events().hasServerJoin())
                 assignPartitionsStates();
@@ -4640,6 +4643,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             if (stateChangeExchange() && !F.isEmpty(msg.getErrorsMap()))
                 cctx.kernalContext().state().onStateChangeError(msg.getErrorsMap(), exchActions.stateChangeRequest());
+
+            if (firstDiscoEvt.type() == EVT_DISCOVERY_CUSTOM_EVT) {
+                DiscoveryCustomMessage discoveryCustomMessage = ((DiscoveryCustomEvent)firstDiscoEvt).customMessage();
+
+                if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage
+                    && ((SnapshotDiscoveryMessage)discoveryCustomMessage).needAssignPartitions())
+                    markAffinityReassign();
+            }
 
             onDone(resTopVer, null);
         }
