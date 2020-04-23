@@ -456,7 +456,7 @@ public abstract class AbstractDiscoverySelfTest<T extends IgniteSpi> extends Gri
 
                 GridSpiTestContext ctx = initSpiContext();
 
-                GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "spiCtx", ctx);
+                GridTestUtils.setFieldValue(spi, "spiCtx", ctx);
 
                 if (useSsl) {
                     IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");

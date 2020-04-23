@@ -415,7 +415,7 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
 
             rsrcs.inject(spi);
 
-            GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
+            GridTestUtils.setFieldValue(spi, "igniteInstanceName", "grid-" + i);
 
             spi.setListener(new TestListener());
 

@@ -480,7 +480,7 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
         for (int i = 0; i < getSpiCount(); i++) {
             CommunicationSpi<Message> spi = newCommunicationSpi();
 
-            GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
+            GridTestUtils.setFieldValue(spi, "igniteInstanceName", "grid-" + i);
 
             IgniteTestResources rsrcs = new IgniteTestResources();
 

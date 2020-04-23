@@ -361,7 +361,7 @@ public class BinaryTypeMismatchLoggingTest extends GridCommonAbstractTest {
 
         this.capture = new GridStringLogger(false, this.log);
 
-        GridTestUtils.setFieldValue(ignite.context().query(), GridProcessorAdapter.class,"log", capture);
+        GridTestUtils.setFieldValue(ignite.context().query(), "log", capture);
 
         return ignite;
     }

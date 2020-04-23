@@ -134,7 +134,7 @@ public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
 
             if (rmvTxState) {
                 txState = getFieldValue(activeTx, IgniteTxLocalAdapter.class, "txState");
-                setFieldValue(activeTx, IgniteTxLocalAdapter.class, "txState", null);
+                setFieldValue(activeTx, "txState", null);
             }
 
             boolean commit = false;
@@ -154,7 +154,7 @@ public class SafeLogTxFinishErrorTest extends GridCommonAbstractTest {
 
             //That there was no NPE when closing a transaction.
             if (rmvTxState)
-                setFieldValue(activeTx, IgniteTxLocalAdapter.class, "txState", txState);
+                setFieldValue(activeTx, "txState", txState);
         }
     }
 }

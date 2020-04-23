@@ -760,7 +760,7 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
 
             rsrcs.inject(spi);
 
-            GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
+            GridTestUtils.setFieldValue(spi, "igniteInstanceName", "grid-" + i);
 
             if (useSsl) {
                 IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");

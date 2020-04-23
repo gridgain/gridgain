@@ -251,7 +251,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         GridDiscoveryManager discovery = server0.context().discovery();
 
-        GridTestUtils.setFieldValue(discovery, GridManagerAdapter.class, "log", log);
+        GridTestUtils.setFieldValue(discovery, "log", log);
     }
 
     /**
