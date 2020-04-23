@@ -38,7 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for discovery message exchange, that is performed upon binary type registration when using Cache Store API.
+ * Test for moving binary metadata folder to PDS
  */
 public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
