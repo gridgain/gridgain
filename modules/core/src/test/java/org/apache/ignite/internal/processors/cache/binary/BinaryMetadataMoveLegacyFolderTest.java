@@ -41,9 +41,7 @@ import org.junit.Test;
  * Tests for discovery message exchange, that is performed upon binary type registration when using Cache Store API.
  */
 public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Before
     @Override public void beforeTest() throws Exception {
         super.beforeTest();
@@ -53,9 +51,7 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @After
     @Override public void afterTest() throws Exception {
         super.afterTest();
@@ -65,30 +61,22 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(igniteInstanceName);
 
-        DataStorageConfiguration dsCfg = configuration.getDataStorageConfiguration();
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
 
-        if (dsCfg == null) {
-            dsCfg = new DataStorageConfiguration();
-            configuration.setDataStorageConfiguration(dsCfg);
-        }
+        configuration.setDataStorageConfiguration(dsCfg);
 
         dsCfg.setDefaultDataRegionConfiguration(
             new DataRegionConfiguration()
-                .setPersistenceEnabled(true)
-                .setMaxSize(100L * 1024 * 1024));
+                .setPersistenceEnabled(true));
 
         return configuration;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected IgniteEx startGrid(IgniteConfiguration cfg) throws Exception {
         IgniteEx grid = super.startGrid(cfg);
         grid.active(true);
