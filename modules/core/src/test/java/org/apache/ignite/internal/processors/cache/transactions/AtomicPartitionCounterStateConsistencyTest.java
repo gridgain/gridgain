@@ -16,15 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cluster.ClusterTopologyException;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
-import org.apache.ignite.internal.util.typedef.X;
-import org.junit.Ignore;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -33,6 +24,15 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cluster.ClusterTopologyException;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.util.typedef.X;
+import org.junit.Ignore;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -116,7 +116,8 @@ public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCount
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
-                            X.hasCause(e, ClusterTopologyCheckedException.class));
+                        X.hasCause(e, ClusterTopologyCheckedException.class) ||
+                        X.hasCause(e, CacheInvalidStateException.class));
                 }
             }
 
