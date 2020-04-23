@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,13 +54,16 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -99,6 +103,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setFailureDetectionTimeout(100000L);
+        cfg.setClientFailureDetectionTimeout(100000L);
 
         if (customDiscoSpi != null) {
             cfg.setDiscoverySpi(customDiscoSpi);
@@ -986,6 +993,74 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     @Test
     public void testPrimaryLeftUnderLoadToSwitchingPartitions_4() throws Exception {
         doTestPrimaryLeftUnderLoadToSwitchingPartitions(1, 3);
+    }
+
+    /** */
+    @Test
+    public void testLateAffinityChangeDuringExchange() throws Exception {
+        backups = 2;
+        Ignite crd = startGridsMultiThreaded(3);
+        crd.cluster().active(true);
+
+        awaitPartitionMapExchange();
+
+        for (int p = 0; p < PARTS_CNT; p++)
+            crd.cache(DEFAULT_CACHE_NAME).put(p, p);
+
+        forceCheckpoint();
+
+        int key = primaryKey(grid(2).cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    boolean ret = msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).topologyVersion().equals(new AffinityTopologyVersion(4, 0));
+
+                    if (ret)
+                        System.out.println();
+
+                    return ret;
+                }
+
+                return false;
+            }
+        });
+
+        GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                stopGrid(2);
+            }
+        });
+
+        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked();
+
+        // Create counter delta for triggering counter rebalance.
+        for (int p = 0; p < PARTS_CNT; p++)
+            crd.cache(DEFAULT_CACHE_NAME).put(p, p + 1);
+
+        IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
+        ((TestRecordingCommunicationSpi)cfg2.getCommunicationSpi()).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                return msg instanceof GridDhtPartitionDemandMessage;
+            }
+        });
+
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(cfg2);
+
+                return null;
+            }
+        });
+
+        doSleep(2000);
+
+        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
+
+        for (int i = 0; i < 100; i++)
+            grid(0).cache(DEFAULT_CACHE_NAME).put(i, i);
     }
 
     /**

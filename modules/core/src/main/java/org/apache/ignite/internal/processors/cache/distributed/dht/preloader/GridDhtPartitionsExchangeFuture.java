@@ -4018,6 +4018,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      */
     private void assignPartitionsStates() {
+        if (initialVersion().equals(new AffinityTopologyVersion(5, 0)))
+            try {
+                U.sleep(6_000);
+            } catch (IgniteInterruptedCheckedException e) {
+                e.printStackTrace();
+            }
+
         try {
             U.doInParallel(
                 cctx.kernalContext().getSystemExecutorService(),
