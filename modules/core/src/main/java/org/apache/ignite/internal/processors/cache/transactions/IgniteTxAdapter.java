@@ -1226,6 +1226,8 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                     cctx.tm().setMvccState(this, toMvccState(state));
 
                     ptr = cctx.tm().logTxRecord(this);
+
+                    cctx.tm().trackTransaction(this);
                 }
             }
         }

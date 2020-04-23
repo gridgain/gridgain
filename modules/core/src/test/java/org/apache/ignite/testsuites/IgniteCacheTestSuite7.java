@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.cache.transactions.AtomicPartitionC
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithPrimaryIndexCorruptionTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCacheMapOnInvalidTopologyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCacheRemoteMultiplePartitionReservationTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxLocalTrackerWithoutTxRecordLoggingTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxRollbackAsyncWithPersistenceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxWithSmallTimeoutAndContentionOneKeyTest;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -131,6 +132,8 @@ public class IgniteCacheTestSuite7 {
         GridTestUtils.addTestIfNeeded(suite, AtomicPartitionCounterStateConsistencyHistoryRebalanceTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridCacheDhtPreloadWaitForBackupsWithPersistenceTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, TxLocalTrackerWithoutTxRecordLoggingTest.class, ignoredTests);
 
         return suite;
     }
