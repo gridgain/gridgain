@@ -4087,7 +4087,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplayInfoMap) {
         if (hasPartitonToLog(supplayInfoMap, false)) {
-            log.info("Partitions weren't any history reservation: [" +
+            log.info("Partitions weren't present in any history reservation: [" +
                 supplayInfoMap.entrySet().stream().map(entry ->
                     "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
                         .filter(info -> !info.isHistoryReserved())

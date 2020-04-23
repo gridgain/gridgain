@@ -105,7 +105,7 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
                 str.contains("fullPartitions=[], histPartitions=[0-7]")).times(2).build();
 
         LogListener unexpectedMessagesLsnr = LogListener.matches((str) ->
-            str.startsWith("Partitions weren't any history reservation:") ||
+            str.startsWith("Partitions weren't present in any history reservation:") ||
                 str.startsWith("Partitions were reserved, but maximum available counter is greater than demanded:")
         ).build();
 
@@ -135,7 +135,7 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "500000")
     public void testFullRebalanceLogMsgs() throws Exception {
         LogListener expMsgsLsnr = LogListener.
-            matches("Partitions weren't any history reservation: " +
+            matches("Partitions weren't present in any history reservation: " +
                 "[[grp=cache_group2 part=[[0-7]]], [grp=cache_group1 part=[[0-7]]]]").
             andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
                 str.contains("fullPartitions=[0-7], histPartitions=[]")).times(2).build();
