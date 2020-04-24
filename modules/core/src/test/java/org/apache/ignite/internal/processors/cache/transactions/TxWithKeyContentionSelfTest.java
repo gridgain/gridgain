@@ -65,9 +65,6 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** Near cache flag. */
     private boolean nearCache;
 
-    /** Atomic flag. */
-    private boolean atomic;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
@@ -103,7 +100,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** */
     protected CacheConfiguration<?, ?> getCacheConfiguration(String name) {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(name)
-            .setAtomicityMode(atomic ? CacheAtomicityMode.ATOMIC : CacheAtomicityMode.TRANSACTIONAL)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setBackups(2)
