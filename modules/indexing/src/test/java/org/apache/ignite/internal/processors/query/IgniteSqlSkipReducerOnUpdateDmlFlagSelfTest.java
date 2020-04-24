@@ -24,6 +24,7 @@ import java.util.Map;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -104,6 +105,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
             CacheConfiguration ccfg = new CacheConfiguration(CACHE_STOCK);
 
             ccfg.setCacheMode(CacheMode.REPLICATED);
+            ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
 
             QueryEntity entity = new QueryEntity(Integer.class, Stock.class);
 
