@@ -344,12 +344,7 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
     protected abstract IgniteCache<K, V> cache();
 
     protected int getNextKey() {
-        boolean preloadFlag = IgniteSystemProperties.getBoolean("BENCHMARK_PRELOAD", false);
-
-        // Debug
-        println("BENCHMARK_PRELOAD: " + preloadFlag);
-
-        if (preloadFlag)
+        if (IgniteSystemProperties.getBoolean("BENCHMARK_PRELOAD", false))
             return nextRandom(args.range());
 
         int key;
