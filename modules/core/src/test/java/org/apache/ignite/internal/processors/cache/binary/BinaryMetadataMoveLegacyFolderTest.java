@@ -65,6 +65,8 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(igniteInstanceName);
 
+        configuration.setConsistentId(UUID.randomUUID());
+
         DataStorageConfiguration dsCfg = new DataStorageConfiguration();
 
         configuration.setDataStorageConfiguration(dsCfg);
@@ -90,11 +92,7 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
      * @param fieldName Field name.
      */
     private byte[] createBinaryType(String typeName, String fieldName) throws Exception {
-        UUID uuid = UUID.randomUUID();
-
         IgniteConfiguration configuration = getConfiguration();
-
-        configuration.setConsistentId(uuid.toString());
 
         IgniteEx grid = startGrid(configuration);
 
@@ -123,6 +121,8 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
      */
     @Test
     public void testBinaryMetadataDirectoryMigration() throws Exception {
+        IgniteConfiguration configuration = getConfiguration();
+
         String typeName = "TestBinaryType";
 
         String fieldName = "testField";
@@ -130,13 +130,11 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
         // build binary type and get byte representation
         byte[] testBinaryTypeDefinition = createBinaryType(typeName, fieldName);
 
-        UUID uuid = UUID.randomUUID();
-
         File legacyDir = new File(U.resolveWorkDirectory(
             U.defaultWorkDirectory(),
             "binary_meta",
             false
-        ), U.maskForFileName(uuid.toString()));
+        ), U.maskForFileName(configuration.getConsistentId().toString()));
 
         legacyDir.mkdirs();
 
@@ -145,10 +143,6 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
 
         // write binary type definition to legacy folder
         Files.write(testBinaryTypeDefFile.toPath(), testBinaryTypeDefinition);
-
-        IgniteConfiguration configuration = getConfiguration();
-
-        configuration.setConsistentId(uuid.toString());
 
         IgniteEx grid = startGrid(configuration);
 

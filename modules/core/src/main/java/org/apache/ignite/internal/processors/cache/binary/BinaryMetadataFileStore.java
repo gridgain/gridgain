@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.binary;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,7 +92,7 @@ class BinaryMetadataFileStore {
         this.isPersistenceEnabled = CU.isPersistenceEnabled(ctx.config());
         this.log = log;
 
-        if (!CU.isPersistenceEnabled(ctx.config()))
+        if (!isPersistenceEnabled)
             return;
 
         fileIOFactory = ctx.config().getDataStorageConfiguration().getFileIOFactory();
@@ -289,7 +290,17 @@ class BinaryMetadataFileStore {
                 throw new IgniteCheckedException("Failed to copy legacy binary metadata dir to new location", e);
             }
 
-            if (!IgniteUtils.delete(legacyDir))
+            File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
+
+            try {
+                // rename legacy dir so if deletion fails in the middle, we won't be stuck with half-deleted metadata
+                Files.move(legacyDir.toPath(), legacyTmpDir.toPath());
+            }
+            catch (IOException e) {
+                throw new IgniteCheckedException("Failed to rename legacy binary metadata dir", e);
+            }
+
+            if (!IgniteUtils.delete(legacyTmpDir))
                 throw new IgniteCheckedException("Failed to delete legacy binary metadata dir");
         }
     }
