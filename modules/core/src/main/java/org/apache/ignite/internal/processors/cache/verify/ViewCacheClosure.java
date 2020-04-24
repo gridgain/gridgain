@@ -24,13 +24,16 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.datastructures.AtomicDataStructureValue;
 import org.apache.ignite.internal.processors.datastructures.DataStructureType;
@@ -127,6 +130,15 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     ci.setMode(desc.cacheConfiguration().getCacheMode());
                     ci.setAtomicityMode(desc.cacheConfiguration().getAtomicityMode());
                     ci.setMapped(mapped(desc.cacheName()));
+
+                    GridCacheProcessor cacheProcessor = k.context().cache();
+
+                    IgniteCache<Object, Object> c = cacheProcessor.jcache(ci.getCacheName());
+
+                    CacheMetrics m = c.localMetrics();
+
+                    ci.setHeapEntriesCount(m.getHeapEntriesCount());
+                    ci.setOffHeapPrimaryEntriesCount(m.getOffHeapPrimaryEntriesCount());
 
                     cacheInfo.add(ci);
                 }

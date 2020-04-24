@@ -78,6 +78,12 @@ public class CacheInfo extends VisorDataTransferObject {
     /** Affinity class name. */
     private String affinityClsName;
 
+    /** Heap entries count. */
+    private Long heapEntriesCount;
+
+    /** Off-Heap entries count. */
+    private Long offHeapPrimaryEntriesCount;
+
     /** */
     public String getSeqName() {
         return seqName;
@@ -325,7 +331,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 break;
 
             default:
-                map = new LinkedHashMap<>(10);
+                map = new LinkedHashMap<>(12);
 
                 map.put("cacheName", getCacheName());
                 map.put("cacheId", getCacheId());
@@ -337,6 +343,8 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
+                map.put("heapCnt", getHeapEntriesCount());
+                map.put("offHeapCnt", getOffHeapPrimaryEntriesCount());
         }
 
         return map;
@@ -344,7 +352,7 @@ public class CacheInfo extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V5;
     }
 
     /** {@inheritDoc} */
@@ -363,6 +371,8 @@ public class CacheInfo extends VisorDataTransferObject {
         U.writeString(out, affinityClsName);
         out.writeInt(cachesCnt);
         U.writeEnum(out, atomicityMode);
+        out.writeLong(heapEntriesCount);
+        out.writeLong(offHeapPrimaryEntriesCount);
     }
 
     /** {@inheritDoc} */
@@ -381,10 +391,28 @@ public class CacheInfo extends VisorDataTransferObject {
         affinityClsName = U.readString(in);
         cachesCnt = in.readInt();
         atomicityMode = protoVer >= V2 ? CacheAtomicityMode.fromOrdinal(in.readByte()) : null;
+        heapEntriesCount = protoVer >= V5 ? in.readLong() : null;
+        offHeapPrimaryEntriesCount = protoVer >= V5 ? in.readLong() : null;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheInfo.class, this);
+    }
+
+    public void setHeapEntriesCount(Long heapEntriesCount) {
+        this.heapEntriesCount = heapEntriesCount;
+    }
+
+    public Long getHeapEntriesCount() {
+        return heapEntriesCount;
+    }
+
+    public void setOffHeapPrimaryEntriesCount(Long offHeapPrimaryEntriesCount) {
+        this.offHeapPrimaryEntriesCount = offHeapPrimaryEntriesCount;
+    }
+
+    public Long getOffHeapPrimaryEntriesCount() {
+        return offHeapPrimaryEntriesCount;
     }
 }
