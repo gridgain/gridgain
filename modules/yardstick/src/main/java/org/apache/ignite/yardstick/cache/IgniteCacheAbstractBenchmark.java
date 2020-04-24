@@ -50,7 +50,6 @@ import static org.yardstickframework.BenchmarkUtils.println;
  */
 public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractBenchmark {
     public static final String DEAD_NODE_ATTR = "DEAD_NODE";
-
     /** Cache. */
     protected IgniteCache<K, V> cache;
 
@@ -345,6 +344,9 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
     protected abstract IgniteCache<K, V> cache();
 
     protected int getNextKey() {
+        if (IgniteSystemProperties.getBoolean("BENCHMARK_PRELOAD", false))
+            return nextRandom(args.range());
+
         int key;
         String cacheName = cache().getName();
 
@@ -360,9 +362,13 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
             // does not belong to restarted nodes.
             Collection<ClusterNode> deadNodes = ignite().cluster().forAttribute(DEAD_NODE_ATTR, "true").nodes();
 
+            if (deadNodes.isEmpty()) {
+                throw new IllegalStateException("Zero nodes with attribute " + DEAD_NODE_ATTR + " exist");
+            }
+
             do {
                 key = nextRandom(args.range());
-            } while (!deadNodes.isEmpty() || deadNodes.containsAll(
+            } while (deadNodes.containsAll(
                     ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key)
             ));
         }
