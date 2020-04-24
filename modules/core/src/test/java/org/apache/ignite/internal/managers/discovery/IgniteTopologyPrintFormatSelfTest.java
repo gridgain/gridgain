@@ -23,6 +23,8 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -31,6 +33,15 @@ import org.junit.Test;
 public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     /** */
     private static final String ALIVE_NODES_MSG = "aliveNodes=[";
+
+    /** */
+    private static final String NUMBER_SRV_NODES = ">>> Number of server nodes: %d";
+
+    /** */
+    private static final String NIMBER_CLIENT_NODES = ">>> Number of client nodes: %d";
+
+    /** */
+    private static final String TOPOLOGY_MSG = "Topology snapshot [ver=%d, locNode=%s, servers=%d, clients=%d,";
 
     /** */
     private ListeningTestLogger testLog = new ListeningTestLogger(false, log);
@@ -78,11 +89,13 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testServerDebugLogs() throws Exception {
+        ((GridTestLog4jLogger)log).setLevel(Level.DEBUG);
+
         doServerLogTest(true);
     }
 
     /**
-     * @param dbg debug flag.
+     * @param dbg Debug flag.
      * @throws Exception If failed.
      */
     private void doServerLogTest(boolean dbg) throws Exception {
@@ -95,16 +108,19 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
         testLog.registerListener(aliveNodesLsnr);
 
         LogListener lsnr;
+        LogListener lsnr2;
 
         try {
             Ignite srv = startGrid("server");
 
             nodeId8 = U.id8(srv.cluster().localNode().id());
 
-            lsnr = LogListener.matches( s -> s.contains("Topology snapshot [ver=2, locNode=" + nodeId8 + ", servers=2, clients=0,")
-                    || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 0"))).build();
+            lsnr = LogListener.matches(String.format(TOPOLOGY_MSG, 2, nodeId8, 2, 0)).build();
 
-            testLog.registerListener(lsnr);
+            lsnr2 = LogListener.matches(s -> s.contains(String.format(NUMBER_SRV_NODES, 2))
+                && s.contains(String.format(NIMBER_CLIENT_NODES, 0))).build();
+
+            testLog.registerAllListeners(lsnr, lsnr2);
 
             Ignite srv1 = startGrid("server1");
 
@@ -114,9 +130,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             stopAllGrids();
         }
 
-        assertTrue(lsnr.check());
-
-        checkNodesAdditionalLogging(aliveNodesLsnr);
+        checkLogMessages(aliveNodesLsnr, lsnr, lsnr2);
     }
 
     /**
@@ -132,6 +146,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testServerAndClientDebugLogs() throws Exception {
+        ((GridTestLog4jLogger)log).setLevel(Level.DEBUG);
+
         doServerAndClientTest(true);
     }
 
@@ -149,16 +165,19 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
         testLog.registerListener(aliveNodesLsnr);
 
         LogListener lsnr;
+        LogListener lsnr2;
 
         try {
             Ignite srv = startGrid("server");
 
             nodeId8 = U.id8(srv.cluster().localNode().id());
 
-            lsnr = LogListener.matches( s -> s.contains("Topology snapshot [ver=4, locNode=" + nodeId8 + ", servers=2, clients=2,")
-                    || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 2"))).build();
+            lsnr = LogListener.matches(String.format(TOPOLOGY_MSG, 4, nodeId8, 2, 2)).build();
 
-            testLog.registerListener(lsnr);
+            lsnr2 = LogListener.matches(s -> s.contains(String.format(NUMBER_SRV_NODES, 2))
+                && s.contains(String.format(NIMBER_CLIENT_NODES, 2))).build();
+
+            testLog.registerAllListeners(lsnr, lsnr2);
 
             Ignite srv1 = startGrid("server1");
             Ignite client1 = startGrid("first client");
@@ -170,9 +189,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             stopAllGrids();
         }
 
-        assertTrue(lsnr.check());
-
-        checkNodesAdditionalLogging(aliveNodesLsnr);
+        checkLogMessages(aliveNodesLsnr, lsnr, lsnr2);
     }
 
     /**
@@ -188,6 +205,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testForceServerAndClientDebugLogs() throws Exception {
+        ((GridTestLog4jLogger)log).setLevel(Level.DEBUG);
+
         doForceServerAndClientTest(true);
     }
 
@@ -205,16 +224,19 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
         testLog.registerListener(aliveNodesLsnr);
 
         LogListener lsnr;
+        LogListener lsnr2;
 
         try {
             Ignite srv = startGrid("server");
 
             nodeId8 = U.id8(srv.cluster().localNode().id());
 
-            lsnr = LogListener.matches( s -> s.contains("Topology snapshot [ver=5, locNode=" + nodeId8 + ", servers=2, clients=3,")
-                    || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 3"))).build();
+            lsnr = LogListener.matches(String.format(TOPOLOGY_MSG, 5, nodeId8, 2, 3)).build();
 
-            testLog.registerListener(lsnr);
+            lsnr2 = LogListener.matches(s -> s.contains(String.format(NUMBER_SRV_NODES, 2))
+                && s.contains(String.format(NIMBER_CLIENT_NODES, 3))).build();
+
+            testLog.registerAllListeners(lsnr, lsnr2);
 
             Ignite srv1 = startGrid("server1");
             Ignite client1 = startGrid("first client");
@@ -222,16 +244,12 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             Ignite forceServClnt3 = startGrid("third client_force_server");
 
             waitForDiscovery(srv, srv1, client1, client2, forceServClnt3);
-
-            assertTrue(lsnr.check());
         }
         finally {
             stopAllGrids();
         }
 
-        assertTrue(lsnr.check());
-
-        checkNodesAdditionalLogging(aliveNodesLsnr);
+        checkLogMessages(aliveNodesLsnr, lsnr, lsnr2);
     }
 
     /**
@@ -239,10 +257,16 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      *
      * @param aliveNodesLsnr log listener.
      */
-    private void checkNodesAdditionalLogging(LogListener aliveNodesLsnr) {
-        if (log.isDebugEnabled())
-            assertFalse(aliveNodesLsnr.check());
-        else if (log.isInfoEnabled())
+    private void checkLogMessages(LogListener aliveNodesLsnr, LogListener lsnr, LogListener lsnr2) {
+        if (testLog.isDebugEnabled()) {
             assertTrue(aliveNodesLsnr.check());
+            assertFalse(lsnr.check());
+            assertTrue(lsnr2.check());
+        }
+        else {
+            assertTrue(aliveNodesLsnr.check());
+            assertTrue(lsnr.check());
+            assertFalse(lsnr2.check());
+        }
     }
 }
