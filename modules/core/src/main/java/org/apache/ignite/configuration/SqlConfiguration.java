@@ -16,6 +16,7 @@
 
 package org.apache.ignite.configuration;
 
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -302,6 +303,36 @@ public class SqlConfiguration {
      */
     public SqlConfiguration setDisabledSqlFunctions(String[] disabledSqlFuncs) {
         this.disabledSqlFuncs = disabledSqlFuncs == null ? DFLT_DISABLED_SQL_FUNCTIONS : disabledSqlFuncs;
+
+        return this;
+    }
+
+    /**
+     * Defines the default query timeout.
+     *
+     * Defaults to {@link #DFLT_QRY_TIMEOUT}.
+     * {@code 0} means there is no timeout (this
+     * is a default value)
+     *
+     * @return Default query timeout.
+     */
+    public long getDefaultQueryTimeout() {
+        return dfltQryTimeout;
+    }
+
+    /**
+     * Sets timeout in milliseconds for default query timeout.
+     * {@code 0} means there is no timeout (this
+     * is a default value)
+     *
+     * @param dfltQryTimeout Timeout in milliseconds.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
+        A.ensure(dfltQryTimeout >= 0 && dfltQryTimeout <= Integer.MAX_VALUE,
+            "default query timeout value should be valid Integer.");
+
+        this.dfltQryTimeout = dfltQryTimeout;
 
         return this;
     }
