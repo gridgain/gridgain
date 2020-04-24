@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcTableMeta;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.plugin.security.SecurityException;
 
 import static java.sql.DatabaseMetaData.columnNullable;
 import static java.sql.DatabaseMetaData.tableIndexOther;
@@ -206,6 +207,8 @@ public class JdbcUtils {
             }
             else if (t instanceof IgniteSQLException)
                 return ((IgniteSQLException)t).toJdbcException();
+            else if (t instanceof SecurityException)
+                return new SQLException(t.getMessage(), sqlStateForUnknown, t);
             else if (t instanceof SqlCacheException)
                 return ((SqlCacheException)t).toJdbcException();
 
