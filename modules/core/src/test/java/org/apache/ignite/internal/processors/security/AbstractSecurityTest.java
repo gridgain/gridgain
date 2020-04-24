@@ -79,6 +79,6 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
      */
     protected IgniteEx startGrid(String login, SecurityPermissionSet prmSet, boolean isClient) throws Exception {
         return startGrid(getConfiguration(login, new TestSecurityPluginProvider(login, "", prmSet, globalAuth))
-                .setClientMode(isClient));
+                .setClientMode(isClient).setConsistentId(login));
     }
 }
