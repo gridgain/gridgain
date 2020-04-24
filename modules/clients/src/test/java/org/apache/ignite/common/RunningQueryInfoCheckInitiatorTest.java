@@ -148,7 +148,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
         Consumer<String> sqlExec = sql -> {
             GridTestUtils.runAsync(() -> {
                     try (Connection conn = DriverManager.getConnection(
-                        "jdbc:ignite:thin://127.0.0.1/?user=ignite&password=ignite")) {
+                        "jdbc:ignite:thin://127.0.0.1:" + clientPort(grid(0)) + "/?user=ignite&password=ignite")) {
                         try (Statement stmt = conn.createStatement()) {
                             stmt.execute(sql);
                         }
@@ -177,7 +177,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
             GridTestUtils.runAsync(() -> {
                     try (IgniteClient cli = Ignition.startClient(
                         new ClientConfiguration()
-                            .setAddresses("127.0.0.1")
+                            .setAddresses("127.0.0.1:" + clientPort(grid(0)))
                             .setUserName("ignite")
                             .setUserPassword("ignite"))) {
                         cli.query(new SqlFieldsQuery(sql)).getAll();
@@ -254,7 +254,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
         IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
                 try (Connection conn = DriverManager.getConnection(
-                    "jdbc:ignite:thin://127.0.0.1/?user=ignite&password=ignite")) {
+                    "jdbc:ignite:thin://127.0.0.1:" + clientPort(grid(0)) + "/?user=ignite&password=ignite")) {
                     try (Statement stmt = conn.createStatement()) {
                         stmt.execute("CREATE TABLE T (ID INT PRIMARY KEY, VAL INT)");
 
@@ -352,6 +352,10 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
             if (U.currentTimeMillis() - t0 > timeout)
                 fail("Timeout. There are unexpected running queries: " + res);
         }
+    }
+
+    private static int clientPort(IgniteEx ign) {
+        return ign.context().sqlListener().port();
     }
 
     /**
