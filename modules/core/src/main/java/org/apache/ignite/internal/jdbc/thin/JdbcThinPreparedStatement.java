@@ -553,6 +553,6 @@ public class JdbcThinPreparedStatement extends JdbcThinStatement implements Prep
      */
     private void ensureCustomObjectsSupported() throws SQLException {
         if (!conn.isCustomObjectSupported())
-            throw new SQLException("Custom objects are not supported by server");
+            throw new SQLException("Custom objects are not supported");
     }
 }

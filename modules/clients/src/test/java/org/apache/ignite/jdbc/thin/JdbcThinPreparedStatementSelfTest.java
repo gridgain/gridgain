@@ -33,13 +33,16 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
@@ -61,6 +64,8 @@ import static java.sql.Types.TINYINT;
 import static java.sql.Types.VARCHAR;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
 
 /**
  * Prepared statement test.
@@ -172,6 +177,24 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
     }
 
     /**
+     * Create new JDBC connection to the grid.
+     *
+     * @param disabledFeatues Features that should be disabled.
+     * @return New connection.
+     */
+    private Connection createConnection(JdbcThinFeature... disabledFeatues) throws SQLException {
+        String url = URL + "?disabledFeatures=" + Arrays.stream(disabledFeatues)
+            .map(JdbcThinFeature::name)
+            .collect(Collectors.joining(","));
+
+        Connection conn = DriverManager.getConnection(url);
+
+        conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
+
+        return conn;
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
@@ -208,7 +231,11 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
     }
 
     /**
-     * Ensure binary object's meta is properly synchronized between connections.
+     * Ensure binary object's meta is properly synchronized between connections
+     *      - start grid
+     *      - from one connection create and fill table such one of the columns was user's object
+     *      - from another connection execute query with filter by this object
+     *      - verify that result is not empty and returned object is the same as expected
      *
      * @throws SQLException In case of any sql error.
      */
@@ -251,7 +278,11 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
 
     /**
      * Ensure custom objects can be retrieved as {@link BinaryObject}
-     * if keepBinary flag is set to {@code true} on connection.
+     * if keepBinary flag is set to {@code true} on connection
+     *      - start grid and create and fill table such one of the columns was user's object
+     *      - from another connection with keepBinary flag set to {@code true}
+     *      execute query with filter by this object
+     *      - verify that result is not empty and returned object is the {@link BinaryObject}
      *
      * @throws SQLException In case of any sql error.
      */
@@ -284,7 +315,10 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
     }
 
     /**
-     * Ensure custom objects can be retrieved through JdbcThinConnection.
+     * Ensure custom objects can be retrieved through JdbcThinConnection
+     *      - start grid and create and fill table such one of the columns was user's object
+     *      - execute query with filter by this object (use both real object and null for param value)
+     *      - verify that result is not empty and returned object is the same as expected
      *
      * @throws Exception If failed.
      */
@@ -333,6 +367,32 @@ public class JdbcThinPreparedStatementSelfTest extends JdbcThinAbstractSelfTest 
         }
 
         Assert.assertEquals("There should be exactly 1 result", 1, cnt);
+    }
+
+    /**
+     * Ensure custom object support could be disabled via disabledFeatures connection property
+     *      - start grid and create and fill table such one of the columns was user's object
+     *      - from another connection with disabledFeatures set to {@link JdbcThinFeature#CUSTOM_OBJECT}
+     *      execute query with filter by this object
+     *      - verify that exception is thrown when you try to set custom object as statement param
+     * @throws SQLException
+     */
+    @Test
+    public void testCustomObjectSupportCanBeDisabled() throws SQLException {
+        try (Connection conn = createConnection(JdbcThinFeature.CUSTOM_OBJECT);
+            PreparedStatement stmt = conn.prepareStatement(SQL_PART + " where objVal is not distinct from ?")
+        ) {
+            Throwable t = GridTestUtils.assertThrowsWithCause(
+                new RunnableX() {
+                    @Override public void runx() throws Exception {
+                        stmt.setObject(1, new TestObjectField(100, "AAAA"));
+                    }
+                },
+                SQLException.class
+            );
+
+            Assert.assertThat(t.getMessage(), is(containsString("Custom objects are not supported")));
+        }
     }
 
     /**

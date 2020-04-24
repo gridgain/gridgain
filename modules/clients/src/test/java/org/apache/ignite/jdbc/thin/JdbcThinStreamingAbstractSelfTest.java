@@ -352,7 +352,12 @@ public abstract class JdbcThinStreamingAbstractSelfTest extends JdbcStreamingSel
     }
 
     /**
-     * Ensure custom object can be serialized in streaming mode.
+     * Ensure custom object can be serialized in streaming mode
+     *      - start grid
+     *      - create table such one of the columns was user's object
+     *      - enable streaming and fill the table
+     *      - disable streaming and query random row such it should be presented in the table
+     *      - verify returned object
      *
      * @throws Exception
      */
