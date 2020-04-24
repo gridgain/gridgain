@@ -825,15 +825,17 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         cctx.mvccCaching().onTxFinished(this, true);
 
-                        if (!near() && !F.isEmpty(dataEntries) && cctx.wal() != null) {
-                            // Set new update counters for data entries received from persisted tx entries.
-                            List<DataEntry> entriesWithCounters = dataEntries.stream()
-                                .map(tuple -> tuple.get1().partitionCounter(tuple.get2().updateCounter()))
-                                .collect(Collectors.toList());
+                        if (!near() && !F.isEmpty(dataEntries)) {
+                            logKeysToPendingTxsTracker(dataEntries);
 
-                            logKeysToPendingTxsTracker(entriesWithCounters);
+                            if (cctx.wal() != null) {
+                                // Set new update counters for data entries received from persisted tx entries.
+                                List<DataEntry> entriesWithCounters = dataEntries.stream()
+                                    .map(tuple -> tuple.get1().partitionCounter(tuple.get2().updateCounter()))
+                                    .collect(Collectors.toList());
 
-                            ptr = cctx.wal().log(new DataRecord(entriesWithCounters));
+                                ptr = cctx.wal().log(new DataRecord(entriesWithCounters));
+                            }
                         }
 
                         if (ptr != null && !cctx.tm().logTxRecords())
@@ -879,24 +881,26 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     }
 
     /**
-     * @param dataEntries Data entries.
+     * @param dataEntryTuples Data entries.
      */
-    private void logKeysToPendingTxsTracker(List<DataEntry> dataEntries) {
-        for (DataEntry dataEntry : dataEntries) {
-            List<KeyCacheObject> readKeys = new ArrayList<>();
-            List<KeyCacheObject> writeKeys = new ArrayList<>();
+    private void logKeysToPendingTxsTracker(List<T2<DataEntry, IgniteTxEntry>> dataEntryTuples) {
+        List<KeyCacheObject> readKeys = new ArrayList<>();
+        List<KeyCacheObject> writeKeys = new ArrayList<>();
+
+        for (T2<DataEntry, IgniteTxEntry> tuple : dataEntryTuples) {
+            DataEntry dataEntry = tuple.get1().partitionCounter(tuple.get2().updateCounter());
 
             if (dataEntry.op() == READ)
                 readKeys.add(dataEntry.key());
             else
                 writeKeys.add(dataEntry.key());
-
-            if (!readKeys.isEmpty())
-                cctx.tm().pendingTxsTracker().onKeysRead(nearXidVersion(), readKeys);
-
-            if (!writeKeys.isEmpty())
-                cctx.tm().pendingTxsTracker().onKeysWritten(nearXidVersion(), writeKeys);
         }
+
+        if (!readKeys.isEmpty())
+            cctx.tm().pendingTxsTracker().onKeysRead(nearXidVersion(), readKeys);
+
+        if (!writeKeys.isEmpty())
+            cctx.tm().pendingTxsTracker().onKeysWritten(nearXidVersion(), writeKeys);
     }
 
     /** {@inheritDoc} */
