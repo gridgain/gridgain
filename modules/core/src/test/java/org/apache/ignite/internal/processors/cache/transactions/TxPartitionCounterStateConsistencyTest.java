@@ -35,11 +35,13 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -72,11 +74,13 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.BlockTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
@@ -1016,7 +1020,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 if (msg instanceof GridDhtPartitionsSingleMessage) {
                     GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
 
-                    boolean ret = msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).topologyVersion().equals(new AffinityTopologyVersion(4, 0));
+                    boolean ret = msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).
+                        topologyVersion().equals(new AffinityTopologyVersion(4, 0));
 
                     if (ret)
                         System.out.println();
@@ -1059,8 +1064,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
 
-        for (int i = 0; i < 100; i++)
-            grid(0).cache(DEFAULT_CACHE_NAME).put(i, i);
+        grid(0).context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(5, 1)).get();
+
+        // Primary node for a key will be stopped by FH without a fix.
+        grid(0).cache(DEFAULT_CACHE_NAME).put(key, -1);
+
+        for (int i = 0; i < 1000; i++)
+            assertEquals(-1, grid(2).cache(DEFAULT_CACHE_NAME).get(key));
     }
 
     /**
