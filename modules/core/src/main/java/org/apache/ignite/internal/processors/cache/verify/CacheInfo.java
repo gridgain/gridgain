@@ -371,8 +371,8 @@ public class CacheInfo extends VisorDataTransferObject {
         U.writeString(out, affinityClsName);
         out.writeInt(cachesCnt);
         U.writeEnum(out, atomicityMode);
-        out.writeLong(heapEntriesCount);
-        out.writeLong(offHeapPrimaryEntriesCount);
+        out.writeObject(heapEntriesCount);
+        out.writeObject(offHeapPrimaryEntriesCount);
     }
 
     /** {@inheritDoc} */
@@ -391,8 +391,8 @@ public class CacheInfo extends VisorDataTransferObject {
         affinityClsName = U.readString(in);
         cachesCnt = in.readInt();
         atomicityMode = protoVer >= V2 ? CacheAtomicityMode.fromOrdinal(in.readByte()) : null;
-        heapEntriesCount = protoVer >= V5 ? in.readLong() : null;
-        offHeapPrimaryEntriesCount = protoVer >= V5 ? in.readLong() : null;
+        heapEntriesCount = protoVer >= V5 ? (Long)in.readObject() : null;
+        offHeapPrimaryEntriesCount = protoVer >= V5 ? (Long)in.readObject() : null;
     }
 
     /** {@inheritDoc} */
