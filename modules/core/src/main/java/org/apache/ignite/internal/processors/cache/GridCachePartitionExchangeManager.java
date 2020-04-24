@@ -405,9 +405,62 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             return;
                         }
+                    } else {
+                        GridDhtPartitionsExchangeFuture cur = lastTopologyFuture();
+
+                        if (!cur.isDone() && cur.changedAffinity()) {
+                            boolean stale = true;
+
+                            for (GridDhtPartitionMap map : msg.partitions().values()) {
+                                assert !map.topologyVersion().equals(NONE) :
+                                    "Received map update from uninitialized topology: msg=" + msg + ", exchFut=" + cur;
+
+                                assert !map.topologyVersion().after(cur.initialVersion()) :
+                                    "Received map update from the future: msg=" + msg + ", exchFut=" + cur;
+
+                                if (cur.initialVersion().compareTo(map.topologyVersion()) == 0) {
+                                    stale = false;
+
+                                    break;
+                                }
+                            }
+
+                            if (!stale) {
+                                cur.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                                    @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
+                                        if (fut.error() == null)
+                                            processSinglePartitionUpdate(node, msg);
+                                    }
+                                });
+                            }
+                            else if (log.isDebugEnabled()) {
+                                log.debug("Ignoring stale partition update message [msg=" + msg +
+                                    ", topVer=" + cur.initialVersion() + ']');
+                            }
+
+                            return;
+                        }
                     }
 
-                    preprocessSingleMessage(node, msg);
+                    if (!crdInitFut.isDone() && !msg.restoreState()) {
+                        GridDhtPartitionExchangeId exchId = msg.exchangeId();
+
+                        if (log.isInfoEnabled()) {
+                            log.info("Waiting for coordinator initialization [node=" + node.id() +
+                                ", nodeOrder=" + node.order() +
+                                ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
+                        }
+
+                        crdInitFut.listen(new CI1<IgniteInternalFuture>() {
+                            @Override public void apply(IgniteInternalFuture fut) {
+                                processSinglePartitionUpdate(node, msg);
+                            }
+                        });
+
+                        return;
+                    }
+
+                    processSinglePartitionUpdate(node, msg);
                 }
             });
 
@@ -491,34 +544,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         durationHistogram = mreg.findMetric(PME_DURATION_HISTOGRAM);
         blockingDurationHistogram = mreg.findMetric(PME_OPS_BLOCKED_DURATION_HISTOGRAM);
-    }
-
-    /**
-     * Preprocess {@code msg} which was sended by {@code node}.
-     *
-     * @param node Cluster node.
-     * @param msg Message.
-     */
-    private void preprocessSingleMessage(ClusterNode node, GridDhtPartitionsSingleMessage msg) {
-        if (!crdInitFut.isDone() && !msg.restoreState()) {
-            GridDhtPartitionExchangeId exchId = msg.exchangeId();
-
-            if (log.isInfoEnabled()) {
-                log.info("Waiting for coordinator initialization [node=" + node.id() +
-                    ", nodeOrder=" + node.order() +
-                    ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
-            }
-
-            crdInitFut.listen(new CI1<IgniteInternalFuture>() {
-                @Override public void apply(IgniteInternalFuture fut) {
-                    processSinglePartitionUpdate(node, msg);
-                }
-            });
-
-            return;
-        }
-
-        processSinglePartitionUpdate(node, msg);
     }
 
     /**
