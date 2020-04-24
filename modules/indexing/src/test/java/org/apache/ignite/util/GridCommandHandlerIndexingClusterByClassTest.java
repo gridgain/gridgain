@@ -21,6 +21,7 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes.INDEXES_INLINE_SIZE_ARE_THE_SAME;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakCacheDataTree;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakSqlIndex;
@@ -45,6 +46,21 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
     /** {@inheritDoc} */
     @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
         return new StopNodeFailureHandler();
+    }
+
+    /**
+     * Tests --cache check_index_inline_sizes works in case of all indexes have the same inline size.
+     */
+    @Test
+    public void testCheckIndexInlineSizesNoError() {
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "check_index_inline_sizes"));
+
+        String output = testOut.toString();
+
+        assertContains(log, output, "Found 2 secondary indexes.");
+        assertContains(log, output, INDEXES_INLINE_SIZE_ARE_THE_SAME);
     }
 
     /**

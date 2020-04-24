@@ -184,32 +184,30 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                     ses.remoteAddress() + ", req=" + req + ']');
             }
 
-            ClientListenerResponse resp;
-
             AuthorizationContext authCtx = connCtx.authorizationContext();
 
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
             try(OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
-                resp = handler.handle(req);
+                ClientListenerResponse resp = handler.handle(req);
+
+                if (resp != null) {
+                    if (log.isDebugEnabled()) {
+                        long dur = (System.nanoTime() - startTime) / 1000;
+
+                        log.debug("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
+                            ", resp=" + resp.status() + ']');
+                    }
+
+                    byte[] outMsg = parser.encode(resp);
+
+                    ses.send(outMsg);
+                }
             }
             finally {
                 if (authCtx != null)
                     AuthorizationContext.clear();
-            }
-
-            if (resp != null) {
-                if (log.isDebugEnabled()) {
-                    long dur = (System.nanoTime() - startTime) / 1000;
-
-                    log.debug("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
-                        ", resp=" + resp.status() + ']');
-                }
-
-                byte[] outMsg = parser.encode(resp);
-
-                ses.send(outMsg);
             }
         }
         catch (Exception e) {
