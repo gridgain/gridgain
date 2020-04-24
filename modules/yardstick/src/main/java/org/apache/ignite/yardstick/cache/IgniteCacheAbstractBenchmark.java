@@ -351,13 +351,13 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
         String cacheName = cache().getName();
 
         // If some partitions are lost, then pick a key from a non-lost partiton.
-        if (!cache().lostPartitions().isEmpty()) {
-            do {
-                key = nextRandom(args.range());
-            } while (cache().lostPartitions().contains(
-                    ignite().affinity(cacheName).partition(key)
-            ));
-        } else {
+//        if (!cache().lostPartitions().isEmpty()) {
+//            do {
+//                key = nextRandom(args.range());
+//            } while (cache().lostPartitions().contains(
+//                    ignite().affinity(cacheName).partition(key)
+//            ));
+//        } else {
             // If no partitions are lost, then pick a key whose primary and backup partitions
             // does not belong to restarted nodes.
             Collection<ClusterNode> deadNodes = ignite().cluster().forAttribute(DEAD_NODE_ATTR, "true").nodes();
@@ -371,7 +371,7 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
             } while (deadNodes.containsAll(
                     ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key)
             ));
-        }
+//        }
 
         return key;
     }
