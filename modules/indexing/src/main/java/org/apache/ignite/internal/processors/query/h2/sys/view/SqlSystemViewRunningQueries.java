@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.h2.engine.Session;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
@@ -54,6 +55,8 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
 
     /** {@inheritDoc} */
     @Override public Iterator<Row> getRows(Session ses, SearchRow first, SearchRow last) {
+        ctx.security().authorize(SecurityPermission.GET_QUERY_VIEWS);
+
         SqlSystemViewColumnCondition qryIdCond = conditionForColumn("QUERY_ID", first, last);
 
         List<GridRunningQueryInfo> runningSqlQueries = ((IgniteH2Indexing)ctx.query().getIndexing()).runningSqlQueries();

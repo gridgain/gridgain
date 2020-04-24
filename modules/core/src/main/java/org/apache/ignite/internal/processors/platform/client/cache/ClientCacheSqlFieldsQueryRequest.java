@@ -129,7 +129,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
             if (securityEx != null) {
                 throw new IgniteClientException(
                     ClientStatus.SECURITY_VIOLATION,
-                    "Client is not authorized to perform this operation",
+                    securityEx.getMessage(),
                     securityEx
                 );
             }
