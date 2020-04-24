@@ -374,7 +374,7 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
                 println("Dead nodes: " + deadNodes);
                 println("Key nodes:  " + keyNodes.toString());
 
-                if (deadNodes.containsAll(keyNodes)) {
+                if (!deadNodes.containsAll(keyNodes)) {
                     println("A good key found!");
                     break;
                 }
