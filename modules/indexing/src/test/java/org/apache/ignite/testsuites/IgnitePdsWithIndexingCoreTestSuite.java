@@ -53,47 +53,47 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-//    IgnitePdsCacheIntegrationTest.class,
-//    IgnitePdsPageEvictionTest.class,
-//    IgnitePdsMultiNodePutGetRestartTest.class,
-//    IgnitePersistentStoreCacheGroupsTest.class,
-//    PersistenceDirectoryWarningLoggingTest.class,
-//    WalPathsTest.class,
-//    WalRecoveryTxLogicalRecordsTest.class,
-//    WalRolloverRecordLoggingFsyncTest.class,
-//    WalRolloverRecordLoggingLogOnlyTest.class,
-//    WalOnNodeStartTest.class,
-//
-//    IgniteWalRecoveryTest.class,
-//    IgniteWalRecoveryWithCompactionTest.class,
-//    IgnitePdsNoActualWalHistoryTest.class,
-//    IgniteWalRebalanceTest.class,
-//
-//    IgnitePdsAtomicCacheRebalancingTest.class,
-//    IgnitePdsAtomicCacheHistoricalRebalancingTest.class,
-//
-//    IgnitePdsTxCacheRebalancingTest.class,
-    IgnitePdsTxHistoricalRebalancingTest.class
+    IgnitePdsCacheIntegrationTest.class,
+    IgnitePdsPageEvictionTest.class,
+    IgnitePdsMultiNodePutGetRestartTest.class,
+    IgnitePersistentStoreCacheGroupsTest.class,
+    PersistenceDirectoryWarningLoggingTest.class,
+    WalPathsTest.class,
+    WalRecoveryTxLogicalRecordsTest.class,
+    WalRolloverRecordLoggingFsyncTest.class,
+    WalRolloverRecordLoggingLogOnlyTest.class,
+    WalOnNodeStartTest.class,
 
-//    IgniteWalRecoveryPPCTest.class,
-//
-//    IgnitePdsDiskErrorsRecoveringTest.class,
-//
-//    IgnitePdsCacheDestroyDuringCheckpointTest.class,
-//
-//    IgnitePdsBinaryMetadataOnClusterRestartTest.class,
-//    IgnitePdsBinaryMetadataAsyncWritingTest.class,
-//    IgnitePdsMarshallerMappingRestoreOnNodeStartTest.class,
-//    IgnitePdsThreadInterruptionTest.class,
-//    IgnitePdsBinarySortObjectFieldsTest.class,
-//
-//    IgnitePdsCorruptedIndexTest.class,
-//
-//    IgniteLogicalRecoveryTest.class,
-//
-//    IgniteSequentialNodeCrashRecoveryTest.class,
-//
-//    IgniteCacheGroupsWithRestartsTest.class
+    IgniteWalRecoveryTest.class,
+    IgniteWalRecoveryWithCompactionTest.class,
+    IgnitePdsNoActualWalHistoryTest.class,
+    IgniteWalRebalanceTest.class,
+
+    IgnitePdsAtomicCacheRebalancingTest.class,
+    IgnitePdsAtomicCacheHistoricalRebalancingTest.class,
+
+    IgnitePdsTxCacheRebalancingTest.class,
+    IgnitePdsTxHistoricalRebalancingTest.class,
+
+    IgniteWalRecoveryPPCTest.class,
+
+    IgnitePdsDiskErrorsRecoveringTest.class,
+
+    IgnitePdsCacheDestroyDuringCheckpointTest.class,
+
+    IgnitePdsBinaryMetadataOnClusterRestartTest.class,
+    IgnitePdsBinaryMetadataAsyncWritingTest.class,
+    IgnitePdsMarshallerMappingRestoreOnNodeStartTest.class,
+    IgnitePdsThreadInterruptionTest.class,
+    IgnitePdsBinarySortObjectFieldsTest.class,
+
+    IgnitePdsCorruptedIndexTest.class,
+
+    IgniteLogicalRecoveryTest.class,
+
+    IgniteSequentialNodeCrashRecoveryTest.class,
+
+    IgniteCacheGroupsWithRestartsTest.class
 })
 public class IgnitePdsWithIndexingCoreTestSuite {
 }

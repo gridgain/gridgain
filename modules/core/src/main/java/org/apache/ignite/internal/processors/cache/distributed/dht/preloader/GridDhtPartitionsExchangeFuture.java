@@ -3274,7 +3274,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Collects and determines new owners of partitions for all nodes for given {@code top}.
      *
      * @param top Topology to assign.
-     * @return Partitons supplay info list.
+     * @return Partitions supply info list.
      */
     private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
@@ -4044,13 +4044,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private void assignPartitionsStates() {
         Map<String, List<SupplyPartitionInfo>> supplayInfoMap = log.isInfoEnabled() ?
             new ConcurrentHashMap<>() : null;
-
-        if (initialVersion().equals(new AffinityTopologyVersion(5, 0)))
-            try {
-                U.sleep(6_000);
-            } catch (IgniteInterruptedCheckedException e) {
-                e.printStackTrace();
-            }
 
         try {
             U.doInParallel(

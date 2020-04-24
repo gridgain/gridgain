@@ -63,6 +63,7 @@ import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
@@ -999,7 +1000,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         doTestPrimaryLeftUnderLoadToSwitchingPartitions(1, 3);
     }
 
-    /** */
+    /**
+     * Tests a scenario when stale partition state message can trigger spurious late affinity switching cause
+     * mapping to moving partitions.
+     */
     @Test
     public void testLateAffinityChangeDuringExchange() throws Exception {
         backups = 2;
@@ -1041,14 +1045,31 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked();
 
+        // Fill queue with a lot of messages.
+        for (int i = 0; i < 1000; i++)
+            grid(1).context().cache().context().exchange().refreshPartitions();
+
+        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked(1000);
+
         // Create counter delta for triggering counter rebalance.
         for (int p = 0; p < PARTS_CNT; p++)
             crd.cache(DEFAULT_CACHE_NAME).put(p, p + 1);
 
         IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
-        ((TestRecordingCommunicationSpi)cfg2.getCommunicationSpi()).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+        TestRecordingCommunicationSpi spi2 = (TestRecordingCommunicationSpi) cfg2.getCommunicationSpi();
+        spi2.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                return msg instanceof GridDhtPartitionDemandMessage;
+                if (msg instanceof GridDhtPartitionDemandMessage)
+                    return true; // Prevent any rebalancing to avoid switching partitions to owning.
+
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() != null &&
+                        msg0.exchangeId().topologyVersion().equals(new AffinityTopologyVersion(5, 0));
+                }
+
+                return false;
             }
         });
 
@@ -1060,9 +1081,14 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        doSleep(2000);
+        // Delay last single message. It should trigger PME for version 5,0
+        spi2.waitForBlocked();
 
+        // Start processing single messages.
         TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
+
+        // Allow PME to finish.
+        spi2.stopBlock();
 
         grid(0).context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(5, 1)).get();
 
@@ -1071,6 +1097,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         for (int i = 0; i < 1000; i++)
             assertEquals(-1, grid(2).cache(DEFAULT_CACHE_NAME).get(key));
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
     /**

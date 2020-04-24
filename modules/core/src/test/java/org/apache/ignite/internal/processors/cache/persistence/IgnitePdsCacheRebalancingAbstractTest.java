@@ -60,7 +60,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
@@ -208,7 +207,6 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
      * @throws Exception If fails.
      */
     @Test
-    @Ignore
     public void testRebalancingOnRestart() throws Exception {
         Ignite ignite0 = startGrid(0);
 
@@ -261,7 +259,6 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
      * @throws Exception If fails.
      */
     @Test
-    @Ignore
     public void testRebalancingOnRestartAfterCheckpoint() throws Exception {
         IgniteEx ignite0 = startGrid(0);
 
@@ -324,7 +321,6 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
      * @throws Exception If failed.
      */
     @Test
-    @Ignore
     public void testTopologyChangesWithConstantLoad() throws Exception {
         final long timeOut = U.currentTimeMillis() + 5 * 60 * 1000;
 
@@ -522,7 +518,6 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
      * @throws Exception If failed.
      */
     @Test
-    @Ignore
     public void testForceRebalance() throws Exception {
         testForceRebalance(CACHE);
     }
@@ -531,7 +526,6 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
      * @throws Exception If failed.
      */
     @Test
-    @Ignore
     public void testForceRebalanceClientTopology() throws Exception {
         filteredCacheEnabled = true;
 
@@ -604,7 +598,7 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
 
         assertPartitionsSame(idleVerify(grid(0), CACHE));
 
-        for (int it = 0; it < SF.applyLB(1000, 3); it++) {
+        for (int it = 0; it < SF.applyLB(10, 3); it++) {
             final int it0 = it;
 
             IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
