@@ -366,25 +366,11 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
                 throw new IllegalStateException("Zero nodes with attribute " + DEAD_NODE_ATTR + " exist");
             }
 
-            while (true) {
+            do {
                 key = nextRandom(args.range());
-
-                Collection<ClusterNode> keyNodes = ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key);
-
-                println("Dead nodes: " + deadNodes);
-                println("Key nodes:  " + keyNodes.toString());
-
-                if (!deadNodes.containsAll(keyNodes)) {
-                    println("A good key found!");
-                    break;
-                }
-            }
-
-//            do {
-//                key = nextRandom(args.range());
-//            } while (deadNodes.containsAll(
-//                    ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key)
-//            ));
+            } while (deadNodes.containsAll(
+                    ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key)
+            ));
 //        }
 
         return key;
