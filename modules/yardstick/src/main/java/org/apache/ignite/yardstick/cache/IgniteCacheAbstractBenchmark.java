@@ -370,10 +370,14 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
                 key = nextRandom(args.range());
 
                 Collection<ClusterNode> keyNodes = ignite().affinity(cacheName).mapKeyToPrimaryAndBackups(key);
-                println(keyNodes.toString());
 
-                if (deadNodes.containsAll(keyNodes))
+                println("Dead nodes: " + deadNodes);
+                println("Key nodes:  " + keyNodes.toString());
+
+                if (deadNodes.containsAll(keyNodes)) {
+                    println("A good key found!");
                     break;
+                }
             }
 
 //            do {
