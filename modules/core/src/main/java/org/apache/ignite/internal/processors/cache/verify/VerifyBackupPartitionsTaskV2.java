@@ -253,7 +253,8 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                 ignite.context().cache().context().database().waitForCheckpoint("VerifyBackupPartitions");
             }
             catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
+                throw new IgniteException(
+                    "Failed to wait for checkpoint before executing verify backup partitions task", e);
             }
 
             Set<Integer> grpIds = getGroupIds();
