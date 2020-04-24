@@ -150,20 +150,13 @@ public class IgniteWalConverter {
                     currentWalPath = currentRecordWalPath;
                 }
 
-                try {
-                    IgniteBiTuple<WALPointer, WALRecord> next = stIt.nextX();
+                IgniteBiTuple<WALPointer, WALRecord> next = stIt.nextX();
 
-                    final WALPointer pointer = next.get1();
-                    final WALRecord record = next.get2();
+                final WALPointer pointer = next.get1();
+                final WALRecord record = next.get2();
 
-                    if (stat != null)
-                        stat.registerRecord(record, pointer, true);
-
-                    out.println(record);
-                }
-                catch (Exception e) {
-                    e.printStackTrace(out);
-                }
+                if (stat != null)
+                    stat.registerRecord(record, pointer, true);
             }
         }
 
