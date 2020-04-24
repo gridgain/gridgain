@@ -65,6 +65,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -178,6 +179,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE;
 import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
 import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
@@ -527,6 +529,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         return;
 
                     UUID id = connId.nodeId();
+
+                    if (log.isDebugEnabled()) {
+                        String errMsg = e != null ? e.getMessage() : null;
+                        log.debug("The node was disconnected [nodeId=" + id + ", err=" + errMsg + "]");
+                    }
 
                     GridCommunicationClient[] nodeClients = clients.get(id);
 
@@ -2260,8 +2267,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
             Map<String, Object> res = new HashMap<>(5);
 
-            boolean ip = !F.isEmpty(locAddr) && locHost.getHostAddress().equals(locAddr);
-            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) && ip;
+            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) &&
+                (!F.isEmpty(locAddr) && locHost.getHostAddress().equals(locAddr)) && !locHost.isAnyLocalAddress() &&
+                !locHost.isLoopbackAddress();
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());
             res.put(createSpiAttributeName(ATTR_HOST_NAMES), setEmptyHostNamesAttr ? emptyList() : addrs.get2());
@@ -2914,6 +2922,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if client was removed.
      */
     private boolean removeNodeClient(UUID nodeId, GridCommunicationClient rmvClient) {
+        if (log.isDebugEnabled())
+            log.debug("The client was removed [nodeId=" + nodeId + ",  client=" + rmvClient.toString() + "].");
+
         for (;;) {
             GridCommunicationClient[] curClients = clients.get(nodeId);
 
@@ -2937,6 +2948,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     private void addNodeClient(ClusterNode node, int connIdx, GridCommunicationClient addClient) {
         assert connectionsPerNode > 0 : connectionsPerNode;
         assert connIdx == addClient.connectionIndex() : addClient;
+
+        if (log.isDebugEnabled())
+            log.debug("The node client is going to create a connection [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
 
         if (connIdx >= connectionsPerNode) {
             assert !usePairedConnections(node);
@@ -2965,6 +2979,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 newClients = curClients.clone();
                 newClients[connIdx] = addClient;
 
+                if (log.isDebugEnabled())
+                    log.debug("The node client was replaced [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
+
                 if (clients.replace(node.id(), curClients, newClients))
                     break;
             }
@@ -2984,6 +3001,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         assert (connIdx >= 0 && connIdx < connectionsPerNode) || !usePairedConnections(node) : connIdx;
 
         UUID nodeId = node.id();
+
+        if (log.isDebugEnabled())
+            log.debug("The node client is going to reserve a connection [nodeId=" + node.id() + ", connIdx=" + connIdx + "]");
 
         while (true) {
             GridCommunicationClient[] curClients = clients.get(nodeId);
@@ -3799,6 +3819,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @throws IgniteCheckedException If occurs.
      */
     void closeConnections(UUID nodeId) throws IgniteCheckedException {
+        if (log.isDebugEnabled())
+            log.debug("The node client connections were closed [nodeId=" + nodeId + "]");
+
         GridCommunicationClient[] clients = this.clients.remove(nodeId);
         if (nonNull(clients)) {
             for (GridCommunicationClient client : clients)
@@ -4362,20 +4385,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if remote nodes support {@link HandshakeWaitMessage}.
      */
     private boolean isHandshakeWaitSupported() {
+        GridKernalContext ctx = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context() : null;
+
         DiscoverySpi discoSpi = ignite().configuration().getDiscoverySpi();
 
-        if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(
-                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE
-            );
-        else {
-            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
-
-            return IgniteFeatures.allNodesSupports(
-                (ignite instanceof IgniteEx)? ((IgniteEx)ignite).context() : null,
-                nodes,
-                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
-        }
+        return IgniteFeatures.allNodesSupport(ctx, discoSpi, TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
     }
 
     /** {@inheritDoc} */

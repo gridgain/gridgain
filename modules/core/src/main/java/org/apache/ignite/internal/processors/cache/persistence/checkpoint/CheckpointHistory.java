@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.Checkpoint;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -49,6 +50,24 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT
  * This directory holds files for checkpoint start and end.
  */
 public class CheckpointHistory {
+    /** The message appears when no one checkpoint was not reserved for cache. */
+    private static final String NOT_RESERVED_WAL_REASON = "Failed to perform reservation of historical WAL segment file";
+
+    /** The message puts down to log when an exception happened during reading reserved WAL. */
+    private static final String WAL_SEG_CORRUPTED_REASON = "Segment corrupted";
+
+    /** Reason means no more history reserved for the cache. */
+    private static final String NO_MORE_HISTORY_REASON = "Reserved checkpoint is the oldest in history";
+
+    /** Node does not have owning partitions. */
+    private static final String NO_PARTITIONS_OWNED_REASON = "Node didn't own any partitions for this group at the time of checkpoint";
+
+    /** Reason means a checkpoint in history reserved can not be applied for cache. */
+    private static final String CHECKPOINT_NOT_APPLICABLE_REASON = "Checkpoint was marked as inapplicable for historical rebalancing";
+
+    /** That means all history reserved for cache. */
+    private static final String FULL_HISTORY_REASON = "Full history were reserved";
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -381,13 +400,13 @@ public class CheckpointHistory {
      *
      * @return Map (groupId, Map (partitionId, earliest valid checkpoint to history search)).
      */
-    public Map<Integer, Map<Integer, CheckpointEntry>> searchAndReserveCheckpoints(
+    public Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
         final Map<Integer, Set<Integer>> groupsAndPartitions
     ) {
         if (F.isEmpty(groupsAndPartitions))
             return Collections.emptyMap();
 
-        final Map<Integer, Map<Integer, CheckpointEntry>> res = new HashMap<>();
+        final Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
 
         CheckpointEntry prevReserved = null;
 
@@ -401,12 +420,21 @@ public class CheckpointHistory {
                 boolean reserved = cctx.wal().reserve(chpEntry.checkpointMark());
 
                 // If checkpoint WAL history can't be reserved, stop searching.
-                if (!reserved)
-                    break;
+                if (!reserved) {
+                    for (Integer grpId : groupsAndPartitions.keySet())
+                        res.computeIfAbsent(grpId, key -> new T2<>())
+                            .set1(NOT_RESERVED_WAL_REASON);
+
+                    return res;
+                }
 
                 for (Integer grpId : new HashSet<>(groupsAndPartitions.keySet()))
-                    if (!isCheckpointApplicableForGroup(grpId, chpEntry))
+                    if (!isCheckpointApplicableForGroup(grpId, chpEntry)) {
+                        res.computeIfAbsent(grpId, key -> new T2<>())
+                            .set1(CHECKPOINT_NOT_APPLICABLE_REASON);
+
                         groupsAndPartitions.remove(grpId);
+                    }
 
                 for (Map.Entry<Integer, CheckpointEntry.GroupState> state : chpEntry.groupState(cctx).entrySet()) {
                     int grpId = state.getKey();
@@ -423,7 +451,7 @@ public class CheckpointHistory {
                         int pIdx = cpGrpState.indexByPartition(partId);
 
                         if (pIdx >= 0)
-                            res.computeIfAbsent(grpId, k -> new HashMap<>()).put(partId, chpEntry);
+                            res.computeIfAbsent(grpId, k -> new T2<>(null, new HashMap<>())).get2().put(partId, chpEntry);
                         else {
                             if (inapplicablePartitions == null)
                                 inapplicablePartitions = new HashSet<>();
@@ -440,8 +468,18 @@ public class CheckpointHistory {
 
                 // Remove groups from search with empty set of applicable partitions.
                 for (Map.Entry<Integer, Set<Integer>> e : new HashSet<>(groupsAndPartitions.entrySet()))
-                    if (e.getValue().isEmpty())
+                    if (e.getValue().isEmpty()) {
+                        res.compute(e.getKey(), (key, val) -> {
+                            if (val == null)
+                                return new T2<>(NO_PARTITIONS_OWNED_REASON, null);
+
+                            val.set1(FULL_HISTORY_REASON);
+
+                            return val;
+                        });
+
                         groupsAndPartitions.remove(e.getKey());
+                    }
 
                 // All groups are no more applicable, release history and stop searching.
                 if (groupsAndPartitions.isEmpty()) {
@@ -460,6 +498,10 @@ public class CheckpointHistory {
             catch (IgniteCheckedException ex) {
                 U.warn(log, "Failed to process checkpoint: " + (chpEntry != null ? chpEntry : "none"), ex);
 
+                for (Integer grpId : groupsAndPartitions.keySet())
+                    res.computeIfAbsent(grpId, key -> new T2<>())
+                        .set1(WAL_SEG_CORRUPTED_REASON);
+
                 try {
                     cctx.wal().release(chpEntry.checkpointMark());
                 }
@@ -470,6 +512,10 @@ public class CheckpointHistory {
                 return res;
             }
         }
+
+        for (Integer grpId : groupsAndPartitions.keySet())
+            res.computeIfAbsent(grpId, key -> new T2<>())
+                .set1(NO_MORE_HISTORY_REASON);
 
         return res;
     }

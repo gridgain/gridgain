@@ -130,6 +130,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -648,7 +649,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
         clsLdr = Thread.currentThread().getContextClassLoader();
 
-        info(">>> Starting test class: " + testClassDescription() + " <<<");
+        U.quiet(false, ">>> Starting test class: " + testClassDescription() + " <<<");
 
         if (isSafeTopology())
             assert G.allGrids().isEmpty() : "Not all Ignite instances stopped before tests execution:" + G.allGrids();
@@ -694,7 +695,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private void cleanUpTestEnviroment() throws Exception {
         long dur = System.currentTimeMillis() - ts;
 
-        info(">>> Stopping test: " + testDescription() + " in " + dur + " ms <<<");
+        U.quiet(false, ">>> Stopping test: " + testDescription() + " in " + dur + " ms <<<");
 
         try {
             afterTest();
@@ -915,8 +916,17 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If anything failed.
      */
     protected IgniteEx startClientGrid(int idx) throws Exception {
-        String igniteInstanceName = getTestIgniteInstanceName(idx);
+        return startClientGrid(getTestIgniteInstanceName(idx));
+    }
 
+    /**
+     * Starts new client grid with given name.
+     *
+     * @param igniteInstanceName Index of the grid to start.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startClientGrid(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = optimize(getConfiguration(igniteInstanceName));
 
         cfg.setClientMode(true);
@@ -1174,7 +1184,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         if (cfg == null)
             cfg = optimize(getConfiguration(igniteInstanceName));
 
-        IgniteEx locNode = grid(0);
+        IgniteEx locNode = (IgniteEx)F.first(G.allGrids());
 
         if (locNode != null) {
             DiscoverySpi discoverySpi = locNode.configuration().getDiscoverySpi();
@@ -1196,7 +1206,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
         }
 
-        return new IgniteProcessProxy(cfg, log, (x) -> grid(0), resetDiscovery, additionalRemoteJvmArgs());
+        return new IgniteProcessProxy(cfg, log, (x) -> locNode, resetDiscovery, additionalRemoteJvmArgs());
     }
 
     /**
@@ -1829,7 +1839,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /** */
     private void afterLastTest() throws Exception {
-        info(">>> Stopping test class: " + testClassDescription() + " <<<");
+        U.quiet(false, ">>> Stopping test class: " + testClassDescription() + " <<<");
 
         Exception err = null;
 
@@ -2156,7 +2166,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             Throwable t = ex.get();
 
             if (t != null) {
-                U.error(log, "Test failed.", t);
+                if (t instanceof AssumptionViolatedException)
+                    U.quiet(false, "Test ignored [test=" + testDescription() + ", msg=" + t.getMessage() + "]");
+                else {
+                    U.error(log, "Test failed [test=" + testDescription() +
+                        ", duration=" + (System.currentTimeMillis() - ts) + "]", t);
+                }
 
                 throw t;
             }
@@ -2190,7 +2205,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         // Clear log throttle.
         LT.clear();
 
-        info(">>> Starting test: " + testDescription() + " <<<");
+        U.quiet(false, ">>> Starting test: " + testDescription() + " <<<");
 
         try {
             beforeTest();

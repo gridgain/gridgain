@@ -37,7 +37,6 @@ import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskArg;
 import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskResult;
 
 import static java.lang.Boolean.TRUE;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
@@ -95,7 +94,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
         try (GridClient client = Command.startClient(clientCfg)) {
             UUID coordinatorId = client.compute()
                 //Only non client node can be coordinator.
-                .nodes(node -> !Boolean.TRUE.equals(node.attribute(ATTR_CLIENT_MODE)))
+                .nodes(node -> !node.isClient())
                 .stream()
                 .min(Comparator.comparingLong(GridClientNode::order))
                 .map(GridClientNode::nodeId)

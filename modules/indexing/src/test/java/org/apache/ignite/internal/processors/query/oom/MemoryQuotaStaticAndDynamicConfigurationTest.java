@@ -15,9 +15,9 @@
  */
 package org.apache.ignite.internal.processors.query.oom;
 
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
@@ -39,7 +39,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testGlobalQuota() throws Exception {
         initGrid("0", "0", null);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry);
 
@@ -63,7 +63,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testOffloading() throws Exception {
         initGrid("0", "0", null);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry);
 
@@ -87,7 +87,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testQueryQuota() throws Exception {
         initGrid("0", "0", null);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry);
 
@@ -150,7 +150,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
         GridTestUtils.assertThrows(log, () -> {
             grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
-        }, CacheException.class, "SQL query run out of memory: Query quota exceeded.");
+        }, SqlMemoryQuotaExceededException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
     }

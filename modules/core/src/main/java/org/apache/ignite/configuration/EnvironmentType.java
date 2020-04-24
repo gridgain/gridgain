@@ -21,9 +21,9 @@ import org.apache.ignite.lang.IgniteExperimental;
 /**
  * This enum represents general hint for Ignite about its environment: stand-alone or virtualized.
  *
- * Virtualized deployments may come with limitations like networks hidden behing NATs or may
+ * Virtualized deployments may come with limitations like networks hidden behind NATs or may
  * bring external automated management as Kubernetes does.
- * However from inside virtualized environment looks exaclty the same as a stand-alone one and
+ * However from inside virtualized environment looks exactly the same as a stand-alone one and
  * Ignite node cannot detect type of the environment and adapt its algorithms to these factors.
  *
  * {@link EnvironmentType} enum enables user to give a hint to started Ignite node so it is able to function efficiently.
@@ -31,7 +31,7 @@ import org.apache.ignite.lang.IgniteExperimental;
 @IgniteExperimental
 public enum EnvironmentType {
     /** Default value. */
-    STAND_ALONE,
+    STANDALONE,
 
     /** */
     VIRTUALIZED;

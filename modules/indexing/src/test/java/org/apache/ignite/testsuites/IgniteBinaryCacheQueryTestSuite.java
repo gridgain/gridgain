@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.CacheReplicatedQueryDetailMet
 import org.apache.ignite.internal.processors.cache.CacheReplicatedQueryMetricsDistributedSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheReplicatedQueryMetricsLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheSqlQueryValueCopySelfTest;
+import org.apache.ignite.internal.processors.cache.CheckIndexesInlineSizeOnNodeJoinMultiJvmTest;
 import org.apache.ignite.internal.processors.cache.DdlTransactionSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheCrossCacheQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheDynamicLoadOnClientPersistentTest;
@@ -546,6 +547,7 @@ import org.junit.runners.Suite;
 
     GridIndexRebuildSelfTest.class,
     GridIndexRebuildTest.class,
+    CheckIndexesInlineSizeOnNodeJoinMultiJvmTest.class,
 
     SqlTransactionCommandsWithMvccDisabledSelfTest.class,
 

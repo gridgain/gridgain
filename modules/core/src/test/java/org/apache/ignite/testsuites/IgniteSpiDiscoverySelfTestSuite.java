@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.GridDiscoveryManagerChangeCoordinatorTest;
 import org.apache.ignite.internal.IgniteDiscoveryMassiveNodeFailTest;
 import org.apache.ignite.spi.ExponentialBackoffTimeoutStrategyTest;
 import org.apache.ignite.spi.GridTcpSpiForwardingSelfTest;
@@ -71,6 +72,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoveryWithWrongServerTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.jdbc.TcpDiscoveryJdbcIpFinderSelfTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinderSelfTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinderSelfTest;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinderDnsResolveTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinderSelfTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.BeforeClass;
@@ -84,6 +86,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    TcpDiscoveryVmIpFinderDnsResolveTest.class,
     TcpDiscoveryVmIpFinderSelfTest.class,
     TcpDiscoverySharedFsIpFinderSelfTest.class,
     TcpDiscoveryJdbcIpFinderSelfTest.class,
@@ -168,7 +171,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
     DiscoveryClientSocketTest.class,
 
     IgniteMetricsOverflowTest.class,
-    MetricsCompactionTest.class
+    MetricsCompactionTest.class,
+
+    GridDiscoveryManagerChangeCoordinatorTest.class
 })
 public class IgniteSpiDiscoverySelfTestSuite {
     /** */
