@@ -271,20 +271,20 @@ public abstract class AbstractWalRecordsIterator
             return new IgniteBiTuple<>((WALPointer)actualFilePtr, postProcessRecord(rec));
         }
         catch (IOException | IgniteCheckedException e) {
-            if (e instanceof WalSegmentTailReachedException) {
+            if (e instanceof WalSegmentTailReachedException)
                 throw new WalSegmentTailReachedException(
                     "WAL segment tail reached. [idx=" + hnd.idx() +
                         ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() +
                         ", actualFilePtr=" + actualFilePtr + ']',
                     e
                 );
-            }
 
             if (!(e instanceof SegmentEofException) && !(e instanceof EOFException)) {
                 IgniteCheckedException e0 = handleRecordException(e, actualFilePtr);
 
                 if (e0 != null)
                     throw e0;
+
             }
 
             return null;
