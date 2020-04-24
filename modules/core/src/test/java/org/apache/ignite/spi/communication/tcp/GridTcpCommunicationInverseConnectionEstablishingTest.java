@@ -43,6 +43,8 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
@@ -233,10 +235,18 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * @throws Exception If failed.
      */
     private void executeCacheTestWithUnreachableClient(EnvironmentType envType) throws Exception {
+        LogListener lsnr = LogListener.matches("Failed to send message to remote node").atMost(0).build();
+
         for (int i = 0; i < SRVS_NUM; i++) {
             ccfg = cacheConfiguration(CACHE_NAME, ATOMIC);
 
-            startGrid(i);
+            startGrid(i, cfg -> {
+                ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
+
+                log.registerListener(lsnr);
+
+                return cfg.setGridLogger(log);
+            });
         }
 
         clientMode = true;
@@ -245,6 +255,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         startGrid(SRVS_NUM);
 
         putAndCheckKey();
+
+        assertTrue(lsnr.check());
     }
 
     /**
