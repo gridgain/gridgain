@@ -5179,6 +5179,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     public void markRebalanced() {
         assert !rebalanced;
 
+        U.dumpStack(log, "This exchnage marked as rebalanceless " +  initialVersion());
+
         rebalanced = true;
     }
 
