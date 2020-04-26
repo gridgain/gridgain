@@ -405,7 +405,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             return;
                         }
-                    } else {
+                    }
+                    else {
                         GridDhtPartitionsExchangeFuture cur = lastTopologyFuture();
 
                         if (!cur.isDone() && cur.changedAffinity() && !msg.restoreState()) {
