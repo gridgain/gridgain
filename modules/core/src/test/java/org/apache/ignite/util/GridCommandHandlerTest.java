@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -113,6 +114,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IN
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
@@ -1281,7 +1283,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
-        checkpointFreq = 100L;
+        checkpointFreq = 1000L;
 
         IgniteEx node = startGrids(2);
 
@@ -1299,7 +1301,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
             while (!stopFlag.get()) {
-                cache.put(rnd.nextInt(), rnd.nextInt());
+                cache.put(rnd.nextInt(1000), rnd.nextInt(1000));
 
                 if (Thread.interrupted())
                     break;
@@ -1316,6 +1318,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--check-crc"));
         }
         finally {
+            doSleep(checkpointFreq);
+
             stopFlag.set(true);
 
             loadThread.join();
@@ -1330,7 +1334,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String logFile = new String(Files.readAllBytes(new File(logFileName + ".txt").toPath()));
 
-        assertContains(log, logFile, "Checkpoint with dirty pages started! Cluster not idle!");
+        assertContains(log, logFile, GRID_NOT_IDLE_MSG);
     }
 
     /**

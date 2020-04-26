@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.util;
 
 import java.util.Collection;
+
 import org.jetbrains.annotations.Nullable;
 
 /**
