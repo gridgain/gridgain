@@ -136,7 +136,7 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
     public void testCollocatedFlag() throws Exception {
         startGrids(3);
 
-        Object [][] rows = new Object[][] {
+        Object[][] rows = new Object[][] {
             new Object[] {1, "Bob", 10, "Shank"},
             new Object[] {2, "Bob", 10, "Shank"},
             new Object[] {3, "Bob", 10, "Shank"},
