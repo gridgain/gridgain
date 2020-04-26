@@ -361,7 +361,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      *      if value with given {@code key} doesn't exist.
      */
     @Nullable public <T> T getThreadContext(GridTaskThreadContextKey key) {
-        assert(key != null);
+        assert (key != null);
 
         Map<GridTaskThreadContextKey, Object> map = thCtx.get();
 
@@ -724,7 +724,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         UUID subjId = (UUID)map.get(TC_SUBJ_ID);
 
-        if(subjId == null && ctx.security().enabled())
+        if (subjId == null && ctx.security().enabled())
             subjId = ctx.security().securityContext().subject().id();
 
         if (subjId == null)

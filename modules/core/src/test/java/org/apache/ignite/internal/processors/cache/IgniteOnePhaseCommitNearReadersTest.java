@@ -178,7 +178,7 @@ public class IgniteOnePhaseCommitNearReadersTest extends GridCommonAbstractTest 
 
         Ignite client2 = startGrid(SRVS + 1);
 
-        client= false;
+        client = false;
 
         IgniteCache<Object, Object> cache2 = client2.cache(DEFAULT_CACHE_NAME);
 

@@ -529,7 +529,7 @@ public class MvccRepeatableReadBulkOpsTest extends CacheMvccAbstractTest {
             }
             case INVOKE: {
                 CacheEntryProcessor<Integer, MvccTestAccount, MvccTestAccount> ep =
-                    new GetAndPutEntryProcessor<Integer, MvccTestAccount>(){
+                    new GetAndPutEntryProcessor<Integer, MvccTestAccount>() {
                     /** {@inheritDoc} */
                     @Override MvccTestAccount newValForKey(Integer key) {
                         return entries.get(key);
@@ -634,7 +634,7 @@ public class MvccRepeatableReadBulkOpsTest extends CacheMvccAbstractTest {
          * @param key Key.
          * @return New value.
          */
-        V newValForKey(K key){
+        V newValForKey(K key) {
             throw new UnsupportedOperationException();
         }
     }

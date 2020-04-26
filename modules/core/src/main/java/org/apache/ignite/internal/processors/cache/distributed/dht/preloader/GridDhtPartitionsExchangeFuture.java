@@ -940,7 +940,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             ExchangeType exchange;
 
-            if (exchCtx.exchangeFreeSwitch()){
+            if (exchCtx.exchangeFreeSwitch()) {
                 exchange = onExchangeFreeSwitch();
 
                 initCoordinatorCaches(newCrd);
@@ -4795,7 +4795,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             return;
 
                         try {
-                            assert msg.error() != null: msg;
+                            assert msg.error() != null : msg;
 
                             // Try to revert all the changes that were done during initialization phase
                             cctx.affinity().forceCloseCaches(

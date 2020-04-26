@@ -395,7 +395,7 @@ public abstract class WALRecord {
      * @param size Size of this record in bytes.
      */
     public void size(int size) {
-        assert size >= 0: size;
+        assert size >= 0 : size;
 
         this.size = size;
     }

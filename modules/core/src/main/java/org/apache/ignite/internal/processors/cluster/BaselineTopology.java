@@ -182,7 +182,7 @@ public class BaselineTopology implements Serializable {
 
         Set<Object> consistentIds = new TreeSet<>(CONSISTENT_ID_COMPARATOR);
 
-        for (Object o : nodeMap.keySet()){
+        for (Object o : nodeMap.keySet()) {
             branchingPntHash += (long)o.hashCode();
 
             consistentIds.add(o);
@@ -241,14 +241,14 @@ public class BaselineTopology implements Serializable {
     /**
      * @return Short consistent Id.
      */
-    public Short resolveShortConsistentId(Object constId){
+    public Short resolveShortConsistentId(Object constId) {
         return consistentIdMapping.get(constId);
     }
 
     /**
      * @return Object consistent Id.
      */
-    public Object resolveConsistentId(Short constId){
+    public Object resolveConsistentId(Short constId) {
         return compactIdMapping.get(constId);
     }
 
@@ -397,7 +397,7 @@ public class BaselineTopology implements Serializable {
     /**
      * @return {@code true} If it is new baseline topology.
      */
-    public boolean isNewTopology(){
+    public boolean isNewTopology() {
         return lastBranchingPointType == BranchingPointType.NEW_BASELINE_TOPOLOGY && id == 0;
     }
 

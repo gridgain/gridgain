@@ -25,7 +25,8 @@
 
     <suppress checks="SingleSpaceSeparator" files="JdbcThinCacheToJdbcDataTypesCoverageTest\.java" lines="86-103"/>
 
-    <suppress checks="EmptyLineSeparator|GenericWhitespace|SingleSpaceSeparator|NoWhitespaceBefore" files="modules\/h2\/.*\.java"/>
+    <suppress checks="EmptyLineSeparator|GenericWhitespace|SingleSpaceSeparator|NoWhitespaceBefore|WhitespaceAround"
+              files="modules\/h2\/.*\.java"/>
 
     <suppress checks="NoWhitespaceBefore" files="ConcurrentLinkedHashMap\.java"/>
 </suppressions>

@@ -119,8 +119,8 @@ public class MLPTrainer<P extends Serializable> extends MultiLabelDatasetTrainer
                                                                 Preprocessor<K, V> extractor) {
 
         assert archSupplier != null;
-        assert loss!= null;
-        assert updatesStgy!= null;
+        assert loss != null;
+        assert updatesStgy != null;
 
         try (Dataset<EmptyContext, SimpleLabeledDatasetData> dataset = datasetBuilder.build(
             envBuilder,

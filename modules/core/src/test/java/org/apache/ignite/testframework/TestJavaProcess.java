@@ -89,7 +89,7 @@ public final class TestJavaProcess {
             proc.waitFor();
         }
         finally {
-            if(proc.proc != null)
+            if (proc.proc != null)
                 proc.proc.kill();
 
             proc.procCtx.close();
@@ -123,7 +123,7 @@ public final class TestJavaProcess {
             return (R)proc.res;
         }
         finally {
-            if(proc.proc != null)
+            if (proc.proc != null)
                 proc.proc.kill();
 
             proc.procCtx.close();
@@ -142,7 +142,7 @@ public final class TestJavaProcess {
             throw new Exception("The closure is finished with error", (Error)res);
 
         if (ret != 0)
-            throw new Exception("Abnormal exit code [name=" + name +", code=" + ret);
+            throw new Exception("Abnormal exit code [name=" + name + ", code=" + ret);
 
         return ret;
     }

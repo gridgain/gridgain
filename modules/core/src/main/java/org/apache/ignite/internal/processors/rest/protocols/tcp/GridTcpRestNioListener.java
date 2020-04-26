@@ -370,7 +370,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
      * @param ses Session.
      */
     public void onSessionClosed(GridNioSession ses) {
-        sesInterruptibleFutMap.computeIfPresent(ses, (key, pendingFuts) ->{
+        sesInterruptibleFutMap.computeIfPresent(ses, (key, pendingFuts) -> {
             for (IgniteInternalFuture fut : pendingFuts) {
                 try {
                     if (!fut.isDone())

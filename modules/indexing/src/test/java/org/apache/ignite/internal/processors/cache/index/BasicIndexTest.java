@@ -883,7 +883,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
             }
 
-            {//Check OR -> IN optimization is applied.
+            { //Check OR -> IN optimization is applied.
                 final String sql = qry + "where (val = ?1 OR val = ?2) and fld = " +
                     toStringVal(val3);
 
@@ -1910,7 +1910,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /** User object converter. */
-    static class UserObject implements SqlStrConvertedValHolder{
+    static class UserObject implements SqlStrConvertedValHolder {
         /** User object. */
         private Object obj;
 

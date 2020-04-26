@@ -100,5 +100,5 @@ public class UserManagementOperation implements Serializable {
     /**
      * User action type.
      */
-    public enum OperationType {ADD, UPDATE, REMOVE}
+    public enum OperationType { ADD, UPDATE, REMOVE }
 }

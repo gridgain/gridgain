@@ -1048,7 +1048,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             return iterator;
         }
-        catch(Exception ex) {
+        catch (Exception ex) {
             if (!X.hasCause(ex, IgniteHistoricalIteratorException.class))
                 throw new IgniteHistoricalIteratorException(ex);
 
@@ -1699,7 +1699,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @return Name of pending entires tree.
          */
         private String pendingEntriesTreeName() {
-            return grp.cacheOrGroupName() + "-" +"PendingEntries-" + partId;
+            return grp.cacheOrGroupName() + "-" + "PendingEntries-" + partId;
         }
 
         /**

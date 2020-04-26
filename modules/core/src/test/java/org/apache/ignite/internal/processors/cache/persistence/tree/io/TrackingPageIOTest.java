@@ -137,7 +137,7 @@ public class TrackingPageIOTest {
             for (Map.Entry<Long, Boolean> e : map.entrySet())
                 assertEquals(
                     e.getValue().booleanValue(),
-                    io.wasChanged(buf, e.getKey(), backupId, backupId -1, PAGE_SIZE));
+                    io.wasChanged(buf, e.getKey(), backupId, backupId - 1, PAGE_SIZE));
         }
         catch (Throwable e) {
             System.out.println("snapshotId = " + backupId + ", basePageId = " + basePageId);
@@ -176,7 +176,7 @@ public class TrackingPageIOTest {
         try {
             TreeSet<Long> setIdx = new TreeSet<>();
 
-            generateMarking(buf, track, basePageId, maxId, setIdx, backupId, backupId -1);
+            generateMarking(buf, track, basePageId, maxId, setIdx, backupId, backupId - 1);
 
             for (long pageId = basePageId; pageId < basePageId + track; pageId++) {
                 Long foundNextChangedPage = io.findNextChangedPage(buf, pageId, backupId, backupId - 1, PAGE_SIZE);

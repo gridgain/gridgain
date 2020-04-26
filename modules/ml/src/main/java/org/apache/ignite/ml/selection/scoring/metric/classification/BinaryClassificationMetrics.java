@@ -76,7 +76,7 @@ public class BinaryClassificationMetrics extends AbstractMetrics<BinaryClassific
             else if (truth == negativeClsLb && prediction == negativeClsLb) tn++;
             else if (truth == negativeClsLb && prediction == positiveClsLb) fp++;
 
-            if(enableROCAUC) {
+            if (enableROCAUC) {
                 queue.add(new Pair<>(prediction, truth));
 
                 if (truth == positiveClsLb)

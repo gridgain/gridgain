@@ -295,7 +295,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         Assert.assertNotNull("Didn't find metric " + metricName, metric);
 
-        Assert.assertTrue("Expected long metric, but got "+ metric.getClass(), metric instanceof LongMetric);
+        Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
     }

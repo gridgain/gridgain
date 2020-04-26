@@ -148,7 +148,7 @@ public class GeneticAlgorithm {
                 for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
                     int finalJ = j;
                     Population finalNewPopulation1 = newPopulation;
-                    IgniteSupplier<Pair<Integer, Double>> task = ()-> new Pair<>(finalJ, fitnessFunction.apply(finalNewPopulation1.getChromosome(finalJ)));
+                    IgniteSupplier<Pair<Integer, Double>> task = () -> new Pair<>(finalJ, fitnessFunction.apply(finalNewPopulation1.getChromosome(finalJ)));
                     tasks.add(task);
                 }
 
@@ -187,7 +187,7 @@ public class GeneticAlgorithm {
         double[] sectors = new double[population.size()];
 
         for (int i = 0; i < population.size(); i++)
-            sectors[i] = population.getChromosome(i).getFitness()/totalFitness;
+            sectors[i] = population.getChromosome(i).getFitness() / totalFitness;
 
         Population parentPopulation = new Population(population.size());
 
@@ -199,12 +199,12 @@ public class GeneticAlgorithm {
 
             while (selectedChromosomeIdx == Integer.MIN_VALUE && sectorIdx < sectors.length) {
                 accumulatedSectorLen += sectors[sectorIdx];
-                if(rouletteVal < accumulatedSectorLen)
+                if (rouletteVal < accumulatedSectorLen)
                     selectedChromosomeIdx = sectorIdx;
                 sectorIdx++;
             }
 
-            if(selectedChromosomeIdx == Integer.MIN_VALUE)
+            if (selectedChromosomeIdx == Integer.MIN_VALUE)
                 selectedChromosomeIdx = rnd.nextInt(population.size()); // or get last
 
             parentPopulation.setChromosome(i, population.getChromosome(selectedChromosomeIdx));
@@ -246,15 +246,16 @@ public class GeneticAlgorithm {
      */
     private Population crossingover(Population parents, Population newPopulation) {
         // because parent population is less than new population on amount of elite chromosome
-        for (int j = 0; j < populationSize - amountOfEliteChromosomes; j+=2) {
+        for (int j = 0; j < populationSize - amountOfEliteChromosomes; j += 2) {
             Chromosome ch1 = parents.getChromosome(j);
             Chromosome ch2 = parents.getChromosome(j + 1);
 
-            if(rnd.nextDouble() < crossingoverProbability) {
+            if (rnd.nextDouble() < crossingoverProbability) {
                 List<Chromosome> twoChildren = crossover(ch1, ch2);
                 newPopulation.setChromosome(amountOfEliteChromosomes + j, twoChildren.get(0));
                 newPopulation.setChromosome(amountOfEliteChromosomes + j + 1, twoChildren.get(1));
-            } else {
+            }
+            else {
                 newPopulation.setChromosome(amountOfEliteChromosomes + j, ch1);
                 newPopulation.setChromosome(amountOfEliteChromosomes + j + 1, ch2);
             }
@@ -271,7 +272,7 @@ public class GeneticAlgorithm {
         for (int j = amountOfEliteChromosomes; j < populationSize; j++) {
             Chromosome possibleMutant = newPopulation.getChromosome(j);
             for (int geneIdx = 0; geneIdx < possibleMutant.size(); geneIdx++) {
-                if(rnd.nextDouble() < mutationProbability) {
+                if (rnd.nextDouble() < mutationProbability) {
                     Double gene = possibleMutant.getGene(geneIdx);
                     Double newGeneVal = mutationOperator.apply(geneIdx, gene);
                     possibleMutant.setGene(geneIdx, newGeneVal);

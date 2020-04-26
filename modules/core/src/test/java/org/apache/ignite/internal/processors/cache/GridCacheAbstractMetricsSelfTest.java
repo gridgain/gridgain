@@ -393,7 +393,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
 
                 cache.put(i, i);
 
-                if(keys.size() == 3)
+                if (keys.size() == 3)
                     break;
             }
         }
@@ -843,7 +843,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
 
         awaitMetricsUpdate(1);
 
-        assertEquals(KEY_CNT/2, cache.metrics().getCacheSize());
+        assertEquals(KEY_CNT / 2, cache.metrics().getCacheSize());
 
         assertEquals(cache.localSizeLong(CachePeekMode.PRIMARY), cache.localMetrics().getCacheSize());
 

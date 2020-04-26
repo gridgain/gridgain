@@ -335,7 +335,7 @@ public class TxPartitionCounterStateOnePrimaryOneBackupTest extends TxPartitionC
                 prepFuts.put(nearXidVer, proceedFut);
 
                 // Order prepares.
-                if (prepFuts.size() == txCnt) {// Wait until all prep requests queued and force prepare order.
+                if (prepFuts.size() == txCnt) { // Wait until all prep requests queued and force prepare order.
                     prepFuts.remove(version(prepOrder.poll())).onDone();
                 }
             });

@@ -85,7 +85,7 @@ public class IgniteCacheSqlQueryUnsupportedTypeSelfTest extends GridCommonAbstra
      * Check that unsupported by IgniteSQL type is correctly inserted.
      */
     @Test
-    public void testUnsupportedSqlType(){
+    public void testUnsupportedSqlType() {
         try (IgniteCache<Integer, Person> person = grid(0).createCache(instantCacheConfiguration())) {
             Person p1 = new Person(1, Instant.now());
             Person p2 = new Person(2, p1.time.minus(Period.ofDays(1)));

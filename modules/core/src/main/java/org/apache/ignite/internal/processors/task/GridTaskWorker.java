@@ -1027,7 +1027,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                             ClusterNode newNode = ctx.affinity().mapPartitionToNode(affCacheName, affPartId,
                                 mapTopVer);
 
-                            if(!checkTargetNode(resp, jRes, newNode))
+                            if (!checkTargetNode(resp, jRes, newNode))
                                 return;
 
                             sendRequest(jRes);

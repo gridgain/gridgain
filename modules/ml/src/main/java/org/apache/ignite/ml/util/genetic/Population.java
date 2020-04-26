@@ -43,7 +43,7 @@ public class Population {
      *
      * @param idx Index of chromosome.
      */
-    public Chromosome getChromosome(int idx){
+    public Chromosome getChromosome(int idx) {
         return chromosomes[idx];
     }
 
@@ -53,7 +53,7 @@ public class Population {
      * @param idx Index.
      * @param fitnessFunction Fitness function.
      */
-    public double calculateFitnessForChromosome(int idx, Function<Chromosome, Double> fitnessFunction){
+    public double calculateFitnessForChromosome(int idx, Function<Chromosome, Double> fitnessFunction) {
         double fitness = fitnessFunction.apply(chromosomes[idx]);
         chromosomes[idx].setFitness(fitness);
         fitnessCalculatedFlags.set(idx);

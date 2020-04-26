@@ -879,7 +879,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             PlatformCacheExtension[] res = new PlatformCacheExtension[maxExtId + 1];
 
             for (PlatformCacheExtension cacheExt : cacheExts)
-                res[cacheExt.id()]= cacheExt;
+                res[cacheExt.id()] = cacheExt;
 
             return res;
         }
@@ -920,7 +920,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             PlatformPluginExtension[] res = new PlatformPluginExtension[maxExtId + 1];
 
             for (PlatformPluginExtension ext : exts)
-                res[ext.id()]= ext;
+                res[ext.id()] = ext;
 
             return res;
         }

@@ -49,7 +49,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        if(!getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false)) {
+        if (!getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false)) {
             log.severe("Failed to execute rolling upgrade command='" + rollingUpgradeArgs.command().text() + "\' "
                 + "Rolling upgrade isn't supported.");
 
@@ -137,7 +137,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
     private VisorRollingUpgradeChangeModeTaskArg toVisorArguments(RollingUpgradeArguments args) {
         assert RollingUpgradeSubCommands.ENABLE == args.command() || RollingUpgradeSubCommands.DISABLE == args.command();
 
-        return RollingUpgradeSubCommands.ENABLE == args.command()?
+        return RollingUpgradeSubCommands.ENABLE == args.command() ?
             new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.ENABLE, args.isForcedMode())
             : new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.DISABLE, false);
     }
@@ -150,9 +150,9 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
     private void printRollingUpgradeStatus(Logger log, VisorRollingUpgradeStatusResult res) {
         VisorRollingUpgradeStatus status = res.getStatus();
 
-        log.info("Rolling upgrade is " + (status.isEnabled()? "enabled" : "disabled"));
+        log.info("Rolling upgrade is " + (status.isEnabled() ? "enabled" : "disabled"));
         log.info("Initial version: " + status.getInitialVersion());
-        log.info("Target version: " + ((F.isEmpty(status.getTargetVersion()))? "N/A": status.getTargetVersion()));
+        log.info("Target version: " + ((F.isEmpty(status.getTargetVersion())) ? "N/A" : status.getTargetVersion()));
 
         if (status.isForcedModeEnabled())
             log.info("Forced mode is enabled.");
@@ -176,7 +176,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
     private void printRollingUpgradeChangeModeResult(Logger log, VisorRollingUpgradeChangeModeResult res) {
         if (RollingUpgradeModeChangeResult.Result.SUCCESS == res.getResult())
             log.info("Rolling upgrade mode successfully " +
-                (RollingUpgradeSubCommands.ENABLE == rollingUpgradeArgs.command()? "enabled." : "disabled."));
+                (RollingUpgradeSubCommands.ENABLE == rollingUpgradeArgs.command() ? "enabled." : "disabled."));
         else
             log.info("Rolling upgrade operation failed. " + res.getCause().getMessage());
     }

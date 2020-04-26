@@ -92,7 +92,7 @@ public class GridH2RowDescriptor {
      *
      * @return Table descriptor.
      */
-    public H2TableDescriptor tableDescriptor(){
+    public H2TableDescriptor tableDescriptor() {
         return tbl;
     }
 

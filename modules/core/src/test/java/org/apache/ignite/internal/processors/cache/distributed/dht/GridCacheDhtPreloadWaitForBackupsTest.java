@@ -530,7 +530,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         int nodesCnt = 4;
 
-        startGrids(nodesCnt/2);
+        startGrids(nodesCnt / 2);
 
         ignite(0).cluster().baselineAutoAdjustEnabled(false);
 

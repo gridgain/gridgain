@@ -93,7 +93,7 @@ public class P2PGridifySelfTest extends GridCommonAbstractTest {
      * @return The same value as parameter has.
      */
     @Gridify(taskName = "org.apache.ignite.p2p.GridP2PTestTask",
-        igniteInstanceName="org.apache.ignite.p2p.GridP2PGridifySelfTest1")
+        igniteInstanceName = "org.apache.ignite.p2p.GridP2PGridifySelfTest1")
     public int executeGridify(int res) {
         return res;
     }
@@ -129,7 +129,7 @@ public class P2PGridifySelfTest extends GridCommonAbstractTest {
      * @param res Result.
      * @return The same value as parameter has.
      */
-    @Gridify(igniteInstanceName="org.apache.ignite.p2p.GridP2PGridifySelfTest1")
+    @Gridify(igniteInstanceName = "org.apache.ignite.p2p.GridP2PGridifySelfTest1")
     public Integer executeGridifyResource(int res) {
         String path = "org/apache/ignite/p2p/p2p.properties";
 

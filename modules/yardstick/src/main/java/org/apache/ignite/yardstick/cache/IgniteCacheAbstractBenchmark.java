@@ -189,7 +189,7 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
             }
         }
 
-        if(args.enablePreload()) {
+        if (args.enablePreload()) {
             startPreloadLogging(args.preloadLogsInterval());
 
             preload();
@@ -209,7 +209,7 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
         try {
             IgniteCache<String, Integer> preloadCache = ignite().getOrCreateCache("preloadCache");
 
-            if(preloadCache.get("loaded") == null) {
+            if (preloadCache.get("loaded") == null) {
                 IgniteCompute compute = ignite().compute(ignite().cluster().forServers().forOldest());
 
                 IgniteCache<Integer, SampleValue> cache = (IgniteCache<Integer, SampleValue>)cacheForOperation();

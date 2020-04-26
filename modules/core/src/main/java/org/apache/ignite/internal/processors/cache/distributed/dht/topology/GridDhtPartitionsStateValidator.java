@@ -123,7 +123,7 @@ public class GridDhtPartitionsStateValidator {
         else if (resUpdCnt.isEmpty() && !resSize.isEmpty())
             error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resSize));
 
-        if (error.length() > 0){
+        if (error.length() > 0) {
             Set<Integer> parts = new HashSet<>(resUpdCnt.keySet());
             parts.addAll(resSize.keySet());
 
@@ -445,7 +445,7 @@ public class GridDhtPartitionsStateValidator {
      */
     private void fillMapForPartition(Map<UUID, Long> sourceMap,
         Map<UUID, IgnitePair<Long>> resultMap, boolean isFirst) {
-        if (sourceMap!=null) {
+        if (sourceMap != null) {
             sourceMap.forEach((uuid, val) -> {
                 IgnitePair<Long> pair = resultMap.computeIfAbsent(uuid, u -> new IgnitePair<>());
                 if (isFirst)

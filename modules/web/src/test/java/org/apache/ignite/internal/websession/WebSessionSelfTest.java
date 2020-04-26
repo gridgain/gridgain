@@ -1029,8 +1029,8 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
      * @param srv Server.
      * @throws Exception In case of error.
      */
-    private void stopServerWithLoginService(@Nullable Server srv) throws Exception{
-        if (srv != null){
+    private void stopServerWithLoginService(@Nullable Server srv) throws Exception {
+        if (srv != null) {
             srv.stop();
             File realmFile = new File("/tmp/realm.properties");
             realmFile.delete();
@@ -1038,7 +1038,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
     }
 
     /** Creates a realm file to store test user credentials */
-    private void createRealm() throws Exception{
+    private void createRealm() throws Exception {
         File realmFile = new File("/tmp/realm.properties");
         FileWriter fileWriter = new FileWriter(realmFile);
         fileWriter.append("admin:admin");
@@ -1068,7 +1068,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
                 for (String headerValue : headerFieldValue) {
                     String[] fields = headerValue.split(";");
                     sessionCookieValue = fields[0];
-                    sesId = sessionCookieValue.substring(sessionCookieValue.indexOf("=")+1,
+                    sesId = sessionCookieValue.substring(sessionCookieValue.indexOf("=") + 1,
                             sessionCookieValue.length());
                 }
             }

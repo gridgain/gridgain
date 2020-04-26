@@ -108,9 +108,8 @@ public class Step_8_CV {
                 int bestMaxDeep = 1;
                 double avg = Double.MIN_VALUE;
 
-                for(int p: pSet){
-                    for(int maxDeep: maxDeepSet){
-
+                for (int p : pSet) {
+                    for (int maxDeep : maxDeepSet) {
                         Preprocessor<Integer, Vector> normalizationPreprocessor = new NormalizationTrainer<Integer, Vector>()
                             .withP(p)
                             .fit(
@@ -140,7 +139,7 @@ public class Step_8_CV {
 
                         final double currAvg = Arrays.stream(scores).average().orElse(Double.MIN_VALUE);
 
-                        if(currAvg > avg) {
+                        if (currAvg > avg) {
                             avg = currAvg;
                             bestP = p;
                             bestMaxDeep = maxDeep;

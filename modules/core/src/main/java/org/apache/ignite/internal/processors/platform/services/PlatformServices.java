@@ -652,7 +652,7 @@ public class PlatformServices extends PlatformAbstractTarget {
          * @return Whether specified args are compatible with argTypes.
          */
         private static boolean areMethodArgsCompatible(Class[] argTypes, Object[] args) {
-            for (int i = 0; i < args.length; i++){
+            for (int i = 0; i < args.length; i++) {
                 // arg is always of a primitive wrapper class, and argTypes can have actual primitive
                 Object arg = args[i];
                 Class argType = wrap(argTypes[i]);
@@ -699,7 +699,7 @@ public class PlatformServices extends PlatformAbstractTarget {
          * @param val Value.
          */
         public void put(K key, V val) {
-            synchronized (this){
+            synchronized (this) {
                 if (map.containsKey(key))
                     return;
 

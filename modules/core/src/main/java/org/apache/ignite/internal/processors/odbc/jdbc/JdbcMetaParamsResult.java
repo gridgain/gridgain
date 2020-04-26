@@ -57,7 +57,7 @@ public class JdbcMetaParamsResult extends JdbcResult {
         else {
             writer.writeInt(meta.size());
 
-            for(JdbcParameterMeta m : meta)
+            for (JdbcParameterMeta m : meta)
                 m.writeBinary(writer, protoCtx);
         }
     }

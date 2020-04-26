@@ -147,7 +147,7 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
 
         assertTrue("Rebalance was not logged or did not even run.",
-            prepareRebalanceLogListener.check()&& completeRebalanceLogListener.check());
+            prepareRebalanceLogListener.check() && completeRebalanceLogListener.check());
     }
 
     /**

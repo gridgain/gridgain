@@ -246,7 +246,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      * @throws IOException If failed.
      */
     @Test
-    public void testInsertSimple() throws IOException {// Ignored in lazy suite.
+    public void testInsertSimple() throws IOException { // Ignored in lazy suite.
         Assume.assumeFalse(GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY"));
 
         testInsert("INSERT INTO new_table (" + COLS + ") " +

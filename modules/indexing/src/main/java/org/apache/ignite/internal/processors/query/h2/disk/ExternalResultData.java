@@ -254,7 +254,7 @@ public class ExternalResultData<T> implements AutoCloseable {
 
         writeToFile(writeBuff);
 
-        if(hashIdx != null)
+        if (hashIdx != null)
             hashIdx.put(row.getKey(), lastWrittenPos);
 
         lastWrittenPos = currentFilePosition();
@@ -525,7 +525,7 @@ public class ExternalResultData<T> implements AutoCloseable {
         file.delete();
 
         if (log.isDebugEnabled())
-            log.debug("Deleted spill file "+ file.getName());
+            log.debug("Deleted spill file " + file.getName());
     }
 
     /**

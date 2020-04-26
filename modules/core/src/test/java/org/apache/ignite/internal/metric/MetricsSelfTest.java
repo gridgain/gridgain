@@ -67,7 +67,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
 
         run(l::increment, 100);
 
-        assertEquals(100*100, l.value());
+        assertEquals(100 * 100, l.value());
 
         l.reset();
 
@@ -81,7 +81,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
 
         run(l::increment, 100);
 
-        assertEquals(100*100, l.value());
+        assertEquals(100 * 100, l.value());
 
         l.reset();
 
@@ -95,7 +95,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
 
         run(() -> l.add(1), 100);
 
-        assertEquals(100*100f, l.value(), .000001);
+        assertEquals(100 * 100f, l.value(), .000001);
 
         l.reset();
 
@@ -109,7 +109,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
 
         run(() -> l.add(1), 100);
 
-        assertEquals(100*100, l.value());
+        assertEquals(100 * 100, l.value());
 
         l.reset();
 
@@ -239,17 +239,17 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
         }));
 
         futs.add(runAsync(() -> {
-            for (int i = 0; i < cnt*2; i++)
+            for (int i = 0; i < cnt * 2; i++)
                 h.value(99);
         }));
 
         futs.add(runAsync(() -> {
-            for (int i = 0; i < cnt*3; i++)
+            for (int i = 0; i < cnt * 3; i++)
                 h.value(500);
         }));
 
         futs.add(runAsync(() -> {
-            for (int i = 0; i < cnt*4; i++)
+            for (int i = 0; i < cnt * 4; i++)
                 h.value(501);
         }));
 
@@ -259,9 +259,9 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
         long[] res = h.value();
 
         assertEquals(cnt, res[0]);
-        assertEquals(cnt*2, res[1]);
-        assertEquals(cnt*3, res[2]);
-        assertEquals(cnt*4, res[3]);
+        assertEquals(cnt * 2, res[1]);
+        assertEquals(cnt * 3, res[2]);
+        assertEquals(cnt * 4, res[3]);
     }
 
     /** */
@@ -354,7 +354,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
     private void run(Runnable r, int cnt) throws org.apache.ignite.IgniteCheckedException {
         List<IgniteInternalFuture> futs = new ArrayList<>();
 
-        for (int i=0; i<cnt; i++) {
+        for (int i = 0; i < cnt; i++) {
             futs.add(runAsync(() -> {
                 for (int j = 0; j < cnt; j++)
                     r.run();

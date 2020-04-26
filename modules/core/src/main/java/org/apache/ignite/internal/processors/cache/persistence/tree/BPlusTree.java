@@ -493,14 +493,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             final int cnt = io.getCount(leafAddr);
 
-            assert cnt <= Short.MAX_VALUE: cnt;
+            assert cnt <= Short.MAX_VALUE : cnt;
 
             int idx = findInsertionPoint(lvl, io, leafAddr, 0, cnt, r.row, 0);
 
             if (idx < 0)
                 return RETRY; // We've found exact match on search but now it's gone.
 
-            assert idx >= 0 && idx < cnt: idx;
+            assert idx >= 0 && idx < cnt : idx;
 
             // Need to do inner replace when we remove the rightmost element and the leaf have no forward page,
             // i.e. it is not the rightmost leaf of the tree.
@@ -526,8 +526,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
 
                 // Retry must reset these fields when we release the whole branch without remove.
-                assert r.needReplaceInner == FALSE: "needReplaceInner";
-                assert r.needMergeEmptyBranch == FALSE: "needMergeEmptyBranch";
+                assert r.needReplaceInner == FALSE : "needReplaceInner";
+                assert r.needMergeEmptyBranch == FALSE : "needMergeEmptyBranch";
 
                 if (cnt == 1) // It was the last element on the leaf.
                     r.needMergeEmptyBranch = TRUE;
@@ -902,7 +902,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             Bool res = write(metaPageId, initRoot, BPlusMetaIO.VERSIONS.latest(), rootId, inlineSize, FALSE,
                 statisticsHolder());
 
-            assert res == TRUE: res;
+            assert res == TRUE : res;
 
             assert treeMeta != null;
         }
@@ -1836,7 +1836,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Always positive index.
      */
     private static int fix(int idx) {
-        assert checkIndex(idx): idx;
+        assert checkIndex(idx) : idx;
 
         if (idx < 0)
             idx = -idx - 1;
@@ -1920,7 +1920,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                 continue;
                             }
 
-                            assert x.isFinished(): res;
+                            assert x.isFinished() : res;
                         }
 
                         return;
@@ -2077,7 +2077,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                 continue;
                             }
 
-                            assert res == FOUND: res;
+                            assert res == FOUND : res;
                         }
 
                         assert r.isFinished();
@@ -3467,7 +3467,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
 
-            if(pageId == rootId)
+            if (pageId == rootId)
                 retry = false; // We are at the root page, there are no other leafs.
 
             if (retry) {
@@ -3488,7 +3488,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (lvl != 0)
                 return false;
 
-            if(io.getCount(pageAddr) == 0) {
+            if (io.getCount(pageAddr) == 0) {
                 // it's an empty tree
                 retry = false;
 
@@ -4138,7 +4138,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (res == NOT_FOUND)
                 res = RETRY;
 
-            assert res == FOUND || res == RETRY: res;
+            assert res == FOUND || res == RETRY : res;
 
             return res;
         }
@@ -4298,7 +4298,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @return Tail to release if an empty branch was not merged.
          */
         private Tail<L> mergeEmptyBranch() throws IgniteCheckedException {
-            assert needMergeEmptyBranch == TRUE: needMergeEmptyBranch;
+            assert needMergeEmptyBranch == TRUE : needMergeEmptyBranch;
 
             Tail<L> t = tail;
 
@@ -4313,7 +4313,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             int cnt = t.getCount();
             int idx = fix(insertionPoint(t));
 
-            assert cnt > 0: cnt;
+            assert cnt > 0 : cnt;
 
             if (idx == cnt)
                 idx--;
@@ -4364,7 +4364,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @throws IgniteCheckedException If failed.
          */
         private boolean isInnerKeyInTail() throws IgniteCheckedException {
-            assert tail.lvl > 0: tail.lvl;
+            assert tail.lvl > 0 : tail.lvl;
 
             return insertionPoint(tail) >= 0;
         }
@@ -4384,7 +4384,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Try to simply release all first.
             if (t.lvl <= 1) {
                 // We've just locked leaf and did not do the remove, can safely release all and retry.
-                assert !isRemoved(): "removed";
+                assert !isRemoved() : "removed";
 
                 // These fields will be setup again on remove from leaf.
                 needReplaceInner = FALSE;
@@ -4427,7 +4427,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          */
         private Result finishTail() throws IgniteCheckedException {
             assert !isFinished();
-            assert tail.type == Tail.EXACT && tail.lvl >= 0: tail;
+            assert tail.type == Tail.EXACT && tail.lvl >= 0 : tail;
 
             if (tail.lvl == 0) {
                 // At the bottom level we can't have a tail without a sibling, it means we have higher levels.
@@ -4619,8 +4619,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @throws IgniteCheckedException If failed.
          */
         private Result lockForward(int lvl) throws IgniteCheckedException {
-            assert fwdId != 0: fwdId;
-            assert backId == 0: backId;
+            assert fwdId != 0 : fwdId;
+            assert backId == 0 : backId;
 
             long fwdId = this.fwdId;
             long fwdPage = acquirePage(fwdId);
@@ -4648,9 +4648,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         private void removeDataRowFromLeaf(long pageId, long page, long pageAddr, Boolean walPlc, BPlusIO<L> io, int cnt,
             int idx)
             throws IgniteCheckedException {
-            assert idx >= 0 && idx < cnt: idx;
-            assert io.isLeaf(): "inner";
-            assert !isRemoved(): "already removed";
+            assert idx >= 0 && idx < cnt : idx;
+            assert io.isLeaf() : "inner";
+            assert !isRemoved() : "already removed";
 
             // Detach the row.
             rmvd = needOld ? getRow(io, pageAddr, idx) : (T)Boolean.TRUE;
@@ -4690,12 +4690,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @throws IgniteCheckedException If failed.
          */
         private int insertionPoint(Tail<L> tail) throws IgniteCheckedException {
-            assert tail.type == Tail.EXACT: tail.type;
+            assert tail.type == Tail.EXACT : tail.type;
 
             if (tail.idx == Short.MIN_VALUE) {
                 int idx = findInsertionPoint(tail.lvl, tail.io, tail.buf, 0, tail.getCount(), row, 0);
 
-                assert checkIndex(idx): idx;
+                assert checkIndex(idx) : idx;
 
                 tail.idx = (short)idx;
             }
@@ -4783,7 +4783,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @return {@code true} If children are correct.
          */
         private boolean checkChildren(Tail<L> prnt, Tail<L> left, Tail<L> right, int idx) {
-            assert idx >= 0 && idx < prnt.getCount(): idx;
+            assert idx >= 0 && idx < prnt.getCount() : idx;
 
             return inner(prnt.io).getLeft(prnt.buf, idx) == left.pageId &&
                 inner(prnt.io).getRight(prnt.buf, idx) == right.pageId;
@@ -5549,7 +5549,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             throws IgniteCheckedException {
             assert io.isLeaf() : io;
             assert cnt != 0 : cnt; // We can not see empty pages (empty tree handled in init).
-            assert startIdx >= 0 || startIdx == -1: startIdx;
+            assert startIdx >= 0 || startIdx == -1 : startIdx;
             assert cnt >= startIdx;
 
             checkDestroyed();

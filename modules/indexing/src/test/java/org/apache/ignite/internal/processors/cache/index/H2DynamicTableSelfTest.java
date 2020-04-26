@@ -335,7 +335,8 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
         try {
             GridTestUtils.assertThrows(null, new Callable<Object>() {
                 @Override public Object call() throws Exception {
-                    doTestCustomNames("new", null, null);return null;
+                    doTestCustomNames("new", null, null);
+                    return null;
                 }
             }, IgniteSQLException.class, "Table already exists: NameTest");
         }
@@ -1522,7 +1523,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
             execute(sql);
 
-            if(testUuid)
+            if (testUuid)
                 execute("INSERT INTO T(\"id\", \"x\") values('" + guid.toString() + "', '" + guid.toString() + "')");
             else
                 execute("INSERT INTO T(\"id\", \"x\") values(1, 'a')");

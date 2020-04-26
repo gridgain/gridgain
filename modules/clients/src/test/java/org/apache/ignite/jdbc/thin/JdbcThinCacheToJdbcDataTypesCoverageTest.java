@@ -379,7 +379,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      * @throws Exception If failed.
      */
     @Override protected void checkBasicCacheOperations(Serializable... valsToCheck) throws Exception {
-        checkBasicCacheOperations((Object o)-> o, valsToCheck);
+        checkBasicCacheOperations((Object o) -> o, valsToCheck);
     }
 
     /**

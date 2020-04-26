@@ -204,7 +204,7 @@ public class IgniteChangeGlobalStateDataStructureTest extends IgniteChangeGlobal
      *
      */
     @Test
-    public void testDeActivateAndActivateAtomicSequence(){
+    public void testDeActivateAndActivateAtomicSequence() {
         String seqName = "mySeq";
 
         Ignite ig1 = primary(0);

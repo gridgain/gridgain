@@ -565,7 +565,7 @@ public class JdbcCheckpointSpi extends IgniteSpiAdapter implements CheckpointSpi
                 catch (SQLException e) {
                     U.rollbackConnection(conn, log);
 
-                    if(++errCnt >= retryNum)
+                    if (++errCnt >= retryNum)
                         throw new IgniteSpiException("Failed to create checkpoint table: " + tblName, e);
 
                     if (log.isDebugEnabled()) {
@@ -741,7 +741,7 @@ public class JdbcCheckpointSpi extends IgniteSpiAdapter implements CheckpointSpi
                 catch (SQLException e) {
                     U.rollbackConnection(conn, log);
 
-                    if(++errCnt >= retryNum) {
+                    if (++errCnt >= retryNum) {
                         throw new IgniteSpiException("Failed to save checkpoint [tblName=" + tblName + ", key=" + key +
                             ']', e);
                     }
@@ -752,7 +752,7 @@ public class JdbcCheckpointSpi extends IgniteSpiAdapter implements CheckpointSpi
             }
         }
         catch (SQLException e) {
-            throw new IgniteSpiException("Failed to save checkpoint [tblName=" + tblName +", key=" + key + ']', e);
+            throw new IgniteSpiException("Failed to save checkpoint [tblName=" + tblName + ", key=" + key + ']', e);
         }
         finally {
             U.close(conn, log);

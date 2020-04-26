@@ -57,7 +57,8 @@ public class DiskSpillingWithBaselineTest extends DiskSpillingAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {super.beforeTest();
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
         initGrid();
     }
 

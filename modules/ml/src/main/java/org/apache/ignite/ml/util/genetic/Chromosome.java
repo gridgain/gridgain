@@ -47,7 +47,7 @@ public class Chromosome implements Comparable {
     /**
      * Returns the double array chromosome representation.
      */
-    public Double[] toDoubleArray(){
+    public Double[] toDoubleArray() {
         return genes;
     }
 
@@ -96,7 +96,7 @@ public class Chromosome implements Comparable {
     /**
      * Creates chromosome copy.
      */
-    public Chromosome copy(){
+    public Chromosome copy() {
         Chromosome cp = new Chromosome(genes);
         cp.fitness = fitness;
         return cp;

@@ -125,7 +125,7 @@ public class MvccDataRow extends DataRow {
             this.mvccOpCntr = mvccOpCntr;
         }
 
-        assert (mvccOpCntr & ~MVCC_OP_COUNTER_MASK) == 0: mvccOpCntr;
+        assert (mvccOpCntr & ~MVCC_OP_COUNTER_MASK) == 0 : mvccOpCntr;
     }
 
     /**

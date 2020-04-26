@@ -31,7 +31,7 @@ import javax.persistence.ManyToOne;
 class Post {
     /** ID. */
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
     /** Author. */

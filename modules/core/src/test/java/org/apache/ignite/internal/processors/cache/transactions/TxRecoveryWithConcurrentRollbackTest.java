@@ -152,7 +152,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
         int[] stripeHolder = new int[1];
 
-        try(final Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+        try (final Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             cache.put(k1, Boolean.TRUE);
             cache.put(k2, Boolean.TRUE);
 
@@ -287,7 +287,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         List<IgniteInternalTx> tx0 = null;
         List<IgniteInternalTx> tx2 = null;
 
-        try(final Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+        try (final Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             cache.put(pk, Boolean.TRUE);
 
             TransactionProxyImpl p = (TransactionProxyImpl)tx;

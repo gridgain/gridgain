@@ -125,7 +125,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
 
         int scanCnt = 0;
 
-        while(m.find())
+        while (m.find())
             scanCnt += Integer.valueOf(m.group(1));
 
         return scanCnt;

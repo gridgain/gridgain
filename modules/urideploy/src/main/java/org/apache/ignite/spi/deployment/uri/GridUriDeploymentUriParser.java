@@ -151,7 +151,7 @@ class GridUriDeploymentUriParser {
         for (int i = 0; i < path.length(); i++) {
             char c = path.charAt(i);
 
-            switch(c) {
+            switch (c) {
                 case ' ': {
                     buf.append("%20"); break;
                 }
@@ -159,7 +159,7 @@ class GridUriDeploymentUriParser {
                 case '%': {
                     buf.append("%25"); break;
                 }
-                case ';':{
+                case ';': {
                     buf.append("%3B"); break;
                 }
 

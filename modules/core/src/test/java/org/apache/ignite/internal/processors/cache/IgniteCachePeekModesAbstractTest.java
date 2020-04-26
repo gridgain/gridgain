@@ -765,7 +765,7 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
 
                 int partSize = 0;
 
-                for (Integer key : keys){
+                for (Integer key : keys) {
                     int keyPart = ignite(nodeIdx).affinity(DEFAULT_CACHE_NAME).partition(key);
                     if (keyPart == part)
                         partSize++;
@@ -795,9 +795,9 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
 
                 int partSize = 0;
 
-                for (Integer key :keys){
+                for (Integer key :keys) {
                     int keyPart = ignite(nodeIdx).affinity(DEFAULT_CACHE_NAME).partition(key);
-                    if(keyPart == part)
+                    if (keyPart == part)
                         partSize++;
                 }
 
@@ -882,7 +882,7 @@ public abstract class IgniteCachePeekModesAbstractTest extends IgniteCacheAbstra
             }
 
             if (cacheMode() == REPLICATED) {
-                assertEquals(primary+backups, cache0.localSizeLong(part, ALL));
+                assertEquals(primary + backups, cache0.localSizeLong(part, ALL));
                 assertEquals(primary, cache0.localSizeLong(part, PRIMARY));
                 assertEquals(backups, cache0.localSizeLong(part, BACKUP));
             }

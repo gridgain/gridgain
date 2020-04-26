@@ -80,7 +80,7 @@ public class CopyBenchmark extends AbstractUploadBenchmark {
      *
      * @return absolute path for generated csv file.
      */
-    private String generate(String filePrefix, long records){
+    private String generate(String filePrefix, long records) {
         try {
             File workDir = new File(System.getProperty("user.dir"));
 
@@ -103,7 +103,7 @@ public class CopyBenchmark extends AbstractUploadBenchmark {
 
             return f.getAbsolutePath();
         }
-        catch (Exception ex){
+        catch (Exception ex) {
             throw new RuntimeException("Couldn't generate CSV file, terminating", ex);
         }
     }

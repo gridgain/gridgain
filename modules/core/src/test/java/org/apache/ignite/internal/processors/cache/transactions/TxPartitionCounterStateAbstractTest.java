@@ -898,7 +898,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
          * @param primary Primary node.
          * @param tx Primary tx.
          */
-        protected void onCounterAssigned(IgniteEx primary, IgniteInternalTx tx, int idx){
+        protected void onCounterAssigned(IgniteEx primary, IgniteInternalTx tx, int idx) {
             log.info("TX: primary counter assigned: [name=" + primary.name() + ", txId=" + idx + ']');
         }
 
@@ -931,7 +931,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
                 });
 
                 // Order counter assigns.
-                if (countForNode(primary, TxState.ASSIGN) == txCnt) {// Wait until all prep requests queued and force prepare order.
+                if (countForNode(primary, TxState.ASSIGN) == txCnt) { // Wait until all prep requests queued and force prepare order.
                     futures.remove(new T3<>(primary, TxState.ASSIGN, version(assigns.get(primary).poll()))).onDone();
                 }
             });

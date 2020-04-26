@@ -2787,7 +2787,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                 if (msgBody != null) {
                     if (predLsnr != null) {
-                        try(OperationSecurityContext s = ctx.security().withContext(initNodeId)) {
+                        try (OperationSecurityContext s = ctx.security().withContext(initNodeId)) {
                             if (!predLsnr.apply(nodeId, msgBody))
                                 removeMessageListener(TOPIC_COMM_USER, this);
                         }

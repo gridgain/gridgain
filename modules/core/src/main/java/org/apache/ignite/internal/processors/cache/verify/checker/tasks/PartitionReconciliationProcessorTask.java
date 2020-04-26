@@ -249,7 +249,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
                 File path = proc.collector().flushResultsToFile(startTime);
 
-                return new T2<>((path != null)? path.getAbsolutePath() : null, reconciliationRes);
+                return new T2<>((path != null) ? path.getAbsolutePath() : null, reconciliationRes);
             }
             catch (Exception e) {
                 String msg = "Reconciliation job failed on node [id=" + ignite.localNode().id() + "]. ";
