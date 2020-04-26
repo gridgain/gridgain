@@ -1016,28 +1016,17 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 if (msg instanceof GridDhtPartitionsSingleMessage) {
                     GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
 
-                    boolean ret = msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).
+                    return msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).
                         topologyVersion().equals(new AffinityTopologyVersion(4, 0));
-
-                    if (ret)
-                        System.out.println();
-
-                    return ret;
                 }
 
                 return false;
             }
         });
 
-        GridTestUtils.runAsync(new Runnable() {
-            @Override public void run() {
-                stopGrid(2);
-            }
-        });
+        stopGrid(2);
 
-        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked();
-
-        // Fill queue with a lot of messages.
+        // Fill a queue with a lot of messages.
         for (int i = 0; i < 1000; i++)
             grid(1).context().cache().context().exchange().refreshPartitions();
 

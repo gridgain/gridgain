@@ -408,56 +408,16 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     } else {
                         GridDhtPartitionsExchangeFuture cur = lastTopologyFuture();
 
-                        if (!cur.isDone() && cur.changedAffinity()) {
-                            boolean stale = true;
-
-                            for (GridDhtPartitionMap map : msg.partitions().values()) {
-                                assert !map.topologyVersion().equals(NONE) :
-                                    "Received map update from uninitialized topology: msg=" + msg + ", exchFut=" + cur;
-
-                                assert !map.topologyVersion().after(cur.initialVersion()) :
-                                    "Received map update from the future: msg=" + msg + ", exchFut=" + cur;
-
-                                if (cur.initialVersion().compareTo(map.topologyVersion()) == 0) {
-                                    stale = false;
-
-                                    break;
+                        if (!cur.isDone() && cur.changedAffinity() && !msg.restoreState()) {
+                            cur.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                                @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
+                                    if (fut.error() == null)
+                                        processSinglePartitionUpdate(node, msg);
                                 }
-                            }
-
-                            if (!stale) {
-                                cur.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
-                                    @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
-                                        if (fut.error() == null)
-                                            processSinglePartitionUpdate(node, msg);
-                                    }
-                                });
-                            }
-                            else if (log.isDebugEnabled()) {
-                                log.debug("Ignoring stale partition update message [msg=" + msg +
-                                    ", topVer=" + cur.initialVersion() + ']');
-                            }
+                            });
 
                             return;
                         }
-                    }
-
-                    if (!crdInitFut.isDone() && !msg.restoreState()) {
-                        GridDhtPartitionExchangeId exchId = msg.exchangeId();
-
-                        if (log.isInfoEnabled()) {
-                            log.info("Waiting for coordinator initialization [node=" + node.id() +
-                                ", nodeOrder=" + node.order() +
-                                ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
-                        }
-
-                        crdInitFut.listen(new CI1<IgniteInternalFuture>() {
-                            @Override public void apply(IgniteInternalFuture fut) {
-                                processSinglePartitionUpdate(node, msg);
-                            }
-                        });
-
-                        return;
                     }
 
                     processSinglePartitionUpdate(node, msg);
@@ -3479,6 +3439,12 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                     rebList.add(grp.cacheOrGroupName());
 
                                     r = cur;
+                                }
+                                else if (grp.persistenceEnabled() && exchFut.context().events().hasServerJoin() &&
+                                    assigns != null && assigns.isEmpty()) {
+                                    // Required to trigger late affinity switch when baseline node returns to a topology
+                                    // with the same counters (see testCommitReorderWithRollbackNoRebalanceAfterRestart).
+                                    scheduleResendPartitions();
                                 }
                             }
                         }
