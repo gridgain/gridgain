@@ -267,7 +267,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest extends CacheMvccAbstractTes
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), false) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), false).getAll();
 
             checkLocks(keys);
 
@@ -362,7 +362,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest extends CacheMvccAbstractTes
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -404,7 +404,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest extends CacheMvccAbstractTes
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -573,7 +573,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest extends CacheMvccAbstractTes
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -615,7 +615,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest extends CacheMvccAbstractTes
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 

@@ -89,7 +89,7 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
 
         String plan = (String)sql("EXPLAIN SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().get(0).get(0);
 
-        assertTrue("Invalid join order: " + plan ,
+        assertTrue("Invalid join order: " + plan,
             Pattern.compile("\"PUBLIC\".\"TBL1\"[\\n\\w\\W]+\"PUBLIC\".\"TBL0\"", Pattern.MULTILINE)
                 .matcher(plan).find());
     }

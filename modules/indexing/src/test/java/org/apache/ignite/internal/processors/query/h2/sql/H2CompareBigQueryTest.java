@@ -191,7 +191,7 @@ public class H2CompareBigQueryTest extends AbstractH2CompareQueryTest {
                 for (int i = 0; i < rootOrderId % 5; i++) {
                     int orderId = idGen.incrementAndGet();
 
-                    CustOrder order = new CustOrder(orderId, rootOrderId, dates.get(orderId % dates.size()) ,
+                    CustOrder order = new CustOrder(orderId, rootOrderId, dates.get(orderId % dates.size()),
                         orderId % 2 == 0 ? "CUSTOM" : "OTHER", orderId);
 
                     add(order);
@@ -499,7 +499,7 @@ public class H2CompareBigQueryTest extends AbstractH2CompareQueryTest {
 
         /** Date */
         @QuerySqlField
-        private Date date ;
+        private Date date;
 
         /**  */
         @QuerySqlField
@@ -557,7 +557,7 @@ public class H2CompareBigQueryTest extends AbstractH2CompareQueryTest {
 
         /** Date */
         @QuerySqlField
-        private Date date ;
+        private Date date;
 
         /**  */
         @QuerySqlField
@@ -617,7 +617,7 @@ public class H2CompareBigQueryTest extends AbstractH2CompareQueryTest {
 
         /** Date */
         @QuerySqlField
-        private Date date ;
+        private Date date;
 
         /**  */
         @QuerySqlField
@@ -715,7 +715,7 @@ public class H2CompareBigQueryTest extends AbstractH2CompareQueryTest {
 
         /** Date */
         @QuerySqlField
-        private Date date ;
+        private Date date;
 
         /** */
         @QuerySqlField

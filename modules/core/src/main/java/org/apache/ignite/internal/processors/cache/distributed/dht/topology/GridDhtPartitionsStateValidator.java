@@ -430,7 +430,7 @@ public class GridDhtPartitionsStateValidator {
             for (Map.Entry<UUID, IgnitePair<Long>> e : p.getValue().entrySet()) {
                 Object consistentId = cctx.discovery().node(topVer, e.getKey()).consistentId();
                 sb.a("consistentId=").a(consistentId).a(" meta=[updCnt=").a(e.getValue().get1())
-                    .a(", size=").a(e.getValue().get2()) .a("] ");
+                    .a(", size=").a(e.getValue().get2()).a("] ");
             }
             sb.a("] ");
         }
@@ -441,7 +441,7 @@ public class GridDhtPartitionsStateValidator {
     /**
      * Add pair of counters and size in result map.
      * @param sourceMap PartitionCounters or PartitionSize
-     * @param resultMap  result map with pair of values
+     * @param resultMap result map with pair of values
      */
     private void fillMapForPartition(Map<UUID, Long> sourceMap,
         Map<UUID, IgnitePair<Long>> resultMap, boolean isFirst) {

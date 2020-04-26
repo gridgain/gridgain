@@ -1179,7 +1179,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
 
             U.error(log, errMsg, e);
 
-            userE = new ComputeUserUndeclaredException(errMsg ,e);
+            userE = new ComputeUserUndeclaredException(errMsg, e);
 
             if (e instanceof Error)
                 throw e;

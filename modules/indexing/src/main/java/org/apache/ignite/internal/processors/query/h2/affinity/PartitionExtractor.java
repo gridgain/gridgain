@@ -836,7 +836,7 @@ public class PartitionExtractor {
             return null;
 
         for (long i = leftLongVal; i <= rightLongVal; i++) {
-            int part = partResolver.partition(i , leftColValueType, tbl0.cacheName());
+            int part = partResolver.partition(i, leftColValueType, tbl0.cacheName());
 
             parts.add(new PartitionConstantNode(tbl0, part));
 

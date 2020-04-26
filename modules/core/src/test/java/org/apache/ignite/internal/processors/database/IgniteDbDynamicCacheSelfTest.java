@@ -160,7 +160,7 @@ public class IgniteDbDynamicCacheSelfTest extends GridCommonAbstractTest {
                 ignite.destroyCache("cache" + i);
             }
 
-            iteration ++;
+            iteration++;
         }
     }
 }

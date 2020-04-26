@@ -219,8 +219,7 @@ public final class PageIdUtils {
             ", flags=" + Integer.toBinaryString(flag(pageId)) +
             ", partId=" + partId(pageId) +
             ", index=" + pageIndex(pageId) +
-            ")"
-            ;
+            ")";
     }
 
     /**

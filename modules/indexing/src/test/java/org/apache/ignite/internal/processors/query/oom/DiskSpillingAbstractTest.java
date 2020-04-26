@@ -533,7 +533,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                 catch (SqlMemoryQuotaExceededException e) {
                     oomExThrown.set(true);
 
-                    assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
+                    assertFalse("Unexpected exception:" + X.getFullStackTrace(e), res.success);
 
                     if (res == Result.ERROR_GLOBAL_QUOTA)
                         assertTrue("Wrong message:" + X.getFullStackTrace(e), e.getMessage().contains("Global quota was exceeded."));

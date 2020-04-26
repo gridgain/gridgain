@@ -62,6 +62,19 @@
         </module>
 
         <!--
+            Checks that there is no whitespace before a token.
+            See: https://checkstyle.sourceforge.io/config_whitespace.html#NoWhitespaceBefore
+        -->
+        <module name="NoWhitespaceBefore">
+            <property name="tokens" value="COMMA, SEMI, POST_INC, POST_DEC, ELLIPSIS, METHOD_REF, GENERIC_END"/>
+        </module>
+
+        <module name="NoWhitespaceBefore">
+            <property name="allowLineBreaks" value="true"/>
+            <property name="tokens" value="DOT"/>
+        </module>
+
+        <!--
             Checks that the whitespace around the Generic tokens are correct.
             See: https://checkstyle.sourceforge.io/config_whitespace.html#GenericWhitespace
         -->
