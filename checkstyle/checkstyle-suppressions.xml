@@ -21,7 +21,7 @@
     "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
-    <suppress checks="EmptyLineSeparator|SingleSpaceSeparator" files="BCrypt\.java|ConcurrentLinkedDeque8\.java"/>
+    <suppress checks="EmptyLineSeparator|SingleSpaceSeparator|MethodParamPad" files="BCrypt\.java|ConcurrentLinkedDeque8\.java"/>
 
     <suppress checks="SingleSpaceSeparator" files="JdbcThinCacheToJdbcDataTypesCoverageTest\.java" lines="86-103"/>
 

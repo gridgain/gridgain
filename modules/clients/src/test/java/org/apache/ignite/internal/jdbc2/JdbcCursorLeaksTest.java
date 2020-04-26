@@ -168,7 +168,7 @@ public class JdbcCursorLeaksTest extends AbstractIndexingCommonTest {
                 return;
 
             if (U.currentTimeMillis() - t0 > timeout)
-                fail ("Timeout. There are unexpected running queries [node=" + ign.name() + ", queries= " + res + ']');
+                fail("Timeout. There are unexpected running queries [node=" + ign.name() + ", queries= " + res + ']');
         }
     }
 

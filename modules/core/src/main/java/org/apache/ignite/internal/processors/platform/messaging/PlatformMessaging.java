@@ -200,7 +200,7 @@ public class PlatformMessaging extends PlatformAbstractTarget {
                 if (messaging.isAsync())
                     return this;
 
-                return new PlatformMessaging (platformCtx, messaging.withAsync());
+                return new PlatformMessaging(platformCtx, messaging.withAsync());
         }
 
         return super.processOutObject(type);

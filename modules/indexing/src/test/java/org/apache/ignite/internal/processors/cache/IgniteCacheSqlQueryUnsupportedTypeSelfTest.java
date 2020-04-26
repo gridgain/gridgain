@@ -48,7 +48,7 @@ public class IgniteCacheSqlQueryUnsupportedTypeSelfTest extends GridCommonAbstra
      * Stops the cluster.
      */
     @After
-    public void tearOff () {
+    public void tearOff() {
         stopAllGrids();
     }
 

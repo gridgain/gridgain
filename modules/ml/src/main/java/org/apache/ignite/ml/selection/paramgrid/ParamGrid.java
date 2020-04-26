@@ -90,7 +90,7 @@ public class ParamGrid {
     /**
      * Prepare data for hyper-parameter tuning.
      */
-    public List<Double[]> getParamRawData () {
+    public List<Double[]> getParamRawData() {
         List<Double[]> res = new ArrayList<>();
         paramValuesByParamIdx.forEach(res::add);
         return res;

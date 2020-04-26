@@ -99,8 +99,7 @@ public class TestingCluster implements Closeable {
      * @return set of servers
      */
     public Collection<InstanceSpec> getInstances() {
-        Iterable<InstanceSpec> transformed = Iterables.transform
-            (
+        Iterable<InstanceSpec> transformed = Iterables.transform(
                 servers,
                 new Function<TestingZooKeeperServer, InstanceSpec>() {
                     @Override
