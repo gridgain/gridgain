@@ -33,7 +33,7 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Task that triggers indexes force rebuild for cpecified caches or cache groups.
+ * Task that triggers indexes force rebuild for specified caches or cache groups.
  */
 @GridInternal
 public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTaskArg, IndexForceRebuildTaskRes> {
@@ -69,7 +69,7 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
 
             final GridCacheProcessor cacheProcessor = ignite.context().cache();
 
-            // Collect info about indexes being rebuit.
+            // Collect info about indexes being rebuilt.
             Set<IndexRebuildStatusInfoContainer> rebuildIdxCaches =
                 cacheProcessor.publicCaches()
                     .stream()
@@ -86,12 +86,13 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
                 Set<String> notFoundCaches = new HashSet<>(arg.cacheNames());
                 notFoundCaches.removeIf(name -> cacheProcessor.cache(name) != null);
 
-                Set<GridCacheContext> cacheContexts = cacheProcessor.publicCaches()
-                                                .stream()
-                                                .filter(c -> !rebuildIdxCachesNames.contains(c.getName()))
-                                                .filter(c -> arg.cacheNames().contains(c.getName()))
-                                                .map(IgniteCacheProxy::context)
-                                                .collect(Collectors.toSet());
+                Set<GridCacheContext> cacheContexts =
+                    cacheProcessor.publicCaches()
+                        .stream()
+                        .filter(c -> !rebuildIdxCachesNames.contains(c.getName()))
+                        .filter(c -> arg.cacheNames().contains(c.getName()))
+                        .map(IgniteCacheProxy::context)
+                        .collect(Collectors.toSet());
 
                 // Collect info about started index rebuild.
                 Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild =
@@ -108,13 +109,14 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
                 Set<String> notFoundGroups = new HashSet<>(arg.cacheGrps());
                 notFoundGroups.removeIf(grpName -> cacheProcessor.findCacheGroup(grpName) != null);
 
-                Set<GridCacheContext> cacheContexts = cacheProcessor.cacheGroups()
-                                                .stream()
-                                                .filter(grpContext -> arg.cacheGrps().contains(grpContext.name()))
-                                                .map(CacheGroupContext::caches)
-                                                .flatMap(List::stream)
-                                                .filter(c -> !rebuildIdxCachesNames.contains(c.name()))
-                                                .collect(Collectors.toSet());
+                Set<GridCacheContext> cacheContexts =
+                    cacheProcessor.cacheGroups()
+                        .stream()
+                        .filter(grpContext -> arg.cacheGrps().contains(grpContext.name()))
+                        .map(CacheGroupContext::caches)
+                        .flatMap(List::stream)
+                        .filter(c -> !rebuildIdxCachesNames.contains(c.name()))
+                        .collect(Collectors.toSet());
 
                 Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild =
                     cacheContexts.stream()
@@ -124,7 +126,8 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
                 cacheProcessor.context().database().forceRebuildIndexes(cacheContexts);
 
                 return new IndexForceRebuildTaskRes(cachesWithStartedRebuild, rebuildIdxCaches, notFoundGroups);
-            } else {
+            }
+            else {
                 assert false : "Neither cache names nor cache groups specified";
 
                 return null;

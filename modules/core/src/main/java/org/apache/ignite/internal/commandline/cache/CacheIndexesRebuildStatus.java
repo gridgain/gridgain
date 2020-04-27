@@ -71,7 +71,8 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         IndexRebuildStatusTaskArg taskArg = new IndexRebuildStatusTaskArg(args.nodeId);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg, args.nodeId, clientCfg);
+            taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
+                args.nodeId, clientCfg);
         }
 
         printStatus(taskRes, logger);
@@ -130,9 +131,12 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
 
             logger.info("");
 
+            final Comparator<IndexRebuildStatusInfoContainer> comp =
+                Comparator.comparing(IndexRebuildStatusInfoContainer::groupName)
+                    .thenComparing(IndexRebuildStatusInfoContainer::cacheName);
+
             entry.getValue().stream()
-                .sorted(Comparator.comparing(IndexRebuildStatusInfoContainer::groupName)
-                                  .thenComparing(IndexRebuildStatusInfoContainer::cacheName))
+                .sorted(comp)
                 .forEach(container -> logger.info(constructCacheOuptutString(entry.getKey(), container)));
         }
 
@@ -144,7 +148,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         final String containerStr = container.toString();
 
         String cacheInfo = containerStr.substring(IndexRebuildStatusInfoContainer.class.getSimpleName().length() + 2,
-                                                  containerStr.length() - 1);
+            containerStr.length() - 1);
 
         return "node_id=" + nodeId + ", " + cacheInfo;
     }

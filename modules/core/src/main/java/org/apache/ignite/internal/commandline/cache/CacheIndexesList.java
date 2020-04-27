@@ -84,7 +84,8 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         IndexListTaskArg taskArg = new IndexListTaskArg(args.groupsRegEx, args.cachesRegEx, args.indexesRegEx);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            taskRes = TaskExecutor.executeTaskByNameOnNode(client, "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, args.nodeId, clientCfg);
+            taskRes = TaskExecutor.executeTaskByNameOnNode(client,
+                "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, args.nodeId, clientCfg);
         }
 
         printIndexes(taskRes, logger);
@@ -217,8 +218,9 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         List<IndexListInfoContainer> sorted = new ArrayList<>(res);
 
         sorted.sort(Comparator.comparing(IndexListInfoContainer::groupName)
-                              .thenComparing(IndexListInfoContainer::cacheName)
-                              .thenComparing(IndexListInfoContainer::indexName));
+            .thenComparing(IndexListInfoContainer::cacheName)
+            .thenComparing(IndexListInfoContainer::indexName)
+        );
 
         String prevGrpName = "";
 

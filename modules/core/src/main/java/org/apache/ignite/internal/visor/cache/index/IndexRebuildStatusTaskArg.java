@@ -23,8 +23,11 @@ import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+/**
+ * Argument for {@link IndexRebuildStatusTask}.
+ */
 public class IndexRebuildStatusTaskArg extends IgniteDataTransferObject {
-    /** Requeired for serialization. */
+    /** Required for serialization. */
     private static final long serialVersionUID = 0L;
 
     /** Node id. */

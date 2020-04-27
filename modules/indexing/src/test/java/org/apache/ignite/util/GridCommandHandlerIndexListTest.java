@@ -82,9 +82,9 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         String outStr = testOut.toString();
 
         assertTrue(outStr.contains("grpName=" + GROUP_NAME +", cacheName=" + CACHE_NAME + ", idxName=PERSON_ORGID_ASC_IDX, " +
-                                   "colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));
-        assertTrue(outStr.contains("grpName=" + GROUP_NAME_SECOND + ", cacheName=" + CACHE_NAME_SECOND + ", idxName=PERSON_ORGID_ASC_IDX, " +
-                                   "colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));
+            "colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));
+        assertTrue(outStr.contains("grpName=" + GROUP_NAME_SECOND + ", cacheName=" + CACHE_NAME_SECOND +
+            ", idxName=PERSON_ORGID_ASC_IDX, colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));
 
         final String[] outputLines = outStr.split("\n");
 
@@ -92,12 +92,13 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
 
         assertEquals("Unexpected number of lines: " + outputLinesNum, outputLinesNum, expectedLinesNum);
 
-        long indexDescrLinesNum = Arrays.stream(outputLines)
-                                        .filter(s -> s.contains("grpName="))
-                                        .count();
+        long indexDescrLinesNum =
+            Arrays.stream(outputLines)
+                .filter(s -> s.contains("grpName="))
+                .count();
 
-        assertEquals("Unexpected number of index desctiption lines: " + indexDescrLinesNum,
-                     indexDescrLinesNum, expectedIndexDescrLinesNum);
+        assertEquals("Unexpected number of index description lines: " + indexDescrLinesNum,
+            indexDescrLinesNum, expectedIndexDescrLinesNum);
 
         Set<IndexListInfoContainer> cmdResult = handler.getLastOperationResult();
         assertNotNull(cmdResult);
@@ -105,9 +106,10 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         final int resSetSize = cmdResult.size();
         assertEquals("Unexpected result set size: " + resSetSize, resSetSize, 2);
 
-        boolean isResSetCorrect = cmdResult.stream()
-                                           .map(IndexListInfoContainer::indexName)
-                                           .allMatch((name) -> name.equals(idxName));
+        boolean isResSetCorrect =
+            cmdResult.stream()
+                .map(IndexListInfoContainer::indexName)
+                .allMatch((name) -> name.equals(idxName));
 
         assertTrue("Unexpected result set", isResSetCorrect);
     }
@@ -144,9 +146,10 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         Set<IndexListInfoContainer> cmdResult = handler.getLastOperationResult();
         assertNotNull(cmdResult);
 
-        boolean isResCorrect = cmdResult.stream()
-            .map(IndexListInfoContainer::groupName)
-            .allMatch(predicate);
+        boolean isResCorrect =
+            cmdResult.stream()
+                .map(IndexListInfoContainer::groupName)
+                .allMatch(predicate);
 
         assertTrue("Unexpected command result", isResCorrect);
 
@@ -157,17 +160,21 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
     /** */
     @Test
     public void testCacheNameFilter1() {
-        checkCacheNameFilter(THREE_ENTRIES_CACHE_NAME_COMMON_PART,
+        checkCacheNameFilter(
+            THREE_ENTRIES_CACHE_NAME_COMMON_PART,
             cacheName -> cacheName.contains(THREE_ENTRIES_CACHE_NAME_COMMON_PART),
-            8);
+            8
+        );
     }
 
     /** */
     @Test
     public void testCacheNameFilter2() {
-        checkCacheNameFilter("^" + THREE_ENTRIES_CACHE_NAME_COMMON_PART,
+        checkCacheNameFilter(
+            "^" + THREE_ENTRIES_CACHE_NAME_COMMON_PART,
             cacheName -> cacheName.startsWith(THREE_ENTRIES_CACHE_NAME_COMMON_PART),
-            4);
+            4
+        );
     }
 
     /** */
@@ -179,9 +186,10 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         Set<IndexListInfoContainer> cmdResult = handler.getLastOperationResult();
         assertNotNull(cmdResult);
 
-        boolean isResCorrect = cmdResult.stream()
-            .map(IndexListInfoContainer::cacheName)
-            .allMatch(predicate);
+        boolean isResCorrect =
+            cmdResult.stream()
+                .map(IndexListInfoContainer::cacheName)
+                .allMatch(predicate);
 
         assertTrue("Unexpected command result", isResCorrect);
 

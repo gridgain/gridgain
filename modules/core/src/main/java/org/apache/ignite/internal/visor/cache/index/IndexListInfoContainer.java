@@ -33,7 +33,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_
  * Container for index info.
  */
 public class IndexListInfoContainer extends IgniteDataTransferObject {
-    /** Requeired for serialization */
+    /** Required for serialization */
     private static final long serialVersionUID = 0L;
 
     /** Group name. */

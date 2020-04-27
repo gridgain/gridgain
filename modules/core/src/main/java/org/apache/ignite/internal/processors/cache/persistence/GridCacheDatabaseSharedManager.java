@@ -1547,7 +1547,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         rebuildIndexes(contexts, (cacheCtx) -> true);
     }
 
-    /** */
+    /**
+     * @param contexts Collection of cache contexts for which indexes should be rebuilt.
+     * @param rebuildCond Condition that should be met for indexes to be rebuilt for specific cache.
+     */
     private void rebuildIndexes(Collection<GridCacheContext> contexts, Function<GridCacheContext, Boolean> rebuildCond) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 

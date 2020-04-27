@@ -80,7 +80,7 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
         ListeningTestLogger testLog = new ListeningTestLogger(false, super.getConfiguration(igniteInstanceName).getGridLogger());
 
         return super.getConfiguration(igniteInstanceName)
-                        .setGridLogger(testLog);
+            .setGridLogger(testLog);
     }
 
     /** {@inheritDoc} */
@@ -197,8 +197,8 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
             }
 
             assertEquals(EXIT_CODE_OK, execute("--cache", "indexes_force_rebuild",
-                                               "--node-id", grid(LAST_NODE_NUM).localNode().id().toString(),
-                                               "--cache-names", CACHE_NAME_1_1 + "," + CACHE_NAME_2_1 + "," + CACHE_NAME_NON_EXISTING));
+                "--node-id", grid(LAST_NODE_NUM).localNode().id().toString(),
+                "--cache-names", CACHE_NAME_1_1 + "," + CACHE_NAME_2_1 + "," + CACHE_NAME_NON_EXISTING));
 
             cacheNamesBlockedIdxRebuild.remove(CACHE_NAME_2_1);
 
@@ -213,7 +213,8 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
 
             for (LogListener cache2Lsnr: cache2Listeners)
                 assertFalse(cache2Lsnr.check());
-        } finally {
+        }
+        finally {
             cacheNamesBlockedIdxRebuild.remove(CACHE_NAME_2_1);
 
             for (int i = 0; i < GRIDS_NUM; i++) {
@@ -247,8 +248,8 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
             }
 
             assertEquals(EXIT_CODE_OK, execute("--cache", "indexes_force_rebuild",
-                                               "--node-id", grid(LAST_NODE_NUM).localNode().id().toString(),
-                                               "--group-names", GRP_NAME_1 + "," + GRP_NAME_2 + "," + GRP_NAME_NON_EXISTING));
+                "--node-id", grid(LAST_NODE_NUM).localNode().id().toString(),
+                "--group-names", GRP_NAME_1 + "," + GRP_NAME_2 + "," + GRP_NAME_NON_EXISTING));
 
             cacheNamesBlockedIdxRebuild.remove(CACHE_NAME_1_2);
 
@@ -262,7 +263,8 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
 
             for (LogListener cache2Lsnr: cache2Listeners)
                 assertFalse(cache2Lsnr.check());
-        } finally {
+        }
+        finally {
             cacheNamesBlockedIdxRebuild.remove(CACHE_NAME_1_2);
 
             for (int i = 0; i < GRIDS_NUM; i++) {
@@ -350,9 +352,9 @@ public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerA
     {
         return GridTestUtils.waitForCondition(
             () -> ignite.context().cache().publicCaches()
-                                          .stream()
-                                          .filter(c -> !excludedCacheNames.contains(c.getName()))
-                                          .allMatch(c -> c.indexReadyFuture().isDone()),
+                .stream()
+                .filter(c -> !excludedCacheNames.contains(c.getName()))
+                .allMatch(c -> c.indexReadyFuture().isDone()),
             timeout);
     }
 

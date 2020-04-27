@@ -54,7 +54,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
 public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuild.Arguments> {
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        String desc = "Triggeres rebuild of all indexes for specified caches or cache groups.";
+        String desc = "Triggers rebuild of all indexes for specified caches or cache groups.";
 
         Map<String, String> map = U.newLinkedHashMap(16);
 
@@ -93,11 +93,14 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
         return taskRes;
     }
 
-    /** */
+    /**
+     * @param res Rebuild task result.
+     * @param logger Logger to print to.
+     */
     private void printResult(IndexForceRebuildTaskRes res, Logger logger) {
         if (!res.notFoundCacheNames().isEmpty()) {
-            String warning = args.cacheGrps == null ? "WARNING: These caches were not found:" :
-                                                      "WARNING: These cache groups were not found:";
+            String warning = args.cacheGrps == null ?
+                "WARNING: These caches were not found:" : "WARNING: These cache groups were not found:";
 
             logger.info(warning);
 
@@ -121,7 +124,8 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
             logger.info("Indexes rebuild was started for these caches:");
 
             printInfos(res.cachesWithStartedRebuild(), logger);
-        } else
+        }
+        else
             logger.info("WARNING: Indexes rebuild was not started for any cache. Check command input.");
 
         logger.info("");
