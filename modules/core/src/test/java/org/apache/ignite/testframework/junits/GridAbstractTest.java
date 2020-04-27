@@ -360,15 +360,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         try {
             for (Logger logger : changedLevels.keySet())
                 logger.setLevel(changedLevels.get(logger));
-        }
-        finally {
-            changedLevels.clear();
-        }
 
-        try {
             assertTrue(unguardedMessages.toString(), F.isEmpty(unguardedMessages));
         }
         finally {
+            changedLevels.clear();
             unguardedMessages.clear();
         }
     }
