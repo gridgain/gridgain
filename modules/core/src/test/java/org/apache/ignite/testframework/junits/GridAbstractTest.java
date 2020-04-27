@@ -197,6 +197,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private static final transient Map<Class<?>, IgniteTestResources> tests = new ConcurrentHashMap<>();
 
     /** */
+    private static final transient Map<Logger, Level> changedLevels = new ConcurrentHashMap<>();
+
+    /** */
     protected static final String DEFAULT_CACHE_NAME = "default";
 
     /** Sustains {@link #beforeTestsStarted()} and {@link #afterTestsStopped()} methods execution.*/
@@ -336,7 +339,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTest()} will be called anyway.
      */
     protected void beforeTest() throws Exception {
-        // No-op.
+        assertTrue(changedLevels + "", F.isEmpty(changedLevels));
     }
 
     /**
@@ -348,7 +351,13 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTest() throws Exception {
-        // No-op.
+        try {
+            for (Logger logger : changedLevels.keySet())
+                logger.setLevel(changedLevels.get(logger));
+        }
+        finally {
+            changedLevels.clear();
+        }
     }
 
     /**
@@ -452,6 +461,24 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return IgniteNodeRunner.startedInstance().log();
 
         return log;
+    }
+
+    protected void setLog4jLogLevel(Level log4jLevel, String cat, String... cats) {
+        for (String c : F.concat(false, cat, F.asList(cats))) {
+            Logger logger = Logger.getLogger(c);
+
+            assertNull(logger + " level: " + log4jLevel, changedLevels.put(logger, logger.getLevel()));
+
+            logger.setLevel(log4jLevel);
+        }
+    }
+
+    protected void setLog4jRootLogLevel(Level log4jLevel) {
+        Logger logger = Logger.getRootLogger();
+
+        assertNull(logger + " level: " + log4jLevel, changedLevels.put(logger, logger.getLevel()));
+
+        logger.setLevel(log4jLevel);
     }
 
     /**

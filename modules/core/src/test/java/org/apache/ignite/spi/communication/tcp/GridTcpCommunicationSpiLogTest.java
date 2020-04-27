@@ -34,6 +34,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -56,6 +57,8 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
+
+        setLog4jRootLogLevel(Level.DEBUG);
 
         srvTestLog = new ListeningTestLogger(true, log);
     }
