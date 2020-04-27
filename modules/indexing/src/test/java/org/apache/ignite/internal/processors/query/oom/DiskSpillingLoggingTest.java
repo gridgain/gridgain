@@ -22,7 +22,6 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -45,7 +44,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
             .andMatches("User's query completed")
             .build();
 
-        setLog4jRootLogLevel(Level.DEBUG);
+        setRootLoggerDebugLevel();
 
         testLog(grid(0)).registerListener(logLsnr);
 
@@ -68,7 +67,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
             .andMatches("User's query completed")
             .build();
 
-        setLog4jRootLogLevel(Level.DEBUG);
+        setRootLoggerDebugLevel();
 
         testLog(grid(0)).registerListener(logLsnr);
 

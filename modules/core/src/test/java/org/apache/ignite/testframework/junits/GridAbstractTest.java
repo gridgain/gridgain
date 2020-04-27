@@ -463,19 +463,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         return log;
     }
 
-    /** */
-    protected void setLog4jLogLevel(Level log4jLevel, String cat, String... cats) {
-        for (String c : F.concat(false, cat, F.asList(cats))) {
-            Logger logger = Logger.getLogger(c);
-
-            assertNull(logger + " level: " + log4jLevel, changedLevels.put(logger, logger.getLevel()));
-
-            logger.setLevel(log4jLevel);
-        }
+    /**
+     * Sets the log level for root logger ({@link #log}) to {@link Level#DEBUG}. The log level will be resetted to
+     * default in {@link #afterTest()}.
+     */
+    protected final void setRootLoggerDebugLevel() {
+        setLog4jRootLogLevel(Level.DEBUG);
     }
 
     /** */
-    protected void setLog4jRootLogLevel(Level log4jLevel) {
+    private void setLog4jRootLogLevel(Level log4jLevel) {
         Logger logger = Logger.getRootLogger();
 
         assertNull(logger + " level: " + log4jLevel, changedLevels.put(logger, logger.getLevel()));
