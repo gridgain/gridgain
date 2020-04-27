@@ -39,7 +39,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testGlobalQuota() throws Exception {
         initGrid("0", "0", null);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry);
 
@@ -63,7 +63,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testOffloading() throws Exception {
         initGrid("0", "0", null);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry);
 
@@ -87,7 +87,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testQueryQuota() throws Exception {
         initGrid("0", "0", null);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING, qry);
 
