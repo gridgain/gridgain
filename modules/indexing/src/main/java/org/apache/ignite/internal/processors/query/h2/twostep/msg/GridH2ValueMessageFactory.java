@@ -161,6 +161,9 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
             case Value.ARRAY:
                 return new GridH2Array(v);
 
+            case Value.ROW:
+                return new GridH2Row(v);
+
             case Value.JAVA_OBJECT:
                 if (v instanceof GridH2ValueCacheObject)
                     return new GridH2CacheObject((GridH2ValueCacheObject)v);

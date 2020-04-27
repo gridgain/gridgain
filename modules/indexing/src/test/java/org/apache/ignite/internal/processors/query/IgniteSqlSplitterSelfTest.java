@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,6 +55,9 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.util.StringUtils;
@@ -898,6 +902,66 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
         finally {
             c1.destroy();
             c2.destroy();
+        }
+    }
+
+    /**
+     * Ensure that a ROW statement could be used in WHERE condition.
+     */
+    @Test
+    public void testRowAsFilter() {
+        IgniteCache<?, ?> cache = grid(CLIENT).getOrCreateCache(cacheConfig("testCache", true));
+
+        try {
+            cache.query(new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)")).getAll();
+
+            for (int i = 0; i < 10; i++) {
+                cache.query(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i)
+                ).getAll();
+            }
+
+            for (int i = 0; i < 10; i++) {
+                List<List<?>> res = cache.query(
+                    new SqlFieldsQuery("select id from test where (val1, val2) = (?, ?)").setArgs(i, 2 * i)
+                ).getAll();
+
+                Assert.assertThat(res, hasSize(1));
+                Assert.assertThat(res.get(0), hasSize(1));
+                assertEquals(i, res.get(0).get(0));
+            }
+        }
+        finally {
+            cache.destroy();
+        }
+    }
+
+    /**
+     * Ensure that a DISTINCT EXPRESSION could be used with aggregates.
+     */
+    @Test
+    public void testRowAsSelectExpressionForAggregatesWithDistinct() {
+        IgniteCache<?, ?> cache = grid(CLIENT).getOrCreateCache(cacheConfig("testCache", true));
+
+        try {
+            cache.query(new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)")).getAll();
+
+            for (int i = 0; i < 10; i++) {
+                cache.query(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i)
+                ).getAll();
+            }
+
+            List<List<?>> res = cache.query(
+                new SqlFieldsQuery("select count(distinct(val1, val2)) from test")
+            ).getAll();
+
+            Assert.assertThat(res, hasSize(1));
+            Assert.assertThat(res.get(0), hasSize(1));
+            assertEquals(10L, res.get(0).get(0));
+        }
+        finally {
+            cache.destroy();
         }
     }
 
@@ -2663,5 +2727,14 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             this.floatField = floatField;
             this.doubleField = doubleField;
         }
+    }
+
+    /** */
+    private static Matcher<Collection<?>> hasSize(int size) {
+        return new CustomMatcher<Collection<?>>("collection should be " + size + " elements in size") {
+            @Override public boolean matches(Object item) {
+                return item instanceof Collection && ((Collection<?>)item).size() == size;
+            }
+        };
     }
 }
