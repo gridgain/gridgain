@@ -139,7 +139,7 @@ public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRe
     }
 
     /** {@inheritDoc} */
-    @Override public SegmentIO toIO(FileIOFactory fileIOFactory) throws IOException {
+    @Override public SegmentIO toReadOnlyIO(FileIOFactory fileIOFactory) throws IOException {
         FileIO fileIO = isCompressed() ? new UnzipFileIO(file()) : fileIOFactory.create(file(), READ);
 
         return new SegmentIO(idx, fileIO);
