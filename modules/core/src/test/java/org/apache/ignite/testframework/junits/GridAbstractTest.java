@@ -463,6 +463,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         return log;
     }
 
+    /** */
     protected void setLog4jLogLevel(Level log4jLevel, String cat, String... cats) {
         for (String c : F.concat(false, cat, F.asList(cats))) {
             Logger logger = Logger.getLogger(c);
@@ -473,6 +474,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         }
     }
 
+    /** */
     protected void setLog4jRootLogLevel(Level log4jLevel) {
         Logger logger = Logger.getRootLogger();
 
