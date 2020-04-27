@@ -2128,6 +2128,20 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * Force checking of rebalance state.
+     */
+    public void checkRebalanceState() {
+        for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
+            if (!grp.isLocal()) {
+                GridDhtPartitionTopology top = grp.topology();
+
+                if (top != null)
+                    cctx.affinity().checkRebalanceState(top, grp.groupId());
+            }
+        }
+    }
+
+    /**
      * Builds warning string for long running transaction.
      *
      * @param tx Transaction.
@@ -3440,12 +3454,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                     rebList.add(grp.cacheOrGroupName());
 
                                     r = cur;
-                                }
-                                else if (grp.persistenceEnabled() && exchFut.context().events().hasServerJoin() &&
-                                    assigns != null && assigns.isEmpty()) {
-                                    // Required to trigger late affinity switch when baseline node returns to a topology
-                                    // with the same counters (see testCommitReorderWithRollbackNoRebalanceAfterRestart).
-                                    scheduleResendPartitions();
                                 }
                             }
                         }

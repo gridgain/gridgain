@@ -3906,6 +3906,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 if (!centralizedAff)
                     onDone(exchCtx.events().topologyVersion(), null);
             }
+
+            // Check if a late affinity can be switched right now.
+            if (!centralizedAff && error() == null) {
+                assert isDone() : this;
+
+                cctx.exchange().checkRebalanceState();
+            }
         }
         catch (IgniteCheckedException e) {
             if (reconnectOnError(e))
@@ -4034,7 +4041,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      */
     private void assignPartitionsStates() {
-        Map<String, List<SupplyPartitionInfo>> supplayInfoMap = log.isInfoEnabled() ?
+        Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
             new ConcurrentHashMap<>() : null;
 
         try {
@@ -4053,8 +4060,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     else {
                         List<SupplyPartitionInfo> list = assignPartitionStates(top);
 
-                        if (supplayInfoMap != null && !F.isEmpty(list))
-                            supplayInfoMap.put(grpDesc.cacheOrGroupName(), list);
+                        if (supplyInfoMap != null && !F.isEmpty(list))
+                            supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
                     }
 
                     return null;
@@ -4065,8 +4072,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to assign partition states", e);
         }
 
-        if (log.isInfoEnabled() && !F.isEmpty(supplayInfoMap))
-            printPartitionRebalancingFully(supplayInfoMap);
+        if (log.isInfoEnabled() && !F.isEmpty(supplyInfoMap))
+            printPartitionRebalancingFully(supplyInfoMap);
 
         timeBag.finishGlobalStage("Assign partitions states");
     }
@@ -4075,21 +4082,21 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Prints detail information about partitions which did not have reservation
      * history enough for historical rebalance.
      *
-     * @param supplayInfoMap Map contains information about supplying partitions.
+     * @param supplyInfoMap Map contains information about supplying partitions.
      */
-    private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplayInfoMap) {
-        if (hasPartitonToLog(supplayInfoMap, false)) {
+    private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplyInfoMap) {
+        if (hasPartitonToLog(supplyInfoMap, false)) {
             log.info("Partitions weren't present in any history reservation: [" +
-                supplayInfoMap.entrySet().stream().map(entry ->
+                supplyInfoMap.entrySet().stream().map(entry ->
                     "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
                         .filter(info -> !info.isHistoryReserved())
                         .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
                 ).collect(Collectors.joining(", ")) + ']');
         }
 
-        if (hasPartitonToLog(supplayInfoMap, true)) {
+        if (hasPartitonToLog(supplyInfoMap, true)) {
             log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
-                supplayInfoMap.entrySet().stream().map(entry ->
+                supplyInfoMap.entrySet().stream().map(entry ->
                     "[grp=" + entry.getKey() + ' ' +
                         entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
                             "[part=" + info.part() +
