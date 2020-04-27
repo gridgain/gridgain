@@ -358,7 +358,12 @@
         </profile>
 
         <profile>
-            <id>release</id>
+            <id>release-cpp</id>
+            <activation>
+                <file>
+                    <exists>${basedir}/target/release-package-${ignite.edition}/platforms/cpp/configure.ac</exists>
+                </file>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -433,6 +438,14 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
