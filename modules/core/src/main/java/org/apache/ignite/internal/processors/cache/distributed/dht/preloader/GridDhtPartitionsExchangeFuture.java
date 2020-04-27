@@ -2915,6 +2915,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         fullMsg.rebalanced(rebalanced());
 
+        if (rebalanced())
+            U.dumpStack("Full mesg marked as rebalanced");
+
         try {
             cctx.io().send(node, fullMsg, SYSTEM_POOL);
 
@@ -3074,6 +3077,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         createPartitionsMessage(true, node.version().compareToIgnoreTimestamp(PARTIAL_COUNTERS_MAP_SINCE) >= 0);
 
                     msg.rebalanced(rebalanced());
+
+                    if (rebalanced())
+                        U.dumpStack("Full mesg marked as rebalanced");
+
 
                     finishState0 = new FinishState(cctx.localNodeId(), initialVersion(), msg);
                 }
@@ -3750,8 +3757,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             GridDhtPartitionsFullMessage msg = createPartitionsMessage(true,
                 minVer.compareToIgnoreTimestamp(PARTIAL_COUNTERS_MAP_SINCE) >= 0);
 
-            if (!cctx.affinity().rebalanceRequired())
+            if (!cctx.affinity().rebalanceRequired()) {
                 msg.rebalanced(true);
+
+                U.dumpStack("Full mesg marked as rebalanced");
+
+            }
 
             if (exchCtx.mergeExchanges()) {
                 assert !centralizedAff;

@@ -352,8 +352,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      */
     public void addToWaitGroup(int grpId, int part, AffinityTopologyVersion topVer, List<ClusterNode> assignment) {
         synchronized (mux) {
-            if (waitInfo == null)
+            if (waitInfo == null) {
                 waitInfo = new WaitRebalanceInfo(topVer);
+
+                U.dumpStack("Init wait grps in addToWaitGroup");
+            }
 
             waitInfo.add(grpId, part, assignment);
         }
@@ -2244,6 +2247,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         synchronized (mux) {
+            if (waitInfo == null && !waitRebalanceInfo.empty())
+                U.dumpStack("Init wait grps in initAffinityOnNodeJoin");
+
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
         }
     }
@@ -2595,6 +2601,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         synchronized (mux) {
+            if (waitInfo == null && !waitRebalanceInfo.empty())
+                U.dumpStack("Init wait grps in initAffinityBasedOnPartitionsAvailability");
+
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
         }
 
