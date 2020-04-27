@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -25,11 +24,14 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+
 /**
- * Tests for checking rebalance log messages.
+ * Tests for checking historical rebalance log messages.
  */
 public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
     /** This timeout should be big enough in order to prohibit checkpoint triggered by timeout. */
@@ -90,33 +92,22 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
      *         created.</li>
      *         <li>Start, previously stopped node and await for PME.</li>
      *     </ol>
-     *  <p>
-     *      <b>Expected result:</b>
-     *      Assert that (after restarting second node) log would contain following messages expected number of times:
-     *      <ul>
-     *          <li>'Following partitions were reserved for potential history rebalance [groupId=1813188848
-     *          parts=[0-7], groupId=1813188847 parts=[0-7]]'
-     *          Meaning that partitions were reserved for history rebalance.</li>
-     *          <li>'Starting rebalance routine [cache_group1, topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0],
-     *          supplier=*, fullPartitions=[0], histPartitions=[0-7]]' Meaning that history rebalance started.</li>
-     *      </ul>
-     *      And assert that (after restarting second node) log would <b>not</b> contain following messages:
-     *      <ul>
-     *          <li>Unable to perform historical rebalance...</li>
-     *      </ul>
+     * <p>
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "1")
     public void testHistoricalRebalanceLogMsg() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "1");
+        LogListener expMsgsLsnr = LogListener.matches(str ->
+            str.startsWith("Reserved cache groups with first reserved checkpoint IDs and reasons why previous checkpoint was inapplicable:") &&
+                str.contains("cache_group1") && str.contains("cache_group2")).times(3).
+            andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
+                str.contains("fullPartitions=[], histPartitions=[0-7]")).times(2).build();
 
-        LogListener expMsgsLsnr = LogListener.
-            matches("Following partitions were reserved for potential history rebalance [grpId=1813188848," +
-                " grpName=cache_group2, parts=[0-7], grpId=1813188847, grpName=cache_group1, parts=[0-7]]").times(3).
-            andMatches("fullPartitions=[], histPartitions=[0-7]").times(2).build();
-
-        LogListener unexpectedMessagesLsnr =
-            LogListener.matches("Unable to perform historical rebalance").build();
+        LogListener unexpectedMessagesLsnr = LogListener.matches((str) ->
+            str.startsWith("Partitions weren't present in any history reservation:") ||
+                str.startsWith("Partitions were reserved, but maximum available counter is greater than demanded:")
+        ).build();
 
         checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr, unexpectedMessagesLsnr);
 
@@ -137,31 +128,17 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
      *         created.</li>
      *         <li>Start, previously stopped node and await for PME.</li>
      *     </ol>
-     *  <p>
-     *      <b>Expected result:</b>
-     *      Assert that (after restarting second node) log would contain following messages expected number of times:
-     *      <ul>
-     *          <li>'Following partitions were reserved for potential history rebalance []'
-     *          Meaning that no partitions were reserved for history rebalance.</li>
-     *          <li>'Unable to perform historical rebalance cause history supplier is not available'</li>
-     *          <li>'Unable to perform historical rebalance cause partition is supposed to be cleared'</li>
-     *          <li>'Starting rebalance routine [cache_group1, topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0],
-     *          supplier=* fullPartitions=[0-7], histPartitions=[]]'</li>
-     *      </ul>
+     * <p>
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "500000")
     public void testFullRebalanceLogMsgs() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "500000");
         LogListener expMsgsLsnr = LogListener.
-            matches("Following partitions were reserved for potential history rebalance []").times(4).
-            andMatches("Unable to perform historical rebalancing because a history supplier is not available [" +
-                "grpId=1813188848, grpName=cache_group2, parts=[0-7]," +
-                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").
-            andMatches("Unable to perform historical rebalancing because a history supplier is not available [" +
-                "grpId=1813188847, grpName=cache_group1, parts=[0-7]," +
-                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").
-            andMatches("fullPartitions=[0-7], histPartitions=[]").times(2).build();
+            matches("Partitions weren't present in any history reservation: " +
+                "[[grp=cache_group2 part=[[0-7]]], [grp=cache_group1 part=[[0-7]]]]").
+            andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
+                str.contains("fullPartitions=[0-7], histPartitions=[]")).times(2).build();
 
         checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr);
 
