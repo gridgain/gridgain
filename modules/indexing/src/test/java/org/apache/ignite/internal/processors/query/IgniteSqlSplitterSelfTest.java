@@ -910,20 +910,22 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testRowAsFilter() {
-        IgniteCache<?, ?> cache = grid(CLIENT).getOrCreateCache(cacheConfig("testCache", true));
+        GridQueryProcessor qryProc = grid(CLIENT).context().query();
 
         try {
-            cache.query(new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)")).getAll();
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)"), false
+            ).getAll();
 
             for (int i = 0; i < 10; i++) {
-                cache.query(
-                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i)
+                qryProc.querySqlFields(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i), false
                 ).getAll();
             }
 
             for (int i = 0; i < 10; i++) {
-                List<List<?>> res = cache.query(
-                    new SqlFieldsQuery("select id from test where (val1, val2) = (?, ?)").setArgs(i, 2 * i)
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("select id from test where (val1, val2) = (?, ?)").setArgs(i, 2 * i), false
                 ).getAll();
 
                 Assert.assertThat(res, hasSize(1));
@@ -932,7 +934,9 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             }
         }
         finally {
-            cache.destroy();
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("drop table if exists test"), false
+            ).getAll();
         }
     }
 
@@ -941,19 +945,21 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testRowAsSelectExpressionForAggregatesWithDistinct() {
-        IgniteCache<?, ?> cache = grid(CLIENT).getOrCreateCache(cacheConfig("testCache", true));
+        GridQueryProcessor qryProc = grid(CLIENT).context().query();
 
         try {
-            cache.query(new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)")).getAll();
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)"), false
+            ).getAll();
 
             for (int i = 0; i < 10; i++) {
-                cache.query(
-                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i)
+                qryProc.querySqlFields(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i), false
                 ).getAll();
             }
 
-            List<List<?>> res = cache.query(
-                new SqlFieldsQuery("select count(distinct(val1, val2)) from test")
+            List<List<?>> res = qryProc.querySqlFields(
+                new SqlFieldsQuery("select count(distinct(val1, val2)) from test"), false
             ).getAll();
 
             Assert.assertThat(res, hasSize(1));
@@ -961,7 +967,9 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             assertEquals(10L, res.get(0).get(0));
         }
         finally {
-            cache.destroy();
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("drop table if exists test"), false
+            ).getAll();
         }
     }
 
