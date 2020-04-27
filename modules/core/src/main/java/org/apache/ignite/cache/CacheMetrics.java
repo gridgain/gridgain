@@ -20,6 +20,8 @@ import javax.cache.Cache;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.mxbean.TransactionsMXBean;
 
 /**
  * Cache metrics used to obtain statistics on cache itself.
@@ -708,8 +710,10 @@ public interface CacheMetrics {
 
     /**
      * Checks if there were any tx key collisions last time.
+     * Interval for check specified throught: {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} or
+     * {@link TransactionsMXBean#setTxKeyCollisionsInterval(int)}.
      *
-     * @return String representation.
+     * @return Key collisions and appropriate queue size string representation.
      */
     public String getTxKeyCollisions();
 }
