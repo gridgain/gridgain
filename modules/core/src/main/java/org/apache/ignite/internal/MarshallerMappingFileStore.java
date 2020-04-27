@@ -27,11 +27,14 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.Lock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.util.GridStripedLock;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.MarshallerContext;
 
@@ -53,19 +56,36 @@ final class MarshallerMappingFileStore {
     /** */
     private final IgniteLogger log;
 
+    /**
+     * Kernel context
+     */
+    private final GridKernalContext ctx;
+
     /** Marshaller mapping directory */
-    private final File workDir;
+    private final File mappingDir;
 
     /** */
     private final String FILE_EXTENSION = ".classname";
 
     /**
+     * @param ctx           Context
      * @param igniteWorkDir Ignite work directory
-     * @param log Logger.
+     * @param log           Logger.
      */
-    MarshallerMappingFileStore(String igniteWorkDir, IgniteLogger log) throws IgniteCheckedException {
-        workDir = U.resolveWorkDirectory(igniteWorkDir, "marshaller", false);
+    MarshallerMappingFileStore(final GridKernalContext ctx,
+        String igniteWorkDir,
+        IgniteLogger log
+    ) throws IgniteCheckedException {
+        this.ctx = ctx;
         this.log = log;
+
+        mappingDir = U.resolveWorkDirectory(
+            igniteWorkDir,
+            DataStorageConfiguration.DFLT_MARSHALLER_PATH,
+            false
+        );
+
+        fixLegacyFolder();
     }
 
     /**
@@ -73,9 +93,13 @@ final class MarshallerMappingFileStore {
      * @param log logger.
      * @param marshallerMappingFileStoreDir custom marshaller work directory
      */
-    MarshallerMappingFileStore(final IgniteLogger log, final File marshallerMappingFileStoreDir) {
-        this.workDir = marshallerMappingFileStoreDir;
+    MarshallerMappingFileStore(final GridKernalContext ctx, final IgniteLogger log,
+        final File marshallerMappingFileStoreDir) throws IgniteCheckedException {
+        this.ctx = ctx;
+        this.mappingDir = marshallerMappingFileStoreDir;
         this.log = log;
+
+        fixLegacyFolder();
     }
 
     /**
@@ -91,7 +115,7 @@ final class MarshallerMappingFileStore {
         lock.lock();
 
         try {
-            File file = new File(workDir, fileName);
+            File file = new File(mappingDir, fileName);
 
             try (FileOutputStream out = new FileOutputStream(file)) {
                 try (Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
@@ -130,7 +154,7 @@ final class MarshallerMappingFileStore {
         lock.lock();
 
         try {
-            File file = new File(workDir, fileName);
+            File file = new File(mappingDir, fileName);
 
             long time = 0;
 
@@ -178,7 +202,7 @@ final class MarshallerMappingFileStore {
      * @param marshCtx Marshaller context to register mappings.
      */
     void restoreMappings(MarshallerContext marshCtx) throws IgniteCheckedException {
-        for (File file : workDir.listFiles()) {
+        for (File file : mappingDir.listFiles()) {
             String name = file.getName();
 
             byte platformId = getPlatformId(name);
@@ -219,6 +243,42 @@ final class MarshallerMappingFileStore {
         }
         else
             writeMapping(platformId, typeId, typeName);
+    }
+
+    /**
+     * Try looking for legacy directory with marshaller mappings and move it to new directory
+     */
+    private void fixLegacyFolder() throws IgniteCheckedException {
+        if (ctx.config().getWorkDirectory() == null)
+            return;
+
+        File legacyDir = new File(
+            ctx.config().getWorkDirectory(),
+            "marshaller"
+        );
+
+        if (legacyDir.exists()) {
+            try {
+                IgniteUtils.copy(legacyDir, mappingDir, true);
+            }
+            catch (IOException e) {
+                throw new IgniteCheckedException("Failed to copy legacy marshaller mappings dir to new location", e);
+            }
+
+            File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
+
+            try {
+                // rename legacy dir so if deletion fails in the middle, we won't be stuck with half-deleted
+                // marshaller mappings
+                Files.move(legacyDir.toPath(), legacyTmpDir.toPath());
+            }
+            catch (IOException e) {
+                throw new IgniteCheckedException("Failed to rename legacy marshaller mappings dir", e);
+            }
+
+            if (!IgniteUtils.delete(legacyTmpDir))
+                throw new IgniteCheckedException("Failed to delete legacy marshaller mappings dir");
+        }
     }
 
     /**

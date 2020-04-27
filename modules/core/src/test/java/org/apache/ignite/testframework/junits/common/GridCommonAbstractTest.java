@@ -2034,8 +2034,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.BINARY_METADATA_DFLT_PATH,
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
             false));
     }
 

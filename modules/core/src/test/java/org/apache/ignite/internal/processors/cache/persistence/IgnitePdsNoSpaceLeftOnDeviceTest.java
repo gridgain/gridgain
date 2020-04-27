@@ -131,7 +131,7 @@ public class IgnitePdsNoSpaceLeftOnDeviceTest extends GridCommonAbstractTest {
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             if (unluckyConsistentId.get() != null
                 && file.getAbsolutePath().contains(unluckyConsistentId.get())
-                && file.getAbsolutePath().contains(DataStorageConfiguration.BINARY_METADATA_DFLT_PATH))
+                && file.getAbsolutePath().contains(DataStorageConfiguration.DFLT_BINARY_METADATA_PATH))
                 throw new IOException("No space left on device");
 
             return delegateFactory.create(file, modes);

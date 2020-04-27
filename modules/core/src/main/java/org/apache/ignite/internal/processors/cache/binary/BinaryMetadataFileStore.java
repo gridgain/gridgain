@@ -104,7 +104,7 @@ class BinaryMetadataFileStore {
         else
             metadataDir = new File(U.resolveWorkDirectory(
                 ctx.config().getWorkDirectory(),
-                DataStorageConfiguration.BINARY_METADATA_DFLT_PATH,
+                DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
                 false
             ), nodeFolderName);
 
@@ -276,10 +276,9 @@ class BinaryMetadataFileStore {
         if (ctx.config().getWorkDirectory() == null)
             return;
 
-        File legacyDir = new File(U.resolveWorkDirectory(
+        File legacyDir = new File(new File(
             ctx.config().getWorkDirectory(),
-            "binary_meta",
-            false
+            "binary_meta"
         ), consistendId);
 
         if (legacyDir.exists()) {

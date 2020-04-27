@@ -122,7 +122,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
     private void cleanUpWorkDir() throws Exception {
         String workDir = U.defaultWorkDirectory();
 
-        U.delete(U.resolveWorkDirectory(workDir, "marshaller", false));
+        U.delete(U.resolveWorkDirectory(workDir, DataStorageConfiguration.DFLT_MARSHALLER_PATH, false));
     }
 
     /**
@@ -178,7 +178,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
 
         String fileName = typeId + ".classname0";
 
-        File marshStoreDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false);
+        File marshStoreDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false);
 
         try (FileOutputStream out = new FileOutputStream(new File(marshStoreDir, fileName))) {
             try (Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {

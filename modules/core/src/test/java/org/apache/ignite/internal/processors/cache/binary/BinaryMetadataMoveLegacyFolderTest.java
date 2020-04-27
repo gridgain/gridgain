@@ -179,4 +179,47 @@ public class BinaryMetadataMoveLegacyFolderTest extends GridCommonAbstractTest {
         assertEquals(1, test.intValue());
     }
 
+
+
+    /**
+     * Test that marshaller directory, that was previously located in workdir's root, is successfully moving to PDS
+     * folder.
+     */
+    @Test
+    public void testMarshallerMappingsDirectoryMigration() throws Exception {
+        IgniteConfiguration configuration = getConfiguration();
+
+        String typeName = "TestBinaryType";
+
+        File legacyDir = U.resolveWorkDirectory(
+            U.defaultWorkDirectory(),
+            "marshaller",
+            false
+        );
+
+        // just some random type id
+        String typeIdFile = "708045005.classname0";
+
+        File testBinaryTypeDefFile = new File(legacyDir, typeIdFile);
+
+        // write typename definition to legacy folder
+        Files.write(testBinaryTypeDefFile.toPath(), typeName.getBytes());
+
+        startGrid(configuration);
+
+        // legacy marshaller mappings dir must be deleted at this moment
+        assertFalse(legacyDir.exists());
+
+        File newDir = U.resolveWorkDirectory(
+            U.defaultWorkDirectory(),
+            DataStorageConfiguration.DFLT_MARSHALLER_PATH,
+            false
+        );
+
+        // assert folder and contents moved to new location
+        assertTrue(newDir.exists());
+
+        assertTrue(new File(newDir, typeIdFile).exists());
+    }
+
 }

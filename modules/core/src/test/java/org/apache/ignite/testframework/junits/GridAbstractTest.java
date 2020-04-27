@@ -639,8 +639,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * Will clean and re-create marshaller directory from scratch.
      */
     private void resolveWorkDirectory() throws Exception {
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", true);
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.BINARY_METADATA_DFLT_PATH, true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, true);
     }
 
     /** */

@@ -159,7 +159,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
         // Fake folder provided to perform processor startup on empty folder.
         if (binaryMetadataFileStoreDir == null)
-            binaryMetadataFileStoreDir = new File(DataStorageConfiguration.BINARY_METADATA_DFLT_PATH).getAbsoluteFile();
+            binaryMetadataFileStoreDir = new File(DataStorageConfiguration.DFLT_BINARY_METADATA_PATH).getAbsoluteFile();
 
         this.cacheObjProcessor = binaryProcessor(this, binaryMetadataFileStoreDir);
 
