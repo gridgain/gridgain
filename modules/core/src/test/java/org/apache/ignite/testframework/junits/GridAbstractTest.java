@@ -113,6 +113,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.config.GridTestProperties;
@@ -172,9 +173,6 @@ import static org.apache.ignite.testframework.config.GridTestProperties.IGNITE_C
     "TransientFieldInNonSerializableClass"
 })
 public abstract class GridAbstractTest extends JUnitAssertAware {
-    /** */
-    private static final String UNGUARDED_LOG_USAGE_WARN_MSG = "Logging at TRACE level without checking if TRACE level is enabled";
-
     /**************************************************************
      * DO NOT REMOVE TRANSIENT - THIS OBJECT MIGHT BE TRANSFERRED *
      *                  TO ANOTHER NODE.                          *
@@ -312,7 +310,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected GridAbstractTest() throws IgniteCheckedException {
         this(false);
 
-        log = getIgniteTestResources().getLogger().getLogger(getClass());
+        ListeningTestLogger logger = new ListeningTestLogger(getIgniteTestResources().getLogger().getLogger(getClass()));
+
+        logger.registerListener(warnUnguardedLogUsagelister);
+
+        log = logger;
     }
 
     /**
@@ -326,7 +328,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         // Initialize properties. Logger initialized here.
         GridTestProperties.init();
 
-        log = new GridTestLog4jLogger();
+        ListeningTestLogger logger = new ListeningTestLogger(new GridTestLog4jLogger());
+
+        logger.registerListener(warnUnguardedLogUsagelister);
+
+        log = logger;
 
         GridAbstractTest.startGrid = startGrid;
     }
@@ -357,6 +363,13 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         }
         finally {
             changedLevels.clear();
+        }
+
+        try {
+            assertTrue(unguardedMessages.toString(), F.isEmpty(unguardedMessages));
+        }
+        finally {
+            unguardedMessages.clear();
         }
     }
 

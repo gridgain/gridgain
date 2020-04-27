@@ -21,6 +21,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,31 +44,52 @@ public class ListeningTestLogger implements IgniteLogger {
      * Default constructor.
      */
     public ListeningTestLogger() {
-        this(false);
+        this(null);
     }
 
     /**
-     * @param dbg If set to {@code true}, enables debug and trace log messages processing.
+     * @param dbg Ignored. For setting debug use {@link GridAbstractTest#setRootLoggerDebugLevel()}.
+     * @deprecated Use {@link #ListeningTestLogger()} instead.
      */
+    @Deprecated
     public ListeningTestLogger(boolean dbg) {
-        this(dbg, null);
+        this(null);
     }
 
     /**
-     * @param dbg If set to {@code true}, enables debug and trace log messages processing.
+     * @param dbg Ignored. For setting debug use {@link GridAbstractTest#setRootLoggerDebugLevel()}.
+     * @param echo Logger to echo all messages, limited by {@code dbg} flag.
+     * @deprecated Use {@link #ListeningTestLogger(IgniteLogger)} instead.
+     */
+    @Deprecated
+    public ListeningTestLogger(boolean dbg, @Nullable IgniteLogger echo) {
+        this(echo);
+    }
+
+    /**
      * @param echo Logger to echo all messages, limited by {@code dbg} flag.
      */
-    public ListeningTestLogger(boolean dbg, @Nullable IgniteLogger echo) {
+    public ListeningTestLogger(@Nullable IgniteLogger echo) {
         this.echo = echo;
     }
 
     /**
-     * @param dbg If set to {@code true}, enables debug and trace log messages processing.
+     * @param dbg Ignored. For setting debug use {@link GridAbstractTest#setRootLoggerDebugLevel()}.
+     * @param echo Logger to echo all messages, limited by {@code dbg} flag.
+     * @param lsnrs LogListeners to register instantly.
+     * @deprecated Use {@link #ListeningTestLogger(IgniteLogger, LogListener...)} instead.
+     */
+    @Deprecated
+    public ListeningTestLogger(boolean dbg, @Nullable IgniteLogger echo, @NotNull LogListener... lsnrs) {
+        this(echo, lsnrs);
+    }
+
+    /**
      * @param echo Logger to echo all messages, limited by {@code dbg} flag.
      * @param lsnrs LogListeners to register instantly.
      */
-    public ListeningTestLogger(boolean dbg, @Nullable IgniteLogger echo, @NotNull LogListener... lsnrs) {
-        this(dbg, echo);
+    public ListeningTestLogger(@Nullable IgniteLogger echo, @NotNull LogListener... lsnrs) {
+        this(echo);
 
         for (LogListener lsnr : lsnrs)
             registerListener(lsnr);
