@@ -294,7 +294,7 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
         for (int i = 0; i < getSpiCount(); i++) {
             CommunicationSpi<Message> spi = getSpi(i);
 
-            GridTestUtils.setFieldValue(spi, "igniteInstanceName", "grid-" + i);
+            GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
             IgniteTestResources rsrcs = new IgniteTestResources();
 
@@ -320,7 +320,7 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
 
             rsrcs.inject(spi);
 
-            GridTestUtils.setFieldValue(spi, "igniteInstanceName", "grid-" + i);
+            GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
             if (useSsl) {
                 IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");

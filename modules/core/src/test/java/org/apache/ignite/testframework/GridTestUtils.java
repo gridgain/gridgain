@@ -1654,6 +1654,45 @@ public final class GridTestUtils {
 
             Field field = cls.getDeclaredField(fieldName);
 
+            boolean isFinal = (field.getModifiers() & Modifier.FINAL) != 0;
+
+            boolean isStatic = (field.getModifiers() & Modifier.STATIC) != 0;
+
+            /**
+             * http://java.sun.com/docs/books/jls/third_edition/html/memory.html#17.5.3
+             * If a final field is initialized to a compile-time constant in the field declaration,
+             *   changes to the final field may not be observed.
+             */
+            if (isFinal && isStatic)
+                throw new IgniteException("Modification of static final field through reflection.");
+
+            boolean accessible = field.isAccessible();
+
+            if (!accessible)
+                field.setAccessible(true);
+
+            field.set(obj, val);
+        }
+        catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new IgniteException("Failed to set object field [obj=" + obj + ", field=" + fieldName + ']', e);
+        }
+    }
+
+    /**
+     * Set object field value via reflection.
+     *
+     * @param obj Object to set field value to.
+     * @param cls Class to get field from.
+     * @param fieldName Field name to set value for.
+     * @param val New field value.
+     * @throws IgniteException In case of error.
+     */
+    public static void setFieldValue(Object obj, Class cls, String fieldName, Object val) throws IgniteException {
+        assert fieldName != null;
+
+        try {
+            Field field = cls.getDeclaredField(fieldName);
+
             boolean accessible = field.isAccessible();
 
             if (!accessible)

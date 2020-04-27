@@ -88,12 +88,12 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        GridTestUtils.setFieldValue(TxDeadlockDetection.class, "DEADLOCK_TIMEOUT", (int)(getTestTimeout() * 2));
+        GridTestUtils.setFieldValue(TxDeadlockDetection.class, "deadLockTimeout", (int)(getTestTimeout() * 2));
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
-        GridTestUtils.setFieldValue(TxDeadlockDetection.class, "DEADLOCK_TIMEOUT",
+        GridTestUtils.setFieldValue(TxDeadlockDetection.class, "deadLockTimeout",
             getInteger(IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT, 60000));
     }
 
