@@ -53,6 +53,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -109,6 +110,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -122,6 +125,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /**
@@ -133,6 +138,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     @Test
     public void testNodeJoinIsNotBlockedByAsyncMetaWriting() throws Exception {
         final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
+
+        setLog4jRootLogLevel(Level.DEBUG);
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener submitMsgLsnr = LogListener.matches("Submitting task for async write for").build();
@@ -266,6 +273,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         LogListener cancelFutureLsnr = LogListener.matches("Cancelling future for write operation").build();
         listeningLog.registerListener(cancelFutureLsnr);
 
+        setLog4jRootLogLevel(Level.DEBUG);
+
         IgniteEx ig1 = startGrid(1);
 
         ig0.cluster().active(true);
@@ -351,6 +360,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             MetadataUpdateAcceptedMessage.class,
             (topVer, snd, msg) -> suppressException(fileWriteLatch::await)
         );
+
+        setLog4jRootLogLevel(Level.DEBUG);
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener waitingForWriteLsnr = LogListener.matches("Waiting for write completion of").build();
