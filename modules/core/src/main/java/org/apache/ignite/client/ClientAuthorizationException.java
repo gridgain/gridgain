@@ -34,6 +34,15 @@ public class ClientAuthorizationException extends ClientException {
     }
 
     /**
+     * Constructs a new exception with the specified message.
+     *
+     * @param msg The message.
+     */
+    public ClientAuthorizationException(String msg) {
+        super(msg);
+    }
+
+    /**
      * Constructs a new exception with the specified cause and a detail
      * message of <tt>(cause==null ? null : cause.toString())</tt>.
      *

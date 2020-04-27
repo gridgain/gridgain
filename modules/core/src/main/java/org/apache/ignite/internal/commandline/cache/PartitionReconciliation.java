@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -30,7 +29,6 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
@@ -50,8 +48,6 @@ import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
@@ -192,8 +188,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         );
 
         List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()
-            .filter(node -> Objects.equals(node.attribute(IgniteNodeAttributes.ATTR_CLIENT_MODE), false))
-            .filter(node -> !nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.PARTITION_RECONCILIATION))
+            .filter(node -> !node.isClient())
+            .filter(node -> !node.supports(IgniteFeatures.PARTITION_RECONCILIATION))
             .collect(Collectors.toList());
 
         if (!unsupportedSrvNodes.isEmpty()) {
@@ -375,10 +371,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     }
 
     /**
-     * @return String with meta information about current run of partition-reconciliation: used arguments, params, etc.
+     * @return String with meta information about current run of partition_reconciliation: used arguments, params, etc.
      */
     private String prepareHeaderMeta() {
-        SB options = new SB("partition-reconciliation task was executed with the following args: ");
+        SB options = new SB("partition_reconciliation task was executed with the following args: ");
 
         options
             .a("caches=[")
@@ -411,7 +407,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Map<UUID, String> nodeIdsToFolders,
         Map<UUID, String> nodesIdsToConsistenceIdsMap
     ) {
-        SB out = new SB("partition-reconciliation task prepared result where line is " +
+        SB out = new SB("partition_reconciliation task prepared result where line is " +
             "- <nodeConsistentId>, <nodeId> : <folder> \n");
 
         for (Map.Entry<UUID, String> entry : nodeIdsToFolders.entrySet()) {

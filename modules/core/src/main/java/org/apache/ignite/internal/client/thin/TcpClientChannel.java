@@ -303,7 +303,7 @@ class TcpClientChannel implements ClientChannel {
 
             switch (status) {
                 case ClientStatus.SECURITY_VIOLATION:
-                    pendingReq.onDone(new ClientAuthorizationException());
+                    pendingReq.onDone(new ClientAuthorizationException(err));
                 default:
                     pendingReq.onDone(new ClientServerError(err, status, resId));
             }

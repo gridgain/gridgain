@@ -61,6 +61,7 @@ import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
@@ -114,6 +115,7 @@ import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMess
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.processors.platform.cache.PlatformCacheManager;
 import org.apache.ignite.internal.processors.plugin.CachePluginManager;
 import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
@@ -289,12 +291,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         else
             perf.add(msg, true);
 
-        if (cfg.getCacheMode() == PARTITIONED) {
+        if (cfg.getCacheMode() == PARTITIONED)
             perf.add("Disable near cache (set 'nearConfiguration' to null)", cfg.getNearConfiguration() == null);
-
-            if (cfg.getAffinity() != null)
-                perf.add("Decrease number of backups (set 'backups' to 0)", cfg.getBackups() == 0);
-        }
 
         // Suppress warning if at least one ATOMIC cache found.
         perf.add("Enable ATOMIC mode if not using transactions (set 'atomicityMode' to ATOMIC)",
@@ -1190,6 +1188,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         CacheConflictResolutionManager rslvrMgr = pluginMgr.createComponent(CacheConflictResolutionManager.class);
         GridCacheDrManager drMgr = pluginMgr.createComponent(GridCacheDrManager.class);
         CacheStoreManager storeMgr = pluginMgr.createComponent(CacheStoreManager.class);
+        PlatformCacheManager platformMgr = ctx.platform().cacheManager();
 
         if (cfgStore == null)
             storeMgr.initialize(cfgStore, sesHolders);
@@ -1226,7 +1225,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             drMgr,
             rslvrMgr,
             pluginMgr,
-            affMgr
+            affMgr,
+            platformMgr
         );
 
         cacheCtx.cacheObjectContext(cacheObjCtx);
@@ -1329,6 +1329,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
              * 5. CacheContinuousQueryManager (note, that we start it for DHT cache though).
              * 6. GridCacheDgcManager
              * 7. GridCacheTtlManager.
+             * 8. PlatformCacheManager.
              * ===============================================
              */
             evictMgr = cfg.isOnheapCacheEnabled() ? new GridCacheEvictionManager() : new CacheOffheapEvictionManager();
@@ -1363,7 +1364,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 drMgr,
                 rslvrMgr,
                 pluginMgr,
-                affMgr
+                affMgr,
+                platformMgr
             );
 
             cacheCtx.cacheObjectContext(cacheObjCtx);
@@ -3717,19 +3719,30 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cacheNames Cache names.
      * @return Future that will be completed when state is changed for all caches.
      */
-    public IgniteInternalFuture<?> resetCacheState(Collection<String> cacheNames) {
+    public IgniteInternalFuture<?> resetCacheState(Collection<String> cacheNames) throws ClusterTopologyCheckedException {
         sharedCtx.tm().checkEmptyTransactions(
             () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "resetCacheState"));
 
         Collection<DynamicCacheChangeRequest> reqs = new ArrayList<>(cacheNames.size());
 
         for (String cacheName : cacheNames) {
-            DynamicCacheDescriptor desc = cacheDescriptor(cacheName);
+            final IgniteInternalCache<Object, Object> cache0 = internalCache(cacheName);
 
-            if (desc == null) {
-                U.warn(log, "Failed to find cache for reset lost partition request, cache does not exist: " + cacheName);
-
+            if (cache0 == null)
                 continue;
+
+            // Check if all lost partitions has at least one affinity owner.
+            final Collection<Integer> lostParts = cache0.lostPartitions();
+
+            if (lostParts.isEmpty())
+                continue;
+
+            for (Integer part : lostParts) {
+                final Collection<ClusterNode> owners = cache0.affinity().mapPartitionToPrimaryAndBackups(part);
+
+                if (owners.isEmpty())
+                    throw new ClusterTopologyCheckedException("Cannot reset lost partitions because no baseline nodes " +
+                        "are online [cache=" + cacheName + ", partition=" + part + ']');
             }
 
             DynamicCacheChangeRequest req = DynamicCacheChangeRequest.resetLostPartitions(ctx, cacheName);

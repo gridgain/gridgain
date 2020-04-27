@@ -184,32 +184,30 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                     ses.remoteAddress() + ", req=" + req + ']');
             }
 
-            ClientListenerResponse resp;
-
             AuthorizationContext authCtx = connCtx.authorizationContext();
 
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
             try(OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
-                resp = handler.handle(req);
+                ClientListenerResponse resp = handler.handle(req);
+
+                if (resp != null) {
+                    if (log.isDebugEnabled()) {
+                        long dur = (System.nanoTime() - startTime) / 1000;
+
+                        log.debug("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
+                            ", resp=" + resp.status() + ']');
+                    }
+
+                    byte[] outMsg = parser.encode(resp);
+
+                    ses.send(outMsg);
+                }
             }
             finally {
                 if (authCtx != null)
                     AuthorizationContext.clear();
-            }
-
-            if (resp != null) {
-                if (log.isDebugEnabled()) {
-                    long dur = (System.nanoTime() - startTime) / 1000;
-
-                    log.debug("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
-                        ", resp=" + resp.status() + ']');
-                }
-
-                byte[] outMsg = parser.encode(resp);
-
-                ses.send(outMsg);
             }
         }
         catch (Exception e) {
@@ -296,7 +294,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
         ClientListenerConnectionContext connCtx = null;
 
         try {
-            connCtx = prepareContext(clientType);
+            connCtx = prepareContext(clientType, ses);
 
             ensureClientPermissions(clientType);
 
@@ -354,23 +352,24 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /**
      * Prepare context.
      *
-     * @param ses Session.
+     * @param ses Client's NIO session.
      * @param clientType Client type.
      * @return Context.
      * @throws IgniteCheckedException If failed.
      */
-    private ClientListenerConnectionContext prepareContext(byte clientType) throws IgniteCheckedException {
+    private ClientListenerConnectionContext prepareContext(byte clientType, GridNioSession ses)
+        throws IgniteCheckedException {
         long connId = nextConnectionId();
 
         switch (clientType) {
             case ODBC_CLIENT:
-                return new OdbcConnectionContext(ctx, busyLock, connId, maxCursors);
+                return new OdbcConnectionContext(ctx, ses, busyLock, connId, maxCursors);
 
             case JDBC_CLIENT:
-                return new JdbcConnectionContext(ctx, busyLock, connId, maxCursors);
+                return new JdbcConnectionContext(ctx, ses, busyLock, connId, maxCursors);
 
             case THIN_CLIENT:
-                return new ClientConnectionContext(ctx, connId, maxCursors, thinCfg);
+                return new ClientConnectionContext(ctx, ses, connId, maxCursors, thinCfg);
         }
 
         throw new IgniteCheckedException("Unknown client type: " + clientType);

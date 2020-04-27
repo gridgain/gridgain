@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Impl
     /// <summary>
     /// Base class for interop targets.
     /// </summary>
-    internal class PlatformJniTarget : IPlatformTargetInternal
+    internal sealed class PlatformJniTarget : IPlatformTargetInternal
     {
         /** */
         private static readonly Dictionary<Type, FutureType> IgniteFutureTypeMap
@@ -181,7 +181,7 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /** <inheritdoc /> */
-        public TR InStreamOutLong<TR>(int type, Action<IBinaryStream> outAction, Func<IBinaryStream, long, TR> inAction, 
+        public TR InStreamOutLong<TR>(int type, Func<IBinaryStream, bool> outAction, Func<IBinaryStream, long, TR> inAction, 
             Func<IBinaryStream, Exception> readErrorAction)
         {
             try
@@ -190,7 +190,11 @@ namespace Apache.Ignite.Core.Impl
 
                 using (var stream = IgniteManager.Memory.Allocate().GetStream())
                 {
-                    outAction(stream);
+                    var writeRes = outAction(stream);
+                    if (!writeRes)
+                    {
+                        return default(TR);
+                    }
 
                     var res = UU.TargetInStreamOutLong(_target, type, stream.SynchronizeOutput());
 

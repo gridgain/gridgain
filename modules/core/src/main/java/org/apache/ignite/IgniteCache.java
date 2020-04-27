@@ -128,7 +128,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public IgniteCache<K, V> withNoRetries();
 
     /**
-     * Gets an instance of {@code IgniteCache} that will be allowed to execute cache operations (read, write)
+     * Gets an instance of {@code IgniteCache} that will be allowed to execute cache read operations
      * regardless of partition loss policy.
      *
      * @return Cache without partition loss protection.
@@ -325,7 +325,10 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return New lock instance associated with passed key.
      * @see Lock#lock()
      * @see Lock#tryLock(long, TimeUnit)
+     * @deprecated It is recommended to use {@link Ignite#reentrantLock(String, boolean, boolean, boolean)} instead.
+     *      This method will be removed in  future releases.
      */
+    @Deprecated
     public Lock lock(K key);
 
     /**
@@ -338,7 +341,10 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return New lock instance associated with passed key.
      * @see Lock#lock()
      * @see Lock#tryLock(long, TimeUnit)
+     * @deprecated It is recommended to use {@link Ignite#reentrantLock(String, boolean, boolean, boolean)} instead.
+     *      This method will be removed in  future releases.
      */
+    @Deprecated
     public Lock lockAll(Collection<? extends K> keys);
 
     /**
@@ -351,7 +357,10 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @param byCurrThread If {@code true} method will check that current thread owns a lock on this key, other vise
      *     will check that any thread on any node owns a lock on this key.
      * @return {@code True} if lock is owned by some node.
+     * @deprecated It is recommended to use the lock instance obtained via
+     *      {@link Ignite#reentrantLock(String, boolean, boolean, boolean)} method.
      */
+    @Deprecated
     public boolean isLocalLocked(K key, boolean byCurrThread);
 
     /**

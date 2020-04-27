@@ -97,7 +97,7 @@ param (
 # 0) Functions
 function Make-Dir([string]$dirPath) {
     New-Item -Path $dirPath -ItemType "directory" -Force
-    Remove-Item -Force $dirPath\*.*
+    Remove-Item -Force -Recurse $dirPath\*.*
 }
 
 function Exec([string]$command) {
@@ -175,7 +175,7 @@ if ((Get-Command $ng -ErrorAction SilentlyContinue) -eq $null) {
 
 	if (-not (Test-Path $ng)) {
 		echo "Downloading NuGet..."
-		(New-Object System.Net.WebClient).DownloadFile("https://dist.nuget.org/win-x86-commandline/latest/nuget.exe", "$PSScriptRoot/nuget.exe")    
+		(New-Object System.Net.WebClient).DownloadFile("https://dist.nuget.org/win-x86-commandline/v5.3.1/nuget.exe", "$PSScriptRoot/nuget.exe")    
 	}
 }
 

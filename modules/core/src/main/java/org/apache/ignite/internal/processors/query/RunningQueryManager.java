@@ -26,7 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -116,7 +117,7 @@ public class RunningQueryManager {
     public RunningQueryManager(GridKernalContext ctx) {
         log = ctx.log(RunningQueryManager.class);
         locNodeId = ctx.localNodeId();
-        histSz = ctx.config().getSqlQueryHistorySize();
+        histSz = ctx.config().getSqlConfiguration().getSqlQueryHistorySize();
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
@@ -146,8 +147,12 @@ public class RunningQueryManager {
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
-        @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel) {
+        @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
+        String qryInitiatorId) {
         Long qryId = qryIdGen.incrementAndGet();
+
+        if (qryInitiatorId == null)
+            qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
 
         GridRunningQueryInfo run = new GridRunningQueryInfo(
             qryId,
@@ -158,7 +163,8 @@ public class RunningQueryManager {
             System.currentTimeMillis(),
             cancel,
             loc,
-            memTracker == null ? DUMMY_TRACKER : memTracker
+            memTracker == null ? DUMMY_TRACKER : memTracker,
+            qryInitiatorId
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);
@@ -301,7 +307,7 @@ public class RunningQueryManager {
 
     /**
      * Gets query history statistics. Size of history could be configured via {@link
-     * IgniteConfiguration#setSqlQueryHistorySize(int)}
+     * SqlConfiguration#setSqlQueryHistorySize(int)}
      *
      * @return Queries history statistics aggregated by query text, schema and local flag.
      */

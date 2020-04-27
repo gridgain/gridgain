@@ -92,6 +92,8 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
         ctx.incrementCursors();
 
         try {
+            qry.setQueryInitiatorId(ctx.clientDescriptor());
+
             // If cacheId is provided, we must check the cache for existence.
             if (cacheId() != 0) {
                 DynamicCacheDescriptor desc = cacheDescriptor(ctx);
@@ -127,7 +129,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
             if (securityEx != null) {
                 throw new IgniteClientException(
                     ClientStatus.SECURITY_VIOLATION,
-                    "Client is not authorized to perform this operation",
+                    securityEx.getMessage(),
                     securityEx
                 );
             }

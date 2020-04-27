@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
-import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
@@ -37,8 +36,6 @@ import org.apache.ignite.internal.visor.VisorTaskArgument;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.IgniteFeatures.DR_CONTROL_UTILITY;
-import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 
 /** */
@@ -49,7 +46,7 @@ public abstract class DrAbstractRemoteSubCommand<
 > implements Command<DrArgs> {
     /** */
     protected static boolean drControlUtilitySupported(GridClientNode node) {
-        return nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), DR_CONTROL_UTILITY);
+        return node.supports(DR_CONTROL_UTILITY);
     }
 
     /** */
@@ -116,11 +113,9 @@ public abstract class DrAbstractRemoteSubCommand<
             log.warning("Unrecognized nodes found that have no DR API for control utility: " + nodesWithoutDrTasks.size());
 
             if (verbose) {
-                for (GridClientNode node : nodesWithoutDrTasks) {
-                    boolean clientNode = node.attribute(IgniteNodeAttributes.ATTR_CLIENT_MODE);
+                for (GridClientNode node : nodesWithoutDrTasks)
+                    log.warning(String.format(INDENT + "nodeId=%s, Mode=%s", node.nodeId(), node.isClient() ? "Client" : "Server"));
 
-                    log.warning(String.format(INDENT + "nodeId=%s, Mode=%s", node.nodeId(), clientNode ? "Client" : "Server"));
-                }
             }
             else
                 log.warning("Please use \"--dr topology\" command to see full list.");

@@ -284,7 +284,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
     private String maskIdHash(String s) {
         assert nonNull(s);
 
-        return s.replaceAll("idHash=[0-9]*", "idHash=NO");
+        return s.replaceAll("idHash=[^,]*", "idHash=NO");
     }
 
     /**

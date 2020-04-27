@@ -28,6 +28,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
@@ -664,6 +665,8 @@ public class QueryParser {
         catch (Exception e) {
             if (e instanceof IgniteSQLException)
                 throw (IgniteSQLException)e;
+            else if (e instanceof SqlCacheException)
+                throw (SqlCacheException)e;
             else
                 throw new IgniteSQLException("Failed to prepare update plan.", e);
         }
@@ -733,7 +736,8 @@ public class QueryParser {
             qry.isEnforceJoinOrder(),
             qry.isLocal(),
             skipReducerOnUpdate,
-            batched
+            batched,
+            qry.getQueryInitiatorId()
         );
     }
 }
