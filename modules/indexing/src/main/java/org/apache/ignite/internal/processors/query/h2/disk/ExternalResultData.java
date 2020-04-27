@@ -510,7 +510,7 @@ public class ExternalResultData<T> implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public  void close() {
+    @Override public void close() {
         synchronized (this) {
             if (closed)
                 return;

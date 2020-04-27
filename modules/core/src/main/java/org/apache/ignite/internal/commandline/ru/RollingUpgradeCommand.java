@@ -77,7 +77,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
 
             printRollingUpgradeChangeModeResult(log, res);
 
-            return  res;
+            return res;
         }
         catch (Throwable e) {
             log.severe("Failed to execute rolling upgrade command='" + rollingUpgradeArgs.command().text() + "\' "

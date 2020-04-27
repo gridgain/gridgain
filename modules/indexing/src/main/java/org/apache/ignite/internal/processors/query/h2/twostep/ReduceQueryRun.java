@@ -64,7 +64,7 @@ public class ReduceQueryRun {
         idxs = new ArrayList<>(idxsCnt);
 
         this.pageSize = pageSize;
-        this.dataPageScanEnabled  = dataPageScanEnabled;
+        this.dataPageScanEnabled = dataPageScanEnabled;
     }
 
     /**

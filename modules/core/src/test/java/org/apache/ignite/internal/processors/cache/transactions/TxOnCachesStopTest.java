@@ -503,7 +503,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
                         if (!X.hasCause(e, TransactionRollbackException.class))
                             throw e;
                     }
-                    catch (IgniteException | IllegalStateException  e) {
+                    catch (IgniteException | IllegalStateException e) {
                         // Failed to perform cache operation (cache is stopped).
                     }
                 }

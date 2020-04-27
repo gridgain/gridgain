@@ -151,7 +151,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         // Group is null if try evict page, with persistence evictions should be disabled.
         assert grp != null || pageMem instanceof PageMemoryNoStoreImpl;
 
-        CacheObjectContext coctx = grp != null ?  grp.cacheObjectContext() : null;
+        CacheObjectContext coctx = grp != null ? grp.cacheObjectContext() : null;
         boolean readCacheId = grp == null || grp.storeCacheIdInDataPage();
         int grpId = grp != null ? grp.groupId() : 0;
         IoStatisticsHolder statHolder = grp != null ? grp.statisticsHolderData() : IoStatisticsHolderNoOp.INSTANCE;
@@ -183,7 +183,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         // Group is null if try evict page, with persistence evictions should be disabled.
         assert grp != null || pageMem instanceof PageMemoryNoStoreImpl;
 
-        CacheObjectContext coctx = grp != null ?  grp.cacheObjectContext() : null;
+        CacheObjectContext coctx = grp != null ? grp.cacheObjectContext() : null;
         boolean readCacheId = grp == null || grp.storeCacheIdInDataPage();
         int grpId = grp != null ? grp.groupId() : 0;
         IoStatisticsHolder statHolder = grp != null ? grp.statisticsHolderData() : IoStatisticsHolderNoOp.INSTANCE;

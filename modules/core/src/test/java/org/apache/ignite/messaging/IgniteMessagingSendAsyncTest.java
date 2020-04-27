@@ -80,7 +80,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
     public void testSendAsyncMode() throws Exception {
         Ignite ignite1 = startGrid(1);
 
-        send(ignite1.message(), msgStr,  new IgniteBiInClosure<String, Thread> () {
+        send(ignite1.message(), msgStr, new IgniteBiInClosure<String, Thread>() {
             @Override public void apply(String msg, Thread thread) {
                 Assert.assertTrue(!Thread.currentThread().equals(thread));
                 Assert.assertEquals(msgStr, msg);
@@ -99,7 +99,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
         Ignite ignite2 = startGrid(2);
 
         sendWith2Nodes(ignite2, ignite1.message(), msgStr, new IgniteBiInClosure<String, Thread> () {
-            @Override public  void apply(String msg, Thread thread) {
+            @Override public void apply(String msg, Thread thread) {
                 Assert.assertEquals(Thread.currentThread(), thread);
                 Assert.assertEquals(msgStr, msg);
             }
@@ -116,8 +116,8 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
         Ignite ignite1 = startGrid(1);
         Ignite ignite2 = startGrid(2);
 
-        sendWith2Nodes(ignite2, ignite1.message(), msgStr,  new IgniteBiInClosure<String, Thread> () {
-            @Override public  void apply(String msg, Thread thread) {
+        sendWith2Nodes(ignite2, ignite1.message(), msgStr, new IgniteBiInClosure<String, Thread> () {
+            @Override public void apply(String msg, Thread thread) {
                 Assert.assertTrue(!Thread.currentThread().equals(thread));
                 Assert.assertEquals(msgStr, msg);
             }
@@ -323,7 +323,7 @@ public class IgniteMessagingSendAsyncTest extends GridCommonAbstractTest impleme
             final Ignite ignite2,
             final IgniteMessaging igniteMsg,
             final String msgStr,
-            final IgniteBiInClosure<String, Thread>  cls,
+            final IgniteBiInClosure<String, Thread> cls,
             final boolean async
     ) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);

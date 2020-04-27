@@ -331,6 +331,6 @@ public abstract class JdbcDynamicIndexAbstractSelfTest extends JdbcAbstractDmlSt
             fail("Unexpected exception: " + e);
         }
 
-        fail(SQLException.class.getSimpleName() +  " is not thrown.");
+        fail(SQLException.class.getSimpleName() + " is not thrown.");
     }
 }

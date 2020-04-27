@@ -529,7 +529,7 @@ public class PlatformServices extends PlatformAbstractTarget {
         /*
           Class initializer.
          */
-        static  {
+        static {
             PRIMITIVES_TO_WRAPPERS.put(boolean.class, Boolean.class);
             PRIMITIVES_TO_WRAPPERS.put(byte.class, Byte.class);
             PRIMITIVES_TO_WRAPPERS.put(char.class, Character.class);

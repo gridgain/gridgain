@@ -272,7 +272,7 @@ public class DiskSpillingWithBaselineTest extends DiskSpillingAbstractTest {
 
             List<String> nodeUuids = getNodesFromEvents(dirEvts);
 
-            assertEquals("Offload didn't happen on all nodes.", nodeCount(),  nodeUuids.size());
+            assertEquals("Offload didn't happen on all nodes.", nodeCount(), nodeUuids.size());
         }
         catch (IOException e) {
             throw new RuntimeException(e);

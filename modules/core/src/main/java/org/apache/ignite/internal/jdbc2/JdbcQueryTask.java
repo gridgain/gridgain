@@ -175,7 +175,7 @@ class JdbcQueryTask implements IgniteCallable<JdbcQueryTaskResult> {
             qry.setLazy(lazy());
             qry.setSchema(schemaName);
 
-            if (qry instanceof  SqlFieldsQueryEx)
+            if (qry instanceof SqlFieldsQueryEx)
                 ((SqlFieldsQueryEx)qry).setMaxMemory(maxMemory);
 
             FieldsQueryCursor<List<?>> fldQryCursor = cache.withKeepBinary().query(qry);

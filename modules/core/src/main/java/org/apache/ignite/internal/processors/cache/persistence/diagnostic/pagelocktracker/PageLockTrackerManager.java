@@ -43,7 +43,7 @@ import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcess
  */
 public class PageLockTrackerManager implements LifecycleAware {
     /** */
-    private static final long OVERHEAD_SIZE = 16 + 8  + 8 + 8 + 8;
+    private static final long OVERHEAD_SIZE = 16 + 8 + 8 + 8 + 8;
 
     /** */
     private final MemoryCalculator memoryCalculator = new MemoryCalculator();
@@ -121,7 +121,7 @@ public class PageLockTrackerManager implements LifecycleAware {
             try {
                 // Write dump to file.
                 ToFileDumpProcessor.toFileDump(dump, new File(U.defaultWorkDirectory() +
-                    separatorChar + DEFAULT_TARGET_FOLDER +  separatorChar), managerNameId);
+                    separatorChar + DEFAULT_TARGET_FOLDER + separatorChar), managerNameId);
             }
             catch (IgniteCheckedException e) {
                 log.warning("Failed to save locks dump file.", e);
@@ -169,7 +169,7 @@ public class PageLockTrackerManager implements LifecycleAware {
         try {
             return ToFileDumpProcessor.toFileDump(dump,
                 new File(U.defaultWorkDirectory() +
-                    File.separatorChar + DEFAULT_TARGET_FOLDER +  File.separatorChar), managerNameId);
+                    File.separatorChar + DEFAULT_TARGET_FOLDER + File.separatorChar), managerNameId);
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

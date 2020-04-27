@@ -174,23 +174,23 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
             int off = 1;
 
             assertEquals(cnt - off, (long)bean.getIndexLeafLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
             assertEquals(cnt, (long)bean.getIndexInnerLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * cnt - off, (long)bean.getIndexLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
             // Each data page is touched twice - one during index traversal and second
             assertEquals(2 * cnt, (long)bean.getCacheGroupLogicalReads(CACHE_1_NAME));
-            assertEquals(0,   (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
 
             assertEquals(cnt - off, (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * cnt - off, (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * cnt, (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
-            assertEquals(0,   (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
 
             Assert.assertEquals("HASH_INDEX cache1.HASH_PK [LOGICAL_READS_LEAF=" + (cnt - off) +
                     ", LOGICAL_READS_INNER=" + cnt + ", " +
@@ -206,22 +206,22 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
             readCaches(0, cnt);
 
             assertEquals(2 * (cnt - off), (long)bean.getIndexLeafLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * cnt, (long)bean.getIndexInnerLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * (2 * cnt - off), (long)bean.getIndexLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * (2 * cnt), (long)bean.getCacheGroupLogicalReads(CACHE_1_NAME));
-            assertEquals(0,   (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
 
             assertEquals(2 * (cnt - off), (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * (2 * cnt - off), (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(0,   (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * (2 * cnt), (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
-            assertEquals(0,   (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
 
             // Force physical reads
             ignite(0).cluster().active(false);
@@ -268,12 +268,12 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
 
             assertEquals(2 * (cnt - off), (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             // We had a split, so now we have 2 leaf pages...
-            assertEquals(2,   (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             // And 1 inner page
-            assertEquals(1,   (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(1, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * (2 * cnt - off), (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
-            assertEquals(3,   (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(3, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
             assertEquals(2 * (2 * cnt), (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
             assertEquals(physReads, bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
         }

@@ -189,7 +189,7 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
 
             int srvrMaxNoTerminals = threadCnt / srvrNodes.size();
 
-            if (srvrMaxNoTerminals *  srvrNodes.size() != threadCnt) {
+            if (srvrMaxNoTerminals * srvrNodes.size() != threadCnt) {
                 threadCnt = srvrMaxNoTerminals * srvrNodes.size();
 
                 info("Using " + threadCnt + " threads instead to ensure equal distribution of terminals");
@@ -617,7 +617,7 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
         /**
          *
          */
-        private void doWork()  {
+        private void doWork() {
             Session ses = new Session(terminalId());
 
             try {

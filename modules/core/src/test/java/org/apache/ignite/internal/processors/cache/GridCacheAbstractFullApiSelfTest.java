@@ -185,7 +185,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
     /** */
     @Before
-    public void beforeGridCacheAbstractFullApiSelfTest()  {
+    public void beforeGridCacheAbstractFullApiSelfTest() {
         Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-9543", MvccFeatureChecker.forcedMvcc());
     }
 
@@ -6620,7 +6620,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
             if (!entry.isNear())
                 entry.context().cache().removeEntry(entry);
 
-            return  pair;
+            return pair;
         }
     }
 

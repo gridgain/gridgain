@@ -312,7 +312,7 @@ public class CommandHandler {
 
                     String pwd = new String(requestPasswordFromConsole("password: "));
 
-                    clientCfg = getClientConfiguration(user, pwd,  args);
+                    clientCfg = getClientConfiguration(user, pwd, args);
 
                     credentialsRequested = true;
                 }

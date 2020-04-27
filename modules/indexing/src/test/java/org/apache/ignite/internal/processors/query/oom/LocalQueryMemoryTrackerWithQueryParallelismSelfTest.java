@@ -235,7 +235,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         // Local result is quite small.
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(BIG_TABLE_SIZE >  localResults.stream().mapToLong(r -> r.getRowCount()).sum());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(r -> r.getRowCount()).sum());
     }
 
     /** {@inheritDoc} */

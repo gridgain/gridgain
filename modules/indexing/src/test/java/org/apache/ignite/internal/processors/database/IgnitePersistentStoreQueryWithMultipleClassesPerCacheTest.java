@@ -143,7 +143,7 @@ public class IgnitePersistentStoreQueryWithMultipleClassesPerCacheTest extends G
         private Person(int depId) {
             this.depId = depId;
 
-            name = "Name-"  + id + " " + depId;
+            name = "Name-" + id + " " + depId;
         }
     }
 

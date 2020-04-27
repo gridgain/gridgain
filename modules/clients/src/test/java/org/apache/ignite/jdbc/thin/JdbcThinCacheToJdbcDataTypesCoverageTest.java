@@ -408,7 +408,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
                 (lhs, rhs) -> EqualsBuilder.reflectionEquals(
                     lhs, rhs, false, lhs.getClass(), true);
 
-        String uuidPostfix =  UUID.randomUUID().toString().replaceAll("-", "_");
+        String uuidPostfix = UUID.randomUUID().toString().replaceAll("-", "_");
 
         String cacheName = "cache" + uuidPostfix;
 
@@ -446,7 +446,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
 
             if (keyValEntry.getKey() instanceof SqlStrConvertedValHolder) {
                 originalKey = ((SqlStrConvertedValHolder) keyValEntry.getKey()).originalVal();
-                sqlStrKey =  ((SqlStrConvertedValHolder) keyValEntry.getKey()).sqlStrVal();
+                sqlStrKey = ((SqlStrConvertedValHolder) keyValEntry.getKey()).sqlStrVal();
             }
             else {
                 originalKey = keyValEntry.getKey();

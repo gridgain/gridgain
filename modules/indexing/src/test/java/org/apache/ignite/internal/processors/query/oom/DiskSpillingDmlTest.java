@@ -55,7 +55,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
         "nulls ";
 
     /** */
-    private static final String CREATE_NEW_TBL  ="CREATE TABLE new_table (" +
+    private static final String CREATE_NEW_TBL = "CREATE TABLE new_table (" +
         "id BIGINT PRIMARY KEY, " +
         "name VARCHAR, " +
         "depId SMALLINT, " +

@@ -272,7 +272,7 @@ public abstract class PagesList extends DataStructure {
                         while (prevId != 0L) {
                             final long pageId = prevId;
                             final long page = acquirePage(pageId, IoStatisticsHolderNoOp.INSTANCE);
-                            try  {
+                            try {
                                 long pageAddr = readLock(pageId, page);
 
                                 assert pageAddr != 0L;
@@ -371,7 +371,7 @@ public abstract class PagesList extends DataStructure {
                 if (pages != null) {
                     if (log.isDebugEnabled()) {
                         log.debug("Move pages from heap to PageMemory [list=" + name + ", bucket=" + bucket +
-                            ", pages=" +  pages + ']');
+                            ", pages=" + pages + ']');
                     }
 
                     for (int i = 0; i < pages.size(); i++) {

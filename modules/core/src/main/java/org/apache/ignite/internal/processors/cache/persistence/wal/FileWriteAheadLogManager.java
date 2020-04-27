@@ -2158,7 +2158,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private volatile Throwable lastCompressionError;
 
         /** */
-        FileCompressorWorker(int idx,  IgniteLogger log) {
+        FileCompressorWorker(int idx, IgniteLogger log) {
             super(cctx.igniteInstanceName(), "wal-file-compressor-%" + cctx.igniteInstanceName() + "%-" + idx, log);
         }
 

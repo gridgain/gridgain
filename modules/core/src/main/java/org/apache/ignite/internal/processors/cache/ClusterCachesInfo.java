@@ -1867,7 +1867,7 @@ class ClusterCachesInfo {
             }
         }
 
-        return  null;
+        return null;
     }
 
     /**

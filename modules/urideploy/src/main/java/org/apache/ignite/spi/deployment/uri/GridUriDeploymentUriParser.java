@@ -169,7 +169,7 @@ class GridUriDeploymentUriParser {
             }
         }
 
-        return  buf.toString();
+        return buf.toString();
     }
 
     /** {@inheritDoc} */

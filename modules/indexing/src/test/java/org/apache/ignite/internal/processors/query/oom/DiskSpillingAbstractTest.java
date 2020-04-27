@@ -423,7 +423,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                     Object o1 = l1.get(i);
                     Object o2 = l2.get(i);
 
-                    if (o1 == null  ||  o2 == null) {
+                    if (o1 == null || o2 == null) {
                         if (o1 == null && o2 == null)
                             return 0;
 
@@ -459,7 +459,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     protected void assertWorkDirClean() {
         List<String> spillFiles = listOfSpillFiles();
 
-        assertEquals("Files are not deleted: " + spillFiles,  0, spillFiles.size());
+        assertEquals("Files are not deleted: " + spillFiles, 0, spillFiles.size());
     }
 
     /** */
@@ -549,7 +549,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             }, threadNum);
 
             assertEquals("Exception expected=" + !res.success + ", exception thrown=" + oomExThrown.get(),
-                !res.success,  oomExThrown.get());
+                !res.success, oomExThrown.get());
         }
         catch (Exception e) {
             fail(X.getFullStackTrace(e));
@@ -559,7 +559,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                 if (watchKey != null) {
                     List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
 
-                    assertEquals("Disk spilling " +  (res.offload ? "not" : "") + " happened.",
+                    assertEquals("Disk spilling " + (res.offload ? "not" : "") + " happened.",
                         res.offload, !dirEvts.isEmpty());
                 }
 

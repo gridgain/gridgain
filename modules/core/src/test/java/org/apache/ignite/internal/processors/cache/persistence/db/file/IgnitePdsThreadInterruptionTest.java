@@ -120,7 +120,7 @@ public class IgnitePdsThreadInterruptionTest extends GridCommonAbstractTest {
             }
         }
 
-        IgniteCache<Integer,  byte[]> cache = ignite.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, byte[]> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
         AtomicReference<Throwable> fail = new AtomicReference<>();
 

@@ -2211,7 +2211,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     /**
      * @return Test resources.
      */
-    private synchronized IgniteTestResources getIgniteTestResources()  {
+    private synchronized IgniteTestResources getIgniteTestResources() {
         IgniteTestResources rsrcs = tests.get(getClass());
 
         if (rsrcs == null)

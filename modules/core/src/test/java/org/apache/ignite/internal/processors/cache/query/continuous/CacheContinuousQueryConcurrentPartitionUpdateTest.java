@@ -202,7 +202,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
                         for (int c = 0; c < srvCaches.size(); c++) {
                             if (atomicityMode == ATOMIC)
                                 srvCaches.get(c).put(keys.get(rnd.nextInt(KEYS)), i);
-                            else  {
+                            else {
                                 IgniteCache<Object, Object> cache0 = srvCaches.get(c);
                                 IgniteTransactions txs = cache0.unwrap(Ignite.class).transactions();
 
@@ -395,10 +395,10 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
                         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
                         while (!stop.get()) {
-                            for (IgniteCache<Object, Object> srvCache : srvCaches)  {
+                            for (IgniteCache<Object, Object> srvCache : srvCaches) {
                                 if (atomicityMode == ATOMIC)
                                     srvCache.put(keys.get(rnd.nextInt(KEYS)), rnd.nextInt(100) - 200);
-                                else  {
+                                else {
                                     IgniteTransactions txs = srvCache.unwrap(Ignite.class).transactions();
 
                                     boolean committed = false;
@@ -448,7 +448,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
                         for (IgniteCache<Object, Object> srvCache : srvCaches) {
                             if (atomicityMode == ATOMIC)
                                 srvCache.put(keys.get(rnd.nextInt(KEYS)), i);
-                            else  {
+                            else {
                                 IgniteTransactions txs = srvCache.unwrap(Ignite.class).transactions();
 
                                 boolean committed = false;
@@ -474,7 +474,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
                 }
             }, THREADS, "update");
 
-            for (T2<AtomicInteger, QueryCursor>  qry : qrys) {
+            for (T2<AtomicInteger, QueryCursor> qry : qrys) {
                 final AtomicInteger evtCnt = qry.get1();
 
                 GridTestUtils.waitForCondition(new GridAbsPredicate() {

@@ -77,7 +77,7 @@ public class IgniteTxImplicitSingleStateImpl extends IgniteTxLocalStateAdapter {
 
     /** {@inheritDoc} */
     @Nullable @Override public GridIntList cacheIds() {
-        return  GridIntList.asList(cacheCtx.cacheId());
+        return GridIntList.asList(cacheCtx.cacheId());
     }
 
     /** {@inheritDoc} */

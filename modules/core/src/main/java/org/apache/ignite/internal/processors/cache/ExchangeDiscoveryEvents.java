@@ -143,7 +143,7 @@ public class ExchangeDiscoveryEvents {
      * @return {@code True} if given event is {@link EventType#EVT_NODE_FAILED} or {@link EventType#EVT_NODE_LEFT}.
      */
     public static boolean serverLeftEvent(DiscoveryEvent evt) {
-        return  ((evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT) && !evt.eventNode().isClient());
+        return ((evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT) && !evt.eventNode().isClient());
     }
 
     /**
@@ -151,7 +151,7 @@ public class ExchangeDiscoveryEvents {
      * @return {@code True} if given event is {@link EventType#EVT_NODE_JOINED}.
      */
     public static boolean serverJoinEvent(DiscoveryEvent evt) {
-        return  (evt.type() == EVT_NODE_JOINED && !evt.eventNode().isClient());
+        return (evt.type() == EVT_NODE_JOINED && !evt.eventNode().isClient());
     }
 
     /**

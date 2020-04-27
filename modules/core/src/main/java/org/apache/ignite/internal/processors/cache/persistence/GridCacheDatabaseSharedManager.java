@@ -1799,7 +1799,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Map</*grpId*/Integer, Set</*partId*/Integer>> applicableGroupsAndPartitions = partitionsApplicableForWalRebalance();
 
-        Map</*grpId*/Integer,  T2</*reason*/String, Map</*partId*/Integer, CheckpointEntry>>> earliestValidCheckpoints;
+        Map</*grpId*/Integer, T2</*reason*/String, Map</*partId*/Integer, CheckpointEntry>>> earliestValidCheckpoints;
 
         checkpointReadLock();
 
