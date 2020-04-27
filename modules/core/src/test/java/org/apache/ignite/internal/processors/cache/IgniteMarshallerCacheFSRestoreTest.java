@@ -20,6 +20,8 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.Ignite;
@@ -222,9 +224,9 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
      * Class name for CustomClass class mapping file gets cleaned up from file system.
      */
     private void corruptMarshallerStorage() throws Exception {
-        String marshallerDir = U.defaultWorkDirectory() + File.separator + "marshaller";
+        Path marshallerDir = Paths.get(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH);
 
-        File[] storedMappingsFiles = new File(marshallerDir).listFiles();
+        File[] storedMappingsFiles = marshallerDir.toFile().listFiles();
 
         assert storedMappingsFiles.length == 1;
 
