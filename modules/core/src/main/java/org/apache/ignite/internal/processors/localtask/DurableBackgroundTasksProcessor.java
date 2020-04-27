@@ -83,6 +83,9 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param dropTaskIfFailed Whether to delete task from metastorage, if it has failed.
      */
     private void asyncDurableBackgroundTaskExecute(DurableBackgroundTask task, boolean dropTaskIfFailed) {
+        if (!ctx.state().clusterState().active() || ctx.isStopping())
+            return;
+
         String workerName = "async-durable-background-task-executor-" + asyncDurableBackgroundTasksWorkersCntr.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
@@ -123,7 +126,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         // Waiting for workers, but not cancelling them, trying to complete running tasks.
-        awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, false, log);
+        awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
     }
 
     /** {@inheritDoc} */
@@ -137,6 +140,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
         if (!msg.clusterActive())
             awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
+        else
+            asyncDurableBackgroundTasksExecution();
     }
 
     /** {@inheritDoc} */
