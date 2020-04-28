@@ -318,7 +318,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
      */
     private boolean isValidForWriting;
 
-    /** */
+    /** Tx key collisions with appropriate queue size string representation. */
     private String txKeyCollisions;
 
     /**

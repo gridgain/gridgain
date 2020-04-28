@@ -148,7 +148,7 @@ public enum IgniteFeatures {
     /** Check secondary indexes inline size on join/by control utility request. */
     CHECK_INDEX_INLINE_SIZES(36),
 
-    /** Dump tx collisions possibility. */
+    /** Distributed propagation of tx collisions dump interval. */
     DISTRIBUTED_TX_COLLISIONS_DUMP(36);
 
     /**

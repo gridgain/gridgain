@@ -359,7 +359,8 @@ public class CacheMetricsImpl implements CacheMetrics {
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
 
         mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
-            "Shows key and collisions queue size for the last IGNITE_DUMP_TX_COLLISIONS_INTERVAL. Default is 1 sec.");
+            "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric show " +
+            "appropriate keys.");
     }
 
     /**
@@ -859,7 +860,10 @@ public class CacheMetricsImpl implements CacheMetrics {
             delegate.onRead(isHit);
     }
 
-    /** Set callback for tx key collisions detection. */
+    /** Set callback for tx key collisions detection.
+     *
+     * @param coll Key collisions info holder.
+     **/
     public void keyCollisionsInfo(Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> coll) {
         txKeyCollisionInfo = coll;
 
@@ -867,7 +871,10 @@ public class CacheMetricsImpl implements CacheMetrics {
             delegate.keyCollisionsInfo(coll);
     }
 
-    /** Get existing callback. */
+    /** Callback representing current key collisions state.
+     *
+     * @return Key collisions info holder.
+     **/
     public @Nullable Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> keyCollisionsInfo() {
         return txKeyCollisionInfo;
     }

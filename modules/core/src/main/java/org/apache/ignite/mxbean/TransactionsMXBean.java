@@ -248,16 +248,22 @@ public interface TransactionsMXBean {
     long getLongOperationsDumpTimeout();
 
     /**
-     * Set timeout interval for holding tx key contention info.
+     * Set timeout interval for tx key contention analysis.
      * @param timeout Interval in millis.
      */
     @MXBeanParametersNames("timeout")
-    @MXBeanDescription("Timeout interval (in millis) for printing tx key contention queue size info.")
+    @MXBeanDescription("Timeout interval (in millis) for printing tx key contention queue size info. Each transaction " +
+        "besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons per key lock queue may " +
+        "rise. This property sets the interval during which keys and appropriate queue size statistics has been " +
+        "collected.")
     void setTxKeyCollisionsInterval(int timeout);
 
     /**
      * @return Current interval in millis.
      */
-    @MXBeanDescription("Returns a timeout (in millis) for printing tx key contention queue size info.")
+    @MXBeanDescription("Returns a timeout (in millis) for printing tx key contention queue size info. Each transaction " +
+        "besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons per key lock queue may " +
+        "rise. Returns the interval during which keys and appropriate queue size statistics has been " +
+        "collected.")
     int getTxKeyCollisionsInterval();
 }

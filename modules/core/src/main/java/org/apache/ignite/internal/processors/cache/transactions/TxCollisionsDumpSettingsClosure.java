@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -31,10 +32,16 @@ public class TxCollisionsDumpSettingsClosure implements IgniteRunnable {
     @IgniteInstanceResource
     private IgniteEx ignite;
 
-    /** Collision dump interval. */
+    /**
+     * Tx key collision dump interval.
+     * Check {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} for additional info.
+     **/
     private final int interval;
 
-    /** Constructor. */
+    /** Constructor.
+     *
+     * @param timeout New interval for key collisions collection.
+     * */
     TxCollisionsDumpSettingsClosure(int timeout) {
         interval = timeout;
     }
