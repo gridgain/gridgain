@@ -384,19 +384,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         cctx.txMetrics().onTxManagerStarted();
 
-        long longOpDumpTimeout = longOperationsDumpTimeout();
-
         keyCollisionsInfo = new KeyCollisionsHolder();
 
-        scheduleDumpTask(
-            IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-            () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
-            longOpDumpTimeout);
+        longOperationsDumpTimeout(longOperationsDumpTimeout());
 
-        scheduleDumpTask(
-            IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
-            this::collectTxCollisionsInfo,
-            collisionsDumpInterval());
+        txCollisionsDumpInterval(collisionsDumpInterval());
     }
 
     /**
@@ -2111,7 +2103,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
             this::collectTxCollisionsInfo,
-            collisionsDumpInterval);
+            collisionsDumpInterval());
     }
 
     /**
@@ -3161,11 +3153,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             metricPerCacheStore.forEach((k, v) -> {
                 if (k.metrics0().keyCollisionsInfo() == null) {
                     k.metrics0().keyCollisionsInfo(
-                        new Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>>() {
-                            @Override public List<Map.Entry<GridCacheMapEntry, Integer>> get() {
-                                return metricPerCacheStore.get(k);
-                            }
-                        }
+                        () -> metricPerCacheStore.get(k)
                     );
                 }
             });
