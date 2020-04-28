@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
@@ -40,6 +41,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -52,6 +55,11 @@ import static org.junit.Assume.assumeTrue;
  *
  */
 @GridCommonTest(group = "Kernal Self")
+@SystemPropertiesList({
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
+})
 public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     /** */
     private static final String TEST_NAME = "TEST_NAME";
@@ -244,48 +252,6 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
             () -> isCurrentBaselineFromOneNode(ignite2),
             autoAdjustTimeout
         ));
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testBaselineAutoAdjustWithDaemonNode() throws Exception {
-        IgniteEx ignite0 = startGrid(0);
-
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
-
-        ignite0.cluster().active(true);
-
-        ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
-
-        startGrid(getConfiguration().setDaemon(true));
-
-        doSleep(autoAdjustTimeout);
-
-        assertTrue(isCurrentBaselineFromOneNode(ignite0));
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testBaselineAutoAdjustNotWorkingNonActivatedCluster() throws Exception {
-        IgniteEx ignite0 = startGrid(0);
-
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
-
-        ignite0.cluster().active(true);
-
-        ignite0.cluster().baselineAutoAdjustTimeout(3000L);
-
-        ignite0.cluster().active(false);
-
-        startGrid(1);
-
-        doSleep(3000L);
-
-        assertTrue(isCurrentBaselineFromOneNode(ignite0));
     }
 
     /**

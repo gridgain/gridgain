@@ -276,9 +276,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
 
-        IgniteEx prim = startGrids(srvNodes);
-
-        prim.cluster().baselineAutoAdjustEnabled(false);
+        Ignite prim = startGrids(srvNodes);
 
         prim.cluster().active(true);
 
@@ -827,8 +825,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 
-        crd.cluster().baselineAutoAdjustEnabled(false);
-
         crd.cluster().active(true);
 
         // Same name pattern as in test configuration.
@@ -1040,8 +1036,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         final int srvNodes = SERVER_NODES + 1;
 
         IgniteEx prim = startGrids(srvNodes);
-
-        prim.cluster().baselineAutoAdjustEnabled(false);
 
         prim.cluster().active(true);
 

@@ -86,16 +86,4 @@ public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
         assertEquals(2, ignite0.cluster().currentBaselineTopology().size());
         assertEquals(2, ignite1.cluster().currentBaselineTopology().size());
     }
-
-    /**
-     * Tests that cluster with one server and client do not hung when activating
-     */
-    @Test
-    public void testActivatingIsNotHung() throws Exception {
-        IgniteEx ig = startGrid(0);
-
-        startClientGrid(1);
-
-        ig.cluster().active(true);
-    }
 }

@@ -24,7 +24,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -98,9 +97,7 @@ public class NonAffinityCoordinatorDynamicStartStopTest extends GridCommonAbstra
      */
     @Test
     public void testStartStop() throws Exception {
-        IgniteEx ig0 = startGrids(2);
-
-        ig0.cluster().baselineAutoAdjustEnabled(false);
+        startGrids(2);
 
         if (bltForInMemoryCachesSup)
             resetBaselineTopology();

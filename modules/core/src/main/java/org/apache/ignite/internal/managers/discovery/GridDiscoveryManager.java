@@ -692,7 +692,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     // Current version.
                     discoCache = discoCache();
 
-                // Local Join Event is needed for updating disco cache
                 if (locJoinEvt || !node.isClient() && !node.isDaemon()) {
                     if (type == EVT_NODE_LEFT || type == EVT_NODE_FAILED || type == EVT_NODE_JOINED) {
                         boolean discoCacheRecalculationRequired = ctx.state().autoAdjustInMemoryClusterState(

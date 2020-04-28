@@ -30,6 +30,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /** */
@@ -43,6 +44,11 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    })
     public void testTimeoutAndEnabledFlag() throws Exception {
         IgniteEx ignite = (IgniteEx)startGrid();
 
@@ -87,7 +93,6 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
     @Test
     @SystemPropertiesList({
         @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
     })
     public void testBeanNotFoundBecauseFeatureDisabled() throws Exception {
         startGrid();

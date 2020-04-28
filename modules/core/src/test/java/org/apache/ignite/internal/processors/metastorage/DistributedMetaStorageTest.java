@@ -40,6 +40,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
@@ -48,6 +49,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 
 /**
  * Test for {@link DistributedMetaStorageImpl} with disabled persistence.
@@ -61,6 +64,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * initial objects that were added but should not be counted along with keys defined in tests.
      */
     private static int initialUpdatesCount = -1;
+    private static final int INITIAL_UPDATES_COUNT = 1;
 
     /** **/
     private TcpDiscoverySpi customTcpDiscoverySpi = null;
@@ -612,6 +616,10 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
+    })
     public void testUnstableTopology() throws Exception {
         int cnt = 8;
 

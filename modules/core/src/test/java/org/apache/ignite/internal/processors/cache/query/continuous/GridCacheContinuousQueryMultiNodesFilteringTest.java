@@ -201,7 +201,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
         client = true;
 
-        startGrid(nodesCnt).cluster().active(true);
+        startGrid(nodesCnt);
 
         awaitPartitionMapExchange();
 
@@ -299,8 +299,6 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setConsistentId(igniteInstanceName);
 
         cfg.setClientMode(client);
 
@@ -436,7 +434,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode clusterNode) {
-            return pattern.matcher(clusterNode.consistentId().toString()).matches();
+            return pattern.matcher(clusterNode.id().toString()).matches();
         }
     }
 }
