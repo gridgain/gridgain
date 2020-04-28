@@ -56,7 +56,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
     public static final int GRID_CNT = 2;
 
     /** */
-    //@Test
+    @Test
     public void testValidateIndexesFailedOnNotIdleCluster() throws Exception {
         checkpointFreq = 100L;
 
@@ -96,7 +96,6 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         String out = testOut.toString();
 
-        assertContains(log, out, "Index validation failed");
         assertContains(log, out, GRID_NOT_IDLE_MSG + "[\"" + GROUP_NAME + "\"]");
     }
 
