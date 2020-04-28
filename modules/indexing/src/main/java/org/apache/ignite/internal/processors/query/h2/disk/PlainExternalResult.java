@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.processors.query.h2.H2RowSizeDeltaEstimator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.engine.Session;
@@ -98,7 +98,10 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
 
         rowBuff.add(new IgniteBiTuple<>(null, row));
 
-        long delta = H2Utils.calculateMemoryDelta(null, null, row);
+        if (rowSizeDeltaEstimator == null)
+            rowSizeDeltaEstimator = new H2RowSizeDeltaEstimator();
+
+        long delta = rowSizeDeltaEstimator.calculateMemoryDelta(null, null, row);
 
         memTracker.reserve(delta);
 
@@ -116,8 +119,11 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
 
         long delta = 0;
 
+        if (rowSizeDeltaEstimator == null)
+            rowSizeDeltaEstimator = new H2RowSizeDeltaEstimator();
+
         for (Map.Entry<ValueRow, Value[]> row : rowBuff)
-            delta += H2Utils.calculateMemoryDelta(null, row.getValue(), null);
+            delta += rowSizeDeltaEstimator.calculateMemoryDelta(null, row.getValue(), null);
 
         memTracker.release(-delta);
 

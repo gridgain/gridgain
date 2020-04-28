@@ -200,6 +200,6 @@ public class GridH2ValueCacheObject extends Value {
 
     /** {@inheritDoc} */
     @Override public int getMemory() {
-        return 0;
+        return getBytesNoCopy().length + Value.DEFAULT_MEMORY;
     }
 }

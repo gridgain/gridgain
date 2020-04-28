@@ -41,6 +41,10 @@ import org.h2.util.StringUtils;
  * @author Nicolas Fortin, Atelier SIG, IRSTV FR CNRS 24888
  */
 public abstract class Value extends VersionedValue {
+    /**
+     * Default memory used by object.
+     */
+    public static final int DEFAULT_MEMORY = 24;
 
     /**
      * The data type is unknown at this time.
@@ -318,7 +322,7 @@ public abstract class Value extends VersionedValue {
          * Java 11 with -XX:-UseCompressedOops for all values up to ValueLong
          * and ValueDouble.
          */
-        return 24;
+        return DEFAULT_MEMORY;
     }
 
     /**
