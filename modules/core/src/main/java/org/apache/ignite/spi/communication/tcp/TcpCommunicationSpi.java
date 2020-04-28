@@ -65,6 +65,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -178,6 +179,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE;
 import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
 import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
@@ -2265,8 +2267,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
             Map<String, Object> res = new HashMap<>(5);
 
-            boolean ip = !F.isEmpty(locAddr) && locHost.getHostAddress().equals(locAddr);
-            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) && ip;
+            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) &&
+                (!F.isEmpty(locAddr) && locHost.getHostAddress().equals(locAddr)) && !locHost.isAnyLocalAddress() &&
+                !locHost.isLoopbackAddress();
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());
             res.put(createSpiAttributeName(ATTR_HOST_NAMES), setEmptyHostNamesAttr ? emptyList() : addrs.get2());
@@ -4382,20 +4385,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if remote nodes support {@link HandshakeWaitMessage}.
      */
     private boolean isHandshakeWaitSupported() {
+        GridKernalContext ctx = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context() : null;
+
         DiscoverySpi discoSpi = ignite().configuration().getDiscoverySpi();
 
-        if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(
-                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE
-            );
-        else {
-            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
-
-            return IgniteFeatures.allNodesSupports(
-                (ignite instanceof IgniteEx)? ((IgniteEx)ignite).context() : null,
-                nodes,
-                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
-        }
+        return IgniteFeatures.allNodesSupport(ctx, discoSpi, TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
     }
 
     /** {@inheritDoc} */

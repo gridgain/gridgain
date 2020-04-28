@@ -16,13 +16,12 @@
 
 package org.apache.ignite.internal.agent.processor;
 
-import org.apache.ignite.internal.agent.dto.cluster.BaselineInfo;
-import org.apache.ignite.internal.agent.dto.cluster.ClusterInfo;
-import org.apache.ignite.internal.agent.dto.topology.TopologySnapshot;
-import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.agent.dto.cluster.BaselineInfo;
+import org.apache.ignite.internal.agent.dto.cluster.ClusterInfo;
+import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
@@ -30,9 +29,6 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
-import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterDest;
-import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterTopologyDest;
-import static org.apache.ignite.internal.agent.utils.AgentUtils.getClusterFeatures;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
@@ -40,6 +36,10 @@ import static org.apache.ignite.events.EventType.EVT_BASELINE_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterDest;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.apache.ignite.internal.agent.dto.topology.TopologySnapshot.topology;
+import static org.apache.ignite.internal.agent.utils.AgentUtils.getClusterFeatures;
 
 /**
  * Cluster processor.
@@ -115,7 +115,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
         mgr.send(
             buildClusterTopologyDest(cluster.id()),
-            TopologySnapshot.topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
+            topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
         );
 
         if (evt != null)
@@ -127,7 +127,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
      */
     void sendClusterInfo(Event evt) {
         if (log.isDebugEnabled())
-            log.debug("Sending cluster info to Control Center");
+            log.debug("Sending cluster info to Control Center for event: " + evt);
 
         ClusterInfo clusterInfo = createClusterInfo();
 

@@ -45,6 +45,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -1507,9 +1508,14 @@ public class QueryUtils {
         if (isRemoteFail)
             return false;
 
-        IgniteSQLException cause = X.cause(reason, IgniteSQLException.class);
+        IgniteSQLException cause0 = X.cause(reason, IgniteSQLException.class);
 
-        return cause != null && cause.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
+        if (cause0 != null && cause0.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY)
+            return true;
+
+        SqlCacheException cause1 = X.cause(reason, SqlCacheException.class);
+
+        return cause1 != null && cause1.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
     }
 
     /**
@@ -1536,6 +1542,11 @@ public class QueryUtils {
             sqlState = ((IgniteSQLException)e).sqlState();
 
             code = ((IgniteSQLException)e).statusCode();
+        }
+        else if (e instanceof SqlCacheException) {
+            sqlState = ((SqlCacheException)e).sqlState();
+
+            code = ((SqlCacheException)e).statusCode();
         }
         else if (e instanceof TransactionDuplicateKeyException){
             code = IgniteQueryErrorCode.DUPLICATE_KEY;

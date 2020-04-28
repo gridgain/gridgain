@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 
 /**
  * Basic class for test cases for memory quota static configuration.
@@ -69,18 +70,19 @@ public abstract class AbstractMemoryQuotaStaticConfigurationTest extends DiskSpi
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setSqlOffloadingEnabled(IgniteConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED);
-        cfg.setSqlQueryMemoryQuota(IgniteConfiguration.DFLT_SQL_QUERY_MEMORY_QUOTA);
-        cfg.setSqlGlobalMemoryQuota(IgniteConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA);
+        cfg.setSqlConfiguration(new SqlConfiguration()
+            .setSqlOffloadingEnabled(SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED)
+            .setSqlQueryMemoryQuota(SqlConfiguration.DFLT_SQL_QUERY_MEMORY_QUOTA)
+            .setSqlGlobalMemoryQuota(SqlConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA));
 
         if (offloadingEnabled != null)
-            cfg.setSqlOffloadingEnabled(offloadingEnabled);
+            cfg.getSqlConfiguration().setSqlOffloadingEnabled(offloadingEnabled);
 
         if (globalQuota != null)
-            cfg.setSqlGlobalMemoryQuota(globalQuota);
+            cfg.getSqlConfiguration().setSqlGlobalMemoryQuota(globalQuota);
 
         if (qryQuota != null)
-            cfg.setSqlQueryMemoryQuota(qryQuota);
+            cfg.getSqlConfiguration().setSqlQueryMemoryQuota(qryQuota);
 
         return cfg;
     }

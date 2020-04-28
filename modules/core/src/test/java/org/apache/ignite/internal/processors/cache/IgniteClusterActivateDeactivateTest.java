@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
@@ -1205,6 +1206,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
             ignite(0).cluster().active(true);
         }
+
+        ignite(0).resetLostPartitions(Arrays.asList(CACHE_NAME_PREFIX + "0", CACHE_NAME_PREFIX + "1"));
 
         checkCaches(10);
     }

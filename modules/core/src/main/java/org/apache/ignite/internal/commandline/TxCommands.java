@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
@@ -570,9 +569,7 @@ public class TxCommands implements Command<VisorTxTaskArg> {
             client.compute().nodes(GridClientNode::connectable);
 
         for (GridClientNode node : nodes) {
-            byte[] featuresAttrBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
-
-            if (!IgniteFeatures.nodeSupports(featuresAttrBytes, feature)) {
+            if (!node.supports(feature)) {
                 throw new IllegalStateException("Failed to execute command: cluster contains node that " +
                     "doesn't support feature [nodeId=" + node.nodeId() + ", feature=" + feature + ']');
             }
