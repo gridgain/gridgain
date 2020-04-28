@@ -33,7 +33,6 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
-import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -682,21 +681,21 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         memCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
 
-        LogListener logLsnr = matches((String)U.staticField(FailureProcessor.class, "FAILURE_LOG_MSG")).build();
+        LogListener logLsnr = matches("Possible failure suppressed accordingly to a configured handler").build();
         logger = new ListeningTestLogger(false, log, logLsnr);
 
         IgniteEx srvNode = startGrid(0);
 
         String dataRegionName = "region";
 
-        IgniteConfiguration clientCfg = getConfiguration(getTestIgniteInstanceName(1) + "client")
+        IgniteConfiguration clientCfg = getConfiguration(getTestIgniteInstanceName(1))
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDataRegionConfigurations(new DataRegionConfiguration().setName(dataRegionName))
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             );
 
-        IgniteEx clientNode = startGrid(clientCfg);
+        IgniteEx clientNode = startClientGrid(clientCfg);
 
         srvNode.cluster().active(true);
 
