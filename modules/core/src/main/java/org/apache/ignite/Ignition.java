@@ -495,6 +495,15 @@ public class Ignition {
     }
 
     /**
+     * Gets a list of all grids whether they started or not.
+     *
+     * @return List of all grids.
+     */
+    public static List<Ignite> allGridsx() {
+        return IgnitionEx.allGridsx();
+    }
+
+    /**
      * Gets a grid instance for given local node ID. Note that grid instance and local node have
      * one-to-one relationship where node has ID and instance has name of the grid to which
      * both grid instance and its node belong. Note also that caller of this method
