@@ -39,7 +39,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -113,8 +112,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.configvariations.VariationsTestsConfig;
@@ -251,19 +248,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected static transient IgniteLogger log;
 
     /** */
-    protected static final transient LinkedBlockingQueue<String> unguardedMessages = new LinkedBlockingQueue<>();
-
-    /** */
-    protected static final transient LogListener warnUnguardedLogUsagelister = LogListener.matches(s -> {
-        boolean success = isUnguardedLogUsageMessage(s);
-
-        if (success)
-            unguardedMessages.add(s);
-
-        return success;
-    }).build();
-
-    /** */
     private static transient ClassLoader clsLdr;
 
     /** */
@@ -310,11 +294,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected GridAbstractTest() throws IgniteCheckedException {
         this(false);
 
-        ListeningTestLogger logger = new ListeningTestLogger(getIgniteTestResources().getLogger().getLogger(getClass()));
-
-        logger.registerListener(warnUnguardedLogUsagelister);
-
-        log = logger;
+        log = getIgniteTestResources().getLogger().getLogger(getClass());
     }
 
     /**
@@ -328,11 +308,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         // Initialize properties. Logger initialized here.
         GridTestProperties.init();
 
-        ListeningTestLogger logger = new ListeningTestLogger(new GridTestLog4jLogger());
-
-        logger.registerListener(warnUnguardedLogUsagelister);
-
-        log = logger;
+        log = new GridTestLog4jLogger();
 
         GridAbstractTest.startGrid = startGrid;
     }
@@ -345,7 +321,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTest()} will be called anyway.
      */
     protected void beforeTest() throws Exception {
-        assertTrue(changedLevels + "", F.isEmpty(changedLevels));
+        // No-op.
     }
 
     /**
@@ -360,12 +336,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         try {
             for (Logger logger : changedLevels.keySet())
                 logger.setLevel(changedLevels.get(logger));
-
-            assertTrue(unguardedMessages.toString(), F.isEmpty(unguardedMessages));
         }
         finally {
             changedLevels.clear();
-            unguardedMessages.clear();
         }
     }
 
@@ -477,16 +450,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * default in {@link #afterTest()}.
      */
     protected final void setRootLoggerDebugLevel() {
-        setLog4jRootLogLevel(Level.DEBUG);
-    }
-
-    /** */
-    private void setLog4jRootLogLevel(Level log4jLevel) {
         Logger logger = Logger.getRootLogger();
 
-        assertNull(logger + " level: " + log4jLevel, changedLevels.put(logger, logger.getLevel()));
+        assertNull(logger + " level: " + Level.DEBUG, changedLevels.put(logger, logger.getLevel()));
 
-        logger.setLevel(log4jLevel);
+        logger.setLevel(Level.DEBUG);
     }
 
     /**
@@ -2801,16 +2769,5 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             throw new IgniteException("MBean not registered.");
 
         return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, DynamicMBean.class, false);
-    }
-
-    /**
-     * Checks that given message is warning about unguarded log usage.
-     *
-     * @param msg Message for check.
-     * @return {@code True} if message is warn message about unguarded log usage and {@code false} otherwise.
-     */
-    private static boolean isUnguardedLogUsageMessage(String msg) {
-        // Logging at <LEVEL> level without checking if <LEVEL> level is enabled
-        return msg.startsWith("Logging at ") && msg.contains(" level without checking if ") && msg.contains(" level is enabled");
     }
 }
