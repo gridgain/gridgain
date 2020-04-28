@@ -18,9 +18,11 @@ package org.apache.ignite.internal.agent.processor.export;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.dto.IgniteConfigurationWrapper;
 import org.apache.ignite.internal.agent.dto.NodeConfiguration;
-import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 import static org.apache.ignite.internal.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
@@ -45,13 +47,17 @@ public class NodesConfigurationExporter extends GridProcessorAdapter {
      */
     public void export() {
         try {
-            String consistentId = ctx.cluster().get().localNode().consistentId().toString();
+            IgniteEx ignite = ctx.grid();
 
-            String cfg = mapper.writeValueAsString(new IgniteConfigurationWrapper(ctx.config()));
+            IgniteClusterEx cluster = ignite.cluster();
 
-            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, cfg);
+            String consistentId = cluster.localNode().consistentId().toString();
 
-            ctx.grid().message(ctx.grid().cluster().forOldest()).send(TOPIC_MANAGEMENT_CONSOLE, nodeCfg);
+            String json = mapper.writeValueAsString(new IgniteConfigurationWrapper(ctx.config()));
+
+            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, json);
+
+            ignite.message(cluster.forOldest()).send(TOPIC_MANAGEMENT_CONSOLE, nodeCfg);
         }
         catch (JsonProcessingException e) {
             log.error("Failed to serialize the IgniteConfiguration to JSON", e);

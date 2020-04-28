@@ -21,7 +21,6 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.internal.agent.dto.cluster.ClusterInfo;
-import org.apache.ignite.internal.agent.dto.topology.TopologySnapshot;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
@@ -39,6 +38,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterDest;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.apache.ignite.internal.agent.dto.topology.TopologySnapshot.topology;
 import static org.apache.ignite.internal.agent.utils.AgentUtils.getClusterFeatures;
 
 /**
@@ -115,7 +115,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
         snd.send(
             buildClusterTopologyDest(cluster.id()),
-            TopologySnapshot.topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
+            topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
         );
 
         if (evt != null)
@@ -127,7 +127,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
      */
     void sendClusterInfo(Event evt) {
         if (log.isDebugEnabled())
-            log.debug("Sending cluster info to Control Center");
+            log.debug("Sending cluster info to Control Center for event: " + evt);
 
         ClusterInfo clusterInfo = createClusterInfo();
 

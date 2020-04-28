@@ -20,13 +20,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.agent.dto.metric.MetricRegistrySchema;
 import org.apache.ignite.internal.agent.dto.metric.MetricRequest;
 import org.apache.ignite.internal.agent.dto.metric.MetricResponse;
 import org.apache.ignite.internal.agent.dto.metric.MetricSchema;
 import org.apache.ignite.internal.agent.dto.metric.MetricType;
 import org.apache.ignite.internal.agent.dto.metric.VarIntWriter;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -40,13 +40,13 @@ import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 
+import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.agent.dto.metric.MetricType.BOOLEAN;
 import static org.apache.ignite.internal.agent.dto.metric.MetricType.DOUBLE;
 import static org.apache.ignite.internal.agent.dto.metric.MetricType.HISTOGRAM;
 import static org.apache.ignite.internal.agent.dto.metric.MetricType.HIT_RATE;
 import static org.apache.ignite.internal.agent.dto.metric.MetricType.INT;
 import static org.apache.ignite.internal.agent.dto.metric.MetricType.LONG;
-import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
 
@@ -134,7 +134,7 @@ public class MetricsExporter extends GridProcessorAdapter {
      * @param metrics Metric registries.
      * @return {@link MetricResponse} instance.
      */
-    MetricResponse metricMessage(
+    public MetricResponse metricMessage(
             UUID clusterId,
             String clusterTag,
             String consistentId,
