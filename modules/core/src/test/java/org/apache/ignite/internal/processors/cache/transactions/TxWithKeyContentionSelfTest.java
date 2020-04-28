@@ -57,7 +57,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
-/** */
+/** Tests tx key contention detection functional. */
 public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     /** Client flag. */
     private boolean client;
@@ -206,7 +206,12 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
         runKeyCollisionsMetric(OPTIMISTIC, REPEATABLE_READ);
     }
 
-    /** Tests metric correct results while tx collisions occured. */
+    /** Tests metric correct results while tx collisions occured.
+     *
+     * @param concurrency Concurrency level.
+     * @param isolation Isolation level.
+     * @throws Exception If failed.
+     **/
     private void runKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         if (MvccFeatureChecker.forcedMvcc())
             return; // Not supported.

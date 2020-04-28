@@ -883,8 +883,10 @@ public class CacheMetricsImpl implements CacheMetrics {
     @Override public String getTxKeyCollisions() {
         SB sb = null;
 
-        if (txKeyCollisionInfo != null) {
-            List<Map.Entry<GridCacheMapEntry, Integer>> result = txKeyCollisionInfo.get();
+        Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> collInfo = keyCollisionsInfo();
+
+        if (collInfo != null) {
+            List<Map.Entry<GridCacheMapEntry, Integer>> result = collInfo.get();
 
             if (!F.isEmpty(result)) {
                 sb = new SB();

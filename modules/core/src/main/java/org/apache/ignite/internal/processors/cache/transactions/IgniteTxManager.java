@@ -191,7 +191,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** Collisions dump interval. */
     private volatile int collisionsDumpInterval =
-        IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL,1000);
+        IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
 
     /** Lower tx collisions queue size threshold. */
     static final int COLLISIONS_QUEUE_THRESHOLD = 100;
@@ -298,14 +298,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         new ConcurrentHashMap<>();
 
     /** Timeout operations. */
-    private final Map<String, GridTimeoutProcessor.CancelableTask> TIMEOUT_OPS =
+    private final Map<String, GridTimeoutProcessor.CancelableTask> timeoutOperations =
         new HashMap<String, GridTimeoutProcessor.CancelableTask>() {{
             put(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, null);
             put(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, null);
     }};
 
     /** Key collisions info holder. */
-    private KeyCollisionsHolder keyCollisionsInfo;
+    private volatile KeyCollisionsHolder keyCollisionsInfo;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -386,17 +386,17 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         long longOpDumpTimeout = longOperationsDumpTimeout();
 
+        keyCollisionsInfo = new KeyCollisionsHolder();
+
         scheduleDumpTask(
             IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
             () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
             longOpDumpTimeout);
 
-        keyCollisionsInfo = new KeyCollisionsHolder();
-
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
             this::collectTxCollisionsInfo,
-            collisionsDumpInterval);
+            collisionsDumpInterval());
     }
 
     /**
@@ -2102,7 +2102,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             longOpsDumpTimeout);
     }
 
-    /** */
+    /**
+     * @param timeout Sets tx key collisions analysis interval.
+     **/
     void txCollisionsDumpInterval(int timeout) {
         collisionsDumpInterval = timeout;
 
@@ -2118,7 +2120,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * with a new timeout, delay and start period equal to
      * {@code timeout}, otherwise task is deleted.
      *
-     * @param taskKey Appropriate key in {@link IgniteTxManager#TIMEOUT_OPS}
+     * @param taskKey Appropriate key in {@link IgniteTxManager#timeoutOperations}
      * @param r Task.
      * @param timeout Long operations dump timeout.
      */
@@ -2130,15 +2132,15 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         GridTimeoutProcessor timeoutProc = cctx.kernalContext().timeout();
 
-        synchronized (TIMEOUT_OPS) {
-            GridTimeoutProcessor.CancelableTask task = TIMEOUT_OPS.get(taskKey);
+        synchronized (timeoutOperations) {
+            GridTimeoutProcessor.CancelableTask task = timeoutOperations.get(taskKey);
 
             if (nonNull(task))
                 task.close();
 
             longOpDumpTask = timeout > 0 ? timeoutProc.schedule(r, timeout, timeout) : null;
 
-            TIMEOUT_OPS.put(taskKey, longOpDumpTask);
+            timeoutOperations.put(taskKey, longOpDumpTask);
         }
     }
 
@@ -3005,8 +3007,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     @Override protected void stop0(boolean cancel) {
         super.stop0(cancel);
 
-        synchronized (TIMEOUT_OPS) {
-            TIMEOUT_OPS.forEach((k, v) -> v.close());
+        synchronized (timeoutOperations) {
+            timeoutOperations.forEach((k, v) -> {
+                if (v != null)
+                    v.close();
+            });
         }
     }
 
@@ -3027,6 +3032,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * Returns tx keys collisions dump interval, for additional info check
+     * {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} description.
+     *
      * @return Collisions dump interval.
      */
     public int collisionsDumpInterval() {
@@ -3034,6 +3042,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * Changes tx key collisions dump interval.
+     * For additional info check {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} description.
+     *
      * @param collisionsDumpInterval New collisions dump interval or -1 for disabling.
      */
     public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
@@ -3045,7 +3056,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         );
     }
 
-    /** Collect queue size per key collisions info. */
+    /**
+     * Collect queue size per key collisions info.
+     *
+     * @param key Key..
+     * @param queueSize Collisions queue size
+     **/
     public void pushCollidingKeysWithQueueSize(GridCacheMapEntry key, int queueSize) {
         keyCollisionsInfo.put(key, queueSize);
     }
@@ -3059,7 +3075,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Check local and remote candidates queue size.
      *
      * @param entry CacheEntry.
-     **/
+     */
     public void detectPossibleCollidingKeys(GridDistributedCacheEntry entry) {
         int qSize = entry.remoteMvccSnapshot().size();
 
@@ -3077,46 +3093,43 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** Tx key collisions info holder. */
     private final class KeyCollisionsHolder {
         /** Stripes count. */
-        private final int STRIPES_COUNT = cctx.kernalContext().config().getSystemThreadPoolSize();
+        private final int stripesCnt = cctx.kernalContext().config().getSystemThreadPoolSize();
 
         /** Max objects per store. */
         private static final int MAX_OBJS = 5;
 
-        /** Mutexes for each stripe. */
-        private final Object[] stripeLocks = new Object[STRIPES_COUNT];
-
-        /** Store per stripe. */
-        private final Map<GridCacheMapEntry, Integer> stores[] = new LinkedHashMap[STRIPES_COUNT];
+        /** Store for keys and collisions queue sizes. */
+        private final Map<GridCacheMapEntry, Integer> stores[] = new LinkedHashMap[stripesCnt];
 
         /** Metric per cache store. */
         private final Map<GridCacheAdapter<?, ?>, List<Map.Entry<GridCacheMapEntry, Integer>>> metricPerCacheStore =
             new ConcurrentHashMap<>();
 
         /** Guard. */
-        AtomicBoolean alreadyRun = new AtomicBoolean();
+        private final AtomicBoolean alreadyRun = new AtomicBoolean();
 
         /** Constructor. */
         private KeyCollisionsHolder() {
-            for (int i = 0; i < STRIPES_COUNT; ++i) {
+            for (int i = 0; i < stripesCnt; ++i) {
                 stores[i] = new LinkedHashMap<GridCacheMapEntry, Integer>() {
-                    /** */
+                    /** {@inheritDoc} */
                     @Override protected boolean removeEldestEntry(Map.Entry<GridCacheMapEntry, Integer> eldest) {
                         return size() > MAX_OBJS;
                     }
                 };
-
-                stripeLocks[i] = new Object();
             }
         }
 
         /**
+         * Stores keys and values.
+         *
          * @param key Key to store.
          * @param val Value to store.
-         **/
+         */
         public void put(GridCacheMapEntry key, Integer val) {
-            int stripeIdx = key.hashCode() & (STRIPES_COUNT - 1);
+            int stripeIdx = key.hashCode() & (stripesCnt - 1);
 
-            synchronized (stripeLocks[stripeIdx]) {
+            synchronized (stores[stripeIdx]) {
                 stores[stripeIdx].put(key, val);
             }
         }
@@ -3128,8 +3141,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             metricPerCacheStore.clear();
 
-            for (int i = 0; i < STRIPES_COUNT; ++i) {
-                synchronized (stripeLocks[i]) {
+            for (int i = 0; i < stripesCnt; ++i) {
+                synchronized (stores[i]) {
                     Map<GridCacheMapEntry, Integer> store = stores[i];
 
                     if (store.isEmpty())
