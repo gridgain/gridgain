@@ -332,7 +332,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testSimpleQueryLargeResult() throws Exception {
-        maxMem = 3 * MB;
+        maxMem = 4 * MB;
         execQuery("select * from K", false);
 
         assertFalse(localResults.isEmpty());

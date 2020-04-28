@@ -27,7 +27,7 @@ import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.TreeMap;
-import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.processors.query.h2.H2RowSizeDeltaEstimator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.engine.Session;
@@ -258,7 +258,10 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             Value[] old = sortedRowsBuf.put(key, row);
 
-            long delta = H2Utils.calculateMemoryDelta(key, old, row);
+            if (rowSizeDeltaEstimator == null)
+                rowSizeDeltaEstimator = new H2RowSizeDeltaEstimator();
+
+            long delta = rowSizeDeltaEstimator.calculateMemoryDelta(key, old, row);
 
             memTracker.reserve(delta);
         }
@@ -270,7 +273,10 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             unsortedRowsBuf.add(row);
 
-            long delta = H2Utils.calculateMemoryDelta(null, null, row);
+            if (rowSizeDeltaEstimator == null)
+                rowSizeDeltaEstimator = new H2RowSizeDeltaEstimator();
+
+            long delta = rowSizeDeltaEstimator.calculateMemoryDelta(null, null, row);
 
             memTracker.reserve(delta);
         }
@@ -306,8 +312,11 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
         long delta = 0;
 
+        if (rowSizeDeltaEstimator == null)
+            rowSizeDeltaEstimator = new H2RowSizeDeltaEstimator();
+
         for (Map.Entry<ValueRow, Value[]> row : rows)
-            delta += H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
+            delta += rowSizeDeltaEstimator.calculateMemoryDelta(row.getKey(), row.getValue(), null);
 
         memTracker.release(-delta);
     }
