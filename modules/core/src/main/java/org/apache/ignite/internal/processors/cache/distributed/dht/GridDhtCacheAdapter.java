@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-import javax.cache.Cache;
-import javax.cache.expiry.ExpiryPolicy;
 import java.io.Externalizable;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,6 +28,8 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import javax.cache.Cache;
+import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -728,6 +728,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
         Set<GridCacheEntryEx> newLocalEntries = null;
 
+        ctx.shared().database().checkpointReadLock();
+
         try {
             int keysSize = keys.size();
 
@@ -1037,6 +1039,9 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         catch (IgniteCheckedException e) {
             return new GridFinishedFuture<>(e);
         }
+        finally {
+            ctx.shared().database().checkpointReadUnlock();
+        }
      }
 
     /**
@@ -1321,7 +1326,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      * @param expiryPlc Expiry policy.
      */
     public void sendTtlUpdateRequest(@Nullable final IgniteCacheExpiryPolicy expiryPlc) {
-        if (expiryPlc != null && expiryPlc.entries() != null) {
+        if (expiryPlc != null && !F.isEmpty(expiryPlc.entries())) {
             ctx.closures().runLocalSafe(new GridPlainRunnable() {
             @SuppressWarnings({"ForLoopReplaceableByForEach"})
             @Override public void run() {
