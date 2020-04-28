@@ -1743,8 +1743,7 @@ public class GridDhtPartitionDemander {
             if (!p0.containsAll(p1))
                 return false;
 
-            AffinityTopologyVersion previousTopVer =
-                grp.affinity().cachedVersions().stream().skip(grp.affinity().cachedVersions().size() - 2).findFirst().get();
+            AffinityTopologyVersion previousTopVer = otherAssignments.previousTopVer();
 
             p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
                 grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
