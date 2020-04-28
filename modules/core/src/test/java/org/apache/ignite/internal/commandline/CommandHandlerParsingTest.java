@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.commandline;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -30,8 +31,11 @@ import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.commandline.cache.CacheValidateIndexes;
 import org.apache.ignite.internal.commandline.cache.FindAndDeleteGarbage;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
+import org.apache.ignite.internal.commandline.management.ManagementArguments;
+import org.apache.ignite.internal.commandline.management.ManagementCommands;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxOperation;
 import org.apache.ignite.internal.visor.tx.VisorTxProjection;
 import org.apache.ignite.internal.visor.tx.VisorTxSortOrder;
@@ -689,5 +693,68 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.MANAGEMENT;
+    }
+
+    /**
+     * test parsing management arguments
+     */
+    @Test
+    public void testManagementArguments() throws IOException {
+        ConnectionAndSslParameters args;
+
+        parseArgs(asList("--management", "status"));
+        parseArgs(asList("--management", "help"));
+        
+        args = parseArgs(asList("--management", "on"));
+
+        ManagementArguments arg = ((ManagementCommands)args.command()).arg();
+
+        assertTrue(arg.isEnable());
+
+        args = parseArgs(asList("--management", "off"));
+
+        arg = ((ManagementCommands)args.command()).arg();
+
+        assertFalse(arg.isEnable());
+
+        assertParseArgsThrows("Expected server URIs", "--management", "uri");
+
+        args = parseArgs(asList("--management", "uri", "http://localhost:3000"));
+
+        arg = ((ManagementCommands)args.command()).arg();
+        
+        assertTrue(arg.isEnable());
+        assertEquals(singletonList("http://localhost:3000"), arg.getServerUris());
+
+        assertParseArgsThrows("Invalid uri arguments", "--management", "uri", "http://localhost", "--wrong");
+
+        String keyStorePath = U.resolveIgnitePath("/modules/core/src/test/resources/server.jks").getAbsolutePath();
+        String trustStorePath = U.resolveIgnitePath("/modules/core/src/test/resources/server.jks").getAbsolutePath();
+
+        args = parseArgs(asList("--management", "uri", "http://localhost", "--management-cipher-suites", "CIPHER_1,CIPHER_2",
+            "--management-keystore", keyStorePath,
+            "--management-keystore-password", "KEYSTORE_PASSWORD",
+            "--management-truststore", trustStorePath,
+            "--management-truststore-password", "TRUSTSTORE_PASSWORD",
+            "--management-session-timeout", "1",
+            "--management-session-expiration-timeout", "100"));
+
+        arg = ((ManagementCommands)args.command()).arg();
+
+        assertTrue(arg.isEnable());
+        assertEquals(singletonList("http://localhost"), arg.getServerUris());
+        assertEquals(asList("CIPHER_1", "CIPHER_2"), arg.getCipherSuites());
+        assertEquals(U.readFileToString(keyStorePath, "UTF-8"), arg.getKeyStore());
+        assertEquals("KEYSTORE_PASSWORD", arg.getKeyStorePassword());
+        assertEquals(U.readFileToString(trustStorePath, "UTF-8"), arg.getTrustStore());
+        assertEquals("TRUSTSTORE_PASSWORD", arg.getTrustStorePassword());
+        assertEquals(1, arg.getSessionTimeout());
+        assertEquals(100, arg.getSessionExpirationTimeout());
+
+        assertParseArgsThrows("Expecting session timeout", "--management", "uri", "http://localhost", "--management-session-timeout");
+        assertParseArgsThrows("Invalid value for session timeout: x", "--management", "uri", "http://localhost", "--management-session-timeout", "x");
+
+        assertParseArgsThrows("Expecting session expiration timeout", "--management", "uri", "http://localhost", "--management-session-expiration-timeout");
+        assertParseArgsThrows("Invalid value for session expiration timeout: x", "--management", "uri", "http://localhost", "--management-session-expiration-timeout", "x");
     }
 }

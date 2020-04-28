@@ -158,11 +158,11 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
                 while (argIter.hasNextSubArg()) {
                     ManagementURLCommandArg uriArg = CommandArgUtils.of(
-                        argIter.nextArg("Expected one of uri arguments"), ManagementURLCommandArg.class
+                        argIter.nextArg("Invalid uri arguments"), ManagementURLCommandArg.class
                     );
 
                     if (uriArg == null)
-                        throw new IllegalArgumentException("Expected one of uri arguments");
+                        throw new IllegalArgumentException("Invalid uri arguments");
 
                     switch (uriArg) {
                         case KEYSTORE:
