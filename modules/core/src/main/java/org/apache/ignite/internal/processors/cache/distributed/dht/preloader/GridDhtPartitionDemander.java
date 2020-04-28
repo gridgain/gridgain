@@ -1559,7 +1559,10 @@ public class GridDhtPartitionDemander {
             if (parts.historicalMap().contains(p)) {
                 // The partition p cannot be wal rebalanced,
                 // let's exclude the given nodeId and give a try to full rebalance.
-                exchFut.excludeNodeFromWalRebalance(nodeId);
+                exchFut.markNodeAsInapplicableForWalRebalance(nodeId);
+            }
+            else {
+                exchFut.markNodeAsInapplicableForFullRebalance(nodeId, grp.groupId(), p);
             }
 
             missed.computeIfAbsent(nodeId, k -> new HashSet<>());

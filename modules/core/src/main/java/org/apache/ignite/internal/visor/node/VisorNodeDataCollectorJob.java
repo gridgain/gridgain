@@ -258,7 +258,7 @@ public class VisorNodeDataCollectorJob extends VisorJob<VisorNodeDataCollectorTa
         GridCachePartitionExchangeManager<Object, Object> exchange = ignite.context().cache().context().exchange();
 
         res.setReadyAffinityVersion(new VisorAffinityTopologyVersion(exchange.readyAffinityVersion()));
-        res.setHasPendingExchange(exchange.hasPendingServerExchange());
+        res.setHasPendingExchange(exchange.hasPendingExchange());
 
         res.setTopologyVersion(ignite.cluster().topologyVersion());
 

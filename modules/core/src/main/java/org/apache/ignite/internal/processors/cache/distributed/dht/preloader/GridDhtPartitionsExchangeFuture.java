@@ -311,6 +311,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** Set of nodes that cannot be used for wal rebalancing due to some reason. */
     private Set<UUID> exclusionsFromWalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    /**
+     * Set of nodes that cannot be used for full rebalancing due missed partitions.
+     * Mapping pair of groupId and nodeId to set of partitions.
+     */
+    private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
+
     /** Reserved max available history for calculation of history supplier on coordinator. */
     private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
 
@@ -569,19 +575,52 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
-     * Excludes the given node from the collection of historical suppliers.
+     * Marks the given node as not applicable for historical rebalancing.
      *
-     * @param nodeId Node id that should not be used for wal rebalance (aka historical supplier).
+     * @param nodeId Node id that should not be used for wal rebalancing (aka historical supplier).
      */
-    public void excludeNodeFromWalRebalance(UUID nodeId) {
+    public void markNodeAsInapplicableForWalRebalance(UUID nodeId) {
         exclusionsFromWalRebalance.add(nodeId);
     }
 
     /**
-     * @return {@code true} if there are nodes that are excluded from wal rebalance.
+     * Marks the given node as not applicable for full rebalancing
+     * for the given group and partition.
+     *
+     * @param nodeId Node id that should not be used for full rebalancing.
+     * @param grpId Cache group id.
+     * @param p Partition id.
      */
-    public boolean hasExclusionsFromWalRebalance() {
+    public void markNodeAsInapplicableForFullRebalance(UUID nodeId, int grpId, int p) {
+        Set<Integer> parts = exclusionsFromFullRebalance.computeIfAbsent(new T2<>(grpId, nodeId), t2 ->
+            Collections.newSetFromMap(new ConcurrentHashMap<>())
+        );
+
+        parts.add(p);
+    }
+
+    /**
+     * @return {@code true} if there are nodes which are inapplicable for wal rebalancing.
+     */
+    public boolean hasInapplicableNodeForWalRebalance() {
         return !exclusionsFromWalRebalance.isEmpty();
+    }
+
+    /**
+     * @return {@code true} if there are nodes which are inapplicable for full rebalancing.
+     */
+    public boolean hasInapplicableNodesForFullRebalance() {
+        return !exclusionsFromFullRebalance.isEmpty();
+    }
+
+    /**
+     * @param nodeId Node id to check.
+     * @param grpId Cache group id.
+     * @param p Partition id.
+     * @return {@code true} if the node is applicable for full rebalancing.
+     */
+    public boolean isNodeApplicableForFullRebalance(UUID nodeId, int grpId, int p) {
+        return true;
     }
 
     /**

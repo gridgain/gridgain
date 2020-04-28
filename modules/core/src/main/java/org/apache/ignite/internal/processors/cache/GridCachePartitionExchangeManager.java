@@ -1143,6 +1143,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * @return {@code True} if pending future queue contains exchange task.
+     */
+    public boolean hasPendingExchange() {
+        return exchWorker.hasPendingExchange();
+    }
+
+    /**
      * @return {@code True} if pending future queue contains server exchange task.
      */
     public boolean hasPendingServerExchange() {
@@ -2920,7 +2927,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
          * @param exchId Exchange ID.
          */
         void forceReassign(GridDhtPartitionExchangeId exchId) {
-            if (!hasPendingServerExchange())
+            if (!hasPendingExchange())
                 futQ.add(new RebalanceReassignExchangeTask(exchId));
         }
 
@@ -3046,6 +3053,20 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         }
 
         /**
+         * @return Whether pending exchange future exists.
+         */
+        boolean hasPendingExchange() {
+            if (!futQ.isEmpty()) {
+                for (CachePartitionExchangeWorkerTask task : futQ) {
+                    if (isExchangeTask(task))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
          * @return Whether pending exchange future triggered by non client node exists.
          */
         boolean hasPendingServerExchange() {
@@ -3055,8 +3076,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         if (((GridDhtPartitionsExchangeFuture)task).changedAffinity())
                             return true;
                     }
-                    else if (task instanceof RebalanceReassignExchangeTask || task instanceof ForceRebalanceExchangeTask)
-                        return true;
                 }
             }
 
@@ -3141,7 +3160,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     }
 
                     // If not first preloading and no more topology events present.
-                    if (!cctx.kernalContext().clientNode() && !hasPendingServerExchange() && preloadFinished)
+                    if (!cctx.kernalContext().clientNode() && !hasPendingExchange() && preloadFinished)
                         timeout = cctx.gridConfig().getNetworkTimeout();
 
                     // After workers line up and before preloading starts we initialize all futures.
@@ -3204,19 +3223,26 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             // Reassign request as part of the last finished exchange.
                             if (exchId.topologyVersion().isBetween(lastFut.initialVersion(), lastFut.topologyVersion())) {
-                                if (lastFut.hasExclusionsFromWalRebalance())
+                                if (lastFut.hasInapplicableNodeForWalRebalance() || lastFut.hasInapplicableNodesForFullRebalance())
                                     exchFut = lastFut;
                             }
                             else  if (lastAffChangedVer.after(exchId.topologyVersion())) {
                                     // There is a new exchange which should trigger rebalancing.
                                     // This reassign request can be skipped.
-                                    continue;
+                                if (log.isInfoEnabled()) {
+                                    log.info("Partitions reassign request skipped due to affinity was already changed" +
+                                        " [reassignTopVer=" + exchId.topologyVersion() +
+                                        ", lastAffChangedTopVer=" + lastAffChangedVer +']');
+                                }
+
+                                continue;
                             }
                             else {
                                 // There was an exchange that does not change the affinity.
                                 for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
                                     if (f.isDone() && f.topologyVersion().equals(lastAffChangedVer)) {
-                                        exchFut = f.hasExclusionsFromWalRebalance()? f : null;
+                                        exchFut = f.hasInapplicableNodeForWalRebalance() || f.hasInapplicableNodesForFullRebalance()?
+                                            f : null;
 
                                         break;
                                     }
