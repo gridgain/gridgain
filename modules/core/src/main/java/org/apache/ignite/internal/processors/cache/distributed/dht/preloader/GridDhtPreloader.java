@@ -67,7 +67,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** Disable rebalancing cancellation optimization. */
     private final boolean disableRebalancingCancellationOptimization =
-        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
+        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
 
     /** */
     private GridDhtPartitionTopology top;
