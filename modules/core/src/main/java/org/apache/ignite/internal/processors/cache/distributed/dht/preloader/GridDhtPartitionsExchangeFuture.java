@@ -620,7 +620,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @return {@code true} if the node is applicable for full rebalancing.
      */
     public boolean isNodeApplicableForFullRebalance(UUID nodeId, int grpId, int p) {
-        return true;
+        return Optional.ofNullable(exclusionsFromFullRebalance.get(new T2<>(grpId, nodeId)))
+            .map(s -> !s.contains(p))
+            .orElse(true);
     }
 
     /**
