@@ -29,6 +29,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -360,7 +361,7 @@ public class BinaryTypeMismatchLoggingTest extends GridCommonAbstractTest {
 
         this.capture = new GridStringLogger(false, this.log);
 
-        GridTestUtils.setFieldValue(ignite.context().query(), "log", capture);
+        GridTestUtils.setFieldValue(ignite.context().query(), GridProcessorAdapter.class,"log", capture);
 
         return ignite;
     }
