@@ -44,6 +44,13 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOp
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.management.ManagementCommandList.HELP;
 import static org.apache.ignite.internal.commandline.management.ManagementCommandList.of;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.CIPHER_SUITES;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.KEYSTORE;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.KEYSTORE_PASSWORD;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.SESSION_EXPIRATION_TIMEOUT;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.SESSION_TIMEOUT;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.TRUSTSTORE;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.TRUSTSTORE_PASSWORD;
 
 /**
  * Management cluster command.
@@ -155,7 +162,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                     );
 
                     if (uriArg == null)
-                        throw new IllegalArgumentException("Expected one of auto-adjust arguments");
+                        throw new IllegalArgumentException("Expected one of uri arguments");
 
                     switch (uriArg) {
                         case KEYSTORE:
@@ -169,7 +176,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             break;
 
                         case TRUSTSTORE:
-                            managementArgs.setTrustStorePassword(readFileToString(argIter.nextArg("trust store path")));
+                            managementArgs.setTrustStore(readFileToString(argIter.nextArg("trust store path")));
 
                             break;
 
@@ -232,11 +239,11 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
         return new ManagementConfiguration()
             .setEnabled(args.isEnable())
-            .setConsoleUris(args.getServerUris())
+            .setUris(args.getServerUris())
             .setCipherSuites(args.getCipherSuites())
-            .setConsoleKeyStore(args.getKeyStore())
+            .setKeyStore(args.getKeyStore())
             .setConsoleKeyStorePassword(args.getKeyStorePassword())
-            .setConsoleTrustStore(args.getTrustStore())
+            .setTrustStore(args.getTrustStore())
             .setConsoleTrustStorePassword(args.getTrustStorePassword())
             .setSecuritySessionTimeout(args.getSessionTimeout())
             .setSecuritySessionExpirationTimeout(args.getSessionExpirationTimeout());
@@ -249,13 +256,13 @@ public class ManagementCommands implements Command<ManagementArguments> {
         return Stream.of(
             ManagementCommandList.URI.text(),
             "MANAGEMENT_URIS",
-            optional("--management-cipher-suites", "MANAGEMENT_CIPHER_1[, MANAGEMENT_CIPHER_2, ..., MANAGEMENT_CIPHER_N]"),
-            optional("--management-keystore", "MANAGEMENT_KEYSTORE_PATH"),
-            optional("--management-keystore-password", "MANAGEMENT_KEYSTORE_PASSWORD"),
-            optional("--management-truststore", "MANAGEMENT_TRUSTSTORE_PATH"),
-            optional("--management-truststore-password", "MANAGEMENT_TRUSTSTORE_PASSWORD"),
-            optional("--management-session-timeout", "MANAGEMENT_SESSION_TIMEOUT"),
-            optional("--management-session-expiration-timeout", "MANAGEMENT_SESSION_EXPIRATION_TIMEOUT")
+            optional(CIPHER_SUITES, "MANAGEMENT_CIPHER_1[, MANAGEMENT_CIPHER_2, ..., MANAGEMENT_CIPHER_N]"),
+            optional(KEYSTORE, "MANAGEMENT_KEYSTORE_PATH"),
+            optional(KEYSTORE_PASSWORD, "MANAGEMENT_KEYSTORE_PASSWORD"),
+            optional(TRUSTSTORE, "MANAGEMENT_TRUSTSTORE_PATH"),
+            optional(TRUSTSTORE_PASSWORD, "MANAGEMENT_TRUSTSTORE_PASSWORD"),
+            optional(SESSION_TIMEOUT, "MANAGEMENT_SESSION_TIMEOUT"),
+            optional(SESSION_EXPIRATION_TIMEOUT, "MANAGEMENT_SESSION_EXPIRATION_TIMEOUT")
         ).toArray(String[]::new);
     }
 
@@ -275,13 +282,13 @@ public class ManagementCommands implements Command<ManagementArguments> {
     private void print(Logger log, ManagementConfiguration cfg) {
         log.info("");
         log.info("Management: " + flag(cfg.isEnabled()));
-        log.info("URIs to management: " + cfg.getConsoleUris());
+        log.info("URIs to management: " + cfg.getUris());
 
         if (!F.isEmpty(cfg.getCipherSuites()))
             log.info("Cipher suites: " + cfg.getCipherSuites());
 
-        log.info("Management key store: " + flag(!F.isEmpty(cfg.getConsoleKeyStore())));
-        log.info("Management trust store: " + flag(!F.isEmpty(cfg.getConsoleTrustStore())));
+        log.info("Management key store: " + flag(!F.isEmpty(cfg.getKeyStore())));
+        log.info("Management trust store: " + flag(!F.isEmpty(cfg.getTrustStore())));
         log.info("Management session timeout: " + cfg.getSecuritySessionTimeout());
         log.info("Management session expiration timeout: " + cfg.getSecuritySessionExpirationTimeout());
         log.info("");

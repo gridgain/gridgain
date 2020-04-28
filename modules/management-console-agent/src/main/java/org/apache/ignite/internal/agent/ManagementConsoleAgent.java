@@ -313,7 +313,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             try {
                 mgr.stop(true);
 
-                curSrvUri = nextUri(cfg.getConsoleUris(), curSrvUri);
+                curSrvUri = nextUri(cfg.getUris(), curSrvUri);
 
                 mgr.connect(toWsUri(curSrvUri), cfg, new AfterConnectedSessionHandler());
 
@@ -361,7 +361,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             return;
         }
 
-        if (F.isEmpty(cfg.getConsoleUris())) {
+        if (F.isEmpty(cfg.getUris())) {
             log.info("Control Center agent  was not started on coordinator, because the server URI was not set");
             log.info("You can use control script to setup server URI");
 
@@ -484,7 +484,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
                 }
             });
 
-            cfg.setConsoleUris(singletonList(curSrvUri));
+            cfg.setUris(singletonList(curSrvUri));
 
             writeToMetaStorage(cfg);
         }

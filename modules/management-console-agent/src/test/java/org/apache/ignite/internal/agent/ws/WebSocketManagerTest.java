@@ -88,7 +88,7 @@ public class WebSocketManagerTest extends AgentCommonAbstractTest {
 
         ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
 
-        cfg.setConsoleUris(newArrayList("http://localhost:3000", "http://localhost:3010", "http://localhost:" + port));
+        cfg.setUris(newArrayList("http://localhost:3000", "http://localhost:3010", "http://localhost:" + port));
 
         ignite.context().managementConsole().configuration(cfg);
 

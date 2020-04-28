@@ -22,25 +22,25 @@ import org.apache.ignite.internal.commandline.argument.CommandArg;
  */
 public enum ManagementURLCommandArg implements CommandArg {
     /** SSL cipher suites. */
-    CIPHER_SUITES("management-cipher-suites"),
+    CIPHER_SUITES("--management-cipher-suites"),
 
     /** Path to server key store. */
-    KEYSTORE("management-keystore"),
+    KEYSTORE("--management-keystore"),
 
     /** Server key store password. */
-    KEYSTORE_PASSWORD("management-keystore-password"),
+    KEYSTORE_PASSWORD("--management-keystore-password"),
 
     /** Path to server trust store. */
-    TRUSTSTORE("management-truststore"),
+    TRUSTSTORE("--management-truststore"),
 
     /** Server trust store password. */
-    TRUSTSTORE_PASSWORD("management-truststore-password"),
+    TRUSTSTORE_PASSWORD("--management-truststore-password"),
 
     /** Session timeout. */
-    SESSION_TIMEOUT("management-session-timeout"),
+    SESSION_TIMEOUT("--management-session-timeout"),
 
     /** Session expiration timeout. */
-    SESSION_EXPIRATION_TIMEOUT("management-session-timeout");
+    SESSION_EXPIRATION_TIMEOUT("--management-session-expiration-timeout");
 
     /** Option name. */
     private final String name;
