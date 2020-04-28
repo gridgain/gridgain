@@ -3627,8 +3627,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 fut.listen(f -> connMap.remove(connKey, f));
 
                 try {
-                    log.warning("TCP connection failed, node " + node.id() + " is unreachable," +
-                        " will attempt to request inverse connection via discovery SPI. " + e.getMessage());
+                    if (log.isInfoEnabled())
+                        log.info("TCP connection failed, node " + node.id() + " is unreachable," +
+                            " will attempt to request inverse connection via discovery SPI. " + e.getMessage());
 
                     TcpConnectionRequestDiscoveryMessage msg = new TcpConnectionRequestDiscoveryMessage(
                         node.id(), e.connIdx
