@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.disk;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.H2RowSizeDeltaEstimator;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.h2.engine.Session;
 import org.h2.result.ResultInterface;
@@ -50,6 +51,9 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
 
     /** File with spilled rows data. */
     protected final ExternalResultData<T> data;
+
+    /** Helper class for estimating the row size. */
+    protected H2RowSizeDeltaEstimator rowSizeDeltaEstimator;
 
     /**
      * @param useHashIdx Whether to use hash index.

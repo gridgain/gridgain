@@ -49,7 +49,7 @@ public class IndexingQueryCacheFilter {
     public IndexingQueryCacheFilter(GridCacheAffinityManager aff, Set<Integer> parts,
         AffinityTopologyVersion topVer, ClusterNode locNode) {
         this.aff = aff;
-        this.parts = parts;
+        this.parts = parts != null ? parts : aff.primaryPartitions(locNode.id(), topVer);
         this.topVer = topVer;
         this.locNode = locNode;
     }
@@ -73,9 +73,6 @@ public class IndexingQueryCacheFilter {
      * @return {@code True} if passed.
      */
     public boolean applyPartition(int part) {
-        if (parts == null)
-            return aff.primaryByPartition(locNode, part, topVer);
-        else
-            return parts.contains(part);
+        return parts.contains(part);
     }
 }

@@ -31,8 +31,6 @@ import org.h2.value.TypeInfo;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
-import static org.apache.ignite.internal.processors.query.h2.H2Utils.calculateMemoryDelta;
-
 /** */
 public class H2ManagedLocalResult implements LocalResult {
     private Session session;
@@ -59,6 +57,9 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** Query memory tracker. */
     private H2MemoryTracker memTracker;
+
+    /** Helper class for estimating the row size. */
+    private H2RowSizeDeltaEstimator rowSizeDeltaEstimator;
 
     /** Reserved memory. */
     private long memReserved;
@@ -105,7 +106,10 @@ public class H2ManagedLocalResult implements LocalResult {
         if (memTracker == null)
             return true; // No memory management set.
 
-        long memory = calculateMemoryDelta(distinctRowKey, oldRow, row);
+        if (rowSizeDeltaEstimator == null)
+            rowSizeDeltaEstimator = new H2RowSizeDeltaEstimator();
+
+        long memory = rowSizeDeltaEstimator.calculateMemoryDelta(distinctRowKey, oldRow, row);
 
         boolean hasMemory = true;
 
@@ -322,15 +326,11 @@ public class H2ManagedLocalResult implements LocalResult {
         return ValueRow.get(values);
     }
 
-    private void createExternalResult(boolean forcePlainResult) {
+    private void createExternalResult() {
         QueryMemoryManager memMgr = (QueryMemoryManager)session.groupByDataFactory();
-        if (forcePlainResult)
-            external = memMgr.createPlainExternalResult(session);
-        else {
-            external = distinct || distinctIndexes != null || sort != null ?
-                memMgr.createSortedExternalResult(session, distinct, distinctIndexes, visibleColumnCount, sort, rowCount)
-                : memMgr.createPlainExternalResult(session);
-        }
+        external = distinct || distinctIndexes != null || sort != null ?
+            memMgr.createSortedExternalResult(session, distinct, distinctIndexes, visibleColumnCount, sort, rowCount) :
+            memMgr.createPlainExternalResult(session);
     }
 
     /** {@inheritDoc} */
@@ -346,7 +346,7 @@ public class H2ManagedLocalResult implements LocalResult {
                 }
                 rowCount = distinctRows.size();
                 if (!hasAvailableMemory(array, previous, values)) {
-                    addRowsToDisk(false);
+                    addRowsToDisk();
 
                     distinctRows = null;
                 }
@@ -358,7 +358,7 @@ public class H2ManagedLocalResult implements LocalResult {
             if (external == null) {
                 rows.add(values);
                 if (!hasAvailableMemory(null, null, values)) {
-                    addRowsToDisk(false);
+                    addRowsToDisk();
                 }
             }
             else
@@ -368,11 +368,10 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /**
      * Adds rows to disk.
-     * @param forcePlainResult Whether to force creation of not sorted result.
      */
-    private void addRowsToDisk(boolean forcePlainResult) {
+    private void addRowsToDisk() {
         if (external == null) {
-            createExternalResult(forcePlainResult);
+            createExternalResult();
         }
 
         if (distinctRows == null) {
@@ -398,7 +397,7 @@ public class H2ManagedLocalResult implements LocalResult {
     @Override public void done() {
         initMemTracker();
         if (external != null)
-            addRowsToDisk(false);
+            addRowsToDisk();
 
         else {
             if (isAnyDistinct())
@@ -494,7 +493,7 @@ public class H2ManagedLocalResult implements LocalResult {
             rows.add(row);
 
             if (!hasAvailableMemory(null,null, row))
-                addRowsToDisk(true);
+                addRowsToDisk();
         }
         if (withTiesSortOrder != null && row != null) {
             Value[] expected = row;
@@ -504,12 +503,12 @@ public class H2ManagedLocalResult implements LocalResult {
                 rowCount++;
 
                 if (!hasAvailableMemory(null,null, row))
-                    addRowsToDisk(true);
+                    addRowsToDisk();
             }
         }
 
         if (external != null)
-            addRowsToDisk(true);
+            addRowsToDisk();
 
         temp.close();
     }

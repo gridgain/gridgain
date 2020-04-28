@@ -72,9 +72,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Constants;
 import org.h2.engine.Session;
-import org.h2.expression.aggregate.AggregateData;
 import org.h2.jdbc.JdbcConnection;
 import org.h2.result.Row;
 import org.h2.result.SortOrder;
@@ -99,7 +97,6 @@ import org.h2.value.ValueInt;
 import org.h2.value.ValueJavaObject;
 import org.h2.value.ValueLong;
 import org.h2.value.ValueNull;
-import org.h2.value.ValueRow;
 import org.h2.value.ValueShort;
 import org.h2.value.ValueString;
 import org.h2.value.ValueTime;
@@ -1125,54 +1122,6 @@ public class H2Utils {
      */
     public static QueryContext context(Connection c) {
         return (QueryContext)((Session)((JdbcConnection)c).getSession()).getQueryContext();
-    }
-
-    /**
-     * @param row Data row.
-     * @return Row size in bytes.
-     */
-    public static long rowSizeInBytes(Object[] row) {
-        if (row == null)
-            return 0;
-
-        long rowSize = Constants.MEMORY_ARRAY + row.length * Constants.MEMORY_POINTER;
-
-        for (int i = 0; i < row.length; i++) {
-            Object o = row[i];
-
-            if (o instanceof Value)
-                rowSize += ((Value)row[i]).getMemory();
-            else if (o instanceof AggregateData)
-                rowSize += ((AggregateData)row[i]).getMemory();
-            else
-                rowSize += Constants.MEMORY_ROW;
-        }
-
-        return rowSize;
-    }
-
-    /**
-     * Calculates memory delta when old row was replaced with a new one.
-     *
-     * @param distinctRowKey Distinct row key.
-     * @param oldRow Old row.
-     * @param newRow New row.
-     * @return Memory delta.
-     */
-    public static long calculateMemoryDelta(ValueRow distinctRowKey, Object[] oldRow, Object[] newRow) {
-        long oldRowSize = rowSizeInBytes(oldRow);
-        long newRowSize = rowSizeInBytes(newRow);
-
-        long memory = newRowSize - oldRowSize;
-
-        if (distinctRowKey != null && (oldRow == null || newRow == null)) {
-            if (oldRow == null)
-                memory += distinctRowKey.getMemory();
-            else
-                memory -= distinctRowKey.getMemory();
-        }
-
-        return memory;
     }
 
     /**
