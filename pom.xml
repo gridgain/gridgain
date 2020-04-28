@@ -359,11 +359,6 @@
 
         <profile>
             <id>release-cpp</id>
-            <activation>
-                <file>
-                    <exists>${basedir}/target/release-package-${ignite.edition}/platforms/cpp/configure.ac</exists>
-                </file>
-            </activation>
             <build>
                 <plugins>
                     <plugin>
