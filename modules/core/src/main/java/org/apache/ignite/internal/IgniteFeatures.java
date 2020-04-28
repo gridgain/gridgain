@@ -149,7 +149,7 @@ public enum IgniteFeatures {
     CHECK_INDEX_INLINE_SIZES(36),
 
     /** Distributed propagation of tx collisions dump interval. */
-    DISTRIBUTED_TX_COLLISIONS_DUMP(36);
+    DISTRIBUTED_TX_COLLISIONS_DUMP(37);
 
     /**
      * Unique feature identifier.
