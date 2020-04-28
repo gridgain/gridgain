@@ -1909,7 +1909,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
     }
 
-
     /** User object converter. */
     static class UserObject implements SqlStrConvertedValHolder{
         /** User object. */

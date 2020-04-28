@@ -150,7 +150,6 @@ public class H2Utils {
     /** Quotation character. */
     private static final char ESC_CH = '\"';
 
-
     /** Hash join max table size (not final for test). */
     private static int hashJoinMaxTableSize
         = IgniteSystemProperties.getInteger(IGNITE_HASH_JOIN_MAX_TABLE_SIZE, DFLT_HASH_JOIN_MAX_TABLE_SIZE);
@@ -672,7 +671,7 @@ public class H2Utils {
      * @see Value
      * @see DataType#getTypeFromClass(Class)
      */
-    public static int getTypeFromClass(Class <?> x) {
+    public static int getTypeFromClass(Class<?> x) {
         if (x == null || Void.TYPE == x)
             return Value.NULL;
 

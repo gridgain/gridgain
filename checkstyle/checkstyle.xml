@@ -51,5 +51,11 @@
             <property name="allowMultipleEmptyLines" value="false" />
             <property name="allowMultipleEmptyLinesInsideClassMembers" value="false" />
         </module>
+
+        <!--
+            Checks that the whitespace around the Generic tokens are correct.
+            See: https://checkstyle.sourceforge.io/config_whitespace.html#GenericWhitespace
+        -->
+        <module name="GenericWhitespace"/>
     </module>
 </module>

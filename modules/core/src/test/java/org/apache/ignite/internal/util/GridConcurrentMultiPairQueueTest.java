@@ -45,7 +45,7 @@ public class GridConcurrentMultiPairQueueTest extends GridCommonAbstractTest {
     Map<Integer, Collection<Integer>> mapForCheck;
 
     /** */
-    Map<Integer, Collection<Integer>>mapForCheck2;
+    Map<Integer, Collection<Integer>> mapForCheck2;
 
     /** */
     Integer[] arr2 = {2, 4};

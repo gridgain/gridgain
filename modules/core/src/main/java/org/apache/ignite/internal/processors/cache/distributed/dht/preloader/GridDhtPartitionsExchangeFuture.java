@@ -320,7 +320,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
 
     /** Reserved max available history for calculation of history supplier on coordinator. */
-    private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
+    private volatile Map<Integer/** Group. */, Map<Integer/** Partition */, Long/** Counter. */>> partHistReserved;
 
     /** */
     @GridToStringExclude

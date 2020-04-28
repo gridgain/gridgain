@@ -338,7 +338,6 @@ public class JdbcThinTimezoneTest extends AbstractIndexingCommonTest {
         }, "-Duser.timezone=" + tz.getID());
     }
 
-
     /**
      */
     private List<String> selectAndPrintMilliseconds(final String sql, final TimeZone tz) throws Exception {

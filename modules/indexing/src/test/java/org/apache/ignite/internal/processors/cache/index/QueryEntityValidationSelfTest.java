@@ -157,7 +157,6 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
         }, IgniteCheckedException.class, "Duplicate index name");
     }
 
-
     /**
      * Test class for sql queryable test key
      */

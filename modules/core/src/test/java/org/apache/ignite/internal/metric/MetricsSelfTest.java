@@ -350,7 +350,6 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
         }, names);
     }
 
-
     /** */
     private void run(Runnable r, int cnt) throws org.apache.ignite.IgniteCheckedException {
         List<IgniteInternalFuture> futs = new ArrayList<>();

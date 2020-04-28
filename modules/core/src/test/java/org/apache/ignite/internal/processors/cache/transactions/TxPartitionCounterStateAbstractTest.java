@@ -752,7 +752,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
      */
     protected class TwoPhaseCommitTxCallbackAdapter extends TxCallbackAdapter {
         /** */
-        private Map<T3<IgniteEx /** Node */, TxState /** State */, IgniteUuid /** Near xid */ >, GridFutureAdapter<?>>
+        private Map<T3<IgniteEx/** Node */, TxState/** State */, IgniteUuid/** Near xid */>, GridFutureAdapter<?>>
             futures = new ConcurrentHashMap<>();
 
         /** */

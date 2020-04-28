@@ -22,6 +22,7 @@
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
     <suppress checks="EmptyLineSeparator" files="modules\/h2\/.*\.java"/>
+    <suppress checks="GenericWhitespace" files="modules\/h2\/.*\.java"/>
 
     <suppress checks="EmptyLineSeparator" files="BCrypt\.java|ConcurrentLinkedDeque8\.java"/>
 

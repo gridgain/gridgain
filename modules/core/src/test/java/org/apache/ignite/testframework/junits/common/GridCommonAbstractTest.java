@@ -2674,7 +2674,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         return true;
     }
 
-
     /**
      * Enable checkpoints on a specific nodes.
      *

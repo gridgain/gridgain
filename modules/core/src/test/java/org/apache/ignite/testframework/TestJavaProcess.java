@@ -130,7 +130,6 @@ public final class TestJavaProcess {
         }
     }
 
-
     /** */
     private int waitFor() throws Exception {
         int ret = proc.getProcess().waitFor();
