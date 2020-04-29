@@ -45,10 +45,12 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.hamcrest.CoreMatchers.is;
@@ -265,21 +267,41 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, value = "20000")
     public void testClientSkipsInverseConnectionResponse() throws Exception {
         UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
         RESPOND_TO_INVERSE_REQUEST.set(false);
 
-        startGrids(SRVS_NUM);
+        startGrids(SRVS_NUM - 1);
+
+        LogListener lsnr = LogListener.matches(
+            "Failed to wait for establishing inverse communication connection"
+        ).build();
+
+        startGrid(SRVS_NUM - 1, cfg -> {
+            ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
+
+            log.registerListener(lsnr);
+
+            return cfg.setGridLogger(log);
+        });
 
         clientMode = true;
         envType = EnvironmentType.STANDALONE;
 
-        startGrid(SRVS_NUM);
+        ClusterNode clientNode = startGrid(SRVS_NUM).localNode();
+
+        TcpCommunicationSpi spi = (TcpCommunicationSpi)grid(SRVS_NUM - 1).configuration().getCommunicationSpi();
+
+        GridTestUtils.invoke(spi, "onNodeLeft", clientNode.consistentId(), clientNode.id());
 
         IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() ->
-            grid(SRVS_NUM - 1).context().io().sendIoTest(grid(SRVS_NUM).localNode(), new byte[10], false));
+            grid(SRVS_NUM - 1).context().io().sendIoTest(clientNode, new byte[10], false).get()
+        );
 
-        assertTrue(GridTestUtils.waitForCondition(fut::isDone, 20_000));
+        assertTrue(GridTestUtils.waitForCondition(fut::isDone, 30_000));
+
+        assertTrue(lsnr.check());
     }
 
     /**
