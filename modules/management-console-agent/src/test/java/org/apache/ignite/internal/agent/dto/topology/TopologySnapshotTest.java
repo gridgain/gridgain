@@ -22,12 +22,12 @@ import java.util.UUID;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.util.lang.GridFunc.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -47,7 +47,7 @@ public class TopologySnapshotTest {
 
         TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
             clusterNodeId_1,
-            asList("127.0.0.1"),
+            F.asList("127.0.0.1"),
             Collections.emptyList(),
             8080,
             new TestDiscoveryMetricsProvider(),
@@ -65,7 +65,7 @@ public class TopologySnapshotTest {
 
         TcpDiscoveryNode clusterNode_2 = new TcpDiscoveryNode(
             clusterNodeId_2,
-            asList("127.0.0.1"),
+            F.asList("127.0.0.1"),
             Collections.emptyList(),
             8080,
             new TestDiscoveryMetricsProvider(),
@@ -94,8 +94,8 @@ public class TopologySnapshotTest {
         TopologySnapshot top = TopologySnapshot.topology(
             1,
             crdId,
-            asList(clusterNode_1, clusterNode_2),
-            asList(onlineBaselineNode, offlineBaselineNode)
+            F.asList(clusterNode_1, clusterNode_2),
+            F.asList(onlineBaselineNode, offlineBaselineNode)
         );
 
         assertEquals(1, top.getTopologyVersion());
@@ -138,7 +138,7 @@ public class TopologySnapshotTest {
 
         TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
             clusterNodeId_1,
-            asList("127.0.0.1"),
+            F.asList("127.0.0.1"),
             Collections.emptyList(),
             8080,
             new TestDiscoveryMetricsProvider(),
@@ -155,7 +155,7 @@ public class TopologySnapshotTest {
         TopologySnapshot top = TopologySnapshot.topology(
             1,
             crdId,
-            asList(clusterNode_1),
+            F.asList(clusterNode_1),
             null
         );
 
