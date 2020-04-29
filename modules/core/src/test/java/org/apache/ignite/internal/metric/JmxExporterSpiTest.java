@@ -430,7 +430,7 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
             }
 
             assertEquals(0, systemView(CQ_SYS_VIEW).size());
-            assertEquals(0, systemView(remoteNode, CQ_SYS_VIEW).size());
+            assertTrue(waitForCondition(() -> systemView(remoteNode, CQ_SYS_VIEW).isEmpty(), getTestTimeout()));
         }
     }
 
