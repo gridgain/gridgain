@@ -150,12 +150,12 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
 
             if (isTrustStoreNeeded) {
                 cfg.setTrustStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/server.p12").getPath());
-                cfg.setConsoleTrustStorePassword("123456");
+                cfg.setTrustStorePassword("123456");
             }
 
             if (isKeyStoreNeeded) {
                 cfg.setKeyStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/client.p12").getPath());
-                cfg.setConsoleKeyStorePassword("123456");
+                cfg.setKeyStorePassword("123456");
             }
         }
 

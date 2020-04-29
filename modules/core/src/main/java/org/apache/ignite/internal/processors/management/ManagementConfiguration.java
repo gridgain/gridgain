@@ -37,12 +37,12 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Default console URI. */
-    private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.control.center.uris"))
+    /** Default control center URI. */
+    private static final String DFLT_CONTROL_CENTER_URIS = F.isEmpty(IgniteProperties.get("ignite.control.center.uris"))
         ? "http://localhost:3000" : IgniteProperties.get("ignite.control.center.uris");
 
     /** */
-    private List<String> uris = asList(DFLT_CONSOLE_URIS.split(","));
+    private List<String> uris = asList(DFLT_CONTROL_CENTER_URIS.split(","));
 
     /** */
     private boolean enabled = true;
@@ -126,16 +126,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Control Center key store password.
      */
-    public String getConsoleKeyStorePassword() {
+    public String getKeyStorePassword() {
         return keyStorePass;
     }
 
     /**
-     * @param consoleKeyStorePass Control Center key store password.
+     * @param keyStorePass Control Center key store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleKeyStorePassword(String consoleKeyStorePass) {
-        this.keyStorePass = consoleKeyStorePass;
+    public ManagementConfiguration setKeyStorePassword(String keyStorePass) {
+        this.keyStorePass = keyStorePass;
 
         return this;
     }
@@ -160,16 +160,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Control Center trust store password.
      */
-    public String getConsoleTrustStorePassword() {
+    public String getTrustStorePassword() {
         return trustStorePass;
     }
 
     /**
-     * @param consoleTrustStorePass Console trust store password.
+     * @param trustStorePass Console trust store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleTrustStorePassword(String consoleTrustStorePass) {
-        this.trustStorePass = consoleTrustStorePass;
+    public ManagementConfiguration setTrustStorePassword(String trustStorePass) {
+        this.trustStorePass = trustStorePass;
 
         return this;
     }

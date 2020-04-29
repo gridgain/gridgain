@@ -242,9 +242,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
             .setUris(args.getServerUris())
             .setCipherSuites(args.getCipherSuites())
             .setKeyStore(args.getKeyStore())
-            .setConsoleKeyStorePassword(args.getKeyStorePassword())
+            .setKeyStorePassword(args.getKeyStorePassword())
             .setTrustStore(args.getTrustStore())
-            .setConsoleTrustStorePassword(args.getTrustStorePassword())
+            .setTrustStorePassword(args.getTrustStorePassword())
             .setSecuritySessionTimeout(args.getSessionTimeout())
             .setSecuritySessionExpirationTimeout(args.getSessionExpirationTimeout());
     }
