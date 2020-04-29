@@ -98,6 +98,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -2756,11 +2757,23 @@ public class IgnitionEx {
                         if (cacheSpecificAmountOfOwners <= 1) {
                             safeToStop = false;
 
+                            if (log != null) {
+                                LT.warn(log, "Delaying node shutdown to avoid data loss on cache [name=" +
+                                    grpCtx.cacheOrGroupName() + "]");
+                            }
+
                             break;
                         }
                     }
 
-                    safeToStop = safeToStop && topVer == grid.cluster().topologyVersion();
+                    if (topVer != grid.cluster().topologyVersion()) {
+                        safeToStop = false;
+
+                        if (log != null) {
+                            LT.warn(log, "Delaying node shutdown due to topology change [oldTopVer=" +
+                                topVer + ", newTopVer=" + grid.cluster().topologyVersion() + "]");
+                        }
+                    }
 
                     if (safeToStop) {
                         try {
@@ -2772,13 +2785,16 @@ public class IgnitionEx {
                         }
                         catch (IgniteCheckedException e) {
                             U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
-                                " value from metastore.", e);
+                                " value to metastore.", e);
 
                             continue;
                         }
 
                         if (!readyToStop) {
                             try {
+                                if (log != null)
+                                    LT.warn(log, "Delaying node shutdown while other node is leaving cluster");
+
                                 IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
                             }
                             catch (IgniteInterruptedCheckedException e) {
