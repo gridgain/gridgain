@@ -36,6 +36,7 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
@@ -45,6 +46,7 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -64,6 +66,9 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
  * around protocols.
  */
 final class BinaryMetadataTransport {
+    /** Special metadata version for remove. */
+    public static final int REMOVED_VERSION = -2;
+
     /** */
     private final GridDiscoveryManager discoMgr;
 
@@ -89,7 +94,7 @@ final class BinaryMetadataTransport {
     private final ConcurrentMap<SyncKey, MetadataUpdateResultFuture> syncMap = new ConcurrentHashMap<>();
 
     /** It store pending update future for typeId. It allow to do only one update in one moment. */
-    private final ConcurrentMap<Integer, MetadataUpdateResultFuture> pendingTypeIdMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Integer, GridFutureAdapter<?>> pendingTypeIdMap = new ConcurrentHashMap<>();
 
     /** */
     private final ConcurrentMap<Integer, ClientMetadataRequestFuture> clientReqSyncMap = new ConcurrentHashMap<>();
@@ -98,10 +103,16 @@ final class BinaryMetadataTransport {
     private final ConcurrentMap<SyncKey, GridFutureAdapter<?>> schemaWaitFuts = new ConcurrentHashMap<>();
 
     /** */
-    private volatile boolean stopping;
+    private final List<BinaryMetadataUpdatedListener> binaryUpdatedLsnrs = new CopyOnWriteArrayList<>();
 
     /** */
-    private final List<BinaryMetadataUpdatedListener> binaryUpdatedLsnrs = new CopyOnWriteArrayList<>();
+    private final BinaryContext binCtx;
+
+    /** */
+    private final boolean isPersistenceEnabled;
+
+    /** */
+    private volatile boolean stopping;
 
     /**
      * @param metaLocCache Metadata locale cache.
@@ -112,24 +123,25 @@ final class BinaryMetadataTransport {
     BinaryMetadataTransport(
         ConcurrentMap<Integer, BinaryMetadataHolder> metaLocCache,
         BinaryMetadataFileStore metadataFileStore,
+        BinaryContext binCtx,
         final GridKernalContext ctx,
         IgniteLogger log
     ) {
         this.metaLocCache = metaLocCache;
-
         this.metadataFileStore = metadataFileStore;
-
         this.ctx = ctx;
-
+        this.binCtx = binCtx;
         this.log = log;
+        isPersistenceEnabled = CU.isPersistenceEnabled(ctx.config());
 
         discoMgr = ctx.discovery();
 
         clientNode = ctx.clientNode();
 
         discoMgr.setCustomEventListener(MetadataUpdateProposedMessage.class, new MetadataUpdateProposedListener());
-
         discoMgr.setCustomEventListener(MetadataUpdateAcceptedMessage.class, new MetadataUpdateAcceptedListener());
+        discoMgr.setCustomEventListener(MetadataRemoveProposedMessage.class, new MetadataRemoveProposedListener());
+        discoMgr.setCustomEventListener(MetadataRemoveAcceptedMessage.class, new MetadataRemoveAcceptedListener());
 
         GridIoManager ioMgr = ctx.io();
 
@@ -149,6 +161,19 @@ final class BinaryMetadataTransport {
                     }
                 }
             }, EVT_NODE_LEFT, EVT_NODE_FAILED);
+    }
+
+    /**
+     * Method checks if arrived metadata is obsolete comparing to the one from local cache.
+     *
+     * @param locP pendingVersion of metadata from local cache.
+     * @param locA acceptedVersion of metadata from local cache.
+     * @param remP pendingVersion of metadata from arrived message (client response/proposed/accepted).
+     * @param remA acceptedVersion of metadata from arrived message (client response/proposed/accepted).
+     * @return {@code true} is
+     */
+    private static boolean obsoleteUpdate(int locP, int locA, int remP, int remA) {
+        return (remP < locP) || (remP == locP && remA < locA);
     }
 
     /**
@@ -241,11 +266,11 @@ final class BinaryMetadataTransport {
      * Put new update future and it are waiting pending future if it exists.
      *
      * @param typeId Type id.
-     * @param metaUpdateFut New metadata update future.
+     * @param newMetaFut New metadata update / remove future.
      * @return {@code true} If given future put successfully.
      */
-    private boolean putAndWaitPendingUpdate(int typeId, MetadataUpdateResultFuture metaUpdateFut) {
-        MetadataUpdateResultFuture oldFut = pendingTypeIdMap.putIfAbsent(typeId, metaUpdateFut);
+    private boolean putAndWaitPendingUpdate(int typeId, GridFutureAdapter<?> newMetaFut) {
+        GridFutureAdapter<?> oldFut = pendingTypeIdMap.putIfAbsent(typeId, newMetaFut);
 
         if (oldFut != null) {
             try {
@@ -281,6 +306,27 @@ final class BinaryMetadataTransport {
         BinaryMetadataHolder holder = metaLocCache.get(typeId);
 
         if (holder.acceptedVersion() >= ver)
+            resFut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
+
+        return resFut;
+    }
+
+    /**
+     * Allows thread to wait for a metadata of given typeId and version to be removed.
+     *
+     * @param typeId ID of binary type.
+     * @return future to wait for update result on.
+     */
+    GridFutureAdapter<MetadataUpdateResult> awaitMetadataRemove(int typeId) {
+        SyncKey key = new SyncKey(typeId, REMOVED_VERSION);
+        MetadataUpdateResultFuture resFut = new MetadataUpdateResultFuture(key);
+
+        MetadataUpdateResultFuture oldFut = syncMap.putIfAbsent(key, resFut);
+
+        if (oldFut != null)
+            resFut = oldFut;
+
+        if (!metaLocCache.containsKey(typeId))
             resFut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
 
         return resFut;
@@ -350,7 +396,132 @@ final class BinaryMetadataTransport {
             fut.onDone(res);
     }
 
-    /** */
+    /**
+     * Remove metadata from cluster for specified type.
+     *
+     * @param typeId Type ID to remove metadata.
+     */
+    public GridFutureAdapter<MetadataUpdateResult> requestMetadataRemove(int typeId) throws IgniteCheckedException {
+        MetadataUpdateResultFuture resFut;
+
+        do {
+
+            resFut = new MetadataUpdateResultFuture(typeId);
+        }
+        while (!putAndWaitPendingUpdate(typeId, resFut));
+
+        try {
+            synchronized (this) {
+                unlabeledFutures.add(resFut);
+
+                if (!stopping)
+                    discoMgr.sendCustomEvent(new MetadataRemoveProposedMessage(typeId, ctx.localNodeId()));
+                else
+                    resFut.onDone(MetadataUpdateResult.createUpdateDisabledResult());
+            }
+        }
+        catch (Exception e) {
+            resFut.onDone(MetadataUpdateResult.createUpdateDisabledResult(), e);
+        }
+
+        if (ctx.clientDisconnected())
+            onDisconnected();
+
+        return resFut;
+    }
+
+    /**
+     * @param typeId Type ID.
+     * @param pendingVer Pending version.
+     * @param fut Future.
+     */
+    private void initSyncFor(int typeId, int pendingVer, final MetadataUpdateResultFuture fut) {
+        if (stopping) {
+            fut.onDone(MetadataUpdateResult.createUpdateDisabledResult());
+
+            return;
+        }
+
+        SyncKey key = new SyncKey(typeId, pendingVer);
+
+        MetadataUpdateResultFuture oldFut = syncMap.putIfAbsent(key, fut);
+
+        if (oldFut != null) {
+            oldFut.listen(new IgniteInClosure<IgniteInternalFuture<MetadataUpdateResult>>() {
+                @Override public void apply(IgniteInternalFuture<MetadataUpdateResult> doneFut) {
+                    fut.onDone(doneFut.result(), doneFut.error());
+                }
+            });
+        }
+
+        fut.key(key);
+    }
+
+    /**
+     * Key for mapping arriving {@link MetadataUpdateAcceptedMessage} messages to {@link MetadataUpdateResultFuture}s
+     * other threads may be waiting on.
+     */
+    private static final class SyncKey {
+        /**
+         *
+         */
+        private final int typeId;
+
+        /**
+         *
+         */
+        private final int ver;
+
+        /**
+         * @param typeId Type id.
+         * @param ver Version.
+         */
+        private SyncKey(int typeId, int ver) {
+            this.typeId = typeId;
+            this.ver = ver;
+        }
+
+        /**
+         * @return Type ID.
+         */
+        int typeId() {
+            return typeId;
+        }
+
+        /**
+         * @return Version.
+         */
+        int version() {
+            return ver;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return typeId + ver;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (o == this)
+                return true;
+
+            if (!(o instanceof SyncKey))
+                return false;
+
+            SyncKey that = (SyncKey)o;
+
+            return (typeId == that.typeId) && (ver == that.ver);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(SyncKey.class, this);
+        }
+    }
+
+    /**
+     *
+     */
     private final class MetadataUpdateProposedListener implements CustomEventListener<MetadataUpdateProposedMessage> {
 
         /** {@inheritDoc} */
@@ -511,33 +682,6 @@ final class BinaryMetadataTransport {
     }
 
     /**
-     * @param typeId Type ID.
-     * @param pendingVer Pending version.
-     * @param fut Future.
-     */
-    private void initSyncFor(int typeId, int pendingVer, final MetadataUpdateResultFuture fut) {
-        if (stopping) {
-            fut.onDone(MetadataUpdateResult.createUpdateDisabledResult());
-
-            return;
-        }
-
-        SyncKey key = new SyncKey(typeId, pendingVer);
-
-        MetadataUpdateResultFuture oldFut = syncMap.putIfAbsent(key, fut);
-
-        if (oldFut != null) {
-            oldFut.listen(new IgniteInClosure<IgniteInternalFuture<MetadataUpdateResult>>() {
-                @Override public void apply(IgniteInternalFuture<MetadataUpdateResult> doneFut) {
-                    fut.onDone(doneFut.result(), doneFut.error());
-                }
-            });
-        }
-
-        fut.key(key);
-    }
-
-    /**
      *
      */
     private final class MetadataUpdateAcceptedListener implements CustomEventListener<MetadataUpdateAcceptedMessage> {
@@ -631,6 +775,9 @@ final class BinaryMetadataTransport {
      */
     public final class MetadataUpdateResultFuture extends GridFutureAdapter<MetadataUpdateResult> {
         /** */
+        private SyncKey key;
+
+        /** */
         MetadataUpdateResultFuture(int typeId) {
             this.key = new SyncKey(typeId, 0);
         }
@@ -641,9 +788,6 @@ final class BinaryMetadataTransport {
         MetadataUpdateResultFuture(SyncKey key) {
             this.key = key;
         }
-
-        /** */
-        private SyncKey key;
 
         /** {@inheritDoc} */
         @Override public boolean onDone(@Nullable MetadataUpdateResult res, @Nullable Throwable err) {
@@ -674,64 +818,6 @@ final class BinaryMetadataTransport {
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(MetadataUpdateResultFuture.class, this);
-        }
-    }
-
-    /**
-     * Key for mapping arriving {@link MetadataUpdateAcceptedMessage} messages to {@link MetadataUpdateResultFuture}s
-     * other threads may be waiting on.
-     */
-    private static final class SyncKey {
-        /** */
-        private final int typeId;
-
-        /** */
-        private final int ver;
-
-        /**
-         * @param typeId Type id.
-         * @param ver Version.
-         */
-        private SyncKey(int typeId, int ver) {
-            this.typeId = typeId;
-            this.ver = ver;
-        }
-
-        /**
-         * @return Type ID.
-         */
-        int typeId() {
-            return typeId;
-        }
-
-        /**
-         * @return Version.
-         */
-        int version() {
-            return ver;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return typeId + ver;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (o == this)
-                return true;
-
-            if (!(o instanceof SyncKey))
-                return false;
-
-            SyncKey that = (SyncKey)o;
-
-            return (typeId == that.typeId) && (ver == that.ver);
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(SyncKey.class, this);
         }
     }
 
@@ -843,15 +929,100 @@ final class BinaryMetadataTransport {
     }
 
     /**
-     * Method checks if arrived metadata is obsolete comparing to the one from local cache.
      *
-     * @param locP pendingVersion of metadata from local cache.
-     * @param locA acceptedVersion of metadata from local cache.
-     * @param remP pendingVersion of metadata from arrived message (client response/proposed/accepted).
-     * @param remA acceptedVersion of metadata from arrived message (client response/proposed/accepted).
-     * @return {@code true} is
      */
-    private static boolean obsoleteUpdate(int locP, int locA, int remP, int remA) {
-        return (remP < locP) || (remP == locP && remA < locA);
+    private final class MetadataRemoveProposedListener implements CustomEventListener<MetadataRemoveProposedMessage> {
+        /** {@inheritDoc} */
+        @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
+            MetadataRemoveProposedMessage msg) {
+            if (log.isDebugEnabled())
+                log.debug("Received MetadataUpdateAcceptedMessage " + msg);
+
+            int typeId = msg.typeId();
+
+            BinaryMetadataHolder metaHld = metaLocCache.get(typeId);
+
+            assert metaHld != null : "No metadata found for typeId " + typeId;
+
+            if (msg.isOnCoordinator()) {
+                if (metaHld == null)
+                    msg.markRejected(new BinaryObjectException("Type not found [typeId=" + typeId + ']'));
+
+                if (metaHld.pendingVersion() != metaHld.acceptedVersion()) {
+                    msg.markRejected(new BinaryObjectException(
+                        "Remove type failed. Type is being updated now [typeId=" + typeId + ']'));
+                }
+
+                msg.setOnCoordinator(false);
+            }
+
+            MetadataUpdateResultFuture fut = null;
+
+            if (msg.origNodeId().equals(ctx.localNodeId()))
+                fut = unlabeledFutures.poll();
+
+            if (msg.rejected() && fut != null)
+                fut.onDone(MetadataUpdateResult.createFailureResult(msg.rejectionError()));
+            else {
+                assert metaHld.removeState() == BinaryMetadataHolder.RemoveState.NONE
+                    : "Invalid remove state: " + metaHld;
+
+                if (fut != null)
+                    initSyncFor(typeId, REMOVED_VERSION, fut);
+
+                metaLocCache.put(typeId, metaHld.removePending());
+
+                if (!ctx.clientNode())
+                    metadataFileStore.prepareMetadataRemove(typeId);
+            }
+        }
+    }
+
+    /**
+     *
+     */
+    private final class MetadataRemoveAcceptedListener implements CustomEventListener<MetadataRemoveAcceptedMessage> {
+        /** {@inheritDoc} */
+        @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
+            MetadataRemoveAcceptedMessage msg) {
+            if (log.isDebugEnabled())
+                log.debug("Received MetadataUpdateAcceptedMessage " + msg);
+
+            if (msg.duplicated())
+                return;
+
+            final int typeId = msg.typeId();
+
+            BinaryMetadataHolder metaHld = metaLocCache.get(typeId);
+
+            assert metaHld != null : "No metadata found for typeId " + typeId;
+
+            metaLocCache.put(typeId, metaHld.removeAccepted());
+
+            final GridFutureAdapter<MetadataUpdateResult> fut = syncMap.get(new SyncKey(typeId, REMOVED_VERSION));
+
+            if (isPersistenceEnabled) {
+                GridFutureAdapter<Void> rmvFut = metadataFileStore.removeMetadataAsync(typeId);
+
+                if (rmvFut != null) {
+                    rmvFut.listen((IgniteInClosure<IgniteInternalFuture<Void>>)future -> {
+                        metaLocCache.remove(typeId);
+
+                        binCtx.removeType(typeId);
+
+                        if (fut != null)
+                            fut.onDone(MetadataUpdateResult.createSuccessfulResult(REMOVED_VERSION));
+                    });
+                }
+            }
+            else {
+                metaLocCache.remove(typeId);
+
+                binCtx.removeType(typeId);
+
+                if (fut != null)
+                    fut.onDone(MetadataUpdateResult.createSuccessfulResult(REMOVED_VERSION));
+            }
+        }
     }
 }

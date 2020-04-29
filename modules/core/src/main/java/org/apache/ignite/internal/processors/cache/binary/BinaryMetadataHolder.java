@@ -35,6 +35,7 @@ final class BinaryMetadataHolder implements Serializable {
     /** */
     private final int acceptedVer;
 
+    private final transient RemoveState rmvState;
 
     /**
      * @param metadata Metadata.
@@ -42,11 +43,36 @@ final class BinaryMetadataHolder implements Serializable {
      * @param acceptedVer Version of this metadata - how many updates were issued for this type.
      */
     BinaryMetadataHolder(BinaryMetadata metadata, int pendingVer, int acceptedVer) {
+        this(metadata, pendingVer, acceptedVer, RemoveState.NONE);
+    }
+
+    /**
+     * @param metadata Metadata.
+     * @param pendingVer Pending updates count.
+     * @param acceptedVer Version of this metadata - how many updates were issued for this type.
+     */
+    private BinaryMetadataHolder(BinaryMetadata metadata, int pendingVer, int acceptedVer, RemoveState rmvState) {
         assert metadata != null;
 
         this.metadata = metadata;
         this.pendingVer = pendingVer;
         this.acceptedVer = acceptedVer;
+        this.rmvState = rmvState;
+
+    }
+
+    /**
+     * @return Holder metadata with remove state where remove pending message has been handled.
+     */
+    BinaryMetadataHolder removePending() {
+        return new BinaryMetadataHolder(metadata, pendingVer, acceptedVer, RemoveState.PENDING);
+    }
+
+    /**
+     * @return Holder metadata with remove state where accepted message has been handled.
+     */
+    BinaryMetadataHolder removeAccepted() {
+        return new BinaryMetadataHolder(metadata, pendingVer, acceptedVer, RemoveState.ACCEPTED);
     }
 
     /**
@@ -70,10 +96,33 @@ final class BinaryMetadataHolder implements Serializable {
         return acceptedVer;
     }
 
+    /**
+     *
+     */
+    RemoveState removeState() {
+        return rmvState;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return "[typeId=" + metadata.typeId() +
             ", pendingVer=" + pendingVer +
-            ", acceptedVer=" + acceptedVer + "]";
+            ", acceptedVer=" + acceptedVer +
+            ", removeState=" + rmvState +
+            "]";
+    }
+
+    /**
+     *
+     */
+    public enum RemoveState {
+        /** None. */
+        NONE,
+
+        /** Pending. */
+        PENDING,
+
+        /** Accepted. */
+        ACCEPTED
     }
 }

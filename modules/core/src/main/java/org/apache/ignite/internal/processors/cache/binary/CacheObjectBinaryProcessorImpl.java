@@ -206,8 +206,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             if (!ctx.clientNode())
                 metadataFileStore = new BinaryMetadataFileStore(metadataLocCache, ctx, log, binaryMetadataFileStoreDir);
 
-            transport = new BinaryMetadataTransport(metadataLocCache, metadataFileStore, ctx, log);
-
             BinaryMetadataHandler metaHnd = new BinaryMetadataHandler() {
                 @Override public void addMeta(
                     int typeId,
@@ -260,6 +258,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             binaryCtx = useTestBinaryCtx ?
                 new TestBinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class)) :
                 new BinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class));
+
+            transport = new BinaryMetadataTransport(metadataLocCache, metadataFileStore, binaryCtx, ctx, log);
 
             IgniteUtils.invoke(BinaryMarshaller.class, bMarsh0, "setBinaryContext", binaryCtx, ctx.config());
 
@@ -695,6 +695,19 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         }
 
         if (holder != null) {
+            if (holder.removeState() != BinaryMetadataHolder.RemoveState.NONE) {
+                GridFutureAdapter<MetadataUpdateResult> fut = transport.awaitMetadataRemove(typeId);
+
+                try {
+                    fut.get();
+                }
+                catch (IgniteCheckedException ignored) {
+                    // No-op.
+                }
+
+                return null;
+            }
+
             if (curThread instanceof IgniteDiscoveryThread || (curThread != null && curThread.isForbiddenToRequestBinaryMetadata()))
                 return holder.metadata();
 
@@ -1471,6 +1484,37 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
      */
     public void setBinaryMetadataFileStoreDir(@Nullable File binaryMetadataFileStoreDir) {
         this.binaryMetadataFileStoreDir = binaryMetadataFileStoreDir;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void removeType(String typeName) {
+        int typeId = typeId(typeName);
+
+        if (!metadataLocCache.containsKey(typeId))
+            throw new IgniteException("Failed to remove metadata, type not found [type="  + typeName + ']');
+
+        try {
+            GridFutureAdapter<MetadataUpdateResult> fut = transport.requestMetadataRemove(typeId);
+
+            MetadataUpdateResult res = fut.get();
+
+            if (res.rejected())
+                throw res.error();
+            else if (!ctx.clientNode()) {
+                // Wait for store remove complete
+            }
+        }
+        catch (IgniteCheckedException e) {
+            IgniteCheckedException ex = e;
+
+            if (ctx.isStopping()) {
+                ex = new NodeStoppingException("Node is stopping.");
+
+                ex.addSuppressed(e);
+            }
+
+            throw new BinaryObjectException("Failed to remove metadata for type: " + typeName, ex);
+        }
     }
 
     /** */
