@@ -1212,8 +1212,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /**
      * @param exchId Exchange ID.
      */
-    public void forceReassign(GridDhtPartitionExchangeId exchId) {
-        exchWorker.forceReassign(exchId);
+    public void forceReassign(GridDhtPartitionExchangeId exchId, GridDhtPartitionsExchangeFuture fut) {
+        exchWorker.forceReassign(exchId, fut);
     }
 
     /**
@@ -2926,9 +2926,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         /**
          * @param exchId Exchange ID.
          */
-        void forceReassign(GridDhtPartitionExchangeId exchId) {
+        void forceReassign(GridDhtPartitionExchangeId exchId, GridDhtPartitionsExchangeFuture fut) {
             if (!hasPendingExchange())
-                futQ.add(new RebalanceReassignExchangeTask(exchId));
+                futQ.add(new RebalanceReassignExchangeTask(exchId, fut));
         }
 
         /**
@@ -3215,39 +3215,32 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                         exchId = reassignTask.exchangeId();
 
-                        GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
+                        GridDhtPartitionsExchangeFuture fut = reassignTask.future();
 
-                        if (lastFut != null) {
-                            AffinityTopologyVersion lastAffChangedVer =
-                                cctx.exchange().lastAffinityChangedTopologyVersion(lastFut.topologyVersion());
+                        assert fut.changedAffinity() :
+                            "Reassignment request started for exchange future which didn't change affinity " +
+                                "[exchId=" + exchId + ", fut=" + exchFut + ']';
 
-                            // Reassign request as part of the last finished exchange.
-                            if (exchId.topologyVersion().isBetween(lastFut.initialVersion(), lastFut.topologyVersion())) {
-                                if (lastFut.hasInapplicableNodesForRebalance())
-                                    exchFut = lastFut;
-                            }
-                            else  if (lastAffChangedVer.after(exchId.topologyVersion())) {
-                                    // There is a new exchange which should trigger rebalancing.
-                                    // This reassign request can be skipped.
+                        if (fut.hasInapplicableNodesForRebalance() ) {
+                              GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
+
+                              AffinityTopologyVersion lastAffChangedVer = cctx.exchange().
+                                  lastAffinityChangedTopologyVersion(lastFut.topologyVersion());
+
+                             if (fut.topologyVersion().equals(lastAffChangedVer))
+                                  exchFut = fut;
+                             else if (lastAffChangedVer.after(exchId.topologyVersion())) {
+                                // There is a new exchange which should trigger rebalancing.
+                                // This reassignment request can be skipped.
                                 if (log.isInfoEnabled()) {
-                                    log.info("Partitions reassign request skipped due to affinity was already changed" +
+                                    log.info("Partitions reassignment request skipped due to affinity was already changed" +
                                         " [reassignTopVer=" + exchId.topologyVersion() +
                                         ", lastAffChangedTopVer=" + lastAffChangedVer +']');
                                 }
 
                                 continue;
-                            }
-                            else {
-                                // There was an exchange that does not change the affinity.
-                                for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
-                                    if (f.isDone() && f.topologyVersion().equals(lastAffChangedVer)) {
-                                        exchFut = f.hasInapplicableNodesForRebalance()? f : null;
-
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                             }
+                         }
                     }
                     else if (task instanceof ForceRebalanceExchangeTask) {
                         forcePreload = true;

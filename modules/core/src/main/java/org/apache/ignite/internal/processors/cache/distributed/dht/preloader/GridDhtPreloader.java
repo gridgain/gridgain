@@ -199,8 +199,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         AffinityTopologyVersion topVer = top.readyTopologyVersion();
 
-        List<GridDhtPartitionsExchangeFuture> futs = ctx.exchange().exchangeFutures();
-
         assert exchFut == null ||
             exchFut.context().events().topologyVersion().equals(top.readyTopologyVersion()) ||
             exchFut.context().events().topologyVersion().equals(ctx.exchange().lastAffinityChangedTopologyVersion(top.readyTopologyVersion())):

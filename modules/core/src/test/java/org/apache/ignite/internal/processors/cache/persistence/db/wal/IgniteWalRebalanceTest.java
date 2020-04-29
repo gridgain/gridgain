@@ -713,7 +713,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         // Wait until rebalancing will be cancelled for both suppliers.
         assertTrue(
-            "Rebalance future was not cancelled[fut=" + preloadFut + ']',
+            "Rebalance future was not cancelled [fut=" + preloadFut + ']',
             GridTestUtils.waitForCondition(preloadFut::isDone, getTestTimeout()));
 
         Assert.assertEquals(
@@ -775,9 +775,9 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     /**
      * Tests that demander switches to full rebalance if the previously chosen supplier for a group has failed
      * to perform historical rebalance due to an unexpected error while historical iterator (wal iterator) is created.
-     * Additionally, the client node joins the cluster between the demand message sent and the supply message received.
+     * Additionally, the client node joins the cluster between the demand message sent, and the supply message received.
      *
-     * @throws Exception If failed
+     * @throws Exception If failed.
      */
     @Test
     public void testSwitchHistoricalRebalanceToFullAndClientJoin() throws Exception {

@@ -1063,7 +1063,7 @@ public class GridDhtPartitionDemander {
         /** Initial state. */
         INIT,
 
-        /** Rebalance future is started and requests required patitions. */
+        /** Rebalance future started and requested required partitions. */
         STARTED,
 
         /** Marked as cancelled. This means partitions will not be requested. */
@@ -1558,9 +1558,8 @@ public class GridDhtPartitionDemander {
                 // let's exclude the given nodeId and give a try to full rebalance.
                 exchFut.markNodeAsInapplicableForWalRebalance(nodeId);
             }
-            else {
+            else
                 exchFut.markNodeAsInapplicableForFullRebalance(nodeId, grp.groupId(), p);
-            }
 
             missed.computeIfAbsent(nodeId, k -> new HashSet<>());
 
@@ -1693,7 +1692,7 @@ public class GridDhtPartitionDemander {
 
                     onDone(false); // Finished but has missed partitions, will force dummy exchange
 
-                    ctx.exchange().forceReassign(exchId);
+                    ctx.exchange().forceReassign(exchId, exchFut);
 
                     return;
                 }
