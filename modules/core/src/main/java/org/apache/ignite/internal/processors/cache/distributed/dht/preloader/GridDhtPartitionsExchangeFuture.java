@@ -309,7 +309,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private volatile IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
     /** Set of nodes that cannot be used for wal rebalancing due to some reason. */
-    private Set<UUID> exclusionsFromWalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private Set<UUID> exclusionsFromHistoricalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * Set of nodes that cannot be used for full rebalancing due missed partitions.
@@ -568,7 +568,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     @Nullable public UUID partitionHistorySupplier(int grpId, int partId, long cntrSince) {
         UUID histSupplier = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
 
-        if (histSupplier != null && exclusionsFromWalRebalance.contains(histSupplier))
+        if (histSupplier != null && exclusionsFromHistoricalRebalance.contains(histSupplier))
             return null;
 
         return histSupplier;
@@ -579,8 +579,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      * @param nodeId Node id that should not be used for wal rebalancing (aka historical supplier).
      */
-    public void markNodeAsInapplicableForWalRebalance(UUID nodeId) {
-        exclusionsFromWalRebalance.add(nodeId);
+    public void markNodeAsInapplicableForHistoricalRebalance(UUID nodeId) {
+        exclusionsFromHistoricalRebalance.add(nodeId);
     }
 
     /**
@@ -603,7 +603,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @return {@code true} if there are nodes which are inapplicable for historical rebalancing.
      */
     public boolean hasInapplicableNodesForHistoricalRebalance() {
-        return !exclusionsFromWalRebalance.isEmpty();
+        return !exclusionsFromHistoricalRebalance.isEmpty();
     }
 
     /**
@@ -2782,7 +2782,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         exchangeLocE = null;
         exchangeGlobalExceptions.clear();
         validator.cleanUp();
-        exclusionsFromWalRebalance.clear();
+        exclusionsFromHistoricalRebalance.clear();
         exclusionsFromFullRebalance.clear();
         if (finishState != null)
             finishState.cleanUp();

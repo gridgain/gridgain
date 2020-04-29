@@ -1556,7 +1556,7 @@ public class GridDhtPartitionDemander {
             if (parts.historicalMap().contains(p)) {
                 // The partition p cannot be wal rebalanced,
                 // let's exclude the given nodeId and give a try to full rebalance.
-                exchFut.markNodeAsInapplicableForWalRebalance(nodeId);
+                exchFut.markNodeAsInapplicableForHistoricalRebalance(nodeId);
             }
             else
                 exchFut.markNodeAsInapplicableForFullRebalance(nodeId, grp.groupId(), p);
