@@ -60,7 +60,10 @@ public class BPlusMetaIO extends PageIO {
     private static final long FLAG_INLINE_OBJECT_HASH = 4L;
 
     /** */
-    public static final long DEFAULT_FLAGS = FLAG_UNWRAPPED_PK | FLAG_INLINE_OBJECT_SUPPORTED | FLAG_INLINE_OBJECT_HASH;
+    private static final long FLAG_DECIMAL_SUPPORTED = 8L;
+
+    /** */
+    public static final long DEFAULT_FLAGS = FLAG_UNWRAPPED_PK | FLAG_INLINE_OBJECT_SUPPORTED | FLAG_INLINE_OBJECT_HASH | FLAG_DECIMAL_SUPPORTED;
 
     /** */
     private final int refsOff;
@@ -241,6 +244,16 @@ public class BPlusMetaIO extends PageIO {
         assert supportFlags();
 
         return (flags(pageAddr) & FLAG_INLINE_OBJECT_HASH) != 0L;
+    }
+
+    /**
+      * @param pageAddr Page address.
+      * @return {@code true} In case decimal is supported by the tree.
+      */
+    public boolean inlineDecimalSupported(long pageAddr) {
+        assert supportFlags();
+
+        return (flags(pageAddr) & FLAG_DECIMAL_SUPPORTED) != 0L;
     }
 
     /**
