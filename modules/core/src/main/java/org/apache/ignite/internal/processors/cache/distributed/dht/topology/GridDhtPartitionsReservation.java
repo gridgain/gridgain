@@ -49,7 +49,7 @@ public class GridDhtPartitionsReservation implements GridReservable {
     private final GridCacheContext<?,?> cctx;
 
     /** */
-    private final AffinityTopologyVersion topVer;
+    private final AffinityTopologyVersion lastReservedAffinityChangedTopVer;
 
     /** */
     private final AtomicReference<GridDhtLocalPartition[]> parts = new AtomicReference<>();
@@ -61,16 +61,19 @@ public class GridDhtPartitionsReservation implements GridReservable {
     private final AtomicInteger reservations = new AtomicInteger();
 
     /**
-     * @param topVer AffinityTopologyVersion version.
+     * @param lastReservedAffinityChangedTopVer Last topology version before the reservation when affinity was modified.
      * @param cctx Cache context.
      * @param appKey Application key for reservation.
      */
-    public GridDhtPartitionsReservation(AffinityTopologyVersion topVer, GridCacheContext<?,?> cctx, Object appKey) {
-        assert topVer != null;
+    public GridDhtPartitionsReservation(
+        AffinityTopologyVersion lastReservedAffinityChangedTopVer,
+        GridCacheContext<?,?> cctx, Object appKey
+    ) {
+        assert lastReservedAffinityChangedTopVer != null;
         assert cctx != null;
         assert appKey != null;
 
-        this.topVer = topVer;
+        this.lastReservedAffinityChangedTopVer = lastReservedAffinityChangedTopVer;
         this.cctx = cctx;
         this.appKey = appKey;
     }
@@ -204,13 +207,20 @@ public class GridDhtPartitionsReservation implements GridReservable {
 
             if (reservations.compareAndSet(r, r - 1)) {
                 // If it was the last reservation and topology version changed -> attempt to evict partitions.
-                if (r == 1 && !cctx.kernalContext().isStopping() &&
-                    !topVer.equals(cctx.topology().lastTopologyChangeVersion()))
+                if (r == 1 && !cctx.kernalContext().isStopping()
+                    && !lastReservedAffinityChangedTopVer.equals(lastClusterAffinityChangedTopologyVersion()))
                     tryEvict(parts.get());
 
                 return;
             }
         }
+    }
+
+    /**
+     * @return Last topology version when affinity was modified.
+     */
+    private AffinityTopologyVersion lastClusterAffinityChangedTopologyVersion() {
+        return cctx.shared().exchange().lastAffinityChangedTopologyVersion(cctx.topology().lastTopologyChangeVersion());
     }
 
     /**
@@ -276,7 +286,9 @@ public class GridDhtPartitionsReservation implements GridReservable {
 
         GridDhtPartitionsReservation that = (GridDhtPartitionsReservation)o;
 
-        return cctx == that.cctx && topVer.equals(that.topVer) && appKey.equals(that.appKey);
+        return cctx == that.cctx
+            && lastReservedAffinityChangedTopVer.equals(that.lastReservedAffinityChangedTopVer)
+            && appKey.equals(that.appKey);
     }
 
     /** {@inheritDoc} */
@@ -286,7 +298,7 @@ public class GridDhtPartitionsReservation implements GridReservable {
         int result = name == null ? 0 : name.hashCode();
 
         result = 31 * result + appKey.hashCode();
-        result = 31 * result + topVer.hashCode();
+        result = 31 * result + lastReservedAffinityChangedTopVer.hashCode();
 
         return result;
     }
