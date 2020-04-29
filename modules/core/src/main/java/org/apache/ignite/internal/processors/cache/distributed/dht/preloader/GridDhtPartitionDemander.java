@@ -1067,10 +1067,7 @@ public class GridDhtPartitionDemander {
         STARTED,
 
         /** Marked as cancelled. This means partitions will not be requested. */
-        MARK_CANCELLED,
-
-        /** Missing partitions were detected and rebalance reassign request was issued. */
-        DONE_WITH_REASSIGNMENT
+        MARK_CANCELLED
     }
 
     /**
@@ -1448,7 +1445,7 @@ public class GridDhtPartitionDemander {
                 }
 
                 // There is no need to start rebalancing for the next cache group if reassign request is issued.
-                if (next != null && RebalanceFutureState.DONE_WITH_REASSIGNMENT != STATE_UPD.get(this))
+                if (next != null)
                     next.requestPartitions(); // Go to next item in chain everything if it exists.
 
                 return true;
@@ -1688,7 +1685,7 @@ public class GridDhtPartitionDemander {
                         m.addAll(e.getValue());
                 }
 
-                if (!m.isEmpty() && STATE_UPD.compareAndSet(this, RebalanceFutureState.STARTED, RebalanceFutureState.STARTED)) {
+                if (!m.isEmpty()) {
                     U.log(log, "Reassigning partitions that were missed [parts=" + m +
                         ", grpId=" + grp.groupId() +
                         ", grpName=" + grp.cacheOrGroupName() +

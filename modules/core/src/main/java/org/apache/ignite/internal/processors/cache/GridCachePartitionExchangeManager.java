@@ -3223,7 +3223,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             // Reassign request as part of the last finished exchange.
                             if (exchId.topologyVersion().isBetween(lastFut.initialVersion(), lastFut.topologyVersion())) {
-                                if (lastFut.hasInapplicableNodeForWalRebalance() || lastFut.hasInapplicableNodesForFullRebalance())
+                                if (lastFut.hasInapplicableNodesForRebalance())
                                     exchFut = lastFut;
                             }
                             else  if (lastAffChangedVer.after(exchId.topologyVersion())) {
@@ -3241,8 +3241,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 // There was an exchange that does not change the affinity.
                                 for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
                                     if (f.isDone() && f.topologyVersion().equals(lastAffChangedVer)) {
-                                        exchFut = f.hasInapplicableNodeForWalRebalance() || f.hasInapplicableNodesForFullRebalance()?
-                                            f : null;
+                                        exchFut = f.hasInapplicableNodesForRebalance()? f : null;
 
                                         break;
                                     }

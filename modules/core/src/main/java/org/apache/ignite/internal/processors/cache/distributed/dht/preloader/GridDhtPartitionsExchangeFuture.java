@@ -602,7 +602,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /**
      * @return {@code true} if there are nodes which are inapplicable for wal rebalancing.
      */
-    public boolean hasInapplicableNodeForWalRebalance() {
+    public boolean hasInapplicableNodesForWalRebalance() {
         return !exclusionsFromWalRebalance.isEmpty();
     }
 
@@ -611,6 +611,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     public boolean hasInapplicableNodesForFullRebalance() {
         return !exclusionsFromFullRebalance.isEmpty();
+    }
+
+    /**
+     * @return {@code true} if there are nodes which are inapplicable for rebalancing.
+     */
+    public boolean hasInapplicableNodesForRebalance() {
+        return hasInapplicableNodesForWalRebalance() || hasInapplicableNodesForFullRebalance();
     }
 
     /**
