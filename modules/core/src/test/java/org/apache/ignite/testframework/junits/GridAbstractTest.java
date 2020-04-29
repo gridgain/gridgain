@@ -1315,7 +1315,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param awaitTop Await topology change flag.
      */
     protected void stopGrid(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
-        stopGridInternal(grid(igniteInstanceName), igniteInstanceName, cancel, awaitTop, false);
+        stopGridInternal(igniteInstanceName, cancel, awaitTop, false);
     }
 
     /**
@@ -1325,7 +1325,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param awaitTop Await topology change flag.
      */
     protected void stopGridx(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
-        stopGridInternal(gridx(igniteInstanceName), igniteInstanceName, cancel, awaitTop, true);
+        stopGridInternal(igniteInstanceName, cancel, awaitTop, true);
     }
 
 
@@ -1334,8 +1334,10 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param cancel Cancel flag.
      * @param awaitTop Await topology change flag.
      */
-    private void stopGridInternal(IgniteEx ignite, @Nullable String igniteInstanceName, boolean cancel, boolean awaitTop, boolean stopNotStarted) {
+    private void stopGridInternal(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop, boolean stopNotStarted) {
         try {
+            IgniteEx ignite = stopNotStarted ? gridx(igniteInstanceName) : grid(igniteInstanceName);
+
             assert ignite != null : "Ignite returned null grid for name: " + igniteInstanceName;
 
             UUID id = ignite instanceof IgniteProcessProxy ? ((IgniteProcessProxy)ignite).getId() : ignite.context().localNodeId();
