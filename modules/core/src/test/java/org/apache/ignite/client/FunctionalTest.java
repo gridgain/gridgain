@@ -408,6 +408,25 @@ public class FunctionalTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test that thin client generates valid typeId for system types.
+     */
+    @Test
+    public void testSystemDataType() throws Exception {
+        try (Ignite thickClient = Ignition.start(Config.getServerConfiguration());
+             IgniteClient thinClient = Ignition.startClient(getClientConfiguration())
+        ) {
+            Object val = Collections.emptyList();
+
+            thickClient.cache(DEFAULT_CACHE_NAME).put(3, val);
+            thinClient.cache(DEFAULT_CACHE_NAME).put(2, val);
+
+            Object outVal = thickClient.cache(DEFAULT_CACHE_NAME).get(2);
+
+            assertEquals(val, outVal);
+        }
+    }
+
+    /**
      * Tested API:
      * <ul>
      * <li>{@link ClientCache#putAll(Map)}</li>
