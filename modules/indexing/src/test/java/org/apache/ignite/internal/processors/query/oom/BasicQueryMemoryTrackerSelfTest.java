@@ -360,7 +360,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
                 }
 
                 return null;
-            }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
+            }, CacheException.class, "SQL query ran out of memory: Global quota was exceeded.");
 
             if (isLocal())
                 assertEquals(18, localResults.size());
