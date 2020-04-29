@@ -257,6 +257,11 @@ final class MarshallerMappingFileStore {
             "marshaller"
         );
 
+        File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
+
+        if (legacyTmpDir.exists() && !IgniteUtils.delete(legacyTmpDir))
+            throw new IgniteCheckedException("Failed to delete legacy marshaller mappings dir");
+
         if (legacyDir.exists()) {
             try {
                 IgniteUtils.copy(legacyDir, mappingDir, true);
@@ -264,8 +269,6 @@ final class MarshallerMappingFileStore {
             catch (IOException e) {
                 throw new IgniteCheckedException("Failed to copy legacy marshaller mappings dir to new location", e);
             }
-
-            File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
 
             try {
                 // rename legacy dir so if deletion fails in the middle, we won't be stuck with half-deleted

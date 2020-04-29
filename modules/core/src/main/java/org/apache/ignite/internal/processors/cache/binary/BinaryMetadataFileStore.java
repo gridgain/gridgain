@@ -281,6 +281,11 @@ class BinaryMetadataFileStore {
             "binary_meta"
         ), consistendId);
 
+        File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
+
+        if (legacyTmpDir.exists() && !IgniteUtils.delete(legacyTmpDir))
+            throw new IgniteCheckedException("Failed to delete legacy binary metadata dir");
+
         if (legacyDir.exists()) {
             try {
                 IgniteUtils.copy(legacyDir, metadataDir, true);
@@ -288,8 +293,6 @@ class BinaryMetadataFileStore {
             catch (IOException e) {
                 throw new IgniteCheckedException("Failed to copy legacy binary metadata dir to new location", e);
             }
-
-            File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
 
             try {
                 // rename legacy dir so if deletion fails in the middle, we won't be stuck with half-deleted metadata
