@@ -30,6 +30,7 @@ import java.util.Set;
 import com.thoughtworks.xstream.XStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -39,6 +40,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import sun.jvmstat.monitor.HostIdentifier;
 import sun.jvmstat.monitor.MonitoredHost;
@@ -46,10 +48,15 @@ import sun.jvmstat.monitor.MonitoredVm;
 import sun.jvmstat.monitor.MonitoredVmUtil;
 import sun.jvmstat.monitor.VmIdentifier;
 
+import static org.apache.ignite.testframework.GridTestUtils.DFLT_TEST_TIMEOUT;
+
 /**
  * Run ignite node.
  */
 public class IgniteNodeRunner {
+    /** Ignite test timeout. */
+    public static final String IGNITE_TEST_TIMEOUT = "IGNITE_TEST_TIMEOUT";
+
     /** */
     private static final String IGNITE_CONFIGURATION_FILE = System.getProperty("java.io.tmpdir") +
         File.separator + "igniteConfiguration.tmp_";
@@ -68,9 +75,19 @@ public class IgniteNodeRunner {
 
         X.println("Starting Ignite Node... Args=" + Arrays.toString(args));
 
+        long testTimeout = IgniteSystemProperties.getLong(IGNITE_TEST_TIMEOUT, DFLT_TEST_TIMEOUT);
+
+        assert testTimeout > 0 : testTimeout;
+
         IgniteConfiguration cfg = readCfgFromFileAndDeleteFile(args[0]);
 
         ignite = Ignition.start(cfg);
+
+        Thread.sleep(5 * testTimeout);
+
+        X.println("Node still alive too long time. Halt it immediately.");
+
+        Runtime.getRuntime().halt(1);
     }
 
     /**

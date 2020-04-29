@@ -161,6 +161,7 @@ import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarc
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.testframework.config.GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER;
 import static org.apache.ignite.testframework.config.GridTestProperties.IGNITE_CFG_PREPROCESSOR_CLS;
+import static org.apache.ignite.testframework.junits.multijvm.IgniteNodeRunner.IGNITE_TEST_TIMEOUT;
 
 /**
  * Common abstract test for Ignite tests.
@@ -1237,6 +1238,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             if (arg.startsWith("-DIGNITE_") || arg.startsWith("-DGG_"))
                 res.add(arg);
         }
+
+        res.add("-D" + IGNITE_TEST_TIMEOUT + "=" + getTestTimeout());
 
         String srvcGridProp = System.getProperty(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
 
