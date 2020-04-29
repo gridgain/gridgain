@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package org.apache.ignite.internal.commandline.cache.argument;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 
 /** */
-public enum IndexListComandArg implements CommandArg {
+public enum IndexListCommandArg implements CommandArg {
     /** */
     NODE_ID("--node-id"),
 
@@ -36,7 +36,7 @@ public enum IndexListComandArg implements CommandArg {
     private final String name;
 
     /** */
-    IndexListComandArg(String name) {
+    IndexListCommandArg(String name) {
         this.name = name;
     }
 

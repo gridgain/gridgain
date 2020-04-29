@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
-import org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg;
+import org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusInfoContainer;
@@ -37,7 +37,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusTaskArg;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_REBUILD_STATUS;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.NODE_ID;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.NODE_ID;
 
 /**
  * Cache subcommand that allows to show caches that have
@@ -97,9 +97,9 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         while (argIterator.hasNextSubArg()) {
             String nextArg = argIterator.nextArg("");
 
-            IndexListComandArg arg = CommandArgUtils.of(nextArg, IndexListComandArg.class);
+            IndexListCommandArg arg = CommandArgUtils.of(nextArg, IndexListCommandArg.class);
 
-            if (arg == IndexListComandArg.NODE_ID) {
+            if (arg == IndexListCommandArg.NODE_ID) {
                 if (nodeId != null)
                     throw new IllegalArgumentException(arg.argName() + " arg specified twice.");
 

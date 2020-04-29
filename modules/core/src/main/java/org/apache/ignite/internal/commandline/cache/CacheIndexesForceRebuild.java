@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,12 +41,11 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_FORCE_REBUILD;
-import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_LIST;
 import static org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg.CACHE_NAMES;
 import static org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg.GROUP_NAMES;
 import static org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg.NODE_ID;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.CACHE_NAME;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.GRP_NAME;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.CACHE_NAME;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.GRP_NAME;
 
 /**
  * Cache subcommand that triggers indexes force rebuild.

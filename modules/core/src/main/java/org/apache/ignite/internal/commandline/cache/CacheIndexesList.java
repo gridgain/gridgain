@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
-import org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg;
+import org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
@@ -38,10 +38,10 @@ import org.apache.ignite.internal.visor.cache.index.IndexListTaskArg;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_LIST;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.CACHE_NAME;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.GRP_NAME;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.IDX_NAME;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListComandArg.NODE_ID;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.CACHE_NAME;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.GRP_NAME;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.IDX_NAME;
+import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.NODE_ID;
 
 /**
  * Cache subcommand that allows to show indexes.
@@ -113,7 +113,7 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         while (argIterator.hasNextSubArg()) {
             String nextArg = argIterator.nextArg("");
 
-            IndexListComandArg arg = CommandArgUtils.of(nextArg, IndexListComandArg.class);
+            IndexListCommandArg arg = CommandArgUtils.of(nextArg, IndexListCommandArg.class);
 
             if (arg == null)
                 throw new IllegalArgumentException("Unknown argument: " + nextArg);

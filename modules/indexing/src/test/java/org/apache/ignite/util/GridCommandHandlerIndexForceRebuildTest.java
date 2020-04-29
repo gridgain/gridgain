@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFi
 /**
  * Test for --cache indexes_force_rebuild command. Uses single cluster per suite.
  */
-public class GridCommandHandlerIndexForceRetuildTest extends GridCommandHandlerAbstractTest {
+public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerAbstractTest {
     /** */
     private static final String CACHE_NAME_1_1 = "cache_1_1";
     /** */
