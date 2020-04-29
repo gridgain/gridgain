@@ -32,10 +32,10 @@ import org.junit.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
+import static org.apache.ignite.internal.util.lang.GridFunc.asList;
 import static org.awaitility.Awaitility.with;
 
 /**
@@ -88,7 +88,7 @@ public class WebSocketManagerTest extends AgentCommonAbstractTest {
 
         ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
 
-        cfg.setConsoleUris(newArrayList("http://localhost:3000", "http://localhost:3010", "http://localhost:" + port));
+        cfg.setConsoleUris(asList("http://localhost:3000", "http://localhost:3010", "http://localhost:" + port));
 
         ignite.context().managementConsole().configuration(cfg);
 
