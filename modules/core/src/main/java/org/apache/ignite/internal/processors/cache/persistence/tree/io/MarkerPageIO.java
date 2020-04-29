@@ -19,12 +19,15 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
+/**
+ * Marker page.
+ */
 public class MarkerPageIO extends PageIO {
     /** */
     private static final int MARKER_TYPE_OFF = COMMON_HEADER_END;
 
     /** */
-    public static final int TERMINATION_MARKER_TYPE = 1;
+    public static final int MARKER_TYPE_TERMINATION = 1;
 
     /** */
     public static final IOVersions<MarkerPageIO> VERSIONS = new IOVersions<>(
@@ -55,6 +58,7 @@ public class MarkerPageIO extends PageIO {
         PageUtils.putInt(pageAddr, MARKER_TYPE_OFF, markerType);
     }
 
+    /** {@inheritDoc} */
     @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("MarkerPage [markerType=" + markerType(addr) + "]");
     }
