@@ -208,6 +208,20 @@ public class CacheGroupMetricsImpl {
         initLocalPartitionsNumber.decrement();
     }
 
+    /**
+     * Increments number of local partitions initialized on current node.
+     */
+    public void incrementInitializedLocalPartitions() {
+        initLocalPartitionsNumber.increment();
+    }
+
+    /**
+     * Decrements number of local partitions initialized on current node.
+     */
+    public void decrementInitializedLocalPartitions() {
+        initLocalPartitionsNumber.decrement();
+    }
+
     /** */
     public int getGroupId() {
         return ctx.groupId();
