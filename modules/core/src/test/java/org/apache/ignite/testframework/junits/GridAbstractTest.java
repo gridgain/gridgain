@@ -1315,7 +1315,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param awaitTop Await topology change flag.
      */
     protected void stopGrid(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
-        stopGridInternal(igniteInstanceName, cancel, awaitTop, false);
+        stopGrid0(igniteInstanceName, cancel, awaitTop, false);
     }
 
     /**
@@ -1325,7 +1325,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param awaitTop Await topology change flag.
      */
     protected void stopGridx(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
-        stopGridInternal(igniteInstanceName, cancel, awaitTop, true);
+        stopGrid0(igniteInstanceName, cancel, awaitTop, true);
     }
 
 
@@ -1334,7 +1334,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param cancel Cancel flag.
      * @param awaitTop Await topology change flag.
      */
-    private void stopGridInternal(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop, boolean stopNotStarted) {
+    private void stopGrid0(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop, boolean stopNotStarted) {
         try {
             IgniteEx ignite = stopNotStarted ? gridx(igniteInstanceName) : grid(igniteInstanceName);
 
@@ -1374,7 +1374,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @param cancel Cancel flag.
      */
     protected void stopAllGrids(boolean cancel) {
-        stopAllGrids(true, true);
+        stopAllGrids(cancel, true);
     }
 
     /**
@@ -1387,7 +1387,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             Collection<Ignite> clients = new ArrayList<>();
             Collection<Ignite> srvs = new ArrayList<>();
 
-            for (Ignite g : wait ? G.allGrids() : G.allGridsx()) {
+            for (Ignite g : wait ? G.allGrids() : IgnitionEx.allGridsx()) {
                 if (g.configuration().getDiscoverySpi().isClientMode())
                     clients.add(g);
                 else
