@@ -107,9 +107,6 @@ public class UnwrapDataEntry extends DataEntry implements UnwrappedDataEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return getClass().getSimpleName() + "[k = " + unwrappedKey() + ", v = [ "
-            + unwrappedValue()
-            + "], super = ["
-            + super.toString() + "]]";
+        return UnwrappedDataEntry.toString(this, super.toString(), cacheObjValCtx);
     }
 }

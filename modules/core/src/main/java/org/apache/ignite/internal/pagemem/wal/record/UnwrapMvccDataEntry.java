@@ -111,9 +111,6 @@ public class UnwrapMvccDataEntry extends MvccDataEntry implements UnwrappedDataE
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return getClass().getSimpleName() + "[k = " + unwrappedKey() + ", v = [ "
-            + unwrappedValue()
-            + "], super = ["
-            + super.toString() + "]]";
+        return UnwrappedDataEntry.toString(this, super.toString(), cacheObjValCtx);
     }
 }
