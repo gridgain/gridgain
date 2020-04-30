@@ -142,6 +142,7 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import static java.util.Collections.newSetFromMap;
+import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_ATOMIC_OPS_IN_TX;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
@@ -953,6 +954,21 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         cfg.setClientMode(true);
 
         return (IgniteEx)startGrid(igniteInstanceName, cfg, null);
+    }
+
+    /**
+     * Starts new client grid with given configuration.
+     *
+     * @param cfg Ignite configuration.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startClientGrid(IgniteConfiguration cfg) throws Exception {
+        requireNonNull(cfg);
+
+        cfg = optimize(cfg).setClientMode(true);
+
+        return (IgniteEx)startGrid(cfg.getIgniteInstanceName(), cfg, null);
     }
 
     /**
