@@ -995,7 +995,7 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
      * @return Version.
      */
     private GridCacheVersion version(int order) {
-        return new GridCacheVersion(1, order, order, 0);
+        return new GridCacheVersion(1, (long)order, order, 0);
     }
 
     /**

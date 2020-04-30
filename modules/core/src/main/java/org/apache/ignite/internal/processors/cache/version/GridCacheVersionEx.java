@@ -50,9 +50,9 @@ public class GridCacheVersionEx extends GridCacheVersion {
      * @param dataCenterId Data center ID.
      * @param drVer DR version.
      */
-    public GridCacheVersionEx(int topVer, long order, int nodeOrder, byte dataCenterId,
+    public GridCacheVersionEx(int topVer, long order, int nodeOrder, byte dataCenterId, long updateTime,
         GridCacheVersion drVer) {
-        super(topVer, order, nodeOrder, dataCenterId);
+        super(topVer, order, nodeOrder, dataCenterId, updateTime);
 
         assert drVer != null && !(drVer instanceof GridCacheVersionEx); // DR version can only be plain here.
 
@@ -68,7 +68,20 @@ public class GridCacheVersionEx extends GridCacheVersion {
      * @param drVer DR version.
      */
     public GridCacheVersionEx(int topVer, int nodeOrderDrId, long order, GridCacheVersion drVer) {
-        super(topVer, nodeOrderDrId, order);
+        this(topVer, nodeOrderDrId, order, UPDATE_TIME_NOT_SET_VAL, drVer);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param topVer Topology version.
+     * @param nodeOrderDrId Node order and DR ID.
+     * @param order Version order.
+     * @param updateTime Update time.
+     * @param drVer DR version.
+     */
+    public GridCacheVersionEx(int topVer, int nodeOrderDrId, long order, long updateTime, GridCacheVersion drVer) {
+        super(topVer, nodeOrderDrId, order, updateTime);
 
         assert drVer != null && !(drVer instanceof GridCacheVersionEx); // DR version can only be plain here.
 
@@ -87,7 +100,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 4;
+        return 5;
     }
 
     /** {@inheritDoc} */
@@ -105,12 +118,11 @@ public class GridCacheVersionEx extends GridCacheVersion {
         }
 
         switch (writer.state()) {
-            case 3:
+            case 4:
                 if (!writer.writeMessage("drVer", drVer))
                     return false;
 
                 writer.incrementState();
-
         }
 
         return true;
@@ -127,14 +139,13 @@ public class GridCacheVersionEx extends GridCacheVersion {
             return false;
 
         switch (reader.state()) {
-            case 3:
+            case 4:
                 drVer = reader.readMessage("drVer");
 
                 if (!reader.isLastRead())
                     return false;
 
                 reader.incrementState();
-
         }
 
         return reader.afterMessageRead(GridCacheVersionEx.class);
@@ -161,6 +172,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
         return "GridCacheVersionEx [topVer=" + topologyVersion() +
             ", order=" + order() +
             ", nodeOrder=" + nodeOrder() +
+            ", updTime=" + updateTime() +
             ", drVer=" + drVer + ']';
     }
 }

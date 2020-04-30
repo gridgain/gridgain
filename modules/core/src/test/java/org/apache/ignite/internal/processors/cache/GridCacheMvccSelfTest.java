@@ -164,8 +164,8 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkOrder(cands, ver1, ver5, ver3, ver2);
 
         entry.orderCompleted(
-            new GridCacheVersion(1, 2, 0, 0),
-            Arrays.asList(new GridCacheVersion(1, 3, 4, 0), ver2, new GridCacheVersion(1, 5, 6, 0)),
+            new GridCacheVersion(1, 2L, 0, 0),
+            Arrays.asList(new GridCacheVersion(1, 3L, 4, 0), ver2, new GridCacheVersion(1, 5L, 6, 0)),
             Collections.<GridCacheVersion>emptyList()
         );
 
@@ -1061,7 +1061,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         entry.orderCompleted(
             ver2 /*local version.*/,
-            Arrays.asList(new GridCacheVersion(1, 1, 2, 0), ver3, new GridCacheVersion(1, 5, 6, 0)),
+            Arrays.asList(new GridCacheVersion(1, 1L, 2, 0), ver3, new GridCacheVersion(1, 5L, 6, 0)),
             Collections.<GridCacheVersion>emptyList()
         );
 
@@ -1634,7 +1634,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
      * @return Version.
      */
     private GridCacheVersion version(int order) {
-        return new GridCacheVersion(1, order, order, 0);
+        return new GridCacheVersion(1, (long)order, order, 0);
     }
 
     /**

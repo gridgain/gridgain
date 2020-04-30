@@ -41,7 +41,7 @@ import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE
  */
 public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     /** */
-    public static final GridCacheVersion EVICT_VER = new GridCacheVersion(Integer.MAX_VALUE, 0, 0, 0);
+    public static final GridCacheVersion EVICT_VER = new GridCacheVersion(Integer.MAX_VALUE, 0L, 0, 0);
 
     /** Timestamp used as base time for cache topology version (January 1, 2014). */
     public static final long TOP_VER_BASE_TIME = 1388520000000L;
@@ -104,7 +104,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
         lastDataVer.value(last.order());
 
-        startVer = new GridCacheVersion(0, 0, 0, dataCenterId);
+        startVer = new GridCacheVersion(0, 0L, 0, dataCenterId);
 
         cctx.gridEvents().addLocalEventListener(discoLsnr, EVT_NODE_METRICS_UPDATED);
     }
@@ -126,7 +126,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
         lastDataVer.value(last.order());
 
-        startVer = new GridCacheVersion(0, 0, 0, dataCenterId);
+        startVer = new GridCacheVersion(0, 0L, 0, dataCenterId);
     }
 
     /**
@@ -208,7 +208,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
             topVer += (gridStartTime - TOP_VER_BASE_TIME) / 1000;
 
-            ISOLATED_STREAMER_VER = new GridCacheVersion((int)topVer, 0, 1, dataCenterId);
+            ISOLATED_STREAMER_VER = new GridCacheVersion((int)topVer, 0L, 1, dataCenterId);
         }
 
         return ISOLATED_STREAMER_VER;
@@ -308,7 +308,8 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
             (int)topVer,
             ord,
             locNodeOrder,
-            dataCenterId);
+            dataCenterId
+        );
 
         last = next;
 

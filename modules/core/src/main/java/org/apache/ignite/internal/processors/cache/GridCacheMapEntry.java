@@ -905,6 +905,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     long expTime = CU.toExpireTime(ttl);
 
+                    nextVer = drEnrich(nextVer);
+
                     // Update indexes before actual write to entry.
                     storeValue(ret, expTime, nextVer);
 
@@ -1014,6 +1016,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     // Detach value before index update.
                     ret = cctx.kernalContext().cacheObjects().prepareForCache(ret, cctx);
+
+                    nextVer = drEnrich(nextVer);
 
                     // Update indexes.
                     if (ret != null) {
@@ -1451,7 +1455,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (!cctx.isAll(this, filter))
             return new GridCacheUpdateTxResult(false);
 
-        final GridCacheVersion newVer;
+        GridCacheVersion newVer;
 
         boolean intercept = cctx.config().getInterceptor() != null;
 
@@ -1543,6 +1547,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             val = cctx.kernalContext().cacheObjects().prepareForCache(val, cctx);
 
             assert val != null;
+
+            newVer = drEnrich(newVer);
 
             storeValue(val, expireTime, newVer);
 
@@ -1942,6 +1948,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             Object old0 = null;
 
+            ver = drEnrich(ver);
+
             if (readThrough && needVal && old == null &&
                 (cctx.readThrough() && (op == GridCacheOperation.TRANSFORM || cctx.loadPreviousValue()))) {
                 old0 = readThrough(null, key, false, subjId, taskName);
@@ -2288,9 +2296,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             boolean readFromStore = readThrough && needVal && (cctx.readThrough() &&
                 (op == GridCacheOperation.TRANSFORM || cctx.loadPreviousValue()));
 
+            GridCacheVersion timedVer = drEnrich(newVer);
+
             c = new AtomicCacheUpdateClosure(this,
                 topVer,
-                newVer,
+                timedVer,
                 op,
                 writeObj,
                 invokeArgs,
@@ -2631,6 +2641,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         throws IgniteCheckedException {
         if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal())
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
+    }
+
+    /**
+     * @param ver Version.
+     */
+    private GridCacheVersion drEnrich(GridCacheVersion ver) {
+        if (cctx.isDrEnabled())
+            return cctx.dr().enrich(ver);
+
+        return ver;
     }
 
     /**
@@ -3031,6 +3051,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         cctx.shared().database().checkpointReadLock();
 
+        ver = drEnrich(ver);
+
         try {
             storeValue(val, expireTime, ver);
         }
@@ -3349,6 +3371,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean update;
 
+            final GridCacheVersion ver0 = ver;
+
             IgnitePredicate<CacheDataRow> p = new IgnitePredicate<CacheDataRow>() {
                 @Override public boolean apply(@Nullable CacheDataRow row) {
                     boolean update0;
@@ -3360,9 +3384,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     if (cctx.group().persistenceEnabled()) {
                         if (!isStartVer) {
                             if (cctx.atomic())
-                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver) < 0;
+                                update0 = ATOMIC_VER_COMPARATOR.compare(currVer, ver0) < 0;
                             else
-                                update0 = currVer.compareTo(ver) < 0;
+                                update0 = currVer.compareTo(ver0) < 0;
                         }
                         else
                             update0 = true;
@@ -3375,6 +3399,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return update0;
                 }
             };
+
+            ver = drEnrich(ver);
 
             if (unswapped) {
                 update = p.apply(null);
@@ -3645,6 +3671,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                     // Detach value before index update.
                     val = cctx.kernalContext().cacheObjects().prepareForCache(val, cctx);
+
+                    ver = drEnrich(ver);
 
                     if (val != null) {
                         storeValue(val, expTime, newVer);
@@ -6189,6 +6217,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     newVer.order(),
                     newVer.nodeOrder(),
                     newVer.dataCenterId(),
+                    newVer.updateTime(),
                     conflictVer);
             }
 

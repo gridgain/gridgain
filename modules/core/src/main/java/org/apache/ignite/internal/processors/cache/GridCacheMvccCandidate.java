@@ -625,6 +625,8 @@ public class GridCacheMvccCandidate implements Externalizable,
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
+        assert false : "GridCacheMvccCandidate#writeExternal is used";
+
         IgniteUtils.writeUuid(out, nodeId);
 
         out.writeBoolean(ver == null);
@@ -642,6 +644,8 @@ public class GridCacheMvccCandidate implements Externalizable,
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        assert false : "GridCacheMvccCandidate#readExternal is used";
+
         nodeId = IgniteUtils.readUuid(in);
 
         if (!in.readBoolean()) {

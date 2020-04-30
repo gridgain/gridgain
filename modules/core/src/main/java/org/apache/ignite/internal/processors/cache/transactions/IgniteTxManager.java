@@ -3114,7 +3114,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
          * @param nearVer Near transaction version.
          */
         private CommittedVersion(GridCacheVersion ver, GridCacheVersion nearVer) {
-            super(ver.topologyVersion(), ver.order(), ver.nodeOrder(), ver.dataCenterId());
+            super(ver.topologyVersion(), ver.nodeOrderAndDrIdRaw(), ver.order(), ver.updateTime());
 
             assert nearVer != null;
 
