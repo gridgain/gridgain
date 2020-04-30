@@ -2094,6 +2094,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * Schedule tx collisions collection task.
+     *
      * @param timeout Sets tx key collisions analysis interval.
      **/
     void txCollisionsDumpInterval(int timeout) {
