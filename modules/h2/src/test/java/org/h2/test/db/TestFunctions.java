@@ -31,6 +31,7 @@ import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Currency;
@@ -39,6 +40,7 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -103,6 +105,7 @@ public class TestFunctions extends TestDb implements AggregateFunction {
         testSource();
         testDynamicArgumentAndReturn();
         testUUID();
+        testBase64();
         testWhiteSpacesInParameters();
         testSchemaSearchPath();
         testDeterministic();
@@ -450,6 +453,53 @@ public class TestFunctions extends TestDb implements AggregateFunction {
         stat.execute("drop alias xorUUID");
 
         conn.close();
+    }
+
+    private void testBase64() throws SQLException {
+        Connection conn = getConnection("functions");
+
+        base64encode(conn, "".getBytes(), "");
+        base64encode(conn, "A".getBytes(), "QQ==");
+        base64encode(conn, "AB".getBytes(), "QUI=");
+        base64encode(conn, "ABC".getBytes(), "QUJD");
+        base64encode(conn, "ABCD".getBytes(), "QUJDRA==");
+        base64decode(conn, "", "".getBytes());
+        base64decode(conn, "QQ==", "A".getBytes());
+        base64decode(conn, "QUI=", "AB".getBytes());
+        base64decode(conn, "QUJD", "ABC".getBytes());
+        base64decode(conn, "QUJDRA==", "ABCD".getBytes());
+
+        Random rand = new Random();
+        Base64.Encoder enc = Base64.getEncoder();
+
+        for (int sizeOfArr : new int[] {1024, 2048, 4096, 8192, 1025, 2049, 4097, 8193}) {
+            byte[] sourceArray = new byte[sizeOfArr];
+
+            rand.nextBytes(sourceArray);
+
+            base64encode(conn, sourceArray, enc.encodeToString(sourceArray));
+            base64decode(conn, enc.encodeToString(sourceArray), sourceArray);
+        }
+
+        conn.close();
+    }
+
+    private void base64encode(Connection conn, byte[] source, String expected) throws SQLException {
+        PreparedStatement stat = conn.prepareStatement("call base64_encode(?)");
+        stat.setBytes(1, source);
+        ResultSet rs = stat.executeQuery();
+        rs.next();
+        String actual = rs.getString(1);
+        assertEquals(expected, actual);
+    }
+
+    private void base64decode(Connection conn, String source, byte[] expected) throws SQLException {
+        PreparedStatement stat = conn.prepareStatement("call base64_decode(?)");
+        stat.setString(1, source);
+        ResultSet rs = stat.executeQuery();
+        rs.next();
+        byte[] actual = rs.getBytes(1);
+        assertEquals(expected, actual);
     }
 
     private void testDeterministic() throws SQLException {
