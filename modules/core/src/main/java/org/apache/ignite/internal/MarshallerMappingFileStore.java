@@ -260,7 +260,8 @@ final class MarshallerMappingFileStore {
         File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
 
         if (legacyTmpDir.exists() && !IgniteUtils.delete(legacyTmpDir))
-            throw new IgniteCheckedException("Failed to delete legacy marshaller mappings dir");
+            throw new IgniteCheckedException("Failed to delete legacy marshaller mappings dir: "
+                + legacyTmpDir.getAbsolutePath());
 
         if (legacyDir.exists()) {
             try {

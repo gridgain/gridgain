@@ -284,7 +284,8 @@ class BinaryMetadataFileStore {
         File legacyTmpDir = new File(legacyDir.toString() + ".tmp");
 
         if (legacyTmpDir.exists() && !IgniteUtils.delete(legacyTmpDir))
-            throw new IgniteCheckedException("Failed to delete legacy binary metadata dir");
+            throw new IgniteCheckedException("Failed to delete legacy binary metadata dir: "
+                + legacyTmpDir.getAbsolutePath());
 
         if (legacyDir.exists()) {
             try {
