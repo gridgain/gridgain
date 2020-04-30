@@ -699,7 +699,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 GridFutureAdapter<MetadataUpdateResult> fut = transport.awaitMetadataRemove(typeId);
 
                 try {
-                    log.info("+++ AWAIT");
                     fut.get();
                 }
                 catch (IgniteCheckedException ignored) {

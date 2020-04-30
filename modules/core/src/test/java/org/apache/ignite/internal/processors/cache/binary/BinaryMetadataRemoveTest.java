@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.binary;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -100,7 +101,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      * Tests registration of user classes.
      */
     @Test
-    public void test() throws Exception {
+    public void testRemoveTypeOnNodes() throws Exception {
         for (Ignite ignCreateType : G.allGrids()) {
             for (Ignite ignRemoveType : G.allGrids()) {
                 for (Ignite ignRecreateType : G.allGrids()) {
@@ -112,13 +113,21 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
                     builder0.setField("f", 1);
                     builder0.build();
 
+                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
+
                     removeType((IgniteEx)ignRemoveType, "Type0");
+
+                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
                     BinaryObjectBuilder builder1 = ignRecreateType.binary().builder("Type0");
                     builder1.setField("f", "string");
                     builder1.build();
 
+                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
+
                     removeType((IgniteEx)ignRemoveType, "Type0");
+
+                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
                 }
             }
         }
@@ -142,11 +151,23 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
             catch(Exception e) {
                 err = e;
 
-                U.sleep(100);
+                U.sleep(200);
             }
         }
 
         if (err != null)
             throw err;
+    }
+
+    /**
+     * Delay operation if an operation is executed on a client node.
+     *
+     * @param igns Tests nodes.
+     */
+    private void delayIfClient(Ignite ... igns) throws IgniteInterruptedCheckedException {
+        boolean isThereCli = Arrays.stream(igns).anyMatch(ign -> ((IgniteEx)ign).context().clientNode());
+
+        if (isThereCli)
+            U.sleep(100);
     }
 }
