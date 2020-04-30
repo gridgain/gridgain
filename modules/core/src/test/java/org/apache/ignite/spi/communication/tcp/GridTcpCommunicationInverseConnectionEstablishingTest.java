@@ -18,10 +18,12 @@ package org.apache.ignite.spi.communication.tcp;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -35,6 +37,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -45,12 +48,10 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.hamcrest.CoreMatchers.is;
@@ -267,7 +268,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, value = "20000")
     public void testClientSkipsInverseConnectionResponse() throws Exception {
         UNREACHABLE_DESTINATION.set(UNRESOLVED_HOST);
         RESPOND_TO_INVERSE_REQUEST.set(false);
@@ -289,14 +289,28 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         clientMode = true;
         envType = EnvironmentType.STANDALONE;
 
-        ClusterNode clientNode = startGrid(SRVS_NUM).localNode();
+        IgniteEx client = startGrid(SRVS_NUM);
+        ClusterNode clientNode = client.localNode();
 
-        TcpCommunicationSpi spi = (TcpCommunicationSpi)grid(SRVS_NUM - 1).configuration().getCommunicationSpi();
+        IgniteEx srv = grid(SRVS_NUM - 1);
+
+        List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
+            .filter(t -> t.getName().contains("tcp-comm-worker"))
+            .filter(t -> t.getName().contains(srv.name()) || t.getName().contains(client.name()))
+            .collect(Collectors.toList());
+
+        for (Thread tcpCommWorkerThread : tcpCommWorkerThreads) {
+            U.interrupt(tcpCommWorkerThread);
+
+            U.join(tcpCommWorkerThread, log);
+        }
+
+        TcpCommunicationSpi spi = (TcpCommunicationSpi)srv.configuration().getCommunicationSpi();
 
         GridTestUtils.invoke(spi, "onNodeLeft", clientNode.consistentId(), clientNode.id());
 
         IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() ->
-            grid(SRVS_NUM - 1).context().io().sendIoTest(clientNode, new byte[10], false).get()
+            srv.context().io().sendIoTest(clientNode, new byte[10], false).get()
         );
 
         assertTrue(GridTestUtils.waitForCondition(fut::isDone, 30_000));
