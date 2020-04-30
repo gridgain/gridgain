@@ -35,9 +35,6 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
     /** */
     private final AffinityTopologyVersion topVer;
 
-    /** Topology to which cluster has already passed before this assignment generated. */
-    private final AffinityTopologyVersion previousTopVer;
-
     /** */
     private boolean cancelled;
 
@@ -45,17 +42,12 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
      * @param exchangeId Exchange ID.
      * @param topVer Last join order.
      */
-    public GridDhtPreloaderAssignments(
-        GridDhtPartitionExchangeId exchangeId,
-        AffinityTopologyVersion topVer,
-        AffinityTopologyVersion previousTopVer
-    ) {
+    public GridDhtPreloaderAssignments(GridDhtPartitionExchangeId exchangeId, AffinityTopologyVersion topVer) {
         assert exchangeId != null;
         assert topVer.topologyVersion() > 0 : topVer;
 
         this.exchangeId = exchangeId;
         this.topVer = topVer;
-        this.previousTopVer = previousTopVer;
     }
 
     /**
@@ -84,13 +76,6 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
      */
     public AffinityTopologyVersion topologyVersion() {
         return topVer;
-    }
-
-    /**
-     * @return Previous topology version.
-     */
-    public AffinityTopologyVersion previousTopVer() {
-        return previousTopVer;
     }
 
     /** {@inheritDoc} */

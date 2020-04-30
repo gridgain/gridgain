@@ -88,12 +88,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     private boolean stopped;
 
     /**
-     * Topology was stored here when exchange has skipped rebalance,
-     *  because other exchange was planed already.
-     *  */
-    private AffinityTopologyVersion pendingTopology;
-
-    /**
      * @param grp Cache group.
      */
     public GridDhtPreloader(CacheGroupContext grp) {
@@ -188,19 +182,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         return lastAffChangeTopVer.equals(exchFut.topologyVersion());
     }
 
-    /**
-     * Find and return previous topology version,
-     * return null if this topology is first on cluster.
-     *
-     * @return Return topology version if it has, otherwise null.
-     */
-    AffinityTopologyVersion previousCalculatedTopology() {
-        if (grp.affinity().cachedVersions().size() < 2)
-            return null;
-
-        return grp.affinity().cachedVersions().stream().skip(grp.affinity().cachedVersions().size() - 2).findFirst().get();
-    }
-
     /** {@inheritDoc} */
     @Override public GridDhtPreloaderAssignments generateAssignments(
         GridDhtPartitionExchangeId exchId,
@@ -212,8 +193,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         GridDhtPartitionTopology top = grp.topology();
 
         if (!grp.rebalanceEnabled())
-            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion(),
-                pendingTopology != null ? pendingTopology : previousCalculatedTopology());
+            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion());
 
         int partitions = grp.affinity().partitions();
 
@@ -224,8 +204,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             ", grp=" + grp.name() +
             ", topVer=" + top.readyTopologyVersion() + ']';
 
-        GridDhtPreloaderAssignments assignments = new GridDhtPreloaderAssignments(exchId, topVer,
-            pendingTopology != null ? pendingTopology : previousCalculatedTopology());
+        GridDhtPreloaderAssignments assignments = new GridDhtPreloaderAssignments(exchId, topVer);
 
         AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
@@ -239,14 +218,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     log.debug("Skipping assignments creation, exchange worker has pending assignments: " +
                         exchId);
 
-                pendingTopology = previousCalculatedTopology();
-
                 assignments.cancelled(true);
 
                 return assignments;
             }
-            else
-                pendingTopology = null;
 
             // If partition belongs to local node.
             if (aff.get(p).contains(ctx.localNode())) {

@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1743,22 +1744,28 @@ public class GridDhtPartitionDemander {
             if (!p0.containsAll(p1))
                 return false;
 
-            AffinityTopologyVersion previousTopVer = otherAssignments.previousTopVer();
-
-            p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
-                grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
-                .collect(toSet());
-
             p1 = Stream.concat(grp.affinity().cachedAffinity(otherAssignments.topologyVersion())
                 .primaryPartitions(ctx.localNodeId()).stream(), grp.affinity()
                 .cachedAffinity(otherAssignments.topologyVersion()).backupPartitions(ctx.localNodeId()).stream())
                 .collect(toSet());
 
-            // Not compatible if owners are different.
-            if (p0.equals(p1))
-                return true;
+            NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions()
+                .headSet(otherAssignments.topologyVersion(), false);
 
-            return false;
+            for (AffinityTopologyVersion previousTopVer : toCheck) {
+                if (previousTopVer.before(topVer))
+                    continue;
+
+                p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
+                    grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
+                    .collect(toSet());
+
+                // Not compatible if owners are different.
+                if (!p0.equals(p1))
+                    return false;
+            }
+
+            return true;
         }
 
         /** {@inheritDoc} */

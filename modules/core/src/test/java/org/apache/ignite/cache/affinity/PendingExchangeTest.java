@@ -16,17 +16,23 @@
 
 package org.apache.ignite.cache.affinity;
 
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CachePartitionExchangeWorkerTask;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -47,13 +53,185 @@ public class PendingExchangeTest extends GridCommonAbstractTest {
                 .setBackups(1));
     }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        stopAllGrids();
+
+        super.beforeTest();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        super.afterTest();
+    }
+
     /**
      * Test checks that pending exchange will lead to stable topology.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testStopNodeWithPendingStartCache() throws Exception {
+    public void testStartCachePending() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) ->
+            GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME + "_new")));
+    }
+
+    /**
+     * Start and stop cache.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStopStartCachePending() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            compFut.add(GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME + "_new")));
+            compFut.add(GridTestUtils.runAsync(() -> ignite.destroyCache(DEFAULT_CACHE_NAME + "_new")));
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 1);
+
+            return compFut;
+        });
+    }
+
+    /**
+     * Start several cache and stop their.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStopStartSeveralCachePending() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            for (int i = 0; i < 5; i++) {
+                int finalNum = i;
+
+                compFut.add(GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME +
+                    "_new" + finalNum)));
+                compFut.add(GridTestUtils.runAsync(() -> ignite.destroyCache(DEFAULT_CACHE_NAME +
+                    "_new" + finalNum)));
+            }
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 5);
+
+            return compFut;
+        });
+    }
+
+    /**
+     * Start server and cache.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStartServerAndCache() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            compFut.add(GridTestUtils.runAsync(() -> startGrid("new_srv")));
+            compFut.add(GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME + "_new")));
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 2);
+
+            return compFut;
+        });
+    }
+
+    /**
+     * Start several servers, clients and caches.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStartServalServersWithClisntAndCache() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            for (int i = 0; i < 3; i++) {
+                int finalSrvNum = i;
+
+                compFut.add(GridTestUtils.runAsync(() -> startGrid("new_srv" + finalSrvNum)));
+                compFut.add(GridTestUtils.runAsync(() -> startClientGrid("new_client" + finalSrvNum)));
+                compFut.add(GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME + "_new" + finalSrvNum)));
+            }
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 9);
+
+            return compFut;
+        });
+    }
+
+    /**
+     * Start and stop several servers and clients.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStartStopServalServersWithClisnt() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            for (int i = 0; i < 2; i++) {
+                int finalSrvNum = i;
+
+                compFut.add(GridTestUtils.runAsync(() -> startGrid("new_srv" + finalSrvNum)));
+                compFut.add(GridTestUtils.runAsync(() -> startClientGrid("new_client" + finalSrvNum)));
+
+                compFut.add(GridTestUtils.runAsync(() -> stopGrid("new_srv" + finalSrvNum)));
+                compFut.add(GridTestUtils.runAsync(() -> stopGrid("new_client" + finalSrvNum)));
+            }
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 4);
+
+            return compFut;
+        });
+    }
+
+    /**
+     * Waiting for exchanges beginning.
+     *
+     * @param ignite Ignite.
+     */
+    private void waitForExchnagesBegin(GridCachePartitionExchangeManager exchangeManager, int exchanges) {
+        GridWorker exchWorker = U.field(exchangeManager, "exchWorker");
+        Queue<CachePartitionExchangeWorkerTask> exchnageQueue = U.field(exchWorker, "futQ");
+
+        try {
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                int exFuts = 0;
+
+                for (CachePartitionExchangeWorkerTask task : exchnageQueue) {
+                    if (task instanceof GridDhtPartitionsExchangeFuture)
+                        exFuts++;
+                }
+
+                return exFuts >= exchanges;
+            }, 30_000));
+        }
+        catch (IgniteInterruptedCheckedException e) {
+            fail("Can’t wait for the exchnages beginning.");
+        }
+    }
+
+    /**
+     * @param clo Closure triggering exchange.
+     * @throws Exception If failed.
+     */
+    private void createClusterWithPendingExchnageDuringRebalance(PendingExchangeTrigger clo) throws Exception {
         IgniteEx ignite0 = startGrids(3);
 
         try (IgniteDataStreamer streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME)) {
@@ -80,15 +258,30 @@ public class PendingExchangeTest extends GridCommonAbstractTest {
         assertTrue(GridTestUtils.waitForCondition(() ->
             exchangeManager1.lastTopologyFuture().initialVersion().after(readyTop), 10_000));
 
-        IgniteInternalFuture startCacheFut = GridTestUtils.runAsync(() -> ignite0.createCache(DEFAULT_CACHE_NAME + "_new"));
+        IgniteInternalFuture exchangeTrigger = clo.trigger(ignite0, exchangeManager1);
 
         assertTrue(GridTestUtils.waitForCondition(exchangeManager1::hasPendingServerExchange, 10_000));
 
         exchangeLatch.countDown();
 
         startNodeFut.get(10_000);
-        startCacheFut.get(10_000);
+        exchangeTrigger.get(10_000);
 
         awaitPartitionMapExchange();
+    }
+
+    /**
+     * Trigger pending exchange closure interface.
+     */
+    private static interface PendingExchangeTrigger {
+
+        /**
+         * Invoke exchange.
+         *
+         * @param ignite Ignite.
+         * @param exchangeManager Exchnage manager.
+         * @return
+         */
+        IgniteInternalFuture trigger(Ignite ignite, GridCachePartitionExchangeManager exchangeManager);
     }
 }
