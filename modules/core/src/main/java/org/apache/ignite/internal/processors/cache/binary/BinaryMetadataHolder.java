@@ -35,7 +35,7 @@ final class BinaryMetadataHolder implements Serializable {
     /** */
     private final int acceptedVer;
 
-    private final transient RemoveState rmvState;
+    private final transient boolean removing;
 
     /**
      * @param metadata Metadata.
@@ -43,7 +43,7 @@ final class BinaryMetadataHolder implements Serializable {
      * @param acceptedVer Version of this metadata - how many updates were issued for this type.
      */
     BinaryMetadataHolder(BinaryMetadata metadata, int pendingVer, int acceptedVer) {
-        this(metadata, pendingVer, acceptedVer, RemoveState.NONE);
+        this(metadata, pendingVer, acceptedVer, false);
     }
 
     /**
@@ -51,28 +51,21 @@ final class BinaryMetadataHolder implements Serializable {
      * @param pendingVer Pending updates count.
      * @param acceptedVer Version of this metadata - how many updates were issued for this type.
      */
-    private BinaryMetadataHolder(BinaryMetadata metadata, int pendingVer, int acceptedVer, RemoveState rmvState) {
+    private BinaryMetadataHolder(BinaryMetadata metadata, int pendingVer, int acceptedVer, boolean removing) {
         assert metadata != null;
 
         this.metadata = metadata;
         this.pendingVer = pendingVer;
         this.acceptedVer = acceptedVer;
-        this.rmvState = rmvState;
+        this.removing = removing;
 
     }
 
     /**
      * @return Holder metadata with remove state where remove pending message has been handled.
      */
-    BinaryMetadataHolder removePending() {
-        return new BinaryMetadataHolder(metadata, pendingVer, acceptedVer, RemoveState.PENDING);
-    }
-
-    /**
-     * @return Holder metadata with remove state where accepted message has been handled.
-     */
-    BinaryMetadataHolder removeAccepted() {
-        return new BinaryMetadataHolder(metadata, pendingVer, acceptedVer, RemoveState.ACCEPTED);
+    BinaryMetadataHolder createRemoving() {
+        return new BinaryMetadataHolder(metadata, pendingVer, acceptedVer, true);
     }
 
     /**
@@ -99,8 +92,8 @@ final class BinaryMetadataHolder implements Serializable {
     /**
      *
      */
-    RemoveState removeState() {
-        return rmvState;
+    boolean removing() {
+        return removing;
     }
 
     /** {@inheritDoc} */
@@ -108,21 +101,7 @@ final class BinaryMetadataHolder implements Serializable {
         return "[typeId=" + metadata.typeId() +
             ", pendingVer=" + pendingVer +
             ", acceptedVer=" + acceptedVer +
-            ", removeState=" + rmvState +
+            ", removing=" + removing +
             "]";
-    }
-
-    /**
-     *
-     */
-    public enum RemoveState {
-        /** None. */
-        NONE,
-
-        /** Pending. */
-        PENDING,
-
-        /** Accepted. */
-        ACCEPTED
     }
 }

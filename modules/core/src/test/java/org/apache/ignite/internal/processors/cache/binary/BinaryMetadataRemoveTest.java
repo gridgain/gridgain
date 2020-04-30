@@ -44,9 +44,6 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
 
-    /** Counter of new binary types. Used to generate new type name for each test. */
-    private static final AtomicInteger TYPES_COUNT = new AtomicInteger();
-
     /**
      * Number of {@link MetadataUpdateProposedMessage} that have been sent since a test was start.
      */
@@ -61,7 +58,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
                 DiscoveryCustomMessage customMsg = msg == null ? null
                     : (DiscoveryCustomMessage)IgniteUtils.field(msg, "delegate");
 
-                if (customMsg instanceof MetadataUpdateProposedMessage)
+                if (customMsg instanceof MetadataRemoveProposedMessage)
                     proposeMsgNum.incrementAndGet();
             }
         };

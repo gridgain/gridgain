@@ -964,13 +964,12 @@ final class BinaryMetadataTransport {
             if (msg.rejected() && fut != null)
                 fut.onDone(MetadataUpdateResult.createFailureResult(msg.rejectionError()));
             else {
-                assert metaHld.removeState() == BinaryMetadataHolder.RemoveState.NONE
-                    : "Invalid remove state: " + metaHld;
+                assert !metaHld.removing() : "Invalid removing: " + metaHld;
 
                 if (fut != null)
                     initSyncFor(typeId, REMOVED_VERSION, fut);
 
-                metaLocCache.put(typeId, metaHld.removePending());
+                metaLocCache.put(typeId, metaHld.createRemoving());
 
                 if (!ctx.clientNode())
                     metadataFileStore.prepareMetadataRemove(typeId);
@@ -996,8 +995,6 @@ final class BinaryMetadataTransport {
             BinaryMetadataHolder metaHld = metaLocCache.get(typeId);
 
             assert metaHld != null : "No metadata found for typeId " + typeId;
-
-            metaLocCache.put(typeId, metaHld.removeAccepted());
 
             final GridFutureAdapter<MetadataUpdateResult> fut = syncMap.get(new SyncKey(typeId, REMOVED_VERSION));
 

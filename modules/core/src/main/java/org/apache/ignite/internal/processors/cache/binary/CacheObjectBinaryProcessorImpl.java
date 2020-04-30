@@ -695,10 +695,11 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         }
 
         if (holder != null) {
-            if (holder.removeState() != BinaryMetadataHolder.RemoveState.NONE) {
+            if (holder.removing()) {
                 GridFutureAdapter<MetadataUpdateResult> fut = transport.awaitMetadataRemove(typeId);
 
                 try {
+                    log.info("+++ AWAIT");
                     fut.get();
                 }
                 catch (IgniteCheckedException ignored) {
