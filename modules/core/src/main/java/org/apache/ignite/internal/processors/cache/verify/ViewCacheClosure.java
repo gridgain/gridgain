@@ -26,7 +26,7 @@ import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheMetrics;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.datastructures.AtomicDataStructureValue;
 import org.apache.ignite.internal.processors.datastructures.DataStructureType;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
@@ -104,6 +105,17 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     ci.setAtomicityMode(context.config().getAtomicityMode());
                     ci.setMapped(mapped(context.caches().iterator().next().name()));
 
+                    GridCacheProcessor cacheProcessor = k.context().cache();
+
+                    long sizeSummary = 0L;
+
+                    for (GridCacheContext cacheContext : context.caches()) {
+                        IgniteCache<Object, Object> cache = cacheProcessor.jcache(cacheContext.cache().name());
+                        sizeSummary += cache.localSizeLong(CachePeekMode.OFFHEAP);
+                    }
+                    ci.setOffHeapPrimaryEntriesCount(sizeSummary);
+                    ci.setHeapEntriesCount(0L);
+
                     cacheInfo.add(ci);
                 }
 
@@ -133,12 +145,10 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
 
                     GridCacheProcessor cacheProcessor = k.context().cache();
 
-                    IgniteCache<Object, Object> c = cacheProcessor.jcache(ci.getCacheName());
+                    IgniteCache<Object, Object> cache = cacheProcessor.jcache(ci.getCacheName());
 
-                    CacheMetrics m = c.localMetrics();
-
-                    ci.setHeapEntriesCount(m.getHeapEntriesCount());
-                    ci.setOffHeapPrimaryEntriesCount(m.getOffHeapPrimaryEntriesCount());
+                    ci.setOffHeapPrimaryEntriesCount(cache.localSizeLong(CachePeekMode.OFFHEAP));
+                    ci.setHeapEntriesCount(0L);
 
                     cacheInfo.add(ci);
                 }

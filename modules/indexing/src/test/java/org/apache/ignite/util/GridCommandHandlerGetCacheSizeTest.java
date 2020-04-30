@@ -33,6 +33,9 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
     public static final int GRID_CNT = 2;
 
     /** */
+    public static final int MAX_CACHE_SIZE = 1024;
+
+    /** */
     @Test
     public void testValidateGridCommandHandlerGetCacheSizeTest() throws Exception {
         checkpointFreq = 100L;
@@ -47,11 +50,11 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
             while (!stopFlag.get()) {
-                int id = rnd.nextInt();
+                int id = rnd.nextInt(MAX_CACHE_SIZE);
 
                 cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
 
-                if (Thread.interrupted())
+                if(Thread.interrupted())
                     break;
             }
         });
@@ -74,7 +77,6 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
         String out = testOut.toString();
 
         assertContains(log, out, "heapCnt");
-        assertContains(log, out, "offHeapCnt");
     }
 
     /**
