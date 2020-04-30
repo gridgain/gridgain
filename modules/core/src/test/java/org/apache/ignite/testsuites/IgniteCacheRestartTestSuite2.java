@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import org.apache.ignite.internal.processors.cache.GridCachePutAllFailoverSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicPutAllFailoverSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCachePutAllRestartTest;
+import org.apache.ignite.internal.processors.cache.IgniteCachePutKeyAttachedBinaryObjectTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheAtomicNodeRestartTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheGetRestartTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheAtomicReplicatedNodeRestartSelfTest;
@@ -35,6 +36,7 @@ import org.junit.runners.Suite;
 
     IgniteCacheAtomicPutAllFailoverSelfTest.class,
     IgniteCachePutAllRestartTest.class,
+    IgniteCachePutKeyAttachedBinaryObjectTest.class,
     GridCachePutAllFailoverSelfTest.class,
 
     // TODO IGNITE-4768.

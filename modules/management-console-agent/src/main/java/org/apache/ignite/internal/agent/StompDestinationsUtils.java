@@ -126,7 +126,7 @@ public class StompDestinationsUtils {
      * @return Send cluster info destination.
      */
     public static String buildClusterDest(UUID clusterId) {
-        return "/app/agent/cluster/" + clusterId;
+        return CLUSTER_PREFIX_DEST + '/' + clusterId;
     }
 
     /**
