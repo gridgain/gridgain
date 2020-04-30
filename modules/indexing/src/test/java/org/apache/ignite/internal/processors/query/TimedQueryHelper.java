@@ -33,11 +33,19 @@ import org.apache.ignite.configuration.CacheConfiguration;
  * Some tricks is needed because internally (H2) a query is checked for timeout after retrieving every N rows.
  */
 public class TimedQueryHelper {
+    /** Row count. */
     private static final int ROW_COUNT = 250;
 
+    /** Execution time. */
     private final long executionTime;
+
+    /** Cache name. */
     private final String cacheName;
 
+    /**
+     * @param executionTime Query execution time.
+     * @param cacheName Cache name.
+     */
     public TimedQueryHelper(long executionTime, String cacheName) {
         assert executionTime >= ROW_COUNT;
 
@@ -45,6 +53,7 @@ public class TimedQueryHelper {
         this.cacheName = cacheName;
     }
 
+    /** */
     public void createCache(Ignite ign) {
         IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(cacheName)
             .setSqlSchema("PUBLIC")
@@ -58,18 +67,21 @@ public class TimedQueryHelper {
         cache.putAll(entries);
     }
 
+    /** */
     public String buildTimedQuery() {
         long rowTimeout = executionTime / ROW_COUNT;
 
         return "select longProcess(_val, " + rowTimeout + ") from " + cacheName;
     }
 
+    /** */
     public String buildTimedUpdateQuery() {
         long rowTimeout = executionTime / ROW_COUNT;
 
         return "update " + cacheName + " set _val = longProcess(_val, " + rowTimeout + ")";
     }
 
+    /** */
     @QuerySqlFunction
     public static int longProcess(int i, long millis) {
         try {

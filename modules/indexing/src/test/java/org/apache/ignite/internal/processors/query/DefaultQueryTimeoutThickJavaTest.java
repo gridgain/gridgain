@@ -22,43 +22,54 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils;
 
-public class DefaultQueryTimeoutThickJavaTest extends DefaultQueryTimeoutTest {
+/**
+ *
+ */
+public class DefaultQueryTimeoutThickJavaTest extends AbstractDefaultQueryTimeoutTest {
+    /** Lazy. */
     private final boolean lazy;
 
+    /** */
     public DefaultQueryTimeoutThickJavaTest() {
         this(false, false);
     }
 
+    /** */
     protected DefaultQueryTimeoutThickJavaTest(boolean updateQuery, boolean lazy) {
         super(updateQuery);
 
         this.lazy = lazy;
     }
 
+    /** {@inheritDoc} */
     @Override protected void prepareQueryExecution() throws Exception {
         super.prepareQueryExecution();
 
         startClientGrid(10);
     }
 
+    /** {@inheritDoc} */
     @Override protected void executeQuery(String sql) throws Exception {
         executeQuery0(new SqlFieldsQuery(sql).setLazy(lazy));
     }
 
+    /** {@inheritDoc} */
     @Override protected void executeQuery(String sql, long timeout) throws Exception {
         executeQuery0(new SqlFieldsQuery(sql)
             .setLazy(lazy)
             .setTimeout((int)timeout, TimeUnit.MILLISECONDS));
     }
 
+    /** {@inheritDoc} */
+    @Override protected void assertQueryCancelled(Callable<?> c) {
+        // t0d0 check thrown exception in lazy mode
+        GridTestUtils.assertThrows(log, c, Exception.class, "cancel");
+    }
+
+    /** */
     private void executeQuery0(SqlFieldsQuery qry) throws Exception {
         IgniteEx cli = grid(10);
 
         cli.context().query().querySqlFields(qry, false).getAll();
-    }
-
-    @Override protected void assertQueryCancelled(Callable<?> c) {
-        // t0d0 check thrown exception in lazy mode
-        GridTestUtils.assertThrows(log, c, Exception.class, "cancel");
     }
 }

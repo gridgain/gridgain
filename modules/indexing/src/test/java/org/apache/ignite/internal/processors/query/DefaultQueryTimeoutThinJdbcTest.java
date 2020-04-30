@@ -23,13 +23,18 @@ import java.util.concurrent.Callable;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinStatement;
 import org.apache.ignite.internal.util.typedef.X;
 
-public class DefaultQueryTimeoutThinJdbcTest extends DefaultQueryTimeoutTest {
+/**
+ *
+ */
+public class DefaultQueryTimeoutThinJdbcTest extends AbstractDefaultQueryTimeoutTest {
+    /** {@inheritDoc} */
     @Override protected void executeQuery(String sql) throws Exception {
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
             conn.createStatement().executeQuery(sql);
         }
     }
 
+    /** {@inheritDoc} */
     @Override protected void executeQuery(String sql, long timeout) throws Exception {
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
             JdbcThinStatement stmt = (JdbcThinStatement)conn.createStatement();
@@ -40,6 +45,7 @@ public class DefaultQueryTimeoutThinJdbcTest extends DefaultQueryTimeoutTest {
         }
     }
 
+    /** {@inheritDoc} */
     @Override protected void assertQueryCancelled(Callable<?> c) {
         try {
             c.call();

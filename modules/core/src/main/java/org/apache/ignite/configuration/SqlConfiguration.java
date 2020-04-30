@@ -38,6 +38,9 @@ public class SqlConfiguration {
     /** Default value for SQL offloading flag. */
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
+    /** Default query timeout. */
+    public static final long DFLT_QRY_TIMEOUT = 0;
+
     /** */
     private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
 
@@ -55,6 +58,9 @@ public class SqlConfiguration {
 
     /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
     private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
+
+    /** Default query timeout. */
+    private long dfltQryTimeout = DFLT_QRY_TIMEOUT;
 
     /**
      * Number of SQL query history elements to keep in memory. If not provided, then default value {@link
@@ -284,7 +290,7 @@ public class SqlConfiguration {
      * @param dfltQryTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
+    public SqlConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
         A.ensure(dfltQryTimeout >= 0 && dfltQryTimeout <= Integer.MAX_VALUE,
             "default query timeout value should be valid Integer.");
 

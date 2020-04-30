@@ -18,100 +18,115 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.concurrent.Callable;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
-public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
+/**
+ *
+ */
+public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
+    /** Default query timeout. */
     private long defaultQueryTimeout;
 
+    /** Update query. */
     private final boolean updateQuery;
 
-    protected DefaultQueryTimeoutTest() {
+    /** */
+    protected AbstractDefaultQueryTimeoutTest() {
         this(false);
     }
 
-    protected DefaultQueryTimeoutTest(boolean updateQuery) {
+    /** */
+    protected AbstractDefaultQueryTimeoutTest(boolean updateQuery) {
         this.updateQuery = updateQuery;
     }
 
-    protected void prepareQueryExecution() throws Exception {
-    }
-
-    protected abstract void executeQuery(String sql) throws Exception;
-
-    protected abstract void executeQuery(String sql, long timeout) throws Exception;
-
-    protected abstract void assertQueryCancelled(Callable<?> c);
-
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setDefaultQueryTimeout(defaultQueryTimeout);
+            .setSqlConfiguration(new SqlConfiguration()
+                .setDefaultQueryTimeout(defaultQueryTimeout)
+            );
     }
 
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         super.afterTest();
     }
 
+    /** */
     @Test
     public void testNoExplicitTimeout1() throws Exception {
         checkQueryNoExplicitTimeout(1000, 0, false);
     }
 
+    /** */
     @Test
     public void testNoExplicitTimeout2() throws Exception {
         checkQueryNoExplicitTimeout(1000, 1500, false);
     }
 
+    /** */
     @Test
     public void testNoExplicitTimeout3() throws Exception {
         checkQueryNoExplicitTimeout(1000, 500, true);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout1() throws Exception {
         checkQuery(500, 0, 0, false);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout2() throws Exception {
         checkQuery(500, 1000, 0, false);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout3() throws Exception {
         checkQuery(2000, 1000, 0, true);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout4() throws Exception {
         checkQuery(1500, 0, 1000, false);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout5() throws Exception {
         checkQuery(1000, 1500, 500, false);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout6() throws Exception {
         checkQuery(2000, 1000, 500, true);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout7() throws Exception {
         checkQuery(500, 1000, 2000, false);
     }
 
+    /** */
     @Test
     public void testExplicitTimeout8() throws Exception {
         checkQuery(2000, 1000, 2000, true);
     }
 
+    /** */
     @Test
     public void testConcurrent() throws Exception {
         defaultQueryTimeout = 1000;
@@ -143,16 +158,19 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
         fut2.get(); // assert no exception here
     }
 
+    /** */
     private void checkQueryNoExplicitTimeout(long execTime, long defaultTimeout, boolean expectCancelled)
         throws Exception {
         checkQuery0(execTime, null, defaultTimeout, expectCancelled);
     }
 
+    /** */
     private void checkQuery(long execTime, long explicitTimeout, long defaultTimeout, boolean expectCancelled)
         throws Exception {
         checkQuery0(execTime, explicitTimeout, defaultTimeout, expectCancelled);
     }
 
+    /** */
     private void checkQuery0(long execTime, Long explicitTimeout, long defaultTimeout, boolean expectCancelled)
         throws Exception {
         defaultQueryTimeout = defaultTimeout;
@@ -181,4 +199,17 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
         else
             c.call(); // assert no exception here
     }
+
+    /** */
+    protected void prepareQueryExecution() throws Exception {
+    }
+
+    /** */
+    protected abstract void executeQuery(String sql) throws Exception;
+
+    /** */
+    protected abstract void executeQuery(String sql, long timeout) throws Exception;
+
+    /** */
+    protected abstract void assertQueryCancelled(Callable<?> c);
 }

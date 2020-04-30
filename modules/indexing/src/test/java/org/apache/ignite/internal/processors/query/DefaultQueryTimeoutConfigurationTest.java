@@ -22,25 +22,35 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+/**
+ *
+ */
 public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommonTest {
+    /** */
     private long defaultQueryTimeout;
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setDefaultQueryTimeout(defaultQueryTimeout);
+            .setSqlConfiguration(new SqlConfiguration()
+                .setDefaultQueryTimeout(defaultQueryTimeout)
+            );
     }
 
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         super.afterTest();
     }
 
+    /** */
     @Test
     public void testDifferentConfigurationValues1() throws Exception {
         defaultQueryTimeout = 500;
@@ -72,6 +82,7 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         executeQuery(cli, sql);
     }
 
+    /** */
     @Test
     public void testDifferentConfigurationValues2() throws Exception {
         defaultQueryTimeout = 2000;
@@ -102,6 +113,7 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         GridTestUtils.assertThrowsWithCause(() -> executeQuery(cli, sql), QueryCancelledException.class);
     }
 
+    /** */
     @Test
     public void testNegativeDefaultTimeout() throws Exception {
         defaultQueryTimeout = -1;
@@ -109,6 +121,7 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         GridTestUtils.assertThrowsWithCause(() -> startGrid(0), IllegalArgumentException.class);
     }
 
+    /** */
     @Test
     public void testZeroDefaultTimeout() throws Exception {
         defaultQueryTimeout = 0;
@@ -118,6 +131,7 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         // assert no exception here
     }
 
+    /** */
     @Test
     public void testPositiveDefaultTimeout() throws Exception {
         defaultQueryTimeout = 1;
@@ -127,6 +141,7 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         // assert no exception here
     }
 
+    /** */
     @Test
     public void testTooBigDefaultTimeout() throws Exception {
         defaultQueryTimeout = Integer.MAX_VALUE + 1L;
@@ -136,14 +151,9 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         GridTestUtils.assertThrowsWithCause(() -> startGrid(0), IllegalArgumentException.class);
     }
 
+    /** */
     private List<List<?>> executeQuery(Ignite ign, String sql) {
         SqlFieldsQuery qry = new SqlFieldsQuery(sql);
-
-        return ((IgniteEx)ign).context().query().querySqlFields(qry, false).getAll();
-    }
-
-    private List<List<?>> executeQuery(Ignite ign, String sql, long timeout) {
-        SqlFieldsQuery qry = new SqlFieldsQuery(sql).setTimeout((int)timeout, TimeUnit.MILLISECONDS);
 
         return ((IgniteEx)ign).context().query().querySqlFields(qry, false).getAll();
     }
