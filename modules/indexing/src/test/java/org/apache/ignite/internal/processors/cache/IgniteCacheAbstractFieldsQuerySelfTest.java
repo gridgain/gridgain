@@ -223,18 +223,18 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
 
                 if (personCache.getName().equals(meta.cacheName())) {
                     assertEquals("Invalid types size", 1, types.size());
-                    assert types.contains("Person");
+                    assert types.contains("PERSON");
 
                     if (binaryMarshaller) {
-                        assert Object.class.getName().equals(meta.keyClass("Person"));
-                        assert Object.class.getName().equals(meta.valueClass("Person"));
+                        assert Object.class.getName().equals(meta.keyClass("PERSON"));
+                        assert Object.class.getName().equals(meta.valueClass("PERSON"));
                     }
                     else {
                         assert AffinityKey.class.getName().equals(meta.keyClass("Person"));
                         assert Person.class.getName().equals(meta.valueClass("Person"));
                     }
 
-                    Map<String, String> fields = meta.fields("Person");
+                    Map<String, String> fields = meta.fields("PERSON");
 
                     assert fields != null;
                     assert fields.size() == 3;
@@ -250,7 +250,7 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
 
                     assert String.class.getName().equals(fields.get("NAME"));
 
-                    Collection<GridCacheSqlIndexMetadata> indexes = meta.indexes("Person");
+                    Collection<GridCacheSqlIndexMetadata> indexes = meta.indexes("PERSON");
 
                     assertNotNull("Indexes should be defined", indexes);
                     assertEquals(2, indexes.size());
@@ -282,16 +282,16 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
                 }
                 else if (orgCache.getName().equals(meta.cacheName())) {
                     assertEquals("Invalid types size", 1, types.size());
-                    assert types.contains("Organization");
+                    assert types.contains("ORGANIZATION");
 
                     if (binaryMarshaller)
-                        assert Object.class.getName().equals(meta.valueClass("Organization"));
+                        assert Object.class.getName().equals(meta.valueClass("ORGANIZATION"));
                     else
-                        assert Organization.class.getName().equals(meta.valueClass("Organization"));
+                        assert Organization.class.getName().equals(meta.valueClass("ORGANIZATION"));
 
-                    assert String.class.getName().equals(meta.keyClass("Organization"));
+                    assert String.class.getName().equals(meta.keyClass("ORGANIZATION"));
 
-                    Map<String, String> fields = meta.fields("Organization");
+                    Map<String, String> fields = meta.fields("ORGANIZATION");
 
                     assert fields != null;
                     assertEquals("Fields: " + fields, 2, fields.size());
@@ -307,12 +307,12 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
                 }
                 else if (intCache.getName().equals(meta.cacheName())) {
                     assertEquals("Invalid types size", 1, types.size());
-                    assert types.contains("Integer");
+                    assert types.contains("INTEGER");
 
-                    assert Integer.class.getName().equals(meta.valueClass("Integer"));
-                    assert Integer.class.getName().equals(meta.keyClass("Integer"));
+                    assert Integer.class.getName().equals(meta.valueClass("INTEGER"));
+                    assert Integer.class.getName().equals(meta.keyClass("INTEGER"));
 
-                    Map<String, String> fields = meta.fields("Integer");
+                    Map<String, String> fields = meta.fields("INTEGER");
 
                     assert fields != null;
                     assert fields.size() == 2;
@@ -321,12 +321,12 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
                 }
                 else if (strCache.getName().equals(meta.cacheName())) {
                     assertEquals("Invalid types size", 1, types.size());
-                    assert types.contains("String");
+                    assert types.contains("STRING");
 
-                    assert String.class.getName().equals(meta.valueClass("String"));
-                    assert String.class.getName().equals(meta.keyClass("String"));
+                    assert String.class.getName().equals(meta.valueClass("STRING"));
+                    assert String.class.getName().equals(meta.keyClass("STRING"));
 
-                    Map<String, String> fields = meta.fields("String");
+                    Map<String, String> fields = meta.fields("STRING");
 
                     assert fields != null;
                     assert fields.size() == 2;
