@@ -18,38 +18,38 @@ package org.apache.ignite.internal.agent.processor.metrics;
 
 import java.util.Collection;
 import java.util.UUID;
-import org.apache.ignite.internal.agent.dto.metric.MetricRequest;
-import org.apache.ignite.internal.agent.dto.metric.MetricResponse;
-import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.agent.dto.metric.MetricRequest;
+import org.apache.ignite.internal.agent.dto.metric.MetricResponse;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 
-import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildMetricsDest;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 
 /**
  * Metric processor.
  */
 public class MetricsProcessor extends GridProcessorAdapter {
-    /** Manager. */
-    private WebSocketManager mgr;
+    /** Control Center sender. */
+    private ControlCenterSender snd;
 
     /** Listener. */
     private final GridMessageListener lsnr = this::processMetricResponse;
 
     /**
      * @param ctx Context.
-     * @param mgr Manager.
+     * @param snd Control Center sender.
      */
-    public MetricsProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public MetricsProcessor(GridKernalContext ctx, ControlCenterSender snd) {
         super(ctx);
 
-        this.mgr = mgr;
+        this.snd = snd;
 
         // Listener for collecting metrics event.
         ctx.io().addMessageListener(TOPIC_METRICS, lsnr);
@@ -71,7 +71,7 @@ public class MetricsProcessor extends GridProcessorAdapter {
                 log.debug("Send message to Control Center: " + msg);
 
             try {
-                mgr.send(buildMetricsDest(), res.body());
+                snd.send(buildMetricsDest(), res.body());
             }
             catch (Throwable e) {
                 log.error("Failed to send metrics to Control Center", e);

@@ -37,20 +37,6 @@ public class SqlConfiguration {
     /** Default value for SQL offloading flag. */
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
-    /** Default disabled SQL functions list. */
-    public static final String[] DFLT_DISABLED_SQL_FUNCTIONS = new String[] {
-        "FILE_READ",
-        "FILE_WRITE",
-        "CSVWRITE",
-        "CSVREAD",
-        "MEMORY_FREE",
-        "MEMORY_USED",
-        "LOCK_MODE",
-        "LINK_SCHEMA",
-        "SESSION_ID",
-        "CANCEL_SESSION"
-    };
-
     /** */
     private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
 
@@ -68,9 +54,6 @@ public class SqlConfiguration {
 
     /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
     private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
-
-    /** Disabled SQL functions. */
-    private String[] disabledSqlFuncs = DFLT_DISABLED_SQL_FUNCTIONS;
 
     /**
      * Number of SQL query history elements to keep in memory. If not provided, then default value {@link
@@ -275,33 +258,6 @@ public class SqlConfiguration {
      */
     public SqlConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         this.sqlOffloadingEnabled = offloadingEnabled;
-
-        return this;
-    }
-
-    /**
-     * Gets the set of disabled SQL functions.
-     *
-     * @return The set of disabled SQL functions.
-     */
-    public String[] getDisabledSqlFunctions() {
-        return disabledSqlFuncs;
-    }
-
-    /**
-     * Sets the set of disabled SQL functions.
-     * {@link #DFLT_DISABLED_SQL_FUNCTIONS} - the set of SQL functions that is disallowed by default.
-     *
-     * @param disabledSqlFuncs The set of disabled SQL functions.
-     *  <ul>
-     *      <li>If the empty is passed all SQL functions are allowed.</li>
-     *      <li>If the parameter is {@code null] the default list of function is used.</li>
-     *  </ul>
-     *
-     * @return {@code this} for chaining.
-     */
-    public SqlConfiguration setDisabledSqlFunctions(String[] disabledSqlFuncs) {
-        this.disabledSqlFuncs = disabledSqlFuncs == null ? DFLT_DISABLED_SQL_FUNCTIONS : disabledSqlFuncs;
 
         return this;
     }
