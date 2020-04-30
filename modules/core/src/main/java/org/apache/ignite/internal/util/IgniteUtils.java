@@ -376,6 +376,9 @@ public abstract class IgniteUtils {
     /** Correct Mbean cache name pattern. */
     private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
 
+    /** List of network interface nemes to ignore. */
+    private static List<String> IGNORED_INTERFACE_NAMES = Arrays.asList("docker0");
+
     /** Project home directory. */
     private static volatile GridTuple<String> ggHome;
 
@@ -2053,10 +2056,15 @@ public abstract class IgniteUtils {
         try {
             InetAddress inetAddr = InetAddress.getByName(addr);
 
-            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces()))
-                for (InetAddress itfAddr : asIterable(itf.getInetAddresses()))
+            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
+                if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                    continue;
+
+                for (InetAddress itfAddr : asIterable(itf.getInetAddresses())) {
                     if (itfAddr.equals(inetAddr))
                         return itf.getDisplayName();
+                }
+            }
         }
         catch (UnknownHostException ignore) {
             return null;
@@ -2197,6 +2205,9 @@ public abstract class IgniteUtils {
                 List<InetAddress> locAddrs = new ArrayList<>();
 
                 for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
+                    if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                        continue;
+
                     for (InetAddress addr : asIterable(itf.getInetAddresses())) {
                         if (!addr.isLinkLocalAddress())
                             locAddrs.add(addr);
@@ -2282,8 +2293,12 @@ public abstract class IgniteUtils {
         else {
             List<NetworkInterface> itfs = new ArrayList<>();
 
-            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces()))
+            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
+                if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                    continue;
+
                 itfs.add(itf);
+            }
 
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
                 @Override public int compare(NetworkInterface itf1, NetworkInterface itf2) {
@@ -2388,15 +2403,16 @@ public abstract class IgniteUtils {
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
-                    if (!itf.isLoopback()) {
-                        Enumeration<InetAddress> addrs = itf.getInetAddresses();
+                    if (IGNORED_INTERFACE_NAMES.contains(itf.getName()) || itf.isLoopback())
+                        continue;
 
-                        for (InetAddress addr : asIterable(addrs)) {
-                            String hostAddr = addr.getHostAddress();
+                    Enumeration<InetAddress> addrs = itf.getInetAddresses();
 
-                            if (!addr.isLoopbackAddress() && !ips.contains(hostAddr))
-                                ips.add(hostAddr);
-                        }
+                    for (InetAddress addr : asIterable(addrs)) {
+                        String hostAddr = addr.getHostAddress();
+
+                        if (!addr.isLoopbackAddress() && !ips.contains(hostAddr))
+                            ips.add(hostAddr);
                     }
                 }
             }
@@ -2453,6 +2469,9 @@ public abstract class IgniteUtils {
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
+                    if (IGNORED_INTERFACE_NAMES.contains(itf.getName()))
+                        continue;
+
                     byte[] hwAddr = itf.getHardwareAddress();
 
                     // Loopback produces empty MAC.
