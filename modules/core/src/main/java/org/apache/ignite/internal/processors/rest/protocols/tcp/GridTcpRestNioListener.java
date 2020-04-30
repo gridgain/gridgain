@@ -142,7 +142,8 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     /** Handler for all Redis requests. */
     private GridRedisNioListener redisLsnr;
 
-    /** Storage of pending futures, which be interrupted when session would close. */
+    /** Futures of currently executing tasks that can be interrupted if their session is closed
+     * (e.g. because of user interrupting control.sh operation). */
     private final Map<GridNioSession, Set<IgniteInternalFuture>> sesInterruptibleFutMap = new ConcurrentHashMap<>();
 
     /**
@@ -306,7 +307,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     }
 
     /**
-     * This method checks does request can be interrupted.
+     * This method checks if request in client message can be interrupted.
      *
      * @param msg Message.
      * @return True of task can be interrupted, false otherwise.
@@ -317,14 +318,11 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
 
         GridClientTaskRequest taskRequest = (GridClientTaskRequest)msg;
 
-        //TODO: Need to think about which class loader using here correctly.
-        ClassLoader ldr = getClass().getClassLoader();
-
         try {
-            return U.hasAnnotation(ldr.loadClass(taskRequest.taskName()), InterruptibleVisorTask.class);
+            return U.hasAnnotation(U.forName(taskRequest.taskName(), null), InterruptibleVisorTask.class);
         }
         catch (ClassNotFoundException e) {
-            log.warning("Task closure can't be found: [task=" + taskRequest.taskName() + ", ldr=" + ldr + ']', e);
+            log.warning("Task closure can't be found: [task=" + taskRequest.taskName() + ']', e);
 
             return false;
         }
@@ -349,7 +347,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
      * @param fut Operation future.
      */
     private void removeFutureFromSession(GridNioSession ses, IgniteInternalFuture fut) {
-        assert fut.isDone() : "Operation is running ses=" + ses;
+        assert fut.isDone() : "Operation is in progress, session: " + ses;
 
         sesInterruptibleFutMap.computeIfPresent(ses, (key, futs) -> {
             futs.remove(fut);
@@ -371,7 +369,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                         fut.cancel();
                 }
                 catch (IgniteCheckedException e) {
-                    log.warning("Future was not cancel.", e);
+                    log.warning("Future was not cancelled: " + fut, e);
                 }
             }
 
