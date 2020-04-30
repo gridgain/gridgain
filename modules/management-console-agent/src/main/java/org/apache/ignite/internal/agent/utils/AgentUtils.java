@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.agent.action.Session;
 import org.apache.ignite.internal.agent.dto.action.JobResponse;
 import org.apache.ignite.internal.agent.dto.action.ResponseError;
@@ -211,17 +212,59 @@ public final class AgentUtils {
     }
 
     /**
-     * Quietly closes given processor ignoring possible checked exception.
+     * Closes given processor ignoring possible checked exception.
      *
-     * @param proc Process.
+     * @param proc Processor.
+     * @param log Logger.
      */
-    public static void quiteStop(GridProcessor proc) {
+    public static void stopProcessor(GridProcessor proc, IgniteLogger log) {
         if (proc != null) {
             try {
                 proc.stop(true);
             }
-            catch (Exception ignored) {
-                // No-op.
+            catch (Exception e) {
+                U.warn(log, "Failed to stop GridGain Control Center agent processor: " + proc.getClass(), e);
+            }
+        }
+    }
+
+    /**
+     * Creates agent processor.
+     *
+     * @param log Logger.
+     * @param clsName Processor class name.
+     * @param paramTypes The parameter array.
+     * @param args array of objects to be passed as arguments to the constructor call.
+     * @return Agent processor.
+     */
+    public static <T extends GridProcessor> T createProcessor(IgniteLogger log, String clsName, Class<?>[] paramTypes, Object... args) {
+        ClassLoader ldr = U.gridClassLoader();
+
+        try {
+            Class<?> mgrCls = ldr.loadClass(clsName);
+
+            return (T)mgrCls.getConstructor(paramTypes).newInstance(args);
+        }
+        catch (Exception e) {
+            U.error(log, "Failed to initialize GridGain Control Center agent processor: " + clsName, e);
+        }
+
+        return null;
+    }
+
+    /**
+     * Start given processor ignoring possible checked exception.
+     *
+     * @param proc Processor.
+     * @param log Logger.
+     */
+    public static void startProcessor(GridProcessor proc, IgniteLogger log) {
+        if (proc != null) {
+            try {
+                proc.start();
+            }
+            catch (Exception e) {
+                U.error(log, "Failed to start GridGain Control Center agent processor: " + proc.getClass(), e);
             }
         }
     }
