@@ -157,12 +157,12 @@ public class ManagementCommands implements Command<ManagementArguments> {
                     .setServerUris(argIter.nextStringSet("server URIs"));
 
                 while (argIter.hasNextSubArg()) {
-                    ManagementURLCommandArg uriArg = CommandArgUtils.of(
-                        argIter.nextArg("Invalid uri arguments"), ManagementURLCommandArg.class
-                    );
+                    String arg = argIter.nextArg("Invalid uri arguments");
+
+                    ManagementURLCommandArg uriArg = CommandArgUtils.of(arg, ManagementURLCommandArg.class);
 
                     if (uriArg == null)
-                        throw new IllegalArgumentException("Invalid uri arguments");
+                        throw new IllegalArgumentException("Invalid uri argument: " + arg);
 
                     switch (uriArg) {
                         case KEYSTORE:

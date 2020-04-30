@@ -726,7 +726,7 @@ public class CommandHandlerParsingTest {
         assertTrue(arg.isEnable());
         assertEquals(singletonList("http://localhost:3000"), arg.getServerUris());
 
-        assertParseArgsThrows("Invalid uri arguments", "--management", "uri", "http://localhost", "--wrong");
+        assertParseArgsThrows("Invalid uri argument: --wrong", "--management", "uri", "http://localhost", "--wrong");
 
         String keyStorePath = U.resolveIgnitePath("/modules/core/src/test/resources/server.jks").getAbsolutePath();
         String trustStorePath = U.resolveIgnitePath("/modules/core/src/test/resources/server.jks").getAbsolutePath();
