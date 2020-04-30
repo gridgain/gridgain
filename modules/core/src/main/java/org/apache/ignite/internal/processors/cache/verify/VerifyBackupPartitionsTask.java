@@ -55,6 +55,8 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
+
 /**
  * Task for comparing update counters and checksums between primary and backup partitions of specified caches.
  * <br>
@@ -102,7 +104,7 @@ public class VerifyBackupPartitionsTask extends ComputeTaskAdapter<Set<String>,
 
             for (Map.Entry<PartitionKey, PartitionHashRecord> e : nodeHashes.entrySet()) {
                 if (!clusterHashes.containsKey(e.getKey()))
-                    clusterHashes.put(e.getKey(), new ArrayList<PartitionHashRecord>());
+                    clusterHashes.put(e.getKey(), new ArrayList<>());
 
                 clusterHashes.get(e.getKey()).add(e.getValue());
             }
@@ -329,9 +331,9 @@ public class VerifyBackupPartitionsTask extends ComputeTaskAdapter<Set<String>,
                 long updateCntrAfter = part.updateCounter();
 
                 if (updateCntrBefore != updateCntrAfter) {
-                    throw new IgniteException("Cluster is not idle: update counter of partition [grpId=" +
-                        grpCtx.groupId() + ", partId=" + part.id() + "] changed during hash calculation [before=" +
-                        updateCntrBefore + ", after=" + updateCntrAfter + "]");
+                    throw new GridNotIdleException(IDLE_DATA_ALTERATION_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                        ", grpId=" + grpCtx.groupId() + ", partId=" + part.id() + "] changed during hash calculation " +
+                        "[before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
                 }
             }
             catch (IgniteCheckedException e) {

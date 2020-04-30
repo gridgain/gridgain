@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -28,7 +29,6 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -472,7 +472,7 @@ public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
 
         // Disable checkpoints in order to check whether recovery works.
         forceCheckpoint(grid(1));
-        disableCheckpoints(grid(1));
+        disableCheckpoints(Collections.singletonList(grid(1)));
 
         loadKeys(grid(1), KEYS_CNT, KEY_PREFIX, NEW_VAL_PREFIX, UPDATED_VAL_PREFIX);
 
@@ -583,20 +583,5 @@ public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
 
             Assert.assertEquals(valPrefix + i, val);
         }
-    }
-
-    /**
-     * Disable checkpoints on a specific node.
-     *
-     * @param node Ignite node.h
-     * @throws IgniteCheckedException If failed.
-     */
-    private void disableCheckpoints(Ignite node) throws IgniteCheckedException {
-        assert !node.cluster().localNode().isClient();
-
-        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)node).context()
-                .cache().context().database();
-
-        dbMgr.enableCheckpoints(false).get();
     }
 }
