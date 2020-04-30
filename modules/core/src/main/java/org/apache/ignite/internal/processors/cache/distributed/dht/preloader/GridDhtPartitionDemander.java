@@ -1752,9 +1752,19 @@ public class GridDhtPartitionDemander {
             NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions()
                 .headSet(otherAssignments.topologyVersion(), false);
 
-            for (AffinityTopologyVersion previousTopVer : toCheck) {
+            if (!toCheck.contains(topVer)) {
+                if (log.isInfoEnabled()) {
+                    log.info("History is not enough for checking compatible last rebalance, new rebalance started " +
+                        "[grp=" + grp.cacheOrGroupName() +
+                        ", lastTop=" + topVer + ']');
+                }
+
+                return false;
+            }
+
+            for (AffinityTopologyVersion previousTopVer : toCheck.descendingSet()) {
                 if (previousTopVer.before(topVer))
-                    continue;
+                    break;
 
                 p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
                     grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
