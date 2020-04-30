@@ -400,18 +400,29 @@ public class CacheInfo extends VisorDataTransferObject {
         return S.toString(CacheInfo.class, this);
     }
 
+    /**
+     * @param heapEntriesCount Set heapcount.
+     */
     public void setHeapEntriesCount(Long heapEntriesCount) {
         this.heapEntriesCount = heapEntriesCount;
     }
 
+    /**
+     */
     public Long getHeapEntriesCount() {
         return heapEntriesCount;
     }
 
+    /**
+     * @param offHeapPrimaryEntriesCount Set off-heapcount.
+     */
     public void setOffHeapPrimaryEntriesCount(Long offHeapPrimaryEntriesCount) {
         this.offHeapPrimaryEntriesCount = offHeapPrimaryEntriesCount;
     }
 
+    /**
+     *
+     */
     public Long getOffHeapPrimaryEntriesCount() {
         return offHeapPrimaryEntriesCount;
     }
