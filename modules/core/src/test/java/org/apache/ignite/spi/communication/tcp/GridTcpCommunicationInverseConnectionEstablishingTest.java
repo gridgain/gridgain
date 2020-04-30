@@ -294,6 +294,10 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         IgniteEx srv = grid(SRVS_NUM - 1);
 
+        // We need to interrupt communication worker client nodes so that
+        // closed connection won't automatically reopen when we don't expect it.
+        // Server communication worker is interrupted for another reason - it can hang the test
+        // due to bug in inverse connection protocol & comm worker - it will be fixed later.
         List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
             .filter(t -> t.getName().contains("tcp-comm-worker"))
             .filter(t -> t.getName().contains(srv.name()) || t.getName().contains(client.name()))
