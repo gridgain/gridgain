@@ -24,9 +24,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.AgentCommonAbstractTest;
-import org.apache.ignite.internal.agent.ManagementConsoleAgent;
 import org.apache.ignite.internal.agent.config.WebSocketConfig;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
@@ -50,14 +50,14 @@ public class WebSocketManagerTest extends AgentCommonAbstractTest {
         IgniteEx ignite = startGrid(0);
         changeManagementConsoleConfig(ignite);
 
-        WebSocketManager mgr = ((ManagementConsoleAgent)ignite.context().managementConsole()).webSocketManager();
+        ControlCenterSender snd = ignite.context().managementConsole().sender();
         ExecutorService srv = Executors.newFixedThreadPool(2);
 
         List<CompletableFuture> list = new ArrayList<>();
 
         for(int i = 0; i < 500; i++) {
-            list.add(runAsync(() -> mgr.send("/topic/first", 1), srv));
-            list.add(runAsync(() -> mgr.send("/topic/second", 2), srv));
+            list.add(runAsync(() -> snd.send("/topic/first", 1), srv));
+            list.add(runAsync(() -> snd.send("/topic/second", 2), srv));
         }
 
         CompletableFuture.allOf(list.toArray(new CompletableFuture[0])).get(10, TimeUnit.SECONDS);
