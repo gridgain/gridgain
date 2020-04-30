@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,19 @@
 
 package org.apache.ignite.internal.processors.management;
 
-import org.apache.ignite.internal.processors.GridProcessor;
-
 /**
- * Control Center processor.
+ * Represents abstraction for Control Center communication.
  */
-public interface ManagementConsoleProcessor extends GridProcessor {
+public interface ControlCenterSender {
     /**
-     * Sets the configuration.
-     *
-     * @param cfg Management configuration instance.
+     * @param dest Destination.
+     * @param payload Payload.
      */
-    public void configuration(ManagementConfiguration cfg);
+    public boolean send(String dest, byte[] payload);
 
     /**
-     * Gets the configuration.
-     *
-     * @return Management configuration instance.
+     * @param dest Destination.
+     * @param payload Payload.
      */
-    public ManagementConfiguration configuration();
-
-    /**
-     * @return Sender that responsible for communication with the Control Center backend.
-     */
-    public ControlCenterSender sender();
+    public boolean send(String dest, Object payload);
 }

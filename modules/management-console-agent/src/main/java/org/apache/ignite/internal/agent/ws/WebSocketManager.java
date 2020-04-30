@@ -19,20 +19,20 @@ package org.apache.ignite.internal.agent.ws;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -52,6 +52,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import static java.net.Proxy.NO_PROXY;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.agent.utils.AgentObjectMapperFactory.binaryMapper;
 import static org.apache.ignite.internal.agent.utils.AgentUtils.EMPTY;
@@ -66,9 +67,9 @@ import static org.glassfish.tyrus.container.grizzly.client.GrizzlyClientProperti
 import static org.springframework.util.Base64Utils.encodeToString;
 
 /**
- * Web socket manager.
+ * Websocket manager.
  */
-public class WebSocketManager extends GridProcessorAdapter {
+public class WebSocketManager extends GridProcessorAdapter implements ControlCenterSender {
     /** Mapper. */
     private final ObjectMapper mapper = binaryMapper();
 
@@ -127,11 +128,8 @@ public class WebSocketManager extends GridProcessorAdapter {
         reconnectCnt = -1;
     }
 
-    /**
-     * @param dest Destination.
-     * @param payload Payload.
-     */
-    public boolean send(String dest, byte[] payload) {
+    /** {@inheritDoc} */
+    @Override public boolean send(String dest, byte[] payload) {
         boolean connected = ses != null && ses.isConnected();
 
         // TODO: workaround of spring-messaging bug with send byte array data.
@@ -147,11 +145,8 @@ public class WebSocketManager extends GridProcessorAdapter {
         return connected;
     }
 
-    /**
-     * @param dest Destination.
-     * @param payload Payload.
-     */
-    public boolean send(String dest, Object payload) {
+    /** {@inheritDoc} */
+    @Override public boolean send(String dest, Object payload) {
         boolean connected = connected();
 
         if (connected)
@@ -336,7 +331,7 @@ public class WebSocketManager extends GridProcessorAdapter {
             Map<String, String> proxyHeaders = new HashMap<>();
 
             proxyHeaders.put("Proxy-Authorization", "Basic " +
-                encodeToString((user + ':' + pwd).getBytes(Charset.forName("UTF-8"))));
+                encodeToString((user + ':' + pwd).getBytes(UTF_8)));
 
             mgr.getProperties().put(ClientProperties.PROXY_HEADERS, proxyHeaders);
         }
