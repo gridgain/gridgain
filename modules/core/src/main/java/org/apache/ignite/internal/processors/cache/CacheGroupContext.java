@@ -815,6 +815,8 @@ public class CacheGroupContext {
         if (top != null)
             top.onCacheStopped(cctx.cacheId());
 
+        ctx.evict().stopEvictionAndAwait(this);
+
         offheapMgr.stopCache(cctx.cacheId(), destroy);
 
         removeCacheContext(cctx);
@@ -832,7 +834,7 @@ public class CacheGroupContext {
         IgniteCheckedException err =
             new IgniteCheckedException("Failed to wait for topology update, cache (or node) is stopping.");
 
-        ctx.evict().onCacheGroupStopped(this);
+        ctx.evict().stopEvictionAndAwait(this);
 
         aff.cancelFutures(err);
 

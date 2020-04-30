@@ -109,7 +109,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      *
      * @param grp Group context.
      */
-    public void onCacheGroupStopped(CacheGroupContext grp){
+    public void stopEvictionAndAwait(CacheGroupContext grp){
         GroupEvictionContext grpEvictionCtx = evictionGroupsMap.remove(grp.groupId());
 
         if (grpEvictionCtx != null){
@@ -228,7 +228,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         }
 
                         // Re-schedule new one task form same bucket.
-                        scheduleNextPartitionEviction(bucket);
+                        if (f.error() == null)
+                            scheduleNextPartitionEviction(bucket);
                     });
 
                     // Submit task to executor.
