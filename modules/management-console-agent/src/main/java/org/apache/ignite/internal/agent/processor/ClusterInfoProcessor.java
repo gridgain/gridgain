@@ -16,23 +16,19 @@
 
 package org.apache.ignite.internal.agent.processor;
 
-import org.apache.ignite.internal.agent.dto.cluster.BaselineInfo;
-import org.apache.ignite.internal.agent.dto.cluster.ClusterInfo;
-import org.apache.ignite.internal.agent.dto.topology.TopologySnapshot;
-import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.agent.dto.cluster.BaselineInfo;
+import org.apache.ignite.internal.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
-import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterDest;
-import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterTopologyDest;
-import static org.apache.ignite.internal.agent.utils.AgentUtils.getClusterFeatures;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
@@ -40,6 +36,10 @@ import static org.apache.ignite.events.EventType.EVT_BASELINE_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterDest;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.apache.ignite.internal.agent.dto.topology.TopologySnapshot.topology;
+import static org.apache.ignite.internal.agent.utils.AgentUtils.getClusterFeatures;
 
 /**
  * Cluster processor.
@@ -64,19 +64,19 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     /** Cluster. */
     protected IgniteClusterEx cluster;
 
-    /** Manager. */
-    private WebSocketManager mgr;
+    /** Control center sender. */
+    private ControlCenterSender snd;
 
     /** Send full topology to Control Center on baseline change. */
     private GridLocalEventListener sndTopUpdateLsnr = (event -> sendTopologyUpdate(null, ctx.discovery().discoCache()));
 
     /**
      * @param ctx Context.
-     * @param mgr Manager.
+     * @param snd Control Center sender.
      */
-    public ClusterInfoProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public ClusterInfoProcessor(GridKernalContext ctx, ControlCenterSender snd) {
         super(ctx);
-        this.mgr = mgr;
+        this.snd = snd;
         cluster = ctx.grid().cluster();
 
         GridEventStorageManager evtMgr = ctx.event();
@@ -113,9 +113,9 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
         Object crdId = cluster.localNode().consistentId();
 
-        mgr.send(
+        snd.send(
             buildClusterTopologyDest(cluster.id()),
-            TopologySnapshot.topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
+            topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
         );
 
         if (evt != null)
@@ -127,27 +127,29 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
      */
     void sendClusterInfo(Event evt) {
         if (log.isDebugEnabled())
-            log.debug("Sending cluster info to Control Center");
+            log.debug("Sending cluster info to Control Center for event: " + evt);
 
         ClusterInfo clusterInfo = createClusterInfo();
 
         populateClusterInfo(clusterInfo);
 
-        mgr.send(buildClusterDest(cluster.id()), clusterInfo);
+        snd.send(buildClusterDest(cluster.id()), clusterInfo);
     }
 
     /**
      * @return Create cluster info.
      */
     protected ClusterInfo createClusterInfo() {
-        return new ClusterInfo(cluster.id(), cluster.tag());
+        return new ClusterInfo();
     }
 
     /**
      * @param clusterInfo Cluster info to populate with data.
      */
-    protected void populateClusterInfo(ClusterInfo clusterInfo) {
+    private void populateClusterInfo(ClusterInfo clusterInfo) {
         clusterInfo
+            .setId(cluster.id())
+            .setTag(cluster.tag())
             .setActive(cluster.active())
             .setPersistenceEnabled(CU.isPersistenceEnabled(ctx.config()))
             .setBaselineParameters(
@@ -158,7 +160,6 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
             )
             .setSecure(ctx.authentication().enabled() || ctx.security().enabled())
             .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
-
     }
 
     /** {@inheritDoc} */

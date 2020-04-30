@@ -46,6 +46,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
@@ -63,7 +64,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.internal.agent.utils.AgentUtils.monitoringUri;
-import static org.apache.ignite.internal.agent.utils.AgentUtils.quiteStop;
+import static org.apache.ignite.internal.agent.utils.AgentUtils.stopProcessor;
 import static org.apache.ignite.internal.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -94,7 +95,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     protected WebSocketManager mgr;
 
     /** Cluster processor. */
-    private ClusterInfoProcessor clusterProc;
+    protected ClusterInfoProcessor clusterProc;
 
     /** Span exporter. */
     private SpanExporter spanExporter;
@@ -133,7 +134,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     private String curSrvUri;
 
     /** If first connection error after successful connection. */
-    private AtomicBoolean disconnected = new AtomicBoolean();
+    private final AtomicBoolean disconnected = new AtomicBoolean();
 
     /** Agent started. */
     private final AtomicBoolean agentStarted = new AtomicBoolean();
@@ -177,7 +178,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
             exporter.export();
 
-            quiteStop(exporter);
+            stopProcessor(exporter, log);
         }
         else
             log.warning("Management console requires DISTRIBUTED_METASTORAGE and CLUSTER_ID_AND_TAG features for work");
@@ -188,14 +189,25 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         if (isManagementConsoleFeaturesEnabled()) {
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-            quiteStop(actDispatcher);
-            quiteStop(messagesProc);
-            quiteStop(metricExporter);
-            quiteStop(evtsExporter);
-            quiteStop(spanExporter);
+            stopProcessor(messagesProc, log);
+            stopProcessor(actDispatcher, log);
+            stopProcessor(metricExporter, log);
+            stopProcessor(evtsExporter, log);
+            stopProcessor(spanExporter, log);
 
             disconnect();
         }
+    }
+
+    /**
+     * Stop processors.
+     */
+    protected void onDisconnect() {
+        stopProcessor(cacheProc, log);
+        stopProcessor(distributedActProc, log);
+        stopProcessor(metricProc, log);
+        stopProcessor(clusterProc, log);
+        stopProcessor(mgr, log);
     }
 
     /**
@@ -206,11 +218,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
         U.shutdownNow(getClass(), connectPool, log);
 
-        quiteStop(cacheProc);
-        quiteStop(distributedActProc);
-        quiteStop(metricProc);
-        quiteStop(clusterProc);
-        quiteStop(mgr);
+        onDisconnect();
 
         disconnected.set(false);
 
@@ -240,18 +248,16 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public ControlCenterSender sender() {
+        return mgr;
+    }
+
     /**
      * @return Session registry.
      */
     public SessionRegistry sessionRegistry() {
         return sesRegistry;
-    }
-
-    /**
-     * @return Weboscket manager.
-     */
-    public WebSocketManager webSocketManager() {
-        return mgr;
     }
 
     /**
@@ -351,9 +357,16 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     }
 
     /**
+     * On connect to backend.
+     */
+    protected void onConnect() {
+        clusterProc = new ClusterInfoProcessor(ctx, mgr);
+    }
+
+    /**
      * Connect to backend.
      */
-    private void connect() {
+    protected void connect() {
         if (!cfg.isEnabled()) {
             log.info("Control Center agent was not started on coordinator, because it was disabled in configuration");
             log.info("You can use control script to enable Control Center agent");
@@ -371,13 +384,16 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         log.info("Starting Control Center agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
+
         sesRegistry = new SessionRegistry(ctx);
-        clusterProc =  createClusterInfoProcessor();
-        metricProc = new MetricsProcessor(ctx, mgr);
         distributedActProc = new DistributedActionProcessor(ctx);
+
+        metricProc = new MetricsProcessor(ctx, mgr);
         cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
+
+        onConnect();
 
         connectPool = Executors.newSingleThreadExecutor(new CustomizableThreadFactory("mgmt-console-connection-"));
 
@@ -430,10 +446,37 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     }
 
     /**
-     * @return Cluster info processor.
+     * @param ses Session.
      */
-    protected ClusterInfoProcessor createClusterInfoProcessor() {
-        return new ClusterInfoProcessor(ctx, mgr);
+    protected void onConnected(StompSession ses) {
+        IgniteClusterImpl cluster = ctx.cluster().get();
+
+        clusterProc.sendInitialState();
+        cacheProc.sendInitialState();
+
+        ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
+            /** {@inheritDoc} */
+            @Override public Type getPayloadType(StompHeaders headers) {
+                return String.class;
+            }
+
+            /** {@inheritDoc} */
+            @Override public void handleFrame(StompHeaders headers, Object payload) {
+                metricProc.broadcastPullMetrics();
+            }
+        });
+
+        ses.subscribe(buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
+            /** {@inheritDoc} */
+            @Override public Type getPayloadType(StompHeaders headers) {
+                return Request.class;
+            }
+
+            /** {@inheritDoc} */
+            @Override public void handleFrame(StompHeaders headers, Object payload) {
+                distributedActProc.onActionRequest((Request)payload);
+            }
+        });
     }
 
     /**
@@ -456,37 +499,11 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             U.quietAndInfo(log, "If you are already using Control Center, you can add the cluster manually" +
                 " by its ID: " + cluster.id());
 
-            clusterProc.sendInitialState();
-
-            cacheProc.sendInitialState();
-
-            ses.subscribe(buildMetricsPullTopic(), new StompFrameHandler() {
-                /** {@inheritDoc} */
-                @Override public Type getPayloadType(StompHeaders headers) {
-                    return String.class;
-                }
-
-                /** {@inheritDoc} */
-                @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    metricProc.broadcastPullMetrics();
-                }
-            });
-
-            ses.subscribe(buildActionRequestTopic(cluster.id()), new StompFrameHandler() {
-                /** {@inheritDoc} */
-                @Override public Type getPayloadType(StompHeaders headers) {
-                    return Request.class;
-                }
-
-                /** {@inheritDoc} */
-                @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    distributedActProc.onActionRequest((Request)payload);
-                }
-            });
-
             cfg.setConsoleUris(singletonList(curSrvUri));
 
             writeToMetaStorage(cfg);
+
+            onConnected(ses);
         }
 
         /** {@inheritDoc} */

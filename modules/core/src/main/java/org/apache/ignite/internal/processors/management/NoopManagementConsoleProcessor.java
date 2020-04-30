@@ -39,4 +39,9 @@ public class NoopManagementConsoleProcessor extends GridProcessorAdapter impleme
     @Override public ManagementConfiguration configuration() {
         return null;
     }
+
+    /** {@inheritDoc} */
+    @Override public ControlCenterSender sender() {
+        return null;
+    }
 }

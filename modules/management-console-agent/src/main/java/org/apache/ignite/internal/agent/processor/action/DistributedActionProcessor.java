@@ -26,10 +26,10 @@ import org.apache.ignite.internal.agent.dto.action.JobResponse;
 import org.apache.ignite.internal.agent.dto.action.Request;
 import org.apache.ignite.internal.agent.dto.action.ResponseError;
 import org.apache.ignite.internal.agent.dto.action.TaskResponse;
-import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -46,8 +46,8 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     /** Authenticate action name. */
     public static final String AUTHENTICATE_ACTION_NAME = "SecurityActions.authenticate";
 
-    /** Websocket manager. */
-    private final WebSocketManager mgr;
+    /** Control Center sender. */
+    private final ControlCenterSender snd;
 
     /** Session registry. */
     private final SessionRegistry sesRegistry;
@@ -61,7 +61,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public DistributedActionProcessor(GridKernalContext ctx) {
         super(ctx);
 
-        mgr = ((ManagementConsoleAgent)ctx.managementConsole()).webSocketManager();
+        snd = ctx.managementConsole().sender();
         sesRegistry = ((ManagementConsoleAgent)ctx.managementConsole()).sessionRegistry();
         locNodeConsistentId = String.valueOf(ctx.grid().localNode().consistentId());
     }
@@ -130,7 +130,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public void sendTaskResponse(TaskResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionTaskResponseDest(clusterId), res);
+        snd.send(buildActionTaskResponseDest(clusterId), res);
     }
 
     /**
@@ -139,7 +139,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public void sendJobResponse(JobResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionJobResponseDest(clusterId), res);
+        snd.send(buildActionJobResponseDest(clusterId), res);
     }
 
     /**

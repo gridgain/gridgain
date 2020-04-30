@@ -35,6 +35,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
@@ -102,10 +103,12 @@ import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.query.GridQueryFieldsResult;
 import org.apache.ignite.internal.processors.query.GridQueryFieldsResultAdapter;
+import org.apache.ignite.internal.processors.query.GridQueryFinishedInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
+import org.apache.ignite.internal.processors.query.GridQueryStartedInfo;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -317,9 +320,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Query message listener. */
     private GridMessageListener qryLsnr;
-
-    /** Functions manager. */
-    private FunctionsManager funcMgr;
 
     /**
      * @return Kernal context.
@@ -1596,6 +1596,34 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
     }
 
+    /**
+     * @param lsnr Listener.
+     */
+    public void registerQueryStartedListener(Consumer<GridQueryStartedInfo> lsnr) {
+        runningQueryManager().registerQueryStartedListener(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public boolean unregisterQueryStartedListener(Object lsnr) {
+        return runningQueryManager().unregisterQueryStartedListener(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public void registerQueryFinishedListener(Consumer<GridQueryFinishedInfo> lsnr) {
+        runningQueryManager().registerQueryFinishedListener(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public boolean unregisterQueryFinishedListener(Object lsnr) {
+        return runningQueryManager().unregisterQueryFinishedListener(lsnr);
+    }
+
     /** {@inheritDoc} */
     @Override public UpdateSourceIterator<?> executeUpdateOnDataNodeTransactional(
         GridCacheContext<?, ?> cctx,
@@ -2210,9 +2238,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         registerAggregateFunctions();
 
-        distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), log);
+        distrCfg = new DistributedSqlConfiguration(ctx, log);
 
-        funcMgr = new FunctionsManager(this, distrCfg);
+        distrCfg.listenDisabledFunctions(new FunctionsManager<>());
     }
 
     /** {@inheritDoc} */
