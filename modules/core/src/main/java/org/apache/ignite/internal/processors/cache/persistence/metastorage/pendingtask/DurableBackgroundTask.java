@@ -37,4 +37,9 @@ public interface DurableBackgroundTask extends Serializable {
      * @param ctx Grid kernal context.
      */
     public void execute(GridKernalContext ctx);
+
+    /**
+     * Callback for cluster deactivation.
+     */
+    public void onClusterDeactivate();
 }
