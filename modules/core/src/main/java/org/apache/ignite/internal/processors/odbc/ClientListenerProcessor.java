@@ -97,8 +97,9 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
         IgniteConfiguration cfg = ctx.config();
 
         // Daemon node should not open client port
-        if (cfg.isDaemon() && log.isDebugEnabled()) {
-            log.debug("Client connection configuration ignored for daemon node.");
+        if (cfg.isDaemon()) {
+            if (log.isDebugEnabled())
+                log.debug("Client connection configuration ignored for daemon node.");
 
             return;
         }
