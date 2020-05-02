@@ -41,6 +41,7 @@ import org.apache.ignite.lang.utils.GridLeanMapSelfTest;
 import org.apache.ignite.lang.utils.GridListSetSelfTest;
 import org.apache.ignite.lang.utils.GridStripedLockSelfTest;
 import org.apache.ignite.lang.utils.IgniteOffheapReadWriteLockSelfTest;
+import org.apache.ignite.testframework.junits.multijvm.RemoteNodeHaltedByTimeoutInMultiJvmSelfTest;
 import org.apache.ignite.util.GridConcurrentLinkedDequeSelfTest;
 import org.apache.ignite.util.GridConcurrentLinkedHashMapMultiThreadedSelfTest;
 import org.junit.runner.RunWith;
@@ -84,6 +85,7 @@ import org.junit.runners.Suite;
 
     // Consistent hash tests.
     GridConsistentHashSelfTest.class,
+    RemoteNodeHaltedByTimeoutInMultiJvmSelfTest.class
 })
 public class IgniteLangSelfTestSuite {
 }

@@ -53,8 +53,8 @@ import static org.apache.ignite.testframework.GridTestUtils.DFLT_TEST_TIMEOUT;
  * Run ignite node.
  */
 public class IgniteNodeRunner {
-    /** Ignite test timeout. */
-    public static final String IGNITE_TEST_TIMEOUT = "IGNITE_TEST_TIMEOUT";
+    /** Kill remote node timeout. */
+    public static final String IGNITE_HALT_REMOTE_TEST_NODE_TIMEOUT = "IGNITE_HALT_REMOTE_TEST_NODE_TIMEOUT";
 
     /** */
     private static final String IGNITE_CONFIGURATION_FILE = System.getProperty("java.io.tmpdir") +
@@ -74,7 +74,7 @@ public class IgniteNodeRunner {
 
         X.println("Starting Ignite Node... Args=" + Arrays.toString(args));
 
-        long testTimeout = IgniteSystemProperties.getLong(IGNITE_TEST_TIMEOUT, DFLT_TEST_TIMEOUT);
+        long testTimeout = IgniteSystemProperties.getLong(IGNITE_HALT_REMOTE_TEST_NODE_TIMEOUT, 5 * DFLT_TEST_TIMEOUT);
 
         assert testTimeout > 0 : testTimeout;
 
@@ -82,7 +82,7 @@ public class IgniteNodeRunner {
 
         ignite = Ignition.start(cfg);
 
-        Thread.sleep(5 * testTimeout);
+        Thread.sleep(testTimeout);
 
         X.println("Node still alive too long time. Halt it immediately.");
 
