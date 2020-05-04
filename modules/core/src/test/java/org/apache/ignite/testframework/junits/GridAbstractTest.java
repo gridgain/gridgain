@@ -192,7 +192,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     /** */
     private static final transient Map<Class<?>, IgniteTestResources> tests = new ConcurrentHashMap<>();
 
-    /** */
+    /** Loggers with changed log level for test's purposes. */
     private static final transient Map<Logger, Level> changedLevels = new ConcurrentHashMap<>();
 
     /** */

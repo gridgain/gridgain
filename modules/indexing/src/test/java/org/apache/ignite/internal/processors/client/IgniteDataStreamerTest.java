@@ -111,7 +111,7 @@ public class IgniteDataStreamerTest extends GridCommonAbstractTest {
 
                 if (log.isDebugEnabled()) {
                     //Printing future result to log to prevent jvm optimization
-                    log.debug(res == null ? null : res.toString());
+                    log.debug(String.valueOf(res));
                 }
             }
 
