@@ -49,7 +49,9 @@ public final class NoopTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override public void restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates) {
+    @Override public boolean restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates) {
         // No-op.
+
+        return true;
     }
 }

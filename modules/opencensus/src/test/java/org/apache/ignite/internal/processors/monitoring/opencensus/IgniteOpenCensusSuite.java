@@ -24,7 +24,8 @@ import org.junit.runners.Suite;
     OpenCensusMetricExporterSpiTest.class,
     OpenCensusTracingSpiTest.class,
     OpenCensusTxTracingTest.class,
-    MixedTracingSpiTest.class,
+    // TODO: 04.05.20 Rework.
+//    MixedTracingSpiTest.class,
 
     // Tracing configuration tests.
     OpenCensusTxTracingConfigurationTest.class
