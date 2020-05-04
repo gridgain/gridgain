@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsReservation;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
@@ -317,6 +318,8 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
      */
     @Override public void onDoneAfterTopologyUnlock(final GridDhtPartitionsExchangeFuture fut) {
         try {
+
+
             // Must not do anything at the exchange thread. Dispatch to the management thread pool.
             ctx.closure().runLocal(() -> {
                     AffinityTopologyVersion topVer = ctx.cache().context().exchange()

@@ -90,7 +90,7 @@ public class ReservationTest extends GridCommonAbstractTest {
                     }
                 }
             }
-        }, 1, "qry-thread");
+        }, 3, "qry-thread");
 
         doSleep(100);
 
@@ -103,8 +103,6 @@ public class ReservationTest extends GridCommonAbstractTest {
         });
 
         spi2.waitForBlocked();
-
-        doSleep(100);
 
         IgniteEx g3 = startGrid(3);
 
