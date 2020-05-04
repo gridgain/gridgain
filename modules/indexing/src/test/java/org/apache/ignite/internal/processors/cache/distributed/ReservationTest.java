@@ -82,7 +82,7 @@ public class ReservationTest extends GridCommonAbstractTest {
                     //qry.setPageSize(1);
 
                     try {
-                        List<List<?>> rows = grid(ThreadLocalRandom.current().nextInt(2)).cache(DEFAULT_CACHE_NAME).query(qry).getAll();
+                        List<List<?>> rows = grid(0).cache(DEFAULT_CACHE_NAME).query(qry).getAll();
 
                         assertEquals(32 * 5, rows.size());
                     } catch (Exception e) {
@@ -90,7 +90,7 @@ public class ReservationTest extends GridCommonAbstractTest {
                     }
                 }
             }
-        }, 3, "qry-thread");
+        }, 1, "qry-thread");
 
         doSleep(100);
 
