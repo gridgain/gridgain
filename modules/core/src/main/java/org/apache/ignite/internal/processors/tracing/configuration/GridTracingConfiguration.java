@@ -79,7 +79,9 @@ public class GridTracingConfiguration implements TracingConfiguration {
                     ctx.distributedMetastorage().read(scopeBasedKey);
 
                 HashMap<String, TracingConfigurationParameters> updatedScopeBasedTracingConfiguration =
-                    new HashMap<>(existingScopeBasedTracingConfiguration);
+                    existingScopeBasedTracingConfiguration != null ?
+                        new HashMap<>(existingScopeBasedTracingConfiguration) : new
+                        HashMap<>();
 
                 updatedScopeBasedTracingConfiguration.put(coordinates.label(), parameters);
 

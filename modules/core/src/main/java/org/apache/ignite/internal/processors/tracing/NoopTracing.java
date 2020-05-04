@@ -54,4 +54,14 @@ public class NoopTracing implements Tracing {
     @Override public byte[] serialize(@NotNull Span span) {
         return NOOP_SPI.serialize(span);
     }
+
+    /** {@inheritDoc} */
+    @Override public byte[] serialize(@NotNull Span span) {
+        return NOOP_SPI.serialize(span);
+    }
+
+    /** {@inheritDoc} */
+    @Override public @NotNull TracingConfiguration configuration() {
+        return NoopTracingConfiguration.INSTANCE;
+    }
 }

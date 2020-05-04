@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,10 +56,20 @@ public interface SpanManager {
      *
      * @param spanType Type of span to create.
      * @param parentSpan Parent span.
-     * @param supportedScopes Supported scopes.
+     * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
+     * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
+     * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+     *  In other words, if child's span scope is equals to parent's scope
+     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  otherwise it'll be skipped.
+     *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      * @return Created span.
      */
-    public Span create (@NotNull SpanType spanType, @Nullable Span parentSpan, Scope...supportedScopes);
+    public @NotNull Span create (
+        @NotNull SpanType spanType,
+        @Nullable Span parentSpan,
+        double samplingRate,
+        @NotNull Set<Scope> supportedScopes);
 
     /**
      * Serializes span to byte array to send context over network.

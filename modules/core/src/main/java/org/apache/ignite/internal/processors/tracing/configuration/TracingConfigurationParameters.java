@@ -30,11 +30,11 @@ public class TracingConfigurationParameters implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
-    private static final double MIN_SAMPLING_RATE = 0d;
+    /** Min valid sampling rate with special meaning that span won't be created. */
+    public static final double SAMPLING_RATE_NEVER = 0d;
 
-    /** */
-    private static final double MAX_SAMPLING_RATE = 1d;
+    /** Max valid sampling rate with special meaning that span will be always created. */
+    public static final double SAMPLING_RATE_ALWAYS = 1d;
 
     /**
      * Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
@@ -106,7 +106,7 @@ public class TracingConfigurationParameters implements Serializable {
          * @return {@code TracingConfigurationParameters} instance.
          */
         public @NotNull Builder withSamplingRate(double samplingRate) {
-            if (samplingRate < MIN_SAMPLING_RATE || samplingRate > MAX_SAMPLING_RATE) {
+            if (samplingRate < SAMPLING_RATE_NEVER || samplingRate > SAMPLING_RATE_ALWAYS) {
                 throw new IllegalArgumentException("Specified sampling rate=[" + samplingRate + "] has invalid value." +
                     " Should be between 0 and 1 including boundaries.");
             }

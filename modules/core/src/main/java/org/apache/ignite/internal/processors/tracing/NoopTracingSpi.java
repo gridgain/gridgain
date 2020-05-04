@@ -23,6 +23,8 @@ import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Set;
+
 /**
  * Noop and null-safe implementation of Tracing SPI.
  */
@@ -46,7 +48,11 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan, Scope... supportedScopes) {
+    @Override public @NotNull Span create(
+        @NotNull SpanType spanType,
+        @Nullable Span parentSpan,
+        double samplingRate,
+        @NotNull Set<Scope> supportedScopes) {
         return NOOP_SPAN;
     }
 

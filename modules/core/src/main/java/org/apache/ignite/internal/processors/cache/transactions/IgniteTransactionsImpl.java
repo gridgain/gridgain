@@ -23,8 +23,10 @@ import org.apache.ignite.internal.IgniteTransactionsEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.MTC;
-import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -167,7 +169,16 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
     ) {
         cctx.kernalContext().gateway().readLock();
 
-        MTC.supportInitial(cctx.kernalContext().tracing().create(TX, (Span)null));
+        // Retrieve tx tracing configuration.
+        TracingConfigurationParameters tracingConfigurationParameters =
+            cctx.kernalContext().tracing().configuration().retrieveConfiguration(
+                new TracingConfigurationCoordinates.Builder(Scope.TX).withLabel(lb).build());
+
+        MTC.supportInitial(cctx.kernalContext().tracing().create(
+            TX,
+            null,
+            tracingConfigurationParameters.samplingRate(),
+            tracingConfigurationParameters.supportedScopes()));
 
         MTC.span().addTag("isolation", isolation.name());
         MTC.span().addTag("concurrency", concurrency.name());

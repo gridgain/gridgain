@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import io.opencensus.trace.BlankSpan;
+import io.opencensus.trace.Sampler;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
@@ -39,6 +40,8 @@ import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToInt;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToShort;
 import static org.apache.ignite.internal.util.GridClientByteUtils.intToBytes;
@@ -55,7 +58,7 @@ import static org.apache.ignite.internal.util.GridClientByteUtils.shortToBytes;
  * </code>
  * If you don't have OpenCensus Tracing:
  * <code>
- *     IgniteConfigiration cfg;
+ *     IgniteConfiguration cfg;
  *
  *     cfg.setTracingSpi(new OpenCensusTracingSpi(new ZipkinExporterHandler(...)));
  * </code>
@@ -180,23 +183,35 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan, Scope... supportedScopes) {
+    @Override public @NotNull Span create(
+        @NotNull SpanType spanType,
+        @Nullable Span parentSpan,
+        double samplingRate,
+        @NotNull Set<Scope> supportedScopes) {
         try {
             io.opencensus.trace.Span openCensusParent = null;
 
             if (parentSpan instanceof OpenCensusSpanAdapter)
                 openCensusParent = ((OpenCensusSpanAdapter)parentSpan).impl();
 
+            Sampler sampler;
+
+            if (Double.compare(samplingRate, SAMPLING_RATE_NEVER) == 0)
+                sampler = Samplers.neverSample();
+            else if (Double.compare(samplingRate, SAMPLING_RATE_ALWAYS) == 0)
+                sampler = Samplers.alwaysSample();
+            else
+                sampler = Samplers.probabilitySampler(samplingRate);
+
             return new OpenCensusSpanAdapter(
                 Tracing.getTracer().spanBuilderWithExplicitParent(
                     spanType.traceName(),
                     openCensusParent
                 )
-                    .setSampler(Samplers.alwaysSample())
+                    .setSampler(sampler)
                     .startSpan(),
                 spanType,
-
-                new HashSet<>(Arrays.asList(supportedScopes))
+                supportedScopes
             );
         }
         catch (Exception e) {
