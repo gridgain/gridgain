@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
+import java.util.Set;
+import org.apache.ignite.internal.processors.tracing.configuration.NoopTracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.NotNull;
@@ -46,13 +49,12 @@ public class NoopTracing implements Tracing {
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan, Scope... supportedScopes) {
-        return NOOP_SPI.create(spanType, parentSpan, supportedScopes);
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte[] serialize(@NotNull Span span) {
-        return NOOP_SPI.serialize(span);
+    @Override public @NotNull Span create(
+        @NotNull SpanType spanType,
+        @Nullable Span parentSpan,
+        double samplingRate,
+        @NotNull Set<Scope> supportedScopes) {
+        return NOOP_SPI.create(spanType, parentSpan, samplingRate, supportedScopes);
     }
 
     /** {@inheritDoc} */
