@@ -32,6 +32,7 @@
 
 package org.apache.ignite.internal.processors.tracing.configuration;
 
+import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +41,41 @@ import org.jetbrains.annotations.NotNull;
  * Allows to configure tracing, read the configuration and restore it to the defaults.
  */
 public interface TracingConfiguration {
+    // TODO: 04.05.20 After implementing GG-21041 and GG-21042 default TX config will include Scope.CACHE_GET, etc.
+    /** Default transaction tracing configuration. */
+    static final TracingConfigurationParameters DEFAULT_TX_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withSupportedScopes(Collections.emptySet()).
+            build();
+
+    /** Default exchange configuration. */
+    static final TracingConfigurationParameters DEFAULT_EXCHANGE_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withSupportedScopes(Collections.emptySet()).
+            build();
+
+    /** Default discovery configuration. */
+    static final TracingConfigurationParameters DEFAULT_DISCOVERY_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withSupportedScopes(Collections.emptySet()).
+            build();
+
+    /** Default communication configuration. */
+    static final TracingConfigurationParameters DEFAULT_COMMUNICATION_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withSupportedScopes(Collections.emptySet()).
+            build();
+
+    /** Default noop configuration. */
+    static final TracingConfigurationParameters NOOP_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withSupportedScopes(Collections.emptySet()).
+            build();
 
     /**
      * Configure tracing parameters such as sampling rate for the specific tracing coordinates such as scope and label.
@@ -47,8 +83,9 @@ public interface TracingConfiguration {
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
      *  that defines subset of traces and/or spans that'll use given configuration.
      * @param parameters{@link TracingConfigurationParameters} e.g. sampling rate, set of supported scopes etc.
+     * @return {@code true} if new configuration was successfully added, {@code false} otherwise.
      */
-    void addConfiguration(@NotNull TracingConfigurationCoordinates coordinates,
+    boolean addConfiguration(@NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters);
 
     /**
@@ -62,7 +99,31 @@ public interface TracingConfiguration {
      *  that defines subset of traces and/or spans that'll use given configuration.
      * @return {@link TracingConfigurationParameters} instance.
      */
-    @NotNull TracingConfigurationParameters retrieveConfiguration(@NotNull TracingConfigurationCoordinates coordinates);
+    default @NotNull TracingConfigurationParameters retrieveConfiguration(
+        @NotNull TracingConfigurationCoordinates coordinates)
+    {
+        switch (coordinates.scope()) {
+            case TX: {
+                return DEFAULT_TX_CONFIGURATION;
+            }
+
+            case EXCHANGE: {
+                return DEFAULT_EXCHANGE_CONFIGURATION;
+            }
+
+            case DISCOVERY: {
+                return DEFAULT_DISCOVERY_CONFIGURATION;
+            }
+
+            case COMMUNICATION: {
+                return DEFAULT_COMMUNICATION_CONFIGURATION;
+            }
+
+            default: {
+                return NOOP_CONFIGURATION;
+            }
+        }
+    }
 
     /**
      * List all pairs of tracing configuration coordinates and tracing configuration parameters.

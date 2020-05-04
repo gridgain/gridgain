@@ -34,28 +34,18 @@ public class TracingConfigurationCoordinates {
     /**
      * Specifies the label of a traced operation. It's an optional attribute.
      */
-    private String lb;
+    private final String lb;
 
     /**
-     * Constructor.
+     * Private constructor to be used with builder.
      *
-     * @param scope Specifies the {@link Scope} of a trace's root span to which some specific tracing configuration will
-     * be applied.
+     * @param scope scope Specifies the {@link Scope} of a trace's root span to which some specific
+     *  tracing configuration will be applied.
+     * @param lb Specifies the label of a traced operation.
      */
-    public TracingConfigurationCoordinates(@NotNull Scope scope) {
+    private TracingConfigurationCoordinates(@NotNull Scope scope, @Nullable String lb) {
         this.scope = scope;
-    }
-
-    /**
-     * Builder method that allows to set optional label attribute.
-     *
-     * @param lb Label of traced operation. It's an optional attribute.
-     * @return Current {@code TracingConfigurationCoordinates} instance.
-     */
-    public @NotNull TracingConfigurationCoordinates withLabel(@Nullable String lb) {
         this.lb = lb;
-
-        return this;
     }
 
     /**
@@ -70,5 +60,71 @@ public class TracingConfigurationCoordinates {
      */
     @Nullable public String label() {
         return lb;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        TracingConfigurationCoordinates that = (TracingConfigurationCoordinates)o;
+
+        if (scope != that.scope)
+            return false;
+
+        return lb != null ? lb.equals(that.lb) : that.lb == null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        int res = scope != null ? scope.hashCode() : 0;
+
+        res = 31 * res + (lb != null ? lb.hashCode() : 0);
+
+        return res;
+    }
+
+    /**
+     * {@code TracingConfigurationCoordinates} builder.
+     */
+    @SuppressWarnings("PublicInnerClass") public static class Builder {
+        /** Counterpart of {@code TracingConfigurationCoordinator}'s scope. */
+        private final Scope scope;
+
+        /** Counterpart of {@code TracingConfigurationCoordinator}'s lb. */
+        private String lb;
+
+        /**
+         * Constructor.
+         *
+         * @param scope Mandatory scope attribute.
+         */
+        public Builder(Scope scope) {
+            this.scope = scope;
+        }
+
+        /**
+         * Builder method that allows to set optional label attribute.
+         *
+         * @param lb Label of traced operation. It's an optional attribute.
+         * @return Current {@code TracingConfigurationCoordinates} instance.
+         */
+        public @NotNull Builder withLabel(@Nullable String lb) {
+            this.lb = lb;
+
+            return this;
+        }
+
+        /**
+         * Builder's build() method.
+         *
+         * @return {@code TracingConfigurationCoordinates} instance.
+         */
+        public TracingConfigurationCoordinates build() {
+            return new TracingConfigurationCoordinates(scope, lb);
+        }
     }
 }

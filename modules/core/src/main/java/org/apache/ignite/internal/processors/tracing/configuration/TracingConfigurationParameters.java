@@ -40,7 +40,7 @@ public class TracingConfigurationParameters implements Serializable {
      * Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
      */
-    private double samplingRate;
+    private final double samplingRate;
 
     /**
      * Set of {@link Scope} that defines which sub-traces will be included in given trace.
@@ -49,39 +49,23 @@ public class TracingConfigurationParameters implements Serializable {
      * otherwise it'll be skipped.
      * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
-    private Set<Scope> supportedScopes = Collections.emptySet();
+    private final Set<Scope> supportedScopes;
 
     /**
-     * Builder method that allows to set sampling rate.
+     * Constructor.
      *
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
-     * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @return {@code TracingConfigurationParameters} instance.
-     */
-    public @NotNull TracingConfigurationParameters withSamplingRate(double samplingRate) {
-        if (samplingRate < MIN_SAMPLING_RATE || samplingRate > MAX_SAMPLING_RATE) {
-            throw new IllegalArgumentException("Specified sampling rate=[" + samplingRate + "] has invalid value." +
-                " Should be between 0 and 1 including boundaries.");
-        }
-        this.samplingRate = samplingRate;
-
-        return this;
-    }
-
-    /**
-     * Builder method that allows to set supported scopes.
-     *
+     *  0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
      * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
-     * In other words, if child's span scope is equals to parent's scope
-     * or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
-     * otherwise it'll be skipped.
-     * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
-     * @return {@code TracingConfigurationParameters} instance.
+     *  In other words, if child's span scope is equals to parent's scope
+     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  otherwise it'll be skipped.
+     *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
-    public @NotNull TracingConfigurationParameters withSupportedScopes(Set<Scope> supportedScopes) {
-        this.supportedScopes = supportedScopes == null ? Collections.emptySet() : supportedScopes;
-
-        return this;
+    private TracingConfigurationParameters(double samplingRate,
+        Set<Scope> supportedScopes) {
+        this.samplingRate = samplingRate;
+        this.supportedScopes = Collections.unmodifiableSet(supportedScopes);
     }
 
     /**
@@ -102,5 +86,58 @@ public class TracingConfigurationParameters implements Serializable {
      */
     public @NotNull Set<Scope> supportedScopes() {
         return Collections.unmodifiableSet(supportedScopes);
+    }
+
+    /**
+     * {@code TracingConfigurationParameters} builder.
+     */
+    @SuppressWarnings("PublicInnerClass") public static class Builder {
+        /** Counterpart of {@code TracingConfigurationParameters} samplingRate. */
+        private double samplingRate;
+
+        /** Counterpart of {@code TracingConfigurationParameters} supportedScopes. */
+        private Set<Scope> supportedScopes = Collections.emptySet();
+
+        /**
+         * Builder method that allows to set sampling rate.
+         *
+         * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
+         * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
+         * @return {@code TracingConfigurationParameters} instance.
+         */
+        public @NotNull Builder withSamplingRate(double samplingRate) {
+            if (samplingRate < MIN_SAMPLING_RATE || samplingRate > MAX_SAMPLING_RATE) {
+                throw new IllegalArgumentException("Specified sampling rate=[" + samplingRate + "] has invalid value." +
+                    " Should be between 0 and 1 including boundaries.");
+            }
+            this.samplingRate = samplingRate;
+
+            return this;
+        }
+
+        /**
+         * Builder method that allows to set supported scopes.
+         *
+         * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+         * In other words, if child's span scope is equals to parent's scope
+         * or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+         * otherwise it'll be skipped.
+         * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
+         * @return {@code TracingConfigurationParameters} instance.
+         */
+        public @NotNull Builder withSupportedScopes(Set<Scope> supportedScopes) {
+            this.supportedScopes = supportedScopes == null ? Collections.emptySet() : supportedScopes;
+
+            return this;
+        }
+
+        /**
+         * Builder's build() method.
+         *
+         * @return {@code TracingConfigurationParameters} instance.
+         */
+        public TracingConfigurationParameters build() {
+            return new TracingConfigurationParameters(samplingRate, supportedScopes);
+        }
     }
 }

@@ -29,15 +29,17 @@ public final class NoopTracingConfiguration implements TracingConfiguration {
     public static final NoopTracingConfiguration INSTANCE = new NoopTracingConfiguration();
 
     /** {@inheritDoc} */
-    @Override public void addConfiguration(@NotNull TracingConfigurationCoordinates coordinates,
+    @Override public boolean addConfiguration(@NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters) {
         // No-op.
+
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public @NotNull TracingConfigurationParameters retrieveConfiguration(
         @NotNull TracingConfigurationCoordinates coordinates) {
-        return NoopTracingConfigurationParameters.INSTANCE;
+        return TracingConfiguration.NOOP_CONFIGURATION;
     }
 
     /** {@inheritDoc} */
