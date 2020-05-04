@@ -137,6 +137,7 @@ public interface TracingConfiguration {
      * In other words, removes any custom tracing configuration fot the specific {@link TracingConfigurationCoordinates}
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
      *  that defines subset of traces and/or spans that'll use given configuration.
+     * @return {@code true} if configuration was successfully restored to default, {@code false} otherwise.
      */
-    void restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates);
+    boolean restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates);
 }

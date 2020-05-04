@@ -37,6 +37,31 @@ public class GridTracingConfiguration implements TracingConfiguration {
     private static final String TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX =
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "tr.config.";
 
+    /** Map with default configurations. */
+    private static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DEFAULT_CONFIGURATION_MAP;
+
+    static {
+        Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tmpDfltConfigurationMap = new HashMap<>();
+
+        tmpDfltConfigurationMap.put(
+            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+            TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+
+        tmpDfltConfigurationMap.put(
+            new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
+            TracingConfiguration.DEFAULT_COMMUNICATION_CONFIGURATION);
+
+        tmpDfltConfigurationMap.put(
+            new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
+            TracingConfiguration.DEFAULT_EXCHANGE_CONFIGURATION);
+
+        tmpDfltConfigurationMap.put(
+            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+            TracingConfiguration.DEFAULT_DISCOVERY_CONFIGURATION);
+
+        DEFAULT_CONFIGURATION_MAP = Collections.unmodifiableMap(tmpDfltConfigurationMap);
+    }
+
     /** Kernal context. */
     @GridToStringExclude
     protected final GridKernalContext ctx;
@@ -177,24 +202,23 @@ public class GridTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") @Override
     public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveConfigurations() {
         DistributedMetaStorage metaStore;
+
         try {
             metaStore = ctx.distributedMetastorage();
         }
         catch (Exception e) {
             log.warning("Failed to retrieve tracing configuration — meta storage is not available.");
 
-            // TODO: 04.05.20 default values should go here instead of empty map.
-            return Collections.emptyMap();
+            return DEFAULT_CONFIGURATION_MAP;
         }
 
         if (metaStore == null) {
             log.warning("Failed to retrieve tracing configuration — meta storage is not available.");
 
-            // TODO: 04.05.20 default values should go here instead of empty map.
-            return Collections.emptyMap();
+            return DEFAULT_CONFIGURATION_MAP;
         }
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> res = new HashMap<>();
@@ -219,7 +243,61 @@ public class GridTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override public void restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates) {
-        // TODO: 04.05.20
+    @Override public boolean restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates) {
+        DistributedMetaStorage metaStore;
+
+        try {
+            metaStore = ctx.distributedMetastorage();
+        }
+        catch (Exception e) {
+            log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
+                "] to default  — meta storage is not available.");
+
+            return false;
+        }
+
+        if (metaStore == null) {
+            log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
+                "] to default  — meta storage is not available.");
+
+            return false;
+        }
+
+        String scopeBasedKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
+
+        boolean configurationSuccessfullyUpdated = false;
+
+        try {
+            while (!configurationSuccessfullyUpdated) {
+                HashMap<String, TracingConfigurationParameters> existingScopeBasedTracingConfiguration =
+                    ctx.distributedMetastorage().read(scopeBasedKey);
+
+                if (existingScopeBasedTracingConfiguration == null) {
+                    // Nothing to do.
+                    return true;
+                }
+
+                HashMap<String, TracingConfigurationParameters> updatedScopeBasedTracingConfiguration =
+                        new HashMap<>(existingScopeBasedTracingConfiguration);
+
+                if (coordinates.label() != null)
+                    updatedScopeBasedTracingConfiguration.remove(coordinates.label());
+                else
+                    updatedScopeBasedTracingConfiguration.remove(null);
+
+                configurationSuccessfullyUpdated = ctx.distributedMetastorage().compareAndSet(
+                    scopeBasedKey,
+                    existingScopeBasedTracingConfiguration,
+                    updatedScopeBasedTracingConfiguration);
+            }
+        }
+        catch (IgniteCheckedException e) {
+            log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
+                "] to default  — meta storage is not available.");
+
+            return false;
+        }
+
+        return true;
     }
 }
