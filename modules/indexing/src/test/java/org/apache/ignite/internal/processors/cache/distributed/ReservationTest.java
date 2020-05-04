@@ -61,17 +61,17 @@ public class ReservationTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
         TestRecordingCommunicationSpi spi2 = (TestRecordingCommunicationSpi) cfg2.getCommunicationSpi();
 
-        spi2.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                if (msg instanceof GridDhtPartitionsSingleMessage) {
-                    GridDhtPartitionsSingleMessage tmp = (GridDhtPartitionsSingleMessage) msg;
-
-                    return tmp.exchangeId() == null && tmp.partitions().containsKey(CU.cacheId(DEFAULT_CACHE_NAME));
-                }
-
-                return false;
-            }
-        });
+//        spi2.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+//            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+//                if (msg instanceof GridDhtPartitionsSingleMessage) {
+//                    GridDhtPartitionsSingleMessage tmp = (GridDhtPartitionsSingleMessage) msg;
+//
+//                    return tmp.exchangeId() == null && tmp.partitions().containsKey(CU.cacheId(DEFAULT_CACHE_NAME));
+//                }
+//
+//                return false;
+//            }
+//        });
 
         AtomicBoolean stop = new AtomicBoolean();
 
@@ -90,30 +90,33 @@ public class ReservationTest extends GridCommonAbstractTest {
                     }
                 }
             }
-        }, 3, "qry-thread");
+        }, 1, "qry-thread");
 
         doSleep(100);
 
-        IgniteInternalFuture<Void> fut = GridTestUtils.runAsync(new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                startGrid(cfg2);
+//        IgniteInternalFuture<Void> fut = GridTestUtils.runAsync(new Callable<Void>() {
+//            @Override public Void call() throws Exception {
+//                startGrid(cfg2);
+//
+//                return null;
+//            }
+//        });
+//
+//        spi2.waitForBlocked();
+//
+//        IgniteEx g3 = startGrid(3);
+//
+//        spi2.stopBlock();
 
-                return null;
-            }
-        });
-
-        spi2.waitForBlocked();
-
-        IgniteEx g3 = startGrid(3);
-
-        spi2.stopBlock();
+        startGrid(2);
+        startGrid(3);
 
         stop.set(true);
 
         awaitPartitionMapExchange();
 
         run.get();
-        fut.get();
+        //fut.get();
     }
 
     @Override protected long getTestTimeout() {
