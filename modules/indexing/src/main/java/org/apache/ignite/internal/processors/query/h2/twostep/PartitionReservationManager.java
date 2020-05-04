@@ -193,7 +193,7 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
 
                         if (partState != OWNING) {
                             if (partState == LOST)
-                                ignoreLostPartitionIfPossible(cctx, part);
+                                failQueryOnLostData(cctx, part);
                             else {
                                 return new PartitionReservation(reserved,
                                         String.format("Failed to reserve partitions " +
@@ -240,7 +240,7 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
 
                         if (partState != OWNING) {
                             if (partState == LOST)
-                                ignoreLostPartitionIfPossible(cctx, part);
+                                failQueryOnLostData(cctx, part);
                             else {
                                 return new PartitionReservation(reserved,
                                         String.format("Failed to reserve partitions for " +
@@ -294,22 +294,13 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
     }
 
     /**
-     * Decide whether to ignore or proceed with lost partition.
-     *
      * @param cctx Cache context.
      * @param part Partition.
-     * @throws IgniteCheckedException If failed.
      */
-    private static void ignoreLostPartitionIfPossible(GridCacheContext cctx, GridDhtLocalPartition part)
+    private static void failQueryOnLostData(GridCacheContext cctx, GridDhtLocalPartition part)
         throws IgniteCheckedException {
-        PartitionLossPolicy plc = cctx.config().getPartitionLossPolicy();
-
-        if (plc != null) {
-            if (plc == READ_ONLY_SAFE || plc == READ_WRITE_SAFE) {
-                throw new CacheInvalidStateException("Failed to execute query because cache partition has been " +
-                    "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
-            }
-        }
+        throw new CacheInvalidStateException("Failed to execute query because cache partition has been " +
+            "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
     }
 
     /**

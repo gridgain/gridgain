@@ -23,6 +23,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePartitionLossPolicySelfTest;
+import org.junit.Test;
 
 /**
  * Partition loss policy test with enabled indexing.
@@ -52,5 +53,10 @@ public class IndexingCachePartitionLossPolicySelfTest extends IgniteCachePartiti
         //    qry.setLocal(true);
 
         return cache.query(qry).getAll();
+    }
+
+    @Test
+    @Override public void checkLostPartition() throws Exception {
+        super.checkLostPartition();
     }
 }
