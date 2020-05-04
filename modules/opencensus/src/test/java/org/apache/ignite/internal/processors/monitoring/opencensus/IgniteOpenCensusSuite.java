@@ -24,7 +24,10 @@ import org.junit.runners.Suite;
     OpenCensusMetricExporterSpiTest.class,
     OpenCensusTracingSpiTest.class,
     OpenCensusTxTracingTest.class,
-    MixedTracingSpiTest.class
+    MixedTracingSpiTest.class,
+
+    // Tracing configuration tests.
+    OpenCensusTxTracingConfigurationTest.class
 })
 /**
  * Suite to test OpenCensus integration.

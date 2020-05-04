@@ -16,42 +16,16 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import com.google.common.collect.ImmutableMap;
-import io.opencensus.common.Functions;
-import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
-import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
 import io.opencensus.trace.SpanId;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.export.SpanData;
-import io.opencensus.trace.export.SpanExporter;
-import io.opencensus.trace.samplers.Samplers;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.tracing.SpanType;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
-import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.transactions.Transaction;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static io.opencensus.trace.AttributeValue.stringAttributeValue;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_COLOCATED_LOCK_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_COMMIT;
@@ -67,6 +41,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_PRE
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_FINISH_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_RESP;
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -76,76 +51,15 @@ import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 /**
  * Tests to check correctness of OpenCensus Transactions Tracing implementation.
  */
-public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
-    /** Grid count. */
-    private static final int GRID_CNT = 3;
-    /** Span buffer count - hardcode in open census. */
-    private static final int SPAN_BUFFER_COUNT = 32;
+public class OpenCensusTxTracingTest extends AbstractOpenCensusTracingTest {
 
-    /** Test trace exporter handler. */
-    private TraceExporterTestHandler hnd;
+    @Override public void before() throws Exception {
+        super.before();
 
-    /** Wrapper of test exporter handler. */
-    private OpenCensusTraceExporter exporter;
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setConsistentId(igniteInstanceName);
-
-        if (igniteInstanceName.contains("client"))
-            cfg.setClientMode(true);
-
-        cfg.setTracingSpi(new OpenCensusTracingSpi());
-
-        CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
-
-        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-        ccfg.setBackups(2);
-
-        cfg.setCacheConfiguration(ccfg);
-
-        return cfg;
-    }
-
-    /**
-     *
-     */
-    @BeforeClass
-    public static void beforeTests() {
-        /* Uncomment following code to see visualisation on local Zipkin: */
-
-        ZipkinTraceExporter.createAndRegister(ZipkinExporterConfiguration.builder()
-            .setV2Url("http://localhost:9411/api/v2/spans")
-            .setServiceName("ignite")
-            .build());
-    }
-
-    /**
-     *
-     */
-    @Before
-    public void before() throws Exception {
-        stopAllGrids();
-
-        hnd = new TraceExporterTestHandler();
-
-        exporter = new OpenCensusTraceExporter(hnd);
-
-        exporter.start("test");
-
-        startGrids(GRID_CNT);
-    }
-
-    /**
-     *
-     */
-    @After
-    public void after() {
-        exporter.stop();
-
-        stopAllGrids();
+        grid(0).tracingConfiguration().addConfiguration(
+            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+            new TracingConfigurationParameters.Builder().
+                withSamplingRate(SAMPLING_RATE_ALWAYS).build());
     }
 
     /**
@@ -201,7 +115,7 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
 
         tx.commit();
 
-        hnd.flush();
+        handler().flush();
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -356,7 +270,7 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
 
         tx.commit();
 
-        hnd.flush();
+        handler().flush();
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -507,7 +421,7 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
 
         tx.commit();
 
-        hnd.flush();
+        handler().flush();
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -662,7 +576,7 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
 
         tx.commit();
 
-        hnd.flush();
+        handler().flush();
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -813,7 +727,7 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
 
         tx.commit();
 
-        hnd.flush();
+        handler().flush();
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -968,7 +882,7 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
 
         tx.commit();
 
-        hnd.flush();
+        handler().flush();
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -1064,173 +978,5 @@ public class OpenCensusTxTracingTest extends GridCommonAbstractTest {
             txNearFinishReqSpanIds.get(0),
             1,
             null);
-    }
-
-    /**
-     * Verify that given spanData contains all (and only) propagated expected attributes.
-     * @param spanData Span data to check.
-     * @param expAttrs Attributes to check.
-     */
-    private void checkSpanAttributes(SpanData spanData, /** tagName: tagValue*/ Map<String, String> expAttrs) {
-        Map<String, AttributeValue> attrs = spanData.getAttributes().getAttributeMap();
-
-        if (expAttrs != null) {
-            assertEquals(expAttrs.size(), attrs.size());
-
-            for (Map.Entry<String, String> entry : expAttrs.entrySet())
-                assertEquals(entry.getValue(), attributeValueToString(attrs.get(entry.getKey())));
-        }
-    }
-
-    /**
-     * Check span.
-     *
-     * @param spanType Span type.
-     * @param parentSpanId Parent span id.
-     * @param expSpansCnt expected spans count.
-     * @param expAttrs Attributes to check.
-     * @return
-     */
-    private List<SpanId> checkSpan(
-        SpanType spanType,
-        SpanId parentSpanId,
-        int expSpansCnt,
-        /** tagName: tagValue*/ Map<String, String> expAttrs
-    ) {
-        List<SpanData> gotSpans = hnd.allSpans()
-            .filter(
-                span -> parentSpanId != null ?
-                    parentSpanId.equals(span.getParentSpanId()) && spanType.traceName().equals(span.getName()) :
-                    spanType.traceName().equals(span.getName()))
-            .collect(Collectors.toList());
-
-        assertEquals(expSpansCnt, gotSpans.size());
-
-        List<SpanId> spanIds = new ArrayList<>();
-
-        gotSpans.forEach(spanData -> {
-            spanIds.add(spanData.getContext().getSpanId());
-
-            checkSpanAttributes(spanData, expAttrs);
-        });
-
-        return spanIds;
-    }
-
-    /**
-     * @param attributeVal Attribute value.
-     */
-    private static String attributeValueToString(AttributeValue attributeVal) {
-        return attributeVal.match(
-            Functions.returnToString(),
-            Functions.returnToString(),
-            Functions.returnToString(),
-            Functions.returnToString(),
-            Functions.returnConstant(""));
-    }
-
-    /**
-     * Test span exporter handler.
-     */
-    static class TraceExporterTestHandler extends SpanExporter.Handler {
-        /** Collected spans. */
-        private final Map<SpanId, SpanData> collectedSpans = new ConcurrentHashMap<>();
-        /** */
-        private final Map<SpanId, List<SpanData>> collectedSpansByParents = new ConcurrentHashMap<>();
-
-        /** {@inheritDoc} */
-        @Override public void export(Collection<SpanData> spanDataList) {
-            for (SpanData data : spanDataList) {
-                collectedSpans.put(data.getContext().getSpanId(), data);
-
-                if (data.getParentSpanId() != null)
-                    collectedSpansByParents.computeIfAbsent(data.getParentSpanId(), (k) -> new ArrayList<>()).add(data);
-            }
-        }
-
-        /**
-         * @return Stream of all exported spans.
-         */
-        public Stream<SpanData> allSpans() {
-            return collectedSpans.values().stream();
-        }
-
-        /**
-         * @param id Span id.
-         * @return Exported span by given id.
-         */
-        public SpanData spanById(SpanId id) {
-            return collectedSpans.get(id);
-        }
-
-        /**
-         * @param name Span name for search.
-         * @return Span with given name.
-         */
-        public SpanData spanByName(String name) {
-            return allSpans()
-                .filter(span -> span.getName().contains(name))
-                .findFirst()
-                .orElse(null);
-        }
-
-        /**
-         * @param parentId Parent id.
-         * @return All spans by parent id.
-         */
-        public List<SpanData> spanByParentId(SpanId parentId) {
-            return collectedSpansByParents.get(parentId);
-        }
-
-        /**
-         * @param parentSpan Top span.
-         * @return All span which are childs of parentSpan in any generation.
-         */
-        public List<SpanData> unrollByParent(SpanData parentSpan) {
-            ArrayList<SpanData> spanChain = new ArrayList<>();
-
-            LinkedList<SpanData> queue = new LinkedList<>();
-
-            queue.add(parentSpan);
-
-            spanChain.add(parentSpan);
-
-            while (!queue.isEmpty()) {
-                SpanData cur = queue.pollFirst();
-
-                List<SpanData> child = spanByParentId(cur.getContext().getSpanId());
-
-                if (child != null) {
-                    spanChain.addAll(child);
-
-                    queue.addAll(child);
-                }
-            }
-
-            return spanChain;
-        }
-
-        public Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
-            return collectedSpans.values().stream()
-                .filter(spanData -> stringAttributeValue(igniteInstanceName)
-                    .equals(spanData.getAttributes().getAttributeMap().get("node.name")));
-        }
-
-        /**
-         * Forces to flush ended spans that not passed to exporter yet.
-         */
-        public void flush() throws IgniteInterruptedCheckedException {
-            // There is hardcoded invariant, that ended spans will be passed to exporter in 2 cases:
-            // By 5 seconds timeout and if buffer size exceeds 32 spans.
-            // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
-            // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
-            for (int i = 0; i < SPAN_BUFFER_COUNT; i++) {
-                Span span = Tracing.getTracer().spanBuilder("test-" + i).setSampler(Samplers.alwaysSample()).startSpan();
-
-                U.sleep(10); // See same hack in OpenCensusSpanAdapter#end() method.
-
-                span.end();
-            }
-        }
     }
 }

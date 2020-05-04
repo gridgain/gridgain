@@ -61,7 +61,16 @@ public class GridTracingConfiguration implements TracingConfiguration {
         @NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters)
     {
-        DistributedMetaStorage metaStore = ctx.distributedMetastorage();
+        DistributedMetaStorage metaStore;
+
+        try {
+            metaStore = ctx.distributedMetastorage();
+        }
+        catch (Exception e) {
+            log.warning("Failed to save tracing configuration to meta storage. Meta storage is not available");
+
+            return false;
+        }
 
         if (metaStore == null) {
             log.warning("Failed to save tracing configuration to meta storage. Meta storage is not available");
@@ -103,7 +112,18 @@ public class GridTracingConfiguration implements TracingConfiguration {
     /** {@inheritDoc} */
     @Override public @NotNull TracingConfigurationParameters retrieveConfiguration(
         @NotNull TracingConfigurationCoordinates coordinates) {
-        DistributedMetaStorage metaStore = ctx.distributedMetastorage();
+        DistributedMetaStorage metaStore;
+
+        try {
+            metaStore = ctx.distributedMetastorage();
+        }
+        catch (Exception e) {
+            LT.warn(log, "Failed to retrieve tracing configuration — meta storage is not available." +
+                " Default value will be used.");
+
+            // If metastorage in not available — use scope specific default tracing configuration.
+            return TracingConfiguration.super.retrieveConfiguration(coordinates);
+        }
 
         if (metaStore == null) {
             LT.warn(log, "Failed to retrieve tracing configuration — meta storage is not available." +
@@ -159,11 +179,21 @@ public class GridTracingConfiguration implements TracingConfiguration {
     /** {@inheritDoc} */
     @Override
     public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveConfigurations() {
-        DistributedMetaStorage metaStore = ctx.distributedMetastorage();
+        DistributedMetaStorage metaStore;
+        try {
+            metaStore = ctx.distributedMetastorage();
+        }
+        catch (Exception e) {
+            log.warning("Failed to retrieve tracing configuration — meta storage is not available.");
+
+            // TODO: 04.05.20 default values should go here instead of empty map.
+            return Collections.emptyMap();
+        }
 
         if (metaStore == null) {
             log.warning("Failed to retrieve tracing configuration — meta storage is not available.");
 
+            // TODO: 04.05.20 default values should go here instead of empty map.
             return Collections.emptyMap();
         }
 
