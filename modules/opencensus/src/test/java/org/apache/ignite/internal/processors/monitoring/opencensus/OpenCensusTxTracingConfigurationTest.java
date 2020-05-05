@@ -217,7 +217,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
     }
 
     @Test
-    public void testThatDefaultConfigurationIsUsedIfScopeBasedNotFoundAndThatByDefaultTxTracingIsDisabled()
+    public void testThatDefaultConfigurationIsUsedIfScopeSpecificNotFoundAndThatByDefaultTxTracingIsDisabled()
         throws Exception {
         IgniteEx client = startGrid("client");
 

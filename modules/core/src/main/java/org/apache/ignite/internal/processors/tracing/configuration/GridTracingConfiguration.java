@@ -103,26 +103,26 @@ public class GridTracingConfiguration implements TracingConfiguration {
             return false;
         }
 
-        String scopeBasedKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
+        String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
 
         boolean configurationSuccessfullyUpdated = false;
 
         try {
             while (!configurationSuccessfullyUpdated) {
-                HashMap<String, TracingConfigurationParameters> existingScopeBasedTracingConfiguration =
-                    ctx.distributedMetastorage().read(scopeBasedKey);
+                HashMap<String, TracingConfigurationParameters> existingScopeSpecificTracingConfiguration =
+                    ctx.distributedMetastorage().read(scopeSpecificKey);
 
-                HashMap<String, TracingConfigurationParameters> updatedScopeBasedTracingConfiguration =
-                    existingScopeBasedTracingConfiguration != null ?
-                        new HashMap<>(existingScopeBasedTracingConfiguration) : new
+                HashMap<String, TracingConfigurationParameters> updatedScopeSpecificTracingConfiguration =
+                    existingScopeSpecificTracingConfiguration != null ?
+                        new HashMap<>(existingScopeSpecificTracingConfiguration) : new
                         HashMap<>();
 
-                updatedScopeBasedTracingConfiguration.put(coordinates.label(), parameters);
+                updatedScopeSpecificTracingConfiguration.put(coordinates.label(), parameters);
 
                 configurationSuccessfullyUpdated = ctx.distributedMetastorage().compareAndSet(
-                    scopeBasedKey,
-                    existingScopeBasedTracingConfiguration,
-                    updatedScopeBasedTracingConfiguration);
+                    scopeSpecificKey,
+                    existingScopeSpecificTracingConfiguration,
+                    updatedScopeSpecificTracingConfiguration);
             }
         }
         catch (IgniteCheckedException e) {
@@ -158,12 +158,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
             return TracingConfiguration.super.retrieveConfiguration(coordinates);
         }
 
-        String scopeBasedKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
+        String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
 
-        HashMap<String, TracingConfigurationParameters> scopeBasedTracingConfiguration;
+        HashMap<String, TracingConfigurationParameters> scopeSpecificTracingConfiguration;
 
         try {
-            scopeBasedTracingConfiguration = ctx.distributedMetastorage().read(scopeBasedKey);
+            scopeSpecificTracingConfiguration = ctx.distributedMetastorage().read(scopeSpecificKey);
         }
         catch (IgniteCheckedException e) {
             LT.warn(
@@ -178,19 +178,19 @@ public class GridTracingConfiguration implements TracingConfiguration {
         }
 
         // If the configuration was not found — use scope specific default one.
-        if (scopeBasedTracingConfiguration == null)
+        if (scopeSpecificTracingConfiguration == null)
             return TracingConfiguration.super.retrieveConfiguration(coordinates);
 
         // Retrieving scope + label specific tracing configuration.
         TracingConfigurationParameters lbBasedTracingConfiguration =
-            scopeBasedTracingConfiguration.get(coordinates.label());
+            scopeSpecificTracingConfiguration.get(coordinates.label());
 
         // If scope + label specific was found — use it.
         if (lbBasedTracingConfiguration != null)
             return lbBasedTracingConfiguration;
 
         // Retrieving scope specific tracing configuration.
-        TracingConfigurationParameters rawScopedTracingConfiguration = scopeBasedTracingConfiguration.get(null);
+        TracingConfigurationParameters rawScopedTracingConfiguration = scopeSpecificTracingConfiguration.get(null);
 
         // If scope specific was found — use it.
         if (rawScopedTracingConfiguration != null)
@@ -224,11 +224,11 @@ public class GridTracingConfiguration implements TracingConfiguration {
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> res = new HashMap<>();
 
         for (Scope scope : Scope.values()) {
-            String scopeBasedKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scope.name();
+            String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scope.name();
 
             try {
                 for (Map.Entry<String, TracingConfigurationParameters> entry :
-                    ((Map<String, TracingConfigurationParameters>)metaStore.read(scopeBasedKey)).entrySet()) {
+                    ((Map<String, TracingConfigurationParameters>)metaStore.read(scopeSpecificKey)).entrySet()) {
                     res.put(
                         new TracingConfigurationCoordinates.Builder(scope).withLabel(entry.getKey()).build(),
                         entry.getValue());
@@ -263,32 +263,32 @@ public class GridTracingConfiguration implements TracingConfiguration {
             return false;
         }
 
-        String scopeBasedKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
+        String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
 
         boolean configurationSuccessfullyUpdated = false;
 
         try {
             while (!configurationSuccessfullyUpdated) {
-                HashMap<String, TracingConfigurationParameters> existingScopeBasedTracingConfiguration =
-                    ctx.distributedMetastorage().read(scopeBasedKey);
+                HashMap<String, TracingConfigurationParameters> existingScopeSpecificTracingConfiguration =
+                    ctx.distributedMetastorage().read(scopeSpecificKey);
 
-                if (existingScopeBasedTracingConfiguration == null) {
+                if (existingScopeSpecificTracingConfiguration == null) {
                     // Nothing to do.
                     return true;
                 }
 
-                HashMap<String, TracingConfigurationParameters> updatedScopeBasedTracingConfiguration =
-                        new HashMap<>(existingScopeBasedTracingConfiguration);
+                HashMap<String, TracingConfigurationParameters> updatedScopeSpecificTracingConfiguration =
+                        new HashMap<>(existingScopeSpecificTracingConfiguration);
 
                 if (coordinates.label() != null)
-                    updatedScopeBasedTracingConfiguration.remove(coordinates.label());
+                    updatedScopeSpecificTracingConfiguration.remove(coordinates.label());
                 else
-                    updatedScopeBasedTracingConfiguration.remove(null);
+                    updatedScopeSpecificTracingConfiguration.remove(null);
 
                 configurationSuccessfullyUpdated = ctx.distributedMetastorage().compareAndSet(
-                    scopeBasedKey,
-                    existingScopeBasedTracingConfiguration,
-                    updatedScopeBasedTracingConfiguration);
+                    scopeSpecificKey,
+                    existingScopeSpecificTracingConfiguration,
+                    updatedScopeSpecificTracingConfiguration);
             }
         }
         catch (IgniteCheckedException e) {
