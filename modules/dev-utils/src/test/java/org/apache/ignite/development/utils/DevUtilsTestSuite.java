@@ -24,7 +24,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    IgniteIndexReaderTest.class
+    IgniteIndexReaderTest.class,
+    IgniteWalConverterSensitiveDataTest.class
 })
 public class DevUtilsTestSuite {
 }

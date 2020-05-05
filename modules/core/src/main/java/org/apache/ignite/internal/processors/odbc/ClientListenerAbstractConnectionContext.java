@@ -162,6 +162,8 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
 
         if (authCtx != null)
             clientDesc += "@" + authCtx.userName();
+        else if (secCtx != null)
+            clientDesc += "@" + secCtx.subject().login();
     }
 
     /**

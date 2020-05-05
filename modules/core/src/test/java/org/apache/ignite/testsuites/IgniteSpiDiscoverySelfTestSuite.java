@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.GridDiscoveryManagerChangeCoordinatorTest;
 import org.apache.ignite.internal.IgniteDiscoveryMassiveNodeFailTest;
 import org.apache.ignite.spi.ExponentialBackoffTimeoutStrategyTest;
 import org.apache.ignite.spi.GridTcpSpiForwardingSelfTest;
@@ -170,7 +171,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
     DiscoveryClientSocketTest.class,
 
     IgniteMetricsOverflowTest.class,
-    MetricsCompactionTest.class
+    MetricsCompactionTest.class,
+
+    GridDiscoveryManagerChangeCoordinatorTest.class
 })
 public class IgniteSpiDiscoverySelfTestSuite {
     /** */

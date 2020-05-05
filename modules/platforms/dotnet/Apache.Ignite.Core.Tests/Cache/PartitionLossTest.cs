@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestReadOnlyAll()
         {
-            TestPartitionLoss(PartitionLossPolicy.ReadOnlyAll, false, false);
+            TestPartitionLoss(PartitionLossPolicy.ReadOnlyAll, false, true);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestReadWriteAll()
         {
-            TestPartitionLoss(PartitionLossPolicy.ReadWriteAll, true, false);
+            TestPartitionLoss(PartitionLossPolicy.ReadWriteAll, true, true);
         }
 
         /// <summary>
@@ -138,10 +138,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             {
                 VerifyCacheOperations(cache, part, canWrite, safe);
 
-                // Check recover cache.
+                // Check reads are possible from a cache in recovery mode.
                 var recoverCache = cache.WithPartitionRecover();
-                recoverCache[part] = part;
-                Assert.AreEqual(part, recoverCache[part]);
+                int res;
+                Assert.IsFalse(recoverCache.TryGet(part, out res));
             }
 
             // Reset and verify.
@@ -166,8 +166,8 @@ namespace Apache.Ignite.Core.Tests.Cache
                 var ex = Assert.Throws<CacheException>(() => cache.TryGet(part, out val));
                 Assert.AreEqual(string.Format(
                     "class org.apache.ignite.internal.processors.cache.CacheInvalidStateException" +
-                    ": Failed to execute cache operation (all partition owners have left the grid, " +
-                    "partition data has been lost) [cacheName={0}, part={1}," +
+                    ": Failed to execute the cache operation (all partition owners have left the grid, " +
+                    "partition data has been lost) [cacheName={0}, partition={1}," +
                     " key=UserKeyCacheObjectImpl [part={1}, val={1}, hasValBytes=false]]",
                     CacheName, part), ex.Message);
             }
@@ -184,8 +184,8 @@ namespace Apache.Ignite.Core.Tests.Cache
                     var ex = Assert.Throws<CacheException>(() => cache.Put(part, part));
                     Assert.AreEqual(string.Format(
                         "class org.apache.ignite.internal.processors.cache.CacheInvalidStateException: " +
-                        "Failed to execute cache operation (all partition owners have left the grid, " +
-                        "partition data has been lost) [cacheName={0}, part={1}, key={1}]",
+                        "Failed to execute the cache operation (all partition owners have left the grid, " +
+                        "partition data has been lost) [cacheName={0}, partition={1}, key={1}]",
                         CacheName, part), ex.Message);
                 }
                 else
@@ -198,7 +198,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             {
                 var ex = Assert.Throws<CacheException>(() => cache.Put(part, part));
                 Assert.AreEqual(string.Format(
-                    "class org.apache.ignite.IgniteCheckedException: " +
+                    "class org.apache.ignite.internal.processors.cache.CacheInvalidStateException: " +
                     "Failed to write to cache (cache is moved to a read-only state): {0}",
                     CacheName), ex.Message);
             }

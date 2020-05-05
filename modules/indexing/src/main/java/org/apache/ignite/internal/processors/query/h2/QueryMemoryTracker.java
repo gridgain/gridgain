@@ -19,9 +19,8 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -168,8 +167,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         if (offloadingEnabled)
             return false;
         else
-            throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
-                IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            throw new SqlMemoryQuotaExceededException("SQL query ran out of memory: Query quota was exceeded.");
     }
 
     /** {@inheritDoc} */

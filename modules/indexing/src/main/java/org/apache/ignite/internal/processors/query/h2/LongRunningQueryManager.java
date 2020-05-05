@@ -94,7 +94,7 @@ public final class LongRunningQueryManager {
             }
         };
 
-        timeout = ctx.config().getLongQueryWarningTimeout();
+        timeout = ctx.config().getSqlConfiguration().getLongQueryWarningTimeout();
 
         IgniteThread thread = new IgniteThread(checkWorker);
 
