@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.managers.discovery;
 
+import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -32,13 +33,17 @@ import org.junit.Test;
  */
 public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     /** */
-    private static final String ALIVE_NODES_MSG = "aliveNodes=[";
+    private static final String ALIVE_NODES_MSG = ".*aliveNodes=\\[(TcpDiscoveryNode " +
+        "\\[id=[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}," +
+        " consistentId=.*, addrs=ArrayList \\[([0-9]{1,3}[\\.]){3}[0-9]{1,3}], sockAddrs=HashSet \\[.*]," +
+        " discPort=.*, order=[1-9], intOrder=[1-9], lastExchangeTime=.*, loc=(false|true), ver=.*," +
+        " isClient=(false|true)](, )?){%s,%s}]]";
 
     /** */
     private static final String NUMBER_SRV_NODES = ">>> Number of server nodes: %d";
 
     /** */
-    private static final String NIMBER_CLIENT_NODES = ">>> Number of client nodes: %d";
+    private static final String CLIENT_NODES_COUNT = ">>> Number of client nodes: %d";
 
     /** */
     private static final String TOPOLOGY_MSG = "Topology snapshot [ver=%d, locNode=%s, servers=%d, clients=%d,";
@@ -77,6 +82,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks topology snaphot message with two server nodes in INFO log level.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -85,6 +92,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks topology snaphot message with two server nodes in DEBUG log level.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -103,7 +112,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         testLog = new ListeningTestLogger(dbg, log);
 
-        LogListener aliveNodesLsnr = LogListener.matches(ALIVE_NODES_MSG).times(dbg ? 0 : 4).build();
+        Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 2));
+
+        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(dbg ? 0 : 4).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -118,7 +129,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             lsnr = LogListener.matches(String.format(TOPOLOGY_MSG, 2, nodeId8, 2, 0)).build();
 
             lsnr2 = LogListener.matches(s -> s.contains(String.format(NUMBER_SRV_NODES, 2))
-                && s.contains(String.format(NIMBER_CLIENT_NODES, 0))).build();
+                && s.contains(String.format(CLIENT_NODES_COUNT, 0))).build();
 
             testLog.registerAllListeners(lsnr, lsnr2);
 
@@ -134,6 +145,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks topology snaphot message with server and client nodes in INFO log level.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -142,6 +155,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks topology snaphot message with server and client nodes in DEBUG log level.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -160,7 +175,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         testLog = new ListeningTestLogger(dbg, log);
 
-        LogListener aliveNodesLsnr = LogListener.matches(ALIVE_NODES_MSG).times(dbg ? 0 : 16).build();
+        Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 4));
+
+        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(dbg ? 0 : 16).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -175,7 +192,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             lsnr = LogListener.matches(String.format(TOPOLOGY_MSG, 4, nodeId8, 2, 2)).build();
 
             lsnr2 = LogListener.matches(s -> s.contains(String.format(NUMBER_SRV_NODES, 2))
-                && s.contains(String.format(NIMBER_CLIENT_NODES, 2))).build();
+                && s.contains(String.format(CLIENT_NODES_COUNT, 2))).build();
 
             testLog.registerAllListeners(lsnr, lsnr2);
 
@@ -193,6 +210,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks topology snaphot message with server, client and force client nodes in INFO log level.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -201,6 +220,8 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks topology snaphot message with server, client and force client nodes in DEBUG log level.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -219,7 +240,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         testLog = new ListeningTestLogger(dbg, log);
 
-        LogListener aliveNodesLsnr = LogListener.matches(ALIVE_NODES_MSG).times(dbg ? 0 : 25).build();
+        Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 4));
+
+        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(dbg ? 0 : 25).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -234,7 +257,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             lsnr = LogListener.matches(String.format(TOPOLOGY_MSG, 5, nodeId8, 2, 3)).build();
 
             lsnr2 = LogListener.matches(s -> s.contains(String.format(NUMBER_SRV_NODES, 2))
-                && s.contains(String.format(NIMBER_CLIENT_NODES, 3))).build();
+                && s.contains(String.format(CLIENT_NODES_COUNT, 3))).build();
 
             testLog.registerAllListeners(lsnr, lsnr2);
 
