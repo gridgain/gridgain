@@ -49,16 +49,13 @@ public class MTC {
     public static TraceSurroundings support(Span startSpan) {
         Span oldSpan = span();
 
-        if (startSpan != null && startSpan != NOOP_SPAN)
-            span.set(startSpan);
-
         if (startSpan != null && startSpan != NOOP_SPAN) {
             span.set(startSpan);
 
             return new TraceSurroundings(oldSpan, true);
         }
         else
-            return new TraceSurroundings(oldSpan, false);
+            return oldSpan == NOOP_SPAN ? NOOP_UNCLOSED_SURROUNDINGS : new TraceSurroundings(oldSpan, false);
     }
 
     /**
@@ -83,22 +80,6 @@ public class MTC {
             span.set(startSpan);
 
         return new TraceSurroundings(oldSpan, false);
-    }
-
-    /**
-     * Attach given span to current thread if it isn't null and do nothing if it is null. Detach given span and return
-     * previous span when {@link TraceSurroundings#close()} would be called.
-     *
-     * @param supSpan Span which should be added to current thread.
-     * @return {@link TraceSurroundings} for manage span life cycle.
-     */
-    public static TraceSurroundings supportSpan(Span supSpan) {
-        Span oldSpan = span();
-
-        if (supSpan != null)
-            span.set(supSpan);
-
-        return oldSpan == NOOP_SPAN ? NOOP_UNCLOSED_SURROUNDINGS : new TraceSurroundings(oldSpan, false);
     }
 
 

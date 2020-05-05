@@ -1070,19 +1070,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (validateCache) {
                 GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
-                if (topFut != null && !isEmpty(req.writes())) {
-                    // All caches either read only or not. So validation of one cache context is enough.
-                    GridCacheContext ctx = F.first(req.writes()).context();
+            if (topFut != null) {
+                err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
 
-                    Throwable err = topFut.validateCache(
-                        ctx,
-                        req.recovery(),
-                        isEmpty(req.writes()), null, null);
-
-                    if (err != null)
-                        onDone(null, new IgniteCheckedException(err));
-                }
+                if (err != null)
+                    onDone(null, this.err);
             }
+        }
 
             boolean ser = tx.serializable() && tx.optimistic();
 

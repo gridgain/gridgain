@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -175,8 +175,9 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        while (IdleVerifyUtility.isCheckpointNow(node.context().cache().context().database()))
-            doSleep(500);
+        forceCheckpoint();
+
+        enableCheckpoints(G.allGrids(), false);
 
         // Validate indexes on start.
         ValidateIndexesClosure clo = new ValidateIndexesClosure(Collections.singleton(CACHE_NAME), 0, 0, false, true);
@@ -187,8 +188,6 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
 
         assertEquals(msgFound, idxRebuildLsnr.check());
     }
-
-
 
     /** */
     private void removeIndexBin(int nodeId) throws IgniteCheckedException {

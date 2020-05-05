@@ -29,7 +29,6 @@ import org.apache.ignite.configuration.ThinClientConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerAbstractConnectionContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
@@ -175,13 +174,13 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
             }
         }
 
-        AuthorizationContext authCtx = authenticate(ses.certificates(), user, pwd);
+        authenticate(ses.certificates(), user, pwd);
 
         initClientDescriptor("cli");
 
         currentVer = ver;
 
-        handler = new ClientRequestHandler(this, authCtx, ver);
+        handler = new ClientRequestHandler(this, ver);
 
         parser = new ClientMessageParser(this, ver);
     }
