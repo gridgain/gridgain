@@ -40,7 +40,7 @@ public class OpenCensusSpanAdapter implements Span {
     /** Span type. */
     private final SpanType spanType;
 
-    /** Set of supported scopes for given span. */
+    /** Set of extra supported scopes for given span in addition to span's scope that is supported by default. */
     private final Set<Scope> supportedScopes;
 
     /**

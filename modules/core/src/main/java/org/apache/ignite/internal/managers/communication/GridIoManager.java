@@ -138,7 +138,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.UTILITY_CACHE_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.isReservedGridIoPolicy;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
-import static org.apache.ignite.internal.processors.tracing.MTC.supportSpan;
+import static org.apache.ignite.internal.processors.tracing.MTC.support;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_ORDERED_PROCESS;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_REGULAR_PROCESS;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
@@ -1770,7 +1770,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         assert !async || msg instanceof GridIoUserMessage : msg; // Async execution was added only for IgniteMessaging.
         assert topicOrd >= 0 || !(topic instanceof GridTopic) : msg;
 
-        try (TraceSurroundings ignored = supportSpan(null)) {
+        try (TraceSurroundings ignored = support(null)) {
             MTC.span().addLog("Create communication msg - " + traceName(msg));
 
             GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout, connIdx);
@@ -3016,7 +3016,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             assert reserved.get();
 
             for (OrderedMessageContainer mc = msgs.poll(); mc != null; mc = msgs.poll()) {
-                try(TraceSurroundings ignore = MTC.support(ctx.tracing().create(
+                try(TraceSurroundings ignore = support(ctx.tracing().create(
                     COMMUNICATION_ORDERED_PROCESS, mc.parentSpan))) {
                     try {
                         MTC.span().addTag(SpanTags.MESSAGE, traceName(mc.message));
