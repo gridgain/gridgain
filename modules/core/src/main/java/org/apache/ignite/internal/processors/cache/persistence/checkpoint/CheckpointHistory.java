@@ -43,6 +43,11 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason.CHECKPOINT_NOT_APPLICABLE;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason.NO_MORE_DATA_EARLIER_IN_HISTORY;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason.NO_MORE_HISTORY;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason.NO_PARTITIONS_OWNED;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason.WAL_RESERVATION_ERROR;
 
 /**
  * Checkpoint history. Holds chronological ordered map with {@link CheckpointEntry CheckpointEntries}.
@@ -50,24 +55,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT
  * This directory holds files for checkpoint start and end.
  */
 public class CheckpointHistory {
-    /** The message appears when no one checkpoint was not reserved for cache. */
-    private static final String NOT_RESERVED_WAL_REASON = "Failed to perform reservation of historical WAL segment file";
-
-    /** The message puts down to log when an exception happened during reading reserved WAL. */
-    private static final String WAL_SEG_CORRUPTED_REASON = "Segment corrupted";
-
-    /** Reason means no more history reserved for the cache. */
-    private static final String NO_MORE_HISTORY_REASON = "Reserved checkpoint is the oldest in history";
-
-    /** Node does not have owning partitions. */
-    private static final String NO_PARTITIONS_OWNED_REASON = "Node didn't own any partitions for this group at the time of checkpoint";
-
-    /** Reason means a checkpoint in history reserved can not be applied for cache. */
-    private static final String CHECKPOINT_NOT_APPLICABLE_REASON = "Checkpoint was marked as inapplicable for historical rebalancing";
-
-    /** That means all history reserved for cache. */
-    private static final String FULL_HISTORY_REASON = "Full history were reserved";
-
     /** Logger. */
     private final IgniteLogger log;
 
@@ -400,13 +387,13 @@ public class CheckpointHistory {
      *
      * @return Map (groupId, Map (partitionId, earliest valid checkpoint to history search)).
      */
-    public Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
+    public Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
         final Map<Integer, Set<Integer>> groupsAndPartitions
     ) {
         if (F.isEmpty(groupsAndPartitions))
             return Collections.emptyMap();
 
-        final Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
+        final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
 
         CheckpointEntry prevReserved = null;
 
@@ -423,7 +410,7 @@ public class CheckpointHistory {
                 if (!reserved) {
                     for (Integer grpId : groupsAndPartitions.keySet())
                         res.computeIfAbsent(grpId, key -> new T2<>())
-                            .set1(NOT_RESERVED_WAL_REASON);
+                            .set1(WAL_RESERVATION_ERROR);
 
                     return res;
                 }
@@ -431,7 +418,7 @@ public class CheckpointHistory {
                 for (Integer grpId : new HashSet<>(groupsAndPartitions.keySet()))
                     if (!isCheckpointApplicableForGroup(grpId, chpEntry)) {
                         res.computeIfAbsent(grpId, key -> new T2<>())
-                            .set1(CHECKPOINT_NOT_APPLICABLE_REASON);
+                            .set1(CHECKPOINT_NOT_APPLICABLE);
 
                         groupsAndPartitions.remove(grpId);
                     }
@@ -471,9 +458,9 @@ public class CheckpointHistory {
                     if (e.getValue().isEmpty()) {
                         res.compute(e.getKey(), (key, val) -> {
                             if (val == null)
-                                return new T2<>(NO_PARTITIONS_OWNED_REASON, null);
+                                return new T2<>(NO_PARTITIONS_OWNED, null);
 
-                            val.set1(FULL_HISTORY_REASON);
+                            val.set1(NO_MORE_DATA_EARLIER_IN_HISTORY);
 
                             return val;
                         });
@@ -500,7 +487,7 @@ public class CheckpointHistory {
 
                 for (Integer grpId : groupsAndPartitions.keySet())
                     res.computeIfAbsent(grpId, key -> new T2<>())
-                        .set1(WAL_SEG_CORRUPTED_REASON);
+                        .set1(WAL_RESERVATION_ERROR);
 
                 try {
                     cctx.wal().release(chpEntry.checkpointMark());
@@ -515,7 +502,7 @@ public class CheckpointHistory {
 
         for (Integer grpId : groupsAndPartitions.keySet())
             res.computeIfAbsent(grpId, key -> new T2<>())
-                .set1(NO_MORE_HISTORY_REASON);
+                .set1(NO_MORE_HISTORY);
 
         return res;
     }

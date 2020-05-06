@@ -137,6 +137,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.PartitionDestroyQueue;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.PartitionDestroyRequest;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.ReservationReason;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
@@ -1806,7 +1807,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Map</*grpId*/Integer, Set</*partId*/Integer>> applicableGroupsAndPartitions = partitionsApplicableForWalRebalance();
 
-        Map</*grpId*/Integer,  T2</*reason*/String, Map</*partId*/Integer, CheckpointEntry>>> earliestValidCheckpoints;
+        Map</*grpId*/Integer,  T2</*reason*/ReservationReason, Map</*partId*/Integer, CheckpointEntry>>> earliestValidCheckpoints;
 
         checkpointReadLock();
 
@@ -1819,7 +1820,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Map</*grpId*/Integer, Map</*partId*/Integer, /*updCntr*/Long>> grpPartsWithCnts = new HashMap<>();
 
-        for (Map.Entry<Integer, T2</*reason*/String, Map</*partId*/Integer, CheckpointEntry>>> e : earliestValidCheckpoints.entrySet()) {
+        for (Map.Entry<Integer, T2</*reason*/ReservationReason, Map</*partId*/Integer, CheckpointEntry>>> e : earliestValidCheckpoints.entrySet()) {
             int grpId = e.getKey();
 
             if (e.getValue().get2() == null) {
@@ -1862,38 +1863,44 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param earliestValidCheckpoints Map contains information about caches' reservation.
      */
     private void printReservationToLog(
-        Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> earliestValidCheckpoints) {
-        Map</*grpId*/Integer, T2</*reason*/String, Map</*partId*/Integer, CheckpointEntry>>> notReservedCaches =
-            earliestValidCheckpoints.entrySet().stream()
-                .filter(entry -> entry.getValue().get2() == null)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> earliestValidCheckpoints) {
 
-        if (!F.isEmpty(notReservedCaches)) {
+        Map<ReservationReason, List<Integer>> notReservedCachesToPrint = new HashMap<>();
+        Map<ReservationReason, List<T2<Integer, CheckpointEntry>>> reservedCachesToPrint = new HashMap<>();
+
+        for (Map.Entry<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> entry : earliestValidCheckpoints.entrySet()) {
+            if (entry.getValue().get2() == null) {
+                notReservedCachesToPrint.computeIfAbsent(entry.getValue().get1(), reason -> new ArrayList<>())
+                    .add(entry.getKey());
+            }
+            else {
+                reservedCachesToPrint.computeIfAbsent(entry.getValue().get1(), reason -> new ArrayList<>())
+                    .add(new T2(entry.getKey(), entry.getValue().get2().values().stream().min((cp1, cp2) ->
+                        Long.compare(cp1.timestamp(), cp2.timestamp())).get()));
+            }
+        }
+
+        if (!F.isEmpty(notReservedCachesToPrint)) {
             log.info("Following caches were not reserved [" +
-                notReservedCaches.entrySet().stream()
-                    .map(entry -> "[grpId=" + entry.getKey() +
-                        ", grpName=" + cctx.cache().cacheGroup(entry.getKey()).cacheOrGroupName() +
-                        ", reason=" + entry.getValue().get1() + ']')
+                notReservedCachesToPrint.entrySet().stream()
+                    .map(entry -> '[' +
+                        entry.getValue().stream().map(grpId -> "[grpId=" + grpId +
+                            ", grpName=" + cctx.cache().cacheGroup(grpId).cacheOrGroupName() + ']')
+                            .collect(Collectors.joining(", ")) +
+                        ", reason=" + entry.getKey() + ']')
                     .collect(Collectors.joining(", ")) + ']');
         }
 
-        Map</*grpId*/Integer, T2</*reason*/String, Map</*partId*/Integer, CheckpointEntry>>> reservedCaches =
-            earliestValidCheckpoints.entrySet().stream()
-                .filter(entry -> entry.getValue().get2() != null)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        if (!F.isEmpty(reservedCaches)) {
+        if (!F.isEmpty(reservedCachesToPrint)) {
             log.info("Reserved cache groups with first reserved checkpoint IDs and reasons why previous checkpoint was inapplicable: [" +
-                reservedCaches.entrySet().stream()
-                    .map(entry -> {
-                        CheckpointEntry minCpEntry = entry.getValue().get2().values().stream()
-                            .min((cp1, cp2) -> Long.compare(cp1.timestamp(), cp2.timestamp())).get();
-
-                        return "[grpId=" + entry.getKey() +
-                            ", grpName=" + cctx.cache().cacheGroup(entry.getKey()).cacheOrGroupName() +
-                            ", cp=(" + minCpEntry.checkpointId() + ", " + U.format(minCpEntry.timestamp()) + ')' +
-                            ", reason=" + entry.getValue().get1() + ']';
-                    }).collect(Collectors.joining(", ")) + ']');
+                reservedCachesToPrint.entrySet().stream()
+                    .map(entry -> '[' +
+                        entry.getValue().stream().map(grpCp -> "[grpId=" + grpCp.get1() +
+                            ", grpName=" + cctx.cache().cacheGroup(grpCp.get1()).cacheOrGroupName() +
+                            ", cp=(" + grpCp.get2().checkpointId() + ", " + U.format(grpCp.get2().timestamp()) + ")]")
+                            .collect(Collectors.joining(", ")) +
+                        ", reason=" + entry.getKey() + ']')
+                    .collect(Collectors.joining(", ")) + ']');
         }
     }
 
