@@ -14,30 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.management;
-
-import org.apache.ignite.internal.processors.GridProcessor;
-
 /**
- * Control Center processor.
+ * Contains compatibility tests related to caches with persistence enabled.
  */
-public interface ManagementConsoleProcessor extends GridProcessor {
-    /**
-     * Sets the configuration.
-     *
-     * @param cfg Management configuration instance.
-     */
-    public void configuration(ManagementConfiguration cfg);
 
-    /**
-     * Gets the configuration.
-     *
-     * @return Management configuration instance.
-     */
-    public ManagementConfiguration configuration();
-
-    /**
-     * @return Sender that responsible for communication with the Control Center backend.
-     */
-    public ControlCenterSender sender();
-}
+package org.apache.ignite.compatibility.cache;

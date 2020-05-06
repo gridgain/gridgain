@@ -47,22 +47,6 @@ public class ClusterInfo {
     private Set<String> features = Collections.emptySet();
 
     /**
-     * Default constructor.
-     */
-    public ClusterInfo() {
-        // No-op.
-    }
-
-    /**
-     * @param id Cluster ID.
-     * @param tag Cluster tag.
-     */
-    public ClusterInfo(UUID id, String tag) {
-        this.id = id;
-        this.tag = tag;
-    }
-
-    /**
      * @return Cluster id.
      */
     public UUID getId() {
