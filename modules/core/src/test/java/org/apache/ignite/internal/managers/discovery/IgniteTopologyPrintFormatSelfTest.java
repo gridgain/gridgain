@@ -49,7 +49,7 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     private static final String TOPOLOGY_MSG = "Topology snapshot [ver=%d, locNode=%s, servers=%d, clients=%d,";
 
     /** */
-    private ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+    private ListeningTestLogger testLog = new ListeningTestLogger(log);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -88,7 +88,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testServerLogs() throws Exception {
-        doServerLogTest(false);
+        ((GridTestLog4jLogger) log).setLevel(Level.INFO);
+
+        doServerLogTest();
     }
 
     /**
@@ -98,23 +100,22 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testServerDebugLogs() throws Exception {
-        ((GridTestLog4jLogger)log).setLevel(Level.DEBUG);
+        ((GridTestLog4jLogger) log).setLevel(Level.DEBUG);
 
-        doServerLogTest(true);
+        doServerLogTest();
     }
 
     /**
-     * @param dbg Debug flag.
      * @throws Exception If failed.
      */
-    private void doServerLogTest(boolean dbg) throws Exception {
+    private void doServerLogTest() throws Exception {
         String nodeId8;
 
-        testLog = new ListeningTestLogger(dbg, log);
+        testLog = new ListeningTestLogger(log);
 
         Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 2));
 
-        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(dbg ? 0 : 4).build();
+        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(log.isDebugEnabled() ? 0 : 4).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -151,7 +152,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testServerAndClientLogs() throws Exception {
-        doServerAndClientTest(false);
+        ((GridTestLog4jLogger) log).setLevel(Level.INFO);
+
+        doServerAndClientTest();
     }
 
     /**
@@ -163,21 +166,20 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
     public void testServerAndClientDebugLogs() throws Exception {
         ((GridTestLog4jLogger)log).setLevel(Level.DEBUG);
 
-        doServerAndClientTest(true);
+        doServerAndClientTest();
     }
 
     /**
-     * @param dbg Log.
      * @throws Exception If failed.
      */
-    private void doServerAndClientTest(boolean dbg) throws Exception {
+    private void doServerAndClientTest() throws Exception {
         String nodeId8;
 
-        testLog = new ListeningTestLogger(dbg, log);
+        testLog = new ListeningTestLogger(log);
 
         Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 4));
 
-        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(dbg ? 0 : 16).build();
+        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(log.isDebugEnabled() ? 0 : 16).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -216,7 +218,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testForceServerAndClientLogs() throws Exception {
-        doForceServerAndClientTest(false);
+        ((GridTestLog4jLogger) log).setLevel(Level.INFO);
+
+        doForceServerAndClientTest();
     }
 
     /**
@@ -226,23 +230,22 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testForceServerAndClientDebugLogs() throws Exception {
-        ((GridTestLog4jLogger)log).setLevel(Level.DEBUG);
+        ((GridTestLog4jLogger) log).setLevel(Level.DEBUG);
 
-        doForceServerAndClientTest(true);
+        doForceServerAndClientTest();
     }
 
     /**
-     * @param dbg Log.
      * @throws Exception If failed.
      */
-    private void doForceServerAndClientTest(boolean dbg) throws Exception {
+    private void doForceServerAndClientTest() throws Exception {
         String nodeId8;
 
-        testLog = new ListeningTestLogger(dbg, log);
+        testLog = new ListeningTestLogger(log);
 
         Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 4));
 
-        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(dbg ? 0 : 25).build();
+        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(log.isDebugEnabled() ? 0 : 25).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
