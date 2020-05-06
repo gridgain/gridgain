@@ -41,5 +41,5 @@ public interface DurableBackgroundTask extends Serializable {
     /**
      * Callback for cluster deactivation.
      */
-    public void onClusterDeactivate();
+    public void onCancel();
 }

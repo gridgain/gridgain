@@ -168,7 +168,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     }
 
     /** {@inheritDoc} */
-    @Override public void onClusterDeactivate() {
+    @Override public void onCancel() {
         trees = null;
     }
 

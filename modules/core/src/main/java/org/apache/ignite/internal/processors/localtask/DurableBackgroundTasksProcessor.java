@@ -66,9 +66,11 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     /** Set of started tasks' names. */
     private final Set<String> startedTasks = new GridConcurrentHashSet<>();
 
-    /** Ban to start new tasks. The first time the cluster is activated, it will try again to run existing tasks.
+    /**
+     * Ban to start new tasks. The first time the cluster is activated, it will try again to run existing tasks.
      *
-     *  @see #onStateChangeFinish(ChangeGlobalStateFinishMessage) */
+     *  @see #onStateChangeFinish(ChangeGlobalStateFinishMessage)
+     */
     private volatile boolean banStartingNewTasks = false;
 
     /**
@@ -91,12 +93,19 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /**
      * Creates a worker to execute single durable background task.
+     *
      * @param task Task.
      */
     private void asyncDurableBackgroundTaskExecute(DurableBackgroundTask task) {
         String workerName = "async-durable-background-task-executor-" + asyncDurableBackgroundTasksWorkersCntr.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
+            @Override public void cancel() {
+                task.onCancel();
+
+                super.cancel();
+            }
+
             @Override protected void body() {
                 try {
                     if (banStartingNewTasks)
@@ -156,9 +165,6 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
             banStartingNewTasks = true;
 
             awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
-
-            for (DurableBackgroundTask task : durableBackgroundTasks.values())
-                    task.onClusterDeactivate();
         }
     }
 
@@ -166,7 +172,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param msg Message.
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
-        if (ctx.state().clusterState().active()) {
+        if (msg.clusterActive()) {
             banStartingNewTasks = false;
 
             asyncDurableBackgroundTasksExecution();
