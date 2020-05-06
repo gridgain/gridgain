@@ -25,14 +25,14 @@ import java.util.concurrent.TimeUnit;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.AgentCommonAbstractTest;
 import org.apache.ignite.internal.agent.config.WebSocketConfig;
-import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ControlCenterSender;
-import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import static java.util.Arrays.asList;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
@@ -88,7 +88,7 @@ public class WebSocketManagerTest extends AgentCommonAbstractTest {
 
         ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
 
-        cfg.setConsoleUris(F.asList("http://localhost:3000", "http://localhost:3010", "http://localhost:" + port));
+        cfg.setConsoleUris(asList("http://localhost:3000", "http://localhost:3010", "http://localhost:" + port));
 
         ignite.context().managementConsole().configuration(cfg);
 
