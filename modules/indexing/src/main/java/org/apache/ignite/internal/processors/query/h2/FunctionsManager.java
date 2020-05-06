@@ -16,25 +16,25 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.h2.expression.function.Function;
 import org.h2.expression.function.FunctionInfo;
 
 /**
  * SQL function manager.
  */
-@SuppressWarnings("unchecked")
-public class FunctionsManager {
+public class FunctionsManager <T extends Set<String> & Serializable> implements DistributePropertyListener<T> {
     /** Original H2 functions set. */
-    private static HashMap<String, FunctionInfo> origFuncs;
+    private static Map<String, FunctionInfo> origFuncs;
 
     /** Current H2 functions set. */
-    private static HashMap<String, FunctionInfo> funcs;
+    private static Map<String, FunctionInfo> funcs;
 
     static {
         try {
@@ -42,7 +42,7 @@ public class FunctionsManager {
 
             fldFUNCTIONS.setAccessible(true);
 
-            funcs = (HashMap<String, FunctionInfo>)fldFUNCTIONS.get(Class.class);
+            funcs = (Map<String, FunctionInfo>)fldFUNCTIONS.get(Class.class);
 
             origFuncs = new HashMap<>(funcs);
         }
@@ -51,35 +51,18 @@ public class FunctionsManager {
         }
     }
 
-    /** Logger. */
-    private final IgniteLogger log;
-
-    /**
-     *
-     */
-    public FunctionsManager(IgniteH2Indexing idx,
-        DistributedSqlConfiguration distSqlCfg) {
+    /** */
+    public FunctionsManager() {
         assert Objects.nonNull(funcs);
         assert Objects.nonNull(origFuncs);
-
-        log = idx.kernalContext().log(FunctionsManager.class);
-
-        distSqlCfg.listenDisabledFunctions(this::updateDisabledFunctions);
     }
 
-    /**
-     *
-     */
-    private void updateDisabledFunctions(String s, HashSet<String> oldFuncs, HashSet<String> newFuncs) {
-        if (newFuncs != null)
-            removeFunctions(newFuncs);
-        else
-            removeFunctions(DistributedSqlConfiguration.DFLT_DISABLED_FUNCS);
+    /** {@inheritDoc} */
+    @Override public void onUpdate(String s, T oldFuncs, T newFuncs) {
+        removeFunctions(newFuncs != null ? newFuncs : DistributedSqlConfiguration.DFLT_DISABLED_FUNCS);
     }
 
-    /**
-     *
-     */
+    /** */
     private static void removeFunctions(Set<String> funcNames) {
         funcs.putAll(origFuncs);
 

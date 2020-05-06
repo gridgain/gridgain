@@ -3609,16 +3609,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             GridFutureAdapter<?> oldFut = connMap.putIfAbsent(connKey, fut);
 
             if (oldFut != null) {
-                GridFutureAdapter<?> oldFut0 = fut;
+                GridFutureAdapter<?> fut0 = fut;
+
+                oldFut.listen(f -> {
+                    if (f.error() != null)
+                        fut0.onDone(f.error());
+                    else
+                        fut0.onDone();
+                });
 
                 fut = oldFut;
-
-                fut.listen(f -> {
-                    if (f.error() != null)
-                        oldFut0.onDone(f.error());
-                    else
-                        oldFut0.onDone();
-                });
             }
             else {
                 if (log.isDebugEnabled())
@@ -3627,8 +3627,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 fut.listen(f -> connMap.remove(connKey, f));
 
                 try {
-                    log.warning("TCP connection failed, node " + node.id() + " is unreachable," +
-                        " will attempt to request inverse connection via discovery SPI", e);
+                    if (log.isInfoEnabled())
+                        log.info("TCP connection failed, node " + node.id() + " is unreachable," +
+                            " will attempt to request inverse connection via discovery SPI. " + e.getMessage());
 
                     TcpConnectionRequestDiscoveryMessage msg = new TcpConnectionRequestDiscoveryMessage(
                         node.id(), e.connIdx
