@@ -35,7 +35,7 @@ public class SqlSchemaView {
 
     /** @return Schema name. */
     @Order
-    public String name() {
+    public String schemaName() {
         return schema.schemaName();
     }
 

@@ -164,7 +164,7 @@ public class SchemaManager {
         ctx.systemView().registerInnerCollectionView(SQL_IDXS_VIEW, SQL_IDXS_VIEW_DESC,
             SqlIndexView.class,
             dataTables.values(),
-            GridH2Table::getIndexes,
+            GridH2Table::indexesInformation,
             SqlIndexView::new);
 
         ctx.systemView().registerInnerArrayView(SQL_TBL_COLS_VIEW, SQL_TBL_COLS_VIEW_DESC,
