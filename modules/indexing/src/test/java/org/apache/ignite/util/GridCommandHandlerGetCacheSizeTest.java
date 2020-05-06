@@ -27,8 +27,10 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.*;
 
+/**
+ *
+ */
 public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-
     /** */
     public static final int GRID_CNT = 2;
 
