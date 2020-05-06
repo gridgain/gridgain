@@ -38,6 +38,7 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
 
 /**
@@ -65,6 +66,60 @@ public class PendingExchangeTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         super.afterTest();
+    }
+
+    /**
+     * Thats starts several caches in order to affinity history is exhausted.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "2")
+    public void testWithShortAfinityHistory() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            for (int i = 0; i < 20; i++) {
+                int finalNum = i;
+
+                compFut.add(GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME + "_new" + finalNum)));
+            }
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 20);
+
+            return compFut;
+        });
+    }
+
+    /**
+     * Thats starts one cache and several clients in one moment in order leading to pending client exchanges.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStartSeveralClients() throws Exception {
+        createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
+            GridCompoundFuture compFut = new GridCompoundFuture();
+
+            for (int i = 0; i < 5; i++) {
+                int finalNum = i;
+
+                compFut.add(GridTestUtils.runAsync(() -> startClientGrid("new_client" + finalNum)));
+            }
+
+            //Need to explicitly wait for laying of client exchanges on exchange queue, before cache start exchnage.
+            waitForExchnagesBegin(exchangeManager, 5);
+
+            compFut.add(GridTestUtils.runAsync(() -> ignite.createCache(DEFAULT_CACHE_NAME + "_new")));
+
+            compFut.markInitialized();
+
+            waitForExchnagesBegin(exchangeManager, 6);
+
+            return compFut;
+        });
     }
 
     /**

@@ -1753,11 +1753,8 @@ public class GridDhtPartitionDemander {
                 .headSet(otherAssignments.topologyVersion(), false);
 
             if (!toCheck.contains(topVer)) {
-                if (log.isInfoEnabled()) {
-                    log.info("History is not enough for checking compatible last rebalance, new rebalance started " +
-                        "[grp=" + grp.cacheOrGroupName() +
-                        ", lastTop=" + topVer + ']');
-                }
+                log.warning("History is not enough for checking compatible last rebalance, new rebalance started " +
+                    "[grp=" + grp.cacheOrGroupName() + ", lastTop=" + topVer + ']');
 
                 return false;
             }
@@ -1765,6 +1762,9 @@ public class GridDhtPartitionDemander {
             for (AffinityTopologyVersion previousTopVer : toCheck.descendingSet()) {
                 if (previousTopVer.before(topVer))
                     break;
+
+                if (!ctx.exchange().lastAffinityChangedTopologyVersion(previousTopVer).equals(previousTopVer))
+                    continue;
 
                 p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
                     grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
