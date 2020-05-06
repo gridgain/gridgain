@@ -19,6 +19,7 @@ package org.apache.ignite.util;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -29,6 +30,8 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.DeploymentEvent;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -46,6 +49,12 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UN
 public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAbstractTest {
     /** Load loop cycles. */
     private static final int LOAD_LOOP = 500_000;
+
+    /** Idle verify task name. */
+    private static final String IDLE_VERIFY_TASK_V2 = "org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskV2";
+
+    /** Validate index task name. */
+    private static final String VALIDATE_INDEX_TASK = "org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask";
 
     /** Log listener. */
     private ListeningTestLogger lnsrLog;
@@ -77,6 +86,7 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
                     .setMaxSize(200L * 1024 * 1024)
                 )
             )
+            .setIncludeEventTypes(EventType.EVT_TASK_DEPLOYED)
             .setCacheConfiguration(new CacheConfiguration<Integer, UserValue>(DEFAULT_CACHE_NAME)
                 .setName(DEFAULT_CACHE_NAME)
                 .setQueryEntities(Collections.singleton(createQueryEntity())));
@@ -180,22 +190,86 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
 
         preloadeData(ignite);
 
-        LogListener lnsrValidationStarted = LogListener.matches("Current progress of ValidateIndexesClosure").build();
+        CountDownLatch startTaskLatch = waitForTaskEvent(ignite, VALIDATE_INDEX_TASK);
+
         LogListener lnsrValidationCancelled = LogListener.matches("Index validation was cancelled.").build();
 
-        lnsrLog.registerListener(lnsrValidationStarted);
         lnsrLog.registerListener(lnsrValidationCancelled);
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() ->
             assertSame(EXIT_CODE_UNEXPECTED_ERROR, execute("--cache", "validate_indexes")));
 
-        assertTrue(GridTestUtils.waitForCondition(lnsrValidationStarted::check, 10_000));
+        startTaskLatch.await();
 
         fut.cancel();
 
         fut.get();
 
-        assertTrue(GridTestUtils.waitForCondition(lnsrValidationCancelled::check, 10_000));
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            ignite.compute().activeTaskFutures().isEmpty(), 10_000));
+
+        assertTrue(lnsrValidationCancelled.check());
+    }
+
+    /**
+     * Checks that idle verify command will not cancel if initiator client interrupted.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIdleVerifyCommand() throws Exception {
+        lnsrLog = new ListeningTestLogger(false, log);
+
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        preloadeData(ignite);
+
+        CountDownLatch startTaskLatch = waitForTaskEvent(ignite, IDLE_VERIFY_TASK_V2);
+
+        LogListener lnsrValidationCancelled = LogListener.matches("Idle verify was cancelled.").build();
+
+        lnsrLog.registerListener(lnsrValidationCancelled);
+
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() ->
+            assertSame(EXIT_CODE_UNEXPECTED_ERROR, execute("--cache", "idle_verify")));
+
+        startTaskLatch.await();
+
+        fut.cancel();
+
+        fut.get();
+
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            ignite.compute().activeTaskFutures().isEmpty(), 10_000));
+
+        assertFalse(lnsrValidationCancelled.check());
+    }
+
+    /**
+     * Method subscribe on task event and return a latch for waiting.
+     *
+     * @param ignite Ignite.
+     * @param taskName Task name.
+     * @return Latch which will open after event received.
+     */
+
+    private CountDownLatch waitForTaskEvent(IgniteEx ignite, String taskName) {
+        CountDownLatch startTaskLatch = new CountDownLatch(1);
+
+        ignite.events().localListen((evt) -> {
+            assertTrue(evt instanceof DeploymentEvent);
+
+            if (taskName.equals(((DeploymentEvent)evt).alias())) {
+                startTaskLatch.countDown();
+
+                return false;
+            }
+
+            return true;
+        }, EventType.EVT_TASK_DEPLOYED);
+        return startTaskLatch;
     }
 
     /**
