@@ -16,6 +16,10 @@
 
 package org.apache.ignite.yardstick.sql;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteDataStreamer;
@@ -30,6 +34,26 @@ import static org.yardstickframework.BenchmarkUtils.println;
  * Ignite benchmark that performs query operations with joins.
  */
 public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
+
+    /**
+     * Enum of key types possible for testing
+     */
+    private enum TestedType {
+        /** */
+        JAVA_OBJECT,
+        /** */
+        PRIMITIVE,
+        /** */
+        DECIMAL,
+        /** */
+        LARGE_DECIMAL,
+        /** */
+        SMALL_DECIMAL
+    }
+
+    /* List of double keys generated before execution */
+    private final List<Double> doubleKeys = new ArrayList<>();
+
     /** Cache name for benchmark. */
     private String cacheName;
 
@@ -39,23 +63,42 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
     /** How many entries should be preloaded and within which range. */
     private int range;
 
-    /** Whether key should be type of Java object or simple (e.g. integer or long). */
-    private boolean isJavaObj;
+    /** Type of the key object for the test */
+    private TestedType testedType;
 
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
         super.setUp(cfg);
 
         range = args.range();
-        isJavaObj = args.getBooleanParameter("javaObject", false);
+        testedType = TestedType.valueOf(args.getStringParameter("testedType", TestedType.PRIMITIVE.toString()));
 
-        if (isJavaObj) {
-            cacheName = "CACHE_POJO";
-            keyCls = TestKey.class;
-        }
-        else {
-            cacheName = "CACHE_LONG";
-            keyCls = Integer.class;
+        switch (testedType) {
+            case JAVA_OBJECT:
+                cacheName = "CACHE_POJO";
+                keyCls = TestKey.class;
+                break;
+            case PRIMITIVE:
+                cacheName = "CACHE_LONG";
+                keyCls = Integer.class;
+                break;
+            case DECIMAL:
+                generateDoublekeys(doubleKeys);
+                cacheName = "CACHE_DECIMAL";
+                keyCls = BigDecimal.class;
+                break;
+            case LARGE_DECIMAL:
+                generateDoublekeys(doubleKeys);
+                cacheName = "CACHE_LARGE_DECIMAL";
+                keyCls = BigDecimal.class;
+                break;
+            case SMALL_DECIMAL:
+                generateDoublekeys(doubleKeys);
+                cacheName = "CACHE_SMALL_DECIMAL";
+                keyCls = BigDecimal.class;
+                break;
+            default:
+                throw new Exception(testedType + "is not expected type");
         }
 
         printParameters();
@@ -78,6 +121,11 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
         finally {
             sem.release();
         }
+    }
+
+    private void generateDoublekeys(List<Double> keys) {
+        while (keys.size() < range)
+            keys.add(ThreadLocalRandom.current().nextDouble(range));
     }
 
     /**
@@ -110,16 +158,29 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
 
     /** Creates next random key. */
     private Object nextKey() {
-        return isJavaObj
-            ? new TestKey(ThreadLocalRandom.current().nextInt(range))
-            : ThreadLocalRandom.current().nextInt(range);
+        switch (testedType) {
+            case JAVA_OBJECT:
+                return new TestKey(ThreadLocalRandom.current().nextInt(range));
+            case PRIMITIVE:
+                return ThreadLocalRandom.current().nextInt(range);
+            case DECIMAL:
+                return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range)));
+            case LARGE_DECIMAL:
+                return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range))).pow(3);
+            case SMALL_DECIMAL:
+                // low enough to use intCompact of BigDecimal
+                return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range))).
+                    divide(BigDecimal.TEN, RoundingMode.HALF_DOWN).setScale(2, RoundingMode.HALF_UP);
+            default:
+                return null;
+        }
     }
 
     /** */
     private void printParameters() {
         println("Benchmark parameter:");
         println("    range: " + range);
-        println("    is JavaObject: " + isJavaObj);
+        println("    testedType: " + testedType);
     }
 
     /** Pojo that used as key value for object's inlining benchmark. */
