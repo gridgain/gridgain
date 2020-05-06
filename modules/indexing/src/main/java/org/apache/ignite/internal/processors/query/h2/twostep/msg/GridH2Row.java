@@ -119,6 +119,7 @@ public class GridH2Row extends GridH2ValueMessage {
 
     /** {@inheritDoc} */
     @Override public short directType() {
+        // Intentionally serialized as GridH2Array to preserve compatibility
         return -18;
     }
 
