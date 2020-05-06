@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -676,6 +678,65 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         mem.start();
 
         return mem;
+    }
+
+    /** Checks correctness of comparator implementation.
+     *
+     *  Right comparator and further iteration need to be sorted by ts and flags from lower to higher:
+     *  [(ts = 100, dirty=false, meta=false),
+     *  (ts = 200, dirty=false, meta=false),
+     *  (ts = 80, dirty=true, meta=false),
+     *  (ts = 90, dirty=true, meta=false),
+     *  (ts = 50, dirty=false|true, meta=true),
+     *  (ts = 300, dirty=false|true, meta=true)]
+     */
+    @Test
+    public void testPageWithAttrComparator() {
+        long ts = 1000;
+
+        int ethalonSize = 15;
+
+        Set<PageMemoryImpl.PageWithAttrHolder> checkedSet = new TreeSet<>();
+
+        for (int i = 0; i < 5; ++i)
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, true, true));
+
+        for (int i = 0; i < 5; ++i)
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, false, false));
+
+        for (int i = 0; i < 5; ++i)
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, true, false));
+
+        for (int i = 0; i < 5; ++i)
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, false, true));
+
+        assertTrue(checkedSet.size() == ethalonSize);
+
+        int i = 0;
+
+        for (PageMemoryImpl.PageWithAttrHolder holder : checkedSet) {
+            if (i < 5) {
+                assertTrue(!holder.dirty);
+
+                assertTrue(!holder.meta);
+
+                assertEquals(holder.ts, 1000 + i);
+            }
+            else if (i < 10) {
+                assertTrue(holder.dirty);
+
+                assertTrue(!holder.meta);
+
+                assertEquals(holder.ts, 1000 + (i % 5));
+            }
+            else if (i < 15) {
+                assertTrue(holder.meta);
+
+                assertEquals(holder.ts, 1000 + (i % 5));
+            }
+
+            ++i;
+        }
     }
 
     /**
