@@ -78,7 +78,13 @@ public enum SecurityPermission {
     CHANGE_SNAPSHOT_SECURITY_LEVEL,
 
     /** */
-    SET_QUERY_MEMORY_QUOTA;
+    SET_QUERY_MEMORY_QUOTA,
+
+    /** Permission to request any views containing query. */
+    GET_QUERY_VIEWS,
+
+    /** Permission to execute KILL QUERY command.*/
+    KILL_QUERY;
 
     /** Enumerated values. */
     private static final SecurityPermission[] VALS = values();

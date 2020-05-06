@@ -308,6 +308,15 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     @GridToStringExclude
     private volatile IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
+    /** Set of nodes that cannot be used for wal rebalancing due to some reason. */
+    private Set<UUID> exclusionsFromHistoricalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    /**
+     * Set of nodes that cannot be used for full rebalancing due missed partitions.
+     * Mapping pair of groupId and nodeId to set of partitions.
+     */
+    private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
+
     /** Reserved max available history for calculation of history supplier on coordinator. */
     private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
 
@@ -343,12 +352,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
     /** Register caches future. Initialized on exchange init. Must be waited on exchange end. */
     private IgniteInternalFuture<?> registerCachesFuture;
-
-    /** Partitions sent flag (for coordinator node). */
-    private volatile boolean partitionsSent;
-
-    /** Partitions received flag (for non-coordinator node). */
-    private volatile boolean partitionsReceived;
 
     /** Latest (by update sequences) full message with exchangeId == null, need to be processed right after future is done. */
     @GridToStringExclude
@@ -557,7 +560,70 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @return ID of history supplier node or null if it doesn't exist.
      */
     @Nullable public UUID partitionHistorySupplier(int grpId, int partId, long cntrSince) {
-        return partHistSuppliers.getSupplier(grpId, partId, cntrSince);
+        UUID histSupplier = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
+
+        if (histSupplier != null && exclusionsFromHistoricalRebalance.contains(histSupplier))
+            return null;
+
+        return histSupplier;
+    }
+
+    /**
+     * Marks the given node as not applicable for historical rebalancing.
+     *
+     * @param nodeId Node id that should not be used for wal rebalancing (aka historical supplier).
+     */
+    public void markNodeAsInapplicableForHistoricalRebalance(UUID nodeId) {
+        exclusionsFromHistoricalRebalance.add(nodeId);
+    }
+
+    /**
+     * Marks the given node as not applicable for full rebalancing
+     * for the given group and partition.
+     *
+     * @param nodeId Node id that should not be used for full rebalancing.
+     * @param grpId Cache group id.
+     * @param p Partition id.
+     */
+    public void markNodeAsInapplicableForFullRebalance(UUID nodeId, int grpId, int p) {
+        Set<Integer> parts = exclusionsFromFullRebalance.computeIfAbsent(new T2<>(grpId, nodeId), t2 ->
+            Collections.newSetFromMap(new ConcurrentHashMap<>())
+        );
+
+        parts.add(p);
+    }
+
+    /**
+     * @return {@code true} if there are nodes which are inapplicable for historical rebalancing.
+     */
+    public boolean hasInapplicableNodesForHistoricalRebalance() {
+        return !exclusionsFromHistoricalRebalance.isEmpty();
+    }
+
+    /**
+     * @return {@code true} if there are nodes which are inapplicable for full rebalancing.
+     */
+    public boolean hasInapplicableNodesForFullRebalance() {
+        return !exclusionsFromFullRebalance.isEmpty();
+    }
+
+    /**
+     * @return {@code true} if there are nodes which are inapplicable for rebalancing.
+     */
+    public boolean hasInapplicableNodesForRebalance() {
+        return hasInapplicableNodesForHistoricalRebalance() || hasInapplicableNodesForFullRebalance();
+    }
+
+    /**
+     * @param nodeId Node id to check.
+     * @param grpId Cache group id.
+     * @param p Partition id.
+     * @return {@code true} if the node is applicable for full rebalancing.
+     */
+    public boolean isNodeApplicableForFullRebalance(UUID nodeId, int grpId, int p) {
+        return Optional.ofNullable(exclusionsFromFullRebalance.get(new T2<>(grpId, nodeId)))
+            .map(s -> !s.contains(p))
+            .orElse(true);
     }
 
     /**
@@ -2710,6 +2776,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         exchangeLocE = null;
         exchangeGlobalExceptions.clear();
         validator.cleanUp();
+        exclusionsFromHistoricalRebalance.clear();
+        exclusionsFromFullRebalance.clear();
         if (finishState != null)
             finishState.cleanUp();
     }
@@ -3274,10 +3342,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Collects and determines new owners of partitions for all nodes for given {@code top}.
      *
      * @param top Topology to assign.
+     * @return Partitions supply info list.
      */
-    private void assignPartitionStates(GridDhtPartitionTopology top) {
+    private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
-        Map<Integer, Long> minCntrs = new HashMap<>();
+        Map<Integer, T2<UUID, Long>> minCntrs = new HashMap<>();
 
         for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e : msgs.entrySet()) {
             CachePartitionPartialCountersMap nodeCntrs = e.getValue().partitionUpdateCounters(top.groupId(),
@@ -3288,9 +3357,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             for (int i = 0; i < nodeCntrs.size(); i++) {
                 int p = nodeCntrs.partitionAt(i);
 
-                UUID uuid = e.getKey();
+                UUID remoteNodeId = e.getKey();
 
-                GridDhtPartitionState state = top.partitionState(uuid, p);
+                GridDhtPartitionState state = top.partitionState(remoteNodeId, p);
 
                 if (state != GridDhtPartitionState.OWNING && state != GridDhtPartitionState.MOVING)
                     continue;
@@ -3299,10 +3368,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     nodeCntrs.initialUpdateCounterAt(i) :
                     nodeCntrs.updateCounterAt(i);
 
-                Long minCntr = minCntrs.get(p);
+                T2<UUID, Long> minCntr = minCntrs.get(p);
 
-                if (minCntr == null || minCntr > cntr)
-                    minCntrs.put(p, cntr);
+                if (minCntr == null || minCntr.get2() > cntr)
+                    minCntrs.put(p, new T2(remoteNodeId, cntr));
 
                 if (state != GridDhtPartitionState.OWNING)
                     continue;
@@ -3310,9 +3379,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 CounterWithNodes maxCntr = maxCntrs.get(p);
 
                 if (maxCntr == null || cntr > maxCntr.cnt)
-                    maxCntrs.put(p, new CounterWithNodes(cntr, e.getValue().partitionSizes(top.groupId()).get(p), uuid));
+                    maxCntrs.put(p, new CounterWithNodes(cntr, e.getValue().partitionSizes(top.groupId()).get(p), remoteNodeId));
                 else if (cntr == maxCntr.cnt)
-                    maxCntr.nodes.add(uuid);
+                    maxCntr.nodes.add(remoteNodeId);
             }
         }
 
@@ -3325,10 +3394,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             final long cntr = state == GridDhtPartitionState.MOVING ? part.initialUpdateCounter() : part.updateCounter();
 
-            Long minCntr = minCntrs.get(part.id());
+            T2<UUID, Long> minCntr = minCntrs.get(part.id());
 
-            if (minCntr == null || minCntr > cntr)
-                minCntrs.put(part.id(), cntr);
+            if (minCntr == null || minCntr.get2() > cntr)
+                minCntrs.put(part.id(), new T2(cctx.localNodeId(), cntr));
 
             if (state != GridDhtPartitionState.OWNING)
                 continue;
@@ -3357,9 +3426,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         Set<Integer> haveHistory = new HashSet<>();
 
-        for (Map.Entry<Integer, Long> e : minCntrs.entrySet()) {
+        List<SupplyPartitionInfo> list = new ArrayList<>();
+
+        for (Map.Entry<Integer, T2<UUID, Long>> e : minCntrs.entrySet()) {
             int p = e.getKey();
-            long minCntr = e.getValue();
+            long minCntr = e.getValue().get2();
 
             CounterWithNodes maxCntrObj = maxCntrs.get(p);
 
@@ -3369,32 +3440,51 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (minCntr == 0 || minCntr == maxCntr)
                 continue;
 
+            T2<UUID, Long> deepestReserved = new T2<>(null, Long.MAX_VALUE);
+
             if (localReserved != null) {
                 Long localHistCntr = localReserved.get(p);
 
-                if (localHistCntr != null && localHistCntr <= minCntr) {
-                    if (maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                    if (localHistCntr <= minCntr) {
+
                         partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, localHistCntr);
 
                         haveHistory.add(p);
 
                         continue;
                     }
+
+                    if (deepestReserved.get2() > localHistCntr)
+                        deepestReserved.set(cctx.localNodeId(), localHistCntr);
                 }
             }
 
             for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e0 : msgs.entrySet()) {
                 Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
 
-                if (histCntr != null && histCntr <= minCntr) {
-                    if (maxCntrObj.nodes.contains(e0.getKey())) {
+                if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
+                    if (histCntr <= minCntr) {
                         partHistSuppliers.put(e0.getKey(), top.groupId(), p, histCntr);
 
                         haveHistory.add(p);
 
                         break;
                     }
+
+                    if (deepestReserved.get2() > histCntr)
+                        deepestReserved.set(e0.getKey(), histCntr);
                 }
+            }
+
+            if (!haveHistory.contains(p)) {
+                list.add(new SupplyPartitionInfo(
+                    p,
+                    minCntr,
+                    e.getValue().get1(),
+                    deepestReserved.get2(),
+                    deepestReserved.get1()
+                ));
             }
         }
 
@@ -3419,6 +3509,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             for (int part : parts)
                 partsToReload.put(nodeId, top.groupId(), part);
         }
+
+        return list;
     }
 
     /**
@@ -3826,8 +3918,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     mergedJoinExchMsgs0
                 );
 
-                partitionsSent = true;
-
                 if (!stateChangeExchange())
                     onDone(exchCtx.events().topologyVersion(), null);
 
@@ -3889,6 +3979,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 if (!centralizedAff)
                     onDone(exchCtx.events().topologyVersion(), null);
+            }
+
+            // Check if a late affinity can be switched right now.
+            if (!centralizedAff && error() == null) {
+                assert isDone() : this;
+
+                cctx.exchange().checkRebalanceState();
             }
         }
         catch (IgniteCheckedException e) {
@@ -4018,6 +4115,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      */
     private void assignPartitionsStates() {
+        Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
+            new ConcurrentHashMap<>() : null;
+
         try {
             U.doInParallel(
                 cctx.kernalContext().getSystemExecutorService(),
@@ -4031,8 +4131,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     if (!CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration()))
                         assignPartitionSizes(top);
-                    else
-                        assignPartitionStates(top);
+                    else {
+                        List<SupplyPartitionInfo> list = assignPartitionStates(top);
+
+                        if (supplyInfoMap != null && !F.isEmpty(list))
+                            supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
+                    }
 
                     return null;
                 }
@@ -4042,7 +4146,59 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to assign partition states", e);
         }
 
+        if (log.isInfoEnabled() && !F.isEmpty(supplyInfoMap))
+            printPartitionRebalancingFully(supplyInfoMap);
+
         timeBag.finishGlobalStage("Assign partitions states");
+    }
+
+    /**
+     * Prints detail information about partitions which did not have reservation
+     * history enough for historical rebalance.
+     *
+     * @param supplyInfoMap Map contains information about supplying partitions.
+     */
+    private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplyInfoMap) {
+        if (hasPartitonToLog(supplyInfoMap, false)) {
+            log.info("Partitions weren't present in any history reservation: [" +
+                supplyInfoMap.entrySet().stream().map(entry ->
+                    "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
+                        .filter(info -> !info.isHistoryReserved())
+                        .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
+                ).collect(Collectors.joining(", ")) + ']');
+        }
+
+        if (hasPartitonToLog(supplyInfoMap, true)) {
+            log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
+                supplyInfoMap.entrySet().stream().map(entry ->
+                    "[grp=" + entry.getKey() + ' ' +
+                        entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
+                            "[part=" + info.part() +
+                                ", minCntr=" + info.minCntr() +
+                                ", minNodeId=" + info.minNodeId() +
+                                ", maxReserved=" + info.maxReserved() +
+                                ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
+                        ).collect(Collectors.joining(", ")) + ']'
+                ).collect(Collectors.joining(", ")) + ']');
+        }
+    }
+
+    /**
+     * Does information contain partitions which will print to log.
+     *
+     * @param supplayInfoMap Map contains information about supplying partitions.
+     * @param reserved Reservation flag.
+     * @return True if map has partitions with same reserved flag, false otherwise.
+     */
+    private boolean hasPartitonToLog(Map<String, List<SupplyPartitionInfo>> supplayInfoMap, boolean reserved) {
+        for (List<SupplyPartitionInfo> infos : supplayInfoMap.values()) {
+            for (SupplyPartitionInfo info : infos) {
+                if (info.isHistoryReserved() == reserved)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -4549,8 +4705,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
-
-        partitionsReceived = true;
 
         timeBag.finishGlobalStage("Full map updating");
     }
@@ -5141,18 +5295,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return (e instanceof IgniteNeedReconnectException
             || X.hasCause(e, IOException.class, IgniteClientDisconnectedCheckedException.class))
             && cctx.discovery().reconnectSupported();
-    }
-
-    /**
-     * @return {@code True} If partition changes triggered by receiving Single/Full messages are not finished yet.
-     */
-    public boolean partitionChangesInProgress() {
-        ClusterNode crd0 = crd;
-
-        if (crd0 == null)
-            return false;
-
-        return crd0.equals(cctx.localNode()) ? !partitionsSent : !partitionsReceived;
     }
 
     /**

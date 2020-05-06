@@ -109,6 +109,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -122,6 +124,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /**
@@ -133,6 +137,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     @Test
     public void testNodeJoinIsNotBlockedByAsyncMetaWriting() throws Exception {
         final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
+
+        setRootLoggerDebugLevel();
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener submitMsgLsnr = LogListener.matches("Submitting task for async write for").build();
@@ -266,6 +272,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         LogListener cancelFutureLsnr = LogListener.matches("Cancelling future for write operation").build();
         listeningLog.registerListener(cancelFutureLsnr);
 
+        setRootLoggerDebugLevel();
+
         IgniteEx ig1 = startGrid(1);
 
         ig0.cluster().active(true);
@@ -351,6 +359,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             MetadataUpdateAcceptedMessage.class,
             (topVer, snd, msg) -> suppressException(fileWriteLatch::await)
         );
+
+        setRootLoggerDebugLevel();
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener waitingForWriteLsnr = LogListener.matches("Waiting for write completion of").build();

@@ -23,20 +23,23 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.compute.ComputeTaskFuture;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.agent.action.annotation.ActionController;
 import org.apache.ignite.internal.agent.action.query.CursorHolder;
+import org.apache.ignite.internal.agent.action.query.QueryHistoryMetricsCollectorTask;
 import org.apache.ignite.internal.agent.action.query.QueryHolder;
 import org.apache.ignite.internal.agent.action.query.QueryHolderRegistry;
 import org.apache.ignite.internal.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.internal.agent.dto.action.query.QueryArgument;
+import org.apache.ignite.internal.agent.dto.action.query.QueryDetailMetrics;
 import org.apache.ignite.internal.agent.dto.action.query.QueryResult;
 import org.apache.ignite.internal.agent.dto.action.query.RunningQuery;
 import org.apache.ignite.internal.agent.dto.action.query.ScanQueryArgument;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -87,6 +90,21 @@ public class QueryActionsController {
         qryRegistry.cancelQuery(qryId);
 
         return new IgniteFinishedFutureImpl<>();
+    }
+
+    /**
+     * @param globalQryId Global query id.
+     * @return Kill query result.
+     */
+    public IgniteInternalFuture<?> kill(String globalQryId) {
+        return ctx.closure().runLocalSafe(() -> {
+            SqlFieldsQuery qryFields = new SqlFieldsQuery("KILL QUERY '" + globalQryId + "';")
+                .setLazy(false);
+
+            try (FieldsQueryCursor<List<?>> cursor = qryProc.querySqlFields(qryFields, true)) {
+                cursor.getAll();
+            }
+        }, MANAGEMENT_POOL);
     }
 
     /**
@@ -206,6 +224,7 @@ public class QueryActionsController {
             .stream()
             .map(q -> new RunningQuery()
                 .setId(q.id())
+                .setGlobalQueryId(q.globalQueryId())
                 .setQuery(q.query())
                 .setQryType(q.queryType())
                 .setSchemaName(q.schemaName())
@@ -215,5 +234,14 @@ public class QueryActionsController {
                 .setLocal(q.local())
             )
             .collect(toList());
+    }
+
+    /**
+     * @param since Since.
+     * @return List of query detail metrics.
+     */
+    public ComputeTaskFuture<Collection<QueryDetailMetrics>> history(long since) {
+        return ctx.grid().compute(ctx.grid().cluster().forServers())
+            .executeAsync(QueryHistoryMetricsCollectorTask.class, since);
     }
 }

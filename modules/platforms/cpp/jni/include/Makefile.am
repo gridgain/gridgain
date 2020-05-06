@@ -17,7 +17,8 @@ ACLOCAL_AMFLAGS =-I m4
 
 nobase_include_HEADERS = \
     ignite/jni/java.h \
-    ignite/jni/exports.h
+    ignite/jni/exports.h \
+    ignite/jni/utils.h
 
 uninstall-hook:
 	if [ -d ${includedir}/ignite ]; then find ${includedir}/ignite -type d -empty -delete; fi

@@ -97,6 +97,7 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -1563,10 +1564,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         clo.apply(summary.toString());
 
-        ClusterNode currCrd = discoCache.oldestServerNode();
+        ClusterNode currCrd = discoCache.coordinator();
 
         if ((evtType == EventType.EVT_NODE_FAILED || evtType == EventType.EVT_NODE_LEFT) &&
-                currCrd != null && currCrd.order() > evtNode.order())
+                !evtNode.isClient() && currCrd != null && currCrd.order() > evtNode.order())
             clo.apply("Coordinator changed [prev=" + evtNode + ", cur=" + currCrd + "]");
 
         BaselineTopology blt = state.baselineTopology();
@@ -2754,18 +2755,19 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 try {
                     body0();
                 }
-                catch (InterruptedException e) {
-                    if (!isCancelled)
-                        ctx.failure().process(new FailureContext(SYSTEM_WORKER_TERMINATION, e));
-
-                    throw e;
-                }
                 catch (Throwable t) {
-                    U.error(log, "Exception in discovery notyfier worker thread.", t);
+                    boolean isInterruptedException = X.hasCause(t, InterruptedException.class)
+                        || X.hasCause(t, IgniteInterruptedException.class)
+                        || X.hasCause(t, IgniteInterruptedCheckedException.class);
 
-                    FailureType type = t instanceof OutOfMemoryError ? CRITICAL_ERROR : SYSTEM_WORKER_TERMINATION;
+                    if (!isInterruptedException)
+                        U.error(log, "Exception in discovery notifier worker thread.", t);
 
-                    ctx.failure().process(new FailureContext(type, t));
+                    if (!isInterruptedException || !isCancelled) {
+                        FailureType type = t instanceof OutOfMemoryError ? CRITICAL_ERROR : SYSTEM_WORKER_TERMINATION;
+
+                        ctx.failure().process(new FailureContext(type, t));
+                    }
 
                     throw t;
                 }

@@ -70,7 +70,12 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     private String testName(final Description desc) {
-        return escapeForTeamcity((suite != null ? suite + ": " : "") + desc.getClassName() + "." + desc.getMethodName());
+        String res = desc.getClassName() + "." + desc.getMethodName();
+
+        if (suite != null && !suite.equals(desc.getClassName()))
+            res = suite + ": " + res;
+
+        return escapeForTeamcity(res);
     }
 
     /** */
