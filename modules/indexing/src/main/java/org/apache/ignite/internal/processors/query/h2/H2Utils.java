@@ -1057,7 +1057,6 @@ public class H2Utils {
      *
      * @return Array of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     @NotNull public static IndexColumn[] unwrapKeyColumns(GridH2Table tbl, IndexColumn[] idxCols) {
         ArrayList<IndexColumn> keyCols = new ArrayList<>();
 
