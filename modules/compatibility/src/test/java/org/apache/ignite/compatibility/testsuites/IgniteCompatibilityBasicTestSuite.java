@@ -16,6 +16,7 @@
 
 package org.apache.ignite.compatibility.testsuites;
 
+import org.apache.ignite.compatibility.cache.LocalCacheTest;
 import org.apache.ignite.compatibility.persistence.FoldersReuseCompatibilityTest;
 import org.apache.ignite.compatibility.persistence.MigratingToWalV2SerializerWithCompactionTest;
 import org.apache.ignite.compatibility.persistence.PersistenceBasicCompatibilityTest;
@@ -30,8 +31,8 @@ import org.junit.runners.Suite;
     PersistenceBasicCompatibilityTest.class,
 
     FoldersReuseCompatibilityTest.class,
-
-    MigratingToWalV2SerializerWithCompactionTest.class
+    MigratingToWalV2SerializerWithCompactionTest.class,
+    LocalCacheTest.class
 })
 public class IgniteCompatibilityBasicTestSuite {
 }
