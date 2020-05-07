@@ -2668,7 +2668,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 if (PageIO.getCompressionType(pageAddr) != CompressionProcessor.UNCOMPRESSED_PAGE) {
                     int realPageSize = pageMem.realPageSize(pageSnapshotRecord.groupId());
 
-                    assert pageSnapshotRecord.pageDataSize() < realPageSize : pageSnapshotRecord.pageDataSize();
+                    assert pageSnapshotRecord.pageDataSize() <= realPageSize : pageSnapshotRecord.pageDataSize();
 
                     cctx.kernalContext().compress().decompressPage(pageMem.pageBuffer(pageAddr), realPageSize);
                 }
