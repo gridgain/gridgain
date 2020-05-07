@@ -17,25 +17,29 @@
 package org.apache.ignite.internal.commandline;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.TracingConfigurationCommandArg;
 import org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationArguments;
 import org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.visor.tracing.configuration.VisorTracingConfigurationTask;
+import org.apache.ignite.internal.visor.tracing.configuration.VisorTracingConfigurationTaskArg;
 import org.apache.ignite.internal.visor.tracing.configuration.VisorTracingConfigurationTaskResult;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.TRACING_CONFIGURATION;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
-import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
+import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.RETRIEVE_ALL;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.of;
 import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
@@ -117,14 +121,26 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
      * Execute tracing-configuration command.
      *
      * @param clientCfg Client configuration.
-     * @throws Exception If failed to execute baseline action.
+     * @throws Exception If failed to execute tracing-configuration action.
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         if (experimentalEnabled()) {
             try (GridClient client = Command.startClient(clientCfg)) {
+                UUID crdId = client.compute()
+                    //Only non client node can be coordinator.
+                    .nodes(node -> !node.isClient())
+                    .stream()
+                    .min(Comparator.comparingLong(GridClientNode::order))
+                    .map(GridClientNode::nodeId)
+                    .orElse(null);
 
-                VisorTracingConfigurationTaskResult res =
-                    executeTask(client, VisorTracingConfigurationTask.class, args, clientCfg);
+                VisorTracingConfigurationTaskResult res = executeTaskByNameOnNode(
+                    client,
+                    VisorTracingConfigurationTask.class.getName(),
+                    toVisorArguments(args),
+                    crdId,
+                    clientCfg
+                );
 
                 printResult(res, log::info);
 
@@ -160,8 +176,11 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
         TracingConfigurationArguments.Builder tracingConfigurationArgs = new TracingConfigurationArguments.Builder(cmd);
 
         Scope scope = null;
+
         String lb = null;
+
         double samplingRate = SAMPLING_RATE_NEVER;
+
         Set<Scope> supportedScopes = new HashSet<>();
 
         while (argIter.hasNextSubArg()) {
@@ -261,7 +280,8 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
             }
 
             case APPLY: {
-                tracingConfigurationArgs.withScope(scope).withLabel(lb).withSamplingRate(samplingRate).withSupportedScopes(supportedScopes);
+                tracingConfigurationArgs.withScope(scope).withLabel(lb).withSamplingRate(samplingRate).
+                    withSupportedScopes(supportedScopes);
 
                 break;
             }
@@ -298,5 +318,21 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
      */
     private void printResult(VisorTracingConfigurationTaskResult res, Consumer<String> printer) {
         res.print(printer);
+    }
+
+    /**
+     * Prepare task argument.
+     *
+     * @param args Argument from command line.
+     * @return Task argument.
+     */
+    private VisorTracingConfigurationTaskArg toVisorArguments(TracingConfigurationArguments args) {
+        return new VisorTracingConfigurationTaskArg(
+            args.command().visorBaselineOperation(),
+            args.scope(),
+            args.label(),
+            args.samplingRate(),
+            args.supportedScopes()
+        );
     }
 }

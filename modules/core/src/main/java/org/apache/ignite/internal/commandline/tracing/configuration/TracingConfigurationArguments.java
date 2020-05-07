@@ -28,8 +28,18 @@ import org.jetbrains.annotations.Nullable;
  * This class contains all possible arguments after parsing tracing-configuration command input.
  */
  public final class TracingConfigurationArguments extends VisorTracingConfigurationItem {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Command. */
     private TracingConfigurationSubcommand cmd;
+
+    /**
+     * Default constructor.
+     */
+    public TracingConfigurationArguments() {
+        // No-op.
+    }
 
     /**
      * Constructor.

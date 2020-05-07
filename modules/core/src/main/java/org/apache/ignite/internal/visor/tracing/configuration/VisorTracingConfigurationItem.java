@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Set;
-
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -126,18 +125,29 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        out.writeShort(scope.idx());
+        out.writeBoolean(scope != null);
+
+        if (scope != null)
+            out.writeShort(scope.idx());
+
         U.writeString(out, label());
+
         out.writeObject(samplingRate);
+
         U.writeCollection(out, supportedScopes);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
-        scope = Scope.fromIndex(in.readShort());
+
+        if (in.readBoolean())
+            scope = Scope.fromIndex(in.readShort());
+
         lb = U.readString(in);
+
         samplingRate = (Double)in.readObject();
+
         supportedScopes = U.readSet(in);
     }
 

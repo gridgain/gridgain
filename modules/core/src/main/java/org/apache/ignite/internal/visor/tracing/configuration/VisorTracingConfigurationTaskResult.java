@@ -20,12 +20,13 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
-import com.sun.deploy.util.StringUtils;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Result for {@link VisorTracingConfigurationTask}.
@@ -61,38 +62,41 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        // TODO: 07.05.20      
+        U.writeCollection(out, tracingConfigurations);
     }
 
     /** {@inheritDoc} */
     @Override
     protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        // TODO: 07.05.20  
+        tracingConfigurations = (List)U.readCollection(in);
     }
 
     /**
      * Fills printer {@link Consumer <String>} by string view of this class.
      */
     public void print(Consumer<String> printer) {
+        // TODO: 07.05.20 Add pretty printing.
         for (VisorTracingConfigurationItem tracingConfiguration : tracingConfigurations) {
-            printer.accept("Scope: ");
-            printer.accept(tracingConfiguration.scope().name());
+            StringBuilder tracingConfigurationLine = new StringBuilder();
+
+            tracingConfigurationLine.append("Scope: ");
+            tracingConfigurationLine.append(tracingConfiguration.scope().name());
 
             if (tracingConfiguration.label() != null) {
-                printer.accept(", Label: '");
-                printer.accept(tracingConfiguration.label());
-                printer.accept(".");
+                tracingConfigurationLine.append(", Label: '");
+                tracingConfigurationLine.append(tracingConfiguration.label());
+                tracingConfigurationLine.append(".");
             }
 
-            printer.accept(", Sampling Rate: ");
-            printer.accept(String.valueOf(tracingConfiguration.samplingRate()));
+            tracingConfigurationLine.append(", Sampling Rate: ");
+            tracingConfigurationLine.append(tracingConfiguration.samplingRate());
 
             if (tracingConfiguration.supportedScopes() != null && !tracingConfiguration.supportedScopes().isEmpty()) {
-                printer.accept(", Supported Scopes: ");
-                printer.accept(StringUtils.join(tracingConfiguration.supportedScopes(), ","));
+                tracingConfigurationLine.append(", Supported Scopes: ");
+                tracingConfigurationLine.append(Arrays.toString(tracingConfiguration.supportedScopes().toArray()));
             }
 
-            printer.accept("/n/n");
+            printer.accept(tracingConfigurationLine.toString());
         }
     }
 }
