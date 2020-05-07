@@ -1077,6 +1077,7 @@ public class GridDhtPartitionDemander {
         private final GridCacheSharedContext<?, ?> ctx;
 
         /** Internal state. */
+        @GridToStringExclude
         private volatile RebalanceFutureState state = RebalanceFutureState.INIT;
 
         /** */
@@ -1663,9 +1664,6 @@ public class GridDhtPartitionDemander {
             if (remaining.isEmpty()) {
                 sendRebalanceFinishedEvent();
 
-                if (log.isInfoEnabled())
-                    log.info("Completed rebalance future: " + this);
-
                 if (log.isDebugEnabled())
                     log.debug("Partitions have been scheduled to resend [reason=" +
                         "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
@@ -1697,6 +1695,18 @@ public class GridDhtPartitionDemander {
 
                 onDone(!cancelled);
             }
+        }
+
+        /** {@inheritDoc} */
+        @Override protected final boolean onDone(@Nullable Boolean res, @Nullable Throwable err, boolean cancel) {
+            if (super.onDone(res, err, cancel)) {
+                if (!isInitial() && log.isInfoEnabled())
+                    log.info("Completed rebalance future: " + this);
+
+                return true;
+            }
+
+            return false;
         }
 
         /**
@@ -1782,7 +1792,7 @@ public class GridDhtPartitionDemander {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(RebalanceFuture.class, this);
+            return S.toString(RebalanceFuture.class, this, "result", result());
         }
 
         /**
