@@ -101,6 +101,24 @@ This utility can do the following commands:
   Get management status:
     control.(sh|bat) --management status
 
+  Print tracing configuration:
+    control.(sh|bat) --tracing-configuration
+
+  Print tracing configuration:
+    control.(sh|bat) --tracing-configuration retrieve-all
+
+  Print specific tracing configuration based on specified --scope and --label:
+    control.(sh|bat) --tracing-configuration retrieve --scope [--label]
+
+  Reset specific tracing configuration to the default. If both --scope and --label are specified then remove given configuration, if only --scope is specified then reset given configuration to the default. Print reseted configuration.
+    control.(sh|bat) --tracing-configuration reset --scope [--label]
+
+  Reset all specific tracing configuration the to default. If --scopeis specified, then remove all label specific configuration for the given scope and reset given scope specific configuration to the default, if --scope is skipped then reset all tracing configurations to the default. Print tracing configuration.
+    control.(sh|bat) --tracing-configuration reset-all [--scope]
+
+  Apply new tracing configuration. If both --scope and --label are specified then add or override label specific configuration, if only --scope is specified, then override scope specific configuration. Print applied configuration.
+    control.(sh|bat) --tracing-configuration apply --scope [--label] [--sampling-rate] [--supported-scopes]
+
 By default commands affecting the cluster require interactive confirmation.
 Use --yes option to disable it.
 

@@ -31,6 +31,7 @@ import org.apache.ignite.internal.commandline.cache.CacheValidateIndexes;
 import org.apache.ignite.internal.commandline.cache.FindAndDeleteGarbage;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.tx.VisorTxOperation;
 import org.apache.ignite.internal.visor.tx.VisorTxProjection;
@@ -396,6 +397,12 @@ public class CommandHandlerParsingTest {
                     break;
                 }
 
+                case TRACING_CONFIGURATION: {
+                    // TODO: 05.05.20
+
+                    break;
+                }
+
                 default:
                     fail("Unknown command: " + cmd);
             }
@@ -625,6 +632,160 @@ public class CommandHandlerParsingTest {
         parseArgs(asList("--cache", "partition_reconciliation", "--recheck-delay", "0"));
 
         parseArgs(asList("--cache", "partition_reconciliation", "--recheck-delay", "50"));
+    }
+
+    /**
+     * Argument validation test.
+     *
+     * validate that following tracing-configuration arguments validated as expected:
+     * <ul>
+     *     <li>
+     *         restore, retrieve:
+     *         <ul>
+     *             <li>
+     *                 --scope
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                     </li>
+     *                     <li>
+     *                         if unsupported value is used:
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --label
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The label should be specified.)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *         </ul>
+     *     </li>
+     *     <li>
+     *         add:
+     *         <ul>
+     *             <li>
+     *                 --scope
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                     </li>
+     *                     <li>
+     *                         if unsupported value is used:
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --label
+     *                 <ul>
+     *                     <li>
+     *                          if value is missing:
+     *                              IllegalArgumentException (The label should be specified.)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --sampling-rate
+     *                 <ul>
+     *                     <li>
+     *                          if value is missing:
+     *                              IllegalArgumentException (The sampling-rate should be specified. Decimal value between 0 and 1 should be used.)
+     *                     </li>
+     *                     <li>
+     *                          if unsupported value is used:
+     *                              IllegalArgumentException (Invalid samling-rate 'aaa'. Decimal value between 0 and 1 should be used.)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --supported-scopes
+     *                 <ul>
+     *                     <li>
+     *                          if value is missing:
+     *                              IllegalArgumentException (At least one supported scope should be specified.)
+     *                     </li>
+     *                     <li>
+     *                          if unsupported value is used:
+     *                              IllegalArgumentException (Invalid supported scope: aaa. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *         </ul>
+     *     </li>
+     * </ul>
+     */
+    @Test
+    public void testTracingConfigurationArgumentsValidation() {
+        // restore
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "restore", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "restore", "--scope", "aaa");
+
+        assertParseArgsThrows("The label should be specified.",
+            "--tracing-configuration", "restore", "--label");
+
+        // retrieve
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "retrieve", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "retrieve", "--scope", "aaa");
+
+        assertParseArgsThrows("The label should be specified.",
+            "--tracing-configuration", "retrieve", "--label");
+
+        // add
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "add", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "add", "--scope", "aaa");
+
+        assertParseArgsThrows("The label should be specified.",
+            "--tracing-configuration", "add", "--label");
+
+        assertParseArgsThrows("The sampling rate should be specified. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "add", "--sampling-rate");
+
+        assertParseArgsThrows("Invalid samling-rate 'aaa'. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "add", "--sampling-rate", "aaa");
+
+        assertParseArgsThrows("Invalid samling-rate '-1'. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "add", "--sampling-rate", "-1");
+
+        assertParseArgsThrows("Invalid samling-rate '2'. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "add", "--sampling-rate", "2");
+
+        assertParseArgsThrows("At least one supported scope should be specified.",
+            "--tracing-configuration", "add", "--supported-scopes");
+
+        assertParseArgsThrows("Invalid supported scope 'aaa'. The following values can be used: "
+                + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "add", "--supported-scopes", "TX,aaa");
+    }
+
+    @Test
+    public void testTracingConfigurationArgumentsValidationMandatoryArgumentSet() {
+        parseArgs(asList("--tracing-configuration"));
+
+        parseArgs(asList("--tracing-configuration", "list"));
+
+        assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "restore");
+
+        assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "retrieve");
+
+        assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "add");
     }
 
     /**
