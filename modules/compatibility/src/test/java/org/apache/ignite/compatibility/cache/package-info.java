@@ -14,24 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
-
-import org.apache.ignite.logger.java.JavaLoggerTest;
-import org.apache.ignite.tools.junit.JUnitTeamcityReporter;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
 /**
- * Logging self-test suite.
+ * Contains compatibility tests related to caches with persistence enabled.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({JavaLoggerTest.class})
-public class IgniteLoggingSelfTestSuite {
-    /** */
-    @BeforeClass
-    public static void setUpClass() {
-        JUnitTeamcityReporter.suite = IgniteLoggingSelfTestSuite.class.getName();
-    }
 
-}
+package org.apache.ignite.compatibility.cache;
