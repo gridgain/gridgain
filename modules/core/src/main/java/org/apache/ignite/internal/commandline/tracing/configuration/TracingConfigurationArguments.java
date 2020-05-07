@@ -71,7 +71,7 @@ import org.jetbrains.annotations.Nullable;
     /**
      * Builder of {@link TracingConfigurationArguments}.
      */
-    @SuppressWarnings("PackageVisibleInnerClass") static class Builder {
+    @SuppressWarnings("PublicInnerClass") public static class Builder {
         /** Counterpart of {@code TracingConfigurationArguments}'s command. */
         private TracingConfigurationSubcommand cmd;
 
