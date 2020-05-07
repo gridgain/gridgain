@@ -4159,20 +4159,35 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param supplyInfoMap Map contains information about supplying partitions.
      */
     private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplyInfoMap) {
-        if (hasPartitonToLog(supplyInfoMap, false)) {
+        Map<String, List<Integer>> partsNotReservedToPrint = new HashMap<>();
+        Map<String, List<SupplyPartitionInfo>> partsNotEnoghtReservationToPrint = new HashMap<>();
+
+        for (Map.Entry<String, List<SupplyPartitionInfo>> entry : supplyInfoMap.entrySet()) {
+            for (SupplyPartitionInfo info : entry.getValue()) {
+                if (!log.isDebugEnabled() || !info.isHistoryReserved()) {
+                    partsNotReservedToPrint.computeIfAbsent(entry.getKey(), parts -> new ArrayList<>())
+                        .add(info.part());
+                }
+                else {
+                    partsNotEnoghtReservationToPrint.computeIfAbsent(entry.getKey(), parts -> new ArrayList<>())
+                        .add(info);
+                }
+            }
+        }
+
+        if (!F.isEmpty(partsNotReservedToPrint)) {
             log.info("Partitions weren't present in any history reservation: [" +
-                supplyInfoMap.entrySet().stream().map(entry ->
+                partsNotReservedToPrint.entrySet().stream().map(entry ->
                     "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
-                        .filter(info -> !info.isHistoryReserved())
-                        .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
+                        .collect(Collectors.toSet())) + "]]"
                 ).collect(Collectors.joining(", ")) + ']');
         }
 
-        if (hasPartitonToLog(supplyInfoMap, true)) {
-            log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
-                supplyInfoMap.entrySet().stream().map(entry ->
+        if (!F.isEmpty(partsNotEnoghtReservationToPrint)) {
+            log.debug("Partitions were reserved, but maximum available counter is greater than demanded: [" +
+                partsNotEnoghtReservationToPrint.entrySet().stream().map(entry ->
                     "[grp=" + entry.getKey() + ' ' +
-                        entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
+                        entry.getValue().stream().map(info ->
                             "[part=" + info.part() +
                                 ", minCntr=" + info.minCntr() +
                                 ", minNodeId=" + info.minNodeId() +
@@ -4181,24 +4196,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         ).collect(Collectors.joining(", ")) + ']'
                 ).collect(Collectors.joining(", ")) + ']');
         }
-    }
-
-    /**
-     * Does information contain partitions which will print to log.
-     *
-     * @param supplayInfoMap Map contains information about supplying partitions.
-     * @param reserved Reservation flag.
-     * @return True if map has partitions with same reserved flag, false otherwise.
-     */
-    private boolean hasPartitonToLog(Map<String, List<SupplyPartitionInfo>> supplayInfoMap, boolean reserved) {
-        for (List<SupplyPartitionInfo> infos : supplayInfoMap.values()) {
-            for (SupplyPartitionInfo info : infos) {
-                if (info.isHistoryReserved() == reserved)
-                    return true;
-            }
-        }
-
-        return false;
     }
 
     /**
