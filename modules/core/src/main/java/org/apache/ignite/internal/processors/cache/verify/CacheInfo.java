@@ -28,6 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.apache.ignite.internal.visor.verify.VisorViewCacheCmd;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Cache info DTO.
@@ -78,11 +79,9 @@ public class CacheInfo extends VisorDataTransferObject {
     /** Affinity class name. */
     private String affinityClsName;
 
-    /** Heap entries count. */
-    private Long heapEntriesCount;
-
     /** Off-Heap entries count. */
-    private Long offHeapPrimaryEntriesCount;
+    @Nullable
+    private Long offHeapPrimaryEntriesCnt;
 
     /** */
     public String getSeqName() {
@@ -343,8 +342,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
-                map.put("heapCnt", getHeapEntriesCount());
-                map.put("offHeapCnt", getOffHeapPrimaryEntriesCount());
+                map.put("offHeapCnt", getOffHeapPrimaryEntriesCnt());
         }
 
         return map;
@@ -371,8 +369,7 @@ public class CacheInfo extends VisorDataTransferObject {
         U.writeString(out, affinityClsName);
         out.writeInt(cachesCnt);
         U.writeEnum(out, atomicityMode);
-        out.writeObject(heapEntriesCount);
-        out.writeObject(offHeapPrimaryEntriesCount);
+        out.writeObject(offHeapPrimaryEntriesCnt);
     }
 
     /** {@inheritDoc} */
@@ -391,8 +388,7 @@ public class CacheInfo extends VisorDataTransferObject {
         affinityClsName = U.readString(in);
         cachesCnt = in.readInt();
         atomicityMode = protoVer >= V2 ? CacheAtomicityMode.fromOrdinal(in.readByte()) : null;
-        heapEntriesCount = protoVer >= V5 ? (Long)in.readObject() : null;
-        offHeapPrimaryEntriesCount = protoVer >= V5 ? (Long)in.readObject() : null;
+        offHeapPrimaryEntriesCnt = protoVer >= V5 ? (Long)in.readObject() : null;
     }
 
     /** {@inheritDoc} */
@@ -401,29 +397,17 @@ public class CacheInfo extends VisorDataTransferObject {
     }
 
     /**
-     * @param heapEntriesCount Set heapcount.
+     * Set off-heap size for Cache
+     * @param offHeapPrimaryEntriesCnt Set off-heapcount.
      */
-    public void setHeapEntriesCount(Long heapEntriesCount) {
-        this.heapEntriesCount = heapEntriesCount;
+    public void setOffHeapPrimaryEntriesCnt(@Nullable Long offHeapPrimaryEntriesCnt) {
+        this.offHeapPrimaryEntriesCnt = offHeapPrimaryEntriesCnt;
     }
 
     /**
+     * Get off-heap entries count
      */
-    public Long getHeapEntriesCount() {
-        return heapEntriesCount;
-    }
-
-    /**
-     * @param offHeapPrimaryEntriesCount Set off-heapcount.
-     */
-    public void setOffHeapPrimaryEntriesCount(Long offHeapPrimaryEntriesCount) {
-        this.offHeapPrimaryEntriesCount = offHeapPrimaryEntriesCount;
-    }
-
-    /**
-     *
-     */
-    public Long getOffHeapPrimaryEntriesCount() {
-        return offHeapPrimaryEntriesCount;
+    public @Nullable Long getOffHeapPrimaryEntriesCnt() {
+        return offHeapPrimaryEntriesCnt;
     }
 }

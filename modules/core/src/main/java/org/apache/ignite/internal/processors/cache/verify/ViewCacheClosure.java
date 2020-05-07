@@ -110,11 +110,10 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     long sizeSummary = 0L;
 
                     for (GridCacheContext cacheContext : context.caches()) {
-                        IgniteCache<Object, Object> cache = cacheProcessor.jcache(cacheContext.cache().name());
-                        sizeSummary += cache.localSizeLong(CachePeekMode.OFFHEAP);
+                        String nameInGrp = cacheContext.cache().name();
+                        sizeSummary += getOffHeapCountFromCache(cacheProcessor, nameInGrp);
                     }
-                    ci.setOffHeapPrimaryEntriesCount(sizeSummary);
-                    ci.setHeapEntriesCount(0L);
+                    ci.setOffHeapPrimaryEntriesCnt(sizeSummary);
 
                     cacheInfo.add(ci);
                 }
@@ -144,17 +143,18 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     ci.setMapped(mapped(desc.cacheName()));
 
                     GridCacheProcessor cacheProcessor = k.context().cache();
-
-                    IgniteCache<Object, Object> cache = cacheProcessor.jcache(ci.getCacheName());
-
-                    ci.setOffHeapPrimaryEntriesCount(cache.localSizeLong(CachePeekMode.OFFHEAP));
-                    ci.setHeapEntriesCount(0L);
+                    ci.setOffHeapPrimaryEntriesCnt(getOffHeapCountFromCache(cacheProcessor, ci.getCacheName()));
 
                     cacheInfo.add(ci);
                 }
 
                 return cacheInfo;
         }
+    }
+
+    private long getOffHeapCountFromCache(GridCacheProcessor cacheProcessor, String cacheName) {
+        IgniteCache<Object, Object> cache = cacheProcessor.jcache(cacheName);
+        return cache.localSizeLong(CachePeekMode.OFFHEAP);
     }
 
     /**
