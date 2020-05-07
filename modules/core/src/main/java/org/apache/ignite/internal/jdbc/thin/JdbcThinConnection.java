@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.net.URL;
 import java.sql.Array;
 import java.sql.BatchUpdateException;
 import java.sql.Blob;
@@ -133,8 +132,7 @@ import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CLIENT_CON
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_CLOSED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_FAILURE;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
-import static org.apache.ignite.marshaller.MarshallerUtils.JDK_CLS_NAMES_FILE;
-import static org.apache.ignite.marshaller.MarshallerUtils.readSysTypes;
+import static org.apache.ignite.marshaller.MarshallerUtils.processSystemClasses;
 
 /**
  * JDBC connection implementation.
@@ -2137,21 +2135,18 @@ public class JdbcThinConnection implements Connection {
         private final Map<Integer, String> cache = new ConcurrentHashMap<>();
 
         /** */
-        private final Set<String> sysTypesSet = new HashSet<>();
+        private final Set<String> sysTypes = new HashSet<>();
 
         /**
          * Default constructor.
          */
         public JdbcMarshallerContext() {
-            ClassLoader ldr = U.gridClassLoader();
-
-            URL jdkClsNames = ldr.getResource(JDK_CLS_NAMES_FILE);
-
-            if (jdkClsNames == null)
-                throw new IgniteException("Failed to load class names properties file packaged with ignite binaries " +
-                    "[file=" + JDK_CLS_NAMES_FILE + ", ldr=" + ldr + ']');
-
-            readSysTypes(jdkClsNames, name -> sysTypesSet.add(name.className()));
+            try {
+                processSystemClasses(U.gridClassLoader(), null, sysTypes::add);
+            }
+            catch (IOException e) {
+                throw new IgniteException("Unable to initialize marshaller context", e);
+            }
         }
 
         /** {@inheritDoc} */
@@ -2248,7 +2243,7 @@ public class JdbcThinConnection implements Connection {
 
         /** {@inheritDoc} */
         @Override public boolean isSystemType(String typeName) {
-            return sysTypesSet.contains(typeName);
+            return sysTypes.contains(typeName);
         }
 
         /** {@inheritDoc} */
