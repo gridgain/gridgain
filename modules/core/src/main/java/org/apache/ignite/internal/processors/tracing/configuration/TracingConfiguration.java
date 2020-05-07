@@ -34,8 +34,11 @@ package org.apache.ignite.internal.processors.tracing.configuration;
 
 import java.util.Collections;
 import java.util.Map;
+
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Allows to configure tracing, read the configuration and restore it to the defaults.
@@ -78,29 +81,43 @@ public interface TracingConfiguration {
             build();
 
     /**
-     * Configure tracing parameters such as sampling rate for the specific tracing coordinates such as scope and label.
+     * Apply new tracing configuration for the specific tracing coordinates (scope, label, etc.).
+     * If tracing configuration with specified coordinates already exists it'll be overrided,
+     * otherwise new one will be created.
      *
-     * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
+     * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label,
      *  that defines subset of traces and/or spans that'll use given configuration.
-     * @param parameters{@link TracingConfigurationParameters} e.g. sampling rate, set of supported scopes etc.
-     * @return {@code true} if new configuration was successfully added, {@code false} otherwise.
+     * @param parameters {@link TracingConfigurationParameters} e.g. sampling rate, set of supported scopes etc.
+     * @throws IgniteException If failed to apply tracing configuration.
      */
-    boolean addConfiguration(@NotNull TracingConfigurationCoordinates coordinates,
-        @NotNull TracingConfigurationParameters parameters);
+    void apply(@NotNull TracingConfigurationCoordinates coordinates,
+        @NotNull TracingConfigurationParameters parameters) throws IgniteException;
 
     /**
-     * Retrieve the most specific tracing parameters for the specified tracing coordinates (scope and label).
-     * The most specific means
-     *  that if there's no configuration for the whole set of {@link TracingConfigurationCoordinates} attributes then
-     *  {@link Scope} based configuration will be used.
-     *  If scope based configuration also not specified then default one will be used.
+     * Retrieve the most specific tracing parameters for the specified tracing coordinates (scope, label, etc.).
+     * The most specific means:
+     * <ul>
+     *     <li>
+     *         If there's tracing configuration that matches all tracing configuration attributes (scope and label) —
+     *         it'll be returned.
+     *     </li>
+     *     <li>
+     *         If there's no tracing configuration with specified label, or label wasn't specified —
+     *         scope specific tracing configuration will be returned.
+     *     </li>
+     *     <li>
+     *         If there's no tracing configuration with specified scope —
+     *         default scope specific configuration will be returned.
+     *     </li>
+     * </ul>
      *
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
      *  that defines subset of traces and/or spans that'll use given configuration.
      * @return {@link TracingConfigurationParameters} instance.
+     * @throws IgniteException If failed to retrieve tracing configuration.
      */
-    default @NotNull TracingConfigurationParameters retrieveConfiguration(
-        @NotNull TracingConfigurationCoordinates coordinates)
+    default @NotNull TracingConfigurationParameters retrieve(
+        @NotNull TracingConfigurationCoordinates coordinates) throws IgniteException
     {
         switch (coordinates.scope()) {
             case TX: {
@@ -129,15 +146,24 @@ public interface TracingConfiguration {
      * List all pairs of tracing configuration coordinates and tracing configuration parameters.
      *
      * @return The whole set of tracing configuration.
+     * @throws IgniteException If failed to retrieve tracing configuration.
      */
-    @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveConfigurations();
+    @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveAll() throws IgniteException;
 
     /**
-     * Restore the tracing parameters for the specified tracing coordinates to the default.
-     * In other words, removes any custom tracing configuration fot the specific {@link TracingConfigurationCoordinates}
-     * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
-     *  that defines subset of traces and/or spans that'll use given configuration.
-     * @return {@code true} if configuration was successfully restored to default, {@code false} otherwise.
+     * Reset tracing configuration for the specific tracing coordinates (scope, label, etc.) to default values.
+     * Please pay attention, that there's no default values for label specific coordinates,
+     * so such kind of configurations will be removed.
+     * @param coordinates {@link TracingConfigurationCoordinates} specific set of locators like {@link Scope} and label
+     *  that defines subset of traces and/or spans that will be reset.
+     *  @throws IgniteException If failed to reset tracing configuration.
      */
-    boolean restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates);
+    void reset(@NotNull TracingConfigurationCoordinates coordinates) throws IgniteException;
+
+    /**
+     * Reset tracing configuration for the specific scope, or all tracing configurations if scope not specified.
+     * @param scope {@link Scope} that defines set of applicable tracing configurations.
+     * @throws IgniteException If failed to reset tracing configuration.
+     */
+    void resetAll(@Nullable Scope scope) throws IgniteException;
 }

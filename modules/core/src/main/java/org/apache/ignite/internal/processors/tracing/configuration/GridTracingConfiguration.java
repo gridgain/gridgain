@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
@@ -28,6 +29,7 @@ import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Tracing configuration implementation that uses distributed meta storage in order to store tracing configuration.
@@ -82,7 +84,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean addConfiguration(
+    @Override public void apply(
         @NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters)
     {
@@ -94,13 +96,14 @@ public class GridTracingConfiguration implements TracingConfiguration {
         catch (Exception e) {
             log.warning("Failed to save tracing configuration to meta storage. Meta storage is not available");
 
-            return false;
+            throw new IgniteException(e);
         }
 
         if (metaStore == null) {
             log.warning("Failed to save tracing configuration to meta storage. Meta storage is not available");
 
-            return false;
+            throw new
+                IgniteException("Failed to save tracing configuration to meta storage. Meta storage is not available");
         }
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
@@ -128,14 +131,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
         catch (IgniteCheckedException e) {
             log.warning("Failed to save tracing configuration to meta storage.", e);
 
-            return false;
+            throw new IgniteException(e);
         }
-
-        return true;
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfigurationParameters retrieveConfiguration(
+    @Override public @NotNull TracingConfigurationParameters retrieve(
         @NotNull TracingConfigurationCoordinates coordinates) {
         DistributedMetaStorage metaStore;
 
@@ -147,7 +148,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 " Default value will be used.");
 
             // If metastorage in not available — use scope specific default tracing configuration.
-            return TracingConfiguration.super.retrieveConfiguration(coordinates);
+            return TracingConfiguration.super.retrieve(coordinates);
         }
 
         if (metaStore == null) {
@@ -155,7 +156,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 " Default value will be used.");
 
             // If metastorage in not available — use scope specific default tracing configuration.
-            return TracingConfiguration.super.retrieveConfiguration(coordinates);
+            return TracingConfiguration.super.retrieve(coordinates);
         }
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
@@ -174,12 +175,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 true);
 
             // In case of exception during retrieving configuration from metastorage — use scope specific default one.
-            return TracingConfiguration.super.retrieveConfiguration(coordinates);
+            return TracingConfiguration.super.retrieve(coordinates);
         }
 
         // If the configuration was not found — use scope specific default one.
         if (scopeSpecificTracingConfiguration == null)
-            return TracingConfiguration.super.retrieveConfiguration(coordinates);
+            return TracingConfiguration.super.retrieve(coordinates);
 
         // Retrieving scope + label specific tracing configuration.
         TracingConfigurationParameters lbBasedTracingConfiguration =
@@ -198,12 +199,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
         // If neither scope + label specific nor just scope specific configuration was found —
         // use scope specific default one.
-        return TracingConfiguration.super.retrieveConfiguration(coordinates);
+        return TracingConfiguration.super.retrieve(coordinates);
     }
 
     /** {@inheritDoc} */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") @Override
-    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveConfigurations() {
+    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveAll() {
         DistributedMetaStorage metaStore;
 
         try {
@@ -243,7 +244,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates) {
+    @Override public void reset(@NotNull TracingConfigurationCoordinates coordinates) {
         DistributedMetaStorage metaStore;
 
         try {
@@ -253,14 +254,15 @@ public class GridTracingConfiguration implements TracingConfiguration {
             log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
 
-            return false;
+            throw new IgniteException(e);
         }
 
         if (metaStore == null) {
             log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
 
-            return false;
+            throw new IgniteException("Failed to restore tracing configuration for coordinates=[" + coordinates +
+                "] to default  — meta storage is not available.");
         }
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
@@ -274,7 +276,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
                 if (existingScopeSpecificTracingConfiguration == null) {
                     // Nothing to do.
-                    return true;
+                    return;
                 }
 
                 HashMap<String, TracingConfigurationParameters> updatedScopeSpecificTracingConfiguration =
@@ -295,9 +297,11 @@ public class GridTracingConfiguration implements TracingConfiguration {
             log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
 
-            return false;
+            throw new IgniteException(e);
         }
+    }
 
-        return true;
+    @Override public void resetAll(@Nullable Scope scope) throws IgniteException {
+        // TODO: 07.05.20
     }
 }

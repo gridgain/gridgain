@@ -171,7 +171,7 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
 
         // Retrieve tx tracing configuration.
         TracingConfigurationParameters tracingConfigurationParameters =
-            cctx.kernalContext().tracing().configuration().retrieveConfiguration(
+            cctx.kernalContext().tracing().configuration().retrieve(
                 new TracingConfigurationCoordinates.Builder(Scope.TX).withLabel(lb).build());
 
         MTC.supportInitial(cctx.kernalContext().tracing().create(
