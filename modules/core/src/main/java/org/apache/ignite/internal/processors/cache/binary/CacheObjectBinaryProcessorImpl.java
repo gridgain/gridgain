@@ -636,7 +636,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         catch (BinaryObjectException e) {
             throw new BinaryObjectException("New binary metadata is incompatible with binary metadata" +
                 " persisted locally." +
-                " Consider cleaning up persisted metadata from <workDir>/binary_meta directory.", e);
+                " Consider cleaning up persisted metadata from <workDir>/db/binary_meta directory.", e);
         }
     }
 
