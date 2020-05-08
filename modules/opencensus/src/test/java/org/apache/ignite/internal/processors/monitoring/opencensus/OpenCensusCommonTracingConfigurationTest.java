@@ -32,11 +32,22 @@ import static org.apache.ignite.internal.processors.tracing.configuration.Tracin
 
 public class OpenCensusCommonTracingConfigurationTest extends GridCommonAbstractTest {
 
+    /**
+     * Ensure that it's possible to override tracing coniguration at runtime with any cluster node including client one.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testThatItsPossibleToOverrideTracingConfigurationAtRuntimeWithinAnyClusterNode() throws Exception {
 
     }
 
+    /**
+     * Ensure that default tracing configuration is used if distributed metastorage is disabled.
+     * Distributed metastorage is used to store tracing configuration and propagate it over cluster.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     @SystemPropertiesList({
         @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false"),

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import org.apache.ignite.TracingConfigurationValidationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -26,6 +27,9 @@ import org.junit.runners.Suite;
     OpenCensusTxTracingTest.class,
     // TODO: 04.05.20 Rework.
 //    MixedTracingSpiTest.class,
+
+    // Common configuration tests.
+    TracingConfigurationValidationTest.class,
 
     // Tracing configuration tests.
     OpenCensusTxTracingConfigurationTest.class
