@@ -17,38 +17,21 @@
 package org.apache.ignite.internal.processors.cache.persistence.metastorage;
 
 /**
- *
+ * BPlus row hierarchy is broken. Ideally this interface would contain only {@link #key()} method.
  */
-public class MetsatorageSearchRowImpl implements MetastorageSearchRow {
-    /** */
-    private final String key;
-    /** */
-    private final long link;
+public interface MetastorageRow {
+    /**
+     * @return Link for this row.
+     */
+    public long link();
 
     /**
-     * @param key Key.
-     * @param link Link.
+     * @return Key string.
      */
-    public MetsatorageSearchRowImpl(String key, long link) {
-        this.key = key;
-        this.link = link;
-    }
+    public String key();
 
-    /** {@inheritDoc} */
-    @Override
-    public String key() {
-        return key;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public long link() {
-        return link;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public int hash() {
-        return key.hashCode();
-    }
+    /**
+     * @return Key link.
+     */
+    public long keyLink();
 }

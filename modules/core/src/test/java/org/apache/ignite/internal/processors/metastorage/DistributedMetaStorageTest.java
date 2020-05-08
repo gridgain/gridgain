@@ -246,29 +246,29 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
 
-        GridTestUtils.assertThrowsAnyCause(null,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
+//        GridTestUtils.assertThrowsAnyCause(null,
+//            new Callable<Object>() {
+//                @Override public Object call() throws Exception {
                     metastorage.write(LONG_KEY, "randomValue");
+//
+//                    return null;
+//                }
+//            },
+//            IgniteCheckedException.class,
+//            "Key is too long."
+//        );
 
-                    return null;
-                }
-            },
-            IgniteCheckedException.class,
-            "Key is too long."
-        );
-
-        GridTestUtils.assertThrowsAnyCause(null,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
+//        GridTestUtils.assertThrowsAnyCause(null,
+//            new Callable<Object>() {
+//                @Override public Object call() throws Exception {
                     metastorage.writeAsync(LONG_KEY, "randomValue");
-
-                    return null;
-                }
-            },
-            IgniteCheckedException.class,
-            "Key is too long."
-        );
+//
+//                    return null;
+//                }
+//            },
+//            IgniteCheckedException.class,
+//            "Key is too long."
+//        );
     }
 
     /**
@@ -284,41 +284,41 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
 
-        GridTestUtils.assertThrowsAnyCause(null,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
+//        GridTestUtils.assertThrowsAnyCause(null,
+//            new Callable<Object>() {
+//                @Override public Object call() throws Exception {
                     metastorage.compareAndSet(LONG_KEY, "randomValue", "newRandomValue");
+//
+//                    return null;
+//                }
+//            },
+//            IgniteCheckedException.class,
+//            "Key is too long."
+//        );
 
-                    return null;
-                }
-            },
-            IgniteCheckedException.class,
-            "Key is too long."
-        );
-
-        GridTestUtils.assertThrowsAnyCause(null,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
+//        GridTestUtils.assertThrowsAnyCause(null,
+//            new Callable<Object>() {
+//                @Override public Object call() throws Exception {
                     metastorage.compareAndSetAsync(LONG_KEY, "randomValue", "newRandomValue");
+//
+//                    return null;
+//                }
+//            },
+//            IgniteCheckedException.class,
+//            "Key is too long."
+//        );
 
-                    return null;
-                }
-            },
-            IgniteCheckedException.class,
-            "Key is too long."
-        );
-
-        GridTestUtils.assertThrowsAnyCause(null,
-            new Callable<Object>() {
-                @Override public Object call() throws Exception {
+//        GridTestUtils.assertThrowsAnyCause(null,
+//            new Callable<Object>() {
+//                @Override public Object call() throws Exception {
                     metastorage.compareAndRemove(LONG_KEY, "randomValue");
-
-                    return null;
-                }
-            },
-            IgniteCheckedException.class,
-            "Key is too long."
-        );
+//
+//                    return null;
+//                }
+//            },
+//            IgniteCheckedException.class,
+//            "Key is too long."
+//        );
     }
 
     /**

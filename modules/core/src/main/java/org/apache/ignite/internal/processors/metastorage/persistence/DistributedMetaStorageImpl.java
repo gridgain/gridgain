@@ -41,6 +41,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.DiscoveryLocalJoinData;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -70,6 +71,10 @@ import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
+import static org.apache.ignite.internal.IgniteFeatures.METASTORAGE_LONG_KEYS;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree.MAX_KEY_LEN;
 import static org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage.isSupported;
@@ -1003,11 +1008,28 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * @throws IgniteCheckedException If key exceeds maximum key length.
      */
     private void checkMaxKeyLengthExceeded(String key) throws IgniteCheckedException {
+        if (longKeysSupported())
+            return;
+
         if (DistributedMetaStorageUtil.localKey(key).getBytes().length > MAX_KEY_LEN) {
             throw new IgniteCheckedException("Key is too long. Maximum key length is " +
                 (MAX_KEY_LEN - DistributedMetaStorageUtil.localKeyPrefix().getBytes().length) +
                 " bytes in UTF8");
         }
+    }
+
+    /** */
+    private boolean longKeysSupported() {
+        if (!allNodesSupport(ctx, METASTORAGE_LONG_KEYS, IgniteDiscoverySpi.SRV_NODES))
+            return false;
+
+        return allNodesSupport(
+            ctx,
+            METASTORAGE_LONG_KEYS,
+            node -> node.isClient()
+                && (nodeSupports(ctx, node, METASTORAGE_LONG_KEYS) || !nodeSupports(ctx, node, DISTRIBUTED_METASTORAGE)
+            )
+        );
     }
 
     /**
