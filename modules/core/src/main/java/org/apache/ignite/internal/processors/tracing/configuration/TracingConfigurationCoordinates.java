@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Specifies to which traces, specific configuration will be applied. In other words it's a sort of tracing
- * configuration locators.
+ * configuration locator.
  */
 public class TracingConfigurationCoordinates {
     /**

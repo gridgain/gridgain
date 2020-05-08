@@ -37,15 +37,15 @@ public class TracingConfigurationParameters implements Serializable {
     public static final double SAMPLING_RATE_ALWAYS = 1d;
 
     /**
-     * Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
+     * Number between 0 and 1 that more or less reflects the probability of sampling a specific trace.
      * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
      */
     private final double samplingRate;
 
     /**
-     * Set of {@link Scope} that defines which sub-traces will be included in given trace.
-     * In other words, if child's span scope is equals to parent's scope
-     * or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     * Set of {@link Scope} that defines which sub-traces will be included in a given trace.
+     * In other words, if the child's span scope is equal to parent's scope
+     * or it belongs to the parent's span supported scopes, then the given child span will be attached to the current trace,
      * otherwise it'll be skipped.
      * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */

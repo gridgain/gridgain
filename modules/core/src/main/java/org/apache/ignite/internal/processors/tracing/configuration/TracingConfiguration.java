@@ -112,7 +112,7 @@ public interface TracingConfiguration {
      * </ul>
      *
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
-     *  that defines subset of traces and/or spans that'll use given configuration.
+     *  that defines a subset of traces and/or spans that'll use given configuration.
      * @return {@link TracingConfigurationParameters} instance.
      * @throws IgniteException If failed to retrieve tracing configuration.
      */
@@ -153,16 +153,16 @@ public interface TracingConfiguration {
     /**
      * Reset tracing configuration for the specific tracing coordinates (scope, label, etc.) to default values.
      * Please pay attention, that there's no default values for label specific coordinates,
-     * so such kind of configurations will be removed.
+     * so such kinds of configurations will be removed.
      * @param coordinates {@link TracingConfigurationCoordinates} specific set of locators like {@link Scope} and label
-     *  that defines subset of traces and/or spans that will be reset.
+     *  that defines a subset of traces and/or spans that will be reset.
      *  @throws IgniteException If failed to reset tracing configuration.
      */
     void reset(@NotNull TracingConfigurationCoordinates coordinates) throws IgniteException;
 
     /**
      * Reset tracing configuration for the specific scope, or all tracing configurations if scope not specified.
-     * @param scope {@link Scope} that defines set of applicable tracing configurations.
+     * @param scope {@link Scope} that defines a set of applicable tracing configurations.
      * @throws IgniteException If failed to reset tracing configuration.
      */
     void resetAll(@Nullable Scope scope) throws IgniteException;
