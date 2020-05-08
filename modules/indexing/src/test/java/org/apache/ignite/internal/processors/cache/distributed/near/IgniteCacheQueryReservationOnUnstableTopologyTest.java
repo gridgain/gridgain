@@ -64,6 +64,8 @@ public class IgniteCacheQueryReservationOnUnstableTopologyTest extends GridCommo
     /**
      * @param lazy Lazy flag for query.
      * @param smallPage {@code True} to set small page size.
+     *
+     * @throws Exception If failed.
      */
     private void doTestQueryReservationRelease(boolean lazy, boolean smallPage) throws Exception {
         IgniteEx crd = startGrids(2);
