@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
@@ -35,6 +36,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.apache.ignite.internal.visor.cache.index.IndexListTaskArg;
 
+import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_LIST;
@@ -81,11 +84,31 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         Set<IndexListInfoContainer> taskRes;
 
+        final UUID id = args.nodeId;
+
         IndexListTaskArg taskArg = new IndexListTaskArg(args.groupsRegEx, args.cachesRegEx, args.indexesRegEx);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            taskRes = TaskExecutor.executeTaskByNameOnNode(client,
-                "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, args.nodeId, clientCfg);
+            boolean allNodesSupport = client.compute()
+                .nodes()
+                .stream()
+                .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
+
+
+            if ((id == null && allNodesSupport) ||
+                client.compute().node(id).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
+            {
+                taskRes = TaskExecutor.executeTaskByNameOnNode(client,
+                    "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, id, clientCfg);
+            }
+            else {
+                if (id == null)
+                    logger.info("Listing indexes is not supported clusterwide. Try specifying node id");
+                else
+                    logger.info("Listing indexes is not supported by node " + id);
+
+                return null;
+            }
         }
 
         printIndexes(taskRes, logger);

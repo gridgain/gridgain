@@ -37,6 +37,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexForceRebuildTaskArg;
 import org.apache.ignite.internal.visor.cache.index.IndexForceRebuildTaskRes;
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusInfoContainer;
 
+import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
@@ -84,7 +85,20 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
         IndexForceRebuildTaskArg taskArg = new IndexForceRebuildTaskArg(args.cacheGrps, args.cacheNames);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg, args.nodeId, clientCfg);
+            boolean allNodesSupport = client.compute()
+                .nodes()
+                .stream()
+                .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
+
+            if (allNodesSupport) {
+                taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg,
+                    args.nodeId, clientCfg);
+            }
+            else {
+                logger.info("Indexes force rebuild is not supported clusterwide.");
+
+                return null;
+            }
         }
 
         printResult(taskRes, logger);

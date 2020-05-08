@@ -34,6 +34,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusInfoContai
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusTask;
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusTaskArg;
 
+import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_REBUILD_STATUS;
@@ -68,11 +69,30 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         Map<UUID, Set<IndexRebuildStatusInfoContainer>> taskRes;
 
-        IndexRebuildStatusTaskArg taskArg = new IndexRebuildStatusTaskArg(args.nodeId);
+        final UUID nodeId = args.nodeId;
+
+        IndexRebuildStatusTaskArg taskArg = new IndexRebuildStatusTaskArg(nodeId);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
-                args.nodeId, clientCfg);
+            boolean allNodesSupport = client.compute()
+                .nodes()
+                .stream()
+                .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
+
+            if ((nodeId == null && allNodesSupport) ||
+                client.compute().node(nodeId).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
+            {
+                taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
+                    nodeId, clientCfg);
+            }
+            else {
+                if (nodeId == null)
+                    logger.info("Indexes rebuild status request is not supported clusterwide. Try specifying node id");
+                else
+                    logger.info("Indexes rebuild status request is not supported by node " + nodeId);
+
+                return null;
+            }
         }
 
         printStatus(taskRes, logger);
