@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -33,7 +32,6 @@ import java.util.stream.IntStream;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
@@ -46,22 +44,18 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.CacheRebalancingEvent;
-import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -75,7 +69,6 @@ import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
-import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 
 /**
  *
@@ -127,48 +120,45 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         Random r = new Random();
         System.out.println("Seed: " + U.field(r, "seed"));
 
-        //params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, 2, true, 5, new int[]{1, 0, 2}, false});
-        params.add(new Object[]{TRANSACTIONAL, IGNORE, 2, true, 5, new int[]{1, 0, 2}, false});
+        for (CacheAtomicityMode mode : Arrays.asList(TRANSACTIONAL, ATOMIC)) {
+            // Test always scenarios.
+            params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, false});
+            params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, true});
+            params.add(new Object[]{mode, READ_ONLY_SAFE, 1, true, 4, new int[]{2, 0}, false});
+            params.add(new Object[]{mode, IGNORE, 1, false, 4, new int[]{0, 2}, false});
 
-//        for (CacheAtomicityMode mode : Arrays.asList(TRANSACTIONAL, ATOMIC)) {
-//            // Test always scenarios.
-//            params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, false});
-//            params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, true});
-//            params.add(new Object[]{mode, READ_ONLY_SAFE, 1, true, 4, new int[]{2, 0}, false});
-//            params.add(new Object[]{mode, IGNORE, 1, false, 4, new int[]{0, 2}, false});
-//
-//            // Random scenarios.
-//            for (Integer backups : Arrays.asList(0, 1, 2)) {
-//                int nodes = backups + 3;
-//                int[] stopIdxs = new int[backups + 1];
-//
-//                List<Integer> tmp = IntStream.range(0, nodes).boxed().collect(Collectors.toList());
-//                Collections.shuffle(tmp, r);
-//
-//                for (int i = 0; i < stopIdxs.length; i++)
-//                    stopIdxs[i] = tmp.get(i);
-//
-//                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, false, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, IGNORE, backups, false, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, false, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, READ_ONLY_ALL, backups, false, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, true, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, IGNORE, backups, true, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, true, nodes, stopIdxs, false});
-//                params.add(new Object[]{mode, READ_ONLY_ALL, backups, true, nodes, stopIdxs, false});
-//
-//                boolean ignored = false; // Autoadjust is currently ignored for persistent mode.
-//
-//                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, IGNORE, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, READ_ONLY_ALL, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, IGNORE, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, ignored, nodes, stopIdxs, true});
-//                params.add(new Object[]{mode, READ_ONLY_ALL, backups, ignored, nodes, stopIdxs, true});
-//            }
-//        }
+            // Random scenarios.
+            for (Integer backups : Arrays.asList(0, 1, 2)) {
+                int nodes = backups + 3;
+                int[] stopIdxs = new int[backups + 1];
+
+                List<Integer> tmp = IntStream.range(0, nodes).boxed().collect(Collectors.toList());
+                Collections.shuffle(tmp, r);
+
+                for (int i = 0; i < stopIdxs.length; i++)
+                    stopIdxs[i] = tmp.get(i);
+
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, IGNORE, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, true, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, IGNORE, backups, true, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, true, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, true, nodes, stopIdxs, false});
+
+                boolean ignored = false; // Autoadjust is currently ignored for persistent mode.
+
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, IGNORE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, IGNORE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, ignored, nodes, stopIdxs, true});
+            }
+        }
 
         return params;
     }
@@ -177,9 +167,6 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     @SuppressWarnings("unchecked")
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
-
-        cfg.setFailureDetectionTimeout(10000000L);
-        cfg.setClientFailureDetectionTimeout(10000000L);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
@@ -420,17 +407,17 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
             List<?> objects;
 
-//            try {
-//                objects = runQuery(ig, cacheName, false, p);
-//
-//                assertTrue("Query over lost partition should have failed: safe=" + safe +
-//                        ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
-//
-//                if (safe)
-//                    assertEquals(1, objects.size());
-//            } catch (Exception e) {
-//                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
-//            }
+            try {
+                objects = runQuery(ig, cacheName, false, p);
+
+                assertTrue("Query over lost partition should have failed: safe=" + safe +
+                        ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
+
+                if (safe)
+                    assertEquals(1, objects.size());
+            } catch (Exception e) {
+                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+            }
 
             try {
                 runQuery(ig, cacheName, false, -1);
@@ -442,19 +429,19 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
                 assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
             }
 
-//            if (loc) {
-//                try {
-//                    objects = runQuery(ig, cacheName, true, p);
-//
-//                    assertTrue("Query over lost partition should have failed: safe=" + safe +
-//                            ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
-//
-//                    if (safe)
-//                        assertEquals(1, objects.size());
-//                } catch (Exception e) {
-//                    assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
-//                }
-//            }
+            if (loc) {
+                try {
+                    objects = runQuery(ig, cacheName, true, p);
+
+                    assertTrue("Query over lost partition should have failed: safe=" + safe +
+                            ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
+
+                    if (safe)
+                        assertEquals(1, objects.size());
+                } catch (Exception e) {
+                    assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+                }
+            }
         }
     }
 
@@ -540,29 +527,9 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             ignite.events().localListen(lsnr, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
         }
 
-        final List<DiscoveryEvent> mergedEvts = new ArrayList<>();
-        mergeExchangeWaitVersion(grid(3), 8, mergedEvts);
-
-        stopGrid(getTestIgniteInstanceName(stopNodes[0]), true, false);
-        stopGrid(getTestIgniteInstanceName(stopNodes[1]), true, false);
-        stopGrid(getTestIgniteInstanceName(stopNodes[2]), true, false);
-
-//        stopGrid(stopNodes[0], true);
-//        stopGrid(stopNodes[1], true);
-
-//        waitForReadyTopology(grid(3).cachex(CACHES[0]).context().topology(),
-//            new AffinityTopologyVersion(8, 0));
-
-        //stopGrid(stopNodes[2], true);
+        for (int i = 0; i < stopNodes.length; i++)
+            stopGrid(stopNodes[i], true);
 
         return expLostParts;
-    }
-
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000;
-    }
-
-    @Override protected long getPartitionMapExchangeTimeout() {
-        return super.getPartitionMapExchangeTimeout() * 100000;
     }
 }
