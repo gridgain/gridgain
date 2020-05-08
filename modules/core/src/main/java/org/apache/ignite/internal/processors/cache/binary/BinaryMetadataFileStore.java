@@ -167,7 +167,7 @@ class BinaryMetadataFileStore {
             return;
 
         try {
-            File file = new File(workDir, typeId + ".bin");
+            File file = new File(metadataDir, typeId + ".bin");
 
             if(!file.delete())
                 throw new IgniteException("Cannot remove metadata file: " + file.getAbsolutePath());
