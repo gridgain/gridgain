@@ -59,6 +59,7 @@ public class BinaryMetadataRemoveWithPersistenceTest extends BinaryMetadataRemov
 
         for (String nodeName : nodeNames) {
             log.info("+++ Check on " + nodeName);
+
             BinaryObjectBuilder builder0 = grid(nodeName).binary().builder("Type0");
 
             builder0.setField("f", 1);

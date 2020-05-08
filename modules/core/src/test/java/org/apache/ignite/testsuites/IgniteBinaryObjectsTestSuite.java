@@ -58,6 +58,8 @@ import org.apache.ignite.internal.processors.cache.binary.BinaryAtomicCacheLocal
 import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataRegistrationCacheApiTest;
 import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataRegistrationCacheStoreTest;
 import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataRegistrationEntryProcessorTest;
+import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataRemoveTest;
+import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataRemoveWithPersistenceTest;
 import org.apache.ignite.internal.processors.cache.binary.BinaryMetadataUpdatesFlowTest;
 import org.apache.ignite.internal.processors.cache.binary.BinaryTxCacheLocalEntriesSelfTest;
 import org.apache.ignite.internal.processors.cache.binary.GridCacheBinaryObjectMetadataExchangeMultinodeTest;
@@ -83,6 +85,9 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    BinaryMetadataRemoveTest.class,
+    BinaryMetadataRemoveWithPersistenceTest.class,
+
     BinarySimpleNameTestPropertySelfTest.class,
 
     BinaryBasicIdMapperSelfTest.class,

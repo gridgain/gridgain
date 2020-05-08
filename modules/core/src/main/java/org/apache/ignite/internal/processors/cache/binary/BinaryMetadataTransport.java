@@ -133,11 +133,11 @@ final class BinaryMetadataTransport {
         this.ctx = ctx;
         this.binCtx = binCtx;
         this.log = log;
-        isPersistenceEnabled = CU.isPersistenceEnabled(ctx.config());
 
         discoMgr = ctx.discovery();
 
         clientNode = ctx.clientNode();
+        isPersistenceEnabled = CU.isPersistenceEnabled(ctx.config()) && !clientNode;
 
         discoMgr.setCustomEventListener(MetadataUpdateProposedMessage.class, new MetadataUpdateProposedListener());
         discoMgr.setCustomEventListener(MetadataUpdateAcceptedMessage.class, new MetadataUpdateAcceptedListener());
@@ -548,6 +548,9 @@ final class BinaryMetadataTransport {
             if (msg.pendingVersion() == 0) {
                 //coordinator receives update request
                 if (holder != null) {
+                    if (holder.removing())
+                        msg.markRejected(new BinaryObjectException("The type is removing now [typeId=" + typeId + ']'));
+
                     pendingVer = holder.pendingVersion() + 1;
                     acceptedVer = holder.acceptedVersion();
                 }
@@ -689,7 +692,6 @@ final class BinaryMetadataTransport {
      *
      */
     private final class MetadataUpdateAcceptedListener implements CustomEventListener<MetadataUpdateAcceptedMessage> {
-
         /** {@inheritDoc} */
         @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
             MetadataUpdateAcceptedMessage msg) {
@@ -1002,7 +1004,7 @@ final class BinaryMetadataTransport {
 
             final GridFutureAdapter<MetadataUpdateResult> fut = syncMap.get(new SyncKey(typeId, REMOVED_VERSION));
 
-            if (isPersistenceEnabled && !clientNode) {
+            if (isPersistenceEnabled) {
                 GridFutureAdapter<Void> rmvFut = metadataFileStore.removeMetadataAsync(typeId);
 
                 if (rmvFut != null) {
