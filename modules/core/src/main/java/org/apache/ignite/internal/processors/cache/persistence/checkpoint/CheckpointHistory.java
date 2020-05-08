@@ -384,16 +384,14 @@ public class CheckpointHistory {
      * Finds and reserves earliest valid checkpoint for each of given groups and partitions.
      *
      * @param groupsAndPartitions Groups and partitions to find and reserve earliest valid checkpoint.
-     *
-     * @return Map (groupId, Map (partitionId, earliest valid checkpoint to history search)).
+     * @param earliestValidCheckpoints Modifieble Map (groupId, Map (partitionId, earliest valid checkpoint to history search)).
      */
-    public Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
-        final Map<Integer, Set<Integer>> groupsAndPartitions
+    public void searchAndReserveCheckpoints(
+        final Map<Integer, Set<Integer>> groupsAndPartitions,
+        Map<Integer,  T2<ReservationReason, Map<Integer, CheckpointEntry>>> earliestValidCheckpoints
     ) {
         if (F.isEmpty(groupsAndPartitions))
-            return Collections.emptyMap();
-
-        final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
+            return;
 
         CheckpointEntry prevReserved = null;
 
@@ -409,15 +407,15 @@ public class CheckpointHistory {
                 // If checkpoint WAL history can't be reserved, stop searching.
                 if (!reserved) {
                     for (Integer grpId : groupsAndPartitions.keySet())
-                        res.computeIfAbsent(grpId, key -> new T2<>())
+                        earliestValidCheckpoints.computeIfAbsent(grpId, key -> new T2<>())
                             .set1(WAL_RESERVATION_ERROR);
 
-                    return res;
+                    return;
                 }
 
                 for (Integer grpId : new HashSet<>(groupsAndPartitions.keySet()))
                     if (!isCheckpointApplicableForGroup(grpId, chpEntry)) {
-                        res.computeIfAbsent(grpId, key -> new T2<>())
+                        earliestValidCheckpoints.computeIfAbsent(grpId, key -> new T2<>())
                             .set1(CHECKPOINT_NOT_APPLICABLE);
 
                         groupsAndPartitions.remove(grpId);
@@ -438,7 +436,7 @@ public class CheckpointHistory {
                         int pIdx = cpGrpState.indexByPartition(partId);
 
                         if (pIdx >= 0)
-                            res.computeIfAbsent(grpId, k -> new T2<>(null, new HashMap<>())).get2().put(partId, chpEntry);
+                            earliestValidCheckpoints.computeIfAbsent(grpId, k -> new T2<>(null, new HashMap<>())).get2().put(partId, chpEntry);
                         else {
                             if (inapplicablePartitions == null)
                                 inapplicablePartitions = new HashSet<>();
@@ -456,7 +454,7 @@ public class CheckpointHistory {
                 // Remove groups from search with empty set of applicable partitions.
                 for (Map.Entry<Integer, Set<Integer>> e : new HashSet<>(groupsAndPartitions.entrySet()))
                     if (e.getValue().isEmpty()) {
-                        res.compute(e.getKey(), (key, val) -> {
+                        earliestValidCheckpoints.compute(e.getKey(), (key, val) -> {
                             if (val == null)
                                 return new T2<>(NO_PARTITIONS_OWNED, null);
 
@@ -486,7 +484,7 @@ public class CheckpointHistory {
                 U.warn(log, "Failed to process checkpoint: " + (chpEntry != null ? chpEntry : "none"), ex);
 
                 for (Integer grpId : groupsAndPartitions.keySet())
-                    res.computeIfAbsent(grpId, key -> new T2<>())
+                    earliestValidCheckpoints.computeIfAbsent(grpId, key -> new T2<>())
                         .set1(WAL_RESERVATION_ERROR);
 
                 try {
@@ -496,15 +494,13 @@ public class CheckpointHistory {
                     log.error("Failed to release checkpoint WAL pointer: " + chpEntry, e);
                 }
 
-                return res;
+                return;
             }
         }
 
         for (Integer grpId : groupsAndPartitions.keySet())
-            res.computeIfAbsent(grpId, key -> new T2<>())
+            earliestValidCheckpoints.computeIfAbsent(grpId, key -> new T2<>())
                 .set1(NO_MORE_HISTORY);
-
-        return res;
     }
 
     /**

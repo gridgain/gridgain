@@ -4115,7 +4115,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      */
     private void assignPartitionsStates() {
-        Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
+        Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isDebugEnabled() ?
             new ConcurrentHashMap<>() : null;
 
         try {
@@ -4146,7 +4146,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to assign partition states", e);
         }
 
-        if (log.isInfoEnabled() && !F.isEmpty(supplyInfoMap))
+        if (log.isDebugEnabled() && !F.isEmpty(supplyInfoMap))
             printPartitionRebalancingFully(supplyInfoMap);
 
         timeBag.finishGlobalStage("Assign partitions states");
@@ -4164,19 +4164,19 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         for (Map.Entry<String, List<SupplyPartitionInfo>> entry : supplyInfoMap.entrySet()) {
             for (SupplyPartitionInfo info : entry.getValue()) {
-                if (!log.isDebugEnabled() || !info.isHistoryReserved()) {
-                    partsNotReservedToPrint.computeIfAbsent(entry.getKey(), parts -> new ArrayList<>())
-                        .add(info.part());
-                }
-                else {
+                if (info.isHistoryReserved()) {
                     partsNotEnoghtReservationToPrint.computeIfAbsent(entry.getKey(), parts -> new ArrayList<>())
                         .add(info);
+                }
+                else {
+                    partsNotReservedToPrint.computeIfAbsent(entry.getKey(), parts -> new ArrayList<>())
+                        .add(info.part());
                 }
             }
         }
 
         if (!F.isEmpty(partsNotReservedToPrint)) {
-            log.info("Partitions weren't present in any history reservation: [" +
+            log.debug("Partitions weren't present in any history reservation: [" +
                 partsNotReservedToPrint.entrySet().stream().map(entry ->
                     "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
                         .collect(Collectors.toSet())) + "]]"

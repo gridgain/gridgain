@@ -109,7 +109,8 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         LogListener expMsgsLsnr = LogListener.matches(str ->
             str.startsWith("Reserved cache groups with first reserved checkpoint IDs and reasons why previous checkpoint was inapplicable:") &&
                 str.contains("cache_group1") && str.contains("cache_group2")).times(3).
-            andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
+            andMatches(str -> str.startsWith("Starting rebalance routine") &&
+                (str.contains("cache_group1") || str.contains("cache_group2")) &&
                 str.contains("fullPartitions=[], histPartitions=[0-7]")).times(2).build();
 
         LogListener unexpectedMessagesLsnr = LogListener.matches((str) ->
@@ -145,28 +146,6 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         LogListener expMsgsLsnr = LogListener.
             matches("Partitions weren't present in any history reservation: " +
                 "[[grp=cache_group2 part=[[0-7]]], [grp=cache_group1 part=[[0-7]]]]").
-            andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
-                str.contains("fullPartitions=[0-7], histPartitions=[]")).times(2).build();
-
-        checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr);
-
-        assertTrue(expMsgsLsnr.check());
-    }
-
-    /**
-     * Test checks log messages in case of short history of checkpoint on debug.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, value = "2")
-    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "1")
-    public void testFullRebalanceWithShortCpHistoryLogMsgsOnDebug() throws Exception {
-        setRootLoggerDebugLevel();
-
-        LogListener expMsgsLsnr = LogListener.
-            matches(str -> str.startsWith("Partitions were reserved, but maximum available counter is greater than demanded: ") &&
-                str.contains("grp=cache_group1") && str.contains("grp=cache_group2")).
             andMatches(str -> str.startsWith("Starting rebalance routine") &&
                 (str.contains("cache_group1") || str.contains("cache_group2")) &&
                 str.contains("fullPartitions=[0-7], histPartitions=[]")).times(2).build();
@@ -186,7 +165,7 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "1")
     public void testFullRebalanceWithShortCpHistoryLogMsgs() throws Exception {
         LogListener expMsgsLsnr = LogListener.
-            matches(str -> str.startsWith("Partitions weren't present in any history reservation: ") &&
+            matches(str -> str.startsWith("Partitions were reserved, but maximum available counter is greater than demanded: ") &&
                 str.contains("grp=cache_group1") && str.contains("grp=cache_group2")).
             andMatches(str -> str.startsWith("Starting rebalance routine") &&
                 (str.contains("cache_group1") || str.contains("cache_group2")) &&
@@ -205,6 +184,8 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
      */
     private void checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(LogListener... lsnrs)
         throws Exception {
+        setRootLoggerDebugLevel();
+
         startGridsMultiThreaded(2).cluster().active(true);
 
         IgniteCache<Integer, String> cache1 = createCache("cache1", "cache_group1");

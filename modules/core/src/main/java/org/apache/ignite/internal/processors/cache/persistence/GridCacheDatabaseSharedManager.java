@@ -1805,14 +1805,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         reservedForExchange = new HashMap<>();
 
-        Map</*grpId*/Integer, Set</*partId*/Integer>> applicableGroupsAndPartitions = partitionsApplicableForWalRebalance();
+        Map</*grpId*/Integer,  T2</*reason*/ReservationReason, Map</*partId*/Integer, CheckpointEntry>>> earliestValidCheckpoints = new HashMap<>();
 
-        Map</*grpId*/Integer,  T2</*reason*/ReservationReason, Map</*partId*/Integer, CheckpointEntry>>> earliestValidCheckpoints;
+        Map</*grpId*/Integer, Set</*partId*/Integer>> applicableGroupsAndPartitions = partitionsApplicableForWalRebalance(earliestValidCheckpoints);
 
         checkpointReadLock();
 
         try {
-            earliestValidCheckpoints = cpHist.searchAndReserveCheckpoints(applicableGroupsAndPartitions);
+            cpHist.searchAndReserveCheckpoints(applicableGroupsAndPartitions, earliestValidCheckpoints);
         }
         finally {
             checkpointReadUnlock();
@@ -1850,7 +1850,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
         }
 
-        if (log.isInfoEnabled() && !F.isEmpty(earliestValidCheckpoints))
+        if (log.isDebugEnabled() && !F.isEmpty(earliestValidCheckpoints))
             printReservationToLog(earliestValidCheckpoints);
 
         return grpPartsWithCnts;
@@ -1881,7 +1881,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
 
         if (!F.isEmpty(notReservedCachesToPrint)) {
-            log.info("Following caches were not reserved [" +
+            log.debug("Following caches were not reserved [" +
                 notReservedCachesToPrint.entrySet().stream()
                     .map(entry -> '[' +
                         entry.getValue().stream().map(grpId -> "[grpId=" + grpId +
@@ -1892,7 +1892,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
 
         if (!F.isEmpty(reservedCachesToPrint)) {
-            log.info("Reserved cache groups with first reserved checkpoint IDs and reasons why previous checkpoint was inapplicable: [" +
+            log.debug("Reserved cache groups with first reserved checkpoint IDs and reasons why previous checkpoint was inapplicable: [" +
                 reservedCachesToPrint.entrySet().stream()
                     .map(entry -> '[' +
                         entry.getValue().stream().map(grpCp -> "[grpId=" + grpCp.get1() +
@@ -1905,9 +1905,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
+     * @param earliestValidCheckpoints Modifieble Map (groupId, Map (partitionId, earliest valid checkpoint to history search)).
      * @return Map of group id -> Set of partitions which can be used as suppliers for WAL rebalance.
      */
-    private Map<Integer, Set<Integer>> partitionsApplicableForWalRebalance() {
+    private Map<Integer, Set<Integer>> partitionsApplicableForWalRebalance(
+        Map<Integer,  T2<ReservationReason, Map<Integer, CheckpointEntry>>> earliestValidCheckpoints
+    ) {
         Map<Integer, Set<Integer>> res = new HashMap<>();
 
         for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
@@ -1918,6 +1921,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 if (locPart.state() == OWNING && locPart.fullSize() > walRebalanceThreshold)
                     res.computeIfAbsent(grp.groupId(), k -> new HashSet<>()).add(locPart.id());
             }
+
+            if (!res.containsKey(grp.groupId()))
+                earliestValidCheckpoints.put(grp.groupId(), new T2<>(ReservationReason.NO_PARTITIONS_OWNED, null));
         }
 
         return res;

@@ -46,7 +46,7 @@ public enum ReservationReason {
                 return "Reserved checkpoint is the oldest in history";
 
             case NO_PARTITIONS_OWNED:
-                return "Node didn't own any partitions for this group at the time of checkpoint";
+                return "Node didn't own any partitions or size of these less than threshold for this group at the time of checkpoint";
 
             case CHECKPOINT_NOT_APPLICABLE:
                 return "Checkpoint was marked as inapplicable for historical rebalancing";
