@@ -17,7 +17,10 @@
 package org.apache.ignite.internal.processors.cache.binary;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -27,6 +30,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
@@ -45,26 +49,18 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
 
+    /** */
+    private GridTestUtils.DiscoveryHook discoveryHook;
+
     /**
      * Number of {@link MetadataUpdateProposedMessage} that have been sent since a test was start.
      */
-    private static final AtomicInteger proposeMsgNum = new AtomicInteger();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        GridTestUtils.DiscoveryHook discoveryHook = new GridTestUtils.DiscoveryHook() {
-            @Override public void handleDiscoveryMessage(DiscoverySpiCustomMessage msg) {
-                DiscoveryCustomMessage customMsg = msg == null ? null
-                    : (DiscoveryCustomMessage)IgniteUtils.field(msg, "delegate");
-
-                if (customMsg instanceof MetadataRemoveProposedMessage)
-                    proposeMsgNum.incrementAndGet();
-            }
-        };
-
-        TcpDiscoverySpi discoSpi = new TcpDiscoverySpi() {
+        TcpDiscoverySpi discoSpi = discoveryHook == null ? new TcpDiscoverySpi() : new TcpDiscoverySpi() {
             @Override public void setListener(@Nullable DiscoverySpiListener lsnr) {
                 super.setListener(GridTestUtils.DiscoverySpiListenerWrapper.wrap(lsnr, discoveryHook));
             }
@@ -79,6 +75,12 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        startCluster();
+    }
+
+    /**
+     */
+    protected void startCluster() throws Exception {
         startGrid("srv0");
         startGrid("srv1");
         startGrid("srv2");
@@ -89,7 +91,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        proposeMsgNum.set(0);
+        discoveryHook = null;
     }
 
     /** {@inheritDoc} */
@@ -98,7 +100,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Tests registration of user classes.
+     * Tests remove type metadata at all nodes (coordinator, server, client).
      */
     @Test
     public void testRemoveTypeOnNodes() throws Exception {
@@ -134,10 +136,77 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @param ign Node to remove type.
-     * @param typeName Binary type name.
+     * Tests remove type metadata at all nodes (coordinator, server, client).
      */
-    private void removeType(IgniteEx ign, String typeName) throws Exception {
+    @Test
+    public void testChangeOnLocalNodeWhenTypeRemoving() throws Exception {
+        final CyclicBarrier barrier0 = new CyclicBarrier(2);
+        final CyclicBarrier barrier1 = new CyclicBarrier(2);
+
+        discoveryHook = new GridTestUtils.DiscoveryHook() {
+            private volatile IgniteEx ignite;
+
+            @Override public void handleDiscoveryMessage(DiscoverySpiCustomMessage msg) {
+                DiscoveryCustomMessage customMsg = msg == null ? null
+                    : (DiscoveryCustomMessage) IgniteUtils.field(msg, "delegate");
+
+                if (customMsg instanceof MetadataRemoveAcceptedMessage) {
+                    MetadataRemoveAcceptedMessage propMsg = (MetadataRemoveAcceptedMessage)customMsg;
+
+                    try {
+                        log.info("+++ on barrier0");
+                        barrier0.await();
+                        log.info("+++ leave barrier0");
+                        barrier1.await();
+                        log.info("+++ leave barrier1");
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override public void ignite(IgniteEx ignite) {
+                this.ignite = ignite;
+            }
+        };
+
+        stopGrid("srv0");
+        IgniteEx ign = startGrid("srv0");
+
+        BinaryObjectBuilder builder0 = ign.binary().builder("Type0");
+
+        builder0.setField("f", 1);
+        builder0.build();
+
+        GridTestUtils.runAsync(()-> {
+            try {
+                removeType((IgniteEx)ign, "Type0");
+            }
+            catch (Exception e) {
+                log.error("Unexpected exception", e);
+
+                fail("Unexpected exception.");
+            }
+        });
+
+        barrier0.await();
+
+        System.out.println("+++ create new type");
+
+        BinaryObjectBuilder builder1 = ign.binary().builder("Type0");
+
+        builder0.setField("f1", 1);
+        builder0.build();
+
+        System.out.println("+++ END");
+    }
+
+        /**
+         * @param ign Node to remove type.
+         * @param typeName Binary type name.
+         */
+    protected void removeType(IgniteEx ign, String typeName) throws Exception {
         Exception err = null;
 
         for (int i = 0; i < MAX_RETRY_CONT; ++i) {
@@ -164,7 +233,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      *
      * @param igns Tests nodes.
      */
-    private void delayIfClient(Ignite ... igns) throws IgniteInterruptedCheckedException {
+    protected void delayIfClient(Ignite ... igns) throws IgniteInterruptedCheckedException {
         boolean isThereCli = Arrays.stream(igns).anyMatch(ign -> ((IgniteEx)ign).context().clientNode());
 
         if (isThereCli)

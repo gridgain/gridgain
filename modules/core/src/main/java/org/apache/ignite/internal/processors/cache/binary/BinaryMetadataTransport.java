@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -198,6 +199,9 @@ final class BinaryMetadataTransport {
 
         do {
             BinaryMetadataHolder metaHolder = metaLocCache.get(typeId);
+
+            if (metaHolder != null && metaHolder.removing())
+                throw new IgniteException("The metadata is removing for type [typeId=" + typeId + ']');
 
             BinaryMetadata oldMeta = Optional.ofNullable(metaHolder)
                 .map(BinaryMetadataHolder::metadata)
@@ -998,7 +1002,7 @@ final class BinaryMetadataTransport {
 
             final GridFutureAdapter<MetadataUpdateResult> fut = syncMap.get(new SyncKey(typeId, REMOVED_VERSION));
 
-            if (isPersistenceEnabled) {
+            if (isPersistenceEnabled && !clientNode) {
                 GridFutureAdapter<Void> rmvFut = metadataFileStore.removeMetadataAsync(typeId);
 
                 if (rmvFut != null) {
