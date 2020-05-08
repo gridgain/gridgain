@@ -31,9 +31,6 @@ public class JUnitTeamcityReporter extends RunListener {
     public static volatile String suite;
 
     /** */
-    private volatile long started;
-
-    /** */
     @Override public void testAssumptionFailure(Failure failure) {
         System.out.println(String.format("##teamcity[testIgnored name='%s' message='%s']",
             testName(failure.getDescription()), escapeForTeamcity(failure.getMessage())));
@@ -41,15 +38,12 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public void testStarted(Description desc) {
-        started = System.currentTimeMillis();
-
         System.out.println(String.format("##teamcity[testStarted name='%s' captureStandardOutput='true']", testName(desc)));
     }
 
     /** */
     @Override public void testFinished(Description desc) {
-        System.out.println(String.format("##teamcity[testFinished name='%s' duration='%d']",
-            testName(desc), System.currentTimeMillis() - started));
+        System.out.println(String.format("##teamcity[testFinished name='%s']", testName(desc)));
     }
 
     /** */
