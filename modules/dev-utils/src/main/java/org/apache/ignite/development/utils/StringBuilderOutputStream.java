@@ -19,27 +19,40 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Output stream that can be used to print some output to string builder.
  */
 public class StringBuilderOutputStream extends OutputStream {
-    /** */
+    /** String builder. */
     private final GridStringBuilder sb;
 
-    /** */
+    /** Encoding */
     protected final Charset encoding;
 
-    /** */
+    /**
+     * Default constructor.
+     */
     public StringBuilderOutputStream() {
-        this(new GridStringBuilder(), Charset.forName("UTF-8"));
+        this(new GridStringBuilder(), UTF_8);
     }
 
-    /** */
+    /**
+     * Constructor.
+     *
+     * @param sb String buider.
+     */
     public StringBuilderOutputStream(GridStringBuilder sb) {
-        this(sb, Charset.forName("UTF-8"));
+        this(sb, UTF_8);
     }
 
-    /** */
+    /**
+     * Constructor.
+     *
+     * @param sb String builder.
+     * @param encoding Encoding.
+     */
     public StringBuilderOutputStream(GridStringBuilder sb, Charset encoding) {
         this.sb = sb;
         this.encoding = encoding;

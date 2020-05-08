@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.development.utils.indexreader;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,7 +31,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -41,16 +41,25 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.IgnitePair;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.gridgain.grid.GridGain;
+import org.gridgain.grid.configuration.GridGainConfiguration;
+import org.gridgain.grid.configuration.SnapshotConfiguration;
+import org.gridgain.grid.internal.processors.cache.database.snapshot.GridCacheSnapshotManager;
+import org.gridgain.grid.persistentstore.GridSnapshot;
+import org.gridgain.grid.persistentstore.SnapshotFuture;
+import org.gridgain.grid.persistentstore.snapshot.file.FileDatabaseSnapshotSpi;
 import org.junit.Test;
 
+import static java.lang.String.valueOf;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -66,7 +75,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
- *
+ * Class for testing {@link IgniteIndexReader}.
  */
 public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /** Page size. */
@@ -77,9 +86,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
     /** Version of file page stores. */
     private static final int PAGE_STORE_VER = 2;
-
-    /** Cache name. */
-    private static final String CACHE_NAME = "default";
 
     /** Cache group name. */
     private static final String CACHE_GROUP_NAME = "defaultGroup";
@@ -123,13 +129,22 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /** Work directory, containing cache group directories. */
     private static File workDir;
 
+    /** Directory containing full snapshot. */
+    private static File fullSnapshotDir;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
         cleanPersistenceDir();
 
-        workDir = prepareIndex();
+        try (IgniteEx node = startGrid(0)) {
+            populateData(node);
+
+            workDir = ((FilePageStoreManager)node.context().cache().context().pageStore()).workDir();
+
+            fullSnapshotDir = createSnapshot(node, true);
+        }
     }
 
     /** {@inheritDoc} */
@@ -151,7 +166,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                         .setMaxSize(50 * 1024L * 1024L)
                 )
         ).setCacheConfiguration(
-            new CacheConfiguration(CACHE_NAME)
+            new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setGroupName(CACHE_GROUP_NAME)
                 .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
                 .setSqlSchema("PUBLIC"),
@@ -173,43 +188,76 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                         .setIndexes(singleton(new QueryIndex("s")))
                         .setTableName("QT2")
                 ))
-        );
+        ).setPluginConfigurations(new GridGainConfiguration().setSnapshotConfiguration(new SnapshotConfiguration()));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void cleanPersistenceDir() throws Exception {
+        super.cleanPersistenceDir();
+
+        U.delete(resolveSnapshotDirectory());
     }
 
     /**
-     * Runs a grid to prepare directory with index and data partitions.
+     * Resolve snapshot directory.
      *
-     * @return Work directory.
+     * @return Snapshot directory.
      * @throws Exception If fails.
      */
-    private File prepareIndex() throws Exception {
-        IgniteEx ignite = (IgniteEx)Ignition.start(getConfiguration());
+    private File resolveSnapshotDirectory() throws Exception {
+        return U.resolveWorkDirectory(U.defaultWorkDirectory(), SnapshotConfiguration.DFLT_SNAPSHOTS_PATH, false);
+    }
 
-        ignite.cluster().active(true);
+    /**
+     * Filling node with data.
+     *
+     * @param node Node.
+     * @throws Exception If fails.
+     */
+    private void populateData(IgniteEx node) throws Exception {
+        IgniteClusterEx cluster = node.cluster();
 
-        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
+        if (!cluster.active())
+            cluster.active(true);
 
-        IgniteCache<Integer, Object> qryCache = ignite.getOrCreateCache(QUERY_CACHE_NAME);
+        IgniteCache<Integer, Object> qryCache = node.cache(QUERY_CACHE_NAME);
 
         for (int i = 0; i < 100; i++)
-            qryCache.put(i, new TestClass1(i, String.valueOf(i)));
+            qryCache.put(i, new TestClass1(i, valueOf(i)));
 
         for (int i = 0; i < 70; i++)
-            qryCache.put(i, new TestClass2(i, String.valueOf(i)));
+            qryCache.put(i, new TestClass2(i, valueOf(i)));
+
+        IgniteCache<Integer, Integer> cache = node.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             createAndFillTable(cache, TableInfo.generate(i));
 
-        forceCheckpoint(ignite);
+        forceCheckpoint(node);
+    }
 
-        IgniteInternalCache<Integer, Integer> cacheEx = ignite.cachex(CACHE_NAME);
+    /**
+     * Creating a snapshot and returning path to it on node.
+     *
+     * @param node Node.
+     * @param full Full or incremental snapshot creation.
+     * @return Path to snapshot.
+     */
+    private File createSnapshot(IgniteEx node, boolean full) {
+        GridSnapshot gridSnapshot = ((GridGain)node.plugin(GridGain.PLUGIN_NAME)).snapshot();
 
-        File cacheWorkDir =
-            ((FilePageStoreManager)cacheEx.context().shared().pageStore()).cacheWorkDir(cacheEx.configuration());
+        SnapshotFuture<Void> snapshotFut = full ? gridSnapshot.createFullSnapshot(null, "full") :
+            gridSnapshot.createSnapshot(null, "inc");
 
-        Ignition.stop(ignite.name(), true);
+        snapshotFut.get();
 
-        return cacheWorkDir.getParentFile();
+        GridCacheSnapshotManager snapshotMgr = (GridCacheSnapshotManager)node.context().cache().context().snapshot();
+        FileDatabaseSnapshotSpi snapshotSpi = (FileDatabaseSnapshotSpi)snapshotMgr.snapshotSpi();
+
+        return snapshotSpi.findCurNodeSnapshotDir(
+            snapshotSpi.snapshotWorkingDirectory().toPath(),
+            snapshotFut.snapshotOperation().snapshotId()
+        ).toFile();
     }
 
     /**
@@ -357,7 +405,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         Object[] paramVals = new Object[fields.size() + 1];
 
         for (int i = 0; i < fields.size() + 1; i++)
-            paramVals[i] = (i % 2 == 0) ? cntr : String.valueOf(cntr);
+            paramVals[i] = (i % 2 == 0) ? cntr : valueOf(cntr);
 
         query(cache, q.toString(), paramVals);
     }
@@ -453,7 +501,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param canBeCorrupted Whether index can be corrupted.
      */
     private void checkIdx(String output, String traversePrefix, String idx, int entriesCnt, boolean canBeCorrupted) {
-        Pattern ptrnCorrect = Pattern.compile(checkIdxRegex(traversePrefix, false, idx, 1, String.valueOf(entriesCnt)));
+        Pattern ptrnCorrect = Pattern.compile(checkIdxRegex(traversePrefix, false, idx, 1, valueOf(entriesCnt)));
 
         Matcher mCorrect = ptrnCorrect.matcher(output);
 
@@ -695,6 +743,30 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         String output = runIndexReader(workDir, QUERY_CACHE_GROUP_NAME, null, false);
 
         checkOutput(output, 5, 0, 0, 0);
+    }
+
+    @Test
+    public void test_0() throws Exception {
+        // TODO: implements
+
+        File baseDestDir = new File(resolveSnapshotDirectory(), "tmp");
+
+        for (Path path : Files.newDirectoryStream(fullSnapshotDir.toPath(), Files::isDirectory)) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            try (IgniteIndexReader idxReader = new IgniteIndexReader(
+                path.toAbsolutePath().toString(),
+                PAGE_SIZE,
+                PAGE_STORE_VER,
+                baos
+            )) {
+                File destDir = new File(baseDestDir, path.getFileName().toString());
+
+                idxReader.transform(destDir.getAbsolutePath(), ".bin");
+
+                log.info(String.format("RESULT snapDir=%s destDir=%s res=%s", path, destDir, baos));
+            }
+        }
     }
 
     /**
