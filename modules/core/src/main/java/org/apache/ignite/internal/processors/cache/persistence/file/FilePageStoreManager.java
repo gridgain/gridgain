@@ -222,7 +222,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 "change location of persistence directories in data storage configuration " +
                 "(see DataStorageConfiguration#walPath, DataStorageConfiguration#walArchivePath, " +
                 "DataStorageConfiguration#storagePath properties). " +
-                "Current persistence store directory is: [" + tmpDir + "]");
+                "Current persistence store directory is: [" + storeWorkDir.getAbsolutePath() + "]");
         }
 
         File[] files = storeWorkDir.listFiles();
