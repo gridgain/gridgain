@@ -101,8 +101,12 @@ public class TracingConfigurationCoordinates {
          * Constructor.
          *
          * @param scope Mandatory scope attribute.
+         * @throws IllegalArgumentException if null scope is specified.
          */
         public Builder(Scope scope) {
+            if (scope == null)
+                throw new IllegalArgumentException("Null scope is not valid for tracing coordinates.");
+
             this.scope = scope;
         }
 

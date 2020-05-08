@@ -27,6 +27,8 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,7 +48,12 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FU
 /**
  * Tests to check correctness of OpenCensus Tracing SPI implementation.
  */
-public class OpenCensusTracingSpiTest extends AbstractOpenCensusTracingTest {
+public class OpenCensusTracingSpiTest extends AbstractTracingTest {
+    /** {@inheritDoc} */
+    @Override protected TracingSpi getTracingSpi() {
+        return new OpenCensusTracingSpi();
+    }
+
     /**
      * Test checks that node join process is traced correctly in positive case.
      */

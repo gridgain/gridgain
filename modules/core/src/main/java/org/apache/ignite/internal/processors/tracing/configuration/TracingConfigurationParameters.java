@@ -88,6 +88,20 @@ public class TracingConfigurationParameters implements Serializable {
         return Collections.unmodifiableSet(supportedScopes);
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        TracingConfigurationParameters that = (TracingConfigurationParameters)o;
+
+        if (Double.compare(that.samplingRate, samplingRate) != 0)
+            return false;
+        return supportedScopes != null ? supportedScopes.equals(that.supportedScopes) : that.supportedScopes == null;
+    }
+
     /**
      * {@code TracingConfigurationParameters} builder.
      */

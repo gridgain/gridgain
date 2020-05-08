@@ -16,6 +16,14 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import io.opencensus.common.Functions;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
@@ -28,34 +36,21 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
-import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
-import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 
 /**
  * Abstract class for open census tracing tests.
  */
-public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTest {
+public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** Grid count. */
     protected static final int GRID_CNT = 3;
 
@@ -68,6 +63,8 @@ public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTe
     /** Wrapper of test exporter handler. */
     private OpenCensusTraceExporter exporter;
 
+    protected abstract TracingSpi getTracingSpi();
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -77,7 +74,7 @@ public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTe
         if (igniteInstanceName.contains("client"))
             cfg.setClientMode(true);
 
-        cfg.setTracingSpi(new OpenCensusTracingSpi());
+        cfg.setTracingSpi(getTracingSpi());
 
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
