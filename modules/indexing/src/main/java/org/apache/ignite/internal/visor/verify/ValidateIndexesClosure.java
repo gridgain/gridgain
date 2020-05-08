@@ -105,6 +105,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Exception message throwing when closure was cancelled. */
+    public static final String CANCELLED_MSG = "Closure of index validation was cancelled.";
+
     /** Ignite. */
     @IgniteInstanceResource
     private transient IgniteEx ignite;
@@ -161,16 +164,28 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     /** Group cache ids when calculating cache size was an error. */
     private final Set<Integer> failCalcCacheSizeGrpIds = newSetFromMap(new ConcurrentHashMap<>());
 
+    /** Validate index context. */
+    private final ValidateIndexesContext validateCtx;
+
     /**
      * Constructor.
      *
+     * @param validateCtx Context of validate index closure.
      * @param cacheNames Cache names.
      * @param checkFirst If positive only first K elements will be validated.
      * @param checkThrough If positive only each Kth element will be validated.
      * @param checkCrc Check CRC sum on stored pages on disk.
      * @param checkSizes Check that index size and cache size are same.
      */
-    public ValidateIndexesClosure(Set<String> cacheNames, int checkFirst, int checkThrough, boolean checkCrc, boolean checkSizes) {
+    public ValidateIndexesClosure(
+        ValidateIndexesContext validateCtx,
+        Set<String> cacheNames,
+        int checkFirst,
+        int checkThrough,
+        boolean checkCrc,
+        boolean checkSizes
+    ) {
+        this.validateCtx = validateCtx;
         this.cacheNames = cacheNames;
         this.checkFirst = checkFirst;
         this.checkThrough = checkThrough;
@@ -233,6 +248,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      *
      */
     private VisorValidateIndexesJobResult call0() {
+        if (validateCtx.isCancelled())
+            throw new IgniteException(CANCELLED_MSG);
+
         Set<Integer> grpIds = collectGroupIds();
 
         /** Update counters per partition per group. */
@@ -371,6 +389,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             throw unwrapFutureException(e);
         }
 
+        if (validateCtx.isCancelled())
+            throw new IgniteException(CANCELLED_MSG);
+
         return new VisorValidateIndexesJobResult(
             partResults,
             idxResults,
@@ -498,7 +519,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
         GridDhtLocalPartition part = grpCtxWithPart.get2();
 
-        if (!part.reserve())
+        if (validateCtx.isCancelled() || !part.reserve())
             return emptyMap();
 
         ValidateIndexesPartitionResult partRes;
@@ -529,7 +550,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             long current = 0;
             long processedNumber = 0;
 
-            while (it.hasNextX()) {
+            while (it.hasNextX() && !validateCtx.isCancelled()) {
                 if (enoughIssues)
                     break;
 
@@ -602,6 +623,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 ArrayList<Index> indexes = gridH2Tbl.getIndexes();
 
                 for (Index idx : indexes) {
+                    if (validateCtx.isCancelled())
+                        break;
+
                     if (!(idx instanceof H2TreeIndexBase))
                         continue;
 
@@ -706,6 +730,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         T2<GridCacheContext, Index> cacheCtxWithIdx,
         IgniteInClosure<Integer> idleChecker
     ) {
+        if (validateCtx.isCancelled())
+            return emptyMap();
+
         GridCacheContext ctx = cacheCtxWithIdx.get1();
 
         Index idx = cacheCtxWithIdx.get2();
@@ -743,7 +770,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
         KeyCacheObject previousKey = null;
 
-        while (!enoughIssues) {
+        while (!enoughIssues && !validateCtx.isCancelled()) {
             KeyCacheObject h2key = null;
 
             try {
@@ -860,108 +887,122 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         GridDhtLocalPartition locPart
     ) {
         return calcExecutor.submit(() -> {
+            return calcCacheSize(grpCtx, locPart);
+        });
+    }
+
+    /**
+     * Calculation of caches size with divided by tables.
+     *
+     * @param grpCtx Cache group context.
+     * @param locPart Local partition.
+     * @return Cache size representation object.
+     */
+    private CacheSize calcCacheSize(CacheGroupContext grpCtx,GridDhtLocalPartition locPart) {
+        try {
+            if (validateCtx.isCancelled())
+                return new CacheSize(null, emptyMap());
+
+            long updateCntrBefore = locPart.updateCounter();
+
+            int grpId = grpCtx.groupId();
+
+            if (failCalcCacheSizeGrpIds.contains(grpId))
+                return new CacheSize(null, null);
+
+            boolean reserve = false;
+
+            int partId = locPart.id();
+
             try {
-                long updateCntrBefore = locPart.updateCounter();
+                if (!(reserve = locPart.reserve()))
+                    throw new IgniteException("Can't reserve partition");
 
-                int grpId = grpCtx.groupId();
+                if (locPart.state() != OWNING)
+                    throw new IgniteException("Partition not in state " + OWNING);
 
-                if (failCalcCacheSizeGrpIds.contains(grpId))
-                    return new CacheSize(null, null);
+                Map<Integer, Map<String, AtomicLong>> cacheSizeByTbl = new HashMap<>();
 
-                boolean reserve = false;
+                GridIterator<CacheDataRow> partIter = grpCtx.offheap().partitionIterator(partId);
 
-                int partId = locPart.id();
+                GridQueryProcessor qryProcessor = ignite.context().query();
+                IgniteH2Indexing h2Indexing = (IgniteH2Indexing)qryProcessor.getIndexing();
 
-                try {
-                    if (!(reserve = locPart.reserve()))
-                        throw new IgniteException("Can't reserve partition");
+                while (partIter.hasNextX() && !failCalcCacheSizeGrpIds.contains(grpId)) {
+                    CacheDataRow cacheDataRow = partIter.nextX();
 
-                    if (locPart.state() != OWNING)
-                        throw new IgniteException("Partition not in state " + OWNING);
+                    int cacheId = cacheDataRow.cacheId();
 
-                    Map<Integer, Map<String, AtomicLong>> cacheSizeByTbl = new HashMap<>();
+                    GridCacheContext cacheCtx = cacheId == 0 ?
+                        grpCtx.singleCacheContext() : grpCtx.shared().cacheContext(cacheId);
 
-                    GridIterator<CacheDataRow> partIter = grpCtx.offheap().partitionIterator(partId);
+                    if (cacheCtx == null)
+                        throw new IgniteException("Unknown cacheId of CacheDataRow: " + cacheId);
 
-                    GridQueryProcessor qryProcessor = ignite.context().query();
-                    IgniteH2Indexing h2Indexing = (IgniteH2Indexing)qryProcessor.getIndexing();
+                    if (cacheDataRow.link() == 0L)
+                        throw new IgniteException("Contains invalid partition row, possibly deleted");
 
-                    while (partIter.hasNextX() && !failCalcCacheSizeGrpIds.contains(grpId)) {
-                        CacheDataRow cacheDataRow = partIter.nextX();
+                    String cacheName = cacheCtx.name();
 
-                        int cacheId = cacheDataRow.cacheId();
+                    QueryTypeDescriptorImpl qryTypeDesc = qryProcessor.typeByValue(
+                        cacheName,
+                        cacheCtx.cacheObjectContext(),
+                        cacheDataRow.key(),
+                        cacheDataRow.value(),
+                        true
+                    );
 
-                        GridCacheContext cacheCtx = cacheId == 0 ?
-                            grpCtx.singleCacheContext() : grpCtx.shared().cacheContext(cacheId);
+                    if (isNull(qryTypeDesc))
+                        continue; // Tolerate - (k, v) is just not indexed.
 
-                        if (cacheCtx == null)
-                            throw new IgniteException("Unknown cacheId of CacheDataRow: " + cacheId);
+                    String tableName = qryTypeDesc.tableName();
 
-                        if (cacheDataRow.link() == 0L)
-                            throw new IgniteException("Contains invalid partition row, possibly deleted");
+                    GridH2Table gridH2Tbl = h2Indexing.schemaManager().dataTable(cacheName, tableName);
 
-                        String cacheName = cacheCtx.name();
+                    if (isNull(gridH2Tbl))
+                        continue; // Tolerate - (k, v) is just not indexed.
 
-                        QueryTypeDescriptorImpl qryTypeDesc = qryProcessor.typeByValue(
-                            cacheName,
-                            cacheCtx.cacheObjectContext(),
-                            cacheDataRow.key(),
-                            cacheDataRow.value(),
-                            true
-                        );
-
-                        if (isNull(qryTypeDesc))
-                            continue; // Tolerate - (k, v) is just not indexed.
-
-                        String tableName = qryTypeDesc.tableName();
-
-                        GridH2Table gridH2Tbl = h2Indexing.schemaManager().dataTable(cacheName, tableName);
-
-                        if (isNull(gridH2Tbl))
-                            continue; // Tolerate - (k, v) is just not indexed.
-
-                        cacheSizeByTbl.computeIfAbsent(cacheCtx.cacheId(), i -> new HashMap<>())
-                            .computeIfAbsent(tableName, s -> new AtomicLong()).incrementAndGet();
-                    }
-
-                    long updateCntrAfter = locPart.updateCounter();
-
-                    if (updateCntrBefore != updateCntrAfter) {
-                        throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
-                            ", grpId=" + grpCtx.groupId() + ", partId=" + locPart.id() + "] changed during size " +
-                            "calculation [before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
-                    }
-
-                    return new CacheSize(null, cacheSizeByTbl);
+                    cacheSizeByTbl.computeIfAbsent(cacheCtx.cacheId(), i -> new HashMap<>())
+                        .computeIfAbsent(tableName, s -> new AtomicLong()).incrementAndGet();
                 }
-                catch (Throwable t) {
-                    IgniteException cacheSizeErr = new IgniteException("Cache size calculation error [" +
-                        cacheGrpInfo(grpCtx) + ", locParId=" + partId + ", err=" + t.getMessage() + "]", t);
 
-                    error(log, cacheSizeErr);
+                long updateCntrAfter = locPart.updateCounter();
 
-                    failCalcCacheSizeGrpIds.add(grpId);
-
-                    return new CacheSize(cacheSizeErr, null);
+                if (updateCntrBefore != updateCntrAfter) {
+                    throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                        ", grpId=" + grpCtx.groupId() + ", partId=" + locPart.id() + "] changed during size " +
+                        "calculation [before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
                 }
-                finally {
-                    if (reserve)
-                        locPart.release();
-                }
+
+                return new CacheSize(null, cacheSizeByTbl);
+            }
+            catch (Throwable t) {
+                IgniteException cacheSizeErr = new IgniteException("Cache size calculation error [" +
+                    cacheGrpInfo(grpCtx) + ", locParId=" + partId + ", err=" + t.getMessage() + "]", t);
+
+                error(log, cacheSizeErr);
+
+                failCalcCacheSizeGrpIds.add(grpId);
+
+                return new CacheSize(cacheSizeErr, null);
             }
             finally {
-                processedCacheSizePartitions.incrementAndGet();
-
-                printProgressOfIndexValidationIfNeeded();
+                if (reserve)
+                    locPart.release();
             }
-        });
+        }
+        finally {
+            processedCacheSizePartitions.incrementAndGet();
+
+            printProgressOfIndexValidationIfNeeded();
+        }
     }
 
     /**
      * Asynchronous calculation of the index size for cache.
      *
      * @param cacheCtx Cache context.
-     * @param idx      Index.
+     * @param idx Index.
      * @param idleChecker Idle check closure.
      * @return Future with index size.
      */
@@ -971,37 +1012,56 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         IgniteInClosure<Integer> idleChecker
     ) {
         return calcExecutor.submit(() -> {
-            try {
-                if (failCalcCacheSizeGrpIds.contains(cacheCtx.groupId()))
-                    return new T2<>(null, 0L);
-
-                String cacheName = cacheCtx.name();
-                String tblName = idx.getTable().getName();
-                String idxName = idx.getName();
-
-                try {
-                    long indexSize = ignite.context().query().getIndexing().indexSize(cacheName, tblName, idxName);
-
-                    idleChecker.apply(cacheCtx.groupId());
-
-                    return new T2<>(null, indexSize);
-                }
-                catch (Throwable t) {
-                    Throwable idxSizeErr = new IgniteException("Index size calculation error [" +
-                        cacheGrpInfo(cacheCtx.group()) + ", " + cacheInfo(cacheCtx) + ", tableName=" +
-                        tblName + ", idxName=" + idxName + ", err=" + t.getMessage() + "]", t);
-
-                    error(log, idxSizeErr);
-
-                    return new T2<>(idxSizeErr, 0L);
-                }
-            }
-            finally {
-                processedIdxSizes.incrementAndGet();
-
-                printProgressOfIndexValidationIfNeeded();
-            }
+            return calcIndexSize(cacheCtx, idx, idleChecker);
         });
+    }
+
+    /**
+     * Calculation of the index size for cache.
+     *
+     * @param cacheCtx Cache context.
+     * @param idx Index.
+     * @param idleChecker Idle check closure.
+     * @return Tuple contains exception if it happened and size of index.
+     */
+    private T2<Throwable, Long> calcIndexSize(
+        GridCacheContext cacheCtx,
+        Index idx,
+        IgniteInClosure<Integer> idleChecker
+    ) {
+        if (validateCtx.isCancelled())
+            return new T2<>(null, 0L);
+
+        try {
+            if (failCalcCacheSizeGrpIds.contains(cacheCtx.groupId()))
+                return new T2<>(null, 0L);
+
+            String cacheName = cacheCtx.name();
+            String tblName = idx.getTable().getName();
+            String idxName = idx.getName();
+
+            try {
+                long indexSize = ignite.context().query().getIndexing().indexSize(cacheName, tblName, idxName);
+
+                idleChecker.apply(cacheCtx.groupId());
+
+                return new T2<>(null, indexSize);
+            }
+            catch (Throwable t) {
+                Throwable idxSizeErr = new IgniteException("Index size calculation error [" +
+                    cacheGrpInfo(cacheCtx.group()) + ", " + cacheInfo(cacheCtx) + ", tableName=" +
+                    tblName + ", idxName=" + idxName + ", err=" + t.getMessage() + "]", t);
+
+                error(log, idxSizeErr);
+
+                return new T2<>(idxSizeErr, 0L);
+            }
+        }
+        finally {
+            processedIdxSizes.incrementAndGet();
+
+            printProgressOfIndexValidationIfNeeded();
+        }
     }
 
     /**
