@@ -63,6 +63,7 @@ import static java.lang.String.valueOf;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.ERROR_PREFIX;
@@ -215,6 +216,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @throws Exception If fails.
      */
     private void populateData(IgniteEx node) throws Exception {
+        requireNonNull(node);
+
         IgniteClusterEx cluster = node.cluster();
 
         if (!cluster.active())
@@ -244,6 +247,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @return Path to snapshot.
      */
     private File createSnapshot(IgniteEx node, boolean full) {
+        requireNonNull(node);
+
         GridSnapshot gridSnapshot = ((GridGain)node.plugin(GridGain.PLUGIN_NAME)).snapshot();
 
         SnapshotFuture<Void> snapshotFut = full ? gridSnapshot.createFullSnapshot(null, "full") :
@@ -749,23 +754,33 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void test_0() throws Exception {
         // TODO: implements
 
+        fullSnapshotDir = new File(
+            "C:/Users/tkalk/IdeaProjects/apache-ignite/work/snapshot/ts_20200508164857_1588945737117.snapshot/bc61ff10_a92b_4607_9a54_02d6d4b37340"
+        );
+
         File baseDestDir = new File(resolveSnapshotDirectory(), "tmp");
 
-        for (Path path : Files.newDirectoryStream(fullSnapshotDir.toPath(), Files::isDirectory)) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
 
-            try (IgniteIndexReader idxReader = new IgniteIndexReader(
-                path.toAbsolutePath().toString(),
-                PAGE_SIZE,
-                PAGE_STORE_VER,
-                baos
-            )) {
-                File destDir = new File(baseDestDir, path.getFileName().toString());
+            for (Path path : Files.newDirectoryStream(fullSnapshotDir.toPath(), Files::isDirectory)) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-                idxReader.transform(destDir.getAbsolutePath(), ".bin");
+                try (IgniteIndexReader idxReader = new IgniteIndexReader(
+                    path.toAbsolutePath().toString(),
+                    PAGE_SIZE,
+                    PAGE_STORE_VER,
+                    baos
+                )) {
+                    File destDir = new File(baseDestDir, path.getFileName().toString());
 
-                log.info(String.format("RESULT snapDir=%s destDir=%s res=%s", path, destDir, baos));
+                    idxReader.transform(destDir.getAbsolutePath(), ".bin");
+
+                    log.info(String.format("RESULT snapDir=%s destDir=%s res=%s", path, destDir, baos));
+                }
             }
+        }
+        finally {
+            U.delete(baseDestDir);
         }
     }
 
