@@ -33,20 +33,20 @@ public final class NoopTracingConfiguration implements TracingConfiguration {
     public static final NoopTracingConfiguration INSTANCE = new NoopTracingConfiguration();
 
     /** {@inheritDoc} */
-    @Override public void apply(@NotNull TracingConfigurationCoordinates coordinates,
+    @Override public void set(@NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters) {
         // No-op.
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfigurationParameters retrieve(
+    @Override public @NotNull TracingConfigurationParameters get(
         @NotNull TracingConfigurationCoordinates coordinates) {
         return TracingConfiguration.NOOP_CONFIGURATION;
     }
 
     /** {@inheritDoc} */
     @Override
-    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveAll() {
+    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll() {
         return Collections.emptyMap();
     }
 

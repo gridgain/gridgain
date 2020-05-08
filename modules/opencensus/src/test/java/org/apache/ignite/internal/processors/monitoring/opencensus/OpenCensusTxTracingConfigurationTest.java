@@ -54,7 +54,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
     public void testTxConfigurationSamplingRateNeverPreventsTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_NEVER).build());
 
@@ -78,7 +78,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
     public void testTxConfigurationSamplingRateAlwaysEnablesTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
@@ -104,7 +104,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
     public void testTxConfigurationSamplingRateHalfSamplesSomethingAboutHalfTransactions() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(0.5).build());
 
@@ -135,7 +135,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
     public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptySupportedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
@@ -169,7 +169,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
     public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxSupportedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).
@@ -209,7 +209,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
 
         final String txLbNotToBeTraced = "label2";
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).withLabel(txLbToBeTraced).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
@@ -247,7 +247,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
     public void testThatScopeSpecificConfigurationIsUsedIfLabelSpecificNotFound() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().apply(
+        client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 

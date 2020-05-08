@@ -64,7 +64,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     @Override public void before() throws Exception {
         super.before();
 
-        grid(0).tracingConfiguration().apply(
+        grid(0).tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());

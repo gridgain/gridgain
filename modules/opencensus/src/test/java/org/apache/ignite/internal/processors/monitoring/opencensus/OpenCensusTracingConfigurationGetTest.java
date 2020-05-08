@@ -37,23 +37,23 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
     }
 
     /**
-     * Ensure that label specific configuration retrieval returns default scope specific if there's
+     * Ensure that label specific configuration get returns default scope specific if there's
      * neither corresponding custom label specific nor corresponding custom scope specific.
      */
     @Test
-    public void testThatLabelSpecificConfigurationRetrievalReturnsDefaultIfCustomConfigurationNotSet() {
+    public void testThatLabelSpecificConfigurationGetReturnsDefaultIfCustomConfigurationNotSet() {
         assertEquals(
             TracingConfiguration.DEFAULT_TX_CONFIGURATION,
-            grid(0).tracingConfiguration().retrieve(
+            grid(0).tracingConfiguration().get(
                 new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build()));
     }
 
     /**
-     * Ensure that label specific configuration retrieval returns custom scope specific if there's no
+     * Ensure that label specific configuration get returns custom scope specific if there's no
      * corresponding custom label specific one.
      */
     @Test
-    public void testThatLabelSpecificConfigurationRetrievalReturnsCustomScopeSpecificIfLabelSpecificIsNotSet() {
+    public void testThatLabelSpecificConfigurationGetReturnsCustomScopeSpecificIfLabelSpecificIsNotSet() {
         TracingConfigurationCoordinates coords =
             new TracingConfigurationCoordinates.Builder(TX).build();
 
@@ -62,19 +62,19 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
                 withSamplingRate(0.2).
                 withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
 
-        grid(0).tracingConfiguration().apply(coords, expScopeSpecificParameters);
+        grid(0).tracingConfiguration().set(coords, expScopeSpecificParameters);
 
         assertEquals(
             expScopeSpecificParameters,
-            grid(0).tracingConfiguration().retrieve(
+            grid(0).tracingConfiguration().get(
                 new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build()));
     }
 
     /**
-     * Ensure that label specific configuration retrieval returns custom label specific is such one is present.
+     * Ensure that label specific configuration get returns custom label specific is such one is present.
      */
     @Test
-    public void testThatLabelSpecificConfigurationRetrievalReturnsLabelSpecificOne() {
+    public void testThatLabelSpecificConfigurationGetReturnsLabelSpecificOne() {
         TracingConfigurationCoordinates coords =
             new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build();
 
@@ -83,30 +83,30 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
                 withSamplingRate(0.35).
                 withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
 
-        grid(0).tracingConfiguration().apply(coords, expScopeSpecificParameters);
+        grid(0).tracingConfiguration().set(coords, expScopeSpecificParameters);
 
         assertEquals(
             expScopeSpecificParameters,
-            grid(0).tracingConfiguration().retrieve(coords));
+            grid(0).tracingConfiguration().get(coords));
     }
 
     /**
-     * Ensure that scope specific configuration retrieval returns default scope specific if there's no corresponding
+     * Ensure that scope specific configuration get returns default scope specific if there's no corresponding
      * custom specific one.
      */
     @Test
-    public void testThatScopeSpecificConfigurationRetrievalReturnsDefaultOneIfCustomConfigurationNotSet() {
+    public void testThatScopeSpecificConfigurationGetReturnsDefaultOneIfCustomConfigurationNotSet() {
         assertEquals(
             TracingConfiguration.DEFAULT_TX_CONFIGURATION,
-            grid(0).tracingConfiguration().retrieve(
+            grid(0).tracingConfiguration().get(
                 new TracingConfigurationCoordinates.Builder(TX).build()));
     }
 
     /**
-     * Ensure that scope specific configuration retrieval returns corresponding custom specific one if it's available.
+     * Ensure that scope specific configuration get returns corresponding custom specific one if it's available.
      */
     @Test
-    public void testThatScopeSpecificConfigurationRetrievalReturnsCustomScopeSpecific() {
+    public void testThatScopeSpecificConfigurationGetReturnsCustomScopeSpecific() {
         TracingConfigurationCoordinates coords =
             new TracingConfigurationCoordinates.Builder(TX).build();
 
@@ -115,19 +115,19 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
                 withSamplingRate(0.2).
                 withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
 
-        grid(0).tracingConfiguration().apply(coords, expScopeSpecificParameters);
+        grid(0).tracingConfiguration().set(coords, expScopeSpecificParameters);
 
         assertEquals(
             expScopeSpecificParameters,
-            grid(0).tracingConfiguration().retrieve(coords));
+            grid(0).tracingConfiguration().get(coords));
     }
 
     /**
-     * Ensure that scope specific configuration retrieval returns corresponding custom specific one if it's available
+     * Ensure that scope specific configuration get returns corresponding custom specific one if it's available
      * and ignores label specific one.
      */
     @Test
-    public void testThatScopeSpecificConfigurationRetrievalReturnsScopeSpecificEventIfLabelSpecificIsSet() {
+    public void testThatScopeSpecificConfigurationGetReturnsScopeSpecificEventIfLabelSpecificIsSet() {
         TracingConfigurationCoordinates scopeSpecificCoords =
             new TracingConfigurationCoordinates.Builder(TX).build();
 
@@ -139,10 +139,10 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
                 withSamplingRate(0.35).
                 withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
 
-        grid(0).tracingConfiguration().apply(lbSpecificCoords, expScopeSpecificParameters);
+        grid(0).tracingConfiguration().set(lbSpecificCoords, expScopeSpecificParameters);
 
         assertEquals(
             TracingConfiguration.DEFAULT_TX_CONFIGURATION,
-            grid(0).tracingConfiguration().retrieve(scopeSpecificCoords));
+            grid(0).tracingConfiguration().get(scopeSpecificCoords));
     }
 }

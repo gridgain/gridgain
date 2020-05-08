@@ -81,20 +81,20 @@ public interface TracingConfiguration {
             build();
 
     /**
-     * Apply new tracing configuration for the specific tracing coordinates (scope, label, etc.).
+     * Set new tracing configuration for the specific tracing coordinates (scope, label, etc.).
      * If tracing configuration with specified coordinates already exists it'll be overrided,
      * otherwise new one will be created.
      *
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label,
      *  that defines subset of traces and/or spans that'll use given configuration.
      * @param parameters {@link TracingConfigurationParameters} e.g. sampling rate, set of supported scopes etc.
-     * @throws IgniteException If failed to apply tracing configuration.
+     * @throws IgniteException If failed to set tracing configuration.
      */
-    void apply(@NotNull TracingConfigurationCoordinates coordinates,
+    void set(@NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters) throws IgniteException;
 
     /**
-     * Retrieve the most specific tracing parameters for the specified tracing coordinates (scope, label, etc.).
+     * Get the most specific tracing parameters for the specified tracing coordinates (scope, label, etc.).
      * The most specific means:
      * <ul>
      *     <li>
@@ -114,9 +114,9 @@ public interface TracingConfiguration {
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label
      *  that defines a subset of traces and/or spans that'll use given configuration.
      * @return {@link TracingConfigurationParameters} instance.
-     * @throws IgniteException If failed to retrieve tracing configuration.
+     * @throws IgniteException If failed to get tracing configuration.
      */
-    default @NotNull TracingConfigurationParameters retrieve(
+    default @NotNull TracingConfigurationParameters get(
         @NotNull TracingConfigurationCoordinates coordinates) throws IgniteException
     {
         switch (coordinates.scope()) {
@@ -146,9 +146,9 @@ public interface TracingConfiguration {
      * List all pairs of tracing configuration coordinates and tracing configuration parameters.
      *
      * @return The whole set of tracing configuration.
-     * @throws IgniteException If failed to retrieve tracing configuration.
+     * @throws IgniteException If failed to get tracing configuration.
      */
-    @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveAll() throws IgniteException;
+    @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll() throws IgniteException;
 
     /**
      * Reset tracing configuration for the specific tracing coordinates (scope, label, etc.) to default values.

@@ -84,7 +84,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override public void apply(
+    @Override public void set(
         @NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters)
     {
@@ -136,7 +136,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfigurationParameters retrieve(
+    @Override public @NotNull TracingConfigurationParameters get(
         @NotNull TracingConfigurationCoordinates coordinates) {
         DistributedMetaStorage metaStore;
 
@@ -148,7 +148,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 " Default value will be used.");
 
             // If metastorage in not available — use scope specific default tracing configuration.
-            return TracingConfiguration.super.retrieve(coordinates);
+            return TracingConfiguration.super.get(coordinates);
         }
 
         if (metaStore == null) {
@@ -156,7 +156,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 " Default value will be used.");
 
             // If metastorage in not available — use scope specific default tracing configuration.
-            return TracingConfiguration.super.retrieve(coordinates);
+            return TracingConfiguration.super.get(coordinates);
         }
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
@@ -175,12 +175,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 true);
 
             // In case of exception during retrieving configuration from metastorage — use scope specific default one.
-            return TracingConfiguration.super.retrieve(coordinates);
+            return TracingConfiguration.super.get(coordinates);
         }
 
         // If the configuration was not found — use scope specific default one.
         if (scopeSpecificTracingConfiguration == null)
-            return TracingConfiguration.super.retrieve(coordinates);
+            return TracingConfiguration.super.get(coordinates);
 
         // Retrieving scope + label specific tracing configuration.
         TracingConfigurationParameters lbBasedTracingConfiguration =
@@ -199,12 +199,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
         // If neither scope + label specific nor just scope specific configuration was found —
         // use scope specific default one.
-        return TracingConfiguration.super.retrieve(coordinates);
+        return TracingConfiguration.super.get(coordinates);
     }
 
     /** {@inheritDoc} */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") @Override
-    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveAll() {
+    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll() {
         DistributedMetaStorage metaStore;
 
         try {
