@@ -1432,14 +1432,18 @@ public class GridDhtPartitionDemander {
 
         /** {@inheritDoc} */
         @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err) {
-            if (super.onDone(res, err)) {
-                try {
-                    if (availablePrintRebalanceStatistics() && !isInitial())
+            if (availablePrintRebalanceStatistics() && !isInitial()) {
+                // Avoid race with next rebalancing.
+                listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                    @Override public void apply(IgniteInternalFuture<Boolean> fut) {
                         printRebalanceStatistics();
-                }
-                catch (IgniteCheckedException e) {
-                    log.warning("Failed to print rebalance statistic for cache " + grp.cacheOrGroupName(), e);
-                }
+                    }
+                });
+            }
+
+            if (super.onDone(res, err)) {
+                if (!isInitial() && log.isInfoEnabled())
+                    log.info("Completed rebalance future: " + this);
 
                 // There is no need to start rebalancing for the next cache group if reassign request is issued.
                 if (next != null)
@@ -1698,18 +1702,6 @@ public class GridDhtPartitionDemander {
             }
         }
 
-        /** {@inheritDoc} */
-        @Override protected final boolean onDone(@Nullable Boolean res, @Nullable Throwable err, boolean cancel) {
-            if (super.onDone(res, err, cancel)) {
-                if (!isInitial() && log.isInfoEnabled())
-                    log.info("Completed rebalance future: " + this);
-
-                return true;
-            }
-
-            return false;
-        }
-
         /**
          * @return Collection of supplier nodes. Value {@code empty} means rebalance already finished.
          */
@@ -1834,7 +1826,7 @@ public class GridDhtPartitionDemander {
          *
          * @throws IgniteCheckedException If error occurs.
          */
-        private void printRebalanceStatistics() throws IgniteCheckedException {
+        private void printRebalanceStatistics() {
             assert isDone() : "RebalanceFuture should be done.";
             assert availablePrintRebalanceStatistics();
             assert nonNull(stat);
@@ -1845,7 +1837,7 @@ public class GridDhtPartitionDemander {
             stat.end(U.currentTimeMillis());
 
             if (log.isInfoEnabled())
-                log.info(cacheGroupRebalanceStatistics(grp, stat, get(), topVer));
+                log.info(cacheGroupRebalanceStatistics(grp, stat, result(), topVer));
 
             totalStat.merge(stat);
             stat.reset();
@@ -1854,7 +1846,7 @@ public class GridDhtPartitionDemander {
             for (GridCacheContext<?, ?> cacheCtx : ctx.cacheContexts()) {
                 IgniteInternalFuture<Boolean> rebFut = cacheCtx.preloader().rebalanceFuture();
 
-                if (!rebFut.isDone() || !rebFut.get())
+                if (!rebFut.isDone() || !rebFut.result())
                     return;
             }
 
