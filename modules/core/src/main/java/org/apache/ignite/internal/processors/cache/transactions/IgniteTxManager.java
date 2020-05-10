@@ -169,8 +169,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         Integer.getInteger(IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE, 256);
 
     /** Node left rollback message. */
-    static final String NODE_LEFT_ROLLBACK_MSG = "Primary owner [nodeId=%s, consistentId=%s] of an affected partition has left the topology." +
-        " The transaction was rolled back.";
+    static final String NODE_LEFT_ROLLBACK_MSG = "Primary owner [nodeId=%s, consistentId=%s] of an affected partition " +
+        "has left the topology. The transaction was rolled back.";
 
     /** Deadlock detection maximum iterations. */
     static int DEADLOCK_MAX_ITERS =
@@ -3015,7 +3015,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     }
 
                     if (tx.near() && tx.state() == ACTIVE && ((GridNearTxLocal)tx).mappings().get(evtNodeId) != null) {
-                        tx.commitError(new ClusterTopologyCheckedException(String.format(NODE_LEFT_ROLLBACK_MSG, evtNodeId, node.consistentId())));
+                        tx.commitError(new ClusterTopologyCheckedException(String.format(NODE_LEFT_ROLLBACK_MSG,
+                            evtNodeId, node.consistentId())));
 
                         ((GridNearTxLocal)tx).rollbackNearTxLocalAsync(false, false);
                     }

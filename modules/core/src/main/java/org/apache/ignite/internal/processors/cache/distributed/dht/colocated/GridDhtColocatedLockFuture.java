@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlock;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
+import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -575,10 +576,11 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
      */
     @Override public boolean cancel() {
         if (inTx()) {
-            onError(tx.rollbackException());
+            onError(tx.commitError() != null ?
+                new IgniteTxRollbackCheckedException(tx.commitError()) : tx.rollbackException());
 
             /** Should wait until {@link mappings} are ready before continuing with async rollback
-             * or some primary nodes might not receive tx finish messages because of race.
+             * or some primary nodes might not receive tx finish messages because of a race.
              * If prepare phase has not started waiting is not necessary.
              */
             synchronized (this) {
