@@ -17,13 +17,12 @@ package org.apache.ignite.development.utils.indexreader;
 
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.lang.IgniteBiTuple;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- *
+ * Page lists info.
  */
 class PageListsInfo {
     /**
@@ -36,17 +35,24 @@ class PageListsInfo {
     final Set<Long> allPages;
 
     /** Page type statistics. */
-    final Map<Class, Long> pageListStat;
+    final Map<Class<?>, Long> pageListStat;
 
     /** Map of errors, pageId -> list of exceptions. */
     final Map<Long, List<Throwable>> errors;
 
-    /** */
+    /**
+     * Constructor.
+     *
+     * @param bucketsData Page list bucket data.
+     * @param allPages All page ids from page lists.
+     * @param pageListStat Page type statistics.
+     * @param errors Map of errors, pageId -> list of exceptions.
+     */
     public PageListsInfo(
-            Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData,
-            Set<Long> allPages,
-            Map<Class, Long> pageListStat,
-            Map<Long, List<Throwable>> errors
+        Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData,
+        Set<Long> allPages,
+        Map<Class<?>, Long> pageListStat,
+        Map<Long, List<Throwable>> errors
     ) {
         this.bucketsData = bucketsData;
         this.allPages = allPages;
