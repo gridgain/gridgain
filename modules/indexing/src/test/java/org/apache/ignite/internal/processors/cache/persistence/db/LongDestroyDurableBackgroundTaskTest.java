@@ -510,6 +510,8 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
         assertFalse(lsnr3.check());
 
         testLog.unregisterListener(lsnr);
+        testLog.unregisterListener(lsnr2);
+        testLog.unregisterListener(lsnr3);
 
         for (int i = 0; i < NODES_COUNT; i++)
             grid(i);

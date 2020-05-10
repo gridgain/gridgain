@@ -86,9 +86,10 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     private void asyncDurableBackgroundTasksExecution() {
         assert durableBackgroundTasks != null;
 
-        for (DurableBackgroundTask task : durableBackgroundTasks.values())
+        for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
             if (startedTasks.add(task.shortName()))
                 asyncDurableBackgroundTaskExecute(task);
+        }
     }
 
     /**
