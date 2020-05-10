@@ -39,12 +39,12 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -170,7 +170,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setGroupName(CACHE_GROUP_NAME)
                 .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
-                .setSqlSchema("PUBLIC"),
+                .setSqlSchema(QueryUtils.DFLT_SCHEMA),
             new CacheConfiguration(EMPTY_CACHE_NAME)
                 .setGroupName(EMPTY_CACHE_GROUP_NAME),
             new CacheConfiguration(QUERY_CACHE_NAME)
@@ -560,7 +560,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     private String runIndexReader(File workDir, String cacheGrp, String[] idxs, boolean checkParts) throws IgniteCheckedException {
         File dir = new File(workDir, "cacheGroup-" + cacheGrp);
 
-        OutputStream destStream = new StringBuilderOutputStream();
+        OutputStream destStream = new ByteArrayOutputStream();
 
         try (IgniteIndexReader reader = new IgniteIndexReader(
             dir.getAbsolutePath(),
@@ -754,14 +754,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void test_0() throws Exception {
         // TODO: implements
 
-        fullSnapshotDir = new File(
-            "C:/Users/tkalk/IdeaProjects/apache-ignite/work/snapshot/ts_20200508164857_1588945737117.snapshot/bc61ff10_a92b_4607_9a54_02d6d4b37340"
-        );
-
         File baseDestDir = new File(resolveSnapshotDirectory(), "tmp");
 
         try {
-
             for (Path path : Files.newDirectoryStream(fullSnapshotDir.toPath(), Files::isDirectory)) {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -778,6 +773,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                     log.info(String.format("RESULT snapDir=%s destDir=%s res=%s", path, destDir, baos));
                 }
             }
+
+            log.info("FINISH");
         }
         finally {
             U.delete(baseDestDir);

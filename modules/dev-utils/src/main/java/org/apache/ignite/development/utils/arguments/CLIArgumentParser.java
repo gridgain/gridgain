@@ -23,23 +23,28 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 
+import static java.util.Objects.isNull;
 import static java.util.stream.Collectors.toSet;
 
 /**
  * Parser for command line arguments.
  */
 public class CLIArgumentParser {
-    /** */
-    private final Map<String, CLIArgument> argConfiguration = new LinkedHashMap<>();
+    /** Configuration of arguments. */
+    private final Map<String, CLIArgument<?>> argConfiguration = new LinkedHashMap<>();
 
-    /** */
+    /** Parsed arguments. */
     private final Map<String, Object> parsedArgs = new HashMap<>();
 
-    /** */
-    public CLIArgumentParser(List<CLIArgument> argConfiguration) {
-        for (CLIArgument cliArgument : argConfiguration)
+    /**
+     * Constructor.
+     *
+     * @param argConfiguration Configuration of arguments.
+     */
+    public CLIArgumentParser(List<CLIArgument<?>> argConfiguration) {
+        for (CLIArgument<?> cliArgument : argConfiguration)
             this.argConfiguration.put(cliArgument.name(), cliArgument);
     }
 
@@ -47,7 +52,7 @@ public class CLIArgumentParser {
      * Parses arguments using iterator. Parsed argument value are available through {@link #get(CLIArgument)}
      * and {@link #get(String)}.
      *
-     * @param argsIter Iterator.
+     * @param argsIter Argument iterator.
      */
     public void parse(Iterator<String> argsIter) {
         Set<String> obligatoryArgs =
@@ -56,9 +61,9 @@ public class CLIArgumentParser {
         while (argsIter.hasNext()) {
             String arg = argsIter.next();
 
-            CLIArgument cliArg = argConfiguration.get(arg);
+            CLIArgument<?> cliArg = argConfiguration.get(arg);
 
-            if (cliArg == null)
+            if (isNull(cliArg))
                 throw new IgniteException("Unexpected argument: " + arg);
 
             if (cliArg.type().equals(Boolean.class))
@@ -79,8 +84,14 @@ public class CLIArgumentParser {
             throw new IgniteException("Mandatory argument(s) missing: " + obligatoryArgs);
     }
 
-    /** */
-    private Object parseVal(String val, Class type) {
+    /**
+     * Parse value.
+     *
+     * @param val Value.
+     * @param type Type.
+     * @return Parsed value.
+     */
+    private Object parseVal(String val, Class<?> type) {
         switch (type.getSimpleName()) {
             case "String": return val;
 
@@ -103,13 +114,10 @@ public class CLIArgumentParser {
      * @param <T> Value type.
      * @return Value.
      */
-    public <T> T get(CLIArgument arg) {
+    public <T> T get(CLIArgument<?> arg) {
         Object val = parsedArgs.get(arg.name());
 
-        if (val == null)
-            return (T)arg.defaultValueSupplier().get();
-        else
-            return (T)val;
+        return isNull(val) ? (T)arg.defaultValueSupplier().get() : (T)val;
     }
 
     /**
@@ -120,9 +128,9 @@ public class CLIArgumentParser {
      * @return Value.
      */
     public <T> T get(String name) {
-        CLIArgument arg = argConfiguration.get(name);
+        CLIArgument<?> arg = argConfiguration.get(name);
 
-        if (arg == null)
+        if (isNull(arg))
             throw new IgniteException("No such argument: " + name);
 
         return get(arg);
@@ -134,12 +142,12 @@ public class CLIArgumentParser {
      * @return Usage.
      */
     public String usage() {
-        GridStringBuilder sb = new GridStringBuilder("Usage: ");
+        SB sb = new SB("Usage: ");
 
-        for (CLIArgument arg : argConfiguration.values())
-            sb.a(argNameForUsage(arg)).a(" ");
+        for (CLIArgument<?> arg : argConfiguration.values())
+            sb.a(argNameForUsage(arg)).a(' ');
 
-        for (CLIArgument arg : argConfiguration.values()) {
+        for (CLIArgument<?> arg : argConfiguration.values()) {
             Object dfltVal = null;
 
             try {
@@ -151,18 +159,20 @@ public class CLIArgumentParser {
 
             sb.a("\n\n").a(arg.name()).a(": ").a(arg.usage());
 
-            if(arg.optional())
+            if (arg.optional())
                 sb.a(" Default value: ").a(dfltVal);
         }
 
         return sb.toString();
     }
 
-    /** */
-    private String argNameForUsage(CLIArgument arg) {
-        if (arg.optional())
-            return "[" + arg.name() + "]";
-        else
-            return arg.name();
+    /**
+     * Get argument name for usage description.
+     *
+     * @param arg Argument.
+     * @return Argument name.
+     */
+    private String argNameForUsage(CLIArgument<?> arg) {
+        return arg.optional() ? "[" + arg.name() + "]" : arg.name();
     }
 }
