@@ -3015,8 +3015,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     }
 
                     if (tx.near() && tx.state() == ACTIVE && ((GridNearTxLocal)tx).mappings().get(evtNodeId) != null) {
-                        tx.commitError(new ClusterTopologyCheckedException(String.format(NODE_LEFT_ROLLBACK_MSG,
-                            evtNodeId, node.consistentId())));
+                        ClusterTopologyCheckedException ex = new ClusterTopologyCheckedException(String.format(NODE_LEFT_ROLLBACK_MSG,
+                            evtNodeId, node.consistentId()));
+                        ex.retryReadyFuture(cctx.nextAffinityReadyFuture(tx.topologyVersion()));
+
+                        tx.commitError(ex);
 
                         ((GridNearTxLocal)tx).rollbackNearTxLocalAsync(false, false);
                     }
