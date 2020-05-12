@@ -28,7 +28,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
@@ -108,34 +107,46 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRemoveTypeOnNodes() throws Exception {
-        for (Ignite ignCreateType : G.allGrids()) {
-            for (Ignite ignRemoveType : G.allGrids()) {
-                for (Ignite ignRecreateType : G.allGrids()) {
-                    log.info("+++ Check [createOn=" + ignCreateType.name() +
-                        ", removeOn=" + ignRemoveType.name() + ", recreateOn=" + ignRecreateType.name());
+        IgniteEx [][] testNodeSets = new IgniteEx[][] {
+            {grid("srv0"), grid("srv0"), grid("srv0")},
+            {grid("srv0"), grid("srv1"), grid("srv1")},
+            {grid("srv0"), grid("srv1"), grid("srv2")},
+            {grid("srv0"), grid("srv1"), grid("srv2")},
+            {grid("srv1"), grid("srv1"), grid("srv1")},
+            {grid("srv1"), grid("srv2"), grid("srv0")},
+            {grid("srv0"), grid("cli0"), grid("cli0")},
+            {grid("cli0"), grid("cli0"), grid("cli0")},
+            {grid("cli0"), grid("cli1"), grid("cli2")},
+        };
 
-                    BinaryObjectBuilder builder0 = ignCreateType.binary().builder("Type0");
+        for (IgniteEx [] testNodeSet : testNodeSets) {
+            IgniteEx ignCreateType = testNodeSet[0];
+            IgniteEx ignRemoveType = testNodeSet[1];
+            IgniteEx ignRecreateType = testNodeSet[2];
 
-                    builder0.setField("f", 1);
-                    builder0.build();
+            log.info("+++ Check [createOn=" + ignCreateType.name() +
+                ", removeOn=" + ignRemoveType.name() + ", recreateOn=" + ignRecreateType.name());
 
-                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
+            BinaryObjectBuilder builder0 = ignCreateType.binary().builder("Type0");
 
-                    removeType((IgniteEx)ignRemoveType, "Type0");
+            builder0.setField("f", 1);
+            builder0.build();
 
-                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
+            delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-                    BinaryObjectBuilder builder1 = ignRecreateType.binary().builder("Type0");
-                    builder1.setField("f", "string");
-                    builder1.build();
+            removeType((IgniteEx)ignRemoveType, "Type0");
 
-                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
+            delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-                    removeType((IgniteEx)ignRemoveType, "Type0");
+            BinaryObjectBuilder builder1 = ignRecreateType.binary().builder("Type0");
+            builder1.setField("f", "string");
+            builder1.build();
 
-                    delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
-                }
-            }
+            delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
+
+            removeType((IgniteEx)ignRemoveType, "Type0");
+
+            delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
         }
     }
 
