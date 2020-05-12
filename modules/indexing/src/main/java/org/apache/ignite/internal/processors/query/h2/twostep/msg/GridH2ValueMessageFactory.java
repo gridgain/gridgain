@@ -158,11 +158,9 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
             case Value.STRING_IGNORECASE:
                 return new GridH2String(v);
 
+            case Value.ROW: // Intentionally converts Value.ROW to GridH2Array to preserve compatibility
             case Value.ARRAY:
                 return new GridH2Array(v);
-
-            case Value.ROW:
-                return new GridH2Row(v);
 
             case Value.JAVA_OBJECT:
                 if (v instanceof GridH2ValueCacheObject)
