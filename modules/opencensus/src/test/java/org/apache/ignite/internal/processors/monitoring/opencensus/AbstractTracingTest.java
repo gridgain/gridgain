@@ -116,6 +116,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** Wrapper of test exporter handler. */
     private OpenCensusTraceExporter exporter;
 
+    /**
+     * @return Tracing SPI to be used within tests.
+     */
     protected abstract TracingSpi getTracingSpi();
 
     /** {@inheritDoc} */
@@ -178,6 +181,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
+    /**
+     * @return Handler.
+     */
     protected OpenCensusTxTracingTest.TraceExporterTestHandler handler() {
         return hnd;
     }
@@ -326,6 +332,10 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
             return spanChain;
         }
 
+        /**
+         * @param igniteInstanceName Ignite instance name.
+         * @return Stream of SpanData.
+         */
         public Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
             return collectedSpans.values().stream()
                 .filter(spanData -> stringAttributeValue(igniteInstanceName)
