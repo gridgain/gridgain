@@ -88,7 +88,7 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check commit changed BinaryObject to non-backup node
+     * Check commit changed BinaryObject to non-backup cache
      */
     @Test
     public void testTxNoBackups() {
@@ -126,10 +126,13 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
         catch (Exception e) {
             assertTrue(e.getMessage().startsWith("Wrong value has been set"));
         }
+
+        assertEquals(123, fooCache.get(1).intField);
+
     }
 
     /**
-     * Check commit changed BinaryObject to replicated node
+     * Check commit changed BinaryObject to replicated cache
      */
     @Test
     public void testTxReplicated(){
@@ -176,6 +179,11 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
         catch (Exception e) {
             assertTrue(e.getMessage().startsWith("Wrong value has been set"));
         }
+
+        assertEquals(1, fooCache.get(1).intField);
+
+        assertEquals(2, fooCache.get(2).intField);
+
     }
 
     /**
