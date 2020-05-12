@@ -409,7 +409,6 @@ final class BinaryMetadataTransport {
         MetadataUpdateResultFuture resFut;
 
         do {
-
             resFut = new MetadataUpdateResultFuture(typeId);
         }
         while (!putAndWaitPendingUpdate(typeId, resFut));
@@ -527,7 +526,6 @@ final class BinaryMetadataTransport {
      *
      */
     private final class MetadataUpdateProposedListener implements CustomEventListener<MetadataUpdateProposedMessage> {
-
         /** {@inheritDoc} */
         @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
             MetadataUpdateProposedMessage msg) {
@@ -542,47 +540,56 @@ final class BinaryMetadataTransport {
 
             BinaryMetadataHolder holder = metaLocCache.get(typeId);
 
-            int pendingVer;
-            int acceptedVer;
+            int pendingVer = -1;
+            int acceptedVer = -1;
 
             if (msg.pendingVersion() == 0) {
                 //coordinator receives update request
                 if (holder != null) {
-                    if (holder.removing())
+                    if (holder.removing()) {
+                        log.info("+++ Update removing on coordinator");
                         msg.markRejected(new BinaryObjectException("The type is removing now [typeId=" + typeId + ']'));
+                    }
+                    else {
+                        log.info("+++ Update not removing on coord 0");
 
-                    pendingVer = holder.pendingVersion() + 1;
-                    acceptedVer = holder.acceptedVersion();
+                        pendingVer = holder.pendingVersion() + 1;
+                        acceptedVer = holder.acceptedVersion();
+                    }
                 }
                 else {
+                    log.info("+++ Update not removing on coord 1");
+
                     pendingVer = 1;
                     acceptedVer = 0;
                 }
 
-                msg.pendingVersion(pendingVer);
-                msg.acceptedVersion(acceptedVer);
+                if (!msg.rejected()) {
+                    msg.pendingVersion(pendingVer);
+                    msg.acceptedVersion(acceptedVer);
 
-                BinaryMetadata locMeta = holder != null ? holder.metadata() : null;
+                    BinaryMetadata locMeta = holder != null ? holder.metadata() : null;
 
-                try {
-                    Set<Integer> changedSchemas = new LinkedHashSet<>();
+                    try {
+                        Set<Integer> changedSchemas = new LinkedHashSet<>();
 
-                    BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas);
+                        BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas);
 
-                    if (log.isDebugEnabled())
-                        log.debug("Versions are stamped on coordinator" +
-                            " [typeId=" + typeId +
-                            ", changedSchemas=" + changedSchemas +
-                            ", pendingVer=" + pendingVer +
-                            ", acceptedVer=" + acceptedVer + "]"
-                        );
+                        if (log.isDebugEnabled())
+                            log.debug("Versions are stamped on coordinator" +
+                                " [typeId=" + typeId +
+                                ", changedSchemas=" + changedSchemas +
+                                ", pendingVer=" + pendingVer +
+                                ", acceptedVer=" + acceptedVer + "]"
+                            );
 
-                    msg.metadata(mergedMeta);
-                }
-                catch (BinaryObjectException err) {
-                    log.warning("Exception with merging metadata for typeId: " + typeId, err);
+                        msg.metadata(mergedMeta);
+                    }
+                    catch (BinaryObjectException err) {
+                        log.warning("Exception with merging metadata for typeId: " + typeId, err);
 
-                    msg.markRejected(err);
+                        msg.markRejected(err);
+                    }
                 }
             }
             else {
@@ -643,7 +650,7 @@ final class BinaryMetadataTransport {
             }
             else {
                 if (!msg.rejected()) {
-                    BinaryMetadata locMeta = holder != null ? holder.metadata() : null;
+                    BinaryMetadata locMeta = holder != null && !holder.removing() ? holder.metadata() : null;
 
                     Set<Integer> changedSchemas = new LinkedHashSet<>();
 
@@ -681,6 +688,7 @@ final class BinaryMetadataTransport {
                         }
                     }
                     catch (BinaryObjectException ignored) {
+                        log.error("+++ Exception", ignored);
                         assert false : msg;
                     }
                 }
@@ -998,34 +1006,24 @@ final class BinaryMetadataTransport {
 
             final int typeId = msg.typeId();
 
-            BinaryMetadataHolder metaHld = metaLocCache.get(typeId);
+            if (!metaLocCache.containsKey(typeId)) {
+                log.info("+++ DUPPP");
+                msg.duplicated(true);
 
-            assert metaHld != null : "No metadata found for typeId " + typeId;
-
-            final GridFutureAdapter<MetadataUpdateResult> fut = syncMap.get(new SyncKey(typeId, REMOVED_VERSION));
-
-            if (isPersistenceEnabled) {
-                GridFutureAdapter<Void> rmvFut = metadataFileStore.removeMetadataAsync(typeId);
-
-                if (rmvFut != null) {
-                    rmvFut.listen((IgniteInClosure<IgniteInternalFuture<Void>>)future -> {
-                        metaLocCache.remove(typeId);
-
-                        binCtx.removeType(typeId);
-
-                        if (fut != null)
-                            fut.onDone(MetadataUpdateResult.createSuccessfulResult(REMOVED_VERSION));
-                    });
-                }
+                return;
             }
-            else {
-                metaLocCache.remove(typeId);
 
-                binCtx.removeType(typeId);
+            if (isPersistenceEnabled)
+                metadataFileStore.removeMetadataAsync(typeId);
 
-                if (fut != null)
-                    fut.onDone(MetadataUpdateResult.createSuccessfulResult(REMOVED_VERSION));
-            }
+            GridFutureAdapter<MetadataUpdateResult> fut = syncMap.get(new SyncKey(typeId, REMOVED_VERSION));
+
+            metaLocCache.remove(typeId);
+
+            binCtx.removeType(typeId);
+
+            if (fut != null)
+                fut.onDone(MetadataUpdateResult.createSuccessfulResult(REMOVED_VERSION));
         }
     }
 }

@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.binary;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -28,6 +30,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
@@ -107,17 +110,27 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRemoveTypeOnNodes() throws Exception {
-        IgniteEx [][] testNodeSets = new IgniteEx[][] {
-            {grid("srv0"), grid("srv0"), grid("srv0")},
-            {grid("srv0"), grid("srv1"), grid("srv1")},
-            {grid("srv0"), grid("srv1"), grid("srv2")},
-            {grid("srv0"), grid("srv1"), grid("srv2")},
-            {grid("srv1"), grid("srv1"), grid("srv1")},
-            {grid("srv1"), grid("srv2"), grid("srv0")},
-            {grid("srv0"), grid("cli0"), grid("cli0")},
-            {grid("cli0"), grid("cli0"), grid("cli0")},
-            {grid("cli0"), grid("cli1"), grid("cli2")},
-        };
+        List<IgniteEx[]> testNodeSets = new ArrayList<>();
+
+        // Add all servers permutations to tests sets.
+        for (Ignite ign0 : G.allGrids()) {
+            for (Ignite ign1 : G.allGrids()) {
+                for (Ignite ign2 : G.allGrids()) {
+                    IgniteEx ignx0 = (IgniteEx)ign0;
+                    IgniteEx ignx1 = (IgniteEx)ign1;
+                    IgniteEx ignx2 = (IgniteEx)ign2;
+
+                    if (!ignx0.context().clientNode()
+                        && !ignx1.context().clientNode()
+                        && !ignx2.context().clientNode())
+                        testNodeSets.add(new IgniteEx[]{ignx0, ignx1, ignx2});
+                }
+            }
+        }
+
+        testNodeSets.add(new IgniteEx[]{grid("srv0"), grid("cli0"), grid("cli0")});
+        testNodeSets.add(new IgniteEx[]{grid("cli0"), grid("cli0"), grid("cli0")});
+        testNodeSets.add(new IgniteEx[]{grid("cli0"), grid("cli1"), grid("cli2")});
 
         for (IgniteEx [] testNodeSet : testNodeSets) {
             IgniteEx ignCreateType = testNodeSet[0];
@@ -144,7 +157,9 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-            removeType((IgniteEx)ignRemoveType, "Type0");
+            log.info("+++ INITIAL REMOVE");
+            // Remove type at the end of test case.
+            removeType(grid("srv0"), "Type0");
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
         }

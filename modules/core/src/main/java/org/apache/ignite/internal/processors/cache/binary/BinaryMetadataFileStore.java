@@ -130,6 +130,8 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
+        log.info("+++ WRITE " + binMeta);
+
         try {
             File file = new File(metadataDir, binMeta.typeId() + ".bin");
 
@@ -166,11 +168,13 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
+        log.info("+++ REMOVE " + typeId);
+
         try {
             File file = new File(metadataDir, typeId + ".bin");
 
             if(!file.delete())
-                throw new IgniteException("Cannot remove metadata file: " + file.getAbsolutePath());
+                throw new IgniteException("Cannot remove metadata file: " + file.getAbsolutePath() + ", exists=" + file.exists());
         }
         catch (Exception e) {
             final String msg = "Failed to remove metadata for typeId: " + typeId +
