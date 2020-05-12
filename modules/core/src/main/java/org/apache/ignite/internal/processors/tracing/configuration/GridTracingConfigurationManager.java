@@ -32,9 +32,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Tracing configuration implementation that uses distributed meta storage in order to store tracing configuration.
+ * Tracing configuration manager implementation that uses distributed meta storage
+ * in order to store tracing configuration.
  */
-public class GridTracingConfiguration implements TracingConfiguration {
+public class GridTracingConfigurationManager implements TracingConfigurationManager {
     /** */
     private static final String TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX =
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "tr.config.";
@@ -63,19 +64,19 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
         tmpDfltConfigurationMap.put(
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION);
 
         tmpDfltConfigurationMap.put(
             new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
-            TracingConfiguration.DEFAULT_COMMUNICATION_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_COMMUNICATION_CONFIGURATION);
 
         tmpDfltConfigurationMap.put(
             new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
-            TracingConfiguration.DEFAULT_EXCHANGE_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_EXCHANGE_CONFIGURATION);
 
         tmpDfltConfigurationMap.put(
             new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
-            TracingConfiguration.DEFAULT_DISCOVERY_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_DISCOVERY_CONFIGURATION);
 
         DEFAULT_CONFIGURATION_MAP = Collections.unmodifiableMap(tmpDfltConfigurationMap);
     }
@@ -93,7 +94,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
      *
      * @param ctx Context.
      */
-    public GridTracingConfiguration(@NotNull GridKernalContext ctx) {
+    public GridTracingConfigurationManager(@NotNull GridKernalContext ctx) {
         this.ctx = ctx;
 
         log = ctx.log(getClass());
@@ -149,14 +150,14 @@ public class GridTracingConfiguration implements TracingConfiguration {
             LT.warn(log, WARNING_FAILED_TO_RETRIEVE_CONFIG_METASTORAGE_NOT_AVAILABLE);
 
             // If metastorage in not available — use scope specific default tracing configuration.
-            return TracingConfiguration.super.get(coordinates);
+            return TracingConfigurationManager.super.get(coordinates);
         }
 
         if (metaStore == null) {
             LT.warn(log, WARNING_FAILED_TO_RETRIEVE_CONFIG_METASTORAGE_NOT_AVAILABLE);
 
             // If metastorage in not available — use scope specific default tracing configuration.
-            return TracingConfiguration.super.get(coordinates);
+            return TracingConfigurationManager.super.get(coordinates);
         }
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
@@ -175,12 +176,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 true);
 
             // In case of exception during retrieving configuration from metastorage — use scope specific default one.
-            return TracingConfiguration.super.get(coordinates);
+            return TracingConfigurationManager.super.get(coordinates);
         }
 
         // If the configuration was not found — use scope specific default one.
         if (scopeSpecificTracingConfiguration == null)
-            return TracingConfiguration.super.get(coordinates);
+            return TracingConfigurationManager.super.get(coordinates);
 
         // Retrieving scope + label specific tracing configuration.
         TracingConfigurationParameters lbBasedTracingConfiguration =
@@ -199,7 +200,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
         // If neither scope + label specific nor just scope specific configuration was found —
         // use scope specific default one.
-        return TracingConfiguration.super.get(coordinates);
+        return TracingConfigurationManager.super.get(coordinates);
     }
 
     /** {@inheritDoc} */

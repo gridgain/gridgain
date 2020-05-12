@@ -24,7 +24,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.processors.tracing.DeferredSpan;
-import org.apache.ignite.internal.processors.tracing.configuration.GridTracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.GridTracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.processors.tracing.Scope;
@@ -32,7 +32,7 @@ import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -50,7 +50,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     private final TraceableMessagesHandler msgHnd;
 
     /** Tracing configuration */
-    private final TracingConfiguration tracingConfiguration;
+    private final TracingConfigurationManager tracingConfiguration;
 
     /**
      * Constructor.
@@ -65,7 +65,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         msgHnd = new TraceableMessagesHandler(this, ctx.log(GridTracingManager.class));
 
-        tracingConfiguration = new GridTracingConfiguration(ctx);
+        tracingConfiguration = new GridTracingConfigurationManager(ctx);
     }
 
     /**
@@ -207,7 +207,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfiguration configuration() {
+    @Override public @NotNull TracingConfigurationManager configuration() {
         return tracingConfiguration;
     }
 }

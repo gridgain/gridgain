@@ -41,7 +41,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -95,19 +95,19 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     static {
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION);
 
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
-            TracingConfiguration.DEFAULT_COMMUNICATION_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_COMMUNICATION_CONFIGURATION);
 
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
-            TracingConfiguration.DEFAULT_EXCHANGE_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_EXCHANGE_CONFIGURATION);
 
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
-            TracingConfiguration.DEFAULT_DISCOVERY_CONFIGURATION);
+            TracingConfigurationManager.DEFAULT_DISCOVERY_CONFIGURATION);
     }
 
     /** Test trace exporter handler. */

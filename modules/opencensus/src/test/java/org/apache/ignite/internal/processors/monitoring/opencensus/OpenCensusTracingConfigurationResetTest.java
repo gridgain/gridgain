@@ -21,7 +21,7 @@ import java.util.Map;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FO
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
- * Tests for OpenCensus based {@link TracingConfiguration#reset(TracingConfigurationCoordinates)}.
+ * Tests for OpenCensus based {@link TracingConfigurationManager#reset(TracingConfigurationCoordinates)}.
  */
 public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTest {
     /** {@inheritDoc} */
@@ -87,7 +87,7 @@ public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTes
         grid(0).tracingConfiguration().reset(TX_SCOPE_SPECIFIC_COORDINATES);
 
         // Modify expected tracing configuration map to reflect changes after resetting scope specific configuration.
-        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, TracingConfigurationManager.DEFAULT_TX_CONFIGURATION);
 
         // Check tracing configuration after resetting.
         assertEquals(
@@ -96,7 +96,7 @@ public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTes
 
         // Just in case, assert with simple get()
         assertEquals(
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION,
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION,
             grid(0).tracingConfiguration().get(TX_SCOPE_SPECIFIC_COORDINATES));
 
         assertEquals(

@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.tracing.configuration.TracingConfig
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.internal.processors.tracing.Scope;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED
 import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
- * Tests for OpenCensus based {@link TracingConfiguration#getAll(Scope)}.
+ * Tests for OpenCensus based {@link TracingConfigurationManager#getAll(Scope)}.
  */
 public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTest {
     /** {@inheritDoc} */
@@ -59,7 +59,7 @@ public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTes
     public void testThatDefaultScopeSpecificConfigurationReturnsIfScopeIsSpecifiedAndCustomConfigurationNotSet() {
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg = new HashMap<>();
 
-        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, TracingConfigurationManager.DEFAULT_TX_CONFIGURATION);
 
         assertEquals(
             expTracingCfg,

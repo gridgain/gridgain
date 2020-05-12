@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.monitoring.opencensus;
 import java.util.Collections;
 
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.processors.tracing.Scope.COMMUNICATION;
 import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
- * Tests for OpenCensus based {@link TracingConfiguration#get(TracingConfigurationCoordinates)}.
+ * Tests for OpenCensus based {@link TracingConfigurationManager#get(TracingConfigurationCoordinates)}.
  */
 public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
     /** {@inheritDoc} */
@@ -49,7 +49,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
     @Test
     public void testThatLabelSpecificConfigurationGetReturnsDefaultIfCustomConfigurationNotSet() {
         assertEquals(
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION,
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION,
             grid(0).tracingConfiguration().get(
                 new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build()));
     }
@@ -103,7 +103,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
     @Test
     public void testThatScopeSpecificConfigurationGetReturnsDefaultOneIfCustomConfigurationNotSet() {
         assertEquals(
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION,
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION,
             grid(0).tracingConfiguration().get(
                 new TracingConfigurationCoordinates.Builder(TX).build()));
     }
@@ -148,7 +148,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
         grid(0).tracingConfiguration().set(lbSpecificCoords, expScopeSpecificParameters);
 
         assertEquals(
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION,
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION,
             grid(0).tracingConfiguration().get(scopeSpecificCoords));
     }
 
@@ -164,7 +164,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
     })
     public void testThatDefaultTracingConfigurationIsUsedIfMetastorageIsDisabled() {
         assertEquals(
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION,
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION,
             grid(0).tracingConfiguration().get(TX_SCOPE_SPECIFIC_COORDINATES)
         );
     }

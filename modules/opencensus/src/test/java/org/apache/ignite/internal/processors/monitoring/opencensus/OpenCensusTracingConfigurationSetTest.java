@@ -22,7 +22,7 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.junit.Test;
 
@@ -31,7 +31,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FO
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
- * Tests for OpenCensus based {@link TracingConfiguration#get(TracingConfigurationCoordinates)}.
+ * Tests for OpenCensus based {@link TracingConfigurationManager#get(TracingConfigurationCoordinates)}.
  *
  * There's no sense in duplicating tests for setting scope and label specific configuration
  * cause it's already implemented within {@link OpenCensusTracingConfigurationResetAllTest} test class.

@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,7 +30,7 @@ public interface Tracing extends SpanManager {
     public TraceableMessagesHandler messages();
 
     /**
-     * Returns the {@link TracingConfiguration} instance that allows to
+     * Returns the {@link TracingConfigurationManager} instance that allows to
      * <ul>
      *     <li>Configure tracing parameters such as sampling rate for the specific tracing coordinates
      *          such as scope and label.</li>
@@ -38,7 +38,7 @@ public interface Tracing extends SpanManager {
      *     <li>Restore the tracing parameters for the specified tracing coordinates to the default.</li>
      *     <li>List all pairs of tracing configuration coordinates and tracing configuration parameters.</li>
      * </ul>
-     * @return {@link TracingConfiguration} instance.
+     * @return {@link TracingConfigurationManager} instance.
      */
-    public @NotNull TracingConfiguration configuration();
+    public @NotNull TracingConfigurationManager configuration();
 }

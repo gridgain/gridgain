@@ -25,7 +25,7 @@ import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -37,7 +37,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED
 import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
- * Tests for OpenCensus based {@link TracingConfiguration#resetAll(Scope)}.
+ * Tests for OpenCensus based {@link TracingConfigurationManager#resetAll(Scope)}.
  */
 public class OpenCensusTracingConfigurationResetAllTest extends AbstractTracingTest {
     /** {@inheritDoc} */

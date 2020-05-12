@@ -25,12 +25,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Noop tracing configuration.
+ * Noop tracing configuration manager.
  * To be used mainly with {@link org.apache.ignite.internal.processors.tracing.NoopTracing}.
  */
-public final class NoopTracingConfiguration implements TracingConfiguration {
+public final class NoopTracingConfigurationManager implements TracingConfigurationManager {
     /** */
-    public static final NoopTracingConfiguration INSTANCE = new NoopTracingConfiguration();
+    public static final NoopTracingConfigurationManager INSTANCE = new NoopTracingConfigurationManager();
 
     /** {@inheritDoc} */
     @Override public void set(@NotNull TracingConfigurationCoordinates coordinates,
@@ -41,7 +41,7 @@ public final class NoopTracingConfiguration implements TracingConfiguration {
     /** {@inheritDoc} */
     @Override public @NotNull TracingConfigurationParameters get(
         @NotNull TracingConfigurationCoordinates coordinates) {
-        return TracingConfiguration.NOOP_CONFIGURATION;
+        return TracingConfigurationManager.NOOP_CONFIGURATION;
     }
 
     /** {@inheritDoc} */
