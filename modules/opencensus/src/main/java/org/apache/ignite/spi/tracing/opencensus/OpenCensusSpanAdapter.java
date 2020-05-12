@@ -114,17 +114,6 @@ public class OpenCensusSpanAdapter implements Span {
 
     /** {@inheritDoc} */
     @Override public OpenCensusSpanAdapter end() {
-        try {
-            // TODO: https://ggsystems.atlassian.net/browse/GG-22503
-            // This sleep hack is needed to consider span as sampled.
-            // @see io.opencensus.implcore.trace.export.InProcessSampledSpanStoreImpl.Bucket.considerForSampling
-            // Meaningful only for tracing tests.
-            Thread.sleep(10);
-        }
-        catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
-        }
-
         span.end();
 
         ended = true;
