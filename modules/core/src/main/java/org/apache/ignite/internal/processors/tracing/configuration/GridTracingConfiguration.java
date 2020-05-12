@@ -228,23 +228,33 @@ public class GridTracingConfiguration implements TracingConfiguration {
             String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scopeToRetrieve.name();
 
             try {
-                Map<String, TracingConfigurationParameters> scopeBasedTracingConfig = metaStore.read(scopeSpecificKey);
+                Map<String, TracingConfigurationParameters> scopeBasedTracingCfg = metaStore.read(scopeSpecificKey);
 
-                if (scopeBasedTracingConfig == null) {
+                if (scopeBasedTracingCfg == null) {
+                    res.put(
+                        new TracingConfigurationCoordinates.Builder(scopeToRetrieve).build(),
+                        DEFAULT_CONFIGURATION_MAP.get(
+                            new TracingConfigurationCoordinates.Builder(scopeToRetrieve).build()));
+
+                    continue;
+                }
+
+                // Null keys encapsulates scope specific configuration.
+                if (!scopeBasedTracingCfg.containsKey(null)) {
                     res.put(
                         new TracingConfigurationCoordinates.Builder(scopeToRetrieve).build(),
                         DEFAULT_CONFIGURATION_MAP.get(
                             new TracingConfigurationCoordinates.Builder(scopeToRetrieve).build()));
                 }
-                else {
-                    for (Map.Entry<String, TracingConfigurationParameters> entry :
-                        ((Map<String, TracingConfigurationParameters>)metaStore.read(scopeSpecificKey)).entrySet()) {
-                        res.put(
-                            new TracingConfigurationCoordinates.Builder(scopeToRetrieve).
-                                withLabel(entry.getKey()).build(),
-                            entry.getValue());
-                    }
+
+                for (Map.Entry<String, TracingConfigurationParameters> entry :
+                    ((Map<String, TracingConfigurationParameters>)metaStore.read(scopeSpecificKey)).entrySet()) {
+                    res.put(
+                        new TracingConfigurationCoordinates.Builder(scopeToRetrieve).
+                            withLabel(entry.getKey()).build(),
+                        entry.getValue());
                 }
+
             }
             catch (IgniteCheckedException e) {
                 LT.warn(log, "Failed to retrieve tracing configuration");
@@ -262,17 +272,17 @@ public class GridTracingConfiguration implements TracingConfiguration {
             metaStore = ctx.distributedMetastorage();
         }
         catch (Exception e) {
-            log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
+            log.warning("Failed to reset tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
 
             throw new IgniteException(e);
         }
 
         if (metaStore == null) {
-            log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
+            log.warning("Failed to reset tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
 
-            throw new IgniteException("Failed to restore tracing configuration for coordinates=[" + coordinates +
+            throw new IgniteException("Failed to reset tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
         }
 
@@ -305,14 +315,44 @@ public class GridTracingConfiguration implements TracingConfiguration {
             }
         }
         catch (IgniteCheckedException e) {
-            log.warning("Failed to restore tracing configuration for coordinates=[" + coordinates +
+            log.warning("Failed to reset tracing configuration for coordinates=[" + coordinates +
                 "] to default  — meta storage is not available.");
 
             throw new IgniteException(e);
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void resetAll(@Nullable Scope scope) throws IgniteException {
-        // TODO: 07.05.20
+        DistributedMetaStorage metaStore;
+
+        try {
+            metaStore = ctx.distributedMetastorage();
+        }
+        catch (Exception e) {
+            log.warning("Failed to reset tracing configuration for scope=[" + scope +
+                "] to default  — meta storage is not available.");
+
+            throw new IgniteException(e);
+        }
+
+        if (metaStore == null) {
+            log.warning("Failed to reset tracing configuration for scope=[" + scope +
+                "] to default  — meta storage is not available.");
+
+            throw new IgniteException("Failed to reset tracing configuration for scope=[" + scope +
+                "] to default  — meta storage is not available.");
+        }
+
+        try {
+            for (Scope scopeItem : scope == null ? Scope.values() : new Scope[] {scope})
+                metaStore.remove(TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scopeItem.name());
+        }
+        catch (IgniteCheckedException e) {
+            log.warning("Failed to reset tracing configuration for scope=[" + scope +
+                "] to default  — meta storage is not available.");
+
+            throw new IgniteException(e);
+        }
     }
 }

@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.monitoring.opencensus;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -36,8 +38,12 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -46,6 +52,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
+import static org.apache.ignite.internal.processors.tracing.Scope.COMMUNICATION;
+import static org.apache.ignite.internal.processors.tracing.Scope.EXCHANGE;
+import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
  * Abstract class for open census tracing tests.
@@ -56,6 +65,50 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
 
     /** Span buffer count - hardcode in open census. */
     private static final int SPAN_BUFFER_COUNT = 32;
+
+    /** Default configuration map. */
+    protected static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DFLT_CONFIG_MAP =
+        new HashMap<>();
+
+    /** TX scope specific coordinates to be used within several tests. */
+    protected static final TracingConfigurationCoordinates TX_SCOPE_SPECIFIC_COORDINATES =
+        new TracingConfigurationCoordinates.Builder(TX).build();
+
+    /** EXCHANGE scope specific coordinates to be used within several tests. */
+    protected static final TracingConfigurationCoordinates EXCHANGE_SCOPE_SPECIFIC_COORDINATES =
+        new TracingConfigurationCoordinates.Builder(EXCHANGE).build();
+
+    /** Updated scope specific parameters to be used within several tests. */
+    protected static final TracingConfigurationParameters UPDATED_SCOPE_SPECIFIC_PARAMETERS =
+        new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
+            withincludedScopes(Collections.singleton(COMMUNICATION)).build();
+
+    /** TX Label specific coordinates to be used within several tests. */
+    protected static final TracingConfigurationCoordinates TX_LABEL_SPECIFIC_COORDINATES =
+        new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build();
+
+    /** Updated label specific parameters to be used within several tests. */
+    protected static final TracingConfigurationParameters UPDATED_LABEL_SPECIFIC_PARAMETERS =
+        new TracingConfigurationParameters.Builder().withSamplingRate(0.111).
+            withincludedScopes(Collections.singleton(EXCHANGE)).build();
+
+    static {
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+            TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
+            TracingConfiguration.DEFAULT_COMMUNICATION_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
+            TracingConfiguration.DEFAULT_EXCHANGE_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+            TracingConfiguration.DEFAULT_DISCOVERY_CONFIGURATION);
+    }
 
     /** Test trace exporter handler. */
     private OpenCensusTxTracingTest.TraceExporterTestHandler hnd;

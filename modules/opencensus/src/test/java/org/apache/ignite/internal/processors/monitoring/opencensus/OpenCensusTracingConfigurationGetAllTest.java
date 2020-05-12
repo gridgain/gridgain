@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
@@ -27,54 +26,12 @@ import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.tracing.Scope.COMMUNICATION;
-import static org.apache.ignite.internal.processors.tracing.Scope.EXCHANGE;
 import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
  * Tests for OpenCensus based {@link TracingConfiguration#getAll(Scope)}.
  */
 public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTest {
-    /** Default configuration map. */
-    private static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DFLT_CONFIG_MAP =
-        new HashMap<>();
-
-    /** Scope specific coordinates to be used within several tests. */
-    private static final TracingConfigurationCoordinates SCOPE_SPECIFIC_COORDINATES =
-        new TracingConfigurationCoordinates.Builder(TX).build();
-
-    /** Updated scope specific parameters to be used within several tests. */
-    private static final TracingConfigurationParameters UPDATED_SCOPE_SPECIFIC_PARAMETERS =
-        new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
-            withincludedScopes(Collections.singleton(COMMUNICATION)).build();
-
-    /** Label specific coordinates to be used within several tests. */
-    private static final TracingConfigurationCoordinates LABEL_SPECIFIC_COORDINATES =
-        new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build();
-
-    /** Updated label specific parameters to be used within several tests. */
-    private static final TracingConfigurationParameters UPDATED_LABEL_SPECIFIC_PARAMETERS =
-        new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
-            withincludedScopes(Collections.singleton(EXCHANGE)).build();
-
-    static {
-        DFLT_CONFIG_MAP.put(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
-            TracingConfiguration.DEFAULT_TX_CONFIGURATION);
-
-        DFLT_CONFIG_MAP.put(
-            new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
-            TracingConfiguration.DEFAULT_COMMUNICATION_CONFIGURATION);
-
-        DFLT_CONFIG_MAP.put(
-            new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
-            TracingConfiguration.DEFAULT_EXCHANGE_CONFIGURATION);
-
-        DFLT_CONFIG_MAP.put(
-            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
-            TracingConfiguration.DEFAULT_DISCOVERY_CONFIGURATION);
-    }
-
     /** {@inheritDoc} */
     @Override protected TracingSpi getTracingSpi() {
         return new OpenCensusTracingSpi();
@@ -97,7 +54,7 @@ public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTes
     public void testThatDefaultScopeSpecificConfigurationReturnsIfScopeIsSpecifiedAndCustomConfigurationNotSet() {
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg = new HashMap<>();
 
-        expTracingCfg.put(SCOPE_SPECIFIC_COORDINATES, TracingConfiguration.DEFAULT_TX_CONFIGURATION);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, TracingConfiguration.DEFAULT_TX_CONFIGURATION);
 
         assertEquals(
             expTracingCfg,
@@ -110,16 +67,16 @@ public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTes
      */
     @Test
     public void testThatCustomConfigurationReturnsIfScopeNotSpecifiedAndCustomConfigurationIsSet() {
-        grid(0).tracingConfiguration().set(SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
 
-        grid(0).tracingConfiguration().set(LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg =
             new HashMap<>(DFLT_CONFIG_MAP);
 
-        expTracingCfg.put(SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
 
-        expTracingCfg.put(LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
 
         assertEquals(
             expTracingCfg,
@@ -132,15 +89,15 @@ public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTes
      */
     @Test
     public void testThatCustomScopeSpecificConfigurationReturnsIfScopeIsSpecifiedAndCustomConfigurationIsSet() {
-        grid(0).tracingConfiguration().set(SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
 
-        grid(0).tracingConfiguration().set(LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg = new HashMap<>();
 
-        expTracingCfg.put(SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
 
-        expTracingCfg.put(LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
 
         assertEquals(
             expTracingCfg,
