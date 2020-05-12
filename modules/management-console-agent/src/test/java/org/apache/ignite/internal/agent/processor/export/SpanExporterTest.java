@@ -20,18 +20,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-import com.google.common.collect.Lists;
 import io.opencensus.common.Timestamp;
 import io.opencensus.trace.SpanContext;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.TraceId;
 import io.opencensus.trace.Tracestate;
 import io.opencensus.trace.export.SpanData;
-import org.apache.ignite.internal.agent.dto.tracing.SpanBatch;
-import org.apache.ignite.internal.agent.processor.AbstractServiceTest;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.agent.dto.tracing.SpanBatch;
+import org.apache.ignite.internal.agent.processor.AbstractServiceTest;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
@@ -40,6 +39,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static io.opencensus.trace.TraceOptions.DEFAULT;
+import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
@@ -81,7 +81,7 @@ public class SpanExporterTest extends AbstractServiceTest {
         ClusterGroup grp = mock(ClusterGroup.class);
 
         when(cluster.forServers()).thenReturn(grp);
-        when(grp.nodes()).thenReturn(Lists.newArrayList(new TcpDiscoveryNode()));
+        when(grp.nodes()).thenReturn(asList(new TcpDiscoveryNode()));
 
         IgniteConfiguration cfg = mock(IgniteConfiguration.class);
 
@@ -97,7 +97,7 @@ public class SpanExporterTest extends AbstractServiceTest {
      * @return Span data list.
      */
     private List<SpanData> getSpanData() {
-        return Lists.newArrayList(
+        return asList(
             SpanData.create(
                 SpanContext.create(TraceId.generateRandomId(new Random()), SpanId.generateRandomId(new Random()), DEFAULT, Tracestate.builder().build()),
                 SpanId.generateRandomId(new Random()),
