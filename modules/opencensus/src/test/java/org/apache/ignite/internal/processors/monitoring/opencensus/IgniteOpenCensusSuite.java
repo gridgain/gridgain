@@ -32,7 +32,9 @@ import org.junit.runners.Suite;
     TracingConfigurationValidationTest.class,
 
     // Tracing configuration tests.
-    OpenCensusTxTracingConfigurationTest.class
+    OpenCensusTxTracingConfigurationTest.class,
+    OpenCensusTracingConfigurationGetTest.class,
+    OpenCensusTracingConfigurationGetAllTest.class
 })
 /**
  * Suite to test OpenCensus integration.

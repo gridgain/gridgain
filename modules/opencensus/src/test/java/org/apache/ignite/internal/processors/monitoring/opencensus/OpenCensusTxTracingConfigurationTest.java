@@ -132,7 +132,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
      * @throws Exception If Failed.
      */
     @Test
-    public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptyincludedScopes() throws Exception {
+    public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptyIncludedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
         client.tracingConfiguration().set(
@@ -166,7 +166,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
      * @throws Exception If Failed.
      */
     @Test
-    public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxincludedScopes() throws Exception {
+    public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxIncludedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
         client.tracingConfiguration().set(

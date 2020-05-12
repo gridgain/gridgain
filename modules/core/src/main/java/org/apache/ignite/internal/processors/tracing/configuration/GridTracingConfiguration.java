@@ -204,7 +204,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
     /** {@inheritDoc} */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") @Override
-    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll() {
+    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll(@Nullable Scope scope) {
         DistributedMetaStorage metaStore;
 
         try {
@@ -224,15 +224,26 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> res = new HashMap<>();
 
-        for (Scope scope : Scope.values()) {
-            String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scope.name();
+        for (Scope scopeToRetrieve : scope == null ? Scope.values() : new Scope[] {scope}) {
+            String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scopeToRetrieve.name();
 
             try {
-                for (Map.Entry<String, TracingConfigurationParameters> entry :
-                    ((Map<String, TracingConfigurationParameters>)metaStore.read(scopeSpecificKey)).entrySet()) {
+                Map<String, TracingConfigurationParameters> scopeBasedTracingConfig = metaStore.read(scopeSpecificKey);
+
+                if (scopeBasedTracingConfig == null) {
                     res.put(
-                        new TracingConfigurationCoordinates.Builder(scope).withLabel(entry.getKey()).build(),
-                        entry.getValue());
+                        new TracingConfigurationCoordinates.Builder(scopeToRetrieve).build(),
+                        DEFAULT_CONFIGURATION_MAP.get(
+                            new TracingConfigurationCoordinates.Builder(scopeToRetrieve).build()));
+                }
+                else {
+                    for (Map.Entry<String, TracingConfigurationParameters> entry :
+                        ((Map<String, TracingConfigurationParameters>)metaStore.read(scopeSpecificKey)).entrySet()) {
+                        res.put(
+                            new TracingConfigurationCoordinates.Builder(scopeToRetrieve).
+                                withLabel(entry.getKey()).build(),
+                            entry.getValue());
+                    }
                 }
             }
             catch (IgniteCheckedException e) {
