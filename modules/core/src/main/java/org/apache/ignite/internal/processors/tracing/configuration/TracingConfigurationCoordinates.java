@@ -17,12 +17,13 @@
 package org.apache.ignite.internal.processors.tracing.configuration;
 
 import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Specifies to which traces, specific configuration will be applied. In other words it's a sort of tracing
- * configuration locators.
+ * configuration locator.
  */
 public class TracingConfigurationCoordinates {
     /**
@@ -87,6 +88,11 @@ public class TracingConfigurationCoordinates {
         return res;
     }
 
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(TracingConfigurationCoordinates.class, this);
+    }
+
     /**
      * {@code TracingConfigurationCoordinates} builder.
      */
@@ -101,8 +107,12 @@ public class TracingConfigurationCoordinates {
          * Constructor.
          *
          * @param scope Mandatory scope attribute.
+         * @throws IllegalArgumentException if null scope is specified.
          */
         public Builder(Scope scope) {
+            if (scope == null)
+                throw new IllegalArgumentException("Null scope is not valid for tracing coordinates.");
+
             this.scope = scope;
         }
 

@@ -21,8 +21,10 @@ import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
+import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
@@ -51,12 +53,18 @@ import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 /**
  * Tests to check correctness of OpenCensus Transactions Tracing implementation.
  */
-public class OpenCensusTxTracingTest extends AbstractOpenCensusTracingTest {
+public class OpenCensusTxTracingTest extends AbstractTracingTest {
 
+    /** {@inheritDoc} */
+    @Override protected TracingSpi getTracingSpi() {
+        return new OpenCensusTracingSpi();
+    }
+
+    /** {@inheritDoc} */
     @Override public void before() throws Exception {
         super.before();
 
-        grid(0).tracingConfiguration().addConfiguration(
+        grid(0).tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());

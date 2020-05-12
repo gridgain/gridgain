@@ -58,9 +58,9 @@ public interface SpanManager {
      * @param parentSpan Parent span.
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+     * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
      *  In other words, if child's span scope is equals to parent's scope
-     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
      *  otherwise it'll be skipped.
      *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      * @return Created span.
@@ -69,7 +69,7 @@ public interface SpanManager {
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
         double samplingRate,
-        @NotNull Set<Scope> supportedScopes);
+        @NotNull Set<Scope> includedScopes);
 
     /**
      * Serializes span to byte array to send context over network.

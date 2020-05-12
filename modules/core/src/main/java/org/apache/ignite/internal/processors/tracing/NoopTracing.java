@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.tracing;
 
 import java.util.Set;
-import org.apache.ignite.internal.processors.tracing.configuration.NoopTracingConfiguration;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.NoopTracingConfigurationManager;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.NotNull;
@@ -53,8 +53,8 @@ public class NoopTracing implements Tracing {
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
         double samplingRate,
-        @NotNull Set<Scope> supportedScopes) {
-        return NOOP_SPI.create(spanType, parentSpan, samplingRate, supportedScopes);
+        @NotNull Set<Scope> includedScopes) {
+        return NOOP_SPI.create(spanType, parentSpan, samplingRate, includedScopes);
     }
 
     /** {@inheritDoc} */
@@ -63,7 +63,7 @@ public class NoopTracing implements Tracing {
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfiguration configuration() {
-        return NoopTracingConfiguration.INSTANCE;
+    @Override public @NotNull TracingConfigurationManager configuration() {
+        return NoopTracingConfigurationManager.INSTANCE;
     }
 }

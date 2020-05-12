@@ -23,11 +23,14 @@ import io.opencensus.trace.export.SpanData;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
+import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -36,14 +39,23 @@ import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 /**
  * Tests for transaction tracing configuration.
  */
-public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTracingTest {
+public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
+    /** {@inheritDoc} */
+    @Override protected TracingSpi getTracingSpi() {
+        return new OpenCensusTracingSpi();
+    }
 
+    /**
+     * Ensure that in case of sampling rate equals to 0.0 (Never) no transactions are traced.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
     public void testTxConfigurationSamplingRateNeverPreventsTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_NEVER).build());
 
         client.transactions().txStart(PESSIMISTIC, SERIALIZABLE).commit();
@@ -57,12 +69,17 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         assertTrue(gotSpans.isEmpty());
     }
 
+    /**
+     * Ensure that in case of sampling rate equals to 1.0 (Always) transactions are successfully traced.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
     public void testTxConfigurationSamplingRateAlwaysEnablesTxTracing() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
         client.transactions().txStart(PESSIMISTIC, SERIALIZABLE).commit();
@@ -76,15 +93,22 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         assertEquals(1, gotSpans.size());
     }
 
+    /**
+     * Ensure that specifying 0 < sapling rate < 1 within TX scope will trace some but not all transactions.
+     * Cause of probability nature of sampling, it's not possible to check that 0.5 sampling rate
+     * will result in exactly half of the transactions being traced.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
     public void testTxConfigurationSamplingRateHalfSamplesSomethingAboutHalfTransactions() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(0.5).build());
 
-        final int txAmount = 10;
+        final int txAmount = 100;
 
         for (int i = 0; i < txAmount; i++)
             client.transactions().txStart(PESSIMISTIC, SERIALIZABLE).commit();
@@ -95,18 +119,24 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
             .filter(span -> SpanType.TX.traceName().equals(span.getName()))
             .collect(Collectors.toList());
 
-        // Cause of probability nature of sampling it's not possible to check that 0.5 sampling rate will end with
+        // Cause of probability nature of sampling, it's not possible to check that 0.5 sampling rate will end with
         // 5 sampling transactions out of {@code txAmount},
         // so we just check that some and not all transactions were traced.
         assertTrue(!gotSpans.isEmpty() && gotSpans.size() < txAmount);
     }
 
+
+    /**
+     * Ensure that TX traces doesn't include COMMUNICATION sub-traces in case of empty set of included scopes.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
-    public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptySupportedScopes() throws Exception {
+    public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptyIncludedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
         Transaction tx = client.transactions().txStart(PESSIMISTIC, SERIALIZABLE);
@@ -129,15 +159,21 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         assertTrue(gotSpans.isEmpty());
     }
 
+    /**
+     * Ensure that TX trace does include COMMUNICATION sub-traces in case of COMMUNICATION scope within the set
+     * of included scopes of the corresponding TX tracing configuration.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
-    public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxSupportedScopes() throws Exception {
+    public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxIncludedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).
-                withSupportedScopes(Collections.singleton(Scope.COMMUNICATION)).
+                withincludedScopes(Collections.singleton(Scope.COMMUNICATION)).
                 build());
 
         Transaction tx = client.transactions().txStart(PESSIMISTIC, SERIALIZABLE);
@@ -160,19 +196,24 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         assertFalse(gotSpans.isEmpty());
     }
 
+    /**
+     * Ensure that label specific configuration is used instead of scope specific if it's possible.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
     public void testThatLabelSpecificConfigurationIsUsedWheneverPossible() throws Exception {
         IgniteEx client = startGrid("client");
 
-        final String txLabelToBeTraced = "label1";
+        final String txLbToBeTraced = "label1";
 
-        final String txLabelNotToBeTraced = "label2";
+        final String txLbNotToBeTraced = "label2";
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).withLabel(txLabelToBeTraced).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).withLabel(txLbToBeTraced).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
-        client.transactions().withLabel(txLabelToBeTraced).txStart(PESSIMISTIC, SERIALIZABLE).commit();
+        client.transactions().withLabel(txLbToBeTraced).txStart(PESSIMISTIC, SERIALIZABLE).commit();
 
         handler().flush();
 
@@ -185,7 +226,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         // Not to be traced, cause there's neither tracing configuration with given label
         // nor scope specific tx configuration. In that case default tx tracing configuration will be used that
         // actually disables tracing.
-        client.transactions().withLabel(txLabelNotToBeTraced).txStart(PESSIMISTIC, SERIALIZABLE).commit();
+        client.transactions().withLabel(txLbNotToBeTraced).txStart(PESSIMISTIC, SERIALIZABLE).commit();
 
         handler().flush();
 
@@ -197,12 +238,17 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         assertEquals(1, gotSpans.size());
     }
 
+    /**
+     * Ensure that scope specific configuration is used if corresponding label specific not found.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
     public void testThatScopeSpecificConfigurationIsUsedIfLabelSpecificNotFound() throws Exception {
         IgniteEx client = startGrid("client");
 
-        client.tracingConfiguration().addConfiguration(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        client.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
 
         client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE).commit();
@@ -216,6 +262,12 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractOpenCensusTrac
         assertEquals(1, gotSpans.size());
     }
 
+    /**
+     * Ensure that default scope specific configuration is used if there's no neither label specif not custom scope specific ones.
+     * Also ensure that by default TX tracing is disabled.
+     *
+     * @throws Exception If Failed.
+     */
     @Test
     public void testThatDefaultConfigurationIsUsedIfScopeSpecificNotFoundAndThatByDefaultTxTracingIsDisabled()
         throws Exception {

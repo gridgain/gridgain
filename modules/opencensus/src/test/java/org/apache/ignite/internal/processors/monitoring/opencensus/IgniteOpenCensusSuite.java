@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import org.apache.ignite.TracingConfigurationValidationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -24,11 +25,14 @@ import org.junit.runners.Suite;
     OpenCensusMetricExporterSpiTest.class,
     OpenCensusTracingSpiTest.class,
     OpenCensusTxTracingTest.class,
-    // TODO: 04.05.20 Rework.
-//    MixedTracingSpiTest.class,
-
-    // Tracing configuration tests.
-    OpenCensusTxTracingConfigurationTest.class
+    MixedTracingSpiTest.class,
+    TracingConfigurationValidationTest.class,
+    OpenCensusTxTracingConfigurationTest.class,
+    OpenCensusTracingConfigurationGetTest.class,
+    OpenCensusTracingConfigurationGetAllTest.class,
+    OpenCensusTracingConfigurationResetTest.class,
+    OpenCensusTracingConfigurationResetAllTest.class,
+    OpenCensusTracingConfigurationSetTest.class
 })
 /**
  * Suite to test OpenCensus integration.

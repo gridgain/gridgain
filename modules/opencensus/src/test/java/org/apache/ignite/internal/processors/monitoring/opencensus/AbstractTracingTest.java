@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,16 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import io.opencensus.common.Functions;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
@@ -30,43 +40,86 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
-import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
-import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
+import static org.apache.ignite.internal.processors.tracing.Scope.COMMUNICATION;
+import static org.apache.ignite.internal.processors.tracing.Scope.EXCHANGE;
+import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
  * Abstract class for open census tracing tests.
  */
-public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTest {
+public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** Grid count. */
     protected static final int GRID_CNT = 3;
 
     /** Span buffer count - hardcode in open census. */
     private static final int SPAN_BUFFER_COUNT = 32;
 
+    /** Default configuration map. */
+    protected static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DFLT_CONFIG_MAP =
+        new HashMap<>();
+
+    /** TX scope specific coordinates to be used within several tests. */
+    protected static final TracingConfigurationCoordinates TX_SCOPE_SPECIFIC_COORDINATES =
+        new TracingConfigurationCoordinates.Builder(TX).build();
+
+    /** EXCHANGE scope specific coordinates to be used within several tests. */
+    protected static final TracingConfigurationCoordinates EXCHANGE_SCOPE_SPECIFIC_COORDINATES =
+        new TracingConfigurationCoordinates.Builder(EXCHANGE).build();
+
+    /** Updated scope specific parameters to be used within several tests. */
+    protected static final TracingConfigurationParameters SOME_SCOPE_SPECIFIC_PARAMETERS =
+        new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
+            withincludedScopes(Collections.singleton(COMMUNICATION)).build();
+
+    /** TX Label specific coordinates to be used within several tests. */
+    protected static final TracingConfigurationCoordinates TX_LABEL_SPECIFIC_COORDINATES =
+        new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build();
+
+    /** Updated label specific parameters to be used within several tests. */
+    protected static final TracingConfigurationParameters SOME_LABEL_SPECIFIC_PARAMETERS =
+        new TracingConfigurationParameters.Builder().withSamplingRate(0.111).
+            withincludedScopes(Collections.singleton(EXCHANGE)).build();
+
+    static {
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+            TracingConfigurationManager.DEFAULT_TX_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
+            TracingConfigurationManager.DEFAULT_COMMUNICATION_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
+            TracingConfigurationManager.DEFAULT_EXCHANGE_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+            TracingConfigurationManager.DEFAULT_DISCOVERY_CONFIGURATION);
+    }
+
     /** Test trace exporter handler. */
     private OpenCensusTxTracingTest.TraceExporterTestHandler hnd;
 
     /** Wrapper of test exporter handler. */
     private OpenCensusTraceExporter exporter;
+
+    /**
+     * @return Tracing SPI to be used within tests.
+     */
+    protected abstract TracingSpi getTracingSpi();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -77,7 +130,7 @@ public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTe
         if (igniteInstanceName.contains("client"))
             cfg.setClientMode(true);
 
-        cfg.setTracingSpi(new OpenCensusTracingSpi());
+        cfg.setTracingSpi(getTracingSpi());
 
         CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
@@ -128,6 +181,9 @@ public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTe
         stopAllGrids();
     }
 
+    /**
+     * @return Handler.
+     */
     protected OpenCensusTxTracingTest.TraceExporterTestHandler handler() {
         return hnd;
     }
@@ -276,6 +332,10 @@ public abstract class AbstractOpenCensusTracingTest extends GridCommonAbstractTe
             return spanChain;
         }
 
+        /**
+         * @param igniteInstanceName Ignite instance name.
+         * @return Stream of SpanData.
+         */
         public Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
             return collectedSpans.values().stream()
                 .filter(spanData -> stringAttributeValue(igniteInstanceName)

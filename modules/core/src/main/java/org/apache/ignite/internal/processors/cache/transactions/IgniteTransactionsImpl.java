@@ -169,16 +169,16 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
     ) {
         cctx.kernalContext().gateway().readLock();
 
-        // Retrieve tx tracing configuration.
+        // Get tx tracing configuration.
         TracingConfigurationParameters tracingConfigurationParameters =
-            cctx.kernalContext().tracing().configuration().retrieveConfiguration(
+            cctx.kernalContext().tracing().configuration().get(
                 new TracingConfigurationCoordinates.Builder(Scope.TX).withLabel(lb).build());
 
         MTC.supportInitial(cctx.kernalContext().tracing().create(
             TX,
             null,
             tracingConfigurationParameters.samplingRate(),
-            tracingConfigurationParameters.supportedScopes()));
+            tracingConfigurationParameters.includedScopes()));
 
         MTC.span().addTag("isolation", isolation.name());
         MTC.span().addTag("concurrency", concurrency.name());

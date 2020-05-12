@@ -18,40 +18,45 @@ package org.apache.ignite.internal.processors.tracing.configuration;
 
 import java.util.Collections;
 import java.util.Map;
+
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.processors.tracing.Scope;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Noop tracing configuration.
+ * Noop tracing configuration manager.
  * To be used mainly with {@link org.apache.ignite.internal.processors.tracing.NoopTracing}.
  */
-public final class NoopTracingConfiguration implements TracingConfiguration {
+public final class NoopTracingConfigurationManager implements TracingConfigurationManager {
     /** */
-    public static final NoopTracingConfiguration INSTANCE = new NoopTracingConfiguration();
+    public static final NoopTracingConfigurationManager INSTANCE = new NoopTracingConfigurationManager();
 
     /** {@inheritDoc} */
-    @Override public boolean addConfiguration(@NotNull TracingConfigurationCoordinates coordinates,
+    @Override public void set(@NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters) {
         // No-op.
-
-        return true;
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfigurationParameters retrieveConfiguration(
+    @Override public @NotNull TracingConfigurationParameters get(
         @NotNull TracingConfigurationCoordinates coordinates) {
-        return TracingConfiguration.NOOP_CONFIGURATION;
+        return TracingConfigurationManager.NOOP_CONFIGURATION;
     }
 
     /** {@inheritDoc} */
     @Override
-    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> retrieveConfigurations() {
+    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll(@Nullable Scope scope) {
         return Collections.emptyMap();
     }
 
     /** {@inheritDoc} */
-    @Override public boolean restoreDefaultConfiguration(@NotNull TracingConfigurationCoordinates coordinates) {
+    @Override public void reset(@NotNull TracingConfigurationCoordinates coordinates) {
         // No-op.
+    }
 
-        return true;
+    /** {@inheritDoc} */
+    @Override public void resetAll(@Nullable Scope scope) throws IgniteException {
+        // No-op.
     }
 }

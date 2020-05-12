@@ -30,7 +30,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.IgnitePlugin;
@@ -724,7 +724,7 @@ public interface Ignite extends AutoCloseable {
     public DataStorageMetrics dataStorageMetrics();
 
     /**
-     * Returns the {@link TracingConfiguration} instance that allows to
+     * Returns the {@link TracingConfigurationManager} instance that allows to
      * <ul>
      *     <li>Configure tracing parameters such as sampling rate for the specific tracing coordinates
      *          such as scope and label.</li>
@@ -732,7 +732,7 @@ public interface Ignite extends AutoCloseable {
      *     <li>Restore the tracing parameters for the specified tracing coordinates to the default.</li>
      *     <li>List all pairs of tracing configuration coordinates and tracing configuration parameters.</li>
      * </ul>
-     * @return {@link TracingConfiguration} instance.
+     * @return {@link TracingConfigurationManager} instance.
      */
-    public @NotNull TracingConfiguration tracingConfiguration();
+    public @NotNull TracingConfigurationManager tracingConfiguration();
 }

@@ -24,7 +24,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.processors.tracing.DeferredSpan;
-import org.apache.ignite.internal.processors.tracing.configuration.GridTracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.GridTracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.processors.tracing.Scope;
@@ -32,7 +32,7 @@ import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -50,7 +50,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     private final TraceableMessagesHandler msgHnd;
 
     /** Tracing configuration */
-    private final TracingConfiguration tracingConfiguration;
+    private final TracingConfigurationManager tracingConfiguration;
 
     /**
      * Constructor.
@@ -65,7 +65,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         msgHnd = new TraceableMessagesHandler(this, ctx.log(GridTracingManager.class));
 
-        tracingConfiguration = new GridTracingConfiguration(ctx);
+        tracingConfiguration = new GridTracingConfigurationManager(ctx);
     }
 
     /**
@@ -117,14 +117,14 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /**
-     * Generates child span if it's possible due to parent/child supported scopes, otherwise returns patent span as is.
+     * Generates child span if it's possible due to parent/child included scopes, otherwise returns patent span as is.
      * @param parentSpan Parent span.
      * @param spanTypeToCreate Span type to create.
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+     * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
      *  In other words, if child's span scope is equals to parent's scope
-     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
      *  otherwise it'll be skipped.
      *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      * @return Span to propagate with.
@@ -133,34 +133,34 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         @Nullable Span parentSpan,
         @NotNull SpanType spanTypeToCreate,
         double samplingRate,
-        @NotNull Set<Scope> supportedScopes) {
+        @NotNull Set<Scope> includedScopes) {
         if (parentSpan instanceof DeferredSpan)
             return getSpi().create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
 
         if (parentSpan == null || parentSpan == NoopSpan.INSTANCE) {
             // If there's no parent span or parent span is NoopSpan then
             // create new span that will be closed when TraceSurroundings.
-            // Use union of scope and supportedScopes as span supported scopes.
+            // Use union of scope and includedScopes as span included scopes.
             return getSpi().create(
                 spanTypeToCreate,
                 null,
                 samplingRate,
-                supportedScopes);
+                includedScopes);
         }
         else {
             // If there's is parent span and parent span supports given scope then...
             if (parentSpan.isChainable(spanTypeToCreate.scope())) {
-                // create new span as child span for parent span, using parents span supported scopes.
+                // create new span as child span for parent span, using parents span included scopes.
 
-                Set<Scope> mergedSupportedScopes = new HashSet<>(parentSpan.supportedScopes());
-                mergedSupportedScopes.add(parentSpan.type().scope());
-                mergedSupportedScopes.remove(spanTypeToCreate.scope());
+                Set<Scope> mergedincludedScopes = new HashSet<>(parentSpan.includedScopes());
+                mergedincludedScopes.add(parentSpan.type().scope());
+                mergedincludedScopes.remove(spanTypeToCreate.scope());
 
                 return getSpi().create(
                     spanTypeToCreate,
                     parentSpan,
                     samplingRate,
-                    mergedSupportedScopes);
+                    mergedincludedScopes);
             }
             else {
                 // do nothing;
@@ -188,12 +188,12 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
         double samplingRate,
-        @NotNull Set<Scope> supportedScopes) {
+        @NotNull Set<Scope> includedScopes) {
         return enrichWithLocalNodeParameters(generateSpan(
             parentSpan,
             spanType,
             samplingRate,
-            supportedScopes));
+            includedScopes));
     }
 
     /** {@inheritDoc} */
@@ -207,7 +207,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull TracingConfiguration configuration() {
+    @Override public @NotNull TracingConfigurationManager configuration() {
         return tracingConfiguration;
     }
 }

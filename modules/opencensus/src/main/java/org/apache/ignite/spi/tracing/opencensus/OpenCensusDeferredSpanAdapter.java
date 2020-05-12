@@ -74,7 +74,7 @@ public class OpenCensusDeferredSpanAdapter implements Span, DeferredSpan {
         return null;
     }
 
-    @Override public Set<Scope> supportedScopes() {
+    @Override public Set<Scope> includedScopes() {
         return null;
     }
 

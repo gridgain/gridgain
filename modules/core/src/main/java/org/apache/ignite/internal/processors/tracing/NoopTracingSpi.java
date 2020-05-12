@@ -52,7 +52,7 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
         double samplingRate,
-        @NotNull Set<Scope> supportedScopes) {
+        @NotNull Set<Scope> includedScopes) {
         return NOOP_SPAN;
     }
 
