@@ -288,8 +288,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             cache.Get(2);
             cache.Get(3);
 
-            var reqs = _loggers
-                .Select(l => new {Logger = l, Requests = GetCacheRequestNames(l).ToArray()})
+            var reqs = GetLoggers()
+                .Select(l => new
+                {
+                    Logger = l, 
+                    Requests = GetServerRequestNames(l, RequestNamePrefixCache).ToArray()
+                })
                 .Where(r => r.Requests.Length > 0)
                 .ToArray();
 
