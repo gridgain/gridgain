@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import javax.cache.CacheException;
-import java.text.DecimalFormatSymbols;
-import javax.management.JMException;
 import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -55,6 +53,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.CacheException;
+import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsAdapter;
 import org.apache.ignite.DataStorageMetrics;
@@ -151,7 +151,6 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -171,8 +170,8 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
+import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
@@ -246,7 +245,6 @@ import static org.apache.ignite.internal.GridKernalState.STARTING;
 import static org.apache.ignite.internal.GridKernalState.STOPPED;
 import static org.apache.ignite.internal.GridKernalState.STOPPING;
 import static org.apache.ignite.internal.IgniteComponentType.COMPRESSION;
-import static org.apache.ignite.internal.IgniteComponentType.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteComponentType.SCHEDULE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
@@ -291,9 +289,9 @@ import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
 import static org.apache.ignite.internal.IgniteVersionUtils.REV_HASH_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
-import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_START;
 import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 
@@ -1180,7 +1178,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     startProcessor(new DistributedMetaStorageImpl(ctx));
 
                 startProcessor(new DistributedConfigurationProcessor(ctx));
-                startProcessor(createComponent(ManagementConsoleProcessor.class, ctx));
                 startProcessor(new DurableBackgroundTasksProcessor(ctx));
 
                 // Start transactional data replication processor.
@@ -4263,9 +4260,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         if (cls.equals(GridSecurityProcessor.class))
             return null;
-
-        if (cls.equals(ManagementConsoleProcessor.class))
-            return MANAGEMENT_CONSOLE.createOptional(ctx);
 
         Class<T> implCls = null;
 

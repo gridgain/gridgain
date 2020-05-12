@@ -314,8 +314,9 @@ public enum IgniteFeatures {
                 continue;
 
             // Add only when Control Center is enabled.
-            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
-                continue;
+            // TODO GG-29192 How to implement feature check in case of plugin?
+//            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
+//                continue;
 
             // Add only when scheduling is disabled.
             if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
