@@ -316,9 +316,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
 
                     serializer.writeValue(writer, val);
 
-                    if (reader == null)
-                        // Metadata has already been checked.
-                        fieldsMeta = checkMetadata(meta, fieldsMeta, val, name, fieldId);
+                    fieldsMeta = checkMetadata(meta, fieldsMeta, val, name, fieldId);
                 }
             }
 
