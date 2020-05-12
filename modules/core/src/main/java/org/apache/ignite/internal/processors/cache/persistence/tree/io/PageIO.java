@@ -678,6 +678,9 @@ public abstract class PageIO {
             case T_DATA_PART:
                 return (Q)SimpleDataPageIO.VERSIONS.forVersion(ver);
 
+            case T_MARKER_PAGE:
+                return (Q)MarkerPageIO.VERSIONS.forVersion(ver);
+
             default:
                 if (testIO != null) {
                     if (testIO.type == type && testIO.ver == ver)
