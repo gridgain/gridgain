@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.tracing.configuration;
 
 import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -85,6 +86,11 @@ public class TracingConfigurationCoordinates {
         res = 31 * res + (lb != null ? lb.hashCode() : 0);
 
         return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(TracingConfigurationCoordinates.class, this);
     }
 
     /**

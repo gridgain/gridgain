@@ -42,6 +42,22 @@ public class GridTracingConfiguration implements TracingConfiguration {
     /** Map with default configurations. */
     private static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DEFAULT_CONFIGURATION_MAP;
 
+    /** */
+    public static final String WARNING_MSG_METASTORAGE_NOT_AVAILABLE =
+        "Failed to save tracing configuration to meta storage. Meta storage is not available.";
+
+    /** */
+    public static final String WARNING_MSG_TO_RESET_CONFIG_METASTORAGE_NOT_AVAILABLE =
+        "Failed to reset tracing configuration for coordinates=[%s] to default. Meta storage is not available.";
+
+    /** */
+    public static final String WARNING_MSG_TO_RESET_ALL_CONFIG_METASTORAGE_NOT_AVAILABLE =
+        "Failed to reset tracing configuration for scope=[%s] to default. Meta storage is not available.";
+
+    /** */
+    public static final String WARNING_FAILED_TO_RETRIEVE_CONFIG_METASTORAGE_NOT_AVAILABLE =
+        "Failed to retrieve tracing configuration. Meta storage is not available. Default value will be used.";
+
     static {
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tmpDfltConfigurationMap = new HashMap<>();
 
@@ -88,23 +104,9 @@ public class GridTracingConfiguration implements TracingConfiguration {
         @NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters)
     {
-        DistributedMetaStorage metaStore;
-
-        try {
-            metaStore = ctx.distributedMetastorage();
-        }
-        catch (Exception e) {
-            log.warning("Failed to save tracing configuration to meta storage. Meta storage is not available");
-
-            throw new IgniteException(e);
-        }
-
-        if (metaStore == null) {
-            log.warning("Failed to save tracing configuration to meta storage. Meta storage is not available");
-
-            throw new
-                IgniteException("Failed to save tracing configuration to meta storage. Meta storage is not available");
-        }
+        DistributedMetaStorage metaStore = distributedMetaStorage(
+            false,
+            WARNING_MSG_METASTORAGE_NOT_AVAILABLE);
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
 
@@ -113,7 +115,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
         try {
             while (!configurationSuccessfullyUpdated) {
                 HashMap<String, TracingConfigurationParameters> existingScopeSpecificTracingConfiguration =
-                    ctx.distributedMetastorage().read(scopeSpecificKey);
+                    metaStore.read(scopeSpecificKey);
 
                 HashMap<String, TracingConfigurationParameters> updatedScopeSpecificTracingConfiguration =
                     existingScopeSpecificTracingConfiguration != null ?
@@ -122,16 +124,16 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
                 updatedScopeSpecificTracingConfiguration.put(coordinates.label(), parameters);
 
-                configurationSuccessfullyUpdated = ctx.distributedMetastorage().compareAndSet(
+                configurationSuccessfullyUpdated = metaStore.compareAndSet(
                     scopeSpecificKey,
                     existingScopeSpecificTracingConfiguration,
                     updatedScopeSpecificTracingConfiguration);
             }
         }
         catch (IgniteCheckedException e) {
-            log.warning("Failed to save tracing configuration to meta storage.", e);
+            log.warning(WARNING_MSG_METASTORAGE_NOT_AVAILABLE, e);
 
-            throw new IgniteException(e);
+            throw new IgniteException(WARNING_MSG_METASTORAGE_NOT_AVAILABLE, e);
         }
     }
 
@@ -144,16 +146,14 @@ public class GridTracingConfiguration implements TracingConfiguration {
             metaStore = ctx.distributedMetastorage();
         }
         catch (Exception e) {
-            LT.warn(log, "Failed to retrieve tracing configuration — meta storage is not available." +
-                " Default value will be used.");
+            LT.warn(log, WARNING_FAILED_TO_RETRIEVE_CONFIG_METASTORAGE_NOT_AVAILABLE);
 
             // If metastorage in not available — use scope specific default tracing configuration.
             return TracingConfiguration.super.get(coordinates);
         }
 
         if (metaStore == null) {
-            LT.warn(log, "Failed to retrieve tracing configuration — meta storage is not available." +
-                " Default value will be used.");
+            LT.warn(log, WARNING_FAILED_TO_RETRIEVE_CONFIG_METASTORAGE_NOT_AVAILABLE);
 
             // If metastorage in not available — use scope specific default tracing configuration.
             return TracingConfiguration.super.get(coordinates);
@@ -164,7 +164,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
         HashMap<String, TracingConfigurationParameters> scopeSpecificTracingConfiguration;
 
         try {
-            scopeSpecificTracingConfiguration = ctx.distributedMetastorage().read(scopeSpecificKey);
+            scopeSpecificTracingConfiguration = metaStore.read(scopeSpecificKey);
         }
         catch (IgniteCheckedException e) {
             LT.warn(
@@ -205,22 +205,12 @@ public class GridTracingConfiguration implements TracingConfiguration {
     /** {@inheritDoc} */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") @Override
     public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll(@Nullable Scope scope) {
-        DistributedMetaStorage metaStore;
+        DistributedMetaStorage metaStore = distributedMetaStorage(
+            true,
+            WARNING_FAILED_TO_RETRIEVE_CONFIG_METASTORAGE_NOT_AVAILABLE);
 
-        try {
-            metaStore = ctx.distributedMetastorage();
-        }
-        catch (Exception e) {
-            log.warning("Failed to retrieve tracing configuration — meta storage is not available.");
-
+        if (metaStore == null)
             return DEFAULT_CONFIGURATION_MAP;
-        }
-
-        if (metaStore == null) {
-            log.warning("Failed to retrieve tracing configuration — meta storage is not available.");
-
-            return DEFAULT_CONFIGURATION_MAP;
-        }
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> res = new HashMap<>();
 
@@ -266,25 +256,10 @@ public class GridTracingConfiguration implements TracingConfiguration {
 
     /** {@inheritDoc} */
     @Override public void reset(@NotNull TracingConfigurationCoordinates coordinates) {
-        DistributedMetaStorage metaStore;
-
-        try {
-            metaStore = ctx.distributedMetastorage();
-        }
-        catch (Exception e) {
-            log.warning("Failed to reset tracing configuration for coordinates=[" + coordinates +
-                "] to default  — meta storage is not available.");
-
-            throw new IgniteException(e);
-        }
-
-        if (metaStore == null) {
-            log.warning("Failed to reset tracing configuration for coordinates=[" + coordinates +
-                "] to default  — meta storage is not available.");
-
-            throw new IgniteException("Failed to reset tracing configuration for coordinates=[" + coordinates +
-                "] to default  — meta storage is not available.");
-        }
+        DistributedMetaStorage metaStore = distributedMetaStorage(
+            false,
+            WARNING_MSG_TO_RESET_CONFIG_METASTORAGE_NOT_AVAILABLE,
+            coordinates);
 
         String scopeSpecificKey = TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + coordinates.scope().name();
 
@@ -293,7 +268,7 @@ public class GridTracingConfiguration implements TracingConfiguration {
         try {
             while (!configurationSuccessfullyUpdated) {
                 HashMap<String, TracingConfigurationParameters> existingScopeSpecificTracingConfiguration =
-                    ctx.distributedMetastorage().read(scopeSpecificKey);
+                    metaStore.read(scopeSpecificKey);
 
                 if (existingScopeSpecificTracingConfiguration == null) {
                     // Nothing to do.
@@ -308,51 +283,75 @@ public class GridTracingConfiguration implements TracingConfiguration {
                 else
                     updatedScopeSpecificTracingConfiguration.remove(null);
 
-                configurationSuccessfullyUpdated = ctx.distributedMetastorage().compareAndSet(
+                configurationSuccessfullyUpdated = metaStore.compareAndSet(
                     scopeSpecificKey,
                     existingScopeSpecificTracingConfiguration,
                     updatedScopeSpecificTracingConfiguration);
             }
         }
         catch (IgniteCheckedException e) {
-            log.warning("Failed to reset tracing configuration for coordinates=[" + coordinates +
-                "] to default  — meta storage is not available.");
+            log.warning(String.format(WARNING_MSG_TO_RESET_CONFIG_METASTORAGE_NOT_AVAILABLE, coordinates));
 
-            throw new IgniteException(e);
+            throw new IgniteException(
+                String.format(WARNING_MSG_TO_RESET_CONFIG_METASTORAGE_NOT_AVAILABLE, coordinates),
+                e);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void resetAll(@Nullable Scope scope) throws IgniteException {
-        DistributedMetaStorage metaStore;
-
-        try {
-            metaStore = ctx.distributedMetastorage();
-        }
-        catch (Exception e) {
-            log.warning("Failed to reset tracing configuration for scope=[" + scope +
-                "] to default  — meta storage is not available.");
-
-            throw new IgniteException(e);
-        }
-
-        if (metaStore == null) {
-            log.warning("Failed to reset tracing configuration for scope=[" + scope +
-                "] to default  — meta storage is not available.");
-
-            throw new IgniteException("Failed to reset tracing configuration for scope=[" + scope +
-                "] to default  — meta storage is not available.");
-        }
+        DistributedMetaStorage metaStore = distributedMetaStorage(
+            false,
+            WARNING_MSG_TO_RESET_ALL_CONFIG_METASTORAGE_NOT_AVAILABLE,
+            scope);
 
         try {
             for (Scope scopeItem : scope == null ? Scope.values() : new Scope[] {scope})
                 metaStore.remove(TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY_PREFIX + scopeItem.name());
         }
         catch (IgniteCheckedException e) {
-            log.warning("Failed to reset tracing configuration for scope=[" + scope +
-                "] to default  — meta storage is not available.");
+            log.warning(String.format(WARNING_MSG_TO_RESET_ALL_CONFIG_METASTORAGE_NOT_AVAILABLE, scope));
 
-            throw new IgniteException(e);
+            throw new IgniteException(
+                String.format(WARNING_MSG_TO_RESET_ALL_CONFIG_METASTORAGE_NOT_AVAILABLE, scope),
+                e);
         }
+    }
+
+    /**
+     * Checks if metastore if available and return it.
+     *
+     * @param returnNull If {@code true} return null if distributed metastorage isn't available,
+     *  otherwise throw {@code IgniteException}
+     * @param warningMsg Warning message to be logged and used in {@code IgniteException}
+     * @param warningMsgFormatArgs Arguments to warning message.
+     *
+     * @return Distributed metastorage if it's available.
+     */
+    private DistributedMetaStorage distributedMetaStorage(boolean returnNull, String warningMsg, Object...warningMsgFormatArgs) {
+        DistributedMetaStorage metaStore;
+
+        try {
+            metaStore = ctx.distributedMetastorage();
+        }
+        catch (Exception e) {
+            log.warning(String.format(warningMsg, warningMsgFormatArgs));
+
+            if (returnNull)
+                return null;
+            else
+                throw new IgniteException(String.format(warningMsg, warningMsgFormatArgs), e);
+        }
+
+        if (metaStore == null) {
+            log.warning(String.format(warningMsg, warningMsgFormatArgs));
+
+            if (returnNull)
+                return null;
+            else
+                throw new IgniteException(String.format(warningMsg, warningMsgFormatArgs));
+        }
+
+        return metaStore;
     }
 }

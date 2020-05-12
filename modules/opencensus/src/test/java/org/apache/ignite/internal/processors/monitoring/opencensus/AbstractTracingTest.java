@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         new TracingConfigurationCoordinates.Builder(EXCHANGE).build();
 
     /** Updated scope specific parameters to be used within several tests. */
-    protected static final TracingConfigurationParameters UPDATED_SCOPE_SPECIFIC_PARAMETERS =
+    protected static final TracingConfigurationParameters SOME_SCOPE_SPECIFIC_PARAMETERS =
         new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
             withincludedScopes(Collections.singleton(COMMUNICATION)).build();
 
@@ -88,7 +88,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build();
 
     /** Updated label specific parameters to be used within several tests. */
-    protected static final TracingConfigurationParameters UPDATED_LABEL_SPECIFIC_PARAMETERS =
+    protected static final TracingConfigurationParameters SOME_LABEL_SPECIFIC_PARAMETERS =
         new TracingConfigurationParameters.Builder().withSamplingRate(0.111).
             withincludedScopes(Collections.singleton(EXCHANGE)).build();
 

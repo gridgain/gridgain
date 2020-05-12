@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,16 +27,13 @@ import org.junit.runners.Suite;
     OpenCensusTxTracingTest.class,
     // TODO: 04.05.20 Rework.
 //    MixedTracingSpiTest.class,
-
-    // Common configuration tests.
     TracingConfigurationValidationTest.class,
-
-    // Tracing configuration tests.
     OpenCensusTxTracingConfigurationTest.class,
     OpenCensusTracingConfigurationGetTest.class,
     OpenCensusTracingConfigurationGetAllTest.class,
     OpenCensusTracingConfigurationResetTest.class,
-    OpenCensusTracingConfigurationResetAllTest.class
+    OpenCensusTracingConfigurationResetAllTest.class,
+    OpenCensusTracingConfigurationSetTest.class
 })
 /**
  * Suite to test OpenCensus integration.

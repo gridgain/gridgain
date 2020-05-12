@@ -24,8 +24,13 @@ import org.apache.ignite.internal.processors.tracing.configuration.TracingConfig
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfiguration;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 
 /**
@@ -67,16 +72,16 @@ public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTes
      */
     @Test
     public void testThatCustomConfigurationReturnsIfScopeNotSpecifiedAndCustomConfigurationIsSet() {
-        grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS);
 
-        grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, SOME_LABEL_SPECIFIC_PARAMETERS);
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg =
             new HashMap<>(DFLT_CONFIG_MAP);
 
-        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS);
 
-        expTracingCfg.put(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_LABEL_SPECIFIC_COORDINATES, SOME_LABEL_SPECIFIC_PARAMETERS);
 
         assertEquals(
             expTracingCfg,
@@ -89,18 +94,35 @@ public class OpenCensusTracingConfigurationGetAllTest extends AbstractTracingTes
      */
     @Test
     public void testThatCustomScopeSpecificConfigurationReturnsIfScopeIsSpecifiedAndCustomConfigurationIsSet() {
-        grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS);
 
-        grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, SOME_LABEL_SPECIFIC_PARAMETERS);
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg = new HashMap<>();
 
-        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, UPDATED_SCOPE_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS);
 
-        expTracingCfg.put(TX_LABEL_SPECIFIC_COORDINATES, UPDATED_LABEL_SPECIFIC_PARAMETERS);
+        expTracingCfg.put(TX_LABEL_SPECIFIC_COORDINATES, SOME_LABEL_SPECIFIC_PARAMETERS);
 
         assertEquals(
             expTracingCfg,
             grid(0).tracingConfiguration().getAll(TX));
+    }
+
+    /**
+     * Ensure that default configuration returns
+     * in case of calling {@code tracingConfiguration().get()} if distributed metastorage is not available.
+     */
+    @Test
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    })
+    public void testThatDefaultTracingConfigurationIsUsedIfMetastorageIsDisabled() {
+        assertEquals(
+            DFLT_CONFIG_MAP,
+            grid(0).tracingConfiguration().getAll(TX)
+        );
     }
 }
