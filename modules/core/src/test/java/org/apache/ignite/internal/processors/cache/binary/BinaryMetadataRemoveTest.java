@@ -256,6 +256,6 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
         boolean isThereCli = Arrays.stream(igns).anyMatch(ign -> ((IgniteEx)ign).context().clientNode());
 
         if (isThereCli)
-            U.sleep(100);
+            U.sleep(500);
     }
 }
