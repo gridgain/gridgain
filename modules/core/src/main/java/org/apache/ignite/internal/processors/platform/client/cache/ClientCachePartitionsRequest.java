@@ -76,18 +76,14 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (cacheDesc == null)
                 continue;
 
-            ClientCachePartitionMapping mapping = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
+            ClientCachePartitionAwarenessGroup grp = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
 
             // Cache already processed.
-            if (mapping == null)
+            if (grp == null)
                 continue;
 
-            // Mapping is new and is not contained in the current list.
-            CacheObjectBinaryProcessorImpl proc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
-            ClientCachePartitionAwarenessGroup group = new ClientCachePartitionAwarenessGroup(proc, mapping, cacheDesc);
-
-            groups.add(group);
-            cacheGroupIds.put(cacheDesc.groupId(), group);
+            groups.add(grp);
+            cacheGroupIds.put(cacheDesc.groupId(), grp);
         }
 
         Map<String, DynamicCacheDescriptor> allCaches = ctx.kernalContext().cache().cacheDescriptors();
@@ -111,9 +107,10 @@ public class ClientCachePartitionsRequest extends ClientRequest {
      * @param cacheGroupIds Map of known group IDs.
      * @param affinityVer Affinity topology version.
      * @param cacheDesc Cache descriptor.
-     * @return Null if cache was processed and new client cache partition mapping if it does not belong to any existent.
+     * @return Null if cache was processed and new client cache affinity awareness group if it does not belong to any
+     * existent.
      */
-    private static ClientCachePartitionMapping processCache(
+    private static ClientCachePartitionAwarenessGroup processCache(
         ClientConnectionContext ctx,
         List<ClientCachePartitionAwarenessGroup> groups,
         Map<Integer, ClientCachePartitionAwarenessGroup> cacheGroupIds,
@@ -150,7 +147,9 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             return null;
         }
 
-        return mapping;
+        CacheObjectBinaryProcessorImpl proc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
+
+        return new ClientCachePartitionAwarenessGroup(proc, mapping, cacheDesc);
     }
 
     /**
