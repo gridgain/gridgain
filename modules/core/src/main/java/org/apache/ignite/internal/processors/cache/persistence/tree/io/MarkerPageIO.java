@@ -23,10 +23,10 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  * Marker page.
  */
 public class MarkerPageIO extends PageIO {
-    /** */
+    /** Offset for marker type value. */
     private static final int MARKER_TYPE_OFF = COMMON_HEADER_END;
 
-    /** */
+    /** This type of marker is used to mark the end of pages stream. */
     public static final int MARKER_TYPE_TERMINATION = 1;
 
     /** */
@@ -48,12 +48,12 @@ public class MarkerPageIO extends PageIO {
         super(type, ver);
     }
 
-    /** */
+    /** Type of a marker. */
     public int markerType(long pageAddr) {
         return PageUtils.getInt(pageAddr, MARKER_TYPE_OFF);
     }
 
-    /** */
+    /** Sets marker type. */
     public void setMarkerType(long pageAddr, int markerType) {
         PageUtils.putInt(pageAddr, MARKER_TYPE_OFF, markerType);
     }
