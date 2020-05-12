@@ -24,7 +24,7 @@ import org.apache.ignite.internal.processors.tracing.Span;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Set of tracing configuration parameters like sampling rate or supported scopes.
+ * Set of tracing configuration parameters like sampling rate or included scopes.
  */
 public class TracingConfigurationParameters implements Serializable {
     /** */
@@ -45,27 +45,27 @@ public class TracingConfigurationParameters implements Serializable {
     /**
      * Set of {@link Scope} that defines which sub-traces will be included in a given trace.
      * In other words, if the child's span scope is equal to parent's scope
-     * or it belongs to the parent's span supported scopes, then the given child span will be attached to the current trace,
+     * or it belongs to the parent's span included scopes, then the given child span will be attached to the current trace,
      * otherwise it'll be skipped.
      * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
-    private final Set<Scope> supportedScopes;
+    private final Set<Scope> includedScopes;
 
     /**
      * Constructor.
      *
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      *  0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+     * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
      *  In other words, if child's span scope is equals to parent's scope
-     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
      *  otherwise it'll be skipped.
      *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
     private TracingConfigurationParameters(double samplingRate,
-        Set<Scope> supportedScopes) {
+        Set<Scope> includedScopes) {
         this.samplingRate = samplingRate;
-        this.supportedScopes = Collections.unmodifiableSet(supportedScopes);
+        this.includedScopes = Collections.unmodifiableSet(includedScopes);
     }
 
     /**
@@ -79,13 +79,13 @@ public class TracingConfigurationParameters implements Serializable {
     /**
      * @return Set of {@link Scope} that defines which sub-traces will be included in given trace.
      * In other words, if child's span scope is equals to parent's scope
-     * or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     * or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
      * otherwise it'll be skipped.
      * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      * If no scopes are specified, empty set will be returned.
      */
-    public @NotNull Set<Scope> supportedScopes() {
-        return Collections.unmodifiableSet(supportedScopes);
+    public @NotNull Set<Scope> includedScopes() {
+        return Collections.unmodifiableSet(includedScopes);
     }
 
     /** {@inheritDoc} */
@@ -99,7 +99,7 @@ public class TracingConfigurationParameters implements Serializable {
 
         if (Double.compare(that.samplingRate, samplingRate) != 0)
             return false;
-        return supportedScopes != null ? supportedScopes.equals(that.supportedScopes) : that.supportedScopes == null;
+        return includedScopes != null ? includedScopes.equals(that.includedScopes) : that.includedScopes == null;
     }
 
     /**
@@ -109,8 +109,8 @@ public class TracingConfigurationParameters implements Serializable {
         /** Counterpart of {@code TracingConfigurationParameters} samplingRate. */
         private double samplingRate;
 
-        /** Counterpart of {@code TracingConfigurationParameters} supportedScopes. */
-        private Set<Scope> supportedScopes = Collections.emptySet();
+        /** Counterpart of {@code TracingConfigurationParameters} includedScopes. */
+        private Set<Scope> includedScopes = Collections.emptySet();
 
         /**
          * Builder method that allows to set sampling rate.
@@ -130,17 +130,17 @@ public class TracingConfigurationParameters implements Serializable {
         }
 
         /**
-         * Builder method that allows to set supported scopes.
+         * Builder method that allows to set included scopes.
          *
-         * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+         * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
          * In other words, if child's span scope is equals to parent's scope
-         * or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+         * or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
          * otherwise it'll be skipped.
          * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
          * @return {@code TracingConfigurationParameters} instance.
          */
-        public @NotNull Builder withSupportedScopes(Set<Scope> supportedScopes) {
-            this.supportedScopes = supportedScopes == null ? Collections.emptySet() : supportedScopes;
+        public @NotNull Builder withincludedScopes(Set<Scope> includedScopes) {
+            this.includedScopes = includedScopes == null ? Collections.emptySet() : includedScopes;
 
             return this;
         }
@@ -151,7 +151,7 @@ public class TracingConfigurationParameters implements Serializable {
          * @return {@code TracingConfigurationParameters} instance.
          */
         public TracingConfigurationParameters build() {
-            return new TracingConfigurationParameters(samplingRate, supportedScopes);
+            return new TracingConfigurationParameters(samplingRate, includedScopes);
         }
     }
 }

@@ -127,12 +127,12 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
 
 
     /**
-     * Ensure that TX traces doesn't include COMMUNICATION sub-traces in case of empty set of supported scopes.
+     * Ensure that TX traces doesn't include COMMUNICATION sub-traces in case of empty set of included scopes.
      *
      * @throws Exception If Failed.
      */
     @Test
-    public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptySupportedScopes() throws Exception {
+    public void testTxTraceDoesNotIncludeCommunicationTracesInCaseOfEmptyincludedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
         client.tracingConfiguration().set(
@@ -161,19 +161,19 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
 
     /**
      * Ensure that TX trace does include COMMUNICATION sub-traces in case of COMMUNICATION scope within the set
-     * of supported scopes of the corresponding TX tracing configuration.
+     * of included scopes of the corresponding TX tracing configuration.
      *
      * @throws Exception If Failed.
      */
     @Test
-    public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxSupportedScopes() throws Exception {
+    public void testTxTraceIncludesCommunicationTracesInCaseOfCommunicationScopeInTxincludedScopes() throws Exception {
         IgniteEx client = startGrid("client");
 
         client.tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).
-                withSupportedScopes(Collections.singleton(Scope.COMMUNICATION)).
+                withincludedScopes(Collections.singleton(Scope.COMMUNICATION)).
                 build());
 
         Transaction tx = client.transactions().txStart(PESSIMISTIC, SERIALIZABLE);

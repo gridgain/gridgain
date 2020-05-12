@@ -53,8 +53,8 @@ public class NoopTracing implements Tracing {
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
         double samplingRate,
-        @NotNull Set<Scope> supportedScopes) {
-        return NOOP_SPI.create(spanType, parentSpan, samplingRate, supportedScopes);
+        @NotNull Set<Scope> includedScopes) {
+        return NOOP_SPI.create(spanType, parentSpan, samplingRate, includedScopes);
     }
 
     /** {@inheritDoc} */

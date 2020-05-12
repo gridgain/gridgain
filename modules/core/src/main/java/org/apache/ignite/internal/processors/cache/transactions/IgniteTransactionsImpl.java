@@ -178,7 +178,7 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
             TX,
             null,
             tracingConfigurationParameters.samplingRate(),
-            tracingConfigurationParameters.supportedScopes()));
+            tracingConfigurationParameters.includedScopes()));
 
         MTC.span().addTag("isolation", isolation.name());
         MTC.span().addTag("concurrency", concurrency.name());

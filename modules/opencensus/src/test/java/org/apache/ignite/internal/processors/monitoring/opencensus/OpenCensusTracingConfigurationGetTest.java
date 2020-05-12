@@ -60,7 +60,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
         TracingConfigurationParameters expScopeSpecificParameters =
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(0.2).
-                withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
+                withincludedScopes(Collections.singleton(COMMUNICATION)).build();
 
         grid(0).tracingConfiguration().set(coords, expScopeSpecificParameters);
 
@@ -81,7 +81,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
         TracingConfigurationParameters expScopeSpecificParameters =
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(0.35).
-                withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
+                withincludedScopes(Collections.singleton(COMMUNICATION)).build();
 
         grid(0).tracingConfiguration().set(coords, expScopeSpecificParameters);
 
@@ -113,7 +113,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
         TracingConfigurationParameters expScopeSpecificParameters =
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(0.2).
-                withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
+                withincludedScopes(Collections.singleton(COMMUNICATION)).build();
 
         grid(0).tracingConfiguration().set(coords, expScopeSpecificParameters);
 
@@ -137,7 +137,7 @@ public class OpenCensusTracingConfigurationGetTest extends AbstractTracingTest {
         TracingConfigurationParameters expScopeSpecificParameters =
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(0.35).
-                withSupportedScopes(Collections.singleton(COMMUNICATION)).build();
+                withincludedScopes(Collections.singleton(COMMUNICATION)).build();
 
         grid(0).tracingConfiguration().set(lbSpecificCoords, expScopeSpecificParameters);
 

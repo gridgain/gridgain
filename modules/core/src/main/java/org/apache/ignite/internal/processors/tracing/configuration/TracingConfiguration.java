@@ -49,35 +49,35 @@ public interface TracingConfiguration {
     static final TracingConfigurationParameters DEFAULT_TX_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withSupportedScopes(Collections.emptySet()).
+            withincludedScopes(Collections.emptySet()).
             build();
 
     /** Default exchange configuration. */
     static final TracingConfigurationParameters DEFAULT_EXCHANGE_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withSupportedScopes(Collections.emptySet()).
+            withincludedScopes(Collections.emptySet()).
             build();
 
     /** Default discovery configuration. */
     static final TracingConfigurationParameters DEFAULT_DISCOVERY_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withSupportedScopes(Collections.emptySet()).
+            withincludedScopes(Collections.emptySet()).
             build();
 
     /** Default communication configuration. */
     static final TracingConfigurationParameters DEFAULT_COMMUNICATION_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withSupportedScopes(Collections.emptySet()).
+            withincludedScopes(Collections.emptySet()).
             build();
 
     /** Default noop configuration. */
     static final TracingConfigurationParameters NOOP_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withSupportedScopes(Collections.emptySet()).
+            withincludedScopes(Collections.emptySet()).
             build();
 
     /**
@@ -87,7 +87,7 @@ public interface TracingConfiguration {
      *
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label,
      *  that defines subset of traces and/or spans that'll use given configuration.
-     * @param parameters {@link TracingConfigurationParameters} e.g. sampling rate, set of supported scopes etc.
+     * @param parameters {@link TracingConfigurationParameters} e.g. sampling rate, set of included scopes etc.
      * @throws IgniteException If failed to set tracing configuration.
      */
     void set(@NotNull TracingConfigurationCoordinates coordinates,

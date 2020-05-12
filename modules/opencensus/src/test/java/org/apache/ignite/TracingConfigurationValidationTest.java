@@ -108,16 +108,16 @@ import static org.apache.ignite.internal.processors.tracing.Scope.TX;
     }
 
     /**
-     * Ensure that it's possible to set any set of {@code Scope} as supported scopes as part of
+     * Ensure that it's possible to set any set of {@code Scope} as included scopes as part of
      * {@link TracingConfigurationParameters}.
      */
     @Test @SuppressWarnings("unchecked")
-    public void testThatItsPossibleToSpecifyAnySetSupportedScopesAsPartOfTracingConfigurationParameters() {
-        for (Set<Scope> validSupportedScopes : new Set[] {
+    public void testThatItsPossibleToSpecifyAnySetincludedScopesAsPartOfTracingConfigurationParameters() {
+        for (Set<Scope> validincludedScopes : new Set[] {
             null,
             Collections.emptySet(),
             Collections.singleton(COMMUNICATION),
             new HashSet<>(Arrays.asList(COMMUNICATION, DISCOVERY, TX, EXCHANGE))})
-            new TracingConfigurationParameters.Builder().withSupportedScopes(validSupportedScopes).build();
+            new TracingConfigurationParameters.Builder().withincludedScopes(validincludedScopes).build();
     }
 }
