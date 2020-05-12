@@ -114,6 +114,30 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
     }
 
     /**
+     * Test affinity awareness for all applicable operation types for partitioned cache with 0 backups.
+     */
+    @Test
+    public void testPartitionedCache0Backups() {
+        testApplicableCache(PART_CACHE_0_BACKUPS_NAME, i -> i);
+    }
+
+    /**
+     * Test affinity awareness for all applicable operation types for partitioned cache with 1 backups.
+     */
+    @Test
+    public void testPartitionedCache1Backups() {
+        testApplicableCache(PART_CACHE_1_BACKUPS_NAME, i -> i);
+    }
+
+    /**
+     * Test affinity awareness for all applicable operation types for partitioned cache with 3 backups.
+     */
+    @Test
+    public void testPartitionedCache3Backups() {
+        testApplicableCache(PART_CACHE_3_BACKUPS_NAME, i -> i);
+    }
+
+    /**
      * @param cacheName Cache name.
      */
     private void testNotApplicableCache(String cacheName) {
