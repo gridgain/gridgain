@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1761,23 +1762,38 @@ public class GridDhtPartitionDemander {
             if (!p0.containsAll(p1))
                 return false;
 
-            AffinityTopologyVersion previousTopVer =
-                grp.affinity().cachedVersions().stream().skip(grp.affinity().cachedVersions().size() - 2).findFirst().get();
-
-            p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
-                grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
-                .collect(toSet());
-
             p1 = Stream.concat(grp.affinity().cachedAffinity(otherAssignments.topologyVersion())
                 .primaryPartitions(ctx.localNodeId()).stream(), grp.affinity()
                 .cachedAffinity(otherAssignments.topologyVersion()).backupPartitions(ctx.localNodeId()).stream())
                 .collect(toSet());
 
-            // Not compatible if owners are different.
-            if (p0.equals(p1))
-                return true;
+            NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions()
+                .headSet(otherAssignments.topologyVersion(), false);
 
-            return false;
+            if (!toCheck.contains(topVer)) {
+                log.warning("History is not enough for checking compatible last rebalance, new rebalance started " +
+                    "[grp=" + grp.cacheOrGroupName() + ", lastTop=" + topVer + ']');
+
+                return false;
+            }
+
+            for (AffinityTopologyVersion previousTopVer : toCheck.descendingSet()) {
+                if (previousTopVer.before(topVer))
+                    break;
+
+                if (!ctx.exchange().lastAffinityChangedTopologyVersion(previousTopVer).equals(previousTopVer))
+                    continue;
+
+                p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
+                    grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
+                    .collect(toSet());
+
+                // Not compatible if owners are different.
+                if (!p0.equals(p1))
+                    return false;
+            }
+
+            return true;
         }
 
         /** {@inheritDoc} */
