@@ -76,11 +76,6 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
         return cfg;
     }
 
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        startCluster();
-    }
-
     /**
      */
     protected void startCluster() throws Exception {
@@ -94,12 +89,18 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        startCluster();
+
         discoveryHook = null;
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        super.afterTest();
     }
 
     /**

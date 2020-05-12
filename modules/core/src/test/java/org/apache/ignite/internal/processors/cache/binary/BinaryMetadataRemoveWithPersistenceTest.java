@@ -36,11 +36,12 @@ public class BinaryMetadataRemoveWithPersistenceTest extends BinaryMetadataRemov
                     .setPersistenceEnabled(true)));
     }
 
+
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
+    @Override protected void beforeTest() throws Exception {
         cleanPersistenceDir();
 
-        super.beforeTestsStarted();
+        super.beforeTest();
     }
 
     /** {@inheritDoc} */
