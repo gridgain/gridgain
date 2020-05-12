@@ -76,17 +76,14 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (cacheDesc == null)
                 continue;
 
-            if (fillGroup(cacheGroupIds, cacheDesc))
+            ClientCachePartitionAwarenessGroup grp = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
+
+            // Cache already processed.
+            if (grp == null)
                 continue;
 
-            ClientCachePartitionMapping mapping = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
-
-            // Mapping is new and is not contained in the current list.
-            CacheObjectBinaryProcessorImpl proc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
-            ClientCachePartitionAwarenessGroup group = new ClientCachePartitionAwarenessGroup(proc, mapping, cacheDesc);
-
-            groups.add(group);
-            cacheGroupIds.put(cacheDesc.groupId(), group);
+            groups.add(grp);
+            cacheGroupIds.put(cacheDesc.groupId(), grp);
         }
 
         Map<String, DynamicCacheDescriptor> allCaches = ctx.kernalContext().cache().cacheDescriptors();
@@ -97,36 +94,10 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (!cacheDesc.cacheType().userCache())
                 continue;
 
-            if (fillGroup(cacheGroupIds, cacheDesc))
-                continue;
-
             processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
         }
 
         return new ClientCachePartitionsResponse(requestId(), groups, affinityVer);
-    }
-
-    /**
-     * Get the cache group and if it exists add cache description to it.
-     *
-     * @param cacheGroupIds
-     * @param cacheDesc
-     * @return {@code true} if group already exists.
-     */
-    private static boolean fillGroup(Map<Integer, ClientCachePartitionAwarenessGroup> cacheGroupIds,
-                                     DynamicCacheDescriptor cacheDesc) {
-        int cacheGroupId = cacheDesc.groupId();
-
-        ClientCachePartitionAwarenessGroup group = cacheGroupIds.get(cacheGroupId);
-        if (group != null) {
-            // Cache group is found. It means that cache belongs to one of cache groups with known mapping.
-            // Just adding our cache to this group here.
-            group.addCache(cacheDesc);
-
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -136,9 +107,10 @@ public class ClientCachePartitionsRequest extends ClientRequest {
      * @param cacheGroupIds Map of known group IDs.
      * @param affinityVer Affinity topology version.
      * @param cacheDesc Cache descriptor.
-     * @return Null if cache was processed and new client cache partition mapping if it does not belong to any existent.
+     * @return Null if cache was processed and new client cache affinity awareness group if it does not belong to any
+     * existent.
      */
-    private static ClientCachePartitionMapping processCache(
+    private static ClientCachePartitionAwarenessGroup processCache(
         ClientConnectionContext ctx,
         List<ClientCachePartitionAwarenessGroup> groups,
         Map<Integer, ClientCachePartitionAwarenessGroup> cacheGroupIds,
@@ -147,6 +119,15 @@ public class ClientCachePartitionsRequest extends ClientRequest {
     {
         int cacheGroupId = cacheDesc.groupId();
         int cacheId = cacheDesc.cacheId();
+
+        ClientCachePartitionAwarenessGroup group = cacheGroupIds.get(cacheGroupId);
+        if (group != null) {
+            // Cache group is found. It means that cache belongs to one of cache groups with known mapping.
+            // Just adding our cache to this group here.
+            group.addCache(cacheDesc);
+
+            return null;
+        }
 
         AffinityAssignment assignment = getCacheAssignment(ctx, affinityVer, cacheId);
 
@@ -158,7 +139,7 @@ public class ClientCachePartitionsRequest extends ClientRequest {
         if (isApplicable(cacheDesc.cacheConfiguration()))
             mapping = new ClientCachePartitionMapping(cacheId, assignment);
 
-        ClientCachePartitionAwarenessGroup group = getCompatibleGroup(groups, mapping);
+        group = getCompatibleGroup(groups, mapping);
         if (group != null) {
             group.addCache(cacheDesc);
             cacheGroupIds.put(cacheGroupId, group);
@@ -166,7 +147,9 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             return null;
         }
 
-        return mapping;
+        CacheObjectBinaryProcessorImpl proc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
+
+        return new ClientCachePartitionAwarenessGroup(proc, mapping, cacheDesc);
     }
 
     /**
