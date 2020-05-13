@@ -22,11 +22,11 @@ import org.jetbrains.annotations.Nullable;
  * Tracing configuration operation options.
  */
 public enum VisorTracingConfigurationOperation {
-    /** Retrieve specific tracing configuration. */
-    RETRIEVE,
+    /** Get specific tracing configuration. */
+    GET,
 
-    /** Retrieve tracing configuration. */
-    RETRIEVE_ALL,
+    /** Get tracing configuration. */
+    GET_ALL,
 
     /** Reset specific tracing configuration to default. */
     RESET,
@@ -37,8 +37,8 @@ public enum VisorTracingConfigurationOperation {
      */
     RESET_ALL,
 
-    /** Apply new tracing configuration. */
-    APPLY;
+    /** Set new tracing configuration. */
+    SET;
 
     /** Enumerated values. */
     private static final VisorTracingConfigurationOperation[] VALS = values();

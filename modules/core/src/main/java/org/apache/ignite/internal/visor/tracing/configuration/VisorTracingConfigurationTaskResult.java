@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -35,8 +37,11 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** */
+    private static final Character RES_PRINTER_SEPARATOR = ',';
+
     /** Retrieved reseted or updated tracing configuration. */
-    private List<VisorTracingConfigurationItem> tracingConfigurations = new ArrayList();
+    private List<VisorTracingConfigurationItem> tracingConfigurations = new ArrayList<>();
 
     /**
      * Default constructor.
@@ -51,12 +56,13 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
      * @param coordinates {@link TracingConfigurationCoordinates} instance.
      * @param parameters {@link TracingConfigurationParameters} instance.
      */
+    @SuppressWarnings("unchecked")
     public void add(TracingConfigurationCoordinates coordinates, TracingConfigurationParameters parameters) {
         tracingConfigurations.add(new VisorTracingConfigurationItem(
             coordinates.scope(),
             coordinates.label(),
             parameters.samplingRate(),
-            parameters.supportedScopes()
+            parameters.includedScopes()
         ));
     }
 
@@ -66,7 +72,7 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
     }
 
     /** {@inheritDoc} */
-    @Override
+    @SuppressWarnings("unchecked") @Override
     protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         tracingConfigurations = (List)U.readCollection(in);
     }
@@ -75,28 +81,23 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
      * Fills printer {@link Consumer <String>} by string view of this class.
      */
     public void print(Consumer<String> printer) {
-        // TODO: 07.05.20 Add pretty printing.
+        printer.accept("Scope, Label, Sampling Rate, Supported Scopes");
+
+        Collections.sort(tracingConfigurations, Comparator.comparing(VisorTracingConfigurationItem::scope));
+
         for (VisorTracingConfigurationItem tracingConfiguration : tracingConfigurations) {
-            StringBuilder tracingConfigurationLine = new StringBuilder();
-
-            tracingConfigurationLine.append("Scope: ");
-            tracingConfigurationLine.append(tracingConfiguration.scope().name());
-
-            if (tracingConfiguration.label() != null) {
-                tracingConfigurationLine.append(", Label: '");
-                tracingConfigurationLine.append(tracingConfiguration.label());
-                tracingConfigurationLine.append(".");
-            }
-
-            tracingConfigurationLine.append(", Sampling Rate: ");
-            tracingConfigurationLine.append(tracingConfiguration.samplingRate());
-
-            if (tracingConfiguration.supportedScopes() != null && !tracingConfiguration.supportedScopes().isEmpty()) {
-                tracingConfigurationLine.append(", Supported Scopes: ");
-                tracingConfigurationLine.append(Arrays.toString(tracingConfiguration.supportedScopes().toArray()));
-            }
-
-            printer.accept(tracingConfigurationLine.toString());
+            printer.accept(
+                tracingConfiguration.scope().name() + RES_PRINTER_SEPARATOR +
+                    (tracingConfiguration.label() == null ? "" : tracingConfiguration.label()) + RES_PRINTER_SEPARATOR +
+                    tracingConfiguration.samplingRate() + RES_PRINTER_SEPARATOR +
+                    Arrays.toString(tracingConfiguration.supportedScopes().toArray()));
         }
+    }
+
+    /**
+     * @return Retrieved reseted or updated tracing configuration.
+     */
+    public List<VisorTracingConfigurationItem> tracingConfigurations() {
+        return tracingConfigurations;
     }
 }

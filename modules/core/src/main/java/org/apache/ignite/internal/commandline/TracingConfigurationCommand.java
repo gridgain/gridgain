@@ -38,9 +38,12 @@ import org.apache.ignite.internal.visor.tracing.configuration.VisorTracingConfig
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.TRACING_CONFIGURATION;
+import static org.apache.ignite.internal.commandline.CommandLogger.grouped;
+import static org.apache.ignite.internal.commandline.CommandLogger.join;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
-import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.RETRIEVE_ALL;
+import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.GET_ALL;
+import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.RESET_ALL;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.of;
 import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
@@ -66,7 +69,8 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
             log,
             "Print tracing configuration: ",
             TRACING_CONFIGURATION,
-            TracingConfigurationSubcommand.RETRIEVE_ALL.text());
+            TracingConfigurationSubcommand.GET_ALL.text(),
+            optional(TracingConfigurationCommandArg.SCOPE.argName(), join("|", Scope.values())));
 
         Command.usage(
             log,
@@ -74,9 +78,20 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
                 TracingConfigurationCommandArg.SCOPE.argName() + " and " +
                 TracingConfigurationCommandArg.LABEL.argName() + ": ",
             TRACING_CONFIGURATION,
-            TracingConfigurationSubcommand.RETRIEVE.text(),
-            TracingConfigurationCommandArg.SCOPE.argName(),
+            TracingConfigurationSubcommand.GET.text(),
+            grouped(TracingConfigurationCommandArg.SCOPE.argName(), join("|", Scope.values())),
             optional(TracingConfigurationCommandArg.LABEL.argName()));
+
+        Command.usage(
+            log,
+            "Reset all specific tracing configuration the to default. If " +
+                TracingConfigurationCommandArg.SCOPE.argName() +
+                " is specified, then remove all label specific configuration for the given scope and reset given scope" +
+                " specific configuration to the default, if " + TracingConfigurationCommandArg.SCOPE.argName() +
+                " is skipped then reset all tracing configurations to the default. Print tracing configuration.",
+            TRACING_CONFIGURATION,
+            RESET_ALL.text(),
+            optional(TracingConfigurationCommandArg.SCOPE.argName(), join("|", Scope.values())));
 
         Command.usage(
             log,
@@ -88,33 +103,27 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
                 " Print reseted configuration.",
             TRACING_CONFIGURATION,
             TracingConfigurationSubcommand.RESET.text(),
-            TracingConfigurationCommandArg.SCOPE.argName(),
+            grouped(TracingConfigurationCommandArg.SCOPE.argName(), join("|", Scope.values())),
             optional(TracingConfigurationCommandArg.LABEL.argName()));
 
         Command.usage(
             log,
-            "Reset all specific tracing configuration the to default. If " +
-                TracingConfigurationCommandArg.SCOPE.argName() +
-                "is specified, then remove all label specific configuration for the given scope and reset given scope" +
-                " specific configuration to the default, if " + TracingConfigurationCommandArg.SCOPE.argName() +
-                " is skipped then reset all tracing configurations to the default. Print tracing configuration.",
-            TRACING_CONFIGURATION,
-            TracingConfigurationSubcommand.RESET_ALL.text(),
-            optional(TracingConfigurationCommandArg.SCOPE.argName()));
-
-        Command.usage(
-            log,
-            "Apply new tracing configuration. If both " +
+            "Set new tracing configuration. If both " +
                 TracingConfigurationCommandArg.SCOPE.argName() + " and " +
                 TracingConfigurationCommandArg.LABEL.argName() + " are specified then add or override label" +
                 " specific configuration, if only " + TracingConfigurationCommandArg.SCOPE.argName() +
                 " is specified, then override scope specific configuration. Print applied configuration.",
             TRACING_CONFIGURATION,
-            TracingConfigurationSubcommand.APPLY.text(),
-            TracingConfigurationCommandArg.SCOPE.argName(),
+            TracingConfigurationSubcommand.SET.text(),
+            grouped(TracingConfigurationCommandArg.SCOPE.argName(), join("|", Scope.values()),
             optional(TracingConfigurationCommandArg.LABEL.argName()),
-            optional(TracingConfigurationCommandArg.SAMPLING_RATE.argName()),
-            optional(TracingConfigurationCommandArg.SUPPORTED_SCOPES.argName()));
+            optional(TracingConfigurationCommandArg.SAMPLING_RATE.argName(),
+                "Decimal value between 0 and 1, " +
+                "where 0 means never and 1 means always. " +
+                "More or less reflects the probability of sampling specific trace."),
+            optional(TracingConfigurationCommandArg.SUPPORTED_SCOPES.argName(),
+                "Set of scopes with comma as separator ",
+                join("|", Scope.values()))));
     }
 
     /**
@@ -163,7 +172,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
     @Override public void parseArguments(CommandArgIterator argIter) {
         // If there is no arguments, use list command.
         if (!argIter.hasNextSubArg()) {
-            args = new TracingConfigurationArguments.Builder(TracingConfigurationSubcommand.RETRIEVE_ALL).build();
+            args = new TracingConfigurationArguments.Builder(TracingConfigurationSubcommand.GET_ALL).build();
 
             return;
         }
@@ -188,6 +197,8 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
                 CommandArgUtils.of(argIter.nextArg(""), TracingConfigurationCommandArg.class);
 
             String strVal;
+
+            assert arg != null;
 
             switch (arg) {
                 case SCOPE: {
@@ -254,18 +265,14 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
             }
         }
 
-        // Scope is a mandatory attribute for all sub-commands except list.
-        if (cmd != RETRIEVE_ALL && scope == null) {
+        // Scope is a mandatory attribute for all sub-commands except get_all and reset_all.
+        if ((cmd != GET_ALL && cmd != RESET_ALL) && scope == null) {
             throw new IllegalArgumentException(
                 "Scope attribute is missing. Following values can be used: " + Arrays.toString(Scope.values()) + '.');
         }
 
         switch (cmd) {
-            case RETRIEVE_ALL: {
-                // No-op
-                break;
-            }
-
+            case GET_ALL:
             case RESET_ALL: {
                 tracingConfigurationArgs.withScope(scope);
 
@@ -273,13 +280,13 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
             }
 
             case RESET:
-            case RETRIEVE: {
+            case GET: {
                 tracingConfigurationArgs.withScope(scope).withLabel(lb);
 
                 break;
             }
 
-            case APPLY: {
+            case SET: {
                 tracingConfigurationArgs.withScope(scope).withLabel(lb).withSamplingRate(samplingRate).
                     withSupportedScopes(supportedScopes);
 

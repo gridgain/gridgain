@@ -155,4 +155,22 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
     @Override public String toString() {
         return S.toString(VisorTracingConfigurationItem.class, this);
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        VisorTracingConfigurationItem that = (VisorTracingConfigurationItem)o;
+
+        if (scope != that.scope)
+            return false;
+        if (lb != null ? !lb.equals(that.lb) : that.lb != null)
+            return false;
+        if (samplingRate != null ? !samplingRate.equals(that.samplingRate) : that.samplingRate != null)
+            return false;
+        return supportedScopes != null ? supportedScopes.equals(that.supportedScopes) : that.supportedScopes == null;
+    }
 }

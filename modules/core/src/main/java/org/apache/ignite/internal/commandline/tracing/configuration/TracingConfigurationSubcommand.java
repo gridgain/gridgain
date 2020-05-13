@@ -23,11 +23,11 @@ import org.jetbrains.annotations.Nullable;
  * Set of tracing configuration commands.
  */
 public enum TracingConfigurationSubcommand {
-    /** Retrieve specific tracing configuration. */
-    RETRIEVE("retrieve", VisorTracingConfigurationOperation.RETRIEVE),
+    /** Get specific tracing configuration. */
+    GET("get", VisorTracingConfigurationOperation.GET),
 
-    /** Retrieve tracing configuration. */
-    RETRIEVE_ALL("retrieve-all", VisorTracingConfigurationOperation.RETRIEVE_ALL),
+    /** Get tracing configuration. */
+    GET_ALL("get_all", VisorTracingConfigurationOperation.GET_ALL),
 
     /** Reset specific tracing configuration to default. */
     RESET("reset", VisorTracingConfigurationOperation.RESET),
@@ -36,10 +36,10 @@ public enum TracingConfigurationSubcommand {
      * Reset all scope specific tracing configuration to default,
      * or reset all tracing configurations to default if scope is not specified.
      */
-    RESET_ALL("reset-all", VisorTracingConfigurationOperation.RESET_ALL),
+    RESET_ALL("reset_all", VisorTracingConfigurationOperation.RESET_ALL),
 
-    /** Apply new tracing configuration. */
-    APPLY("apply", VisorTracingConfigurationOperation.APPLY);
+    /** Set new tracing configuration. */
+    SET("set", VisorTracingConfigurationOperation.SET);
 
     /** Enumerated values. */
     private static final TracingConfigurationSubcommand[] VALS = values();

@@ -45,7 +45,8 @@ import org.jetbrains.annotations.Nullable;
      * Constructor.
      *
      * @param cmd Command
-     * @param scope Specifies the {@link Scope} of a trace's root span to which some specific tracing configuration will be applied.
+     * @param scope Specify the {@link Scope} of a trace's root span
+     *  to which some specific tracing configuration will be applied.
      * @param lb Specifies the label of a traced operation. It's an optional attribute.
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      *  0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
@@ -108,7 +109,8 @@ import org.jetbrains.annotations.Nullable;
 
         /**
          * Builder method that allows to set scope.
-         * @param scope {@link Scope} of a trace's root span to which some specific tracing configuration will be applied.
+         * @param scope {@link Scope} of a trace's root span
+         *  to which some specific tracing configuration will be applied.
          * @return Builder.
          */
         public @NotNull Builder withScope(Scope scope) {
@@ -120,8 +122,9 @@ import org.jetbrains.annotations.Nullable;
         /**
          * Builder method that allows to set sampling rate.
          *
-         * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
-         * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
+         * @param samplingRate Number between 0 and 1 that more or less reflects the probability
+         *  of sampling specific trace.
+         *  0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
          * @return Builder.
          */
         public @NotNull Builder withSamplingRate(double samplingRate) {

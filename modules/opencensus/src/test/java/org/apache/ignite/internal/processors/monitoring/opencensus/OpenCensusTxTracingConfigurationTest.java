@@ -173,7 +173,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
             new TracingConfigurationCoordinates.Builder(TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).
-                withincludedScopes(Collections.singleton(Scope.COMMUNICATION)).
+                withIncludedScopes(Collections.singleton(Scope.COMMUNICATION)).
                 build());
 
         Transaction tx = client.transactions().txStart(PESSIMISTIC, SERIALIZABLE);

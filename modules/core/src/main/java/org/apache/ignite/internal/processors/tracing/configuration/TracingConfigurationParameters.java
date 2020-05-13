@@ -139,7 +139,7 @@ public class TracingConfigurationParameters implements Serializable {
          * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
          * @return {@code TracingConfigurationParameters} instance.
          */
-        public @NotNull Builder withincludedScopes(Set<Scope> includedScopes) {
+        public @NotNull Builder withIncludedScopes(Set<Scope> includedScopes) {
             this.includedScopes = includedScopes == null ? Collections.emptySet() : includedScopes;
 
             return this;

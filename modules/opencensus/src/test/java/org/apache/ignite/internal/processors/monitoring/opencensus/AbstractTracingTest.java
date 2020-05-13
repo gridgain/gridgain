@@ -81,7 +81,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** Updated scope specific parameters to be used within several tests. */
     protected static final TracingConfigurationParameters SOME_SCOPE_SPECIFIC_PARAMETERS =
         new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
-            withincludedScopes(Collections.singleton(COMMUNICATION)).build();
+            withIncludedScopes(Collections.singleton(COMMUNICATION)).build();
 
     /** TX Label specific coordinates to be used within several tests. */
     protected static final TracingConfigurationCoordinates TX_LABEL_SPECIFIC_COORDINATES =
@@ -90,7 +90,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** Updated label specific parameters to be used within several tests. */
     protected static final TracingConfigurationParameters SOME_LABEL_SPECIFIC_PARAMETERS =
         new TracingConfigurationParameters.Builder().withSamplingRate(0.111).
-            withincludedScopes(Collections.singleton(EXCHANGE)).build();
+            withIncludedScopes(Collections.singleton(EXCHANGE)).build();
 
     static {
         DFLT_CONFIG_MAP.put(

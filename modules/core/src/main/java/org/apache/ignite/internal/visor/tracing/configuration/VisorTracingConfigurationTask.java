@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.visor.tracing.configuration;
 
+import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
@@ -27,9 +29,6 @@ import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Task that will collect and update tracing configuration.
@@ -65,11 +64,11 @@ public class VisorTracingConfigurationTask
         @Override protected @NotNull VisorTracingConfigurationTaskResult run(
             VisorTracingConfigurationTaskArg arg) throws IgniteException {
             switch (arg.operation()) {
-                case RETRIEVE_ALL:
-                    return retrieveAll();
+                case GET_ALL:
+                    return getAll(arg.scope());
 
-                case RETRIEVE:
-                    return retrieve(arg.scope(), arg.label());
+                case GET:
+                    return get(arg.scope(), arg.label());
 
                 case RESET:
                     return reset(arg.scope(), arg.label());
@@ -77,44 +76,45 @@ public class VisorTracingConfigurationTask
                 case RESET_ALL:
                     return resetAll(arg.scope());
 
-                case APPLY:
-                    return apply(arg.scope(), arg.label(), arg.samplingRate(), arg.supportedScopes());
+                case SET:
+                    return set(arg.scope(), arg.label(), arg.samplingRate(), arg.supportedScopes());
 
                 default: {
                     assert false; // We should never get here.
 
-                    return retrieveAll(); // Just in case.
+                    return getAll(null); // Just in case.
                 }
             }
         }
 
         /**
-         * Retrieve tracing configuration.
+         * Get tracing configuration.
          *
+         * @param scope Nullable scope of tracing configuration to be retrieved.
+         *  If null - all configuration will be returned.
          * @return Tracing configuration as {@link VisorTracingConfigurationTaskResult} instance.
          */
-        private @NotNull VisorTracingConfigurationTaskResult retrieveAll() {
-            Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tracingConfigurations =
-                ignite.tracingConfiguration().retrieveConfigurations();
+        private @NotNull VisorTracingConfigurationTaskResult getAll(@Nullable Scope scope) {
+            Map<TracingConfigurationCoordinates, TracingConfigurationParameters> cfg =
+                ignite.tracingConfiguration().getAll(scope);
 
             VisorTracingConfigurationTaskResult res = new VisorTracingConfigurationTaskResult();
 
-            for (Map.Entry<TracingConfigurationCoordinates, TracingConfigurationParameters> entry: tracingConfigurations.entrySet()) {
+            for (Map.Entry<TracingConfigurationCoordinates, TracingConfigurationParameters> entry: cfg.entrySet())
                 res.add(entry.getKey(), entry.getValue());
-            }
 
             return res;
         }
 
         /**
-         * Retrieve scope specific and optionally label specific tracing configuration.
+         * Get scope specific and optionally label specific tracing configuration.
          *
          * @param scope Scope.
          * @param lb Label
          * @return Scope specific and optionally label specific tracing configuration as
          *  {@link VisorTracingConfigurationTaskResult} instance.
          */
-        private @NotNull VisorTracingConfigurationTaskResult retrieve(
+        private @NotNull VisorTracingConfigurationTaskResult get(
             @NotNull Scope scope,
             @Nullable String lb)
         {
@@ -122,7 +122,7 @@ public class VisorTracingConfigurationTask
                 new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build();
 
             TracingConfigurationParameters updatedParameters =
-                ignite.tracingConfiguration().retrieveConfiguration(
+                ignite.tracingConfiguration().get(
                     new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build());
 
             VisorTracingConfigurationTaskResult res = new VisorTracingConfigurationTaskResult();
@@ -137,17 +137,17 @@ public class VisorTracingConfigurationTask
          *
          * @param scope Scope.
          * @param lb Label.
-         * @return Reseted scope specific and optionally label specific tracing configuration  as
+         * @return Scope based configuration that was partly of fully reseted as
          *  {@link VisorTracingConfigurationTaskResult} instance.
          */
         private @NotNull VisorTracingConfigurationTaskResult reset(
             @NotNull Scope scope,
             @Nullable String lb)
         {
-            ignite.tracingConfiguration().restoreDefaultConfiguration(
+            ignite.tracingConfiguration().reset(
                 new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build());
 
-            return retrieve(scope, lb);
+            return getAll(scope);
         }
 
         /**
@@ -157,22 +157,22 @@ public class VisorTracingConfigurationTask
          * @return Tracing configuration as {@link VisorTracingConfigurationTaskResult} instance.
          */
         private @NotNull VisorTracingConfigurationTaskResult resetAll(@Nullable Scope scope) {
-            // TODO: 07.05.20
+            ignite.tracingConfiguration().resetAll(scope);
 
-            return retrieveAll();
+            return getAll(scope);
         }
 
         /**
-         * Apply new tracing configuration.
+         * Set new tracing configuration.
          *
          * @param scope Scope.
          * @param lb Label.
          * @param samplingRate Sampling rate.
          * @param supportedScopes Set of supported scopes.
-         * @return Updated scope specific and optionally label specific tracing configuration  as
-         *  {@link VisorTracingConfigurationTaskResult} instance.
+         * @return Scope based configuration that was partly of fully updated as
+         *          *  {@link VisorTracingConfigurationTaskResult} instance.
          */
-        private @NotNull VisorTracingConfigurationTaskResult apply(
+        private @NotNull VisorTracingConfigurationTaskResult set(
             @NotNull Scope scope,
             @Nullable String lb,
             @Nullable Double samplingRate,
@@ -187,13 +187,12 @@ public class VisorTracingConfigurationTask
                 parametersBuilder.withSamplingRate(samplingRate);
 
             if (supportedScopes != null)
-                parametersBuilder.withSupportedScopes(supportedScopes);
+                parametersBuilder.withIncludedScopes(supportedScopes);
 
-            ignite.tracingConfiguration().addConfiguration(coordinates, parametersBuilder.build());
+            ignite.tracingConfiguration().set(coordinates, parametersBuilder.build());
 
-            return retrieve(scope, lb);
+            return getAll(scope);
         }
-
 
         /** {@inheritDoc} */
         @Override public String toString() {
