@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -59,6 +60,7 @@ import org.apache.ignite.internal.client.impl.connection.GridClientTopology;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.CycleThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
@@ -513,35 +515,27 @@ public class GridClientImpl implements GridClient {
     /**
      * Thread that updates topology according to refresh interval specified in configuration.
      */
-    @SuppressWarnings("BusyWait")
-    private class TopologyUpdaterThread extends Thread {
+    private class TopologyUpdaterThread extends CycleThread {
         /**
          * Creates topology refresh thread.
          */
         private TopologyUpdaterThread() {
-            super(id + "-topology-update");
+            super(id + "-topology-update", TimeUnit.MILLISECONDS.toNanos(cfg.getTopologyRefreshFrequency()));
         }
 
         /** {@inheritDoc} */
-        @Override public void run() {
+        @Override public void iteration() {
             try {
-                while (!isInterrupted()) {
-                    Thread.sleep(cfg.getTopologyRefreshFrequency());
-
-                    try {
-                        tryInitTopology();
-                    }
-                    catch (GridClientException e) {
-                        top.fail(e);
-
-                        if (log.isLoggable(Level.FINE))
-                            log.fine("Failed to update topology: " + e.getMessage());
-                    }
-                }
+                tryInitTopology();
             }
-            catch (InterruptedException ignored) {
+            catch (GridClientException e) {
+                top.fail(e);
+
+                if (log.isLoggable(Level.FINE))
+                    log.fine("Failed to update topology: " + e.getMessage());
+            } catch (InterruptedException ignored) {
                 // Client is shutting down.
-                Thread.currentThread().interrupt();
+                interrupt();
             }
         }
     }

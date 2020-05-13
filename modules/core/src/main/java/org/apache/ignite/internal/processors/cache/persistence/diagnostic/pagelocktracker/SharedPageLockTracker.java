@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
@@ -33,6 +34,7 @@ import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.worker.CycleThread;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lifecycle.LifecycleAware;
 
@@ -358,27 +360,26 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
     /**
      *
      */
-    private class TimeOutWorker extends Thread {
+    private class TimeOutWorker extends CycleThread {
+
+
         /**
          *
          */
-        @Override public void run() {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    sleep(timeOutWorkerInterval);
+        TimeOutWorker() {
+            super("time-out-worker", TimeUnit.MILLISECONDS.toNanos(timeOutWorkerInterval));
+        }
 
-                    cleanTerminatedThreads();
 
-                    if (hangThreadsCallBack != null) {
-                        Set<SharedPageLockTracker.State> threadIds = hangThreads();
+        /** {@inheritDoc} */
+        @Override public void iteration() {
+            cleanTerminatedThreads();
 
-                        if (!F.isEmpty(threadIds))
-                            hangThreadsCallBack.accept(threadIds);
-                    }
-                }
-            }
-            catch (InterruptedException e) {
-                // No-op.
+            if (hangThreadsCallBack != null) {
+                Set<SharedPageLockTracker.State> threadIds = hangThreads();
+
+                if (!F.isEmpty(threadIds))
+                    hangThreadsCallBack.accept(threadIds);
             }
         }
     }
