@@ -75,7 +75,7 @@ public class FilePageStore implements PageStore {
     protected volatile FileIO fileIO;
 
     /** */
-    private final AtomicLong allocated;
+    protected final AtomicLong allocated;
 
     /** Region metrics updater. */
     private final LongAdderMetric allocatedTracker;
@@ -84,7 +84,7 @@ public class FilePageStore implements PageStore {
     protected final int pageSize;
 
     /** */
-    private volatile boolean inited;
+    protected volatile boolean inited;
 
     /** */
     private volatile boolean recover;
