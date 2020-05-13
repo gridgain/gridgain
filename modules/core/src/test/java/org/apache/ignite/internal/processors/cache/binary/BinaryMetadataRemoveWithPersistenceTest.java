@@ -16,13 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.binary;
 
-import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.G;
 import org.junit.Test;
 
 /**
