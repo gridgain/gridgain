@@ -49,6 +49,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.grid.GridGain;
 import org.gridgain.grid.configuration.GridGainConfiguration;
@@ -83,7 +84,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     private static final int PAGE_SIZE = 4096;
 
     /** Partitions count. */
-    private static final int PART_CNT = 1024;
+    private static final int PART_CNT = RendezvousAffinityFunction.DFLT_PARTITION_COUNT;
 
     /** Version of file page stores. */
     private static final int PAGE_STORE_VER = 2;
@@ -169,7 +170,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         ).setCacheConfiguration(
             new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setGroupName(CACHE_GROUP_NAME)
-                .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
+                .setAffinity(new RendezvousAffinityFunction(false))
                 .setSqlSchema(QueryUtils.DFLT_SCHEMA),
             new CacheConfiguration(EMPTY_CACHE_NAME)
                 .setGroupName(EMPTY_CACHE_GROUP_NAME),
@@ -563,12 +564,14 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         OutputStream destStream = new ByteArrayOutputStream();
 
         try (IgniteIndexReader reader = new IgniteIndexReader(
-            dir.getAbsolutePath(),
+            dir,
+            false,
             PAGE_SIZE,
             PART_CNT,
             PAGE_STORE_VER,
             idxs,
             checkParts,
+            null,
             destStream
         )) {
             reader.readIdx();
@@ -643,16 +646,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         cleanDir.mkdir();
 
-        RuntimeException re = null;
-
-        try {
-            runIndexReader(workDir, "noCache", null, false);
-        }
-        catch (RuntimeException e) {
-            re = e;
-        }
-
-        assertNotNull(re);
+        GridTestUtils.assertThrows(
+            log,
+            () -> runIndexReader(workDir, "noCache", null, false),
+            IgniteCheckedException.class,
+            null
+        );
     }
 
     /** */
@@ -754,23 +753,53 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void test_0() throws Exception {
         // TODO: implements
 
+        if (1 == 1)
+            return;
+
+        fullSnapshotDir = new File("C:\\Users\\tkalk\\IdeaProjects\\apache-ignite\\work\\snapshot\\ts_20200512141007_1589281807597.snapshot\\106cfecd_c0ac_49e0_aef9_5836e194a744");
+
         File baseDestDir = new File(resolveSnapshotDirectory(), "tmp");
+
+        String resFormat = "RESULT snapDir=%s destDir=%s res=%s";
 
         try {
             for (Path path : Files.newDirectoryStream(fullSnapshotDir.toPath(), Files::isDirectory)) {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
+                try (IgniteIndexReader ignored = new IgniteIndexReader(
+                    path.toFile(),
+                    true,
+                    PAGE_SIZE,
+                    PART_CNT,
+                    PAGE_STORE_VER,
+                    null,
+                    true,
+                    null,
+                    baos
+                )) {
+                    ignored.readIdx();
+
+                    log.info(String.format(resFormat, path, null, baos));
+                    log.info("------------------------------------------------------------------------------------------");
+                }
+
+                baos.reset();
+
                 try (IgniteIndexReader idxReader = new IgniteIndexReader(
-                    path.toAbsolutePath().toString(),
+                    path.toFile(),
                     PAGE_SIZE,
                     PAGE_STORE_VER,
                     baos
                 )) {
+                    // TODO: remove
+                    if (1 == 1)
+                        continue;
+
                     File destDir = new File(baseDestDir, path.getFileName().toString());
 
                     idxReader.transform(destDir.getAbsolutePath(), ".bin");
 
-                    log.info(String.format("RESULT snapDir=%s destDir=%s res=%s", path, destDir, baos));
+                    log.info(String.format(resFormat, path, destDir, baos));
                 }
             }
 
