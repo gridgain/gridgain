@@ -30,7 +30,10 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
  * Extension {@link FilePageStore} for reading snaphot files without transformation.
  */
 public class SnapshotFilePageStore extends FilePageStore {
-    /** Mapping pageIdx(array index) -> position(array value) in file. */
+    /**
+     * Mapping pageIdx(array index) -> position(array value) in file.
+     * Value {@code -1} means that page is corrupted.
+     */
     private final long[] pageFilePositions;
 
     /**

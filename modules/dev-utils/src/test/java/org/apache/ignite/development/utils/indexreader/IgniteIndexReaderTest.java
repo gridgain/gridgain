@@ -67,6 +67,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.Objects.requireNonNull;
+import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.ERROR_PREFIX;
@@ -269,6 +270,19 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Get data directory for cache group.
+     *
+     * @param cacheGrpName Cache group name.
+     * @param snapshot Snapshot directory or not.
+     * @return Directory name.
+     */
+    private String dataDir(String cacheGrpName, boolean snapshot) {
+        requireNonNull(cacheGrpName);
+
+        return snapshot ? valueOf(CU.cacheId(cacheGrpName)) : CACHE_GRP_DIR_PREFIX + cacheGrpName;
+    }
+
+    /**
      * Corrupts partition file.
      *
      * @param workDir Work directory.
@@ -280,7 +294,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     private void corruptFile(File workDir, int partId, int pageNum, boolean snapshot) throws IOException {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId);
 
-        File cacheWorkDir = new File(workDir, CACHE_GRP_DIR_PREFIX + CACHE_GROUP_NAME);
+        File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME, snapshot));
 
         File file = new File(cacheWorkDir, fileName);
 
@@ -294,12 +308,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             ThreadLocalRandom.current().nextBytes(trash);
 
-            int hdrSize = new FileVersionCheckingFactory(
-                    new AsyncFileIOFactory(),
-                    new AsyncFileIOFactory(),
-                    new DataStorageConfiguration().setPageSize(PAGE_SIZE)
-                )
-                .headerSize(PAGE_STORE_VER);
+            int hdrSize = snapshot ? 0 : new FileVersionCheckingFactory(
+                new AsyncFileIOFactory(),
+                new AsyncFileIOFactory(),
+                new DataStorageConfiguration().setPageSize(PAGE_SIZE)
+            ).headerSize(PAGE_STORE_VER);
 
             f.seek(pageNum * PAGE_SIZE + hdrSize);
 
@@ -310,13 +323,15 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /**
      * Restores corrupted file from backup after corruption.
      *
+     * @param workDir Work directory.
      * @param partId Partition id.
+     * @param snapshot Snapshot directory or not.
      * @throws IOException If failed.
      */
-    private void restoreFile(int partId) throws IOException {
+    private void restoreFile(File workDir, int partId, boolean snapshot) throws IOException {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId);
 
-        File cacheWorkDir = new File(workDir, CACHE_GRP_DIR_PREFIX + CACHE_GROUP_NAME);
+        File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME, snapshot));
 
         Path backupFilesPath = new File(cacheWorkDir, fileName + ".backup").toPath();
 
@@ -511,12 +526,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param canBeCorrupted Whether index can be corrupted.
      */
     private void checkIdx(String output, String traversePrefix, String idx, int entriesCnt, boolean canBeCorrupted) {
-        Pattern ptrnCorrect = Pattern.compile(checkIdxRegex(traversePrefix, false, idx, 1, valueOf(entriesCnt)));
+        Pattern ptrnCorrect = compile(checkIdxRegex(traversePrefix, false, idx, 1, valueOf(entriesCnt)));
 
         Matcher mCorrect = ptrnCorrect.matcher(output);
 
         if (canBeCorrupted) {
-            Pattern ptrnCorrupted = Pattern.compile(checkIdxRegex(traversePrefix, true, idx, 0, "[0-9]{1,4}"));
+            Pattern ptrnCorrupted = compile(checkIdxRegex(traversePrefix, true, idx, 0, "[0-9]{1,4}"));
 
             Matcher mCorrupted = ptrnCorrupted.matcher(output);
 
@@ -570,7 +585,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         boolean checkParts,
         boolean snapshot
     ) throws IgniteCheckedException {
-        File dir = new File(workDir, snapshot ? valueOf(CU.cacheId(cacheGrp)) : CACHE_GRP_DIR_PREFIX + cacheGrp);
+        File dir = new File(workDir, dataDir(cacheGrp, snapshot));
 
         OutputStream destStream = new ByteArrayOutputStream();
 
@@ -635,71 +650,38 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         checkEmpty(fullSnapshotDir, true);
     }
 
-    /** */
+    /**
+     * Test for finding corrupted pages in index for both normal pds and snapshot.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testCorruptedIdx() throws Exception {
-        corruptFile(workDir, INDEX_PARTITION, 5, false);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, false);
-
-            // 1 corrupted page detected while traversing, and 1 index size inconsistency error.
-            int travErrCnt = 2;
-
-            // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
-            int seqErrCnt = 2;
-
-            checkOutput(output, 19, travErrCnt, 0, seqErrCnt);
-
-            for (int i = 0; i < CREATED_TABLES_CNT; i++)
-                checkIdxs(output, TableInfo.generate(i), true);
-        }
-        finally {
-            restoreFile(INDEX_PARTITION);
-        }
+        checkCorruptedIdx(workDir, false);
+        checkCorruptedIdx(fullSnapshotDir, true);
     }
 
-    /** */
+    /**
+     * Test for finding corrupted pages in index
+     * and checking for consistency in partitions for both normal pds and snapshot.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testCorruptedIdxWithCheckParts() throws IgniteCheckedException, IOException {
-        int startCorrupt = 30;
-        int endCorrupt = 50;
-
-        for (int i = startCorrupt; i < endCorrupt; i++)
-            corruptFile(workDir, INDEX_PARTITION, i, false);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true, false);
-
-            // Pattern with errors count > 9
-            Pattern ptrn =
-                Pattern.compile("Partition check finished, total errors: [0-9]{2,5}, total problem partitions: [0-9]{2,5}");
-
-            assertTrue(output, ptrn.matcher(output).find());
-
-            assertContains(log, output, "Total errors during lists scan: 0");
-        }
-        finally {
-            restoreFile(INDEX_PARTITION);
-        }
+    public void testCorruptedIdxWithCheckParts() throws Exception {
+        checkCorruptedIdxWithCheckParts(workDir, false);
+        checkCorruptedIdxWithCheckParts(fullSnapshotDir, true);
     }
 
-    /** */
+    /**
+     * Test for finding corrupted pages in partition for both normal pds and snapshot.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testCorruptedPart() throws IgniteCheckedException, IOException {
-        corruptFile(workDir, 0, 7, false);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, false);
-
-            checkOutput(output, 19, -1, 0, 0);
-
-            for (int i = 0; i < CREATED_TABLES_CNT; i++)
-                checkIdxs(output, TableInfo.generate(i), true);
-        }
-        finally {
-            restoreFile(0);
-        }
+    public void testCorruptedPart() throws Exception {
+        checkCorruptedPart(workDir, false);
+        checkCorruptedPart(fullSnapshotDir, true);
     }
 
     /** */
@@ -717,8 +699,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                 checkIdxs(output, TableInfo.generate(i), true);
         }
         finally {
-            restoreFile(INDEX_PARTITION);
-            restoreFile(0);
+            restoreFile(workDir, INDEX_PARTITION, false);
+            restoreFile(workDir, 0, false);
         }
     }
 
@@ -731,6 +713,86 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testQryCacheGroup() throws IgniteCheckedException {
         checkQryCacheGroup(workDir, false);
         checkQryCacheGroup(fullSnapshotDir, true);
+    }
+
+    /**
+     * Checks whether corrupted pages are found in partition.
+     *
+     * @param workDir Work directory.
+     * @param snapshot Snapshot directory or not.
+     * @throws Exception If failed.
+     */
+    private void checkCorruptedPart(File workDir, boolean snapshot) throws Exception {
+        corruptFile(workDir, 0, 7, snapshot);
+
+        try {
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
+
+            checkOutput(output, 19, -1, 0, 0);
+
+            for (int i = 0; i < CREATED_TABLES_CNT; i++)
+                checkIdxs(output, TableInfo.generate(i), true);
+        }
+        finally {
+            restoreFile(workDir, 0, snapshot);
+        }
+    }
+
+    /**
+     * Checking for corrupted pages in index and checking for consistency in partitions.
+     *
+     * @param workDir Work directory.
+     * @param snapshot Snapshot directory or not.
+     * @throws Exception If failed.
+     */
+    private void checkCorruptedIdxWithCheckParts(File workDir, boolean snapshot) throws Exception {
+        for (int i = 30; i < 50; i++)
+            corruptFile(workDir, INDEX_PARTITION, i, snapshot);
+
+        try {
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true, snapshot);
+
+            // Pattern with errors count > 9
+            Pattern ptrn = compile(
+                "Partition check finished, total errors: [0-9]{2,5}, total problem partitions: [0-9]{2,5}"
+            );
+
+            assertTrue(output, ptrn.matcher(output).find());
+
+            assertContains(log, output, "Total errors during lists scan: 0");
+        }
+        finally {
+            restoreFile(workDir, INDEX_PARTITION, snapshot);
+        }
+    }
+
+    /**
+     * Checks whether corrupted pages are found in index.
+     *
+     * @param workDir Work directory.
+     * @param snapshot Snapshot directory or not.
+     * @throws Exception If failed.
+     */
+    private void checkCorruptedIdx(File workDir, boolean snapshot) throws Exception {
+        corruptFile(workDir, INDEX_PARTITION, 5, snapshot);
+
+        try {
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
+
+            // 1 corrupted page detected while traversing, and 1 index size inconsistency error.
+            int travErrCnt = 2;
+
+            // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
+            int seqErrCnt = 2;
+
+            checkOutput(output, 19, travErrCnt, 0, seqErrCnt);
+
+            for (int i = 0; i < CREATED_TABLES_CNT; i++)
+                checkIdxs(output, TableInfo.generate(i), true);
+        }
+        finally {
+            restoreFile(workDir, INDEX_PARTITION, snapshot);
+        }
     }
 
     /**
@@ -830,10 +892,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         // Create an empty directory and try to check it.
         String newCleanGrp = "noCache";
 
-        File cleanDir = new File(
-            workDir,
-            snapshot ? valueOf(CU.cacheId(newCleanGrp)) : CACHE_GRP_DIR_PREFIX + newCleanGrp
-        );
+        File cleanDir = new File(workDir, dataDir(newCleanGrp, snapshot));
 
         try {
             cleanDir.mkdir();
