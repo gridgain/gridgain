@@ -1590,12 +1590,11 @@ public class IgniteIndexReader implements AutoCloseable {
                         return null;
                 }
             ),
-            optionalArg(FILE_MASK.arg(),
-                    "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
+            optionalArg(FILE_MASK.arg(), "mask for files (optional).", String.class, () -> ".bin"),
             optionalArg(CHECK_PARTS.arg(),
                     "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false),
             optionalArg(SNAPSHOT.arg(), "if specified, this utility assumes that all files in --dir directory are" +
-                " snapshot", Boolean.class, () -> false)
+                " snapshot.", Boolean.class, () -> false)
         );
 
         CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
