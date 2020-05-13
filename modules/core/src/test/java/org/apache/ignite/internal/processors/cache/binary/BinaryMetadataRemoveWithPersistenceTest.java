@@ -56,9 +56,7 @@ public class BinaryMetadataRemoveWithPersistenceTest extends BinaryMetadataRemov
      */
     @Test
     public void testRemoveTypeAndClusterRestart() throws Exception {
-        List<String> nodeNames = G.allGrids().stream().map(ign -> ign.name()).collect(Collectors.toList());
-
-        for (String nodeName : nodeNames) {
+        for (String nodeName : new String[]{"srv0", "srv2", "cli0"}) {
             log.info("+++ Check on " + nodeName);
 
             BinaryObjectBuilder builder0 = grid(nodeName).binary().builder("Type0");

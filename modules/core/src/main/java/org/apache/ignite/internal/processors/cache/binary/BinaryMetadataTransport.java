@@ -540,26 +540,24 @@ final class BinaryMetadataTransport {
 
             BinaryMetadataHolder holder = metaLocCache.get(typeId);
 
-            int pendingVer = -1;
-            int acceptedVer = -1;
+            int pendingVer;
+            int acceptedVer;
 
             if (msg.pendingVersion() == 0) {
                 //coordinator receives update request
                 if (holder != null) {
                     if (holder.removing()) {
-                        log.info("+++ Update removing on coordinator");
                         msg.markRejected(new BinaryObjectException("The type is removing now [typeId=" + typeId + ']'));
+
+                        pendingVer = -2;
+                        acceptedVer = -2;
                     }
                     else {
-                        log.info("+++ Update not removing on coord 0");
-
                         pendingVer = holder.pendingVersion() + 1;
                         acceptedVer = holder.acceptedVersion();
                     }
                 }
                 else {
-                    log.info("+++ Update not removing on coord 1");
-
                     pendingVer = 1;
                     acceptedVer = 0;
                 }
@@ -688,7 +686,6 @@ final class BinaryMetadataTransport {
                         }
                     }
                     catch (BinaryObjectException ignored) {
-                        log.error("+++ Exception", ignored);
                         assert false : msg;
                     }
                 }
@@ -749,7 +746,8 @@ final class BinaryMetadataTransport {
 
                 metadataFileStore.writeMetadataAsync(typeId, newAcceptedVer);
 
-                metaLocCache.put(typeId, new BinaryMetadataHolder(holder.metadata(), holder.pendingVersion(), newAcceptedVer));
+                metaLocCache.put(typeId,
+                    new BinaryMetadataHolder(holder.metadata(), holder.pendingVersion(), newAcceptedVer));
             }
 
             for (BinaryMetadataUpdatedListener lsnr : binaryUpdatedLsnrs)
@@ -985,7 +983,7 @@ final class BinaryMetadataTransport {
 
                 metaLocCache.put(typeId, metaHld.createRemoving());
 
-                if (!ctx.clientNode())
+                if (isPersistenceEnabled)
                     metadataFileStore.prepareMetadataRemove(typeId);
             }
         }
@@ -1007,7 +1005,6 @@ final class BinaryMetadataTransport {
             final int typeId = msg.typeId();
 
             if (!metaLocCache.containsKey(typeId)) {
-                log.info("+++ DUPPP");
                 msg.duplicated(true);
 
                 return;

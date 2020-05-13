@@ -147,7 +147,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-            removeType((IgniteEx)ignRemoveType, "Type0");
+            removeType(ignRemoveType, "Type0");
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
@@ -157,7 +157,6 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-            log.info("+++ INITIAL REMOVE");
             // Remove type at the end of test case.
             removeType(grid("srv0"), "Type0");
 

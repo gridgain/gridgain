@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -130,8 +131,6 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
-        log.info("+++ WRITE " + binMeta);
-
         try {
             File file = new File(metadataDir, binMeta.typeId() + ".bin");
 
@@ -168,13 +167,14 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
-        log.info("+++ REMOVE " + typeId);
 
         try {
             File file = new File(metadataDir, typeId + ".bin");
 
-            if(!file.delete())
-                throw new IgniteException("Cannot remove metadata file: " + file.getAbsolutePath() + ", exists=" + file.exists());
+            if(!file.delete()) {
+                throw new IgniteException("Cannot remove metadata file: " + file.getAbsolutePath() +
+                    ", exists=" + file.exists());
+            }
         }
         catch (Exception e) {
             final String msg = "Failed to remove metadata for typeId: " + typeId +
@@ -310,7 +310,7 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
-        writer.finishWriteFuture(typeId, typeVer);
+        writer.finishWriteFuture(typeId, typeVer, null);
     }
 
     /**
@@ -358,6 +358,8 @@ class BinaryMetadataFileStore {
     void prepareMetadataRemove(int typeId) {
         if (!isPersistenceEnabled)
             return;
+
+        writer.cancelTasksForType(typeId);
 
         writer.prepareRemoveFuture(typeId);
     }
@@ -474,17 +476,32 @@ class BinaryMetadataFileStore {
                 blockingSectionEnd();
             }
 
-            finishWriteFuture(task.typeId(), task.typeVersion());
+            finishWriteFuture(task.typeId(), task.typeVersion(), task);
+        }
+
+        /**
+         * @param typeId Binary metadata type id.
+         */
+        synchronized void cancelTasksForType(int typeId) {
+            preparedTasks.entrySet().removeIf(entry -> entry.getKey().typeId == typeId);
         }
 
         /**
          * @param typeId Binary metadata type id.
          * @param typeVer Type version.
+         * @param task Task to remove.
          */
-        void finishWriteFuture(int typeId, int typeVer) {
-            OperationTask task = preparedTasks.remove(new OperationSyncKey(typeId, typeVer));
+        void finishWriteFuture(int typeId, int typeVer, OperationTask task) {
+            boolean removed = false;
 
-            if (task != null) {
+            if (task != null)
+                removed = preparedTasks.remove(new OperationSyncKey(typeId, typeVer), task);
+            else {
+                task = preparedTasks.remove(new OperationSyncKey(typeId, typeVer));
+                removed = task != null;
+            }
+
+            if (removed) {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Future for write operation for" +
