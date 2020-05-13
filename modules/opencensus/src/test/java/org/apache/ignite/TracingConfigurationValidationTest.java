@@ -37,7 +37,8 @@ import static org.apache.ignite.internal.processors.tracing.Scope.TX;
 /**
  * Tests for tracing configuration validation rules.
  */
-@SuppressWarnings("ThrowableNotThrown") public class TracingConfigurationValidationTest extends GridCommonAbstractTest {
+@SuppressWarnings("ThrowableNotThrown")
+public class TracingConfigurationValidationTest extends GridCommonAbstractTest {
     /**
      * Ensure that in case of null scope as part of tracing coordinates {@code IllegalArgumentException} is thrown with
      * message "Null scope is not valid for tracing coordinates."
