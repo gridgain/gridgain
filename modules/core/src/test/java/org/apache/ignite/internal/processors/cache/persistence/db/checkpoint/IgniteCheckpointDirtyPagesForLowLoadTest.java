@@ -197,7 +197,7 @@ public class IgniteCheckpointDirtyPagesForLowLoadTest extends GridCommonAbstract
 
         while (currCpPages == 0) {
             LockSupport.parkNanos(U.millisToNanos(1));
-            currCpPages = db.currentCheckpointPagesCount();
+            currCpPages = db.getCheckpointer().currentProgress().currentCheckpointPagesCount();
 
             if (currCpPages == 0 && ((System.currentTimeMillis() - start) > timeout))
                 return -1;

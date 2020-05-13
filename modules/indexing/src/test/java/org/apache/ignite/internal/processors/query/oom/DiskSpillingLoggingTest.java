@@ -37,12 +37,14 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
     @Test
     public void testLogsWithOffloading() {
         LogListener logLsnr = LogListener
-            .matches("Started query with memory tracking parameters")
-            .andMatches("Started offloading for query")
+            .matches("User's query started")
+            .andMatches("Offloading started for query")
             .andMatches("Created spill file")
             .andMatches("Deleted spill file")
-            .andMatches("Query has been completed with memory metrics")
+            .andMatches("User's query completed")
             .build();
+
+        setRootLoggerDebugLevel();
 
         testLog(grid(0)).registerListener(logLsnr);
 
@@ -61,35 +63,17 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
     @Test
     public void testLogsNoOffloading() {
         LogListener logLsnr = LogListener
-            .matches("Started query with memory tracking parameters")
-            .andMatches("Query has been completed with memory metrics")
+            .matches("User's query started")
+            .andMatches("User's query completed")
             .build();
+
+        setRootLoggerDebugLevel();
 
         testLog(grid(0)).registerListener(logLsnr);
 
         setGlobalQuota("60%");
         setDefaultQueryQuota(HUGE_MEM_LIMIT);
         setOffloadingEnabled(true);
-
-        checkQuery(Result.SUCCESS_NO_OFFLOADING,
-            "SELECT depId, code, age, COUNT(*), SUM(salary),  LISTAGG(uuid) " +
-                "FROM person GROUP BY age, depId, code ");
-
-        assertTrue(logLsnr.check());
-    }
-
-    /** */
-    @Test
-    public void testLogsNoMemoryTracking() {
-        LogListener logLsnr = LogListener
-            .matches("No memory quota configured for the query.")
-            .build();
-
-        testLog(grid(0)).registerListener(logLsnr);
-
-        setGlobalQuota("0");
-        setDefaultQueryQuota(0);
-        setOffloadingEnabled(false);
 
         checkQuery(Result.SUCCESS_NO_OFFLOADING,
             "SELECT depId, code, age, COUNT(*), SUM(salary),  LISTAGG(uuid) " +
@@ -139,6 +123,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
         ListeningTestLogger testLog = new ListeningTestLogger(true, log);
 
         GridTestUtils.setFieldValue(memoryManager(node), "log", testLog);
+        GridTestUtils.setFieldValue(runningQueryManager(node), "log", testLog);
 
         return testLog;
     }

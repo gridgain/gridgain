@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.h2.engine.Session;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
@@ -42,12 +43,20 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
             newColumn("SCHEMA_NAME"),
             newColumn("LOCAL", Value.BOOLEAN),
             newColumn("START_TIME", Value.TIMESTAMP),
-            newColumn("DURATION", Value.LONG)
+            newColumn("DURATION", Value.LONG),
+            newColumn("MEMORY_CURRENT", Value.LONG),
+            newColumn("MEMORY_MAX", Value.LONG),
+            newColumn("DISK_ALLOCATION_CURRENT", Value.LONG),
+            newColumn("DISK_ALLOCATION_MAX", Value.LONG),
+            newColumn("DISK_ALLOCATION_TOTAL", Value.LONG),
+            newColumn("INITIATOR_ID", Value.STRING)
         );
     }
 
     /** {@inheritDoc} */
     @Override public Iterator<Row> getRows(Session ses, SearchRow first, SearchRow last) {
+        ctx.security().authorize(SecurityPermission.GET_QUERY_VIEWS);
+
         SqlSystemViewColumnCondition qryIdCond = conditionForColumn("QUERY_ID", first, last);
 
         List<GridRunningQueryInfo> runningSqlQueries = ((IgniteH2Indexing)ctx.query().getIndexing()).runningSqlQueries();
@@ -73,13 +82,20 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
             long duration = now - info.startTime();
 
             rows.add(
-                createRow(ses,
+                createRow(
+                    ses,
                     info.globalQueryId(),
                     info.query(),
                     info.schemaName(),
                     info.local(),
                     valueTimestampFromMillis(info.startTime()),
-                    duration
+                    duration,
+                    info.memoryMetricProvider().reserved(),
+                    info.memoryMetricProvider().maxReserved(),
+                    info.memoryMetricProvider().writtenOnDisk(),
+                    info.memoryMetricProvider().maxWrittenOnDisk(),
+                    info.memoryMetricProvider().totalWrittenOnDisk(),
+                    info.queryInitiatorId()
                 )
             );
         }

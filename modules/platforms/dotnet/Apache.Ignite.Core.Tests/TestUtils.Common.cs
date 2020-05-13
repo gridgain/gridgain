@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -47,7 +48,7 @@ namespace Apache.Ignite.Core.Tests
         public const int DfltBusywaitSleepInterval = 200;
         
         /** System cache name. */
-        public const string utilityCacheName = "ignite-sys-cache";
+        public const string UtilityCacheName = "ignite-sys-cache";
 
         /** Work dir. */
         private static readonly string WorkDir =
@@ -96,6 +97,14 @@ namespace Apache.Ignite.Core.Tests
         public static Random Random
         {
             get { return _random ?? (_random = new Random(Interlocked.Increment(ref _seed))); }
+        }
+
+        /// <summary>
+        /// Gets current test name.
+        /// </summary>
+        public static string TestName
+        {
+            get { return TestContext.CurrentContext.Test.Name; }
         }
 
         /// <summary>
@@ -249,7 +258,7 @@ namespace Apache.Ignite.Core.Tests
         ///   <c>True</c> if topology took required size.
         /// </returns>
         public static bool WaitTopology(this IIgnite grid, AffinityTopologyVersion waitingTop,
-            string cacheName = utilityCacheName, int timeout = 30000)
+            string cacheName = UtilityCacheName, int timeout = 30000)
         {
             int checkPeriod = 200;
 
@@ -302,6 +311,20 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Waits for condition, polling in a busy wait loop, then asserts that condition is true.
+        /// </summary>
+        /// <param name="cond">Condition.</param>
+        /// <param name="timeout">Timeout, in milliseconds.</param>
+        /// <param name="message">Assertion message.</param>
+        public static void WaitForTrueCondition(Func<bool> cond, int timeout = 1000, string message = null)
+        {
+            var res = WaitForCondition(cond, timeout);
+            message = message ?? string.Format("Condition not reached within {0} ms", timeout);
+
+            Assert.IsTrue(res, message);
+        }
+
+        /// <summary>
         /// Gets the static discovery.
         /// </summary>
         public static TcpDiscoverySpi GetStaticDiscovery()
@@ -317,15 +340,24 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Gets cache keys.
+        /// </summary>
+        public static IEnumerable<int> GetKeys(IIgnite ignite, string cacheName,
+            IClusterNode node = null, bool primary = true)
+        {
+            var aff = ignite.GetAffinity(cacheName);
+            node = node ?? ignite.GetCluster().GetLocalNode();
+
+            return Enumerable.Range(1, int.MaxValue).Where(x => aff.IsPrimary(node, x) == primary);
+        }
+
+        /// <summary>
         /// Gets the primary keys.
         /// </summary>
         public static IEnumerable<int> GetPrimaryKeys(IIgnite ignite, string cacheName,
             IClusterNode node = null)
         {
-            var aff = ignite.GetAffinity(cacheName);
-            node = node ?? ignite.GetCluster().GetLocalNode();
-
-            return Enumerable.Range(1, int.MaxValue).Where(x => aff.IsPrimary(node, x));
+            return GetKeys(ignite, cacheName, node);
         }
 
         /// <summary>
@@ -334,6 +366,14 @@ namespace Apache.Ignite.Core.Tests
         public static int GetPrimaryKey(IIgnite ignite, string cacheName, IClusterNode node = null)
         {
             return GetPrimaryKeys(ignite, cacheName, node).First();
+        }
+
+        /// <summary>
+        /// Gets the primary key.
+        /// </summary>
+        public static int GetKey(IIgnite ignite, string cacheName, IClusterNode node = null, bool primaryKey = false)
+        {
+            return GetKeys(ignite, cacheName, node, primaryKey).First();
         }
 
         /// <summary>
@@ -449,6 +489,32 @@ namespace Apache.Ignite.Core.Tests
             }
 
             throw new InvalidOperationException("Could not resolve Ignite.NET source directory.");
+        }
+        
+        /// <summary>
+        /// Gets a value indicating whether specified partition is reserved.
+        /// </summary>
+        public static bool IsPartitionReserved(IIgnite ignite, string cacheName, int part)
+        {
+            Debug.Assert(ignite != null);
+            Debug.Assert(cacheName != null);
+            
+            const string taskName = "org.apache.ignite.platform.PlatformIsPartitionReservedTask";
+
+            return ignite.GetCompute().ExecuteJavaTask<bool>(taskName, new object[] {cacheName, part});
+        }
+
+        /// <summary>
+        /// Gets the innermost exception.
+        /// </summary>
+        public static Exception GetInnermostException(this Exception ex)
+        {
+            while (ex.InnerException != null)
+            {
+                ex = ex.InnerException;
+            }
+
+            return ex;
         }
     }
 }

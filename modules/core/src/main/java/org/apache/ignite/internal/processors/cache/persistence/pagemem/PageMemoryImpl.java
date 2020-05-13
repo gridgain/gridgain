@@ -67,7 +67,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointWriteProgressSupplier;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
@@ -92,6 +92,7 @@ import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -226,9 +227,6 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Flush dirty page closure. When possible, will be called by evictPage(). */
     private final PageStoreWriter flushDirtyPage;
 
-    /** */
-    private final AtomicBoolean dirtyUserPagesPresent = new AtomicBoolean();
-
     /**
      * Delayed page replacement (rotation with disk) tracker. Because other thread may require exactly the same page to be loaded from store,
      * reads are protected by locking.
@@ -249,7 +247,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private ThrottlingPolicy throttlingPlc;
 
     /** Checkpoint progress provider. Null disables throttling. */
-    @Nullable private final CheckpointWriteProgressSupplier cpProgressProvider;
+    @Nullable private final IgniteOutClosure<CheckpointProgress> cpProgressProvider;
 
     /** Field updater. */
     private static final AtomicIntegerFieldUpdater<PageMemoryImpl> pageReplacementWarnedFieldUpdater =
@@ -291,7 +289,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointLockStateChecker stateChecker,
         DataRegionMetricsImpl memMetrics,
         @Nullable ThrottlingPolicy throttlingPlc,
-        @NotNull CheckpointWriteProgressSupplier cpProgressProvider
+        IgniteOutClosure<CheckpointProgress> cpProgressProvider
     ) {
         assert ctx != null;
         assert pageSize > 0;
@@ -1125,15 +1123,8 @@ public class PageMemoryImpl implements PageMemoryEx {
     @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
         IgniteInternalFuture allowToReplace
     ) throws IgniteException {
-        return beginCheckpointEx(allowToReplace).get1();
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        IgniteInternalFuture allowToReplace
-    ) throws IgniteException {
         if (segments == null)
-            return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
+            return new GridMultiCollectionWrapper<>(Collections.emptyList());
 
         Collection[] collections = new Collection[segments.length];
 
@@ -1148,20 +1139,17 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
 
-            seg.dirtyPages = new GridConcurrentHashSet<>();
-            seg.dirtyPagesCntr.set(0);
+            seg.resetDirtyPages();
         }
 
         safeToUpdate.set(true);
 
         memMetrics.resetDirtyPages();
 
-        boolean hasUserDirtyPages = dirtyUserPagesPresent.getAndSet(false);
-
         if (throttlingPlc != ThrottlingPolicy.DISABLED)
             writeThrottle.onBeginCheckpoint();
 
-        return new IgniteBiTuple<>(new GridMultiCollectionWrapper<FullPageId>(collections), hasUserDirtyPages);
+        return new GridMultiCollectionWrapper<FullPageId>(collections);
     }
 
     /**
@@ -1283,7 +1271,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointMetricsTracker tracker
     ) throws IgniteCheckedException {
         assert absPtr != 0;
-        assert PageHeader.isAcquired(absPtr);
+        assert PageHeader.isAcquired(absPtr) || !isInCheckpoint(fullId);
 
         // Exception protection flag.
         // No need to write if exception occurred.
@@ -1299,16 +1287,23 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             buf.clear();
 
-            pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
+            if (isInCheckpoint(fullId))
+                pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
+
+            return;
+        }
+
+        if (!clearCheckpoint(fullId)) {
+            rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
+
+            if (!pageSingleAcquire)
+                PageHeader.releasePage(absPtr);
 
             return;
         }
 
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
-
-            if (!clearCheckpoint(fullId))
-                return;
 
             if (tmpRelPtr != INVALID_REL_PTR) {
                 PageHeader.tempBufferPointer(absPtr, INVALID_REL_PTR);
@@ -1346,7 +1341,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         finally {
             rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
-            if (canWrite){
+            if (canWrite) {
                 buf.rewind();
 
                 pageStoreWriter.writePage(fullId, buf, tag);
@@ -1862,9 +1857,6 @@ public class PageMemoryImpl implements PageMemoryEx {
                     memMetrics.incrementDirtyPages();
                 }
             }
-
-            if (pageId.groupId() != CU.UTILITY_CACHE_GROUP_ID && !dirtyUserPagesPresent.get())
-                dirtyUserPagesPresent.set(true);
         }
         else {
             Segment seg = segment(pageId.groupId(), pageId.pageId());
@@ -2124,6 +2116,15 @@ public class PageMemoryImpl implements PageMemoryEx {
          */
         private long borrowOrAllocateFreePage(long pageId) {
             return pool.borrowOrAllocateFreePage(PageIdUtils.tag(pageId));
+        }
+
+        /**
+         * Clear dirty pages collection and reset counter.
+         */
+        private void resetDirtyPages() {
+            dirtyPages = new GridConcurrentHashSet<>();
+
+            dirtyPagesCntr.set(0);
         }
 
         /**

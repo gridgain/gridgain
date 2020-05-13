@@ -1434,8 +1434,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             this.dataTree = dataTree;
 
             PartitionUpdateCounter delegate = grp.mvccEnabled() ? new PartitionUpdateCounterMvccImpl(grp) :
-                grp.persistenceEnabled() ? new PartitionUpdateCounterTrackingImpl(grp) :
-                    new PartitionUpdateCounterVolatileImpl(grp);
+                !grp.persistenceEnabled() || grp.hasAtomicCaches() ? new PartitionUpdateCounterVolatileImpl(grp) :
+                            new PartitionUpdateCounterTrackingImpl(grp);
 
             pCntr = ctx.logger(PartitionUpdateCounterDebugWrapper.class).isDebugEnabled() ?
                 new PartitionUpdateCounterDebugWrapper(partId, delegate) : delegate;
@@ -2923,6 +2923,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (ex != null)
                 throw new IgniteCheckedException("Fail destroy store", ex);
+
+            // Allow checkpointer to progress if a partition contains less than BATCH_SIZE keys.
+            if (rmv > 0) {
+                ctx.database().checkpointReadUnlock();
+
+                ctx.database().checkpointReadLock();
+            }
         }
 
         /** {@inheritDoc} */

@@ -44,13 +44,14 @@ import org.apache.ignite.cache.affinity.AffinityKey;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
-import org.junit.Assert;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static java.sql.Types.DATE;
@@ -74,7 +75,10 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setSqlSchemas("PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2");
+        return super.getConfiguration(igniteInstanceName)
+            .setSqlConfiguration(new SqlConfiguration()
+                .setSqlSchemas("PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2")
+            );
     }
 
     /**
@@ -640,12 +644,24 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY.DURATION_MIN.null.19",
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY.DURATION_MAX.null.19",
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY.LAST_START_TIME.null.29.9",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.MEMORY_MIN.null.19",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.MEMORY_MAX.null.19",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_MIN.null.19",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_MAX.null.19",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_TOTAL_MIN.null.19",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_TOTAL_MAX.null.19",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.QUERY_ID.null.2147483647",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.SQL.null.2147483647",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.SCHEMA_NAME.null.2147483647",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.LOCAL.null.1",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.START_TIME.null.29.9",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DURATION.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.MEMORY_CURRENT.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.MEMORY_MAX.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_CURRENT.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_MAX.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_TOTAL.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.INITIATOR_ID.null.2147483647",
                 "IGNITE.NODES.NODE_ID.null.16",
                 "IGNITE.NODES.CONSISTENT_ID.null.2147483647",
                 "IGNITE.NODES.VERSION.null.2147483647",

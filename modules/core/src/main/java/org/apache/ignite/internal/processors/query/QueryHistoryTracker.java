@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.jsr166.ConcurrentLinkedDeque8;
 
 /**
@@ -52,13 +52,7 @@ class QueryHistoryTracker {
         if (histSz <= 0)
             return;
 
-        String qry = runningQryInfo.query();
-        String schema = runningQryInfo.schemaName();
-        boolean loc = runningQryInfo.local();
-        long startTime = runningQryInfo.startTime();
-        long duration = System.currentTimeMillis() - startTime;
-
-        QueryHistoryMetrics m = new QueryHistoryMetrics(qry, schema, loc, startTime, duration, failed);
+        QueryHistoryMetrics m = new QueryHistoryMetrics(runningQryInfo, failed);
 
         QueryHistoryMetrics mergedMetrics = qryMetrics.merge(m.key(), m, QueryHistoryMetrics::aggregateWithNew);
 
@@ -135,7 +129,7 @@ class QueryHistoryTracker {
 
     /**
      * Gets SQL query history. Size of history could be configured via {@link
-     * IgniteConfiguration#setSqlQueryHistorySize(int)}
+     * SqlConfiguration#setSqlQueryHistorySize(int)}
      *
      * @return SQL queries history aggregated by query text, schema and local flag.
      */

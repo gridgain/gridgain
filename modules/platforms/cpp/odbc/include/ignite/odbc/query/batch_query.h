@@ -45,7 +45,7 @@ namespace ignite
                  * @param params SQL params.
                  * @param timeout Timeout in seconds.
                  */
-                BatchQuery(diagnostic::Diagnosable& diag, Connection& connection, const std::string& sql,
+                BatchQuery(diagnostic::DiagnosableAdapter& diag, Connection& connection, const std::string& sql,
                     const app::ParameterSet& params, int32_t& timeout);
 
                 /**
@@ -65,7 +65,7 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector& GetMeta() const;
+                virtual const meta::ColumnMetaVector* GetMeta();
 
                 /**
                  * Fetch next result row to application buffers.

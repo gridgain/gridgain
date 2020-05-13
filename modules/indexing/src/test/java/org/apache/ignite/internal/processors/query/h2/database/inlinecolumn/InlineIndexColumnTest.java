@@ -18,6 +18,7 @@
 package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -45,6 +46,7 @@ import org.h2.value.ValueBoolean;
 import org.h2.value.ValueByte;
 import org.h2.value.ValueBytes;
 import org.h2.value.ValueDate;
+import org.h2.value.ValueDecimal;
 import org.h2.value.ValueDouble;
 import org.h2.value.ValueFloat;
 import org.h2.value.ValueInt;
@@ -151,9 +153,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(1, putAndCompare("अअअ", "ऄऄऄ", String.class, maxSize));
         assertEquals(1, putAndCompare("ऄऄऄ", "ऄऄ", String.class, maxSize));
         assertEquals(1, putAndCompare("ऄऄऄ", "ऄ", String.class, maxSize));
-        assertEquals(-2, putAndCompare("ऄऄऄ", "ऄऄऄ", String.class, maxSize));
-        assertEquals(-2, putAndCompare("ऄऄऄ", "ऄऄअ", String.class, maxSize));
-        assertEquals(-2, putAndCompare("ऄऄअ", "ऄऄऄ", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("ऄऄऄ", "ऄऄऄ", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("ऄऄऄ", "ऄऄअ", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("ऄऄअ", "ऄऄऄ", String.class, maxSize));
     }
 
     /** */
@@ -167,9 +169,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(1, putAndCompare("\ud802\udd21\ud802\udd21\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
         assertEquals(1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20", String.class, maxSize));
         assertEquals(1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20", String.class, maxSize));
-        assertEquals(-2, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
-        assertEquals(-2, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd21", String.class, maxSize));
-        assertEquals(-2, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd21", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
     }
 
     /** */
@@ -180,7 +182,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(0, putAndCompare("\ud802\udd20\u0904", "\ud802\udd20\u0904", String.class, maxSize));
         assertEquals(-1, putAndCompare("\ud802\udd20\u0904", "\ud802\udd20\u0905", String.class, maxSize));
         assertEquals(1, putAndCompare("\u0905\ud802\udd20", "\u0904\ud802\udd20", String.class, maxSize));
-        assertEquals(-2, putAndCompare("\ud802\udd20\ud802\udd20\u0905", "\ud802\udd20\ud802\udd20\u0904", String.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\u0905", "\ud802\udd20\ud802\udd20\u0904", String.class, maxSize));
     }
 
     /** */
@@ -490,6 +492,25 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
+    public void testDecimal() throws Exception {
+        int maxSize = 1 + 4; // 1 byte header + 4 bytes value.
+
+        assertEquals(CANT_BE_COMPARE, putAndCompare(BigDecimal.valueOf(123456.7f), BigDecimal.valueOf(123456.7f), BigDecimal.class, maxSize));
+        assertEquals(-1, putAndCompare(BigDecimal.valueOf(-123456.7f), BigDecimal.valueOf(123456.7f), BigDecimal.class, maxSize));
+        assertEquals(-1, putAndCompare(BigDecimal.valueOf(-0.0000000000000000000001234567f), BigDecimal.valueOf(0.0000000000000000000001234567f), BigDecimal.class, maxSize));
+        assertEquals(1, putAndCompare(BigDecimal.valueOf(000.1234567000000f), BigDecimal.valueOf(-000.1234567000000f), BigDecimal.class, maxSize));
+        assertEquals(-1, putAndCompare(BigDecimal.valueOf(123.4567f), BigDecimal.valueOf(123.4568f), BigDecimal.class, maxSize));
+        assertEquals(1, putAndCompare(BigDecimal.valueOf(1.234568f), BigDecimal.valueOf(1.234567f), BigDecimal.class, maxSize));
+        assertEquals(1, putAndCompare(BigDecimal.valueOf(1.0f), null, BigDecimal.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(BigDecimal.valueOf(123456789012345678901234567890.12), BigDecimal.valueOf(123456789012345678901234567890.12), BigDecimal.class, maxSize));
+        assertEquals(1, putAndCompare(BigDecimal.valueOf(123456789012345678901234567890.12), BigDecimal.valueOf(-123456789012345678901234567890.12), BigDecimal.class, maxSize));
+        assertEquals(-1, putAndCompare(BigDecimal.valueOf(-12345678901234567890.12), BigDecimal.valueOf(12345678901234567890.12), BigDecimal.class, maxSize));
+        assertEquals(-1, putAndCompare(BigDecimal.valueOf(-12345678901234567890.123), BigDecimal.valueOf(12345678901234567890.124), BigDecimal.class, maxSize));
+        assertEquals(-1, putAndCompare(BigDecimal.valueOf(-12345678901234567890.12), BigDecimal.valueOf(12345678901234567891.123), BigDecimal.class, maxSize));
+    }
+
+    /** */
+    @Test
     public void testNull() throws Exception {
         testPutGet(ValueInt.get(-1), ValueNull.INSTANCE, ValueInt.get(3));
         testPutGet(ValueInt.get(-1), ValueNull.INSTANCE, ValueInt.get(3));
@@ -510,7 +531,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(-1, putAndCompare(false, true, Boolean.class, maxSize));
         assertEquals(0, putAndCompare(false, false, Boolean.class, maxSize));
         assertEquals(0, putAndCompare(true, true, Boolean.class, maxSize));
-        assertEquals(-2, putAndCompare(true, false, Boolean.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(true, false, Boolean.class, maxSize - 1));
     }
 
     /** */
@@ -527,7 +548,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(0, putAndCompare(Byte.MAX_VALUE, Byte.MAX_VALUE, Byte.class, maxSize));
         assertEquals(1, putAndCompare(Byte.MAX_VALUE, Byte.MIN_VALUE, Byte.class, maxSize));
         assertEquals(-1, putAndCompare(Byte.MIN_VALUE, Byte.MAX_VALUE, Byte.class, maxSize));
-        assertEquals(-2, putAndCompare((byte)42, (byte)16, Byte.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare((byte)42, (byte)16, Byte.class, maxSize - 1));
     }
 
     /** */
@@ -544,7 +565,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(0, putAndCompare(Short.MAX_VALUE, Short.MAX_VALUE, Short.class, maxSize));
         assertEquals(1, putAndCompare(Short.MAX_VALUE, Short.MIN_VALUE, Short.class, maxSize));
         assertEquals(-1, putAndCompare(Short.MIN_VALUE, Short.MAX_VALUE, Short.class, maxSize));
-        assertEquals(-2, putAndCompare((short)42, (short)16, Short.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare((short)42, (short)16, Short.class, maxSize - 1));
     }
 
     /** */
@@ -561,7 +582,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(0, putAndCompare(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.class, maxSize));
         assertEquals(1, putAndCompare(Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.class, maxSize));
         assertEquals(-1, putAndCompare(Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.class, maxSize));
-        assertEquals(-2, putAndCompare(42, 16, Integer.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(42, 16, Integer.class, maxSize - 1));
     }
 
     /** */
@@ -578,7 +599,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(0, putAndCompare(Long.MAX_VALUE, Long.MAX_VALUE, Long.class, maxSize));
         assertEquals(1, putAndCompare(Long.MAX_VALUE, Long.MIN_VALUE, Long.class, maxSize));
         assertEquals(-1, putAndCompare(Long.MIN_VALUE, Long.MAX_VALUE, Long.class, maxSize));
-        assertEquals(-2, putAndCompare((long)42, (long)16, Long.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare((long)42, (long)16, Long.class, maxSize - 1));
     }
 
     /** */
@@ -609,7 +630,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(-1, putAndCompare(Float.MAX_VALUE, Float.NaN, Float.class, maxSize));
         assertEquals(-1, putAndCompare(Float.MIN_VALUE, Float.NaN, Float.class, maxSize));
         assertEquals(-1, putAndCompare(Float.NEGATIVE_INFINITY, Float.MAX_VALUE, Float.class, maxSize));
-        assertEquals(-2, putAndCompare((float)42, (float)16, Float.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare((float)42, (float)16, Float.class, maxSize - 1));
     }
 
     /** */
@@ -640,7 +661,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(-1, putAndCompare(Double.MAX_VALUE, Double.NaN, Double.class, maxSize));
         assertEquals(-1, putAndCompare(Double.MIN_VALUE, Double.NaN, Double.class, maxSize));
         assertEquals(-1, putAndCompare(Double.NEGATIVE_INFINITY, Double.MAX_VALUE, Double.class, maxSize));
-        assertEquals(-2, putAndCompare((double)42, (double)16, Double.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare((double)42, (double)16, Double.class, maxSize - 1));
     }
 
     /** */
@@ -656,7 +677,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(1, putAndCompare(Date.valueOf("2017-02-24"), Date.valueOf("2017-02-20"), Date.class, maxSize));
         assertEquals(-1, putAndCompare(Date.valueOf("2017-02-16"), Date.valueOf("2017-02-24"), Date.class, maxSize));
         assertEquals(0, putAndCompare(Date.valueOf("2017-02-24"), Date.valueOf("2017-02-24"), Date.class, maxSize));
-        assertEquals(-2, putAndCompare(Date.valueOf("2017-02-24"), Date.valueOf("2017-02-20"), Date.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(Date.valueOf("2017-02-24"), Date.valueOf("2017-02-20"), Date.class, maxSize - 1));
         assertEquals(-1, putAndCompare(new Date(Long.MIN_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MIN_VALUE)),
             new Date(Long.MAX_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MAX_VALUE)), Date.class, maxSize));
     }
@@ -674,7 +695,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(1, putAndCompare(Time.valueOf("4:20:00"), Time.valueOf("4:19:59"), Time.class, maxSize));
         assertEquals(-1, putAndCompare(Time.valueOf("4:19:59"), Time.valueOf("4:20:00"), Time.class, maxSize));
         assertEquals(0, putAndCompare(Time.valueOf("4:20:00"), Time.valueOf("4:20:00"), Time.class, maxSize));
-        assertEquals(-2, putAndCompare(Time.valueOf("4:19:59"), Time.valueOf("4:20:00"), Time.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(Time.valueOf("4:19:59"), Time.valueOf("4:20:00"), Time.class, maxSize - 1));
         assertEquals(-1, putAndCompare(Time.valueOf("00:00:00"), Time.valueOf("23:59:59"), Time.class, maxSize));
     }
 
@@ -693,7 +714,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(1, putAndCompare(Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.valueOf("2017-02-20 4:19:59"), Timestamp.class, maxSize));
         assertEquals(-1, putAndCompare(Timestamp.valueOf("2017-02-20 4:19:59"), Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.class, maxSize));
         assertEquals(0, putAndCompare(Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.class, maxSize));
-        assertEquals(-2, putAndCompare(Timestamp.valueOf("2017-02-20 4:19:59"), Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(Timestamp.valueOf("2017-02-20 4:19:59"), Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.class, maxSize - 1));
         assertEquals(-1, putAndCompare(Timestamp.valueOf("2017-02-20 00:00:00"), Timestamp.valueOf("2017-02-20 23:59:59"), Timestamp.class, maxSize));
         assertEquals(-1, putAndCompare(new Timestamp(Long.MIN_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MIN_VALUE)),
             new Timestamp(Long.MAX_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MAX_VALUE)), Timestamp.class, maxSize));
@@ -718,7 +739,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(-1, putAndCompare(new UUID(48L, Long.MIN_VALUE), new UUID(48L, Long.MAX_VALUE), UUID.class, maxSize));
         assertEquals(1, putAndCompare(new UUID(Long.MAX_VALUE, 10L), new UUID(Long.MIN_VALUE, 20L), UUID.class, maxSize));
         assertEquals(-1, putAndCompare(new UUID(Long.MIN_VALUE, 20L), new UUID(Long.MAX_VALUE, 10L), UUID.class, maxSize));
-        assertEquals(-2, putAndCompare(new UUID(42L, 16L), new UUID(42L, 10L), UUID.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(new UUID(42L, 16L), new UUID(42L, 10L), UUID.class, maxSize - 1));
     }
 
     /** */
@@ -731,10 +752,10 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(1, putAndCompare(new TestPojo(42, 16L), null, TestPojo.class, maxSize));
         assertEquals(1, putAndCompare(new TestPojo(42, 16L), new TestPojo(16, 16L), TestPojo.class, maxSize));
         assertEquals(-1, putAndCompare(new TestPojo(16, 16L), new TestPojo(42, 16L), TestPojo.class, maxSize));
-        assertEquals(-2, putAndCompare(new TestPojo(42, 16L), new TestPojo(42, 16L), TestPojo.class, maxSize));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(new TestPojo(42, 16L), new TestPojo(42, 16L), TestPojo.class, maxSize));
         assertEquals(1, putAndCompare(new TestPojo(Integer.MAX_VALUE, 16L), new TestPojo(Integer.MIN_VALUE, 16L), TestPojo.class, maxSize));
         assertEquals(-1, putAndCompare(new TestPojo(Integer.MIN_VALUE, 16L), new TestPojo(Integer.MAX_VALUE, 16L), TestPojo.class, maxSize));
-        assertEquals(-2, putAndCompare(new TestPojo(42, 16L), new TestPojo(16, 16L), TestPojo.class, maxSize - 1));
+        assertEquals(CANT_BE_COMPARE, putAndCompare(new TestPojo(42, 16L), new TestPojo(16, 16L), TestPojo.class, maxSize - 1));
     }
 
     /** */
@@ -935,6 +956,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
 
             case Value.JAVA_OBJECT:
                 return ValueJavaObject.getNoCopy(marsh.marshal(val), null, null);
+
+            case Value.DECIMAL:
+                return ValueDecimal.get((BigDecimal)val);
         }
 
         throw new IllegalStateException("Unknown value type: type=" + type + ", cls=" + cls.getName());
@@ -986,6 +1010,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         if (IgnoreCaseString.class.isAssignableFrom(cls))
             return Value.STRING_IGNORECASE;
 
+        if (BigDecimal.class.isAssignableFrom(cls))
+            return Value.DECIMAL;
+
         return Value.JAVA_OBJECT;
     }
 
@@ -1011,4 +1038,5 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
             this.val = val;
         }
     }
+
 }

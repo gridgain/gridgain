@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -30,7 +29,6 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
@@ -50,13 +48,12 @@ import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PARTITION_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FAST_CHECK;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.PARALLELISM;
@@ -102,6 +99,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         Map<String, String> paramsDesc = new HashMap<>();
 
+        paramsDesc.put(FAST_CHECK.toString(),
+            "This option allows checking and repairing only partitions that did not pass validation" +
+                " during the last partition map exchange, otherwise, all partitions will be taken into account.");
+
         paramsDesc.put(REPAIR.toString(),
             "If present, fix all inconsistent data. Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
                 + Arrays.toString(RepairAlgorithm.values()) + ". Default value is " + REPAIR.defaultValue() + '.');
@@ -128,8 +129,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             PARTITION_RECONCILIATION,
             desc,
             paramsDesc,
-            optional(REPAIR), optional(PARALLELISM), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
-            optional(INCLUDE_SENSITIVE), optional(caches));
+            optional(REPAIR),
+            optional(FAST_CHECK),
+            optional(PARALLELISM),
+            optional(BATCH_SIZE),
+            optional(RECHECK_ATTEMPTS),
+            optional(INCLUDE_SENSITIVE),
+            optional(caches));
     }
 
     /** {@inheritDoc} */
@@ -170,6 +176,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     ) throws GridClientException {
         VisorPartitionReconciliationTaskArg taskArg = new VisorPartitionReconciliationTaskArg(
             args.caches,
+            args.fastCheck,
             args.repair,
             args.includeSensitive,
             args.locOutput,
@@ -181,8 +188,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         );
 
         List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()
-            .filter(node -> Objects.equals(node.attribute(IgniteNodeAttributes.ATTR_CLIENT_MODE), false))
-            .filter(node -> !nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.PARTITION_RECONCILIATION))
+            .filter(node -> !node.isClient())
+            .filter(node -> !node.supports(IgniteFeatures.PARTITION_RECONCILIATION))
             .collect(Collectors.toList());
 
         if (!unsupportedSrvNodes.isEmpty()) {
@@ -210,7 +217,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
         boolean repair = false;
-        boolean verbose = (boolean)INCLUDE_SENSITIVE.defaultValue();
+        boolean fastCheck = (boolean)FAST_CHECK.defaultValue();
+        boolean includeSensitive = (boolean)INCLUDE_SENSITIVE.defaultValue();
         boolean locOutput = (boolean)LOCAL_OUTPUT.defaultValue();
         int parallelism = (int)PARALLELISM.defaultValue();
         int batchSize = (int)BATCH_SIZE.defaultValue();
@@ -257,8 +265,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
                         break;
 
+                    case FAST_CHECK:
+                        fastCheck = true;
+
+                        break;
+
                     case INCLUDE_SENSITIVE:
-                        verbose = true;
+                        includeSensitive = true;
 
                         break;
 
@@ -330,7 +343,16 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             }
         }
 
-        args = new Arguments(cacheNames, repair, verbose, locOutput, parallelism, batchSize, recheckAttempts, repairAlg,
+        args = new Arguments(
+            cacheNames,
+            repair,
+            fastCheck,
+            includeSensitive,
+            locOutput,
+            parallelism,
+            batchSize,
+            recheckAttempts,
+            repairAlg,
             recheckDelay);
     }
 
@@ -349,15 +371,16 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     }
 
     /**
-     * @return String with meta information about current run of partition-reconciliation: used arguments, params, etc.
+     * @return String with meta information about current run of partition_reconciliation: used arguments, params, etc.
      */
     private String prepareHeaderMeta() {
-        SB options = new SB("partition-reconciliation task was executed with the following args: ");
+        SB options = new SB("partition_reconciliation task was executed with the following args: ");
 
         options
             .a("caches=[")
             .a(args.caches() == null ? "" : String.join(", ", args.caches()))
             .a("], repair=[" + args.repair)
+            .a("], fast-check=[" + args.fastCheck)
             .a("], includeSensitive=[" + args.includeSensitive)
             .a("], parallelism=[" + args.parallelism)
             .a("], batch-size=[" + args.batchSize)
@@ -384,7 +407,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Map<UUID, String> nodeIdsToFolders,
         Map<UUID, String> nodesIdsToConsistenceIdsMap
     ) {
-        SB out = new SB("partition-reconciliation task prepared result where line is " +
+        SB out = new SB("partition_reconciliation task prepared result where line is " +
             "- <nodeConsistentId>, <nodeId> : <folder> \n");
 
         for (Map.Entry<UUID, String> entry : nodeIdsToFolders.entrySet()) {
@@ -449,6 +472,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         /** Flag indicates that an inconsistency should be fixed in accordance with {@link RepairAlgorithm} parameter. */
         private final boolean repair;
 
+        /** Flag indicates that only subset of partitions should be checked and repaired. */
+        private final boolean fastCheck;
+
         /** Flag indicates that the result should include sensitive information such as key and value. */
         private final boolean includeSensitive;
 
@@ -475,6 +501,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          *
          * @param caches Caches.
          * @param repair Fix inconsistency if {@code true}.
+         * @param fastCheck If {@code true} then only partitions that did not pass validation
+         *                  on the last partition map exchange will be checked and repaired.
+         *                  Otherwise, all partitions will be taken into account.
          * @param includeSensitive Print key and value to result log if {@code true}.
          * @param locOutput Print result to local console.
          * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
@@ -486,6 +515,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         public Arguments(
             Set<String> caches,
             boolean repair,
+            boolean fastCheck,
             boolean includeSensitive,
             boolean locOutput,
             int parallelism,
@@ -496,6 +526,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         ) {
             this.caches = caches;
             this.repair = repair;
+            this.fastCheck = fastCheck;
             this.includeSensitive = includeSensitive;
             this.locOutput = locOutput;
             this.parallelism = parallelism;
@@ -517,6 +548,14 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          */
         public boolean repair() {
             return repair;
+        }
+
+        /**
+         * @return {@code true} if only partitions that did not pass validation during the last partition map exchange
+         * will be checked and repaired.
+         */
+        public boolean fastCheck() {
+            return fastCheck;
         }
 
         /**

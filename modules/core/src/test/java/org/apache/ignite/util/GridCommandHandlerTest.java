@@ -16,9 +16,6 @@
 
 package org.apache.ignite.util;
 
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -42,6 +39,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -54,6 +54,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -90,6 +91,8 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
@@ -118,6 +121,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IN
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
@@ -157,6 +161,15 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         super.cleanPersistenceDir();
 
         cleanDiagnosticDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setGridLogger(new ListeningTestLogger());
+
+        return cfg;
     }
 
     /**
@@ -815,13 +828,29 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
-    })
     public void testBaselineAutoAdjustmentAutoRemoveNode() throws Exception {
         Ignite ignite = startGrids(3);
+
+        LogListener[] lsnrs = new LogListener[3];
+
+        for (int g = 0; g < 3; g++) {
+            IgniteEx grid = grid(g);
+
+            ListeningTestLogger log = U.field(grid.configuration().getGridLogger(), "impl");
+
+            LogListener.Builder bldr = LogListener
+                .matches("Baseline parameter 'baselineAutoAdjustTimeout' was changed from '300000' to '2000'");
+
+            if (g == 0) {
+                // The BLT change info is printed on coordinator.
+                bldr = bldr
+                    .andMatches("Baseline auto-adjust will be executed in '2000' ms")
+                    .andMatches("Baseline auto-adjust will be executed right now.");
+            }
+
+            log.registerListener(lsnrs[g] = bldr.build());
+        }
+
 
         ignite.cluster().active(true);
 
@@ -831,7 +860,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         stopGrid(2);
 
-        assertEquals(3, ignite.cluster().currentBaselineTopology().size());
+        for (int i = 0; i < lsnrs.length; i++) {
+            LogListener lsnr = lsnrs[i];
+            assertTrue("Failed to wait for the expected log output on " + i, lsnr.check(10000));
+        }
 
         assertTrue(waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 10000));
 
@@ -857,11 +889,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    })
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -901,12 +928,98 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    public void testBaselineAutoAdjustmentAutoFeatueDisabled() throws Exception {
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    public void testBaselineAutoAdjustmentAutoFeatureDisabled() throws Exception {
         Ignite ignite = startGrids(1);
 
         ignite.cluster().active(true);
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+    }
+
+    /**
+     * Tests that baseline auto-adjustment enabling works from control.sh
+     */
+    @Test
+    public void testBaselineAutoAdjustmentCouldBeEnabled() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "disable"));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
+    }
+
+    /**
+     * Tests that baseline auto-adjustment timeout setting works from control.sh
+     */
+    @Test
+    public void testBaselineAutoAdjustmentTimeoutCouldBeChanged() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "12345"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(12345, ignite.cluster().baselineAutoAdjustTimeout());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "54321"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(54321, ignite.cluster().baselineAutoAdjustTimeout());
+
+    }
+
+    /**
+     * Tests correct error exit code for wrong baseline auto-adjustment timeout setting in control.sh
+     */
+    @Test
+    public void testBaselineAutoAdjustmentTimeoutWrongArguments() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "-1"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enabled", "timeout"));
+    }
+
+    /**
+     * Tests correct error exit code for wrong baseline auto-adjustment enabling in control.sh
+     */
+    @Test
+    public void testBaselineAutoAdjustmentWrongArguments() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().active(true);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "timeout", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "qwer"));
     }
 
     /**
@@ -1090,6 +1203,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             setAtomicityMode(TRANSACTIONAL).
             setWriteSynchronizationMode(FULL_SYNC).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
+
+        awaitPartitionMapExchange();
 
         for (Ignite client : clients) {
             assertTrue(client.configuration().isClientMode());
@@ -1296,7 +1411,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
-        checkpointFreq = 100L;
+        checkpointFreq = 1000L;
 
         IgniteEx node = startGrids(2);
 
@@ -1314,7 +1429,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
             while (!stopFlag.get()) {
-                cache.put(rnd.nextInt(), rnd.nextInt());
+                cache.put(rnd.nextInt(1000), rnd.nextInt(1000));
 
                 if (Thread.interrupted())
                     break;
@@ -1331,6 +1446,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--check-crc"));
         }
         finally {
+            doSleep(checkpointFreq);
+
             stopFlag.set(true);
 
             loadThread.join();
@@ -1345,7 +1462,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String logFile = new String(Files.readAllBytes(new File(logFileName + ".txt").toPath()));
 
-        assertContains(log, logFile, "Checkpoint with dirty pages started! Cluster not idle!");
+        assertContains(log, logFile, GRID_NOT_IDLE_MSG);
     }
 
     /**

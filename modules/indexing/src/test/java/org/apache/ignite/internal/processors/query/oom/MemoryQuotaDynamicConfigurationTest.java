@@ -16,13 +16,13 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.internal.util.typedef.X;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
@@ -53,17 +53,20 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     @Test
     public void testGlobalQuota() throws Exception {
         maxMem = 0; // Disable implicit query quota.
+
         setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
-
         assertEquals(1, localResults.size());
         assertTrue(localResults.get(0).memoryReserved() < GLOBAL_QUOTA);
-        localResults.clear();
+
+        clearResults();
 
         setGlobalQuota(0);
         execQuery("select * from K ORDER BY K.indexed", false);
-        assertEquals(0, localResults.size());
-        localResults.clear();
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
+
+        clearResults();
 
         setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
@@ -79,32 +82,38 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
 
         // All quotas turned off, nothing should happen.
         execQuery("select * from K ORDER BY K.indexed", false);
-        assertEquals(0, localResults.size());
-        localResults.clear();
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
+
+        clearResults();
 
         // Default query quota is set to 100, we expect exception.
         setDefaultQueryQuota(100);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
-        localResults.clear();
+
+        clearResults();
 
         // Turn on offloading, expect no error.
         setOffloadingEnabled(true);
         execQuery("select * from K ORDER BY K.indexed", false);
         assertEquals(2, localResults.size());
         assertTrue(localResults.get(0).memoryReserved() < 100);
-        localResults.clear();
+
+        clearResults();
 
         // Turn off offloading, expect error.
         setOffloadingEnabled(false);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
-        localResults.clear();
+
+        clearResults();
 
         // Turn off quota, expect no error.
         setDefaultQueryQuota(0);
         execQuery("select * from K ORDER BY K.indexed", false);
-        assertEquals(0, localResults.size());
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
     }
 
     /** */
@@ -144,14 +153,17 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
 
     /** {@inheritDoc} */
     @Override protected void checkQueryExpectOOM(String sql, boolean lazy) {
-        IgniteSQLException sqlEx = (IgniteSQLException)GridTestUtils.assertThrowsAnyCause(log, () -> {
+        try {
             execQuery(sql, lazy);
 
-            return null;
-        }, IgniteSQLException.class, "SQL query run out of memory: ");
-
-        assertNotNull("SQL exception missed.", sqlEx);
-        assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
-        assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), sqlEx.sqlState());
+            fail("Exception is not thrown.");
+        } catch (SqlMemoryQuotaExceededException e) {
+            assertTrue(e.getMessage().contains("SQL query ran out of memory: "));
+            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.statusCode());
+            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.sqlState());
+        }
+        catch (Exception e) {
+            fail("Wrong exception: " + X.getFullStackTrace(e));
+        }
     }
 }

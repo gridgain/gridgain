@@ -24,6 +24,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
 import org.apache.ignite.internal.processors.query.QueryHistoryMetricsKey;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.h2.engine.Session;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
@@ -33,28 +34,35 @@ import org.h2.value.Value;
  * View that contains query history statistics on local node.
  */
 public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView {
-
    /**
-     * Creates view with columns.
-     *
-     * @param ctx kernal context.
-     */
-    public SqlSystemViewQueryHistoryMetrics(GridKernalContext ctx) {
-        super("LOCAL_SQL_QUERY_HISTORY", "Ignite SQL query history metrics", ctx,
-            newColumn("SCHEMA_NAME"),
-            newColumn("SQL"),
-            newColumn("LOCAL", Value.BOOLEAN),
-            newColumn("EXECUTIONS", Value.LONG),
-            newColumn("FAILURES", Value.LONG),
-            newColumn("DURATION_MIN", Value.LONG),
-            newColumn("DURATION_MAX", Value.LONG),
-            newColumn("LAST_START_TIME", Value.TIMESTAMP)
-        );
+    * Creates view with columns.
+    *
+    * @param ctx kernal context.
+    */
+   public SqlSystemViewQueryHistoryMetrics(GridKernalContext ctx) {
+       super("LOCAL_SQL_QUERY_HISTORY", "Ignite SQL query history metrics", ctx,
+           newColumn("SCHEMA_NAME"),
+           newColumn("SQL"),
+           newColumn("LOCAL", Value.BOOLEAN),
+           newColumn("EXECUTIONS", Value.LONG),
+           newColumn("FAILURES", Value.LONG),
+           newColumn("DURATION_MIN", Value.LONG),
+           newColumn("DURATION_MAX", Value.LONG),
+           newColumn("LAST_START_TIME", Value.TIMESTAMP),
+           newColumn("MEMORY_MIN", Value.LONG),
+           newColumn("MEMORY_MAX", Value.LONG),
+           newColumn("DISK_ALLOCATION_MIN", Value.LONG),
+           newColumn("DISK_ALLOCATION_MAX", Value.LONG),
+           newColumn("DISK_ALLOCATION_TOTAL_MIN", Value.LONG),
+           newColumn("DISK_ALLOCATION_TOTAL_MAX", Value.LONG)
+       );
 
-    }
+   }
 
     /** {@inheritDoc} */
     @Override public Iterator<Row> getRows(Session ses, SearchRow first, SearchRow last) {
+        ctx.security().authorize(SecurityPermission.GET_QUERY_VIEWS);
+
         Map<QueryHistoryMetricsKey, QueryHistoryMetrics> qryHistMetrics =
             ((IgniteH2Indexing)ctx.query().getIndexing()).runningQueryManager().queryHistoryMetrics();
 
@@ -70,6 +78,12 @@ public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView
                 m.minimumTime(),
                 m.maximumTime(),
                 valueTimestampFromMillis(m.lastStartTime()),
+                m.minMemory(),
+                m.maxMemory(),
+                m.minBytesAllocatedOnDisk(),
+                m.maxBytesAllocatedOnDisk(),
+                m.minTotalBytesWrittenOnDisk(),
+                m.maxTotalBytesWrittenOnDisk()
             };
 
             rows.add(createRow(ses, data));

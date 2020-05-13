@@ -117,8 +117,9 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 
@@ -620,10 +621,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (joinFut != null)
                 joinFut.onDone(false);
 
-            GridFutureAdapter<Void> transitionFut = transitionFuts.remove(discoClusterState.transitionRequestId());
+            GridFutureAdapter<Void> transitionFut = transitionFuts.get(state.transitionRequestId());
 
             if (transitionFut != null) {
                 discoClusterState.setTransitionResult(msg.requestId(), msg.state());
+
+                transitionFuts.remove(state.transitionRequestId());
 
                 transitionFut.onDone();
             }
@@ -1292,6 +1295,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             return new IgniteNodeValidationResult(node.id(), msg);
         }
 
+        if(allNodesSupport(ctx, IgniteFeatures.BASELINE_AUTO_ADJUSTMENT) &&
+            !nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.BASELINE_AUTO_ADJUSTMENT)) {
+            String msg = "Node not supporting baseline auto-adjustment" +
+                " is not allowed to join the cluster with baseline auto-adjustment enabled";
+
+            return new IgniteNodeValidationResult(node.id(), msg);
+        }
+
         if (joiningNodeState == null || joiningNodeState.baselineTopology() == null)
             return null;
 
@@ -1774,6 +1785,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             U.resolveClassLoader(ctx.config())
         );
 
+        // We need to call this method before cluster.isBaselineAutoAdjustEnabled() because
+        // by default this param is false (see cluster.isBaselineAutoAdjustEnabled())
+        // for supporting compatibility, but the real value might be different and
+        // might not been set because of the ordering in disco
+        baselineConfiguration().initDfltAutoAdjustVars(ctx);
+
         boolean autoAdjustBaseline = isInMemoryCluster
             && ClusterState.active(oldState.state())
             && !oldState.transition()
@@ -1893,7 +1910,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled) {
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(baselineAutoAdjustEnabled));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(ctx, baselineAutoAdjustEnabled));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -1928,7 +1945,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(baselineAutoAdjustTimeout));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(ctx, baselineAutoAdjustTimeout));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

@@ -21,7 +21,6 @@ namespace Apache.Ignite.Core.Configuration
     using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Client;
 
     /// <summary>
     /// Client connector configuration (ODBC, JDBC, Thin Client).
@@ -106,7 +105,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientConnectorConfiguration"/> class.
         /// </summary>
-        internal ClientConnectorConfiguration(ClientProtocolVersion ver, IBinaryRawReader reader)
+        internal ClientConnectorConfiguration(IBinaryRawReader reader)
         {
             Debug.Assert(reader != null);
 
@@ -124,15 +123,22 @@ namespace Apache.Ignite.Core.Configuration
             OdbcEnabled = reader.ReadBoolean();
             JdbcEnabled = reader.ReadBoolean();
 
-            if (ver.CompareTo(ClientSocket.Ver130) >= 0) {
-                HandshakeTimeout = reader.ReadLongAsTimespan();
+            HandshakeTimeout = reader.ReadLongAsTimespan();
+
+            // Thin client configuration.
+            if (reader.ReadBoolean())
+            {
+                ThinClientConfiguration = new ThinClientConfiguration
+                {
+                    MaxActiveTxPerConnection = reader.ReadInt()
+                };
             }
         }
 
         /// <summary>
         /// Writes to the specified writer.
         /// </summary>
-        internal void Write(ClientProtocolVersion ver, IBinaryRawWriter writer)
+        internal void Write(IBinaryRawWriter writer)
         {
             Debug.Assert(writer != null);
             
@@ -150,8 +156,17 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteBoolean(OdbcEnabled);
             writer.WriteBoolean(JdbcEnabled);
 
-            if (ver.CompareTo(ClientSocket.Ver130) >= 0) {
-                writer.WriteTimeSpanAsLong(HandshakeTimeout);
+            writer.WriteTimeSpanAsLong(HandshakeTimeout);
+
+            // Thin client configuration.
+            if (ThinClientConfiguration != null)
+            {
+                writer.WriteBoolean(true);
+                writer.WriteInt(ThinClientConfiguration.MaxActiveTxPerConnection);
+            }
+            else
+            {
+                writer.WriteBoolean(false);
             }
         }
 
@@ -238,5 +253,10 @@ namespace Apache.Ignite.Core.Configuration
         /// </summary>
         [DefaultValue(DefaultOdbcEnabled)]
         public bool OdbcEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets thin client specific configuration.
+        /// </summary>
+        public ThinClientConfiguration ThinClientConfiguration { get; set; }
     }
 }

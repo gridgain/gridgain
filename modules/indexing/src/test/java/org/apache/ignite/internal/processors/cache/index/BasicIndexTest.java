@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,16 +34,19 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -58,6 +62,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
@@ -161,7 +166,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             );
         }
 
-        return igniteCfg;
+        return igniteCfg
+            .setFailureHandler(new StopNodeFailureHandler());
     }
 
     /** {@inheritDoc} */
@@ -609,9 +615,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         String sqlIdx2 = String.format("create index \"idx2\" on %s(LANG, ADDRESS)", TEST_TBL_NAME);
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
-        // _key_PK used.
-        assertTrue(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "LANG", "ADDRESS"));
+
         // _key_PK used.
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
             "LAST_NAME", "LANG", "ADDRESS"));
@@ -1385,6 +1389,164 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
     }
 
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario1() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1  on TEST_TBL_NAME (FIRST_NAME, LAST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3);");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario2() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (FIRST_NAME, LAST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME >= 2 and FIRST_NAME = 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario3() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (FIRST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-25338")
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario4() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (LAST_NAME, ADDRESS)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and FIRST_NAME >= 1 and FIRST_NAME <= 5 and ADDRESS in (1, 2, 3)");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexSelectionIsNotAffectedByCreationOrderScenario5() throws Exception {
+        checkRightIndexChosen("IDX1", "IDX2",
+            "CREATE INDEX IDX1 on TEST_TBL_NAME (LAST_NAME, FIRST_NAME)",
+            "CREATE INDEX IDX2 on TEST_TBL_NAME (LAST_NAME, ADDRESS)",
+            "SELECT * FROM TEST_TBL_NAME WHERE LAST_NAME = 2 and ADDRESS >= 1");
+    }
+
+    /**
+     */
+    @Test
+    public void testStopNodeOnSqlQueryWithIncompatibleType() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ OTHER)");
+        sql("CREATE INDEX TEST_VAL_INT ON TEST(VAL_INT)");
+        sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_OBJ)");
+
+        sql("INSERT INTO TEST VALUES (0, 0, ?)", Instant.now());
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_OBJ < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_INT < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        assertFalse(grid().context().isStopping());
+    }
+
+    /**
+     * Checks index creation does not affect used index.
+     *
+     * @param wrongIdx1Name Wrong index name.
+     * @param properIdx2Name Proper index name.
+     * @param idx1Cmd Index 1 (wrong) creation command.
+     * @param idx2Cmd Index 1 (proper) creation command.
+     * @param qry Query to test index selection.
+     * @throws Exception If failed.
+     */
+    private void checkRightIndexChosen(String wrongIdx1Name,
+        String properIdx2Name,
+        String idx1Cmd,
+        String idx2Cmd,
+        String qry)
+        throws Exception {
+        inlineSize = 10;
+
+        wrongIdx1Name = wrongIdx1Name.toUpperCase();
+        properIdx2Name = properIdx2Name.toUpperCase();
+
+        // Check preconditions are correct.
+        assertTrue(idx1Cmd, idx1Cmd.toUpperCase().contains(wrongIdx1Name));
+        assertTrue(idx2Cmd, idx2Cmd.toUpperCase().contains(properIdx2Name));
+
+        // Empty grid is started.
+        IgniteEx ig0 = startGrids(gridCount());
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        // SQL Table with fields FIRST_NAME, LAST_NAME, ADDRESS, LANG is created.
+        // Some initial data is populated to the table.
+        populateTable(qryProc, "TEST_TBL_NAME", 1, "ID","FIRST_NAME", "LAST_NAME",
+            "ADDRESS", "LANG");
+
+        // Create index idx2.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx2Cmd), true).getAll();
+
+        // Create index idx1.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx1Cmd), true).getAll();
+
+        // Execute EXPLAIN SELECT sql.
+        String plan = qryProc.querySqlFields(new SqlFieldsQuery("explain " + qry), true)
+            .getAll().get(0).get(0).toString().toUpperCase();
+
+        // Ensure proper idx2 is used in execution plan.
+        assertTrue("plan=" + plan, plan.contains(properIdx2Name));
+        assertFalse("plan=" + plan, plan.contains(wrongIdx1Name));
+
+        // Drop indices idx1 and idx2.
+        qryProc.querySqlFields(new SqlFieldsQuery("DROP INDEX " + wrongIdx1Name), true).getAll();
+        qryProc.querySqlFields(new SqlFieldsQuery("DROP INDEX " + properIdx2Name), true).getAll();
+
+        // Create index idx1.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx1Cmd), true).getAll();
+
+        // Create index idx2.
+        qryProc.querySqlFields(new SqlFieldsQuery(idx2Cmd), true).getAll();
+
+        // Execute EXPLAIN SELECT sql.
+        plan = qryProc.querySqlFields(new SqlFieldsQuery("explain " + qry), true)
+            .getAll().get(0).get(0).toString().toUpperCase();
+
+        // Ensure proper idx2 is used in execution plan.
+        assertTrue("plan=" + plan, plan.contains(properIdx2Name));
+        assertFalse("plan=" + plan, plan.contains(wrongIdx1Name));
+
+        // Tables and indices are dropped.
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /** */
     private void checkAll() {
         IgniteCache<Key, Val> cache = grid(0).cache(DEFAULT_CACHE_NAME);
@@ -1603,6 +1765,26 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Value object factory method.*/
     private static Val val(long i) {
         return new Val(String.format("bar%03d", i), i, new Pojo(i));
+    }
+
+    /**
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
+        return sql(grid(), sql, args);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
+            .setArgs(args), false);
     }
 
     /** Key object. */

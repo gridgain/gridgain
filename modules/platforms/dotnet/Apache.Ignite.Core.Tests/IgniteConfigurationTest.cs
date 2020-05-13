@@ -105,7 +105,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// Tests all configuration properties.
+        /// Tests all configuration properties roundtrip to Java and back.
         /// </summary>
         [Test]
         public void TestAllConfigurationProperties()
@@ -266,6 +266,9 @@ namespace Apache.Ignite.Core.Tests
                 Assert.AreEqual(2, resCfg.SqlSchemas.Count);
                 Assert.IsTrue(resCfg.SqlSchemas.Contains("SCHEMA_3"));
                 Assert.IsTrue(resCfg.SqlSchemas.Contains("schema_4"));
+
+                Assert.NotNull(cfg.ExecutorConfiguration);
+                AssertExtensions.ReflectionEqual(cfg.ExecutorConfiguration, resCfg.ExecutorConfiguration);
             }
         }
 
@@ -424,7 +427,7 @@ namespace Apache.Ignite.Core.Tests
 
             using (Ignition.Start(cfg))
             {
-                var marshDir = Path.Combine(cfg.WorkDirectory, "marshaller");
+                var marshDir = Path.Combine(cfg.WorkDirectory, "db", "marshaller");
 
                 Assert.IsTrue(Directory.Exists(marshDir));
             }
@@ -877,8 +880,15 @@ namespace Apache.Ignite.Core.Tests
                 MvccVacuumFrequency = 20000,
                 MvccVacuumThreadCount = 8,
                 SqlQueryHistorySize = 99,
-
-                SqlSchemas = new List<string> { "SCHEMA_3", "schema_4" }
+                SqlSchemas = new List<string> { "SCHEMA_3", "schema_4" },
+                ExecutorConfiguration = new[]
+                {
+                    new ExecutorConfiguration
+                    {
+                        Name = "ex-1",
+                        Size = 11
+                    }
+                }
             };
         }
 

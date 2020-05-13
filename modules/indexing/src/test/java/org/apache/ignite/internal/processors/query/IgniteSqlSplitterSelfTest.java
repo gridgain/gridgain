@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.query;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +30,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -52,6 +55,9 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.util.StringUtils;
@@ -494,6 +500,74 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Test checks that splitter properly generates subquery for query like SELECT DISTINCT f1 FROM t ORDER BY func(f1).
+     * Ensure that we can handle disturbed queries with ordering by function of expression from select clause.
+     * For example: SELECT DISTINCT f1 FROM t ORDER BY func(f1).
+     */
+    @Test
+    public void testQueryWithDistinctAndOrderBy() {
+        CacheConfiguration ccfg1 = cacheConfig("pers", true,
+            AffinityKey.class, Person2.class);
+
+        IgniteCache<AffinityKey<Integer>, Person2> c1 = ignite(0).getOrCreateCache(ccfg1);
+
+        try {
+            int orgId = 100500;
+
+            c1.put(new AffinityKey<>(1, orgId), new Person2(1, "Vasya"));
+            c1.put(new AffinityKey<>(3, orgId), new Person2(3, "Vasya"));
+            c1.put(new AffinityKey<>(2, orgId), new Person2(1, "Another Vasya"));
+
+            {
+                List<List<?>> rs = c1.query(new SqlFieldsQuery("select distinct name from Person2 order by length(name)")).getAll();
+
+                assertEquals("Result set should contains exactly 2 row", 2, rs.size());
+                assertEquals("", Arrays.asList("Vasya", "Another Vasya"), Arrays.asList(rs.get(0).get(0), rs.get(1).get(0)));
+            }
+
+            {
+                List<List<?>> rs = c1.query(new SqlFieldsQuery("select distinct orgId from Person2 order by (-orgId * 1000 + 10)")).getAll();
+
+                assertEquals("Result set should contains exactly 2 row", 2, rs.size());
+                assertEquals("", Arrays.asList(3, 1), Arrays.asList(rs.get(0).get(0), rs.get(1).get(0)));
+            }
+        }
+        finally {
+            c1.destroy();
+        }
+    }
+
+    /**
+     * Test checks that additional visible columns in the inner query do not affect the result.
+     * Ensure that we can handle disturbed queries with grouping and distinct
+     */
+    @Test
+    public void testQueryWithDistinctAndGroupBy() {
+        CacheConfiguration ccfg1 = cacheConfig("pers", true,
+            AffinityKey.class, Person2.class);
+
+        IgniteCache<AffinityKey<Integer>, Person2> c1 = ignite(0).getOrCreateCache(ccfg1);
+
+        try {
+            int affKey = 100500;
+
+            c1.put(new AffinityKey<>(1, affKey), new Person2(1, "Vasya"));
+            c1.put(new AffinityKey<>(2, affKey), new Person2(1, "Another Vasya"));
+            c1.put(new AffinityKey<>(3, affKey), new Person2(3, "Vasya"));
+            c1.put(new AffinityKey<>(4, affKey), new Person2(1, "Another Vasya"));
+
+            List<List<?>> rs = c1.query(new SqlFieldsQuery("select distinct name from Person2 group by orgId, name")).getAll();
+
+            assertEquals("Result should contains exactly 2 rows [actualSize=" + rs + "]", 2, rs.size());
+            List<String> names = rs.stream().map(r -> (String)r.get(0)).sorted().collect(Collectors.toList());
+            assertEquals("Result should contains 2 unique names", Arrays.asList("Another Vasya", "Vasya"), names);
+        }
+        finally {
+            c1.destroy();
+        }
+    }
+
+    /**
      * @throws InterruptedException If failed.
      */
     @Test
@@ -590,8 +664,8 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
                 "explain select snd from Value order by fst desc")).getAll();
             String rdcPlan = (String)plan.get(1).get(0);
 
-            assertTrue(rdcPlan.contains("merge_sorted"));
-            assertTrue(rdcPlan.contains("/* index sorted */"));
+            assertTrue("Execution plan should contain \"merge_sorted\" hint:\n" + rdcPlan, rdcPlan.contains("merge_sorted"));
+            assertTrue("Execution plan should contain \"index sorted\" hint:\n" + rdcPlan, rdcPlan.contains("index sorted"));
 
             plan = c.query(new SqlFieldsQuery(
                 "explain select snd from Value")).getAll();
@@ -828,6 +902,74 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
         finally {
             c1.destroy();
             c2.destroy();
+        }
+    }
+
+    /**
+     * Ensure that a ROW statement could be used in WHERE condition.
+     */
+    @Test
+    public void testRowAsFilter() {
+        GridQueryProcessor qryProc = grid(CLIENT).context().query();
+
+        try {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)"), false
+            ).getAll();
+
+            for (int i = 0; i < 10; i++) {
+                qryProc.querySqlFields(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i), false
+                ).getAll();
+            }
+
+            for (int i = 0; i < 10; i++) {
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("select id from test where (val1, val2) = (?, ?)").setArgs(i, 2 * i), false
+                ).getAll();
+
+                Assert.assertThat(res, hasSize(1));
+                Assert.assertThat(res.get(0), hasSize(1));
+                assertEquals(i, res.get(0).get(0));
+            }
+        }
+        finally {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("drop table if exists test"), false
+            ).getAll();
+        }
+    }
+
+    /**
+     * Ensure that a DISTINCT EXPRESSION could be used with aggregates.
+     */
+    @Test
+    public void testRowAsSelectExpressionForAggregatesWithDistinct() {
+        GridQueryProcessor qryProc = grid(CLIENT).context().query();
+
+        try {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)"), false
+            ).getAll();
+
+            for (int i = 0; i < 10; i++) {
+                qryProc.querySqlFields(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i), false
+                ).getAll();
+            }
+
+            List<List<?>> res = qryProc.querySqlFields(
+                new SqlFieldsQuery("select count(distinct(val1, val2)) from test"), false
+            ).getAll();
+
+            Assert.assertThat(res, hasSize(1));
+            Assert.assertThat(res.get(0), hasSize(1));
+            assertEquals(10L, res.get(0).get(0));
+        }
+        finally {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("drop table if exists test"), false
+            ).getAll();
         }
     }
 
@@ -2593,5 +2735,14 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             this.floatField = floatField;
             this.doubleField = doubleField;
         }
+    }
+
+    /** */
+    private static Matcher<Collection<?>> hasSize(int size) {
+        return new CustomMatcher<Collection<?>>("collection should be " + size + " elements in size") {
+            @Override public boolean matches(Object item) {
+                return item instanceof Collection && ((Collection<?>)item).size() == size;
+            }
+        };
     }
 }

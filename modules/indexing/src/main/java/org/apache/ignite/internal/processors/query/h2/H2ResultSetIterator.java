@@ -26,12 +26,14 @@ import java.util.NoSuchElementException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridIteratorAdapter;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.h2.api.ErrorCode;
 import org.h2.engine.Session;
@@ -165,6 +167,9 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                 if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                     throw new QueryCancelledException();
 
+                if (canceled && X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
+                    throw new QueryCancelledException();
+
                 throw new IgniteSQLException(e);
             }
 
@@ -185,7 +190,13 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                     if (e.getCause() instanceof IgniteSQLException)
                         throw (IgniteSQLException)e.getCause();
 
+                    if (e.getCause() instanceof SqlCacheException)
+                        throw (SqlCacheException)e.getCause();
+
                     if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                        throw new QueryCancelledException();
+
+                    if (canceled && X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
                         throw new QueryCancelledException();
 
                     throw new IgniteSQLException(e);

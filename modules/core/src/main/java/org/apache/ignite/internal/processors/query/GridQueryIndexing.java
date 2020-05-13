@@ -18,8 +18,11 @@ package org.apache.ignite.internal.processors.query;
 
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -107,11 +110,12 @@ public interface GridQueryIndexing {
      * @param qry Query.
      * @param params Query parameters.
      * @param streamer Data streamer to feed data to.
+     * @param qryInitiatorId Query initiator ID.
      * @return Update counter.
      * @throws IgniteCheckedException If failed.
      */
     public long streamUpdateQuery(String schemaName, String qry, @Nullable Object[] params,
-        IgniteDataStreamer<?, ?> streamer) throws IgniteCheckedException;
+        IgniteDataStreamer<?, ?> streamer, String qryInitiatorId) throws IgniteCheckedException;
 
     /**
      * Execute a batched INSERT statement using data streamer as receiver.
@@ -120,11 +124,12 @@ public interface GridQueryIndexing {
      * @param qry Query.
      * @param params Query parameters.
      * @param cliCtx Client connection context.
+     * @param qryInitiatorId Query initiator ID.
      * @return Update counters.
      * @throws IgniteCheckedException If failed.
      */
     public List<Long> streamBatchedUpdateQuery(String schemaName, String qry, List<Object[]> params,
-        SqlClientContext cliCtx) throws IgniteCheckedException;
+        SqlClientContext cliCtx, String qryInitiatorId) throws IgniteCheckedException;
 
     /**
      * Executes text query.
@@ -468,13 +473,42 @@ public interface GridQueryIndexing {
     Collection<ColumnInformation> columnsInformation(String schemaNamePtrn, String tblNamePtrn, String colNamePtrn);
 
     /**
-     * Return index size by schema name and index name.
+     * Return index size by schema, table and index name.
      *
      * @param schemaName Schema name.
+     * @param tblName Table name.
      * @param idxName Index name.
      * @return Index size (Number of elements) or {@code 0} if index not found.
      */
-    default long indexSize(String schemaName, String idxName) throws IgniteCheckedException {
+    default long indexSize(String schemaName, String tblName, String idxName) throws IgniteCheckedException {
         return 0;
+    }
+
+    /**
+     * Information about secondary indexes efficient (actual) inline size.
+     *
+     * @return Map with inline sizes. The key of entry is a full index name (with schema and table name), the value of
+     * entry is a inline size.
+     */
+    default Map<String, Integer> secondaryIndexesInlineSize() {
+        return Collections.emptyMap();
+    }
+
+    /**
+     * Setup cluster timezone ID used for date time conversion.
+     *
+     * @param tz Cluster timezone.
+     */
+    default void clusterTimezone(TimeZone tz) throws IgniteCheckedException {
+        // No-op.
+    }
+
+    /**
+     * Gets cluster SQL timezone used for date time conversion.
+     *
+     * @return Cluster SQL timezone.
+     */
+    default TimeZone clusterTimezone() {
+        return TimeZone.getDefault();
     }
 }

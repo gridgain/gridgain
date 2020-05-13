@@ -24,14 +24,24 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import java.util.function.Consumer;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
@@ -44,6 +54,39 @@ public class RunningQueryManager {
     /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
     public static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
+    /** Dummy memory metric provider that returns only -1's. */
+    // This provider used to highlight that query has no tracker at all.
+    // It could be intentionally in case of streaming or text queries
+    // and occasionally in case of uncounted circumstances
+    // that requires followed investigation
+    private static final GridQueryMemoryMetricProvider DUMMY_TRACKER = new GridQueryMemoryMetricProvider() {
+        @Override public long reserved() {
+            return -1;
+        }
+
+        @Override public long maxReserved() {
+            return -1;
+        }
+
+        @Override public long writtenOnDisk() {
+            return -1;
+        }
+
+        @Override public long maxWrittenOnDisk() {
+            return -1;
+        }
+
+        @Override public long totalWrittenOnDisk() {
+            return -1;
+        }
+    };
+
+    /** */
+    private final IgniteLogger log;
+
+    /** */
+    private final GridClosureProcessor closure;
+
     /** Keep registered user queries. */
     private final ConcurrentMap<Long, GridRunningQueryInfo> runs = new ConcurrentHashMap<>();
 
@@ -51,7 +94,7 @@ public class RunningQueryManager {
     private final AtomicLong qryIdGen = new AtomicLong();
 
     /** Local node ID. */
-    private final UUID localNodeId;
+    private final UUID locNodeId;
 
     /** History size. */
     private final int histSz;
@@ -76,15 +119,22 @@ public class RunningQueryManager {
      */
     private final AtomicLongMetric oomQrsCnt;
 
+    /** */
+    private final List<Consumer<GridQueryStartedInfo>> qryStartedListeners = new CopyOnWriteArrayList<>();
+
+    /** */
+    private final List<Consumer<GridQueryFinishedInfo>> qryFinishedListeners = new CopyOnWriteArrayList<>();
+
     /**
      * Constructor.
      *
      * @param ctx Context.
      */
     public RunningQueryManager(GridKernalContext ctx) {
-        localNodeId = ctx.localNodeId();
-
-        histSz = ctx.config().getSqlQueryHistorySize();
+        log = ctx.log(RunningQueryManager.class);
+        locNodeId = ctx.localNodeId();
+        histSz = ctx.config().getSqlConfiguration().getSqlQueryHistorySize();
+        closure = ctx.closure();
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
@@ -114,23 +164,65 @@ public class RunningQueryManager {
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
-        @Nullable GridQueryCancel cancel) {
+        @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
+        String qryInitiatorId) {
         Long qryId = qryIdGen.incrementAndGet();
+
+        if (qryInitiatorId == null)
+            qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
 
         GridRunningQueryInfo run = new GridRunningQueryInfo(
             qryId,
-            localNodeId,
+            locNodeId,
             qry,
             qryType,
             schemaName,
             System.currentTimeMillis(),
             cancel,
-            loc
+            loc,
+            memTracker == null ? DUMMY_TRACKER : memTracker,
+            qryInitiatorId
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);
 
         assert preRun == null : "Running query already registered [prev_qry=" + preRun + ", newQry=" + run + ']';
+
+        if (log.isDebugEnabled()) {
+            log.debug("User's query started [id=" + qryId + ", type=" + qryType + ", local=" + loc +
+                ", qry=" + qry + ']');
+        }
+
+        if (!qryStartedListeners.isEmpty()) {
+            GridQueryStartedInfo info = new GridQueryStartedInfo(
+                run.id(),
+                locNodeId,
+                run.query(),
+                run.queryType(),
+                run.schemaName(),
+                run.startTime(),
+                run.local(),
+                run.queryInitiatorId()
+            );
+
+            try {
+                closure.runLocal(
+                    () -> qryStartedListeners.forEach(lsnr -> {
+                        try {
+                            lsnr.accept(info);
+                        }
+                        catch (Exception ex) {
+                            log.error("Listener fails during handling query started" +
+                                " event [qryId=" + qryId + "]", ex);
+                        }
+                    }),
+                    GridIoPolicy.PUBLIC_POOL
+                );
+            }
+            catch (IgniteCheckedException ex) {
+                throw new IgniteException(ex.getMessage(), ex);
+            }
+        }
 
         return qryId;
     }
@@ -152,6 +244,48 @@ public class RunningQueryManager {
         // Attempt to unregister query twice.
         if (qry == null)
             return;
+
+        if (qry.memoryMetricProvider() instanceof AutoCloseable)
+            U.close((AutoCloseable)qry.memoryMetricProvider(), log);
+
+        if (log.isDebugEnabled()) {
+            log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
+                "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
+                ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
+        }
+
+        if (!qryFinishedListeners.isEmpty()) {
+            GridQueryFinishedInfo info = new GridQueryFinishedInfo(
+                qry.id(),
+                locNodeId,
+                qry.query(),
+                qry.queryType(),
+                qry.schemaName(),
+                qry.startTime(),
+                System.currentTimeMillis(),
+                qry.local(),
+                failed,
+                qry.queryInitiatorId()
+            );
+
+            try {
+                closure.runLocal(
+                    () -> qryFinishedListeners.forEach(lsnr -> {
+                        try {
+                            lsnr.accept(info);
+                        }
+                        catch (Exception ex) {
+                            log.error("Listener fails during handling query finished" +
+                                    " event [qryId=" + qryId + "]", ex);
+                        }
+                    }),
+                    GridIoPolicy.PUBLIC_POOL
+                );
+            }
+            catch (IgniteCheckedException ex) {
+                throw new IgniteException(ex.getMessage(), ex);
+            }
+        }
 
         //We need to collect query history and metrics only for SQL queries.
         if (isSqlQuery(qry)) {
@@ -189,6 +323,44 @@ public class RunningQueryManager {
         }
 
         return res;
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public void registerQueryStartedListener(Consumer<GridQueryStartedInfo> lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        qryStartedListeners.add(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    @SuppressWarnings("SuspiciousMethodCalls")
+    public boolean unregisterQueryStartedListener(Object lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        return qryStartedListeners.remove(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public void registerQueryFinishedListener(Consumer<GridQueryFinishedInfo> lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        qryFinishedListeners.add(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    @SuppressWarnings("SuspiciousMethodCalls")
+    public boolean unregisterQueryFinishedListener(Object lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        return qryFinishedListeners.remove(lsnr);
     }
 
     /**
@@ -254,7 +426,7 @@ public class RunningQueryManager {
 
     /**
      * Gets query history statistics. Size of history could be configured via {@link
-     * IgniteConfiguration#setSqlQueryHistorySize(int)}
+     * SqlConfiguration#setSqlQueryHistorySize(int)}
      *
      * @return Queries history statistics aggregated by query text, schema and local flag.
      */

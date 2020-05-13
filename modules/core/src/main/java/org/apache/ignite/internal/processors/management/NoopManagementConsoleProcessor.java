@@ -17,15 +17,31 @@
 package org.apache.ignite.internal.processors.management;
 
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 /**
  * No-op Control Center processor.
  */
-public class NoopManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
+public class NoopManagementConsoleProcessor extends GridProcessorAdapter implements ManagementConsoleProcessor {
     /**
      * @param ctx Kernal context.
      */
     public NoopManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void configuration(ManagementConfiguration cfg) {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public ManagementConfiguration configuration() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ControlCenterSender sender() {
+        return null;
     }
 }

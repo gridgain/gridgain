@@ -682,6 +682,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             if (cctx.store().isLocal())
                 cctx.store().remove(null, key);
 
+            updatePlatformCache(null, null);
+
             rmv = true;
 
             return true;

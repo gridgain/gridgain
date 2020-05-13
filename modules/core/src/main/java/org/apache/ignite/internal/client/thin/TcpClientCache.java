@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.cache.CachePeekMode;
@@ -37,6 +38,7 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.client.thin.TcpClientTransactions.TcpClientTransaction;
 
 import static java.util.AbstractMap.SimpleEntry;
 
@@ -44,6 +46,12 @@ import static java.util.AbstractMap.SimpleEntry;
  * Implementation of {@link ClientCache} over TCP protocol.
  */
 class TcpClientCache<K, V> implements ClientCache<K, V> {
+    /** "Keep binary" flag mask. */
+    private static final byte KEEP_BINARY_FLAG_MASK = 0x01;
+
+    /** "Transactional" flag mask. */
+    private static final byte TRANSACTIONAL_FLAG_MASK = 0x02;
+
     /** Cache id. */
     private final int cacheId;
 
@@ -56,6 +64,9 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
     /** Marshaller. */
     private final ClientBinaryMarshaller marsh;
 
+    /** Transactions facade. */
+    private final TcpClientTransactions transactions;
+
     /** Serializer/deserializer. */
     private final ClientUtils serDes;
 
@@ -63,11 +74,12 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
     private boolean keepBinary = false;
 
     /** Constructor. */
-    TcpClientCache(String name, ReliableChannel ch, ClientBinaryMarshaller marsh) {
+    TcpClientCache(String name, ReliableChannel ch, ClientBinaryMarshaller marsh, TcpClientTransactions transactions) {
         this.name = name;
         this.cacheId = ClientUtils.cacheId(name);
         this.ch = ch;
         this.marsh = marsh;
+        this.transactions = transactions;
 
         serDes = new ClientUtils(marsh);
     }
@@ -77,12 +89,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             this::readObject
         );
     }
@@ -95,13 +105,11 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        ch.request(
+        cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_PUT,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            }
+            req -> writeObject(req, val),
+            null
         );
     }
 
@@ -110,12 +118,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_CONTAINS_KEY,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             res -> res.in().readBoolean()
         );
     }
@@ -208,11 +214,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (newVal == null)
             throw new NullPointerException("newVal");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REPLACE_IF_EQUALS,
             req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
                 writeObject(req, oldVal);
                 writeObject(req, newVal);
             },
@@ -228,13 +233,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REPLACE,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             res -> res.in().readBoolean()
         );
     }
@@ -244,12 +246,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REMOVE_KEY,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             res -> res.in().readBoolean()
         );
     }
@@ -262,13 +262,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (oldVal == null)
             throw new NullPointerException("oldVal");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REMOVE_IF_EQUALS,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, oldVal);
-            },
+            req -> writeObject(req, oldVal),
             res -> res.in().readBoolean()
         );
     }
@@ -303,13 +300,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET_AND_PUT,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             this::readObject
         );
     }
@@ -319,12 +313,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET_AND_REMOVE,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             this::readObject
         );
     }
@@ -337,13 +329,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET_AND_REPLACE,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             this::readObject
         );
     }
@@ -356,13 +345,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_PUT_IF_ABSENT,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             res -> res.in().readBoolean()
         );
     }
@@ -388,7 +374,7 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
             }
         }
         else {
-            binCache = new TcpClientCache<>(name, ch, marsh);
+            binCache = new TcpClientCache<>(name, ch, marsh, transactions);
 
             binCache.keepBinary = true;
         }
@@ -494,12 +480,53 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         ));
     }
 
+
+    /**
+     * Execute cache operation with a single key.
+     */
+    private <T> T cacheSingleKeyOperation(
+        K key,
+        ClientOperation op,
+        Consumer<PayloadOutputChannel> additionalPayloadWriter,
+        Function<PayloadInputChannel, T> payloadReader
+    ) throws ClientException {
+        Consumer<PayloadOutputChannel> payloadWriter = req -> {
+            writeCacheInfo(req);
+            writeObject(req, key);
+
+            if (additionalPayloadWriter != null)
+                additionalPayloadWriter.accept(req);
+        };
+
+        // Transactional operation cannot be executed on affinity node, it should be executed on node started
+        // the transaction.
+        return transactions.tx() == null ? ch.affinityService(cacheId, key, op, payloadWriter, payloadReader) :
+            ch.service(op, payloadWriter, payloadReader);
+    }
+
     /** Write cache ID and flags. */
     private void writeCacheInfo(PayloadOutputChannel payloadCh) {
         BinaryOutputStream out = payloadCh.out();
 
         out.writeInt(cacheId);
-        out.writeByte((byte)(keepBinary ? 1 : 0));
+
+        byte flags = keepBinary ? KEEP_BINARY_FLAG_MASK : 0;
+
+        TcpClientTransaction tx = transactions.tx();
+
+        if (tx != null) {
+            flags |= TRANSACTIONAL_FLAG_MASK;
+
+            if (tx.clientChannel() != payloadCh.clientChannel()) {
+                throw new ClientException("Transaction context has been lost due to connection errors. " +
+                    "Cache operations are prohibited until current transaction closed.");
+            }
+
+            out.writeByte(flags);
+            out.writeInt(tx.txId());
+        }
+        else
+            out.writeByte(flags);
     }
 
     /** */

@@ -58,6 +58,8 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         startGridsMultiThreaded(GRID_CNT);
+
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
     }
 
     /** {@inheritDoc} */

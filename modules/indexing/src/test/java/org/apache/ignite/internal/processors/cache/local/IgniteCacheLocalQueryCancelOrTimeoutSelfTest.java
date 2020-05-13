@@ -30,6 +30,7 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -58,7 +59,7 @@ public class IgniteCacheLocalQueryCancelOrTimeoutSelfTest extends GridCommonAbst
         ccfg.setCacheMode(LOCAL);
 
         cfg.setCacheConfiguration(ccfg);
-        cfg.setSqlGlobalMemoryQuota("0");
+        cfg.setSqlConfiguration(new SqlConfiguration().setSqlGlobalMemoryQuota("0"));
 
         return cfg;
     }

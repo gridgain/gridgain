@@ -17,17 +17,15 @@ package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_SQL_QUERY_MEMORY_QUOTA;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED;
 import static org.apache.ignite.internal.processors.query.h2.QueryMemoryManager.DFLT_MEMORY_RESERVATION_BLOCK_SIZE;
 import static org.apache.ignite.internal.util.IgniteUtils.GB;
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
@@ -38,10 +36,10 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  */
 public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractTest {
     /** */
-    private static long DFLT_GLOBAL_QUOTA = U.parseBytes(DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA);
+    private static final long DFLT_GLOBAL_QUOTA = U.parseBytes("60%");
 
     /** */
-    private static long DFLT_QUERY_QUOTA = U.parseBytes(DFLT_SQL_QUERY_MEMORY_QUOTA);
+    private static final long DFLT_QUERY_QUOTA = U.parseBytes("0");
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -59,13 +57,16 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         assertManagerState(memMgr,
             DFLT_GLOBAL_QUOTA,
             DFLT_QUERY_QUOTA,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryMetricProvider tracker = memMgr.createQueryMemoryTracker(0);
 
-        // Assert tracking is not used by default.
-        assertNull(tracker);
+        // Check defaults for tracker
+        assertTrackerState(tracker,
+            0,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
     }
 
     /**
@@ -74,9 +75,10 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
     @Test
     public void testQuotaNonDefaults() throws IgniteCheckedException {
         IgniteConfiguration cfg = new IgniteConfiguration()
+            .setSqlConfiguration(new SqlConfiguration()
             .setSqlGlobalMemoryQuota("20k")
             .setSqlQueryMemoryQuota("10K")
-            .setSqlOffloadingEnabled(!DFLT_SQL_QUERY_OFFLOADING_ENABLED);
+            .setSqlOffloadingEnabled(!SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED));
 
         System.setProperty(IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, "5000");
 
@@ -85,21 +87,21 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         assertManagerState(memMgr,
             20 * 1024,
             10 * 1024,
-            !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            !SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryMetricProvider tracker = memMgr.createQueryMemoryTracker(0);
 
         assertTrackerState(tracker,
             10 * 1024,
-            !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            !SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        tracker = memMgr.createQueryMemoryTracker(1_000, "");
+        tracker = memMgr.createQueryMemoryTracker(1_000);
 
         assertTrackerState(tracker,
             1_000,
-            !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            !SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             1_000);
     }
 
@@ -111,20 +113,20 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         // Negative global quota.
         GridTestUtils.assertThrows(log, () -> {
                 IgniteConfiguration cfg = new IgniteConfiguration()
-                    .setSqlGlobalMemoryQuota("-1");
+                    .setSqlConfiguration(new SqlConfiguration().setSqlGlobalMemoryQuota("-1"));
 
                 QueryMemoryManager memoryMgr = new QueryMemoryManager(newContext(cfg));
             }, IllegalArgumentException.class,
-            "Ouch! Argument is invalid: Sql global memory quota must be >= 0. But was -1");
+            "Ouch! Argument is invalid: Sql global memory quota must be >= 0: quotaSize=-1");
 
         // Negative query quota.
         GridTestUtils.assertThrows(log, () -> {
                 IgniteConfiguration cfg = new IgniteConfiguration()
-                    .setSqlQueryMemoryQuota("-1");
+                    .setSqlConfiguration(new SqlConfiguration().setSqlQueryMemoryQuota("-1"));
 
                 QueryMemoryManager memoryMgr = new QueryMemoryManager(newContext(cfg));
             }, IllegalArgumentException.class,
-            "Ouch! Argument is invalid: Sql query memory quota must be >= 0. But was -1");
+            "Ouch! Argument is invalid: Sql query memory quota must be >= 0: quotaSize=-1");
 
         // Zero reservation block size.
         System.setProperty(IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, "0");
@@ -134,7 +136,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
 
                 QueryMemoryManager memoryMgr = new QueryMemoryManager(newContext(cfg));
             }, IllegalArgumentException.class,
-            "Ouch! Argument is invalid: Block size must be > 0. But was 0");
+            "Ouch! Argument is invalid: Block size must be > 0: blockSize=0");
 
         // Negative reservation block size.
         System.setProperty(IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, "-1");
@@ -144,7 +146,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
 
                 QueryMemoryManager memoryMgr = new QueryMemoryManager(newContext(cfg));
             }, IllegalArgumentException.class,
-            "Ouch! Argument is invalid: Block size must be > 0. But was -1");
+            "Ouch! Argument is invalid: Block size must be > 0: blockSize=-1");
     }
 
     /**
@@ -153,7 +155,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
     @Test
     public void testGlobalQuotaDisabled() throws IgniteCheckedException {
         IgniteConfiguration cfg = new IgniteConfiguration()
-            .setSqlGlobalMemoryQuota("0");
+            .setSqlConfiguration(new SqlConfiguration().setSqlGlobalMemoryQuota("0"));
 
         QueryMemoryManager memMgr = new QueryMemoryManager(newContext(cfg));
 
@@ -161,73 +163,22 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         assertManagerState(memMgr,
             0,
             DFLT_QUERY_QUOTA,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryMetricProvider tracker = memMgr.createQueryMemoryTracker(0);
 
-        assertNull(tracker);
+        assertTrackerState(tracker,
+            0,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        tracker = memMgr.createQueryMemoryTracker(10, "");
+        tracker = memMgr.createQueryMemoryTracker(10);
 
         assertTrackerState(tracker,
             10,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             10);
-    }
-
-    /**
-     * @throws IgniteCheckedException If failed.
-     */
-    @Test
-    public void testTrackingDisabled() throws IgniteCheckedException {
-        IgniteConfiguration cfg = new IgniteConfiguration()
-            .setSqlGlobalMemoryQuota("0")
-            .setSqlQueryMemoryQuota("0");
-
-        QueryMemoryManager memMgr = new QueryMemoryManager(newContext(cfg));
-
-        // Check defaults for manager.
-        assertManagerState(memMgr,
-            0,
-            0,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
-            DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
-
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
-
-        assertNull(tracker);
-
-        tracker = memMgr.createQueryMemoryTracker(10, "");
-
-        assertTrackerState(tracker,
-            10,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
-            10);
-    }
-
-    /**
-     * @throws IgniteCheckedException If failed.
-     */
-    @Test
-    public void testGlobalQuotaDisabledPerQueryQuotaEnabled() throws IgniteCheckedException {
-        IgniteConfiguration cfg = new IgniteConfiguration()
-            .setSqlGlobalMemoryQuota("0");
-        QueryMemoryManager memMgr = new QueryMemoryManager(newContext(cfg));
-
-        // Check defaults for manager.
-        assertManagerState(memMgr,
-            0,
-            DFLT_QUERY_QUOTA,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
-            DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
-
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(30, "");
-
-        assertTrackerState(tracker,
-            30,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
-            30);
     }
 
     /**
@@ -236,22 +187,23 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
     @Test
     public void testGlobalQuotaDisabledDefaultPerQueryQuotaEnabled() throws IgniteCheckedException {
         IgniteConfiguration cfg = new IgniteConfiguration()
+            .setSqlConfiguration(new SqlConfiguration()
             .setSqlGlobalMemoryQuota("0")
-            .setSqlQueryMemoryQuota("33");
+            .setSqlQueryMemoryQuota("33"));
         QueryMemoryManager memMgr = new QueryMemoryManager(newContext(cfg));
 
         // Check defaults for manager.
         assertManagerState(memMgr,
             0,
             33,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryMetricProvider tracker = memMgr.createQueryMemoryTracker(0);
 
         assertTrackerState(tracker,
             33,
-            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             33);
     }
 
@@ -357,11 +309,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
      * @param expOffloadingEnabled Expected offloading enabled flag.
      * @param expBlockSize Expected block size.
      */
-    private static void assertTrackerState(QueryMemoryTracker memTracker,
+    private static void assertTrackerState(GridQueryMemoryMetricProvider memTracker,
         long expQuota,
         boolean expOffloadingEnabled,
         long expBlockSize) {
-        assertEquals(expQuota, memTracker.memoryLimit());
+        assertEquals(expQuota, (long) GridTestUtils.getFieldValue(memTracker, "quota"));
         assertEquals(expOffloadingEnabled, (boolean) GridTestUtils.getFieldValue(memTracker, "offloadingEnabled"));
         assertEquals(expBlockSize, (long) GridTestUtils.getFieldValue(memTracker, "blockSize"));
     }

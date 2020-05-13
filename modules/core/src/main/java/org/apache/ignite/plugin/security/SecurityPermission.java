@@ -75,7 +75,16 @@ public enum SecurityPermission {
     JOIN_AS_SERVER,
 
     /** Change snapshot security level. */
-    CHANGE_SNAPSHOT_SECURITY_LEVEL;
+    CHANGE_SNAPSHOT_SECURITY_LEVEL,
+
+    /** */
+    SET_QUERY_MEMORY_QUOTA,
+
+    /** Permission to request any views containing query. */
+    GET_QUERY_VIEWS,
+
+    /** Permission to execute KILL QUERY command.*/
+    KILL_QUERY;
 
     /** Enumerated values. */
     private static final SecurityPermission[] VALS = values();

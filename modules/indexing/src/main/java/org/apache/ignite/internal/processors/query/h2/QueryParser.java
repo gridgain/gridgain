@@ -28,6 +28,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
@@ -98,6 +99,9 @@ public class QueryParser {
     /** Logger. */
     private final IgniteLogger log;
 
+    /** Query parser metrics holder. */
+    private final QueryParserMetricsHolder metricsHolder;
+
     /** */
     private volatile GridBoundedConcurrentLinkedHashMap<QueryDescriptor, QueryParserCacheEntry> cache =
         new GridBoundedConcurrentLinkedHashMap<>(CACHE_SIZE);
@@ -112,7 +116,8 @@ public class QueryParser {
         this.idx = idx;
         this.connMgr = connMgr;
 
-        log = idx.kernalContext().log(QueryParser.class);
+        this.log = idx.kernalContext().log(QueryParser.class);
+        this.metricsHolder = new QueryParserMetricsHolder(idx.kernalContext().metric());
     }
 
     /**
@@ -145,6 +150,8 @@ public class QueryParser {
         QueryParserCacheEntry cached = cache.get(qryDesc);
 
         if (cached != null) {
+            metricsHolder.countCacheHit();
+
             return new QueryParserResult(
                 qryDesc,
                 QueryParameters.fromQuery(qry),
@@ -155,6 +162,8 @@ public class QueryParser {
                 cached.command()
             );
         }
+
+        metricsHolder.countCacheMiss();
 
         // Try parsing as native command.
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);
@@ -656,6 +665,8 @@ public class QueryParser {
         catch (Exception e) {
             if (e instanceof IgniteSQLException)
                 throw (IgniteSQLException)e;
+            else if (e instanceof SqlCacheException)
+                throw (SqlCacheException)e;
             else
                 throw new IgniteSQLException("Failed to prepare update plan.", e);
         }
@@ -725,7 +736,8 @@ public class QueryParser {
             qry.isEnforceJoinOrder(),
             qry.isLocal(),
             skipReducerOnUpdate,
-            batched
+            batched,
+            qry.getQueryInitiatorId()
         );
     }
 }

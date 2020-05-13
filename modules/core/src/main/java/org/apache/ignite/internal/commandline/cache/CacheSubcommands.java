@@ -43,12 +43,12 @@ public enum CacheSubcommands {
     /**
      * Checks consistency of primary and backup partitions assuming that there might be concurrently updated.
      */
-    PARTITION_RECONCILIATION("partition-reconciliation", PartitionReconciliationCommandArg.class, new PartitionReconciliation()),
+    PARTITION_RECONCILIATION("partition_reconciliation", PartitionReconciliationCommandArg.class, new PartitionReconciliation()),
 
     /**
      * Cancels partition reconciliation command.
      */
-    PARTITION_RECONCILIATION_CANCEL("partition-reconciliation-cancel", null, new PartitionReconciliationCancel()),
+    PARTITION_RECONCILIATION_CANCEL("partition_reconciliation_cancel", null, new PartitionReconciliationCancel()),
 
     /**
      * Prints info regarding caches, groups or sequences.
@@ -78,7 +78,12 @@ public enum CacheSubcommands {
     /**
      * Find and remove garbage.
      */
-    FIND_AND_DELETE_GARBAGE("find_garbage", FindAndDeleteGarbageArg.class, new FindAndDeleteGarbage());
+    FIND_AND_DELETE_GARBAGE("find_garbage", FindAndDeleteGarbageArg.class, new FindAndDeleteGarbage()),
+
+    /**
+     * Check secondary indexes inline size.
+     */
+    CHECK_INDEX_INLINE_SIZES("check_index_inline_sizes", null, new CheckIndexInlineSizes());
 
 
     /** Enumerated values. */

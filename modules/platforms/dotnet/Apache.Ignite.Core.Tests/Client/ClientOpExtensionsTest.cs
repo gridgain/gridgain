@@ -48,6 +48,11 @@ namespace Apache.Ignite.Core.Tests.Client
         public void TestGetMinVersionReturnsSpecificVersionForNewFeatures()
         {
             Assert.AreEqual(ClientSocket.Ver140, ClientOp.CachePartitions.GetMinVersion());
+
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterIsActive.GetMinVersion());
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterChangeState.GetMinVersion());
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterChangeWalState.GetMinVersion());
+            Assert.AreEqual(ClientSocket.Ver150, ClientOp.ClusterGetWalState.GetMinVersion());
         }
     }
 }

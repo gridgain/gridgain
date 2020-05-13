@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -55,6 +56,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.h2.message.DbException;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
 import org.h2.table.IndexColumn;
@@ -81,11 +83,18 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** */
     private final int inlineSize;
 
-    /** */
+    /** List of helpers to work with inline values on the page. */
     private final List<InlineIndexColumn> inlineIdxs;
 
-    /** */
+    /** Actual columns that current index is consist from. */
     private final IndexColumn[] cols;
+
+    /**
+     * Columns that will be used for inlining.
+     * Could differ from actual columns {@link #cols} in case of
+     * meta page were upgraded from older version.
+     */
+    private final IndexColumn[] inlineCols;
 
     /** */
     private final boolean mvccEnabled;
@@ -247,6 +256,31 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 .filter(ih -> ih.type() != Value.JAVA_OBJECT)
                 .collect(Collectors.toList());
 
+            inlineCols = new IndexColumn[inlineIdxs.size()];
+
+            for (int i = 0, j = 0; i < cols.length && j < inlineIdxs.size(); i++) {
+                if (cols[i].column.getColumnId() == inlineIdxs.get(j).columnIndex())
+                    inlineCols[j++] = cols[i];
+            }
+
+            boolean inlineDecimalSupported = inlineSize > 0 && metaInfo.inlineDecimalSupported();
+
+            // remove tail if inlining of decimals is not supported
+            if (!inlineDecimalSupported) {
+                boolean decimal = false;
+
+                Iterator<InlineIndexColumn> it = inlineIdxs.iterator();
+                while (it.hasNext()) {
+                    InlineIndexColumn ih = it.next();
+
+                    if (ih.type() == Value.DECIMAL)
+                        decimal = true;
+
+                    if (decimal)
+                        it.remove();
+                }
+            }
+
             if (!metaInfo.flagsSupported())
                 upgradeMetaPage(inlineObjSupported);
         }
@@ -254,6 +288,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             unwrappedPk = true;
 
             cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
+            inlineCols = cols;
 
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
@@ -478,67 +513,70 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx,
         H2Row row) throws IgniteCheckedException {
-        if (inlineSize() == 0)
-            return compareRows(getRow(io, pageAddr, idx), row);
-        else {
-            int off = io.offset(idx);
+        try {
+            if (inlineSize() == 0)
+                return compareRows(getRow(io, pageAddr, idx), row);
+            else {
+                int off = io.offset(idx);
 
-            int fieldOff = 0;
+                int fieldOff = 0;
 
-            int lastIdxUsed = 0;
+                int lastIdxUsed = 0;
 
-            for (int i = 0; i < inlineIdxs.size(); i++) {
-                InlineIndexColumn inlineIdx = inlineIdxs.get(i);
-                IndexColumn col = cols[i];
+                for (int i = 0; i < inlineIdxs.size(); i++) {
+                    InlineIndexColumn inlineIdx = inlineIdxs.get(i);
+                    Value v2 = row.getValue(inlineIdx.columnIndex());
 
-                Value v2 = row.getValue(col.column.getColumnId());
+                    if (v2 == null)
+                        return 0;
 
-                if (v2 == null)
-                    return 0;
+                    int c = inlineIdx.compare(pageAddr, off + fieldOff, inlineSize() - fieldOff, v2, comp);
 
-                int c = inlineIdx.compare(pageAddr, off + fieldOff, inlineSize() - fieldOff, v2, comp);
+                    if (c == CANT_BE_COMPARE)
+                        break;
 
-                if (c == CANT_BE_COMPARE)
-                    break;
+                    lastIdxUsed++;
 
-                lastIdxUsed++;
+                    if (c != 0)
+                        return fixSort(c, inlineCols[i].sortType);
 
-                if (c != 0)
-                    return fixSort(c, col.sortType);
+                    fieldOff += inlineIdx.fullSize(pageAddr, off + fieldOff);
 
-                fieldOff += inlineIdx.fullSize(pageAddr, off + fieldOff);
-
-                if (fieldOff > inlineSize())
-                    break;
-            }
-
-            if (lastIdxUsed == cols.length)
-                return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
-
-            inlineSizeRecomendation(row);
-
-            SearchRow rowData = getRow(io, pageAddr, idx);
-
-            for (int i = lastIdxUsed, len = cols.length; i < len; i++) {
-                IndexColumn col = cols[i];
-                int idx0 = col.column.getColumnId();
-
-                Value v2 = row.getValue(idx0);
-
-                if (v2 == null) {
-                    // Can't compare further.
-                    return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                    if (fieldOff > inlineSize())
+                        break;
                 }
 
-                Value v1 = rowData.getValue(idx0);
+                if (lastIdxUsed == cols.length)
+                    return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
 
-                int c = compareValues(v1, v2);
+                inlineSizeRecomendation(row);
 
-                if (c != 0)
-                    return fixSort(c, col.sortType);
+                SearchRow rowData = getRow(io, pageAddr, idx);
+
+                for (int i = lastIdxUsed, len = cols.length; i < len; i++) {
+                    IndexColumn col = cols[i];
+                    int idx0 = col.column.getColumnId();
+
+                    Value v2 = row.getValue(idx0);
+
+                    if (v2 == null) {
+                        // Can't compare further.
+                        return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                    }
+
+                    Value v1 = rowData.getValue(idx0);
+
+                    int c = compareValues(v1, v2);
+
+                    if (c != 0)
+                        return fixSort(c, col.sortType);
+                }
+
+                return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
             }
-
-            return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+        }
+        catch (DbException ex) {
+            throw new IgniteCheckedException("Rows cannot be compared", ex);
         }
     }
 
@@ -746,6 +784,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         boolean inlineObjHash;
 
         /** */
+        boolean inlineDecimalSupported;
+
+        /** */
         IgniteProductVersion createdVer;
 
         /**
@@ -760,6 +801,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             if (flagsSupported) {
                 inlineObjSupported = io.inlineObjectSupported(pageAddr);
                 inlineObjHash = io.inlineObjectHash(pageAddr);
+                inlineDecimalSupported = io.inlineDecimalSupported(pageAddr);
             }
 
             createdVer = io.createdVersion(pageAddr);
@@ -798,6 +840,13 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
          */
         public boolean inlineObjectHash() {
             return inlineObjHash;
+        }
+
+        /**
+         * @return {@code true} In case inline decimal is supported.
+         */
+        public boolean inlineDecimalSupported() {
+            return inlineDecimalSupported;
         }
     }
 

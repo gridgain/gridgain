@@ -22,6 +22,7 @@ import java.sql.Statement;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingAbstractTest;
@@ -34,18 +35,20 @@ import org.junit.Test;
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
     /** */
-    private static final String QUERY_512_TO_1024 = "SELECT DISTINCT id FROM person WHERE id < 8";
+    private static final String QUERY_1024_TO_2048 = "SELECT DISTINCT id FROM person WHERE id < 8";
 
     /** */
-    private static final String QUERY_1024_TO_2048 = "SELECT DISTINCT id FROM person WHERE id < 16";
+    private static final String QUERY_2048_TO_4096 = "SELECT DISTINCT id FROM person WHERE id < 16";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setSqlOffloadingEnabled(IgniteConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED);
-        cfg.setSqlQueryMemoryQuota("1024");
-        cfg.setSqlGlobalMemoryQuota(IgniteConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA);
+        cfg.setSqlConfiguration(new SqlConfiguration()
+            .setSqlOffloadingEnabled(SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED)
+            .setSqlQueryMemoryQuota("1024")
+            .setSqlGlobalMemoryQuota(SqlConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA)
+        );
 
         return cfg;
     }
@@ -68,23 +71,23 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
     @Test
     public void testClientQueryQuota() throws Exception {
         try (Connection conn512 = createConnection("jdbc-config-query-mem-limit-512.xml");
-             Connection conn2048 = createConnection("jdbc-config-query-mem-limit-2048.xml")) {
-            Statement stmt0 = conn2048.createStatement();
+             Connection conn4096 = createConnection("jdbc-config-query-mem-limit-4096.xml")) {
+            Statement stmt0 = conn4096.createStatement();
 
             // Expect no exception here.
-            stmt0.execute(QUERY_512_TO_1024);
+            stmt0.execute(QUERY_1024_TO_2048);
 
             GridTestUtils.assertThrows(log, () -> {
-                Statement stmt = conn2048.createStatement();
+                Statement stmt = conn4096.createStatement();
 
-                stmt.execute(QUERY_1024_TO_2048);
-            }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
+                stmt.execute(QUERY_2048_TO_4096);
+            }, IgniteException.class, "SQL query ran out of memory: Query quota was exceeded.");
 
             GridTestUtils.assertThrows(log, () -> {
                 Statement stmt = conn512.createStatement();
 
-                stmt.execute(QUERY_512_TO_1024);
-            }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
+                stmt.execute(QUERY_1024_TO_2048);
+            }, IgniteException.class, "SQL query ran out of memory: Query quota was exceeded.");
         }
     }
 

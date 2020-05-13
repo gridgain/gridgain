@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,12 +54,16 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -276,7 +282,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
 
-        Ignite prim = startGrids(srvNodes);
+        IgniteEx prim = startGrids(srvNodes);
+
+        prim.cluster().baselineAutoAdjustEnabled(false);
 
         prim.cluster().active(true);
 
@@ -825,6 +833,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
+
         crd.cluster().active(true);
 
         // Same name pattern as in test configuration.
@@ -983,6 +993,96 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
+     * Tests a scenario when stale partition state message can trigger spurious late affinity switching cause
+     * mapping to moving partitions.
+     */
+    @Test
+    public void testLateAffinityChangeDuringExchange() throws Exception {
+        backups = 2;
+        Ignite crd = startGridsMultiThreaded(3);
+        crd.cluster().active(true);
+
+        awaitPartitionMapExchange();
+
+        for (int p = 0; p < PARTS_CNT; p++)
+            crd.cache(DEFAULT_CACHE_NAME).put(p, p);
+
+        forceCheckpoint();
+
+        int key = primaryKey(grid(2).cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).
+                        topologyVersion().equals(new AffinityTopologyVersion(4, 0));
+                }
+
+                return false;
+            }
+        });
+
+        stopGrid(2);
+
+        // Fill a queue with a lot of messages.
+        for (int i = 0; i < 1000; i++)
+            grid(1).context().cache().context().exchange().refreshPartitions();
+
+        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked(1000);
+
+        // Create counter delta for triggering counter rebalance.
+        for (int p = 0; p < PARTS_CNT; p++)
+            crd.cache(DEFAULT_CACHE_NAME).put(p, p + 1);
+
+        IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
+        TestRecordingCommunicationSpi spi2 = (TestRecordingCommunicationSpi) cfg2.getCommunicationSpi();
+        spi2.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage)
+                    return true; // Prevent any rebalancing to avoid switching partitions to owning.
+
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() != null &&
+                        msg0.exchangeId().topologyVersion().equals(new AffinityTopologyVersion(5, 0));
+                }
+
+                return false;
+            }
+        });
+
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(cfg2);
+
+                return null;
+            }
+        });
+
+        // Delay last single message. It should trigger PME for version 5,0
+        spi2.waitForBlocked();
+
+        // Start processing single messages.
+        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
+
+        // Allow PME to finish.
+        spi2.stopBlock();
+
+        grid(0).context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(5, 1)).get();
+
+        // Primary node for a key will be stopped by FH without a fix.
+        grid(0).cache(DEFAULT_CACHE_NAME).put(key, -1);
+
+        for (int i = 0; i < 1000; i++)
+            assertEquals(-1, grid(2).cache(DEFAULT_CACHE_NAME).get(key));
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
      * The scenario:
      * <p>
      * 1. Start updates only to primary partitions what will be switched when this node has left.
@@ -1037,6 +1137,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         IgniteEx prim = startGrids(srvNodes);
 
+        prim.cluster().baselineAutoAdjustEnabled(false);
+
         prim.cluster().active(true);
 
         for (int p = 0; p < partitions(); p++) {
@@ -1076,6 +1178,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             startGrid(2);
             startGrid(3);
+
+            assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+
+            grid(0).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
         }
 
         prim.context().cache().context().exchange().rebalanceDelay(500);
@@ -1195,8 +1301,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
-                            X.hasCause(e, ClusterTopologyCheckedException.class) ||
-                            X.hasCause(e, TransactionRollbackException.class));
+                        X.hasCause(e, ClusterTopologyCheckedException.class) ||
+                        X.hasCause(e, TransactionRollbackException.class) ||
+                        X.hasCause(e, CacheInvalidStateException.class));
                 }
             }
 

@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -34,11 +33,12 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.plugin.security.SecurityPermission;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
 
 /**
@@ -78,9 +78,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
 
-    /** Session. */
-    private final GridNioSession ses;
-
     /** Shutdown busy lock. */
     private final GridSpinBusyLock busyLock;
 
@@ -116,17 +113,16 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
     /**
      * Constructor.
-     *  @param ctx Kernal Context.
-     * @param ses Session.
+     * @param ctx Kernal Context.
+     * @param ses Client's NIO session.
      * @param busyLock Shutdown busy lock.
      * @param connId Connection ID.
      * @param maxCursors Maximum allowed cursors.
      */
     public JdbcConnectionContext(GridKernalContext ctx, GridNioSession ses, GridSpinBusyLock busyLock, long connId,
         int maxCursors) {
-        super(ctx, connId);
+        super(ctx, ses, connId);
 
-        this.ses = ses;
         this.busyLock = busyLock;
         this.maxCursors = maxCursors;
 
@@ -144,7 +140,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     }
 
     /** {@inheritDoc} */
-    @Override public void initializeFromHandshake(ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
+    @Override public void initializeFromHandshake(GridNioSession ses,
+        ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
         throws IgniteCheckedException {
         assert SUPPORTED_VERS.contains(ver): "Unsupported JDBC protocol version.";
 
@@ -200,8 +197,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 byte [] cliFeatures = reader.readByteArray();
 
                 features = JdbcThinFeature.enumSet(cliFeatures);
-
-                features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
             }
         }
         catch (Exception ex) {
@@ -225,10 +220,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 throw new IgniteCheckedException("Handshake error: " + e.getMessage(), e);
             }
 
-            actx = authenticate(user, passwd);
+            actx = authenticate(ses.certificates(), user, passwd);
         }
 
-        protoCtx = new JdbcProtocolContext(ver, features, null, false);
+        protoCtx = new JdbcProtocolContext(ver, features, null, false, true);
+
+        initClientDescriptor("jdbc-thin");
 
         parser = new JdbcMessageParser(ctx, protoCtx);
 
@@ -245,12 +242,10 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         };
 
-        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, false) && maxMemory != 0L) {
-            log.warning("Memory quotas per connection is disabled." +
-                " To enable it please set Ignite system property \"" + IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA
-                + "\" to \"true\"");
-
-            maxMemory = 0L;
+        if (maxMemory != 0L && securityContext() != null) {
+            try (OperationSecurityContext op = ctx.security().withContext(securityContext())) {
+                ctx.security().authorize(SecurityPermission.SET_QUERY_MEMORY_QUOTA);
+            }
         }
 
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,

@@ -45,7 +45,9 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.histogramBucketNames;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.junit.Assert.assertArrayEquals;
 
 /** */
 public class MetricsSelfTest extends GridCommonAbstractTest {
@@ -332,6 +334,22 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
 
         assertEquals(rateTimeInterval * 2, metric.rateTimeInterval());
     }
+
+    /** */
+    @Test
+    public void testHistogramNames() throws Exception {
+        HistogramMetric h = new HistogramMetric("test", null, new long[]{10, 50, 500});
+
+        String[] names = histogramBucketNames(h);
+
+        assertArrayEquals(new String[] {
+            "test_0_10",
+            "test_10_50",
+            "test_50_500",
+            "test_500_inf"
+        }, names);
+    }
+
 
     /** */
     private void run(Runnable r, int cnt) throws org.apache.ignite.IgniteCheckedException {

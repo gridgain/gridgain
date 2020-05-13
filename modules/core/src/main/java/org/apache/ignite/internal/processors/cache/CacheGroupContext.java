@@ -66,6 +66,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -89,9 +90,6 @@ public class CacheGroupContext {
 
     /** Node ID cache group was received from. */
     private volatile UUID rcvdFrom;
-
-    /** Flag indicating that this cache group is in a recovery mode due to partitions loss. */
-    private boolean needsRecovery;
 
     /** */
     private volatile AffinityTopologyVersion locStartVer;
@@ -183,6 +181,9 @@ public class CacheGroupContext {
 
     /** Statistics holder to track IO operations for data pages. */
     private final IoStatisticsHolder statHolderData;
+
+    /** */
+    private volatile boolean hasAtomicCaches;
 
     /** Cache group metrics. */
     private final CacheGroupMetricsImpl metrics;
@@ -282,6 +283,8 @@ public class CacheGroupContext {
                 (IoStatisticsHolderIndex)statHolderIdx
             );
         }
+
+        hasAtomicCaches = ccfg.getAtomicityMode() == ATOMIC;
     }
 
     /**
@@ -383,6 +386,9 @@ public class CacheGroupContext {
 
         if (!drEnabled && cctx.isDrEnabled())
             drEnabled = true;
+
+        if (!hasAtomicCaches)
+            hasAtomicCaches = cctx.config().getAtomicityMode() == ATOMIC;
     }
 
     /**
@@ -701,20 +707,6 @@ public class CacheGroupContext {
      */
     public IgniteCacheOffheapManager offheap() {
         return offheapMgr;
-    }
-
-    /**
-     * @return Current cache state. Must only be modified during exchange.
-     */
-    public boolean needsRecovery() {
-        return needsRecovery;
-    }
-
-    /**
-     * @param needsRecovery Needs recovery flag.
-     */
-    public void needsRecovery(boolean needsRecovery) {
-        this.needsRecovery = needsRecovery;
     }
 
     /**
@@ -1305,6 +1297,13 @@ public class CacheGroupContext {
      */
     public IoStatisticsHolder statisticsHolderData() {
         return statHolderData;
+    }
+
+    /**
+     * @return {@code True} if group has atomic caches.
+     */
+    public boolean hasAtomicCaches() {
+        return hasAtomicCaches;
     }
 
     /**

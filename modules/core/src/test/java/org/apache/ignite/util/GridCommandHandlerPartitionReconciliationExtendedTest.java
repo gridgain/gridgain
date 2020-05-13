@@ -107,12 +107,12 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertEquals(0, reconciliationSessionId());
 
-        GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--repair",
+        GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--repair",
             "MAJORITY", "--recheck-attempts", "5")));
 
         assertTrue(GridTestUtils.waitForCondition(() -> reconciliationSessionId() != 0, 10_000));
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation-cancel"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation_cancel"));
 
         assertEquals(0, reconciliationSessionId());
 
@@ -133,7 +133,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         IgniteEx ignite = grid(0);
         ignite.cluster().active(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--repair", "MAJORITY", "--recheck-attempts", "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--repair", "MAJORITY", "--recheck-attempts", "1"));
 
         assertTrue(lsnr.check(10_000));
     }
@@ -155,7 +155,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         for (int i = 1; i <= 3; i++)
             ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "default, default3"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "default, default3"));
 
         assertTrue(lsnr.check(10_000));
 
@@ -180,7 +180,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         for (int i = 1; i <= 3; i++)
             ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "default.*"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "default.*"));
 
         assertTrue(lsnr.check(10_000));
 
@@ -208,7 +208,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         for (int i = 1; i <= 3; i++)
             setOfCaches.add(ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i).getName());
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation"));
 
         assertTrue(lsnr.check(10_000));
 
@@ -241,7 +241,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
             }
         }));
 
-        assertEquals(EXIT_CODE_OK, execute(new CommandHandler(logger), "--cache", "partition-reconciliation", wrongCacheName));
+        assertEquals(EXIT_CODE_OK, execute(new CommandHandler(logger), "--cache", "partition_reconciliation", wrongCacheName));
 
         assertTrue(errorMsg.check(10_000));
     }
@@ -250,7 +250,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      * Extract cache names which used for a start.
      */
     private LogListener fillCacheNames(Set<String> usedCaches) {
-        Pattern r = Pattern.compile("Partition reconciliation has started.*caches: \\[(.*)\\]\\].*");
+        Pattern r = Pattern.compile("Partition reconciliation has started.*caches=\\[(.*)\\]\\].*");
 
         LogListener lsnr = LogListener.matches(s -> {
             Matcher m = r.matcher(s);

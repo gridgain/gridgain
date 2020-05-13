@@ -139,8 +139,9 @@ public class H2ManagedGroupByData extends GroupByData {
         lastGrpKey = null;
 
         curEntry = null;
-        tracker.released(memReserved);
-        memReserved = 0;
+
+        tracker.close();
+        tracker = null;
     }
 
     /** {@inheritDoc} */
@@ -150,11 +151,15 @@ public class H2ManagedGroupByData extends GroupByData {
 
     /** {@inheritDoc} */
     @Override public void onRowProcessed() {
+        initTracker();
+
+        assert tracker != null : "tracker should not be null";
+
         Object[] old = groupByData.put(lastGrpKey, lastGrpData);
 
         onGroupChanged(lastGrpKey, old, lastGrpData);
 
-        if (!tracker.reserved(0)) {
+        if (!tracker.reserve(0)) {
             if (sortedExtRes == null)
                 createExtGroupByData();
 
@@ -173,9 +178,7 @@ public class H2ManagedGroupByData extends GroupByData {
 
         groupByData.clear();
 
-        tracker.released(memReserved);
-
-        memReserved = 0;
+        tracker.release(tracker.reserved());
     }
 
     /** {@inheritDoc} */

@@ -71,7 +71,7 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
 
         log = ctx.logger(getClass());
 
-        finFut = new GridFinishedFuture();
+        finFut = new GridFinishedFuture<>(true);
     }
 
     /** {@inheritDoc} */
@@ -157,8 +157,9 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtPreloaderAssignments generateAssignments(GridDhtPartitionExchangeId exchId,
-                                                                     GridDhtPartitionsExchangeFuture exchFut) {
+    @Override public GridDhtPreloaderAssignments generateAssignments(
+        GridDhtPartitionExchangeId exchId,
+        GridDhtPartitionsExchangeFuture exchFut) {
         return null;
     }
 

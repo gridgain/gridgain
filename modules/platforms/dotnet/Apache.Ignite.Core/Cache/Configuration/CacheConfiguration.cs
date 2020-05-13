@@ -343,6 +343,11 @@ namespace Apache.Ignite.Core.Cache.Configuration
             ExpiryPolicyFactory = ExpiryPolicySerializer.ReadPolicyFactory(reader);
 
             KeyConfiguration = reader.ReadCollectionRaw(r => new CacheKeyConfiguration(r));
+            
+            if (reader.ReadBoolean())
+            {
+                PlatformCacheConfiguration = new PlatformCacheConfiguration(reader);
+            }
 
             var count = reader.ReadInt();
 
@@ -448,6 +453,16 @@ namespace Apache.Ignite.Core.Cache.Configuration
             ExpiryPolicySerializer.WritePolicyFactory(writer, ExpiryPolicyFactory);
 
             writer.WriteCollectionRaw(KeyConfiguration);
+            
+            if (PlatformCacheConfiguration != null)
+            {
+                writer.WriteBoolean(true);
+                PlatformCacheConfiguration.Write(writer);
+            }
+            else
+            {
+                writer.WriteBoolean(false);
+            }
 
             if (PluginConfigurations != null)
             {
@@ -931,5 +946,12 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         [DefaultValue(DefaultEncryptionEnabled)]
         public bool EncryptionEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets platform cache configuration.
+        /// More details: <see cref="PlatformCacheConfiguration"/>. 
+        /// </summary>
+        [IgniteExperimental]
+        public PlatformCacheConfiguration PlatformCacheConfiguration { get; set; }
     }
 }

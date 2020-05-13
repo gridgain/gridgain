@@ -17,6 +17,7 @@ package org.apache.ignite.internal.metric;
 
 import java.util.Objects;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingAbstractTest;
@@ -49,8 +50,10 @@ public class SqlStatisticOffloadingTest extends DiskSpillingAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setSqlGlobalMemoryQuota("16k")
-            .setSqlOffloadingEnabled(true);
+            .setSqlConfiguration(new SqlConfiguration()
+                .setSqlGlobalMemoryQuota("16k")
+                .setSqlOffloadingEnabled(true)
+            );
     }
 
     /**
@@ -80,7 +83,7 @@ public class SqlStatisticOffloadingTest extends DiskSpillingAbstractTest {
         // Ensure that metrics increased.
         Metrics m1 = withdrawMetrics();
 
-        Metrics expected = m0.add(Metrics.of(6249, 6249, 1, 16878, 16878, 1)); // Expected numbers of written bytes.
+        Metrics expected = m0.add(Metrics.of(6249, 6249, 1, 16878, 16878, 2)); // Expected numbers of written bytes.
 
         assertEquals(expected, m1);
 

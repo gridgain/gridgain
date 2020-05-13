@@ -16,16 +16,29 @@
 
 package org.apache.ignite.client;
 
+import java.lang.management.ManagementFactory;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -39,26 +52,43 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.client.thin.ClientServerError;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeoutException;
+
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Thin client functional tests.
  */
-public class FunctionalTest {
+public class FunctionalTest extends GridCommonAbstractTest {
     /** Per test timeout */
     @Rule
     public Timeout globalTimeout = new Timeout((int) GridTestUtils.DFLT_TEST_TIMEOUT);
+
+    /**
+     * Ctor.
+     */
+    public FunctionalTest() {
+        super(false);
+    }
 
     /**
      * Tested API:
@@ -252,6 +282,151 @@ public class FunctionalTest {
     }
 
     /**
+     * Test cache operations with different data types.
+     */
+    @Test
+    public void testDataTypes() throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ignite.getOrCreateCache(Config.DEFAULT_CACHE_NAME);
+
+            Person person = new Person(1, "name");
+
+            // Primitive and built-in types.
+            checkDataType(client, ignite, (byte)1);
+            checkDataType(client, ignite, (short)1);
+            checkDataType(client, ignite, 1);
+            checkDataType(client, ignite, 1L);
+            checkDataType(client, ignite, 1.0f);
+            checkDataType(client, ignite, 1.0d);
+            checkDataType(client, ignite, 'c');
+            checkDataType(client, ignite, true);
+            checkDataType(client, ignite, "string");
+            checkDataType(client, ignite, UUID.randomUUID());
+            checkDataType(client, ignite, new Date());
+
+            // Enum.
+            checkDataType(client, ignite, CacheAtomicityMode.ATOMIC);
+
+            // Binary object.
+            checkDataType(client, ignite, person);
+
+            // Arrays.
+            checkDataType(client, ignite, new byte[] {(byte)1});
+            checkDataType(client, ignite, new short[] {(short)1});
+            checkDataType(client, ignite, new int[] {1});
+            checkDataType(client, ignite, new long[] {1L});
+            checkDataType(client, ignite, new float[] {1.0f});
+            checkDataType(client, ignite, new double[] {1.0d});
+            checkDataType(client, ignite, new char[] {'c'});
+            checkDataType(client, ignite, new boolean[] {true});
+            checkDataType(client, ignite, new String[] {"string"});
+            checkDataType(client, ignite, new UUID[] {UUID.randomUUID()});
+            checkDataType(client, ignite, new Date[] {new Date()});
+            checkDataType(client, ignite, new int[][] {new int[] {1}});
+
+            checkDataType(client, ignite, new CacheAtomicityMode[] {CacheAtomicityMode.ATOMIC});
+
+            checkDataType(client, ignite, new Person[] {person});
+            checkDataType(client, ignite, new Person[][] {new Person[] {person}});
+            checkDataType(client, ignite, new Object[] {1, "string", person, new Person[] {person}});
+
+            // Lists.
+            checkDataType(client, ignite, Collections.emptyList());
+            checkDataType(client, ignite, Collections.singletonList(person));
+            checkDataType(client, ignite, Arrays.asList(person, person));
+            checkDataType(client, ignite, new ArrayList<>(Arrays.asList(person, person)));
+            checkDataType(client, ignite, new LinkedList<>(Arrays.asList(person, person)));
+            checkDataType(client, ignite, Arrays.asList(Arrays.asList(person, person), person));
+
+            // Sets.
+            checkDataType(client, ignite, Collections.emptySet());
+            checkDataType(client, ignite, Collections.singleton(person));
+            checkDataType(client, ignite, new HashSet<>(Arrays.asList(1, 2)));
+            checkDataType(client, ignite, new HashSet<>(Arrays.asList(Arrays.asList(person, person), person)));
+            checkDataType(client, ignite, new HashSet<>(new ArrayList<>(Arrays.asList(Arrays.asList(person,
+                person), person))));
+
+            // Maps.
+            checkDataType(client, ignite, Collections.emptyMap());
+            checkDataType(client, ignite, Collections.singletonMap(1, person));
+            checkDataType(client, ignite, F.asMap(1, person));
+            checkDataType(client, ignite, new HashMap<>(F.asMap(1, person)));
+            checkDataType(client, ignite, new HashMap<>(F.asMap(new HashSet<>(Arrays.asList(1, 2)),
+                Arrays.asList(person, person))));
+        }
+    }
+
+    /**
+     * Check that we get the same value from the cache as we put before.
+     *
+     * @param client Thin client.
+     * @param ignite Ignite node.
+     * @param obj Value of data type to check.
+     */
+    private void checkDataType(IgniteClient client, Ignite ignite, Object obj) {
+        IgniteCache<Object, Object> thickCache = ignite.cache(Config.DEFAULT_CACHE_NAME);
+        ClientCache<Object, Object> thinCache = client.cache(Config.DEFAULT_CACHE_NAME);
+
+        Integer key = 1;
+
+        thinCache.put(key, obj);
+
+        assertTrue(thinCache.containsKey(key));
+
+        Object cachedObj = thinCache.get(key);
+
+        assertEqualsArraysAware(obj, cachedObj);
+
+        assertEqualsArraysAware(obj, thickCache.get(key));
+
+        assertEquals(client.binary().typeId(obj.getClass().getName()), ignite.binary().typeId(obj.getClass().getName()));
+
+        if (!obj.getClass().isArray()) { // TODO IGNITE-12578
+            // Server-side comparison with the original object.
+            assertTrue(thinCache.replace(key, obj, obj));
+
+            // Server-side comparison with the restored object.
+            assertTrue(thinCache.remove(key, cachedObj));
+        }
+    }
+
+    /**
+     * Assert values equals (deep equals for arrays).
+     *
+     * @param exp Expected value.
+     * @param actual Actual value.
+     */
+    private void assertEqualsArraysAware(Object exp, Object actual) {
+        if (exp instanceof Object[])
+            assertArrayEquals((Object[])exp, (Object[])actual);
+        else if (U.isPrimitiveArray(exp))
+            assertArrayEquals(new Object[] {exp}, new Object[] {actual}); // Hack to compare primitive arrays.
+        else
+            assertEquals(exp, actual);
+    }
+
+    /**
+     * Test that thin client generates valid typeId for system types.
+     */
+    @Test
+    public void testSystemDataType() throws Exception {
+        try (Ignite thickClient = Ignition.start(Config.getServerConfiguration());
+             IgniteClient thinClient = Ignition.startClient(getClientConfiguration())
+        ) {
+            Object val = Collections.emptyList();
+
+            thickClient.cache(DEFAULT_CACHE_NAME).put(3, val);
+            thinClient.cache(DEFAULT_CACHE_NAME).put(2, val);
+
+            Object outVal = thickClient.cache(DEFAULT_CACHE_NAME).get(2);
+
+            assertEquals(val, outVal);
+        }
+    }
+
+    /**
      * Tested API:
      * <ul>
      * <li>{@link ClientCache#putAll(Map)}</li>
@@ -410,6 +585,568 @@ public class FunctionalTest {
             String.format("%s expected but no exception was received", ClientConnectionException.class.getName()),
             expEx
         );
+    }
+
+    /**
+     * Test PESSIMISTIC REPEATABLE_READ tx holds lock and other tx should be timed out.
+     */
+    @Test
+    public void testPessimisticRepeatableReadsTransactionHoldsLock() throws Exception{
+        testPessimisticTxLocking(REPEATABLE_READ);
+    }
+
+    /**
+     * Test PESSIMISTIC SERIALIZABLE tx holds lock and other tx should be timed out.
+     */
+    @Test
+    public void testPessimisticSerializableTransactionHoldsLock() throws Exception{
+        testPessimisticTxLocking(SERIALIZABLE);
+    }
+
+    /**
+     * Test pessimistic tx holds the lock.
+     */
+    private void testPessimisticTxLocking(TransactionIsolation isolation) throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            CyclicBarrier barrier = new CyclicBarrier(2);
+
+            try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, isolation)) {
+                Thread t = new Thread(() -> {
+                    try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
+                        cache.put(0, "value2");
+
+                        // Should block.
+                        tx2.commit();
+
+                        // Should not get here.
+                        fail();
+                    } catch (ClientServerError ex) {
+                        assertEquals(ClientStatus.TX_TIMED_OUT, ex.getCode());
+                    } catch (Exception ex) {
+                        // Should not get here.
+                        fail();
+                    } finally {
+                        try {
+                            barrier.await(2000, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException | InterruptedException | BrokenBarrierException ignore) {
+                            // No-op.
+                        }
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                t.start();
+
+                barrier.await(2000, TimeUnit.MILLISECONDS);
+
+                t.join();
+
+                tx.commit();
+            }
+
+            assertEquals("value0", cache.get(0));
+        }
+    }
+
+    /**
+     * Test OPTIMISTIC SERIALIZABLE tx rolls backs if another TX commits.
+     */
+    @Test
+    public void testOptimitsticSerializableTransactionHoldsLock() throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
+                Thread t = new Thread(() -> {
+                    try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
+                        cache.put(0, "value2");
+
+                        // Should block.
+                        tx2.commit();
+                    }
+                    catch (Exception ex) {
+                        fail();
+                    }
+                    finally {
+                        latch.countDown();
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                t.start();
+
+                latch.await();
+
+                cache.put(0, "value1");
+
+                t.join();
+
+                try {
+                    tx.commit();
+
+                    fail();
+                }
+                catch (ClientServerError ignored) {
+                    // No op
+                }
+            }
+
+            assertEquals("value2", cache.get(0));
+        }
+    }
+
+    /**
+     * Test OPTIMISTIC REPEATABLE_READ tx doesn't conflict with a regular cache put.
+     */
+    @Test
+    public void testOptimitsticRepeatableReadUpdatesValue() throws Exception {
+        try (Ignite ignored = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
+                Thread t = new Thread(() -> {
+                    try {
+                        assertEquals("value0", cache.get(0));
+
+                        cache.put(0, "value2");
+
+                        assertEquals("value2", cache.get(0));
+                    }
+                    catch (Exception ex) {
+                        fail();
+                    }
+                    finally {
+                        latch.countDown();
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                cache.put(0, "value1");
+
+                t.start();
+
+                latch.await();
+
+                t.join();
+
+                tx.commit();
+            }
+
+            assertEquals("value1", cache.get(0));
+        }
+    }
+
+    /**
+     * Test transactions.
+     */
+    @Test
+    public void testTransactions() throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+
+            cache.put(0, "value0");
+            cache.put(1, "value1");
+
+            // Test nested transactions is not possible.
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                try (ClientTransaction tx1 = client.transactions().txStart()) {
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+            }
+
+            // Test implicit rollback when transaction closed.
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                cache.put(1, "value2");
+            }
+
+            assertEquals("value1", cache.get(1));
+
+            // Test explicit rollback.
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                cache.put(1, "value2");
+
+                tx.rollback();
+            }
+
+            assertEquals("value1", cache.get(1));
+
+            // Test commit.
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                cache.put(1, "value2");
+
+                tx.commit();
+            }
+
+            assertEquals("value2", cache.get(1));
+
+            // Test end of already completed transaction.
+            ClientTransaction tx0 = client.transactions().txStart();
+
+            tx0.close();
+
+            try {
+                tx0.commit();
+
+                fail();
+            }
+            catch (ClientException expected) {
+                // No-op.
+            }
+
+            // Test end of outdated transaction.
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                try {
+                    tx0.commit();
+
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                tx.commit();
+            }
+
+            // Test transaction with a timeout.
+            long TX_TIMEOUT = 200L;
+
+            try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED, TX_TIMEOUT)) {
+                long txStartedTime = U.currentTimeMillis();
+
+                cache.put(1, "value3");
+
+                while (txStartedTime + TX_TIMEOUT >= U.currentTimeMillis())
+                    U.sleep(100L);
+
+                try {
+                    cache.put(1, "value4");
+
+                    fail();
+                }
+                catch (ClientServerError expected) {
+                    // No-op.
+                }
+
+                try {
+                    tx.commit();
+
+                    fail();
+                }
+                catch (ClientServerError expected) {
+                    // No-op.
+                }
+            }
+
+            assertEquals("value2", cache.get(1));
+
+            cache.put(1, "value5");
+
+            // Test failover.
+            ObjectName mbeanName = U.makeMBeanName(ignite.name(), "Clients", ClientListenerProcessor.class.getSimpleName());
+
+            ClientProcessorMXBean mxBean = MBeanServerInvocationHandler.newProxyInstance(
+                    ManagementFactory.getPlatformMBeanServer(), mbeanName, ClientProcessorMXBean.class, true);
+
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                cache.put(1, "value6");
+
+                mxBean.dropAllConnections();
+
+                try {
+                    cache.put(1, "value7");
+
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                // Start new transaction doesn't recover cache operations on failed channel.
+                try (ClientTransaction tx1 = client.transactions().txStart()) {
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                try {
+                    cache.get(1);
+
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                // Close outdated transaction doesn't recover cache operations on failed channel.
+                tx0.close();
+
+                try {
+                    cache.get(1);
+
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+            }
+
+            assertEquals("value5", cache.get(1));
+
+            // Test concurrent transactions in different connections.
+            try (IgniteClient client1 = Ignition.startClient(getClientConfiguration())) {
+                ClientCache<Integer, String> cache1 = client1.cache("cache");
+
+                try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED)) {
+                    cache.put(0, "value8");
+
+                    try (ClientTransaction tx1 = client1.transactions().txStart(OPTIMISTIC, READ_COMMITTED)) {
+                        assertEquals("value8", cache.get(0));
+                        assertEquals("value0", cache1.get(0));
+
+                        cache1.put(1, "value9");
+
+                        assertEquals("value5", cache.get(1));
+                        assertEquals("value9", cache1.get(1));
+
+                        tx1.commit();
+
+                        assertEquals("value9", cache.get(1));
+                    }
+
+                    assertEquals("value0", cache1.get(0));
+
+                    tx.commit();
+
+                    assertEquals("value8", cache1.get(0));
+                }
+            }
+
+            // Check different types of cache operations.
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                // Operations: put, putAll, putIfAbsent.
+                cache.put(2, "value10");
+                cache.putAll(F.asMap(1, "value11", 3, "value12"));
+                cache.putIfAbsent(4, "value13");
+
+                // Operations: get, getAll, getAndPut, getAndRemove, getAndReplace.
+                assertEquals("value10", cache.get(2));
+                assertEquals(F.asMap(1, "value11", 2, "value10"),
+                        cache.getAll(new HashSet<>(Arrays.asList(1, 2))));
+                assertEquals("value13", cache.getAndPut(4, "value14"));
+                assertEquals("value14", cache.getAndReplace(4, "value15"));
+                assertEquals("value15", cache.getAndRemove(4));
+
+                // Operations: contains.
+                assertTrue(cache.containsKey(2));
+                assertFalse(cache.containsKey(4));
+
+                // Operations: replace.
+                cache.put(4, "");
+                assertTrue(cache.replace(4, "value16"));
+                assertTrue(cache.replace(4, "value16", "value17"));
+
+                // Operations: remove, removeAll
+                cache.putAll(F.asMap(5, "", 6, ""));
+                assertTrue(cache.remove(5));
+                assertTrue(cache.remove(4, "value17"));
+                cache.removeAll(new HashSet<>(Arrays.asList(3, 6)));
+                assertFalse(cache.containsKey(3));
+                assertFalse(cache.containsKey(6));
+
+                tx.rollback();
+            }
+
+            assertEquals(F.asMap(0, "value8", 1, "value9"),
+                    cache.getAll(new HashSet<>(Arrays.asList(0, 1))));
+            assertFalse(cache.containsKey(2));
+
+            // Test concurrent transactions started by different threads.
+            try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                CyclicBarrier barrier = new CyclicBarrier(2);
+
+                cache.put(0, "value18");
+
+                Thread t = new Thread(() -> {
+                    try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                        cache.put(1, "value19");
+
+                        barrier.await();
+
+                        assertEquals("value8", cache.get(0));
+
+                        barrier.await();
+
+                        tx1.commit();
+
+                        barrier.await();
+
+                        assertEquals("value18", cache.get(0));
+                    }
+                    catch (InterruptedException | BrokenBarrierException ignore) {
+                        // No-op.
+                    }
+                });
+
+                t.start();
+
+                barrier.await();
+
+                assertEquals("value9", cache.get(1));
+
+                barrier.await();
+
+                tx.commit();
+
+                barrier.await();
+
+                assertEquals("value19", cache.get(1));
+
+                t.join();
+            }
+
+            // Test transaction usage by different threads.
+            try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                cache.put(0, "value20");
+
+                Thread t = new Thread(() -> {
+                    // Implicit transaction started here.
+                    cache.put(1, "value21");
+
+                    assertEquals("value18", cache.get(0));
+
+                    try {
+                        // Transaction can't be commited by another thread.
+                        tx.commit();
+
+                        fail();
+                    }
+                    catch (ClientException expected) {
+                        // No-op.
+                    }
+
+                    // Transaction can be closed by another thread.
+                    tx.close();
+
+                    assertEquals("value18", cache.get(0));
+                });
+
+                t.start();
+
+                t.join();
+
+                assertEquals("value21", cache.get(1));
+
+                try {
+                    // Transaction can't be commited after another thread close this transaction.
+                    tx.commit();
+
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                assertEquals("value18", cache.get(0));
+
+                // Start implicit transaction after explicit transaction has been closed by another thread.
+                cache.put(0, "value22");
+
+                t = new Thread(() -> assertEquals("value22", cache.get(0)));
+
+                t.start();
+
+                t.join();
+
+                // New explicit transaction can be started after current transaction has been closed by another thread.
+                try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                    cache.put(0, "value23");
+
+                    tx1.commit();
+                }
+
+                assertEquals("value23", cache.get(0));
+            }
+
+            // Test active transactions limit.
+            int txLimit = ignite.configuration().getClientConnectorConfiguration().getThinClientConfiguration()
+                    .getMaxActiveTxPerConnection();
+
+            List<ClientTransaction> txs = new ArrayList<>(txLimit);
+
+            for (int i = 0; i < txLimit; i++) {
+                Thread t = new Thread(() -> txs.add(client.transactions().txStart()));
+
+                t.start();
+
+                t.join();
+            }
+
+            try (ClientTransaction tx = client.transactions().txStart()) {
+                fail();
+            }
+            catch (ClientServerError e) {
+                assertEquals(ClientStatus.TX_LIMIT_EXCEEDED, e.getCode());
+            }
+
+            for (ClientTransaction tx : txs)
+                tx.close();
+
+            // Test that new transaction can be started after commit of the previous one without closing.
+            ClientTransaction tx = client.transactions().txStart();
+            tx.commit();
+
+            tx = client.transactions().txStart();
+            tx.rollback();
+
+            // Test that new transaction can be started after rollback of the previous one without closing.
+            tx = client.transactions().txStart();
+            tx.commit();
+
+            // Test that implicit transaction started after commit of previous one without closing.
+            cache.put(0, "value24");
+
+            Thread t = new Thread(() -> assertEquals("value24", cache.get(0)));
+
+            t.start();
+
+            t.join();
+        }
     }
 
     /** */
