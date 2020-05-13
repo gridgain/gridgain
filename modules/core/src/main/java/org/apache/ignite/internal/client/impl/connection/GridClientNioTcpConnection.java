@@ -67,6 +67,7 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeB
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeMetricsBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientResponse;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskResultBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTopologyRequest;
@@ -815,7 +816,11 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         boolean active,
         UUID destNodeId
     ) throws GridClientClosedException, GridClientConnectionResetException {
-        return changeState(active ? ACTIVE : INACTIVE, destNodeId);
+        GridClientStateRequest msg = new GridClientStateRequest();
+
+        msg.active(active);
+
+        return makeRequest(msg, destNodeId);
     }
 
     /** {@inheritDoc} */

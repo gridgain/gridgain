@@ -18,14 +18,20 @@ package org.apache.ignite.internal.commandline;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.util.typedef.F;
 
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
@@ -67,7 +73,19 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            client.state().state(state);
+            Set<GridClientNode> unsupportedServerNodes = client.compute().nodes().stream()
+                .filter(n -> !n.isClient() && !n.isDaemon())
+                .filter(n -> !n.supports(CLUSTER_READ_ONLY_MODE))
+                .collect(toSet());
+
+            if (F.isEmpty(unsupportedServerNodes))
+                client.state().state(state);
+            else {
+                if (state == ACTIVE_READ_ONLY)
+                    throw new IgniteException("Not all nodes in cluster supports cluster state " + state);
+                else
+                    client.state().active(ClusterState.active(state));
+            }
 
             log.info("Cluster state changed to " + state);
 
