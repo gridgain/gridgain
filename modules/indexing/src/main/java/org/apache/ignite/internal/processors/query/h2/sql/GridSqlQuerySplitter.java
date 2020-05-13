@@ -1589,7 +1589,9 @@ public class GridSqlQuerySplitter {
         if (el instanceof GridSqlAlias ||
             el instanceof GridSqlOperation ||
             el instanceof GridSqlFunction ||
-            el instanceof GridSqlArray) {
+            el instanceof GridSqlArray ||
+            el instanceof GridSqlValueRow
+        ) {
             for (int i = 0; i < el.size(); i++)
                 normalizeExpression(el, i);
         }
