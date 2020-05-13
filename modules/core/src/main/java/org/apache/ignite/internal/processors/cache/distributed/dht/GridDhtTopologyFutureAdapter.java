@@ -26,9 +26,11 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.String.format;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
@@ -39,6 +41,10 @@ import static org.apache.ignite.internal.processors.datastructures.DataStructure
  */
 public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<AffinityTopologyVersion>
     implements GridDhtTopologyFuture {
+    /** Error message format if cluster in read-only mode and write operation tries to execute.*/
+    private static final String CLUSTER_READ_ONLY_ERROR_MSG =
+        "Failed to perform cache operation (cluster is in read-only mode) [cacheGrp=%s, cache=%s]";
+
     /** Cache groups validation results. */
     protected volatile Map<Integer, CacheGroupValidation> grpValidRes = Collections.emptyMap();
 
@@ -92,11 +98,14 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         CacheGroupContext grp = cctx.group();
 
-        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name())
-            && !VOLATILE_DATA_REGION_NAME.equals(cctx.group().dataRegion().config().getName())) {
-            return new CacheInvalidStateException(
-                new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
-                    "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']'));
+        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name())) {
+            String regionName = grp.dataRegion() == null ? null : grp.dataRegion().config().getName();
+
+            if (!VOLATILE_DATA_REGION_NAME.equals(regionName)) {
+                return new CacheInvalidStateException(new IgniteClusterReadOnlyException(
+                    format(CLUSTER_READ_ONLY_ERROR_MSG, grp.name(), cctx.name())
+                ));
+            }
         }
 
         CacheGroupValidation validation = grpValidRes.get(grp.groupId());
