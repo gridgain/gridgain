@@ -38,7 +38,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public void testStarted(Description desc) {
-        System.out.println(String.format("##teamcity[testStarted name='%s' captureStandardOutput='true']", testName(desc)));
+        System.out.println(String.format("##teamcity[testStarted name='%s' captureStandardOutput='false']", testName(desc)));
     }
 
     /** */
