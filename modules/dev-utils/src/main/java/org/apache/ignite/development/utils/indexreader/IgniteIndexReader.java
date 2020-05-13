@@ -418,7 +418,7 @@ public class IgniteIndexReader implements AutoCloseable {
         File file
     ) throws IgniteCheckedException {
         try (FileChannel ch = new RandomAccessFile(file, "r").getChannel()) {
-            return new SnapshotFilePageStore(type, dsCfg, file, pagePositions(ch), allocationTracker);
+            return new SnapshotFilePageStore(type, dsCfg, file, pagePositions(file, ch), allocationTracker);
         }
         catch (IOException e) {
             throw new IgniteCheckedException("Error while create of pageStore for: " + file.getAbsolutePath(), e);
@@ -428,15 +428,19 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Creating mapping pageIdx -> position in file with checking.
      * Array index - pageIdx, value - position in file.
+     * Value {@code -1} means that page is corrupted.
      *
+     * @param file File.
      * @param ch File channel.
      * @return Mapping pageIdx -> position into file.
      * @throws IOException If there is an error when reading page or it is corrupted.
      */
-    private long[] pagePositions(FileChannel ch) throws IOException {
+    private long[] pagePositions(File file, FileChannel ch) throws IOException {
         int pageCnt = (int)(ch.size() / pageSize);
 
         long[] positions = new long[pageCnt];
+
+        Arrays.fill(positions, -1);
 
         int actPageCnt = 0;
 
@@ -457,13 +461,18 @@ public class IgniteIndexReader implements AutoCloseable {
                 int calced = calcCrc(buf, pageSize);
 
                 long pageId = getPageId(buf);
-
-                if (calced != crcSaved)
-                    throw new IOException("Corrupted page: " + pageId);
-
-                positions[pageIndex(pageId)] = ch.position() - pageSize;
+                int pageIdx = pageIndex(pageId);
 
                 buf.rewind();
+
+                if (calced != crcSaved) {
+                    printErr("Corrupted page [file=" + file.getAbsolutePath() + ", pageId=" + pageId +
+                        ", pageIdx=" + pageIdx + ", pageNum=" + (actPageCnt - 1) + "]");
+
+                    continue;
+                }
+
+                positions[pageIdx] = ch.position() - pageSize;
             }
         }
         finally {
