@@ -142,6 +142,7 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import static java.util.Collections.newSetFromMap;
+import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_ATOMIC_OPS_IN_TX;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
@@ -190,6 +191,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /** */
     private static final transient Map<Class<?>, IgniteTestResources> tests = new ConcurrentHashMap<>();
+
+    /** Loggers with changed log level for test's purposes. */
+    private static final transient Map<Logger, Level> changedLevels = new ConcurrentHashMap<>();
 
     /** */
     protected static final String DEFAULT_CACHE_NAME = "default";
@@ -330,7 +334,13 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTest() throws Exception {
-        // No-op.
+        try {
+            for (Logger logger : changedLevels.keySet())
+                logger.setLevel(changedLevels.get(logger));
+        }
+        finally {
+            changedLevels.clear();
+        }
     }
 
     /**
@@ -434,6 +444,18 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return IgniteNodeRunner.startedInstance().log();
 
         return log;
+    }
+
+    /**
+     * Sets the log level for root logger ({@link #log}) to {@link Level#DEBUG}. The log level will be resetted to
+     * default in {@link #afterTest()}.
+     */
+    protected final void setRootLoggerDebugLevel() {
+        Logger logger = Logger.getRootLogger();
+
+        assertNull(logger + " level: " + Level.DEBUG, changedLevels.put(logger, logger.getLevel()));
+
+        logger.setLevel(Level.DEBUG);
     }
 
     /**
@@ -639,8 +661,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * Will clean and re-create marshaller directory from scratch.
      */
     private void resolveWorkDirectory() throws Exception {
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", true);
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, true);
     }
 
     /** */
@@ -932,6 +954,21 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         cfg.setClientMode(true);
 
         return (IgniteEx)startGrid(igniteInstanceName, cfg, null);
+    }
+
+    /**
+     * Starts new client grid with given configuration.
+     *
+     * @param cfg Ignite configuration.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startClientGrid(IgniteConfiguration cfg) throws Exception {
+        requireNonNull(cfg);
+
+        cfg = optimize(cfg).setClientMode(true);
+
+        return (IgniteEx)startGrid(cfg.getIgniteInstanceName(), cfg, null);
     }
 
     /**

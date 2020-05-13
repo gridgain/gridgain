@@ -23,24 +23,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteEvents;
-import org.apache.ignite.internal.agent.dto.cache.CacheInfo;
-import org.apache.ignite.internal.agent.dto.cache.CacheSqlMetadata;
-import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.agent.dto.cache.CacheInfo;
+import org.apache.ignite.internal.agent.dto.cache.CacheSqlMetadata;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
+import org.apache.ignite.internal.processors.management.ControlCenterSender;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaFinishDiscoveryMessage;
 
+import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
+import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
 import static org.apache.ignite.internal.agent.utils.QueryUtils.queryTypesToMetadataList;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STARTED;
-import static org.apache.ignite.events.EventType.EVT_CACHE_STOPPED;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 
@@ -54,16 +54,16 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
     /** Events. */
     private final IgniteEvents evts;
 
-    /** Websocket manager. */
-    private final WebSocketManager mgr;
+    /** Control Center sender. */
+    private final ControlCenterSender snd;
 
     /**
      * @param ctx Context.
-     * @param mgr Websocket manager.
+     * @param snd Control Center sender.
      */
-    public CacheChangesProcessor(GridKernalContext ctx, WebSocketManager mgr) {
+    public CacheChangesProcessor(GridKernalContext ctx, ControlCenterSender snd) {
         super(ctx);
-        this.mgr = mgr;
+        this.snd = snd;
         this.evts = ctx.grid().events();
 
         // Listener for cache metadata change.
@@ -108,17 +108,15 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
      * Send caches information to Control Center.
      */
     private void sendCacheInfo() {
-        if (!ctx.isStopping() && mgr.connected()) {
-            UUID clusterId = ctx.cluster().get().id();
+        UUID clusterId = ctx.cluster().get().id();
 
-            Collection<CacheInfo> cachesInfo = getCachesInfo();
+        Collection<CacheInfo> cachesInfo = getCachesInfo();
 
-            Collection<CacheSqlMetadata> cacheSqlMetadata = getCacheSqlMetadata();
+        Collection<CacheSqlMetadata> cacheSqlMetadata = getCacheSqlMetadata();
 
-            mgr.send(buildClusterCachesInfoDest(clusterId), cachesInfo);
+        snd.send(buildClusterCachesInfoDest(clusterId), cachesInfo);
 
-            mgr.send(buildClusterCachesSqlMetaDest(clusterId), cacheSqlMetadata);
-        }
+        snd.send(buildClusterCachesSqlMetaDest(clusterId), cacheSqlMetadata);
     }
 
     /**

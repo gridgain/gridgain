@@ -71,6 +71,7 @@ import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
@@ -105,6 +106,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
@@ -2033,8 +2035,9 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
+            false));
     }
 
     /**
@@ -2672,21 +2675,38 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         return true;
     }
 
+
     /**
-     * Disable checkpoints on a specific nodes.
+     * Enable checkpoints on a specific nodes.
      *
      * @param nodes Ignite nodes.
+     * @param enable {@code True} For checkpoint enabling.
      * @throws IgniteCheckedException If failed.
      */
-    protected void disableCheckpoints(List<Ignite> nodes) throws IgniteCheckedException {
+    protected void enableCheckpoints(Collection<Ignite> nodes, boolean enable) throws IgniteCheckedException {
         for (Ignite node : nodes) {
             assert !node.cluster().localNode().isClient();
 
-            GridCacheDatabaseSharedManager dbMgr = ((GridCacheDatabaseSharedManager)((IgniteEx)node).context()
-                    .cache().context().database());
+            IgniteCacheDatabaseSharedManager dbMgr = (((IgniteEx)node).context()
+                .cache().context().database());
 
-            dbMgr.enableCheckpoints(false).get();
+            assert dbMgr instanceof GridCacheDatabaseSharedManager;
+
+            GridCacheDatabaseSharedManager dbMgr0 = (GridCacheDatabaseSharedManager) dbMgr;
+
+            dbMgr0.enableCheckpoints(enable).get();
         }
+    }
+
+    /**
+     * Enable checkpoints on a specific nodes.
+     *
+     * @param node Ignite node.
+     * @param enable {@code True} For checkpoint enabling.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void enableCheckpoints(Ignite node, boolean enable) throws IgniteCheckedException {
+        enableCheckpoints(Collections.singletonList(node), enable);
     }
 
     /**

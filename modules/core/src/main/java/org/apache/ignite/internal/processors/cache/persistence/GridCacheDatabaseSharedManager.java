@@ -384,9 +384,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final long lockWaitTime;
 
     /** */
-    private final boolean truncateWalOnCpFinish;
-
-    /** */
     private Map</*grpId*/Integer, Map</*partId*/Integer, T2</*updCntr*/Long, WALPointer>>> reservedForExchange;
 
     /** */
@@ -446,10 +443,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         assert persistenceCfg != null;
 
         checkpointFreq = persistenceCfg.getCheckpointFrequency();
-
-        truncateWalOnCpFinish = persistenceCfg.isWalHistorySizeParameterUsed()
-            ? persistenceCfg.getWalHistorySize() != Integer.MAX_VALUE
-            : persistenceCfg.getMaxWalArchiveSize() != Long.MAX_VALUE;
 
         lockWaitTime = persistenceCfg.getLockWaitTime();
 
@@ -549,23 +542,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         int pagesNum = 0;
 
-        boolean hasUserDirtyPages = false;
-
         for (DataRegion reg : dataRegions()) {
             if (!reg.config().isPersistenceEnabled())
                 continue;
 
-            IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> nextCpPages =
-                ((PageMemoryEx)reg.pageMemory()).beginCheckpointEx(allowToReplace);
-
-            GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = nextCpPages.get1();
+            GridMultiCollectionWrapper<FullPageId> nextCpPagesCol = ((PageMemoryEx) reg.pageMemory()).beginCheckpoint(allowToReplace);
 
             pagesNum += nextCpPagesCol.size();
 
             res.add(new T2<>((PageMemoryEx)reg.pageMemory(), nextCpPagesCol));
-
-            if (nextCpPages.get2())
-                hasUserDirtyPages = true;
         }
 
         CheckpointProgress progress = getCheckpointer().currentProgress();
@@ -573,7 +558,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (progress != null)
             progress.currentCheckpointPagesCount(pagesNum);
 
-        return new CheckpointPagesInfoHolder(res, pagesNum, hasUserDirtyPages);
+        return new CheckpointPagesInfoHolder(res, pagesNum);
     }
 
     /**
@@ -2676,7 +2661,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 if (PageIO.getCompressionType(pageAddr) != CompressionProcessor.UNCOMPRESSED_PAGE) {
                     int realPageSize = pageMem.realPageSize(pageSnapshotRecord.groupId());
 
-                    assert pageSnapshotRecord.pageDataSize() < realPageSize : pageSnapshotRecord.pageDataSize();
+                    assert pageSnapshotRecord.pageDataSize() <= realPageSize : pageSnapshotRecord.pageDataSize();
 
                     cctx.kernalContext().compress().decompressPage(pageMem.pageBuffer(pageAddr), realPageSize);
                 }
@@ -4190,8 +4175,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 dirtyPagesCount = cpPagesHolder.pagesNum();
 
-                hasUserPages = !cpPagesHolder.onlySystemPages();
-
                 hasPartitionsToDestroy = !curr.getDestroyQueue().pendingReqs().isEmpty();
 
                 WALPointer cpPtr = null;
@@ -4222,7 +4205,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 tracker.onLockRelease();
             }
 
-            DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, dirtyPagesCount > 0, hasUserPages);
+            DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, dirtyPagesCount > 0);
 
             curr.transitTo(LOCK_RELEASED);
 
@@ -4456,8 +4439,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /** */
         private DbCheckpointListener.Context createOnCheckpointBeginContext(
             DbCheckpointListener.Context delegate,
-            boolean hasPages,
-            boolean hasUserPages
+            boolean hasPages
         ) {
             return new DbCheckpointListener.Context() {
                 /** {@inheritDoc} */
@@ -4483,11 +4465,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 /** {@inheritDoc} */
                 @Override public boolean hasPages() {
                     return hasPages;
-                }
-
-                /** {@inheritDoc} */
-                @Override public boolean hasUserPages() {
-                    return hasUserPages;
                 }
             };
         }
@@ -4521,7 +4498,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.wal().notchLastCheckpointPtr(chp.cpEntry.checkpointMark());
             }
 
-            List<CheckpointEntry> removedFromHistory = cpHist.onCheckpointFinished(chp, truncateWalOnCpFinish);
+            List<CheckpointEntry> removedFromHistory = cpHist.onCheckpointFinished(chp);
 
             for (CheckpointEntry cp : removedFromHistory)
                 removeCheckpointFiles(cp);
@@ -4619,13 +4596,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             /** {@inheritDoc} */
             @Override public boolean hasPages() {
-                throw new IllegalStateException(
-                    "Property is unknown at this moment. You should use onCheckpointBegin() method."
-                );
-            }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasUserPages() {
                 throw new IllegalStateException(
                     "Property is unknown at this moment. You should use onCheckpointBegin() method."
                 );
@@ -5783,9 +5753,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** Current checkpoint pages information. */
     private static class CheckpointPagesInfoHolder {
-        /** If {@code true} there are user pages in checkpoint. */
-        private final boolean hasUserDirtyPages;
-
         /** Total pages count in cp. */
         private final int pagesNum;
 
@@ -5795,16 +5762,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         /** */
         private CheckpointPagesInfoHolder(
             Collection<Map.Entry<PageMemoryEx, GridMultiCollectionWrapper<FullPageId>>> pages,
-            int num,
-            boolean hasUserPages) {
+            int num) {
             cpPages = pages;
             pagesNum = num;
-            hasUserDirtyPages = hasUserPages;
-        }
-
-        /** If {@code true} there are user pages in checkpoint. */
-        private boolean onlySystemPages() {
-            return !hasUserDirtyPages;
         }
 
         /** Total pages count in cp. */
