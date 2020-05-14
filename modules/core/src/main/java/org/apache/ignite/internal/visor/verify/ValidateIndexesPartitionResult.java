@@ -28,7 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 
 /**
- * Encapsulates intermediate results of validation of SQL index (if {@link #sqlIdxName} is present) or partition.
+ * Encapsulates intermediate results of validation of SQL index (if {@link ValidateIndexesPartitionResult#sqlIdxName} is present) or partition.
  */
 public class ValidateIndexesPartitionResult extends VisorDataTransferObject {
     /** */
@@ -128,7 +128,7 @@ public class ValidateIndexesPartitionResult extends VisorDataTransferObject {
      * @return True if there are already enough issues.
      */
     public boolean reportIssue(IndexValidationIssue t) {
-        if (issues.size() == MAX_ISSUES)
+        if (issues.size() >= MAX_ISSUES)
             return true;
 
         issues.add(t);
