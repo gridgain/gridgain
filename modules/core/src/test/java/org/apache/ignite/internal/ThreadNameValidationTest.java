@@ -21,7 +21,6 @@ import java.lang.management.ThreadMXBean;
 import java.util.Arrays;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -96,6 +95,7 @@ public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
             }
             assertTrue(sb.toString(), false);
         });
+
     }
 
     /**

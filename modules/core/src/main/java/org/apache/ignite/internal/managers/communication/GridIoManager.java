@@ -3512,7 +3512,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         /**
          * Executor service to send special communication message.
          */
-        private ExecutorService responseSendService = Executors.newCachedThreadPool();
+        private ExecutorService responseSendService = ctx.getSystemExecutorService();
 
         /**
          * Discovery event listener (works only on client nodes for now) notified when

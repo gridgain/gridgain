@@ -196,6 +196,7 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
 
         if (storeStgy != null)
             storeStgy.resetStore();
+        super.afterTest();
     }
 
     /** {@inheritDoc} */

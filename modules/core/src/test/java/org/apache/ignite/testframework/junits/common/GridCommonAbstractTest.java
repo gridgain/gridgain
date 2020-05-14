@@ -537,6 +537,13 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
+            defaultThreadFactoryCountBeforeTest, getDefaultPoolCounter());
+        super.afterTest();
+    }
+
+    /** {@inheritDoc} */
     @Override protected final Ignite startGridsMultiThreaded(int cnt) throws Exception {
         return startGridsMultiThreaded(cnt, true);
     }
@@ -2727,4 +2734,5 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             }
         }
     }
+
 }
