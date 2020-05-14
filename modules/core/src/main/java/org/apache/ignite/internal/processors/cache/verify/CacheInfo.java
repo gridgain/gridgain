@@ -315,7 +315,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 break;
 
             case GROUPS:
-                map = new LinkedHashMap<>(10);
+                map = new LinkedHashMap<>(11);
 
                 map.put("grpName", getGrpName());
                 map.put("grpId", getGrpId());
@@ -326,11 +326,11 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
-
+                map.put("offHeapCnt", getOffHeapPrimaryEntriesCnt());
                 break;
 
             default:
-                map = new LinkedHashMap<>(12);
+                map = new LinkedHashMap<>(11);
 
                 map.put("cacheName", getCacheName());
                 map.put("cacheId", getCacheId());
