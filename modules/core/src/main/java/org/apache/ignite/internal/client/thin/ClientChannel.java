@@ -16,10 +16,12 @@
 
 package org.apache.ignite.internal.client.thin;
 
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.ignite.client.ClientAuthorizationException;
 import org.apache.ignite.client.ClientConnectionException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 
 /**
  * Processing thin client requests and responses.
@@ -40,4 +42,19 @@ interface ClientChannel extends AutoCloseable {
      * @return Server version.
      */
     public ProtocolVersion serverVersion();
+
+    /**
+     * @return Server node ID.
+     */
+    public UUID serverNodeId();
+
+    /**
+     * @return Server topology version.
+     */
+    public AffinityTopologyVersion serverTopologyVersion();
+
+    /**
+     * Add topology change listener.
+     */
+    public void addTopologyChangeListener(Consumer<ClientChannel> lsnr);
 }
