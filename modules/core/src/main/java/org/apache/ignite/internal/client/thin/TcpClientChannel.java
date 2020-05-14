@@ -85,6 +85,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.*;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
 
 /**
  * Implements {@link ClientChannel} over TCP.
@@ -105,7 +106,7 @@ class TcpClientChannel implements ClientChannel {
     private static final long PAYLOAD_WAIT_TIMEOUT = 10L;
 
     /** Protocol version agreed with the server. */
-    private ProtocolVersion ver = V1_5_0;
+    private ProtocolVersion ver = V1_7_0;
 
     /** Server node ID. */
     private UUID srvNodeId;
