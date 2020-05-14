@@ -190,7 +190,6 @@ class BinaryMetadataFileStore {
         }
     }
 
-
     /**
      * Restores metadata on startup of {@link CacheObjectBinaryProcessorImpl} but before starting discovery.
      */
@@ -276,11 +275,11 @@ class BinaryMetadataFileStore {
     /**
      * @param typeId Type ID.
      */
-    public GridFutureAdapter<Void> removeMetadataAsync(int typeId) {
+    public void removeMetadataAsync(int typeId) {
         if (!isPersistenceEnabled)
-            return null;
+            return;
 
-        return writer.startTaskAsync(typeId, BinaryMetadataTransport.REMOVED_VERSION);
+        writer.startTaskAsync(typeId, BinaryMetadataTransport.REMOVED_VERSION);
     }
 
     /**
@@ -372,6 +371,7 @@ class BinaryMetadataFileStore {
          * Queue of write tasks submitted for execution.
          */
         private final BlockingQueue<OperationTask> queue = new LinkedBlockingQueue<>();
+
         /**
          * Write operation tasks prepared for writing (but not yet submitted to execution (actual writing).
          */
@@ -379,16 +379,17 @@ class BinaryMetadataFileStore {
 
         /** */
         BinaryMetadataAsyncWriter() {
-            super(ctx.igniteInstanceName(), "binary-metadata-writer", BinaryMetadataFileStore.this.log, ctx.workersRegistry());
+            super(ctx.igniteInstanceName(), "binary-metadata-writer",
+                BinaryMetadataFileStore.this.log, ctx.workersRegistry());
         }
 
         /**
          * @param typeId Type ID.
          * @param typeVer Type version.
          */
-        synchronized GridFutureAdapter<Void> startTaskAsync(int typeId, int typeVer) {
+        synchronized void startTaskAsync(int typeId, int typeVer) {
             if (isCancelled())
-                return null;
+                return;
 
             OperationTask task = preparedTasks.get(new OperationSyncKey(typeId, typeVer));
 
@@ -401,8 +402,6 @@ class BinaryMetadataFileStore {
                     );
 
                 queue.add(task);
-
-                return task.future();
             }
             else {
                 if (log.isDebugEnabled())
@@ -411,8 +410,6 @@ class BinaryMetadataFileStore {
                             " [typeId=" + typeId +
                             ", typeVersion=" + typeVer + "] not found"
                     );
-
-                return null;
             }
         }
 

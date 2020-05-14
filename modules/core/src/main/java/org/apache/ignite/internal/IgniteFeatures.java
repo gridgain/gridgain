@@ -146,7 +146,10 @@ public enum IgniteFeatures {
     INVERSE_TCP_CONNECTION(35),
 
     /** Check secondary indexes inline size on join/by control utility request. */
-    CHECK_INDEX_INLINE_SIZES(36);
+    CHECK_INDEX_INLINE_SIZES(36),
+
+    /** Remove metadata from cluster for specified type. */
+    REMOVE_METADATA(37);
 
     /**
      * Unique feature identifier.
