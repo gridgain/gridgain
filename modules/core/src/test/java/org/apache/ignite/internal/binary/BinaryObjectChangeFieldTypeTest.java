@@ -37,10 +37,9 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
 /**
- *
+ * Checking change data type of a field on an already created BinaryObject
  */
 public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
-
     /** */
     private static final int NODE_COUNT = 2;
 
@@ -92,7 +91,6 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTxNoBackups() {
-
         CacheConfiguration<Integer, TestClass> cc = new CacheConfiguration<Integer, TestClass>(CACHE_NAME)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setCacheMode(CacheMode.PARTITIONED)
@@ -128,7 +126,6 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
         }
 
         assertEquals(123, fooCache.get(1).intField);
-
     }
 
     /**
@@ -136,7 +133,6 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTxReplicated(){
-
         CacheConfiguration<Integer, TestClass> cc = new CacheConfiguration<Integer, TestClass>(CACHE_NAME)
             .setCacheMode(CacheMode.REPLICATED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
@@ -183,15 +179,14 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
         assertEquals(1, fooCache.get(1).intField);
 
         assertEquals(2, fooCache.get(2).intField);
-
     }
 
     /**
      * Checking change data type of a field on an already created BinaryObject
      */
     @Test
-    public void testBuild1() {
-        CacheConfiguration<Integer, TestClass> cc = new CacheConfiguration<Integer, TestClass>(CACHE_NAME);
+    public void testBuildWithChangeOneField() {
+        CacheConfiguration<Integer, TestClass> cc = new CacheConfiguration<>(CACHE_NAME);
 
         IgniteCache<Integer, TestClass> clientCache = ignite.getOrCreateCache(cc);
 
@@ -207,23 +202,22 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
                     .build();
             }
         }, BinaryObjectException.class, null);
-
     }
 
     /**
      * Checking change data type of a field on an already created BinaryObject
      */
     @Test
-    public void testBuild2() {
+    public void testBuildWithFullyRemovedFields() {
         CacheConfiguration<Integer, TestClass> cc = new CacheConfiguration<>(CACHE_NAME);
 
-        IgniteCache<Integer, TestClass> fooCache = ignite.getOrCreateCache(cc);
+        IgniteCache<Integer, TestClass> clientCache = ignite.getOrCreateCache(cc);
 
-        fooCache.put(1, new TestClass("11", 11));
+        clientCache.put(1, new TestClass("11", 11));
 
         GridTestUtils.assertThrows(log, new Callable<BinaryObject>() {
             @Override public BinaryObject call() throws Exception {
-                return fooCache.<Integer, BinaryObject>withKeepBinary().get(1)
+                return clientCache.<Integer, BinaryObject>withKeepBinary().get(1)
                     .toBuilder()
                     .removeField("intField")
                     .removeField("strField")
@@ -233,7 +227,6 @@ public class BinaryObjectChangeFieldTypeTest extends GridCommonAbstractTest {
                     .build();
             }
         }, BinaryObjectException.class, null);
-
     }
 
     /**
