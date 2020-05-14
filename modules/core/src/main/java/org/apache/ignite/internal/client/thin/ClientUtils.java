@@ -33,6 +33,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -58,10 +60,13 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_2_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
+import static org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy.convertDuration;
 
 /**
  * Shared serialization/deserialization utils.
@@ -338,14 +343,31 @@ final class ClientUtils {
                                 w.writeByte((byte)i.getIndexType().ordinal());
                                 w.writeInt(i.getInlineSize());
                                 ClientUtils.collection(i.getFields().entrySet(), out, (unused5, f) -> {
-                                        w.writeString(f.getKey());
-                                        w.writeBoolean(f.getValue());
-                                    }
+                                            w.writeString(f.getKey());
+                                            w.writeBoolean(f.getValue());
+                                        }
                                 );
                             });
-                    }
+                        }
                 )
             );
+
+            if (ver.compareTo(V1_6_0) >= 0) {
+                itemWriter.accept(CfgItem.EXPIRE_POLICY, w -> {
+                    ExpiryPolicy expiryPlc = cfg.getExpiryPolicy();
+                    if (expiryPlc == null)
+                        w.writeBoolean(false);
+                    else {
+                        w.writeBoolean(true);
+                        w.writeLong(convertDuration(expiryPlc.getExpiryForCreation()));
+                        w.writeLong(convertDuration(expiryPlc.getExpiryForUpdate()));
+                        w.writeLong(convertDuration(expiryPlc.getExpiryForAccess()));
+                    }
+                });
+            } else if (cfg.getExpiryPolicy() != null) {
+                throw new ClientProtocolError(String.format("Expire policies have not supported by the server " +
+                        "version %s, required version %s", ver, V1_6_0));
+            }
 
             writer.writeInt(origPos, out.position() - origPos - 4); // configuration length
             writer.writeInt(origPos + 4, propCnt.get()); // properties count
@@ -462,17 +484,21 @@ final class ClientUtils {
                                         in,
                                         unused5 -> new SimpleEntry<>(reader.readString(), reader.readBoolean())
                                     ).stream().collect(Collectors.toMap(
-                                        SimpleEntry::getKey,
-                                        SimpleEntry::getValue,
-                                        (a, b) -> a,
-                                        LinkedHashMap::new
+                                            SimpleEntry::getKey,
+                                            SimpleEntry::getValue,
+                                            (a, b) -> a,
+                                            LinkedHashMap::new
                                     ));
 
                                     return new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
                                 }
                             ));
                     }
-                ).toArray(new QueryEntity[0]));
+                    ).toArray(new QueryEntity[0]))
+                    .setExpiryPolicy(
+                            ver.compareTo(V1_6_0) < 0 ? null : reader.readBoolean() ?
+                                    new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
+                    );
         }
     }
 
@@ -694,27 +720,70 @@ final class ClientUtils {
         /** Rebalance timeout. */REBALANCE_TIMEOUT(302),
         /** Copy on read. */COPY_ON_READ(5),
         /** Data region name. */DATA_REGION_NAME(100),
-        /** Stats enabled. */STATS_ENABLED(406),
-        /** Max async ops. */MAX_ASYNC_OPS(403),
-        /** Max query iterators. */MAX_QUERY_ITERATORS(206),
-        /** Onheap cache enabled. */ONHEAP_CACHE_ENABLED(101),
-        /** Query metric size. */QUERY_METRIC_SIZE(202),
-        /** Query parallelism. */QUERY_PARALLELISM(201),
-        /** Sql escape all. */SQL_ESCAPE_ALL(205),
-        /** Sql index max inline size. */SQL_IDX_MAX_INLINE_SIZE(204),
-        /** Sql schema. */SQL_SCHEMA(203),
-        /** Key configs. */KEY_CONFIGS(401),
-        /** Key entities. */QUERY_ENTITIES(200);
+        /**
+         * Stats enabled.
+         */
+        STATS_ENABLED(406),
+        /**
+         * Max async ops.
+         */
+        MAX_ASYNC_OPS(403),
+        /**
+         * Max query iterators.
+         */
+        MAX_QUERY_ITERATORS(206),
+        /**
+         * Onheap cache enabled.
+         */
+        ONHEAP_CACHE_ENABLED(101),
+        /**
+         * Query metric size.
+         */
+        QUERY_METRIC_SIZE(202),
+        /**
+         * Query parallelism.
+         */
+        QUERY_PARALLELISM(201),
+        /**
+         * Sql escape all.
+         */
+        SQL_ESCAPE_ALL(205),
+        /**
+         * Sql index max inline size.
+         */
+        SQL_IDX_MAX_INLINE_SIZE(204),
+        /**
+         * Sql schema.
+         */
+        SQL_SCHEMA(203),
+        /**
+         * Key configs.
+         */
+        KEY_CONFIGS(401),
+        /**
+         * Key entities.
+         */
+        QUERY_ENTITIES(200),
+        /**
+         * Expire policy.
+         */
+        EXPIRE_POLICY(407);
 
-        /** Code. */
+        /**
+         * Code.
+         */
         private final short code;
 
-        /** */
+        /**
+         *
+         */
         CfgItem(int code) {
-            this.code = (short)code;
+            this.code = (short) code;
         }
 
-        /** @return Code. */
+        /**
+         * @return Code.
+         */
         short code() {
             return code;
         }
