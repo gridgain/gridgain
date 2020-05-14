@@ -167,7 +167,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      * 1. Start cluster node. Start thin client connected to that node;
      * 2. Create cache using client with static CreatedExpiryPolicy configured;
      * 3. Put a new value using cache from step 2. Check that value is in cache;
-     * 5. Wait for value to expire; Make sure that update does not prevent value expiration;
+     * 4. Wait for value to expire; Make sure that update does not prevent value expiration;
      */
     @Test
     public void testCreatedExpiryPolicyStaticPositive() throws Exception {
