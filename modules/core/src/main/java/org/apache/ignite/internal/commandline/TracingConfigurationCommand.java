@@ -121,7 +121,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
                 "Decimal value between 0 and 1, " +
                 "where 0 means never and 1 means always. " +
                 "More or less reflects the probability of sampling specific trace."),
-            optional(TracingConfigurationCommandArg.SUPPORTED_SCOPES.argName(),
+            optional(TracingConfigurationCommandArg.INCLUDED_SCOPES.argName(),
                 "Set of scopes with comma as separator ",
                 join("|", Scope.values()))));
     }
@@ -245,7 +245,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
 
                     break;
                 }
-                case SUPPORTED_SCOPES: {
+                case INCLUDED_SCOPES: {
                     Set<String> setStrVals = argIter.nextStringSet(
                         "At least one supported scope should be specified.");
 

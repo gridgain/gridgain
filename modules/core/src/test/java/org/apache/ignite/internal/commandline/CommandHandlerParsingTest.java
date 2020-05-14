@@ -723,7 +723,7 @@ public class CommandHandlerParsingTest {
      *                 </ul>
      *             </li>
      *             <li>
-     *                 --supported-scopes
+     *                 --included-scopes
      *                 <ul>
      *                     <li>
      *                          if value is missing:
@@ -799,10 +799,10 @@ public class CommandHandlerParsingTest {
             "--tracing-configuration", "set", "--sampling-rate", "2");
 
         assertParseArgsThrows("At least one supported scope should be specified.",
-            "--tracing-configuration", "set", "--supported-scopes");
+            "--tracing-configuration", "set", "--included-scopes");
 
         assertParseArgsThrows("Invalid supported scope 'aaa'. The following values can be used: "
-                + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--supported-scopes", "TX,aaa");
+                + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--included-scopesGet", "TX,aaa");
     }
 
     /**

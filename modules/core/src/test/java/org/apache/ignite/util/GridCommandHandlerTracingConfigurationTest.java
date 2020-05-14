@@ -322,14 +322,14 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
 
     /**
      * Ensure that in case of "--tracing-configuration set --scope TX --sampling-rate 0.123
-     * --supported-scopes COMMUNICATION,EXCHANGE"
+     * --included-scopes COMMUNICATION,EXCHANGE"
      * TX scope specific configuration should be updated.
      * Whole TX based configuration should be returned.
      */
     @Test
     public void testSetWithScopeSetsScopeSpecificConfiguratoinAndReturnesScopeBasedConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "set", "--scope", "TX",
-            "--sampling-rate", "0.123", "--supported-scopes", "COMMUNICATION,EXCHANGE"));
+            "--sampling-rate", "0.123", "--included-scopes", "COMMUNICATION,EXCHANGE"));
 
         // Check command result.
         VisorTracingConfigurationTaskResult expRes = new VisorTracingConfigurationTaskResult();
@@ -347,14 +347,14 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
 
     /**
      * Ensure that in case of "--tracing-configuration set --scope TX --label label --sampling-rate 0.123
-     * --supported-scopes COMMUNICATION,EXCHANGE"
+     * --included-scopes COMMUNICATION,EXCHANGE"
      * TX label specific configuration should be updated.
      * Whole TX based configuration should be returned.
      */
     @Test
     public void testSetWithScopeAndLabelSetsLabelSpecificConfiguratoinAndReturnsScopeBasedConfiguration() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "set", "--scope", "TX",
-            "--label", "label", "--sampling-rate", "0.123", "--supported-scopes", "COMMUNICATION,EXCHANGE"));
+            "--label", "label", "--sampling-rate", "0.123", "--included-scopes", "COMMUNICATION,EXCHANGE"));
 
         // Check command result.
         VisorTracingConfigurationTaskResult expRes = new VisorTracingConfigurationTaskResult();

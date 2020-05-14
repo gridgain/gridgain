@@ -49,7 +49,7 @@ public enum TracingConfigurationCommandArg implements CommandArg {
      * will be attached to the current trace, otherwise it'll be skipped. See {@link
      * Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
-    SUPPORTED_SCOPES ("--supported-scopes");
+    INCLUDED_SCOPES("--included-scopes");
 
     /** Arg name. */
     private final String name;
