@@ -19,7 +19,6 @@ package org.apache.ignite.internal.agent.dto.topology;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
-import com.google.common.collect.Lists;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
@@ -28,6 +27,7 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -47,7 +47,7 @@ public class TopologySnapshotTest {
 
         TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
             clusterNodeId_1,
-            Lists.newArrayList("127.0.0.1"),
+            asList("127.0.0.1"),
             Collections.emptyList(),
             8080,
             new TestDiscoveryMetricsProvider(),
@@ -65,7 +65,7 @@ public class TopologySnapshotTest {
 
         TcpDiscoveryNode clusterNode_2 = new TcpDiscoveryNode(
             clusterNodeId_2,
-            Lists.newArrayList("127.0.0.1"),
+            asList("127.0.0.1"),
             Collections.emptyList(),
             8080,
             new TestDiscoveryMetricsProvider(),
@@ -94,8 +94,8 @@ public class TopologySnapshotTest {
         TopologySnapshot top = TopologySnapshot.topology(
             1,
             crdId,
-            Lists.newArrayList(clusterNode_1, clusterNode_2),
-            Lists.newArrayList(onlineBaselineNode, offlineBaselineNode)
+            asList(clusterNode_1, clusterNode_2),
+            asList(onlineBaselineNode, offlineBaselineNode)
         );
 
         assertEquals(1, top.getTopologyVersion());
@@ -138,7 +138,7 @@ public class TopologySnapshotTest {
 
         TcpDiscoveryNode clusterNode_1 = new TcpDiscoveryNode(
             clusterNodeId_1,
-            Lists.newArrayList("127.0.0.1"),
+            asList("127.0.0.1"),
             Collections.emptyList(),
             8080,
             new TestDiscoveryMetricsProvider(),
@@ -155,7 +155,7 @@ public class TopologySnapshotTest {
         TopologySnapshot top = TopologySnapshot.topology(
             1,
             crdId,
-            Lists.newArrayList(clusterNode_1),
+            asList(clusterNode_1),
             null
         );
 

@@ -503,8 +503,8 @@ public class MarshallerContextImpl implements MarshallerContext {
 
         final IgniteLogger fileStoreLog = ctx.log(MarshallerMappingFileStore.class);
         fileStore = marshallerMappingFileStoreDir == null ?
-            new MarshallerMappingFileStore(workDir, fileStoreLog) :
-            new MarshallerMappingFileStore(fileStoreLog, marshallerMappingFileStoreDir);
+            new MarshallerMappingFileStore(ctx, workDir, fileStoreLog) :
+            new MarshallerMappingFileStore(ctx, fileStoreLog, marshallerMappingFileStoreDir);
         this.transport = transport;
         closProc = ctx.closure();
         clientNode = ctx.clientNode();

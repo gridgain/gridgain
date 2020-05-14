@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.visor.verify;
 
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
@@ -25,6 +26,7 @@ import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.resources.JobContextResource;
+import org.apache.ignite.resources.LoggerResource;
 
 /**
  *
@@ -39,6 +41,10 @@ class VisorIdleVerifyJob<ResultT> extends VisorJob<VisorIdleVerifyTaskArg, Resul
     /** Auto-inject job context. */
     @JobContextResource
     protected transient ComputeJobContext jobCtx;
+
+    /** Injected logger. */
+    @LoggerResource
+    private IgniteLogger log;
 
     /** Task class for execution */
     private final Class<? extends ComputeTask<VisorIdleVerifyTaskArg, ResultT>> taskCls;
@@ -72,6 +78,13 @@ class VisorIdleVerifyJob<ResultT> extends VisorJob<VisorIdleVerifyTaskArg, Resul
         }
 
         return fut.get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void cancel() {
+        log.warning("Idle verify was cancelled.");
+
+        super.cancel();
     }
 
     /** {@inheritDoc} */
