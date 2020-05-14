@@ -30,8 +30,17 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
      * This TZ is used to convert date / time / timestamp object to server
      * timezone before sent data, and convert from this timezone after receive results.
      */
-    TIME_ZONE(1)
-    ;
+    TIME_ZONE(1),
+
+    /**
+     * Whether to allow sending custom object through Thin JDBC protocol.
+     */
+    CUSTOM_OBJECT(2),
+
+    /**
+     * User can pass custom attributes to a server to be associated with connection.
+     */
+    USER_ATTRIBUTES(3);
 
     /** */
     private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);

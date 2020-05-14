@@ -135,7 +135,7 @@ public enum IgniteFeatures {
 
     /** Partition Map Exchange-free switch on baseline node left at fully rebalanced cluster. */
     PME_FREE_SWITCH(32),
-    
+
     /** */
     VOLATILE_DATA_STRUCTURES_REGION(33),
 

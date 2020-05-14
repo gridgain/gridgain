@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.rest.client.message;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -78,4 +79,18 @@ public interface GridClientMessage extends Serializable {
      * @param sesTok Session token.
      */
     public void sessionToken(byte[] sesTok);
+
+    /**
+     * Gets user attributes.
+     *
+     * @return User attributes.
+     */
+    public Map<String, String> userAttributes();
+
+    /**
+     * Gets user attributes.
+     *
+     * @param userAttrs User attributes.
+     */
+    public void userAttributes(Map<String, String> userAttrs);
 }
