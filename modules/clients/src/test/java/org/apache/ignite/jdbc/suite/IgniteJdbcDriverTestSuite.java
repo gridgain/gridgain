@@ -26,6 +26,7 @@ import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
 import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcQueryQuotaTest;
 import org.apache.ignite.internal.jdbc2.JdbcSchemaCaseSelfTest;
+import org.apache.ignite.jdbc.JdbcAuthorizationTest;
 import org.apache.ignite.jdbc.JdbcComplexQuerySelfTest;
 import org.apache.ignite.jdbc.JdbcConnectionSelfTest;
 import org.apache.ignite.jdbc.JdbcDefaultNoOpCacheTest;
@@ -130,6 +131,7 @@ import org.junit.runners.Suite;
     JdbcPojoQuerySelfTest.class,
     JdbcPojoLegacyQuerySelfTest.class,
     JdbcConnectionReopenTest.class,
+    JdbcAuthorizationTest.class,
 
     // Ignite client node based driver tests
     org.apache.ignite.internal.jdbc2.JdbcCursorLeaksTest.class,
