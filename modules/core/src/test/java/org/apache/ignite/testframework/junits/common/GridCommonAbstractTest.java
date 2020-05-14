@@ -538,8 +538,10 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
-            defaultThreadFactoryCountBeforeTest, getDefaultPoolCounter());
+        if (getClass().getPackage().getName().startsWith("org.apache.ignite.internal")) {
+            assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
+                defaultThreadFactoryCountBeforeTest, getDefaultPoolCounter());
+        }
         super.afterTest();
     }
 
