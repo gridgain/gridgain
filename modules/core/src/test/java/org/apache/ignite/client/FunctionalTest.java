@@ -1159,10 +1159,10 @@ public class FunctionalTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test cache with expire policy.
+     * Test cache with expiry policy.
      */
     @Test
-    public void testExpirePolicy() throws Exception {
+    public void testExpiryPolicy() throws Exception {
         long ttl = 600L;
         int MAX_RETRIES = 5;
 
@@ -1176,9 +1176,9 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
             Duration dur = new Duration(TimeUnit.MILLISECONDS, ttl);
 
-            ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(dur));
-            ClientCache<Integer, Object> cachePlcUpdated = cache.withExpirePolicy(new ModifiedExpiryPolicy(dur));
-            ClientCache<Integer, Object> cachePlcAccessed = cache.withExpirePolicy(new AccessedExpiryPolicy(dur));
+            ClientCache<Integer, Object> cachePlcCreated = cache.withExpiryPolicy(new CreatedExpiryPolicy(dur));
+            ClientCache<Integer, Object> cachePlcUpdated = cache.withExpiryPolicy(new ModifiedExpiryPolicy(dur));
+            ClientCache<Integer, Object> cachePlcAccessed = cache.withExpiryPolicy(new AccessedExpiryPolicy(dur));
 
             for (int i = 0; i < MAX_RETRIES; i++) {
                 cache.clear();

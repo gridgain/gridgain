@@ -136,7 +136,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
         cache.put(1, 1);
         cache.containsKey(1);
 
-        ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcCreated = cache.withExpiryPolicy(new CreatedExpiryPolicy(ttlDur));
 
         cachePlcCreated.put(1, 0);
         cachePlcCreated.get(1);
@@ -156,7 +156,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
     @Test
     public void testCreatedExpiryPolicyDynamicPositive() throws Exception {
         ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
-        ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcCreated = cache.withExpiryPolicy(new CreatedExpiryPolicy(ttlDur));
 
         checkCreatedExpiryPolicyPositive(cachePlcCreated);
     }
@@ -193,7 +193,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
         cache.put(1, 1);
         cache.containsKey(1);
 
-        ClientCache<Integer, Object> cachePlcUpdated = cache.withExpirePolicy(new ModifiedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcUpdated = cache.withExpiryPolicy(new ModifiedExpiryPolicy(ttlDur));
 
         cachePlcUpdated.get(1);
         assertFalse(waitUntilExpired(cachePlcUpdated, 1));
@@ -216,7 +216,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
     @Test
     public void testModifiedExpiryPolicyDynamicPositive() throws Exception {
         ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
-        ClientCache<Integer, Object> cachePlcUpdated = cache.withExpirePolicy(new ModifiedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcUpdated = cache.withExpiryPolicy(new ModifiedExpiryPolicy(ttlDur));
 
         checkModifiedExpiryPolicyPositive(cachePlcUpdated);
     }
@@ -254,7 +254,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
         cache.put(1, 1);
         cache.containsKey(1);
 
-        ClientCache<Integer, Object> cachePlcAccessed = cache.withExpirePolicy(new AccessedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcAccessed = cache.withExpiryPolicy(new AccessedExpiryPolicy(ttlDur));
 
         cachePlcAccessed.put(1, 2);
         assertFalse(waitUntilExpired(cachePlcAccessed, 1));
@@ -277,7 +277,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
     @Test
     public void testAccessedExpiryPolicyDynamicPositive() throws Exception {
         ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
-        ClientCache<Integer, Object> cachePlcAccessed = cache.withExpirePolicy(new AccessedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcAccessed = cache.withExpiryPolicy(new AccessedExpiryPolicy(ttlDur));
 
         checkAccessedExpiryPolicy(cachePlcAccessed);
     }
@@ -313,7 +313,7 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
     @Test
     public void testCreatedExpiryPolicyBinaryTransaction() throws Exception {
         ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
-        ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcCreated = cache.withExpiryPolicy(new CreatedExpiryPolicy(ttlDur));
         ClientCache<Integer, Object> binCache = cachePlcCreated.withKeepBinary();
 
         try (ClientTransaction tx = client.transactions().txStart()) {

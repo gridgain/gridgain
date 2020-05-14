@@ -419,8 +419,16 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expirePlc) {
-        return new TcpClientCache<>(name, ch, marsh, transactions, keepBinary, expirePlc);
+    public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expiryPlc) {
+        return withExpiryPolicy(expiryPlc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <K1, V1> ClientCache<K1, V1> withExpiryPolicy(ExpiryPolicy expiryPlc) {
+        return new TcpClientCache<>(name, ch, marsh, transactions, keepBinary, expiryPlc);
     }
 
     /**
