@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.agent.config;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -57,7 +57,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
         if (accessor.getCommand() == StompCommand.SEND) {
             String dest = getDestination(msg.getHeaders());
 
-            messages.computeIfAbsent(dest, k -> Lists.newCopyOnWriteArrayList());
+            messages.computeIfAbsent(dest, k -> new ArrayList<>());
 
             messages.computeIfPresent(dest, (k, v) -> {
                 v.add(msg.getPayload());
