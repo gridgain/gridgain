@@ -399,7 +399,7 @@ public class IgniteIndexReader implements AutoCloseable {
         try {
             store.read(pageId, buf, false);
         }
-        catch (IgniteDataIntegrityViolationException e) {
+        catch (IgniteDataIntegrityViolationException | IllegalArgumentException e) {
             // Replacing exception due to security reasons, as IgniteDataIntegrityViolationException prints page content.
             throw new IgniteException("Failed to read page, id=" + pageId + ", file=" + store.getFileAbsolutePath());
         }
