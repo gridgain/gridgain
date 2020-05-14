@@ -207,6 +207,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             // TODO: GG-25595 remove when version 8.7.X support ends
         }
 
+        if (features.contains(USER_ATTRIBUTES))
+            userAttrs = reader.readMap();
+
         if (ver.compareTo(VER_2_5_0) >= 0) {
             String user = null;
             String passwd = null;
@@ -223,9 +226,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             actx = authenticate(ses.certificates(), user, passwd);
         }
-
-        if (features.contains(USER_ATTRIBUTES))
-            userAttrs = reader.readMap();
 
         protoCtx = new JdbcProtocolContext(ver, features, null, false, true);
 

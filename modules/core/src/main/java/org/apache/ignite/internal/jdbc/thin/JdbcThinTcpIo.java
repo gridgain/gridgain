@@ -294,13 +294,6 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_8_2) >= 0)
             writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(enabledFeatures()));
 
-        if (!F.isEmpty(connProps.getUsername())) {
-            assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
-
-            writer.writeString(connProps.getUsername());
-            writer.writeString(connProps.getPassword());
-        }
-
         if (enabledFeatures().contains(USER_ATTRIBUTES)) {
             String userAttrs = connProps.getUserAttributesFactory();
 
@@ -320,6 +313,13 @@ public class JdbcThinTcpIo {
                             SqlStateCode.CLIENT_CONNECTION_FAILED, e);
                 }
             }
+        }
+
+        if (!F.isEmpty(connProps.getUsername())) {
+            assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
+
+            writer.writeString(connProps.getUsername());
+            writer.writeString(connProps.getPassword());
         }
 
         send(writer.array());
