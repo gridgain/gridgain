@@ -684,24 +684,15 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         checkCorruptedPart(fullSnapshotDir, true);
     }
 
-    /** */
+    /**
+     * Test for finding corrupted pages in index and partition for both normal pds and snapshot.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testCorruptedIdxAndPart() throws IgniteCheckedException, IOException {
-        corruptFile(workDir, INDEX_PARTITION, 7, false);
-        corruptFile(workDir, 0, 5, false);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, false);
-
-            checkOutput(output, 19, -1, 0, 2);
-
-            for (int i = 0; i < CREATED_TABLES_CNT; i++)
-                checkIdxs(output, TableInfo.generate(i), true);
-        }
-        finally {
-            restoreFile(workDir, INDEX_PARTITION, false);
-            restoreFile(workDir, 0, false);
-        }
+    public void testCorruptedIdxAndPart() throws Exception {
+        checkCorruptedIdxAndPart(workDir, false);
+        checkCorruptedIdxAndPart(fullSnapshotDir, true);
     }
 
     /**
@@ -713,6 +704,31 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testQryCacheGroup() throws IgniteCheckedException {
         checkQryCacheGroup(workDir, false);
         checkQryCacheGroup(fullSnapshotDir, true);
+    }
+
+    /**
+     * Checks whether corrupted pages are found in index and partition.
+     *
+     * @param workDir Work directory.
+     * @param snapshot Snapshot directory or not.
+     * @throws Exception If failed.
+     */
+    private void checkCorruptedIdxAndPart(File workDir, boolean snapshot) throws Exception {
+        corruptFile(workDir, INDEX_PARTITION, 7, snapshot);
+        corruptFile(workDir, 0, 5, snapshot);
+
+        try {
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
+
+            checkOutput(output, 19, -1, 0, 2);
+
+            for (int i = 0; i < CREATED_TABLES_CNT; i++)
+                checkIdxs(output, TableInfo.generate(i), true);
+        }
+        finally {
+            restoreFile(workDir, INDEX_PARTITION, snapshot);
+            restoreFile(workDir, 0, snapshot);
+        }
     }
 
     /**
