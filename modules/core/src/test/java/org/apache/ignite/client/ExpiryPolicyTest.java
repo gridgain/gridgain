@@ -17,16 +17,15 @@
 package org.apache.ignite.client;
 
 import java.util.concurrent.TimeUnit;
-import javax.cache.expiry.AccessedExpiryPolicy;
-import javax.cache.expiry.CreatedExpiryPolicy;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ModifiedExpiryPolicy;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.cache.expiry.*;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -40,7 +39,6 @@ import org.junit.rules.Timeout;
  * Before every test:
  * 1. Start cluster node;
  * 2. Start thin client connected to that node;
- * 3. Create cache using client without static expiry policy configured;
  *
  * After every test:
  * 1. Stop client;
@@ -52,9 +50,6 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
 
     /** Client. */
     IgniteClient client;
-
-    /** Basic transactional cache with no static expiry policy configured. */
-    ClientCache<Integer, Object> dfltCache;
 
     /** Expiry Policy TTL */
     static final long ttl = 600L;
@@ -80,13 +75,32 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
                 .setSendBufferSize(0)
                 .setReceiveBufferSize(0)
         );
+    }
 
-        dfltCache = client.createCache(new ClientCacheConfiguration()
+    /**
+     * Create cache with no expiry policy.
+     * @param client Client to use.
+     * @return Cache instance.
+     */
+    private static ClientCache<Integer, Object> createCacheNoPolicy(IgniteClient client) {
+        return client.createCache(new ClientCacheConfiguration()
                 .setName("cache_dynamic")
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
         );
+    }
 
-        dfltCache.clear();
+    /**
+     * Create cache with expiry policy.
+     * @param client Client to use.
+     * @param policy Expiry policy.
+     * @return Cache instance.
+     */
+    private static ClientCache<Integer, Object> createCacheWithPolicy(IgniteClient client, ExpiryPolicy policy) {
+        return client.createCache(new ClientCacheConfiguration()
+                .setName("cache_static")
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                .setExpiryPolicy(policy)
+        );
     }
 
     /** {@inheritDoc} */
@@ -112,29 +126,39 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      *
      * 1. Start cluster node. Start thin client connected to that node;
      * 2. Create cache using client without static expiry policy configured;
-     * 3. Create cache facade for cache from step 2 using CreatedExpiryPolicy;
-     * 4. Put a new value using cache facade from step 3. Check that value is in cache;
-     * 5. Wait for value to expire;
-     * 6. Put a new value using cache from step 2. Check that value is in cache;
-     * 7. Modify and get value. Make sure that value is not expired;
+     * 3. Put a new value using cache from step 2. Check that value is in cache;
+     * 4. Create cache facade for cache from step 2 using CreatedExpiryPolicy;
+     * 5. Modify and get value using cache facade from step 4. Make sure that value is not expired;
      */
     @Test
-    public void testCreatedExpiryPolicyDynamic() throws Exception {
-        final int key = 1;
+    public void testCreatedExpiryPolicyDynamicNegative() throws Exception {
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        cache.put(1, 1);
+        cache.containsKey(1);
 
-        ClientCache<Integer, Object> cachePlcCreated = dfltCache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
 
-        cachePlcCreated.put(key, 1);
-        assertTrue(cachePlcCreated.containsKey(key));
+        cachePlcCreated.put(1, 0);
+        cachePlcCreated.get(1);
 
-        assertTrue(GridTestUtils.waitForCondition(() -> !cachePlcCreated.containsKey(key), timeout));
+        assertFalse(waitUntilExpired(cache, 1));
+    }
 
-        // Update and access key with created expire policy.
-        dfltCache.put(key, 1);
-        cachePlcCreated.put(key, 2);
-        cachePlcCreated.get(key);
+    /**
+     * Test that cache with dynamic CreatedExpiryPolicy created using thin client works as expected.
+     *
+     * 1. Start cluster node. Start thin client connected to that node;
+     * 2. Create cache using client without static expiry policy configured;
+     * 3. Create cache facade for cache from step 2 using CreatedExpiryPolicy;
+     * 4. Put a new value using cache facade from step 3. Check that value is in cache;
+     * 5. Wait for value to expire; Make sure that update does not prevent value expiration;
+     */
+    @Test
+    public void testCreatedExpiryPolicyDynamicPositive() throws Exception {
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
 
-        assertFalse(GridTestUtils.waitForCondition(() -> !cachePlcCreated.containsKey(key), timeout));
+        checkCreatedExpiryPolicyPositive(cachePlcCreated);
     }
 
     /**
@@ -143,22 +167,40 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      * 1. Start cluster node. Start thin client connected to that node;
      * 2. Create cache using client with static CreatedExpiryPolicy configured;
      * 3. Put a new value using cache from step 2. Check that value is in cache;
-     * 4. Make sure that value is expired;
+     * 5. Wait for value to expire; Make sure that update does not prevent value expiration;
      */
     @Test
-    public void testCreatedExpiryPolicyStatic() throws Exception {
-        final int key = 1;
+    public void testCreatedExpiryPolicyStaticPositive() throws Exception {
+        ClientCache<Integer, Object> cachePlcCreated = createCacheWithPolicy(client, new CreatedExpiryPolicy(ttlDur));
 
-        ClientCache<Integer, Object> cache = client.createCache(new ClientCacheConfiguration()
-                .setName("cache_static")
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setExpiryPolicy(new CreatedExpiryPolicy(ttlDur))
-        );
+        checkCreatedExpiryPolicyPositive(cachePlcCreated);
+    }
 
-        cache.put(key, 1);
-        assertTrue(cache.containsKey(key));
+    /**
+     * Test that cache with dynamic ModifiedExpiryPolicy created using thin client works as expected.
+     *
+     * 1. Start cluster node. Start thin client connected to that node;
+     * 2. Create cache using client without static expiry policy configured;
+     * 3. Put a new value using cache from step 2. Make sure that value is in cache;
+     * 4. Create cache facade for cache from step 2 using ModifiedExpiryPolicy;
+     * 5. Get value using cache facade from step 4. Make sure that value is not expired;
+     * 6. Make sure that value is not expired if constantly updated;
+     * 7. Stop updating value. Make sure that value is expired;
+     */
+    @Test
+    public void testModifiedExpiryPolicyDynamicNegative() throws Exception {
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        cache.put(1, 1);
+        cache.containsKey(1);
 
-        assertTrue(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
+        ClientCache<Integer, Object> cachePlcUpdated = cache.withExpirePolicy(new ModifiedExpiryPolicy(ttlDur));
+
+        cachePlcUpdated.get(1);
+        assertFalse(waitUntilExpired(cachePlcUpdated, 1));
+
+        assertFalse(waitUntilExpiredWhileUpdated(cachePlcUpdated, 1));
+
+        assertTrue(waitUntilExpired(cachePlcUpdated, 1));
     }
 
     /**
@@ -167,13 +209,16 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      * 1. Start cluster node. Start thin client connected to that node;
      * 2. Create cache using client without static expiry policy configured;
      * 3. Create cache facade for cache from step 2 using ModifiedExpiryPolicy;
-     * 4. Put a new value using cache facade from step 3. Make sure that value is not expired;
-     * 5. Get value using cache facade from step 3. Make sure that value is not expired;
-     * 6. Modify value using cache facade from step 3. Make sure that value is expired;
+     * 4. Put a new value using cache facade from step 3.
+     * 5. Make sure that value is not expired if constantly updated;
+     * 6. Stop updating value. Make sure that value is expired;
      */
     @Test
-    public void testModifiedExpiryPolicyDynamic() throws Exception {
-        checkModifiedExpiryPolicy(dfltCache.withExpirePolicy(new ModifiedExpiryPolicy(ttlDur)));
+    public void testModifiedExpiryPolicyDynamicPositive() throws Exception {
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        ClientCache<Integer, Object> cachePlcUpdated = cache.withExpirePolicy(new ModifiedExpiryPolicy(ttlDur));
+
+        checkModifiedExpiryPolicyPositive(cachePlcUpdated);
     }
 
     /**
@@ -186,14 +231,37 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      * 5. Modify value using cache from step 2. Make sure that value is expired;
      */
     @Test
-    public void testModifiedExpiryPolicyStatic() throws Exception {
-        ClientCache<Integer, Object> cache = client.createCache(new ClientCacheConfiguration()
-                .setName("cache_static")
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setExpiryPolicy(new ModifiedExpiryPolicy(ttlDur))
-        );
+    public void testModifiedExpiryPolicyStaticPositive() throws Exception {
+        ClientCache<Integer, Object> cachePlcUpdated = createCacheWithPolicy(client, new ModifiedExpiryPolicy(ttlDur));
 
-        checkModifiedExpiryPolicy(cache);
+        checkModifiedExpiryPolicyPositive(cachePlcUpdated);
+    }
+
+    /**
+     * Test that cache with dynamic AccessedExpiryPolicy created using thin client works as expected.
+     *
+     * 1. Start cluster node. Start thin client connected to that node;
+     * 2. Create cache using client without static expiry policy configured;
+     * 3. Put a new value using cache from step 2. Make sure that value is in cache;
+     * 4. Create cache facade for cache from step 2 using AccessedExpiryPolicy;
+     * 5. Update value using cache facade from step 4. Make sure that value is not expired;
+     * 6. Make sure that value is not expired if constantly accessed;
+     * 7. Stop accessing value. Make sure that value is expired;
+     */
+    @Test
+    public void testAccessedExpiryPolicyDynamicNegative() throws Exception {
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        cache.put(1, 1);
+        cache.containsKey(1);
+
+        ClientCache<Integer, Object> cachePlcAccessed = cache.withExpirePolicy(new AccessedExpiryPolicy(ttlDur));
+
+        cachePlcAccessed.put(1, 2);
+        assertFalse(waitUntilExpired(cachePlcAccessed, 1));
+
+        assertFalse(waitUntilExpiredWhileAccessed(cachePlcAccessed, 1));
+
+        assertTrue(waitUntilExpired(cachePlcAccessed, 1));
     }
 
     /**
@@ -202,13 +270,16 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      * 1. Start cluster node. Start thin client connected to that node;
      * 2. Create cache using client without static expiry policy configured;
      * 3. Create cache facade for cache from step 2 using AccessedExpiryPolicy;
-     * 4. Put a new value using cache facade from step 3. Make sure that value is not expired;
-     * 5. Modify value using cache facade from step 3. Make sure that value is not expired;
-     * 6. Get value using cache facade from step 3. Make sure that value is expired;
+     * 4. Put a new value using cache facade from step 3.
+     * 5. Make sure that value is not expired if constantly accessed using facade from step 3;
+     * 6. Stop accessing value. Make sure that value is expired;
      */
     @Test
-    public void testAccessedExpiryPolicyDynamic() throws Exception {
-        checkAccessedExpiryPolicy(dfltCache.withExpirePolicy(new AccessedExpiryPolicy(ttlDur)));
+    public void testAccessedExpiryPolicyDynamicPositive() throws Exception {
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        ClientCache<Integer, Object> cachePlcAccessed = cache.withExpirePolicy(new AccessedExpiryPolicy(ttlDur));
+
+        checkAccessedExpiryPolicy(cachePlcAccessed);
     }
 
     /**
@@ -222,13 +293,9 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testAccessedExpiryPolicyStatic() throws Exception {
-        ClientCache<Integer, Object> cache = client.createCache(new ClientCacheConfiguration()
-                .setName("cache_static")
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setExpiryPolicy(new AccessedExpiryPolicy(ttlDur))
-        );
+        ClientCache<Integer, Object> cachePlcAccessed = createCacheWithPolicy(client, new AccessedExpiryPolicy(ttlDur));
 
-        checkAccessedExpiryPolicy(cache);
+        checkAccessedExpiryPolicy(cachePlcAccessed);
     }
 
     /**
@@ -245,60 +312,95 @@ public class ExpiryPolicyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCreatedExpiryPolicyBinaryTransaction() throws Exception {
-        final int key = 4;
-
-        ClientCache<Integer, Object> cachePlcCreated = dfltCache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
+        ClientCache<Integer, Object> cache = createCacheNoPolicy(client);
+        ClientCache<Integer, Object> cachePlcCreated = cache.withExpirePolicy(new CreatedExpiryPolicy(ttlDur));
         ClientCache<Integer, Object> binCache = cachePlcCreated.withKeepBinary();
 
         try (ClientTransaction tx = client.transactions().txStart()) {
-            binCache.put(key, new T2<>("test", "test"));
+            binCache.put(4, new T2<>("test", "test"));
 
             tx.commit();
         }
 
-        assertTrue(binCache.get(key) instanceof BinaryObject);
-        assertFalse(dfltCache.get(key) instanceof BinaryObject);
+        assertTrue(binCache.get(4) instanceof BinaryObject);
+        assertFalse(cache.get(4) instanceof BinaryObject);
 
-        assertTrue(GridTestUtils.waitForCondition(() -> !dfltCache.containsKey(key), timeout));
+        assertTrue(waitUntilExpired(cachePlcCreated, 4));
+    }
+
+    /**
+     * Check that cache with CreatedExpiryPolicy works as expected.
+     * @param cache Cache to use for testing.
+     */
+    private static void checkCreatedExpiryPolicyPositive(ClientCache<Integer, Object> cache) throws Exception {
+        cache.put(1, 1);
+        assertTrue(cache.containsKey(1));
+
+        assertTrue(waitUntilExpiredWhileUpdated(cache, 1));
     }
 
     /**
      * Check that cache with ModifiedExpiryPolicy works as expected.
      * @param cache Cache to use for testing.
      */
-    public static void checkModifiedExpiryPolicy(ClientCache<Integer, Object> cache) throws Exception {
-        final int key = 2;
+    private static void checkModifiedExpiryPolicyPositive(ClientCache<Integer, Object> cache) throws Exception {
+        cache.put(1, 1);
+        assertFalse(waitUntilExpiredWhileUpdated(cache, 1));
 
-        // Access key with modified expire policy.
-        cache.put(key, 1);
-        assertFalse(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
-
-        // Access key with modified expire policy.
-        cache.get(key);
-        assertFalse(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
-
-        // Modify key with modified expire policy.
-        cache.put(key, 2);
-        assertTrue(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
+        assertTrue(waitUntilExpired(cache, 1));
     }
 
     /**
      * Check that cache with AccessedExpiryPolicy works as expected.
      * @param cache Cache to use for testing.
      */
-    public static void checkAccessedExpiryPolicy(ClientCache<Integer, Object> cache) throws Exception {
-        final int key = 3;
+    private static void checkAccessedExpiryPolicy(ClientCache<Integer, Object> cache) throws Exception {
+        cache.put(1, 2);
+        assertFalse(waitUntilExpiredWhileAccessed(cache, 1));
 
-        // Access key with accessed expire policy.
-        cache.put(key, 1);
-        assertFalse(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
+        assertTrue(waitUntilExpired(cache, 1));
+    }
 
-        // Modify key with accessed expire policy.
-        cache.put(key, 2);
-        assertFalse(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
+    /**
+     * Wait until value is expired.
+     * @param cache Cache.
+     * @param key Key.
+     * @return {@code true} if value expired and {@code false} otherwise.
+     */
+    private static boolean waitUntilExpired(ClientCache<Integer, Object> cache, int key)
+            throws IgniteInterruptedCheckedException {
+        return GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout);
+    }
 
-        // Access key with accessed expire policy.
-        cache.get(key);
-        assertTrue(GridTestUtils.waitForCondition(() -> !cache.containsKey(key), timeout));
+    /**
+     * Wait until value is expired while being constantly updated.
+     * @param cache Cache.
+     * @param key Key.
+     * @return {@code true} if value expired and {@code false} otherwise.
+     */
+    private static boolean waitUntilExpiredWhileUpdated(ClientCache<Integer, Object> cache, int key)
+            throws IgniteInterruptedCheckedException {
+        AtomicInteger cnt = new AtomicInteger(100);
+
+        return GridTestUtils.waitForCondition(() -> {
+            cache.replace(key, cnt.getAndIncrement());
+
+            return !cache.containsKey(key);
+        }, timeout);
+    }
+
+    /**
+     * Wait until value is expired while being constantly accessed.
+     * @param cache Cache.
+     * @param key Key.
+     * @return {@code true} if value expired and {@code false} otherwise.
+     */
+    private static boolean waitUntilExpiredWhileAccessed(ClientCache<Integer, Object> cache, int key)
+            throws IgniteInterruptedCheckedException {
+        return GridTestUtils.waitForCondition(() -> {
+            cache.get(key);
+
+            return !cache.containsKey(key);
+        }, timeout);
     }
 }
