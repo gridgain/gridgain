@@ -57,8 +57,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.development.utils.IgniteWalConverter.PRINT_RECORDS;
-import static org.apache.ignite.development.utils.IgniteWalConverter.SENSITIVE_DATA;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.wal.record.RecordUtils.isIncludeIntoLog;
@@ -204,7 +202,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
+    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
     public void testShowSensitiveDataByDefault() throws Exception {
         exeWithCheck(true, true, identity());
     }
@@ -215,12 +213,12 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
-    @WithSystemProperty(key = SENSITIVE_DATA, value = "SHOW")
+    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
+    @WithSystemProperty(key = "SENSITIVE_DATA", value = "SHOW")
     public void testShowSensitiveData() throws Exception {
         exeWithCheck(true, true, identity());
 
-        setProperty(SENSITIVE_DATA, currentTestMethod().getName());
+        setProperty("SENSITIVE_DATA", currentTestMethod().getName());
         resetTestOut();
 
         exeWithCheck(true, true, identity());
@@ -232,8 +230,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
-    @WithSystemProperty(key = SENSITIVE_DATA, value = "HIDE")
+    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
+    @WithSystemProperty(key = "SENSITIVE_DATA", value = "HIDE")
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     public void testHideSensitiveData() throws Exception {
         exeWithCheck(false, false, identity());
@@ -245,8 +243,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
-    @WithSystemProperty(key = SENSITIVE_DATA, value = "HASH")
+    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
+    @WithSystemProperty(key = "SENSITIVE_DATA", value = "HASH")
     public void testHashSensitiveData() throws Exception {
         exeWithCheck(true, false, s -> valueOf(s.hashCode()));
     }
@@ -257,8 +255,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
-    @WithSystemProperty(key = SENSITIVE_DATA, value = "MD5")
+    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
+    @WithSystemProperty(key = "SENSITIVE_DATA", value = "MD5")
     public void testMd5HashSensitiveData() throws Exception {
         exeWithCheck(true, false, ProcessSensitiveDataUtils::md5);
     }
