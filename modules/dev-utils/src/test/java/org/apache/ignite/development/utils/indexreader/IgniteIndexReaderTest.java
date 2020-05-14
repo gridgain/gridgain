@@ -137,6 +137,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /** Directory containing full snapshot. */
     private static File fullSnapshotDir;
 
+    /** Directory containing incremental snapshot. */
+    private static File incSnapshotDir;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -147,8 +150,18 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             populateData(node);
 
             workDir = ((FilePageStoreManager)node.context().cache().context().pageStore()).workDir();
-
             fullSnapshotDir = createSnapshot(node, true);
+        }
+
+        U.delete(workDir);
+
+        try (IgniteEx node = startGrid(0)) {
+            createSnapshot(node, true);
+
+            populateData(node);
+
+            workDir = ((FilePageStoreManager)node.context().cache().context().pageStore()).workDir();
+            incSnapshotDir = createSnapshot(node, false);
         }
     }
 
@@ -252,6 +265,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      */
     private File createSnapshot(IgniteEx node, boolean full) {
         requireNonNull(node);
+
+        IgniteClusterEx cluster = node.cluster();
+
+        if (!cluster.active())
+            cluster.active(true);
 
         GridSnapshot gridSnapshot = ((GridGain)node.plugin(GridGain.PLUGIN_NAME)).snapshot();
 
@@ -607,7 +625,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test checks correctness of index for both normal pds and snapshot.
+     * Test checks correctness of index for normal pds and snapshots.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -615,10 +633,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorrectIdx() throws IgniteCheckedException {
         checkCorrectIdx(workDir, false);
         checkCorrectIdx(fullSnapshotDir, true);
+        checkCorrectIdx(incSnapshotDir, true);
     }
 
     /**
-     * Test checks correctness of index and consistency of partitions with it for both normal pds and snapshot.
+     * Test checks correctness of index and consistency of partitions with it for normal pds and snapshots.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -626,10 +645,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
         checkCorrectIdxWithCheckParts(workDir, false);
         checkCorrectIdxWithCheckParts(fullSnapshotDir, true);
+        checkCorrectIdxWithCheckParts(incSnapshotDir, true);
     }
 
     /**
-     * Test verifies that specific indexes being checked are correct for both normal pds and snapshot.
+     * Test verifies that specific indexes being checked are correct for normal pds and snapshots.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -637,10 +657,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorrectIdxWithFilter() throws IgniteCheckedException {
         checkCorrectIdxWithFilter(workDir, false);
         checkCorrectIdxWithFilter(fullSnapshotDir, true);
+        checkCorrectIdxWithFilter(incSnapshotDir, true);
     }
 
     /**
-     * Test checks whether the index of an empty group is correct for both normal pds and snapshot.
+     * Test checks whether the index of an empty group is correct for normal pds and snapshots.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -648,10 +669,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testEmpty() throws IgniteCheckedException {
         checkEmpty(workDir, false);
         checkEmpty(fullSnapshotDir, true);
+        checkEmpty(incSnapshotDir, true);
     }
 
     /**
-     * Test for finding corrupted pages in index for both normal pds and snapshot.
+     * Test for finding corrupted pages in index for normal pds and snapshots.
      *
      * @throws Exception If failed.
      */
@@ -659,11 +681,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorruptedIdx() throws Exception {
         checkCorruptedIdx(workDir, false);
         checkCorruptedIdx(fullSnapshotDir, true);
+        checkCorruptedIdx(incSnapshotDir, true);
     }
 
     /**
      * Test for finding corrupted pages in index
-     * and checking for consistency in partitions for both normal pds and snapshot.
+     * and checking for consistency in partitions for normal pds and snapshots.
      *
      * @throws Exception If failed.
      */
@@ -671,10 +694,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorruptedIdxWithCheckParts() throws Exception {
         checkCorruptedIdxWithCheckParts(workDir, false);
         checkCorruptedIdxWithCheckParts(fullSnapshotDir, true);
+        checkCorruptedIdxWithCheckParts(incSnapshotDir, true);
     }
 
     /**
-     * Test for finding corrupted pages in partition for both normal pds and snapshot.
+     * Test for finding corrupted pages in partition for normal pds and snapshots.
      *
      * @throws Exception If failed.
      */
@@ -682,10 +706,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorruptedPart() throws Exception {
         checkCorruptedPart(workDir, false);
         checkCorruptedPart(fullSnapshotDir, true);
+        checkCorruptedPart(incSnapshotDir, true);
     }
 
     /**
-     * Test for finding corrupted pages in index and partition for both normal pds and snapshot.
+     * Test for finding corrupted pages in index and partition for normal pds and snapshots.
      *
      * @throws Exception If failed.
      */
@@ -693,10 +718,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testCorruptedIdxAndPart() throws Exception {
         checkCorruptedIdxAndPart(workDir, false);
         checkCorruptedIdxAndPart(fullSnapshotDir, true);
+        checkCorruptedIdxAndPart(incSnapshotDir, true);
     }
 
     /**
-     * Test checks correctness of index of {@link #QUERY_CACHE_GROUP_NAME} for both normal pds and snapshot.
+     * Test checks correctness of index of {@link #QUERY_CACHE_GROUP_NAME} for normal pds and snapshots.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -704,6 +730,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     public void testQryCacheGroup() throws IgniteCheckedException {
         checkQryCacheGroup(workDir, false);
         checkQryCacheGroup(fullSnapshotDir, true);
+        checkQryCacheGroup(incSnapshotDir, true);
     }
 
     /**
