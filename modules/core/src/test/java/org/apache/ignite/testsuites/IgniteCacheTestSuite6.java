@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.cache.affinity.PendingExchangeTest;
 import org.apache.ignite.internal.processors.cache.CacheIgniteOutOfMemoryExceptionTest;
 import org.apache.ignite.internal.processors.cache.CacheNoAffinityExchangeTest;
 import org.apache.ignite.internal.processors.cache.ClientFastReplyCoordinatorFailureTest;
@@ -89,6 +90,7 @@ public class IgniteCacheTestSuite6 {
         GridTestUtils.addTestIfNeeded(suite, IgnitePessimisticTxSuspendResumeTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheExchangeMergeTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PendingExchangeTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ExchangeMergeStaleServerNodesTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClientFastReplyCoordinatorFailureTest.class, ignoredTests);
 

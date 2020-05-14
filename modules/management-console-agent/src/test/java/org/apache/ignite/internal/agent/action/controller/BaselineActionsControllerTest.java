@@ -18,13 +18,13 @@ package org.apache.ignite.internal.agent.action.controller;
 
 import java.util.List;
 import java.util.UUID;
-import com.google.common.collect.Lists;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.agent.dto.action.JobResponse;
 import org.apache.ignite.internal.agent.dto.action.Request;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.apache.ignite.internal.agent.dto.action.Status.COMPLETED;
 
@@ -97,7 +97,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
 
         IgniteEx ignite_3 = startGrid(3);
 
-        List<String> ids = Lists.newArrayList(
+        List<String> ids = asList(
             cluster.localNode().consistentId().toString(),
             ignite_2.cluster().localNode().consistentId().toString(),
             ignite_3.cluster().localNode().consistentId().toString()

@@ -40,6 +40,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature.USER_ATTRIBUTES;
 
 /**
  * JDBC Connection Context.
@@ -197,8 +198,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 byte [] cliFeatures = reader.readByteArray();
 
                 features = JdbcThinFeature.enumSet(cliFeatures);
-
-                features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
             }
         }
         catch (Exception ex) {
@@ -225,7 +224,10 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(ses.certificates(), user, passwd);
         }
 
-        protoCtx = new JdbcProtocolContext(ver, features, null, false);
+        if (features.contains(USER_ATTRIBUTES))
+            userAttrs = reader.readMap();
+
+        protoCtx = new JdbcProtocolContext(ver, features, null, false, true);
 
         initClientDescriptor("jdbc-thin");
 
