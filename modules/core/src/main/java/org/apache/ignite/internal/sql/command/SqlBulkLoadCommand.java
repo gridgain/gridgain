@@ -150,6 +150,8 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 fmt.quoteChars(BulkLoadCsvFormat.DEFAULT_QUOTE_CHARS);
                 fmt.commentChars(BulkLoadCsvFormat.DEFAULT_COMMENT_CHARS);
                 fmt.escapeChars(BulkLoadCsvFormat.DEFAULT_ESCAPE_CHARS);
+                fmt.nullString(BulkLoadCsvFormat.DEFAULT_NULL_STRING);
+                fmt.trim(BulkLoadCsvFormat.DEFAULT_TRIM_SPACES);
 
                 parseCsvOptions(lex, fmt);
 
