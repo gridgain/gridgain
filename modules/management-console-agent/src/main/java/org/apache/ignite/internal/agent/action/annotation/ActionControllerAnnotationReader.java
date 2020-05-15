@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.internal.agent.action.ActionMethod;
 import org.apache.ignite.internal.util.typedef.F;
-import org.reflections.Reflections;
+import org.reflections8.Reflections;
 
 /**
  * Reader for {@link ActionController} annotation.
