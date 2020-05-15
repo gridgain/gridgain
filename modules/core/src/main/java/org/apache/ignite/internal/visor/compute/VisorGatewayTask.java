@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
@@ -121,6 +122,12 @@ public class VisorGatewayTask implements ComputeTask<Object[], Object> {
 
         /** */
         private static final byte[] ZERO_BYTES = new byte[0];
+
+        /** An index of the target node argument. */
+        private static final int TARGET_NODE_ARGUMENT_INDEX = 0;
+
+        /** An index of the type name argument. */
+        private static final int TASK_NAME_ARGUMENT_INDEX = 1;
 
         /** Auto-injected grid instance. */
         @IgniteInstanceResource
@@ -333,141 +340,176 @@ public class VisorGatewayTask implements ComputeTask<Object[], Object> {
             return Class.forName(String.valueOf(arg));
         }
 
+        /**
+         * Check that the node list is empry.
+         *
+         * @param nidsArg Node list argument.
+         * @return {@code true} when the node list is empty or {@code false} otherwise.
+         */
+        private boolean targetNodeArgumentIsEmpty(String nidsArg) {
+            return F.isEmpty(nidsArg) || "null".equals(nidsArg);
+        }
+
+        /**
+         * Parse the node list argument to the list of node IDs.
+         *
+         * @param nidsArg Node list argument.
+         * @return List of node IDs.
+         */
+        private List<UUID> parseNodeIdsArgument(String nidsArg) {
+            String[] items = nidsArg.split(";");
+
+            List<UUID> res = new ArrayList<>(items.length);
+
+            for (String item : items) {
+                try {
+                    res.add(UUID.fromString(item));
+                }
+                catch (IllegalArgumentException ignore) {
+                    ignite.log().warning("Failed to parse node id [taskName=" + argument(TASK_NAME_ARGUMENT_INDEX) +
+                        ", nid=" + item + "]"
+                    );
+                }
+            }
+
+            return res;
+        }
+
         /** {@inheritDoc} */
         @SuppressWarnings("unchecked")
         @Override public Object execute() throws IgniteException {
-            if (fut != null)
-                return fut.get();
+            try {
+                if (fut != null)
+                    return fut.get();
 
-            String nidsArg = argument(0);
-            String taskName = argument(1);
+                String nidsArg = argument(TARGET_NODE_ARGUMENT_INDEX);
+                String taskName = argument(TASK_NAME_ARGUMENT_INDEX);
 
-            Object jobArgs = null;
+                Object jobArgs = null;
 
-            if (argsCnt > 2) {
-                String argClsName = argument(2);
+                if (argsCnt > 2) {
+                    String argClsName = argument(2);
 
-                assert argClsName != null;
+                    assert argClsName != null;
 
-                try {
-                    Class<?> argCls = Class.forName(argClsName);
+                    try {
+                        Class<?> argCls = Class.forName(argClsName);
 
-                    if (argCls == Void.class)
-                        jobArgs = null;
-                    else if (isBuildInObject(argCls))
-                        jobArgs = toJobArgument(argCls, JOB_ARG_IDX);
-                    else {
-                        int beanArgsCnt = argsCnt - JOB_ARG_IDX;
+                        if (argCls == Void.class)
+                            jobArgs = null;
+                        else if (isBuildInObject(argCls))
+                            jobArgs = toJobArgument(argCls, JOB_ARG_IDX);
+                        else {
+                            int beanArgsCnt = argsCnt - JOB_ARG_IDX;
 
-                        for (Constructor ctor : argCls.getDeclaredConstructors()) {
-                            Class[] types = ctor.getParameterTypes();
+                            for (Constructor ctor : argCls.getDeclaredConstructors()) {
+                                Class[] types = ctor.getParameterTypes();
 
-                            int args = types.length;
+                                int args = types.length;
 
-                            // Length of arguments that required to constructor by influence of nested complex objects.
-                            int needArgs = args;
+                                // Length of arguments that required to constructor by influence of nested complex objects.
+                                int needArgs = args;
 
-                            for (Class type: types) {
-                                // When constructor required specified types increase length of required arguments.
-                                if (TYPE_ARG_LENGTH.containsKey(type))
-                                    needArgs += TYPE_ARG_LENGTH.get(type);
-                            }
-
-                            if (needArgs == beanArgsCnt) {
-                                Object[] initArgs = new Object[args];
-
-                                for (int i = 0, ctrIdx = 0; i < beanArgsCnt; i++, ctrIdx++) {
-                                    Class type = types[ctrIdx];
-
-                                    // Parse nested complex objects from arguments for specified types.
-                                    if (TYPE_ARG_LENGTH.containsKey(type)) {
-                                        initArgs[ctrIdx] = toJobArgument(toClass(JOB_ARG_IDX + i), JOB_ARG_IDX + 1 + i);
-
-                                        i += TYPE_ARG_LENGTH.get(type);
-                                    }
-                                    // In common case convert value to object.
-                                    else {
-                                        String val = argument(JOB_ARG_IDX + i);
-
-                                        initArgs[ctrIdx] = toObject(type, val);
-                                    }
+                                for (Class type : types) {
+                                    // When constructor required specified types increase length of required arguments.
+                                    if (TYPE_ARG_LENGTH.containsKey(type))
+                                        needArgs += TYPE_ARG_LENGTH.get(type);
                                 }
 
-                                ctor.setAccessible(true);
-                                jobArgs = ctor.newInstance(initArgs);
+                                if (needArgs == beanArgsCnt) {
+                                    Object[] initArgs = new Object[args];
 
-                                break;
+                                    for (int i = 0, ctrIdx = 0; i < beanArgsCnt; i++, ctrIdx++) {
+                                        Class type = types[ctrIdx];
+
+                                        // Parse nested complex objects from arguments for specified types.
+                                        if (TYPE_ARG_LENGTH.containsKey(type)) {
+                                            initArgs[ctrIdx] = toJobArgument(toClass(JOB_ARG_IDX + i), JOB_ARG_IDX + 1 + i);
+
+                                            i += TYPE_ARG_LENGTH.get(type);
+                                        }
+                                        // In common case convert value to object.
+                                        else {
+                                            String val = argument(JOB_ARG_IDX + i);
+
+                                            initArgs[ctrIdx] = toObject(type, val);
+                                        }
+                                    }
+
+                                    ctor.setAccessible(true);
+                                    jobArgs = ctor.newInstance(initArgs);
+
+                                    break;
+                                }
+                            }
+
+                            if (jobArgs == null) {
+                                Object[] args = new Object[beanArgsCnt];
+
+                                for (int i = 0; i < beanArgsCnt; i++)
+                                    args[i] = argument(i + JOB_ARG_IDX);
+
+                                throw new IgniteException("Failed to find constructor for task argument " +
+                                    "[taskName=" + taskName + ", argsCnt=" + args.length +
+                                    ", args=" + Arrays.toString(args) + "]");
                             }
                         }
+                    }
+                    catch (Exception e) {
+                        throw new IgniteException("Failed to construct job argument [taskName=" + taskName + "]", e);
+                    }
+                }
 
-                        if (jobArgs == null) {
-                            Object[] args = new Object[beanArgsCnt];
+                final List<UUID> nids;
 
-                            for (int i = 0; i < beanArgsCnt; i++)
-                                args[i] = argument(i + JOB_ARG_IDX);
+                if (targetNodeArgumentIsEmpty(nidsArg)) {
+                    try {
+                        Class<?> taskCls = Class.forName(taskName);
 
-                            throw new IgniteException("Failed to find constructor for task argument " +
-                                "[taskName=" + taskName + ", argsCnt=" + args.length +
-                                ", args=" + Arrays.toString(args) + "]");
+                        if (VisorCoordinatorNodeTask.class.isAssignableFrom(taskCls)) {
+                            ClusterNode crd = ignite.context().discovery().discoCache().oldestAliveServerNode();
+
+                            nids = Collections.singletonList(crd.id());
+                        }
+                        else if (VisorOneNodeTask.class.isAssignableFrom(taskCls))
+                            nids = Collections.singletonList(ignite.localNode().id());
+                        else {
+                            Collection<ClusterNode> nodes = ignite.cluster().nodes();
+
+                            nids = new ArrayList<>(nodes.size());
+
+                            for (ClusterNode node : nodes)
+                                nids.add(node.id());
                         }
                     }
-                }
-                catch (Exception e) {
-                    throw new IgniteException("Failed to construct job argument [taskName=" + taskName + "]", e);
-                }
-            }
-
-            final List<UUID> nids;
-
-            if (F.isEmpty(nidsArg) || "null".equals(nidsArg)) {
-                try {
-                    Class<?> taskCls = Class.forName(taskName);
-
-                    if (VisorCoordinatorNodeTask.class.isAssignableFrom(taskCls)) {
-                        ClusterNode crd = ignite.context().discovery().discoCache().oldestAliveServerNode();
-
-                        nids = Collections.singletonList(crd.id());
-                    }
-                    else if (VisorOneNodeTask.class.isAssignableFrom(taskCls))
-                        nids = Collections.singletonList(ignite.localNode().id());
-                    else {
-                        Collection<ClusterNode> nodes = ignite.cluster().nodes();
-
-                        nids = new ArrayList<>(nodes.size());
-
-                        for (ClusterNode node : nodes)
-                            nids.add(node.id());
+                    catch (ClassNotFoundException e) {
+                        throw new IgniteException("Failed to find task class:" + taskName, e);
                     }
                 }
-                catch (ClassNotFoundException e) {
-                    throw new IgniteException("Failed to find task class:" + taskName, e);
-                }
-            }
-            else {
-                String[] items = nidsArg.split(";");
+                else
+                    nids = parseNodeIdsArgument(nidsArg);
 
-                nids = new ArrayList<>(items.length);
+                IgniteCompute comp = ignite.compute(ignite.cluster().forNodeIds(nids));
 
-                for (String item : items) {
-                    try {
-                        nids.add(UUID.fromString(item));
-                    } catch (IllegalArgumentException ignore) {
-                        ignite.log().warning("Failed to parse node id [taskName=" + taskName + ", nid=" + item + "]");
+                fut = comp.executeAsync(taskName, new VisorTaskArgument<>(nids, jobArgs, false));
+
+                fut.listen(new CI1<IgniteFuture<Object>>() {
+                    @Override public void apply(IgniteFuture<Object> f) {
+                        jobCtx.callcc();
                     }
-                }
+                });
+
+                return jobCtx.holdcc();
             }
+            catch (ClusterGroupEmptyException e) {
+                String nidsArg = argument(TARGET_NODE_ARGUMENT_INDEX);
 
-            IgniteCompute comp = ignite.compute(ignite.cluster().forNodeIds(nids));
-
-            fut = comp.executeAsync(taskName, new VisorTaskArgument<>(nids, jobArgs, false));
-
-            fut.listen(new CI1<IgniteFuture<Object>>() {
-                @Override public void apply(IgniteFuture<Object> f) {
-                    jobCtx.callcc();
-                }
-            });
-
-            return jobCtx.holdcc();
+                throw new IgniteException("Failed to execute a task. The target node is not found [taskName=" +
+                    argument(TASK_NAME_ARGUMENT_INDEX) + ", nids=" +
+                    (targetNodeArgumentIsEmpty(nidsArg) ? nidsArg : Arrays.toString(parseNodeIdsArgument(nidsArg).toArray())) +
+                    ", args=" + Arrays.toString(arguments()) + "]",
+                    e);
+            }
         }
     }
 }
