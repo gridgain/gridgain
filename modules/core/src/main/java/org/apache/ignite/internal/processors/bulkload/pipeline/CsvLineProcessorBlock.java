@@ -21,7 +21,7 @@ import org.apache.ignite.IgniteCheckedException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
 
 /**
  * A {@link PipelineBlock}, which splits line according to CSV format rules and unquotes fields. The next block {@link
@@ -36,6 +36,12 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
     /** Quote character. */
     private final char quoteChars;
 
+    /** Null string. */
+    private final String nullString;
+
+    /** Trim field string content. */
+    private final boolean trim;
+
     /** Lines count. */
     private int line = 0;
 
@@ -44,13 +50,12 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
 
     /**
      * Creates a CSV line parser.
-     *
-     * @param fldDelim The pattern for the field delimiter.
-     * @param quoteChars Quoting character.
      */
-    public CsvLineProcessorBlock(Pattern fldDelim, String quoteChars) {
-        this.fldDelim = fldDelim.toString().charAt(0);
-        this.quoteChars = quoteChars.charAt(0);
+    public CsvLineProcessorBlock(BulkLoadCsvFormat format) {
+        this.fldDelim = format.fieldSeparator().toString().charAt(0);
+        this.quoteChars = format.quoteChars().charAt(0);
+        this.nullString = format.nullString();
+        this.trim = format.trim();
     }
 
     /**
@@ -77,12 +82,14 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         while (true) {
             if (current == length) {
                 if (!quotesMatched)
-                    throw new IgniteCheckedException(new SQLException("Unmatched quote found at the end of line " + line + ", symbol " + symbol));
+                    throw new IgniteCheckedException(new SQLException("Unmatched quote found at the end of line "
+                        + line + ", symbol " + symbol));
 
                 if (copy > 0)
                     currentField.append(input, copyStart, copyStart + copy);
 
-                fields.add(currentField.toString());
+                addField(fields, currentField, prev == quoteChars);
+
                 break;
             }
 
@@ -113,7 +120,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                         copy = 0;
                     }
 
-                    fields.add(currentField.toString());
+                    addField(fields, currentField, prev == quoteChars);
 
                     currentField = new StringBuilder();
                     copyStart = current;
@@ -131,8 +138,14 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                         copyStart = current;
                 }
                 else {
-                    if (c == quoteChars)
+                    if (c == quoteChars) {
+                        if (state == ReaderState.UNQUOTED)
+                            throw new IgniteCheckedException(
+                                new SQLException("Quotes are not allowed in the unquoted field, line " + line
+                                    + ", symbol " + symbol));
+
                         quotesMatched = !quotesMatched;
+                    }
 
                     copy++;
 
@@ -145,6 +158,17 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         }
 
         nextBlock.accept(fields.toArray(EMPTY_STR_ARRAY), isLastPortion);
+    }
+
+    /**
+     *
+     * @param fields row fields.
+     * @param fieldVal field value.
+     */
+    private void addField(List<String> fields, StringBuilder fieldVal, boolean quoted) {
+        final String val = trim ? fieldVal.toString().trim() : fieldVal.toString();
+
+        fields.add(val.equals(nullString) ? null : val);
     }
 
     /**
