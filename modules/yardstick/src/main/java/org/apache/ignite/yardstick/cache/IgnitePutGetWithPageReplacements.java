@@ -35,6 +35,13 @@ import static org.apache.ignite.events.EventType.EVT_PAGE_REPLACEMENT_STARTED;
 
 /**
  * Ignite benchmark that performs payload with active page replacement.
+ *
+ * Test scenario:
+ * On setUp phase full fill cache until replace event occured,
+ * after proceed to fill two times more data.
+ * Execute full scan.
+ *
+ * On test phase fill data belonging to only 1/2 of dataregion capacity, calculated on setUp phase.
  */
 public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchmark<Integer, Object> {
     /** Cache name. */
