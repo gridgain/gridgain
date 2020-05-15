@@ -23,11 +23,13 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
+import org.apache.ignite.testframework.junits.common.ValidateThreadNames;
 import org.junit.Test;
 
 /**
  *
  */
+@ValidateThreadNames
 public class BinaryTxCacheLocalEntriesSelfTest extends GridCacheAbstractSelfTest {
     /** */
     private static final String FIELD = "user-name";

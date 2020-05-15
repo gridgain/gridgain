@@ -116,6 +116,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.configvariations.VariationsTestsConfig;
+import org.apache.ignite.testframework.junits.common.ValidateThreadNames;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.apache.ignite.testframework.junits.multijvm.IgniteCacheProcessProxy;
 import org.apache.ignite.testframework.junits.multijvm.IgniteNodeRunner;
@@ -202,6 +203,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /** {@link Executors.DefaultThreadFactory} count before test. */
     protected static transient int defaultThreadFactoryCountBeforeTest;
+
+    /** {@link Thread#threadInitNumber} count before test. */
+    protected static transient int anonymousThreadCountBeforeTest;
 
     /** Sustains {@link #beforeTestsStarted()} and {@link #afterTestsStopped()} methods execution.*/
     @ClassRule public static final TestRule firstLastTestRule = RuleChain
@@ -327,7 +331,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTest()} will be called anyway.
      */
     protected void beforeTest() throws Exception {
-        // No-op.
+        if (isValidationThreadNamesRequired()) {
+            anonymousThreadCountBeforeTest = getAnonymousThreadCount();
+        }
     }
 
     /**
@@ -339,6 +345,12 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTest() throws Exception {
+        if (isValidationThreadNamesRequired()) {
+            assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
+                defaultThreadFactoryCountBeforeTest, getDefaultPoolCount());
+            assertEquals("Thread without specific name detected",
+                anonymousThreadCountBeforeTest, getAnonymousThreadCount());
+        }
         try {
             for (Logger logger : changedLevels.keySet())
                 logger.setLevel(changedLevels.get(logger));
@@ -672,7 +684,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
     /** */
     private void beforeFirstTest() throws Exception {
-        defaultThreadFactoryCountBeforeTest = getDefaultPoolCounter();
+        if (isValidationThreadNamesRequired()) {
+            defaultThreadFactoryCountBeforeTest = getDefaultPoolCount();
+        }
         sharedStaticIpFinder = new TcpDiscoveryVmIpFinder(true);
 
         clsLdr = Thread.currentThread().getContextClassLoader();
@@ -2831,16 +2845,42 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Is validation for thread names enabled.
+     * @return Is validation for thread names enabled
+     */
+    private boolean isValidationThreadNamesRequired() {
+        return Arrays.stream(getClass().getAnnotations())
+            .anyMatch(annotation -> annotation instanceof ValidateThreadNames
+                && !((ValidateThreadNames)annotation).ignore());
+    }
+
+    /**
      * Gets pools count with {@link Executors.DefaultThreadFactory}.
      * @return count
      */
-    protected static int getDefaultPoolCounter() {
+    private static int getDefaultPoolCount() {
         try {
             Class<?> defaultThreadFacktory = Class.forName("java.util.concurrent.Executors$DefaultThreadFactory");
             Field poolNumber = defaultThreadFacktory.getDeclaredField("poolNumber");
             poolNumber.setAccessible(true);
             AtomicInteger counter = (AtomicInteger)poolNumber.get(null);
             return counter.get();
+        }
+        catch (ReflectiveOperationException e) {
+            log.error(e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * Gets anonymous threads count since JVM start.
+     * @return count
+     */
+    private static int getAnonymousThreadCount() {
+        try {
+            Field threadInitNumberField = Thread.class.getDeclaredField("threadInitNumber");
+            threadInitNumberField.setAccessible(true);
+            return threadInitNumberField.getInt(null);
         }
         catch (ReflectiveOperationException e) {
             log.error(e.getMessage());
