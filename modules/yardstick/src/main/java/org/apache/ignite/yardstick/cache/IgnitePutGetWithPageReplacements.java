@@ -42,6 +42,8 @@ import static org.apache.ignite.events.EventType.EVT_PAGE_REPLACEMENT_STARTED;
  * Execute full scan.
  *
  * On test phase fill data belonging to only 1/2 of dataregion capacity, calculated on setUp phase.
+ *
+ * NOTE: EVT_PAGE_REPLACEMENT_STARTED event need to be enabled on server side.
  */
 public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchmark<Integer, Object> {
     /** Cache name. */
