@@ -29,6 +29,8 @@ import org.yardstickframework.BenchmarkUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.ignite.events.EventType.EVT_PAGE_REPLACEMENT_STARTED;
 
@@ -43,16 +45,13 @@ public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchma
     private CacheConfiguration<Integer, Object> cacheWithRep = new CacheConfiguration<>(CACHE_NAME);
 
     /** Active replacement flag. */
-    boolean replacement;
+    private AtomicBoolean replacement = new AtomicBoolean();
 
     /** Payload counter. */
-    int progress;
+    private AtomicInteger progress = new AtomicInteger();
 
     /** In mem reg capacity. */
-    int replCntr;
-
-    /** End of replacement payload flag. */
-    boolean lessRegionSizePayload;
+    private volatile int replCntr = Integer.MAX_VALUE / 2;
 
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
@@ -60,12 +59,50 @@ public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchma
 
         ignite().events().remoteListen(new IgniteBiPredicate<UUID, Event>() {
             @Override public boolean apply(UUID uuid, Event evt) {
-                if (evt.type() == EVT_PAGE_REPLACEMENT_STARTED)
-                    replacement = true;
+                if (evt.type() == EVT_PAGE_REPLACEMENT_STARTED) {
+                    replacement.set(true);
+
+                    return false;
+                }
 
                 return true;
             }
         }, null, EVT_PAGE_REPLACEMENT_STARTED);
+
+        int portion = 100;
+
+        Map<Integer, TestValue> putMap = new HashMap<>(portion, 1.f);
+
+        while (progress.get() < 2 * replCntr) {
+            putMap.clear();
+
+            int progress0 = progress.getAndAdd(portion);
+
+            for (int i = 0; i < portion; i++)
+                putMap.put(progress0 + i, new TestValue(progress0 + i));
+
+            cache().putAll(putMap);
+
+            if (progress0 % 1000 == 0)
+                BenchmarkUtils.println("progress=" + progress);
+
+            if (replacement.compareAndSet(true, false)) {
+                replCntr = progress.get();
+
+                BenchmarkUtils.println("replCntr=" + replCntr);
+            }
+        }
+
+        BenchmarkUtils.println("DataRegion fullfill complete. progress=" + progress + " replCntr=" + replCntr + ".");
+
+        int cacheSize = 0;
+
+        try (QueryCursor cursor = cache.query(new ScanQuery())) {
+            for (Object o : cursor)
+                cacheSize++;
+        }
+
+        BenchmarkUtils.println("cache size=" + cacheSize);
     }
 
     /** */
@@ -79,44 +116,15 @@ public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchma
 
         Map<Integer, TestValue> putMap = new HashMap<>(portion, 1.f);
 
-        if (replacement) {
-            BenchmarkUtils.println("Replacement triggered.");
+        int progress0 = progress.getAndAdd(portion);
 
-            replCntr = progress + portion;
-
-            replacement = false;
-        }
-
-        if (replCntr != 0 && progress > 2 * replCntr) {
-            BenchmarkUtils.println("DataRegion fullfill complete. progress=" + progress + " replCntr=" + replCntr + ".");
-
-            lessRegionSizePayload = true;
-
-            int cacheSize = 0;
-
-            try (QueryCursor cursor = cache.query(new ScanQuery())) {
-                for (Object o : cursor)
-                    cacheSize++;
-            }
-
-            BenchmarkUtils.println("cache size=" + cacheSize);
-        }
-
-        for (int i = 0; i < portion; i++) {
-            if (lessRegionSizePayload) {
-                if (progress > replCntr / 2)
-                    progress = 0;
-            }
-
-            putMap.put(progress + i, new TestValue(progress + i));
-        }
-
-        progress += portion;
-
-        if (progress % 1000 == 0)
-            BenchmarkUtils.println("progress=" + progress);
+        for (int i = 0; i < portion; i++)
+            putMap.put(progress0 + i, new TestValue(progress0 + i));
 
         cache().putAll(putMap);
+
+        if (progress0 % 1000 == 0)
+            BenchmarkUtils.println("progress=" + progress);
 
         return true;
     }
