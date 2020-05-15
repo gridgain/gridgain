@@ -385,9 +385,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final long lockWaitTime;
 
     /** */
-    private final boolean truncateWalOnCpFinish;
-
-    /** */
     private Map</*grpId*/Integer, Map</*partId*/Integer, T2</*updCntr*/Long, WALPointer>>> reservedForExchange;
 
     /** */
@@ -447,10 +444,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         assert persistenceCfg != null;
 
         checkpointFreq = persistenceCfg.getCheckpointFrequency();
-
-        truncateWalOnCpFinish = persistenceCfg.isWalHistorySizeParameterUsed()
-            ? persistenceCfg.getWalHistorySize() != Integer.MAX_VALUE
-            : persistenceCfg.getMaxWalArchiveSize() != Long.MAX_VALUE;
 
         lockWaitTime = persistenceCfg.getLockWaitTime();
 
@@ -2684,7 +2677,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 if (PageIO.getCompressionType(pageAddr) != CompressionProcessor.UNCOMPRESSED_PAGE) {
                     int realPageSize = pageMem.realPageSize(pageSnapshotRecord.groupId());
 
-                    assert pageSnapshotRecord.pageDataSize() < realPageSize : pageSnapshotRecord.pageDataSize();
+                    assert pageSnapshotRecord.pageDataSize() <= realPageSize : pageSnapshotRecord.pageDataSize();
 
                     cctx.kernalContext().compress().decompressPage(pageMem.pageBuffer(pageAddr), realPageSize);
                 }
@@ -4521,7 +4514,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.wal().notchLastCheckpointPtr(chp.cpEntry.checkpointMark());
             }
 
-            List<CheckpointEntry> removedFromHistory = cpHist.onCheckpointFinished(chp, truncateWalOnCpFinish);
+            List<CheckpointEntry> removedFromHistory = cpHist.onCheckpointFinished(chp);
 
             for (CheckpointEntry cp : removedFromHistory)
                 removeCheckpointFiles(cp);

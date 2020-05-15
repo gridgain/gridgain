@@ -147,9 +147,7 @@ public class DistributedSqlConfiguration {
      * @return Disabled SQL functions.
      */
     public Set<String> disabledFunctions() {
-        Set<String> ret = disabledSqlFuncs.get();
-
-        return ret != null ? ret : DFLT_DISABLED_FUNCS;
+        return disabledSqlFuncs.getOrDefault(DFLT_DISABLED_FUNCS);
     }
 
     /**

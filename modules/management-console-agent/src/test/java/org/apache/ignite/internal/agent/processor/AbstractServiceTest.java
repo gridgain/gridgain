@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
-import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -32,7 +31,6 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cluster.ClusterProcessor;
 import org.apache.ignite.testframework.GridTestNode;
-import org.springframework.messaging.simp.stomp.StompSession;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -42,26 +40,6 @@ import static org.mockito.Mockito.when;
  * Abstract service test.
  */
 public abstract class AbstractServiceTest {
-    /** Is session connected. */
-    protected boolean isSesConnected = true;
-
-    /** Session. */
-    protected StompSession ses = mock(StompSession.class);
-
-    /** Websocket manager. */
-    protected WebSocketManager mgr = getMockWebSocketManager();
-
-    /**
-     * @return Mocked web socket manager.
-     */
-    protected WebSocketManager getMockWebSocketManager() {
-        WebSocketManager mgr = mock(WebSocketManager.class);
-
-        when(ses.isConnected()).thenAnswer(i -> isSesConnected);
-
-        return mgr;
-    }
-
     /**
      * @return Mocked grid kernal context.
      */

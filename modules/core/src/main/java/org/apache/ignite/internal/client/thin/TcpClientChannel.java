@@ -33,8 +33,11 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -60,36 +63,56 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.SslMode;
 import org.apache.ignite.client.SslProtocol;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
+import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
+import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryPrimitives;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.odbc.ClientListenerNioListener;
+import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientFlag;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.USER_ATTRIBUTES;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.LATEST_VER;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_0_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_1_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_2_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_3_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_4_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_5_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_0;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
+import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.AUTHORIZATION;
+import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.BITMAP_FEATURES;
+import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.PARTITION_AWARENESS;
 
 /**
  * Implements {@link ClientChannel} over TCP.
  */
 class TcpClientChannel implements ClientChannel {
+    /** Protocol version used by default on first connection attempt. */
+    private static final ProtocolVersion DEFAULT_VERSION = LATEST_VER;
+
     /** Supported protocol versions. */
     private static final Collection<ProtocolVersion> supportedVers = Arrays.asList(
+        V1_7_0,
+        V1_6_0,
         V1_5_0,
         V1_4_0,
+        V1_3_0,
         V1_2_0,
         V1_1_0,
         V1_0_0
@@ -98,8 +121,14 @@ class TcpClientChannel implements ClientChannel {
     /** Timeout before next attempt to lock channel and process next response by current thread. */
     private static final long PAYLOAD_WAIT_TIMEOUT = 10L;
 
-    /** Protocol version agreed with the server. */
-    private ProtocolVersion ver = V1_5_0;
+    /** Protocol context. */
+    private ProtocolContext protocolCtx;
+
+    /** Server node ID. */
+    private UUID srvNodeId;
+
+    /** Server topology version. */
+    private AffinityTopologyVersion srvTopVer;
 
     /** Channel. */
     private final Socket sock;
@@ -122,6 +151,9 @@ class TcpClientChannel implements ClientChannel {
     /** Pending requests. */
     private final Map<Long, ClientRequestFuture> pendingReqs = new ConcurrentHashMap<>();
 
+    /** Topology change listeners. */
+    private final Collection<Consumer<ClientChannel>> topChangeLsnrs = new CopyOnWriteArrayList<>();
+
     /** Constructor. */
     TcpClientChannel(ClientChannelConfiguration cfg) throws ClientConnectionException, ClientAuthenticationException {
         validateConfiguration(cfg);
@@ -136,7 +168,7 @@ class TcpClientChannel implements ClientChannel {
             throw handleIOError("addr=" + cfg.getAddress(), e);
         }
 
-        handshake(cfg.getUserName(), cfg.getUserPassword());
+        handshake(DEFAULT_VERSION, cfg.getUserName(), cfg.getUserPassword(), cfg.getUserAttributes());
     }
 
     /** {@inheritDoc} */
@@ -273,13 +305,17 @@ class TcpClientChannel implements ClientChannel {
 
         BinaryInputStream resIn;
 
-        if (ver.compareTo(V1_4_0) >= 0) {
+        if (protocolCtx.isFeatureSupported(PARTITION_AWARENESS)) {
             short flags = dataInput.readShort();
 
             if ((flags & ClientFlag.AFFINITY_TOPOLOGY_CHANGED) != 0) {
-                // TODO: IGNITE-11898 Implement Best Effort Affinity for java thin client.
-                dataInput.readLong(); // topVer.
-                dataInput.readInt(); // minorTopVer.
+                long topVer = dataInput.readLong();
+                int minorTopVer = dataInput.readInt();
+
+                srvTopVer = new AffinityTopologyVersion(topVer, minorTopVer);
+
+                for (Consumer<ClientChannel> lsnr : topChangeLsnrs)
+                    lsnr.accept(this);
             }
 
             if ((flags & ClientFlag.ERROR) != 0)
@@ -311,8 +347,23 @@ class TcpClientChannel implements ClientChannel {
     }
 
     /** {@inheritDoc} */
-    @Override public ProtocolVersion serverVersion() {
-        return ver;
+    @Override public ProtocolContext protocolCtx() {
+        return protocolCtx;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID serverNodeId() {
+        return srvNodeId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public AffinityTopologyVersion serverTopologyVersion() {
+        return srvTopVer;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void addTopologyChangeListener(Consumer<ClientChannel> lsnr) {
+        topChangeLsnrs.add(lsnr);
     }
 
     /** Validate {@link ClientConfiguration}. */
@@ -350,47 +401,65 @@ class TcpClientChannel implements ClientChannel {
         return sock;
     }
 
-    /** Serialize String for thin client protocol. */
-    private static byte[] marshalString(String s) {
-        try (BinaryOutputStream out = new BinaryHeapOutputStream(s == null ? 1 : s.length() + 20);
-             BinaryRawWriterEx writer = new BinaryWriterExImpl(null, out, null, null)
-        ) {
-            writer.writeString(s);
-
-            return out.arrayCopy();
-        }
-    }
-
     /** Client handshake. */
-    private void handshake(String user, String pwd)
+    private void handshake(ProtocolVersion ver, String user, String pwd, Map<String, String> userAttrs)
         throws ClientConnectionException, ClientAuthenticationException {
-        handshakeReq(user, pwd);
-        handshakeRes(user, pwd);
+        handshakeReq(ver, user, pwd, userAttrs);
+        handshakeRes(ver, user, pwd, userAttrs);
     }
 
     /** Send handshake request. */
-    private void handshakeReq(String user, String pwd) throws ClientConnectionException {
-        try (BinaryOutputStream req = new BinaryHeapOutputStream(32)) {
-            req.writeInt(0); // reserve an integer for the request size
-            req.writeByte((byte)1); // handshake code, always 1
-            req.writeShort(ver.major());
-            req.writeShort(ver.minor());
-            req.writeShort(ver.patch());
-            req.writeByte((byte)2); // client code, always 2
+    private void handshakeReq(ProtocolVersion proposedVer, String user, String pwd,
+        Map<String, String> userAttrs) throws ClientConnectionException {
+        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration(), null);
 
-            if (ver.compareTo(V1_1_0) >= 0 && user != null && !user.isEmpty()) {
-                req.writeByteArray(marshalString(user));
-                req.writeByteArray(marshalString(pwd));
+        try (BinaryWriterExImpl writer = new BinaryWriterExImpl(ctx, new BinaryHeapOutputStream(32), null, null)) {
+            ProtocolContext protocolCtx = protocolContextFromVersion(proposedVer);
+
+            writer.writeInt(0); // reserve an integer for the request size
+            writer.writeByte((byte) ClientListenerRequest.HANDSHAKE);
+
+            writer.writeShort(proposedVer.major());
+            writer.writeShort(proposedVer.minor());
+            writer.writeShort(proposedVer.patch());
+
+            writer.writeByte(ClientListenerNioListener.THIN_CLIENT);
+
+            if (protocolCtx.isFeatureSupported(BITMAP_FEATURES)) {
+                byte[] features = ProtocolBitmaskFeature.featuresAsBytes(protocolCtx.features());
+                writer.writeByteArray(features);
             }
 
-            req.writeInt(0, req.position() - 4); // actual size
+            if (protocolCtx.isFeatureSupported(USER_ATTRIBUTES))
+                writer.writeMap(userAttrs);
 
-            write(req.array(), req.position());
+            boolean authSupported = protocolCtx.isFeatureSupported(AUTHORIZATION);
+
+            if (authSupported && user != null && !user.isEmpty()) {
+                writer.writeString(user);
+                writer.writeString(pwd);
+            }
+
+            writer.out().writeInt(0, writer.out().position() - 4);// actual size
+
+            write(writer.array(), writer.out().position());
         }
     }
 
+    /**
+     * @param ver Protocol version.
+     * @return Protocol context for a version.
+     */
+    private ProtocolContext protocolContextFromVersion(ProtocolVersion ver) {
+        EnumSet<ProtocolBitmaskFeature> features = null;
+        if (ProtocolContext.isFeatureSupported(ver, BITMAP_FEATURES))
+            features = ProtocolBitmaskFeature.allFeaturesAsEnumSet();
+
+        return new ProtocolContext(ver, features);
+    }
+
     /** Receive and handle handshake response. */
-    private void handshakeRes(String user, String pwd)
+    private void handshakeRes(ProtocolVersion proposedVer, String user, String pwd, Map<String, String> userAttrs)
         throws ClientConnectionException, ClientAuthenticationException {
         int resSize = dataInput.readInt();
 
@@ -399,40 +468,46 @@ class TcpClientChannel implements ClientChannel {
 
         BinaryInputStream res = new BinaryHeapInputStream(dataInput.read(resSize));
 
-        try (BinaryReaderExImpl r = new BinaryReaderExImpl(null, res, null, true)) {
-            if (res.readBoolean()) { // Success flag.
-                if (ver.compareTo(V1_4_0) >= 0)
-                    // TODO: IGNITE-11898 Implement Best Effort Affinity for java thin client.
-                    r.readUuid(); // Server node UUID.
-            }
-            else {
+        try (BinaryReaderExImpl reader = new BinaryReaderExImpl(null, res, null, true)) {
+            boolean success = res.readBoolean();
+
+            if (success) {
+                byte[] features = new byte[0];
+
+                if (ProtocolContext.isFeatureSupported(proposedVer, BITMAP_FEATURES))
+                    features = reader.readByteArray();
+
+                protocolCtx = new ProtocolContext(proposedVer, ProtocolBitmaskFeature.enumSet(features));
+
+                if (protocolCtx.isFeatureSupported(PARTITION_AWARENESS)) {
+                    // Reading server UUID
+                    srvNodeId = reader.readUuid();
+                }
+            } else {
                 ProtocolVersion srvVer = new ProtocolVersion(res.readShort(), res.readShort(), res.readShort());
 
-                String err = r.readString();
-
+                String err = reader.readString();
                 int errCode = ClientStatus.FAILED;
 
                 if (res.remaining() > 0)
-                    errCode = r.readInt();
+                    errCode = reader.readInt();
 
                 if (errCode == ClientStatus.AUTH_FAILED)
                     throw new ClientAuthenticationException(err);
-                else if (ver.equals(srvVer))
+                else if (proposedVer.equals(srvVer))
                     throw new ClientProtocolError(err);
                 else if (!supportedVers.contains(srvVer) ||
-                    (srvVer.compareTo(V1_1_0) < 0 && user != null && !user.isEmpty()))
+                    (!ProtocolContext.isFeatureSupported(srvVer, AUTHORIZATION) && !F.isEmpty(user)))
                     // Server version is not supported by this client OR server version is less than 1.1.0 supporting
                     // authentication and authentication is required.
                     throw new ClientProtocolError(String.format(
                         "Protocol version mismatch: client %s / server %s. Server details: %s",
-                        ver,
+                        proposedVer,
                         srvVer,
                         err
                     ));
                 else { // Retry with server version.
-                    ver = srvVer;
-
-                    handshake(user, pwd);
+                    handshake(srvVer, user, pwd, userAttrs);
                 }
             }
         }

@@ -1828,7 +1828,7 @@ public class JdbcThinResultSet implements ResultSet {
 
             Class<?> cls = val.getClass();
 
-            if (targetCls == cls)
+            if (targetCls.isAssignableFrom(cls))
                 return val;
             else
                 throw new SQLException("Cannot convert to " + targetCls.getName() + ": " + val,

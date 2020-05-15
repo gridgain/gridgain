@@ -36,6 +36,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <ignite.edition>apache-ignite</ignite.edition>
+        <ignite.orig.edition>${ignite.edition}</ignite.orig.edition>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>MMMM d yyyy</maven.build.timestamp.format>
         <doxygen.exec>doxygen</doxygen.exec>
@@ -43,6 +44,7 @@
         <git.exec>git</git.exec>
         <javadoc.opts>-Xdoclint:none</javadoc.opts>
         <update.notifier.enabled.by.default>true</update.notifier.enabled.by.default>
+        <failIfNoTests>false</failIfNoTests>
 
         <!-- Dependency versions -->
         <activemq.version>5.12.0</activemq.version>
@@ -140,7 +142,7 @@
         <opencensus.version>0.22.0</opencensus.version>
         <awaitility.version>3.1.6</awaitility.version>
         <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
-        <reflections.version>0.9.11</reflections.version>
+        <reflections.version>0.11.7</reflections.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
         <commons.lang3.version>3.9</commons.lang3.version>
 

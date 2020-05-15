@@ -713,6 +713,9 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         UUID subjId = (UUID)map.get(TC_SUBJ_ID);
 
+        if(subjId == null && ctx.security().enabled())
+            subjId = ctx.security().securityContext().subject().id();
+
         if (subjId == null)
             subjId = getThreadContext(TC_SUBJ_ID);
 

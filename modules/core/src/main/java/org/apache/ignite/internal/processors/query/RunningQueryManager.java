@@ -24,15 +24,22 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -77,6 +84,9 @@ public class RunningQueryManager {
     /** */
     private final IgniteLogger log;
 
+    /** */
+    private final GridClosureProcessor closure;
+
     /** Keep registered user queries. */
     private final ConcurrentMap<Long, GridRunningQueryInfo> runs = new ConcurrentHashMap<>();
 
@@ -109,6 +119,12 @@ public class RunningQueryManager {
      */
     private final AtomicLongMetric oomQrsCnt;
 
+    /** */
+    private final List<Consumer<GridQueryStartedInfo>> qryStartedListeners = new CopyOnWriteArrayList<>();
+
+    /** */
+    private final List<Consumer<GridQueryFinishedInfo>> qryFinishedListeners = new CopyOnWriteArrayList<>();
+
     /**
      * Constructor.
      *
@@ -118,6 +134,7 @@ public class RunningQueryManager {
         log = ctx.log(RunningQueryManager.class);
         locNodeId = ctx.localNodeId();
         histSz = ctx.config().getSqlConfiguration().getSqlQueryHistorySize();
+        closure = ctx.closure();
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
@@ -176,6 +193,37 @@ public class RunningQueryManager {
                 ", qry=" + qry + ']');
         }
 
+        if (!qryStartedListeners.isEmpty()) {
+            GridQueryStartedInfo info = new GridQueryStartedInfo(
+                run.id(),
+                locNodeId,
+                run.query(),
+                run.queryType(),
+                run.schemaName(),
+                run.startTime(),
+                run.local(),
+                run.queryInitiatorId()
+            );
+
+            try {
+                closure.runLocal(
+                    () -> qryStartedListeners.forEach(lsnr -> {
+                        try {
+                            lsnr.accept(info);
+                        }
+                        catch (Exception ex) {
+                            log.error("Listener fails during handling query started" +
+                                " event [qryId=" + qryId + "]", ex);
+                        }
+                    }),
+                    GridIoPolicy.PUBLIC_POOL
+                );
+            }
+            catch (IgniteCheckedException ex) {
+                throw new IgniteException(ex.getMessage(), ex);
+            }
+        }
+
         return qryId;
     }
 
@@ -204,6 +252,39 @@ public class RunningQueryManager {
             log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
                 "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
                 ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
+        }
+
+        if (!qryFinishedListeners.isEmpty()) {
+            GridQueryFinishedInfo info = new GridQueryFinishedInfo(
+                qry.id(),
+                locNodeId,
+                qry.query(),
+                qry.queryType(),
+                qry.schemaName(),
+                qry.startTime(),
+                System.currentTimeMillis(),
+                qry.local(),
+                failed,
+                qry.queryInitiatorId()
+            );
+
+            try {
+                closure.runLocal(
+                    () -> qryFinishedListeners.forEach(lsnr -> {
+                        try {
+                            lsnr.accept(info);
+                        }
+                        catch (Exception ex) {
+                            log.error("Listener fails during handling query finished" +
+                                    " event [qryId=" + qryId + "]", ex);
+                        }
+                    }),
+                    GridIoPolicy.PUBLIC_POOL
+                );
+            }
+            catch (IgniteCheckedException ex) {
+                throw new IgniteException(ex.getMessage(), ex);
+            }
         }
 
         //We need to collect query history and metrics only for SQL queries.
@@ -242,6 +323,44 @@ public class RunningQueryManager {
         }
 
         return res;
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public void registerQueryStartedListener(Consumer<GridQueryStartedInfo> lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        qryStartedListeners.add(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    @SuppressWarnings("SuspiciousMethodCalls")
+    public boolean unregisterQueryStartedListener(Object lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        return qryStartedListeners.remove(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    public void registerQueryFinishedListener(Consumer<GridQueryFinishedInfo> lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        qryFinishedListeners.add(lsnr);
+    }
+
+    /**
+     * @param lsnr Listener.
+     */
+    @SuppressWarnings("SuspiciousMethodCalls")
+    public boolean unregisterQueryFinishedListener(Object lsnr) {
+        A.notNull(lsnr, "lsnr");
+
+        return qryFinishedListeners.remove(lsnr);
     }
 
     /**
