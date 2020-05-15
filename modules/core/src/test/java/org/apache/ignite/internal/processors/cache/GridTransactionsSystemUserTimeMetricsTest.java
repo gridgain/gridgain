@@ -52,6 +52,7 @@ import org.apache.ignite.testframework.MessageOrderLogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
@@ -267,7 +268,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      * @param userDelay User delay for each transaction.
      */
     private void doAsyncTransactions(Ignite client, int txCnt, long userDelay) {
-        ExecutorService executorSrvc = Executors.newFixedThreadPool(txCnt);
+        ExecutorService executorSrvc = Executors.newFixedThreadPool(txCnt, new IgniteThreadFactory("testscope", "async-exec"));
 
         for (int i = 0; i < txCnt; i++) {
             executorSrvc.submit(() -> {

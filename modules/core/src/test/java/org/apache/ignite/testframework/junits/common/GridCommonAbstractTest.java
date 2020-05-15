@@ -538,7 +538,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        if (getClass().getPackage().getName().startsWith("org.apache.ignite.internal")) {
+        String canonicalName = getClass().getCanonicalName();
+        // We need to check internal thread pool, except code which located in diferrent modules
+        if (canonicalName != null
+            && canonicalName.startsWith("org.apache.ignite.internal")
+            && !canonicalName.startsWith("org.apache.ignite.internal.agent")) {
             assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
                 defaultThreadFactoryCountBeforeTest, getDefaultPoolCounter());
         }

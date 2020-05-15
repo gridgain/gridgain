@@ -24,6 +24,7 @@ import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -49,7 +50,7 @@ public abstract class PushMetricsExporterAdapter extends IgniteSpiAdapter implem
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
-        execSvc = Executors.newScheduledThreadPool(1);
+        execSvc = Executors.newSingleThreadScheduledExecutor(new IgniteThreadFactory(igniteInstanceName, "spi-start"));
 
         fut = execSvc.scheduleWithFixedDelay(() -> {
             try {
