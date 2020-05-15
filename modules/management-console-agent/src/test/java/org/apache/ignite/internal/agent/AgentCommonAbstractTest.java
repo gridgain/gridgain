@@ -16,13 +16,9 @@
 
 package org.apache.ignite.internal.agent;
 
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -140,20 +136,6 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @param path Path.
-     */
-    private byte[] readAllBytes(String path) {
-        try {
-            URL url = AgentCommonAbstractTest.class.getClassLoader().getResource(path);
-
-            return Files.readAllBytes(Paths.get(url.toURI()));
-        }
-        catch (Exception e) {
-            throw new IgniteException("Failed to load file content: " + path, e);
-        }
-    }
-
-    /**
      * @param ignite Ignite.
      */
     protected void changeManagementConsoleConfig(IgniteEx ignite, boolean isAssertNeeded) {
@@ -167,12 +149,12 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
             boolean isTrustStoreNeeded = getBoolean("test.withTrustStore");
 
             if (isTrustStoreNeeded) {
-                cfg.setTrustStore(readAllBytes("ssl/ca.p12"));
+                cfg.setTrustStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/server.p12").getPath());
                 cfg.setTrustStorePassword("123456");
             }
 
             if (isKeyStoreNeeded) {
-                cfg.setKeyStore(readAllBytes("ssl/client.p12"));
+                cfg.setKeyStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/client.p12").getPath());
                 cfg.setKeyStorePassword("123456");
             }
         }

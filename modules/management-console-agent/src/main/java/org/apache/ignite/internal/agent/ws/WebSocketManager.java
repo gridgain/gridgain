@@ -253,7 +253,7 @@ public class WebSocketManager extends GridProcessorAdapter implements ControlCen
             sslCtxConfigurator.setTrustStoreType(cfg.getTrustStoreType());
 
         if (!F.isEmpty(cfg.getTrustStore()))
-            sslCtxConfigurator.setTrustStoreBytes(cfg.getTrustStore());
+            sslCtxConfigurator.setTrustStoreFile(cfg.getTrustStore());
 
         if (!F.isEmpty(cfg.getTrustStorePassword()))
             sslCtxConfigurator.setTrustStorePassword(cfg.getTrustStorePassword());
@@ -262,7 +262,7 @@ public class WebSocketManager extends GridProcessorAdapter implements ControlCen
             sslCtxConfigurator.setKeyStoreType(cfg.getKeyStoreType());
 
         if (!F.isEmpty(cfg.getKeyStore()))
-            sslCtxConfigurator.setTrustStoreBytes(cfg.getKeyStore());
+            sslCtxConfigurator.setTrustStoreFile(cfg.getKeyStore());
 
         if (!F.isEmpty(cfg.getKeyStorePassword()))
             sslCtxConfigurator.setKeyStorePassword(cfg.getKeyStorePassword());

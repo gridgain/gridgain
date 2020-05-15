@@ -49,7 +49,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
     /** */
     @GridToStringExclude
-    private byte[] keyStore;
+    private String keyStore;
 
     /** */
     @GridToStringExclude
@@ -61,7 +61,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
     /** */
     @GridToStringExclude
-    private byte[] trustStore;
+    private String trustStore;
 
     /** */
     @GridToStringExclude
@@ -115,17 +115,17 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Control Center key store.
+     * @return Control Center key store path.
      */
-    public byte[] getKeyStore() {
+    public String getKeyStore() {
         return keyStore;
     }
 
     /**
-     * @param keyStore Control Center key store.
+     * @param keyStore Control Center key store path.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setKeyStore(byte[] keyStore) {
+    public ManagementConfiguration setKeyStore(String keyStore) {
         this.keyStore = keyStore;
 
         return this;
@@ -166,17 +166,17 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Control Center trust store.
+     * @return Control Center trust store path.
      */
-    public byte[] getTrustStore() {
+    public String getTrustStore() {
         return trustStore;
     }
 
     /**
-     * @param trustStore Path to Control Center trust store.
+     * @param trustStore Path to Control Center trust store path.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setTrustStore(byte[] trustStore) {
+    public ManagementConfiguration setTrustStore(String trustStore) {
         this.trustStore = trustStore;
 
         return this;
@@ -306,10 +306,10 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
         out.writeBoolean(enabled);
         U.writeCollection(out, uris);
         U.writeString(out, keyStoreType);
-        U.writeByteArray(out, keyStore);
+        U.writeString(out, keyStore);
         U.writeString(out, keyStorePass);
         U.writeString(out, trustStoreType);
-        U.writeByteArray(out, trustStore);
+        U.writeString(out, trustStore);
         U.writeString(out, trustStorePass);
         U.writeCollection(out, cipherSuites);
         out.writeLong(securitySesTimeout);
@@ -321,10 +321,10 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
         enabled = in.readBoolean();
         uris = U.readList(in);
         keyStoreType = U.readString(in);
-        keyStore = U.readByteArray(in);
+        keyStore = U.readString(in);
         keyStorePass = U.readString(in);
         trustStoreType = U.readString(in);
-        trustStore = U.readByteArray(in);
+        trustStore = U.readString(in);
         trustStorePass = U.readString(in);
         cipherSuites = U.readList(in);
         securitySesTimeout = in.readLong();

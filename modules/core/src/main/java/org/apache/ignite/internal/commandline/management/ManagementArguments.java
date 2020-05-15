@@ -37,7 +37,7 @@ public class ManagementArguments {
     private String keyStoreType;
 
     /** */
-    private byte[] keyStore;
+    private String keyStore;
 
     /** */
     private String keyStorePass;
@@ -46,7 +46,7 @@ public class ManagementArguments {
     private String trustStoreType;
 
     /** */
-    private byte[] trustStore;
+    private String trustStore;
 
     /** */
     private String trustStorePass;
@@ -116,9 +116,9 @@ public class ManagementArguments {
     }
 
     /**
-     * @return Key store.
+     * @return Key store path.
      */
-    public byte[] getKeyStore() {
+    public String getKeyStore() {
         return keyStore;
     }
 
@@ -137,9 +137,9 @@ public class ManagementArguments {
     }
 
     /**
-     * @return Trust store.
+     * @return Trust store path.
      */
-    public byte[] getTrustStore() {
+    public String getTrustStore() {
         return trustStore;
     }
 
@@ -184,7 +184,7 @@ public class ManagementArguments {
         private String keyStoreType;
 
         /** */
-        private byte[] keyStore;
+        private String keyStore;
 
         /** */
         private String keyStorePass;
@@ -193,7 +193,7 @@ public class ManagementArguments {
         private String trustStoreType;
 
         /** */
-        private byte[] trustStore;
+        private String trustStore;
 
         /** */
         private String trustStorePass;
@@ -248,7 +248,7 @@ public class ManagementArguments {
          * @param keyStore Key store.
          * @return {@code this} for chaining.
          */
-        public Builder setKeyStore(byte[] keyStore) {
+        public Builder setKeyStore(String keyStore) {
             this.keyStore = keyStore;
 
             return this;
@@ -278,7 +278,7 @@ public class ManagementArguments {
          * @param trustStore Trust store.
          * @return {@code this} for chaining.
          */
-        public Builder setTrustStore(byte[] trustStore) {
+        public Builder setTrustStore(String trustStore) {
             this.trustStore = trustStore;
 
             return this;

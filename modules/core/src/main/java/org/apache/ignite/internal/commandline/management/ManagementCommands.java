@@ -17,14 +17,10 @@
 
 package org.apache.ignite.internal.commandline.management;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
@@ -172,7 +168,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             managementArgs.setKeyStoreType(argIter.nextArg("key store type"));
 
                         case KEYSTORE:
-                            managementArgs.setKeyStore(readAllBytes(argIter.nextArg("key store path")));
+                            managementArgs.setKeyStore(argIter.nextArg("key store path"));
 
                             break;
 
@@ -187,7 +183,7 @@ public class ManagementCommands implements Command<ManagementArguments> {
                             break;
 
                         case TRUSTSTORE:
-                            managementArgs.setTrustStore(readAllBytes(argIter.nextArg("trust store path")));
+                            managementArgs.setTrustStore(argIter.nextArg("trust store path"));
 
                             break;
 
@@ -223,19 +219,6 @@ public class ManagementCommands implements Command<ManagementArguments> {
     /** {@inheritDoc} */
     @Override public String name() {
         return MANAGEMENT.toCommandName();
-    }
-
-    /**
-     * @param path Path.
-     * @return File content.
-     */
-    private byte[] readAllBytes(String path) {
-        try {
-            return Files.readAllBytes(Paths.get(path));
-        }
-        catch (IOException e) {
-            throw new IgniteException("Failed to load file content: " + path, e);
-        }
     }
 
     /**
