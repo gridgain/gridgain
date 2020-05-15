@@ -126,6 +126,9 @@ public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchma
         if (progress0 % 1000 == 0)
             BenchmarkUtils.println("progress=" + progress);
 
+        if (progress0 > replCntr / 2)
+            progress.set(0);
+
         return true;
     }
 
