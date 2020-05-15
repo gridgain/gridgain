@@ -291,26 +291,26 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_8_1) >= 0)
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
-        if (ver.compareTo(VER_2_8_2) >= 0)
+        if (ver.compareTo(VER_2_8_2) >= 0) {
             writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(enabledFeatures()));
 
-        if (enabledFeatures().contains(USER_ATTRIBUTES)) {
-            String userAttrs = connProps.getUserAttributesFactory();
+            if (enabledFeatures().contains(USER_ATTRIBUTES)) {
+                String userAttrs = connProps.getUserAttributesFactory();
 
-            if (F.isEmpty(userAttrs))
-                writer.writeMap(null);
-            else {
-                try {
-                    Class<Factory<Map<String, String>>> cls = (Class<Factory<Map<String, String>>>)
-                            JdbcThinSSLUtil.class.getClassLoader().loadClass(userAttrs);
+                if (F.isEmpty(userAttrs))
+                    writer.writeMap(null);
+                else {
+                    try {
+                        Class<Factory<Map<String, String>>> cls = (Class<Factory<Map<String, String>>>)
+                                JdbcThinSSLUtil.class.getClassLoader().loadClass(userAttrs);
 
-                    Map<String, String> attrs = cls.newInstance().create();
+                        Map<String, String> attrs = cls.newInstance().create();
 
-                    writer.writeMap(attrs);
-                }
-                catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-                    throw new SQLException("Could not found user attributes factory class: " + userAttrs,
-                            SqlStateCode.CLIENT_CONNECTION_FAILED, e);
+                        writer.writeMap(attrs);
+                    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                        throw new SQLException("Could not found user attributes factory class: " + userAttrs,
+                                SqlStateCode.CLIENT_CONNECTION_FAILED, e);
+                    }
                 }
             }
         }
