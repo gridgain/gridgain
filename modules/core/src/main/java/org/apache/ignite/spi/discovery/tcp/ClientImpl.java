@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -46,7 +44,9 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
@@ -120,6 +120,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingRequest;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingResponse;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -196,7 +197,7 @@ class ClientImpl extends TcpDiscoveryImpl {
     private final CountDownLatch leaveLatch = new CountDownLatch(1);
 
     /** */
-    private final Timer timer = new Timer("TcpDiscoverySpi.timer");
+    private final ScheduledExecutorService executorService;
 
     /** */
     private MessageWorker msgWorker;
@@ -213,6 +214,8 @@ class ClientImpl extends TcpDiscoveryImpl {
      */
     ClientImpl(TcpDiscoverySpi adapter) {
         super(adapter);
+        executorService = Executors.newSingleThreadScheduledExecutor(
+            new IgniteThreadFactory("client-node", "tcp-discovery-exec"));
     }
 
     /** {@inheritDoc} */
@@ -308,10 +311,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             }
         }.start();
 
-        timer.schedule(
-            new MetricsSender(),
-            spi.metricsUpdateFreq,
-            spi.metricsUpdateFreq);
+        executorService.scheduleAtFixedRate(new MetricsSender(), spi.metricsUpdateFreq, spi.metricsUpdateFreq, MILLISECONDS) ;
 
         try {
             joinLatch.await();
@@ -362,7 +362,7 @@ class ClientImpl extends TcpDiscoveryImpl {
         while (!U.join(sockReader, log, 200))
             U.interrupt(sockReader);
 
-        timer.cancel();
+        executorService.shutdownNow();
 
         spi.printStopInfo();
     }
@@ -431,17 +431,15 @@ class ClientImpl extends TcpDiscoveryImpl {
                 else {
                     final GridFutureAdapter<Boolean> finalFut = fut;
 
-                    timer.schedule(new TimerTask() {
-                        @Override public void run() {
-                            if (pingFuts.remove(nodeId, finalFut)) {
-                                if (ClientImpl.this.state == DISCONNECTED)
-                                    finalFut.onDone(new IgniteClientDisconnectedCheckedException(null,
-                                        "Failed to ping node, client node disconnected."));
-                                else
-                                    finalFut.onDone(false);
-                            }
+                    executorService.schedule(() -> {
+                        if (pingFuts.remove(nodeId, finalFut)) {
+                            if (ClientImpl.this.state == DISCONNECTED)
+                                finalFut.onDone(new IgniteClientDisconnectedCheckedException(null,
+                                    "Failed to ping node, client node disconnected."));
+                            else
+                                finalFut.onDone(false);
                         }
-                    }, spi.netTimeout);
+                    }, spi.netTimeout, MILLISECONDS);
 
                     sockWriter.sendMessage(new TcpDiscoveryClientPingRequest(getLocalNodeId(), nodeId));
                 }
@@ -1065,7 +1063,7 @@ class ClientImpl extends TcpDiscoveryImpl {
     /**
      * Metrics sender.
      */
-    private class MetricsSender extends TimerTask {
+    private class MetricsSender implements Runnable {
         /** {@inheritDoc} */
         @Override public void run() {
             if (!spi.getSpiContext().isStopping() && sockWriter.isOnline()) {
@@ -2120,11 +2118,9 @@ class ClientImpl extends TcpDiscoveryImpl {
             if (spi.joinTimeout > 0) {
                 final int joinCnt0 = joinCnt;
 
-                timer.schedule(new TimerTask() {
-                    @Override public void run() {
-                        queue.add(new JoinTimeout(joinCnt0));
-                    }
-                }, spi.joinTimeout);
+                executorService.schedule(() -> {
+                    queue.add(new JoinTimeout(joinCnt0));
+                    }, spi.joinTimeout, MILLISECONDS);
             }
 
             sockReader.setSocket(joinRes.get1(), locNode.clientRouterNodeId());

@@ -40,4 +40,11 @@ public @interface ValidateThreadNames {
      * @return ignore validation.
      */
     public boolean ignore() default false;
+
+    /**
+     * Optional description for ignore.
+     *
+     * @return ignore reason description.
+     */
+    public String ignoreReason() default "";
 }
