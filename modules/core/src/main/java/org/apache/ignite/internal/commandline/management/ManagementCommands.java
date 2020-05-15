@@ -18,6 +18,8 @@
 package org.apache.ignite.internal.commandline.management;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -33,7 +35,6 @@ import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.management.ChangeManagementConfigurationTask;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
@@ -47,10 +48,12 @@ import static org.apache.ignite.internal.commandline.management.ManagementComman
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.CIPHER_SUITES;
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.KEYSTORE;
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.KEYSTORE_PASSWORD;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.KEYSTORE_TYPE;
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.SESSION_EXPIRATION_TIMEOUT;
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.SESSION_TIMEOUT;
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.TRUSTSTORE;
 import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.TRUSTSTORE_PASSWORD;
+import static org.apache.ignite.internal.commandline.management.ManagementURLCommandArg.TRUSTSTORE_TYPE;
 
 /**
  * Management cluster command.
@@ -165,8 +168,11 @@ public class ManagementCommands implements Command<ManagementArguments> {
                         throw new IllegalArgumentException("Invalid uri argument: " + arg);
 
                     switch (uriArg) {
+                        case KEYSTORE_TYPE:
+                            managementArgs.setKeyStoreType(argIter.nextArg("key store type"));
+
                         case KEYSTORE:
-                            managementArgs.setKeyStore(readFileToString(argIter.nextArg("key store path")));
+                            managementArgs.setKeyStore(readAllBytes(argIter.nextArg("key store path")));
 
                             break;
 
@@ -175,8 +181,13 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
                             break;
 
+                        case TRUSTSTORE_TYPE:
+                            managementArgs.setTrustStoreType(argIter.nextArg("trust store type"));
+
+                            break;
+
                         case TRUSTSTORE:
-                            managementArgs.setTrustStore(readFileToString(argIter.nextArg("trust store path")));
+                            managementArgs.setTrustStore(readAllBytes(argIter.nextArg("trust store path")));
 
                             break;
 
@@ -218,9 +229,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
      * @param path Path.
      * @return File content.
      */
-    private String readFileToString(String path) {
+    private byte[] readAllBytes(String path) {
         try {
-            return U.readFileToString(path, "UTF-8");
+            return Files.readAllBytes(Paths.get(path));
         }
         catch (IOException e) {
             throw new IgniteException("Failed to load file content: " + path, e);
@@ -241,8 +252,10 @@ public class ManagementCommands implements Command<ManagementArguments> {
             .setEnabled(args.isEnable())
             .setUris(args.getServerUris())
             .setCipherSuites(args.getCipherSuites())
+            .setKeyStoreType(args.getKeyStoreType())
             .setKeyStore(args.getKeyStore())
             .setKeyStorePassword(args.getKeyStorePassword())
+            .setTrustStoreType(args.getTrustStoreType())
             .setTrustStore(args.getTrustStore())
             .setTrustStorePassword(args.getTrustStorePassword())
             .setSecuritySessionTimeout(args.getSessionTimeout())
@@ -257,8 +270,10 @@ public class ManagementCommands implements Command<ManagementArguments> {
             ManagementCommandList.URI.text(),
             "MANAGEMENT_URIS",
             optional(CIPHER_SUITES, "MANAGEMENT_CIPHER_1[, MANAGEMENT_CIPHER_2, ..., MANAGEMENT_CIPHER_N]"),
+            optional(KEYSTORE_TYPE, "MANAGEMENT_KEYSTORE_TYPE"),
             optional(KEYSTORE, "MANAGEMENT_KEYSTORE_PATH"),
             optional(KEYSTORE_PASSWORD, "MANAGEMENT_KEYSTORE_PASSWORD"),
+            optional(TRUSTSTORE_TYPE, "MANAGEMENT_TRUSTSTORE_TYPE"),
             optional(TRUSTSTORE, "MANAGEMENT_TRUSTSTORE_PATH"),
             optional(TRUSTSTORE_PASSWORD, "MANAGEMENT_TRUSTSTORE_PASSWORD"),
             optional(SESSION_TIMEOUT, "MANAGEMENT_SESSION_TIMEOUT"),
@@ -287,7 +302,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
         if (!F.isEmpty(cfg.getCipherSuites()))
             log.info("Cipher suites: " + cfg.getCipherSuites());
 
+        log.info("Management key store type: " + flag(!F.isEmpty(cfg.getKeyStoreType())));
         log.info("Management key store: " + flag(!F.isEmpty(cfg.getKeyStore())));
+        log.info("Management trust store type: " + flag(!F.isEmpty(cfg.getTrustStoreType())));
         log.info("Management trust store: " + flag(!F.isEmpty(cfg.getTrustStore())));
         log.info("Management session timeout: " + cfg.getSecuritySessionTimeout());
         log.info("Management session expiration timeout: " + cfg.getSecuritySessionExpirationTimeout());

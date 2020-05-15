@@ -34,13 +34,19 @@ public class ManagementArguments {
     private List<String> srvUris;
 
     /** */
-    private String keyStore;
+    private String keyStoreType;
+
+    /** */
+    private byte[] keyStore;
 
     /** */
     private String keyStorePass;
 
     /** */
-    private String trustStore;
+    private String trustStoreType;
+
+    /** */
+    private byte[] trustStore;
 
     /** */
     private String trustStorePass;
@@ -63,8 +69,10 @@ public class ManagementArguments {
         subcommand = builder.cmd;
         enable = builder.enable;
         srvUris = builder.srvUris != null ? new ArrayList<>(builder.srvUris) : null;
+        keyStoreType = builder.keyStoreType;
         keyStore = builder.keyStore;
         keyStorePass = builder.keyStorePass;
+        trustStoreType = builder.trustStoreType;
         trustStore = builder.trustStore;
         trustStorePass = builder.trustStorePass;
         cipherSuites = builder.cipherSuites != null ? new ArrayList<>(builder.cipherSuites) : null;
@@ -101,9 +109,16 @@ public class ManagementArguments {
     }
 
     /**
+     * @return Key store type.
+     */
+    public String getKeyStoreType() {
+        return keyStoreType;
+    }
+
+    /**
      * @return Key store.
      */
-    public String getKeyStore() {
+    public byte[] getKeyStore() {
         return keyStore;
     }
 
@@ -115,9 +130,16 @@ public class ManagementArguments {
     }
 
     /**
+     * @return Trust store type.
+     */
+    public String getTrustStoreType() {
+        return trustStoreType;
+    }
+
+    /**
      * @return Trust store.
      */
-    public String getTrustStore() {
+    public byte[] getTrustStore() {
         return trustStore;
     }
 
@@ -159,13 +181,19 @@ public class ManagementArguments {
         private Set<String> srvUris;
 
         /** */
-        private String keyStore;
+        private String keyStoreType;
+
+        /** */
+        private byte[] keyStore;
 
         /** */
         private String keyStorePass;
 
         /** */
-        private String trustStore;
+        private String trustStoreType;
+
+        /** */
+        private byte[] trustStore;
 
         /** */
         private String trustStorePass;
@@ -207,10 +235,20 @@ public class ManagementArguments {
         }
 
         /**
+         * @param keyStoreType Key store type.
+         * @return {@code this} for chaining.
+         */
+        public Builder setKeyStoreType(String keyStoreType) {
+            this.keyStoreType = keyStoreType;
+
+            return this;
+        }
+
+        /**
          * @param keyStore Key store.
          * @return {@code this} for chaining.
          */
-        public Builder setKeyStore(String keyStore) {
+        public Builder setKeyStore(byte[] keyStore) {
             this.keyStore = keyStore;
 
             return this;
@@ -227,10 +265,20 @@ public class ManagementArguments {
         }
 
         /**
+         * @param trustStoreType Trust store type.
+         * @return {@code this} for chaining.
+         */
+        public Builder setTrustStoreType(String trustStoreType) {
+            this.trustStoreType = trustStoreType;
+
+            return this;
+        }
+
+        /**
          * @param trustStore Trust store.
          * @return {@code this} for chaining.
          */
-        public Builder setTrustStore(String trustStore) {
+        public Builder setTrustStore(byte[] trustStore) {
             this.trustStore = trustStore;
 
             return this;

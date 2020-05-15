@@ -16,18 +16,22 @@
 
 package org.apache.ignite.internal.agent;
 
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-import org.apache.ignite.internal.agent.config.TestChannelInterceptor;
-import org.apache.ignite.internal.agent.config.TestWebsocketDecoratedFactory;
-import org.apache.ignite.internal.agent.config.WebSocketConfig;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.agent.config.TestChannelInterceptor;
+import org.apache.ignite.internal.agent.config.TestWebsocketDecoratedFactory;
+import org.apache.ignite.internal.agent.config.WebSocketConfig;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
@@ -55,9 +59,9 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.awaitility.Awaitility.with;
 
 /**
@@ -136,6 +140,20 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @param path Path.
+     */
+    private byte[] readAllBytes(String path) {
+        try {
+            URL url = AgentCommonAbstractTest.class.getClassLoader().getResource(path);
+
+            return Files.readAllBytes(Paths.get(url.toURI()));
+        }
+        catch (Exception e) {
+            throw new IgniteException("Failed to load file content: " + path, e);
+        }
+    }
+
+    /**
      * @param ignite Ignite.
      */
     protected void changeManagementConsoleConfig(IgniteEx ignite, boolean isAssertNeeded) {
@@ -149,12 +167,12 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
             boolean isTrustStoreNeeded = getBoolean("test.withTrustStore");
 
             if (isTrustStoreNeeded) {
-                cfg.setTrustStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/server.p12").getPath());
+                cfg.setTrustStore(readAllBytes("ssl/ca.p12"));
                 cfg.setTrustStorePassword("123456");
             }
 
             if (isKeyStoreNeeded) {
-                cfg.setKeyStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/client.p12").getPath());
+                cfg.setKeyStore(readAllBytes("ssl/client.p12"));
                 cfg.setKeyStorePassword("123456");
             }
         }

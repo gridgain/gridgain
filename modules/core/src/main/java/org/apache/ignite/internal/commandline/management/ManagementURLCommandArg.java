@@ -24,11 +24,17 @@ public enum ManagementURLCommandArg implements CommandArg {
     /** SSL cipher suites. */
     CIPHER_SUITES("--management-cipher-suites"),
 
+    /** Path to server key store type. */
+    KEYSTORE_TYPE("--management-keystore-type"),
+
     /** Path to server key store. */
     KEYSTORE("--management-keystore"),
 
     /** Server key store password. */
     KEYSTORE_PASSWORD("--management-keystore-password"),
+
+    /** Server trust store type. */
+    TRUSTSTORE_TYPE("--management-truststore-type"),
 
     /** Path to server trust store. */
     TRUSTSTORE("--management-truststore"),

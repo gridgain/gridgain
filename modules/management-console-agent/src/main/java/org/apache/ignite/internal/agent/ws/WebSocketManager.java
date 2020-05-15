@@ -249,17 +249,25 @@ public class WebSocketManager extends GridProcessorAdapter implements ControlCen
 
         SslContextConfigurator sslCtxConfigurator = new SslContextConfigurator();
 
+        if (!F.isEmpty(cfg.getTrustStoreType()))
+            sslCtxConfigurator.setTrustStoreType(cfg.getTrustStoreType());
+
         if (!F.isEmpty(cfg.getTrustStore()))
-            sslCtxConfigurator.setTrustStoreFile(cfg.getTrustStore());
+            sslCtxConfigurator.setTrustStoreBytes(cfg.getTrustStore());
 
         if (!F.isEmpty(cfg.getTrustStorePassword()))
             sslCtxConfigurator.setTrustStorePassword(cfg.getTrustStorePassword());
 
+        if (!F.isEmpty(cfg.getKeyStoreType()))
+            sslCtxConfigurator.setKeyStoreType(cfg.getKeyStoreType());
+
         if (!F.isEmpty(cfg.getKeyStore()))
-            sslCtxConfigurator.setKeyStoreFile(cfg.getKeyStore());
+            sslCtxConfigurator.setTrustStoreBytes(cfg.getKeyStore());
 
         if (!F.isEmpty(cfg.getKeyStorePassword()))
             sslCtxConfigurator.setKeyStorePassword(cfg.getKeyStorePassword());
+
+        sslCtxConfigurator.validateConfiguration();
 
         SslEngineConfigurator sslEngineConfigurator = trustAll
             ? createTrustAllSslEngineConfigurator()

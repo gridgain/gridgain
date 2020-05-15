@@ -49,7 +49,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
     /** */
     @GridToStringExclude
-    private String keyStore;
+    private byte[] keyStore;
 
     /** */
     @GridToStringExclude
@@ -57,11 +57,19 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
     /** */
     @GridToStringExclude
-    private String trustStore;
+    private String keyStoreType;
+
+    /** */
+    @GridToStringExclude
+    private byte[] trustStore;
 
     /** */
     @GridToStringExclude
     private String trustStorePass;
+
+    /** */
+    @GridToStringExclude
+    private String trustStoreType;
 
     /** */
     private List<String> cipherSuites;
@@ -109,7 +117,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Control Center key store.
      */
-    public String getKeyStore() {
+    public byte[] getKeyStore() {
         return keyStore;
     }
 
@@ -117,7 +125,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
      * @param keyStore Control Center key store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setKeyStore(String keyStore) {
+    public ManagementConfiguration setKeyStore(byte[] keyStore) {
         this.keyStore = keyStore;
 
         return this;
@@ -141,9 +149,26 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
+     * @return Control Center key store type.
+     */
+    public String getKeyStoreType() {
+        return keyStoreType;
+    }
+
+    /**
+     * @param keyStoreType Control Center key store type.
+     * @return {@code this} for chaining.
+     */
+    public ManagementConfiguration setKeyStoreType(String keyStoreType) {
+        this.keyStoreType = keyStoreType;
+
+        return this;
+    }
+
+    /**
      * @return Control Center trust store.
      */
-    public String getTrustStore() {
+    public byte[] getTrustStore() {
         return trustStore;
     }
 
@@ -151,7 +176,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
      * @param trustStore Path to Control Center trust store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setTrustStore(String trustStore) {
+    public ManagementConfiguration setTrustStore(byte[] trustStore) {
         this.trustStore = trustStore;
 
         return this;
@@ -170,6 +195,23 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
      */
     public ManagementConfiguration setTrustStorePassword(String trustStorePass) {
         this.trustStorePass = trustStorePass;
+
+        return this;
+    }
+
+    /**
+     * @return Control Center trust store type.
+     */
+    public String getTrustStoreType() {
+        return trustStoreType;
+    }
+
+    /**
+     * @param trustStoreType Console trust store type.
+     * @return {@code this} for chaining.
+     */
+    public ManagementConfiguration setTrustStoreType(String trustStoreType) {
+        this.trustStoreType = trustStoreType;
 
         return this;
     }
@@ -263,9 +305,11 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(enabled);
         U.writeCollection(out, uris);
-        U.writeString(out, keyStore);
+        U.writeString(out, keyStoreType);
+        U.writeByteArray(out, keyStore);
         U.writeString(out, keyStorePass);
-        U.writeString(out, trustStore);
+        U.writeString(out, trustStoreType);
+        U.writeByteArray(out, trustStore);
         U.writeString(out, trustStorePass);
         U.writeCollection(out, cipherSuites);
         out.writeLong(securitySesTimeout);
@@ -276,9 +320,11 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         enabled = in.readBoolean();
         uris = U.readList(in);
-        keyStore = U.readString(in);
+        keyStoreType = U.readString(in);
+        keyStore = U.readByteArray(in);
         keyStorePass = U.readString(in);
-        trustStore = U.readString(in);
+        trustStoreType = U.readString(in);
+        trustStore = U.readByteArray(in);
         trustStorePass = U.readString(in);
         cipherSuites = U.readList(in);
         securitySesTimeout = in.readLong();
