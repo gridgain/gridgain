@@ -285,10 +285,16 @@ public class ManagementCommands implements Command<ManagementArguments> {
         if (!F.isEmpty(cfg.getCipherSuites()))
             log.info("Cipher suites: " + cfg.getCipherSuites());
 
-        log.info("Management key store type: " + flag(!F.isEmpty(cfg.getKeyStoreType())));
+        if (!F.isEmpty(cfg.getKeyStoreType()))
+            log.info("Management key store type: " + cfg.getKeyStoreType());
+
         log.info("Management key store: " + flag(!F.isEmpty(cfg.getConsoleKeyStore())));
-        log.info("Management trust store type: " + flag(!F.isEmpty(cfg.getTrustStoreType())));
+
+        if (!F.isEmpty(cfg.getTrustStoreType()))
+            log.info("Management trust store type: " + cfg.getTrustStoreType());
+
         log.info("Management trust store: " + flag(!F.isEmpty(cfg.getConsoleTrustStore())));
+        
         log.info("Management session timeout: " + cfg.getSecuritySessionTimeout());
         log.info("Management session expiration timeout: " + cfg.getSecuritySessionExpirationTimeout());
         log.info("");
