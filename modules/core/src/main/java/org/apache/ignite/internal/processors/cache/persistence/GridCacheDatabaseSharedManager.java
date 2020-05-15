@@ -4165,10 +4165,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 tracker.onListenersExecuteEnd();
 
-                if (curr.nextSnapshot())
-                    snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), ctx0.partitionStatMap());
-
                 fillCacheGroupState(cpRec);
+
+                if (curr.nextSnapshot())
+                    snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), cpRec, ctx0.partitionStatMap());
 
                 //There are allowable to replace pages only after checkpoint entry was stored to disk.
                 cpPagesHolder = beginAllCheckpoints(curr.futureFor(MARKER_STORED_TO_DISK));
