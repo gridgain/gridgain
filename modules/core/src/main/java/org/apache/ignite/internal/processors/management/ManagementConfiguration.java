@@ -277,8 +277,10 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
         return enabled == that.enabled &&
             Objects.equals(uris, that.uris) &&
+            Objects.equals(keyStoreType, that.keyStoreType) &&
             Objects.equals(keyStore, that.keyStore) &&
             Objects.equals(keyStorePass, that.keyStorePass) &&
+            Objects.equals(trustStoreType, that.trustStoreType) &&
             Objects.equals(trustStore, that.trustStore) &&
             Objects.equals(trustStorePass, that.trustStorePass) &&
             Objects.equals(cipherSuites, that.cipherSuites) &&
@@ -291,8 +293,10 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
         return Objects.hash(
             enabled,
             uris,
+            keyStoreType,
             keyStore,
             keyStorePass,
+            trustStoreType,
             trustStore,
             trustStorePass,
             cipherSuites,

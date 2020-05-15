@@ -198,7 +198,7 @@ public class WebSocketManagerWithProxyTest extends AgentWithProxyAbstractTest {
      * Websocket manager test with proxy and secured backend with client authentication.
      */
     @ActiveProfiles("ssl")
-    @TestPropertySource(properties = {"server.ssl.client-auth=need"})
+    @SpringBootTest(classes = {WebSocketConfig.class}, properties = {"server.ssl.client-auth=need"}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
     public static class WebSocketManagerWithTwoWaySslAndProxyTest extends AgentWithProxyAbstractTest {
         /**
          * Should connect to secured backend with client authorization with HTTP.

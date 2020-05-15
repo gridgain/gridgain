@@ -267,8 +267,6 @@ public class WebSocketManager extends GridProcessorAdapter implements ControlCen
         if (!F.isEmpty(cfg.getKeyStorePassword()))
             sslCtxConfigurator.setKeyStorePassword(cfg.getKeyStorePassword());
 
-        sslCtxConfigurator.validateConfiguration();
-
         SslEngineConfigurator sslEngineConfigurator = trustAll
             ? createTrustAllSslEngineConfigurator()
             : new SslEngineConfigurator(sslCtxConfigurator, true, isNeedClientAuth, false);
