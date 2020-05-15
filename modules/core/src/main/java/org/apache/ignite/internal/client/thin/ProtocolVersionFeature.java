@@ -16,12 +16,7 @@
 
 package org.apache.ignite.internal.client.thin;
 
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_1_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_2_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_4_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_5_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.*;
 
 /**
  * Thin client feature that was introduced by introducing new protocol version.
@@ -46,6 +41,9 @@ public class ProtocolVersionFeature {
 
     /** Bitmap features introduced. */
     public static final ProtocolVersionFeature BITMAP_FEATURES = new ProtocolVersionFeature(V1_7_0);
+
+    /** Bitmap features introduced. */
+    public static final ProtocolVersionFeature USER_ATTRIBUTES = new ProtocolVersionFeature(V1_7_1);
 
     /** Version in which the feature was introduced. */
     private final ProtocolVersion ver;
