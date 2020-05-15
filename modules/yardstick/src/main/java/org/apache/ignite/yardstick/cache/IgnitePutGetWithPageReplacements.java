@@ -87,15 +87,13 @@ public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchma
             if (progress % 1000 == 0)
                 BenchmarkUtils.println("progress=" + progress);
 
-            if (replacement.get()) {
+            if (replacement.compareAndSet(true, false)) {
                 if (replCntr != Integer.MAX_VALUE / 2)
                     throw new Exception("Invalid expected val: " + replCntr);
 
                 replCntr = progress;
 
                 BenchmarkUtils.println("replCntr=" + replCntr);
-
-                replacement.set(false);
             }
         }
 
