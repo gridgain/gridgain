@@ -149,22 +149,22 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
             boolean isTrustStoreNeeded = getBoolean("test.withTrustStore");
 
             if (isTrustStoreNeeded) {
-                cfg.setTrustStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/server.p12").getPath());
-                cfg.setTrustStorePassword("123456");
+                cfg.setConsoleTrustStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/server.p12").getPath());
+                cfg.setConsoleTrustStorePassword("123456");
             }
 
             if (isKeyStoreNeeded) {
-                cfg.setKeyStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/client.p12").getPath());
-                cfg.setKeyStorePassword("123456");
+                cfg.setConsoleKeyStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/client.p12").getPath());
+                cfg.setConsoleKeyStorePassword("123456");
             }
         }
 
         if (!isProxyEnabled)
-            cfg.setUris(F.asList((isSslEnabled ? "https" : "http") + "://localhost:" + port));
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://localhost:" + port));
         else if (isWindows() || isMac())
-            cfg.setUris(F.asList((isSslEnabled ? "https" : "http") + "://host.docker.internal:" + port));
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.docker.internal:" + port));
         else
-            cfg.setUris(F.asList((isSslEnabled ? "https" : "http") + "://host.testcontainers.internal:" + port));
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.testcontainers.internal:" + port));
 
 
         ignite.context().managementConsole().configuration(cfg);

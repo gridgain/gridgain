@@ -23,7 +23,7 @@ import org.testcontainers.containers.GenericContainer;
 import static org.testcontainers.containers.BindMode.READ_ONLY;
 
 /**
- * Agent with proxy abstract test.
+ * Agent with proxt abstract test.
  */
 public abstract class AgentWithProxyAbstractTest extends AgentCommonAbstractTest {
     /**

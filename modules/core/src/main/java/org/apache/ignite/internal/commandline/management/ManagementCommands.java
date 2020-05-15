@@ -233,14 +233,14 @@ public class ManagementCommands implements Command<ManagementArguments> {
 
         return new ManagementConfiguration()
             .setEnabled(args.isEnable())
-            .setUris(args.getServerUris())
+            .setConsoleUris(args.getServerUris())
             .setCipherSuites(args.getCipherSuites())
             .setKeyStoreType(args.getKeyStoreType())
-            .setKeyStore(args.getKeyStore())
-            .setKeyStorePassword(args.getKeyStorePassword())
+            .setConsoleKeyStore(args.getKeyStore())
+            .setConsoleKeyStorePassword(args.getKeyStorePassword())
             .setTrustStoreType(args.getTrustStoreType())
-            .setTrustStore(args.getTrustStore())
-            .setTrustStorePassword(args.getTrustStorePassword())
+            .setConsoleTrustStore(args.getTrustStore())
+            .setConsoleTrustStorePassword(args.getTrustStorePassword())
             .setSecuritySessionTimeout(args.getSessionTimeout())
             .setSecuritySessionExpirationTimeout(args.getSessionExpirationTimeout());
     }
@@ -280,15 +280,15 @@ public class ManagementCommands implements Command<ManagementArguments> {
     private void print(Logger log, ManagementConfiguration cfg) {
         log.info("");
         log.info("Management: " + flag(cfg.isEnabled()));
-        log.info("URIs to management: " + cfg.getUris());
+        log.info("URIs to management: " + cfg.getConsoleUris());
 
         if (!F.isEmpty(cfg.getCipherSuites()))
             log.info("Cipher suites: " + cfg.getCipherSuites());
 
         log.info("Management key store type: " + flag(!F.isEmpty(cfg.getKeyStoreType())));
-        log.info("Management key store: " + flag(!F.isEmpty(cfg.getKeyStore())));
+        log.info("Management key store: " + flag(!F.isEmpty(cfg.getConsoleKeyStore())));
         log.info("Management trust store type: " + flag(!F.isEmpty(cfg.getTrustStoreType())));
-        log.info("Management trust store: " + flag(!F.isEmpty(cfg.getTrustStore())));
+        log.info("Management trust store: " + flag(!F.isEmpty(cfg.getConsoleTrustStore())));
         log.info("Management session timeout: " + cfg.getSecuritySessionTimeout());
         log.info("Management session expiration timeout: " + cfg.getSecuritySessionExpirationTimeout());
         log.info("");

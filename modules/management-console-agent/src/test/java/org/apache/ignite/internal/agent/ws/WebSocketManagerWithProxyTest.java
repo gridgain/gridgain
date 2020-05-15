@@ -16,12 +16,10 @@
 
 package org.apache.ignite.internal.agent.ws;
 
-import org.apache.ignite.internal.agent.AgentWithProxyAbstractTest;
-import org.apache.ignite.internal.agent.config.WebSocketConfig;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.agent.AgentWithProxyAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.GenericContainer;

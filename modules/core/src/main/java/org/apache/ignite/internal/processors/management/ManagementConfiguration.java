@@ -37,23 +37,23 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Default control center URI. */
-    private static final String DFLT_CONTROL_CENTER_URIS = F.isEmpty(IgniteProperties.get("ignite.control.center.uris"))
+    /** Default console URI. */
+    private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.control.center.uris"))
         ? "http://localhost:3000" : IgniteProperties.get("ignite.control.center.uris");
 
     /** */
-    private List<String> uris = asList(DFLT_CONTROL_CENTER_URIS.split(","));
+    private List<String> consoleUris = asList(DFLT_CONSOLE_URIS.split(","));
 
     /** */
     private boolean enabled = true;
 
     /** */
     @GridToStringExclude
-    private String keyStore;
+    private String consoleKeyStore;
 
     /** */
     @GridToStringExclude
-    private String keyStorePass;
+    private String consoleKeyStorePass;
 
     /** */
     @GridToStringExclude
@@ -61,11 +61,11 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
 
     /** */
     @GridToStringExclude
-    private String trustStore;
+    private String consoleTrustStore;
 
     /** */
     @GridToStringExclude
-    private String trustStorePass;
+    private String consoleTrustStorePass;
 
     /** */
     @GridToStringExclude
@@ -100,33 +100,33 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Control Center URI.
      */
-    public List<String> getUris() {
-        return uris;
+    public List<String> getConsoleUris() {
+        return consoleUris;
     }
 
     /**
      * @param consoleUris URI.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setUris(List<String> consoleUris) {
-        this.uris = consoleUris;
+    public ManagementConfiguration setConsoleUris(List<String> consoleUris) {
+        this.consoleUris = consoleUris;
 
         return this;
     }
 
     /**
-     * @return Control Center key store path.
+     * @return Control Center key store.
      */
-    public String getKeyStore() {
-        return keyStore;
+    public String getConsoleKeyStore() {
+        return consoleKeyStore;
     }
 
     /**
-     * @param keyStore Control Center key store path.
+     * @param consoleKeyStore Control Center key store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setKeyStore(String keyStore) {
-        this.keyStore = keyStore;
+    public ManagementConfiguration setConsoleKeyStore(String consoleKeyStore) {
+        this.consoleKeyStore = consoleKeyStore;
 
         return this;
     }
@@ -134,16 +134,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Control Center key store password.
      */
-    public String getKeyStorePassword() {
-        return keyStorePass;
+    public String getConsoleKeyStorePassword() {
+        return consoleKeyStorePass;
     }
 
     /**
-     * @param keyStorePass Control Center key store password.
+     * @param consoleKeyStorePass Control Center key store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setKeyStorePassword(String keyStorePass) {
-        this.keyStorePass = keyStorePass;
+    public ManagementConfiguration setConsoleKeyStorePassword(String consoleKeyStorePass) {
+        this.consoleKeyStorePass = consoleKeyStorePass;
 
         return this;
     }
@@ -166,18 +166,18 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Control Center trust store path.
+     * @return Control Center trust store.
      */
-    public String getTrustStore() {
-        return trustStore;
+    public String getConsoleTrustStore() {
+        return consoleTrustStore;
     }
 
     /**
-     * @param trustStore Path to Control Center trust store path.
+     * @param consoleTrustStore Path to Control Center trust store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setTrustStore(String trustStore) {
-        this.trustStore = trustStore;
+    public ManagementConfiguration setConsoleTrustStore(String consoleTrustStore) {
+        this.consoleTrustStore = consoleTrustStore;
 
         return this;
     }
@@ -185,16 +185,16 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /**
      * @return Control Center trust store password.
      */
-    public String getTrustStorePassword() {
-        return trustStorePass;
+    public String getConsoleTrustStorePassword() {
+        return consoleTrustStorePass;
     }
 
     /**
-     * @param trustStorePass Console trust store password.
+     * @param consoleTrustStorePass Console trust store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setTrustStorePassword(String trustStorePass) {
-        this.trustStorePass = trustStorePass;
+    public ManagementConfiguration setConsoleTrustStorePassword(String consoleTrustStorePass) {
+        this.consoleTrustStorePass = consoleTrustStorePass;
 
         return this;
     }
@@ -276,13 +276,13 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
         ManagementConfiguration that = (ManagementConfiguration)o;
 
         return enabled == that.enabled &&
-            Objects.equals(uris, that.uris) &&
+            Objects.equals(consoleUris, that.consoleUris) &&
             Objects.equals(keyStoreType, that.keyStoreType) &&
-            Objects.equals(keyStore, that.keyStore) &&
-            Objects.equals(keyStorePass, that.keyStorePass) &&
+            Objects.equals(consoleKeyStore, that.consoleKeyStore) &&
+            Objects.equals(consoleKeyStorePass, that.consoleKeyStorePass) &&
             Objects.equals(trustStoreType, that.trustStoreType) &&
-            Objects.equals(trustStore, that.trustStore) &&
-            Objects.equals(trustStorePass, that.trustStorePass) &&
+            Objects.equals(consoleTrustStore, that.consoleTrustStore) &&
+            Objects.equals(consoleTrustStorePass, that.consoleTrustStorePass) &&
             Objects.equals(cipherSuites, that.cipherSuites) &&
             Objects.equals(securitySesTimeout, that.securitySesTimeout) &&
             Objects.equals(securitySesExpirationTimeout, that.securitySesExpirationTimeout);
@@ -292,13 +292,13 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     @Override public int hashCode() {
         return Objects.hash(
             enabled,
-            uris,
+            consoleUris,
             keyStoreType,
-            keyStore,
-            keyStorePass,
+            consoleKeyStore,
+            consoleKeyStorePass,
             trustStoreType,
-            trustStore,
-            trustStorePass,
+            consoleTrustStore,
+            consoleTrustStorePass,
             cipherSuites,
             securitySesTimeout,
             securitySesExpirationTimeout
@@ -308,13 +308,13 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(enabled);
-        U.writeCollection(out, uris);
+        U.writeCollection(out, consoleUris);
         U.writeString(out, keyStoreType);
-        U.writeString(out, keyStore);
-        U.writeString(out, keyStorePass);
+        U.writeString(out, consoleKeyStore);
+        U.writeString(out, consoleKeyStorePass);
         U.writeString(out, trustStoreType);
-        U.writeString(out, trustStore);
-        U.writeString(out, trustStorePass);
+        U.writeString(out, consoleTrustStore);
+        U.writeString(out, consoleTrustStorePass);
         U.writeCollection(out, cipherSuites);
         out.writeLong(securitySesTimeout);
         out.writeLong(securitySesExpirationTimeout);
@@ -323,13 +323,13 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         enabled = in.readBoolean();
-        uris = U.readList(in);
+        consoleUris = U.readList(in);
         keyStoreType = U.readString(in);
-        keyStore = U.readString(in);
-        keyStorePass = U.readString(in);
+        consoleKeyStore = U.readString(in);
+        consoleKeyStorePass = U.readString(in);
         trustStoreType = U.readString(in);
-        trustStore = U.readString(in);
-        trustStorePass = U.readString(in);
+        consoleTrustStore = U.readString(in);
+        consoleTrustStorePass = U.readString(in);
         cipherSuites = U.readList(in);
         securitySesTimeout = in.readLong();
         securitySesExpirationTimeout = in.readLong();

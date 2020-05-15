@@ -69,7 +69,7 @@ public class ManagementConsoleAgentTest extends AgentCommonAbstractTest {
         try (IgniteEx ignite = startGrids(1)) {
             ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
 
-            assertEquals("http://localhost:3000", F.first(cfg.getUris()));
+            assertEquals("http://localhost:3000", F.first(cfg.getConsoleUris()));
         }
     }
 

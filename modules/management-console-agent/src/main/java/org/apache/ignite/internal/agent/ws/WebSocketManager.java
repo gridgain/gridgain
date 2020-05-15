@@ -238,34 +238,34 @@ public class WebSocketManager extends GridProcessorAdapter implements ControlCen
     private SslEngineConfigurator createSslEngineConfigurator(IgniteLogger log, ManagementConfiguration cfg) {
         boolean trustAll = Boolean.getBoolean("trust.all");
 
-        if (trustAll && !F.isEmpty(cfg.getTrustStore())) {
+        if (trustAll && !F.isEmpty(cfg.getConsoleTrustStore())) {
             log.warning("Management configuration contains 'server-trust-store' property and node has system" +
                     " property '-Dtrust.all=true'. Option '-Dtrust.all=true' will be ignored.");
 
             trustAll = false;
         }
 
-        boolean isNeedClientAuth = !F.isEmpty(cfg.getKeyStore()) || !F.isEmpty(cfg.getKeyStorePassword());
+        boolean isNeedClientAuth = !F.isEmpty(cfg.getConsoleKeyStore()) || !F.isEmpty(cfg.getConsoleKeyStorePassword());
 
         SslContextConfigurator sslCtxConfigurator = new SslContextConfigurator();
 
         if (!F.isEmpty(cfg.getTrustStoreType()))
             sslCtxConfigurator.setTrustStoreType(cfg.getTrustStoreType());
 
-        if (!F.isEmpty(cfg.getTrustStore()))
-            sslCtxConfigurator.setTrustStoreFile(cfg.getTrustStore());
+        if (!F.isEmpty(cfg.getConsoleTrustStore()))
+            sslCtxConfigurator.setTrustStoreFile(cfg.getConsoleTrustStore());
 
-        if (!F.isEmpty(cfg.getTrustStorePassword()))
-            sslCtxConfigurator.setTrustStorePassword(cfg.getTrustStorePassword());
+        if (!F.isEmpty(cfg.getConsoleTrustStorePassword()))
+            sslCtxConfigurator.setTrustStorePassword(cfg.getConsoleTrustStorePassword());
 
         if (!F.isEmpty(cfg.getKeyStoreType()))
             sslCtxConfigurator.setKeyStoreType(cfg.getKeyStoreType());
 
-        if (!F.isEmpty(cfg.getKeyStore()))
-            sslCtxConfigurator.setKeyStoreFile(cfg.getKeyStore());
+        if (!F.isEmpty(cfg.getConsoleKeyStore()))
+            sslCtxConfigurator.setKeyStoreFile(cfg.getConsoleKeyStore());
 
-        if (!F.isEmpty(cfg.getKeyStorePassword()))
-            sslCtxConfigurator.setKeyStorePassword(cfg.getKeyStorePassword());
+        if (!F.isEmpty(cfg.getConsoleKeyStorePassword()))
+            sslCtxConfigurator.setKeyStorePassword(cfg.getConsoleKeyStorePassword());
 
         SslEngineConfigurator sslEngineConfigurator = trustAll
             ? createTrustAllSslEngineConfigurator()
