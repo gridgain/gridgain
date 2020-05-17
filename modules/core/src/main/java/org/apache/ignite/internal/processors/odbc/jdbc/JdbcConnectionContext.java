@@ -72,7 +72,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.2: adds features flags support.*/
     static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
 
-    /** Version 2.8.2: adds user attributes.*/
+    /** Version 2.8.3: adds user attributes.*/
     static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
 
     /** Current version. */
