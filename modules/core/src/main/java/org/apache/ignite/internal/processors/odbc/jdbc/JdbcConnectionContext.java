@@ -203,7 +203,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 features = JdbcThinFeature.enumSet(cliFeatures);
             }
 
-            if (ver.compareTo(VER_2_8_3) != 0)
+            if (ver.compareTo(VER_2_8_3) >= 0)
                 userAttrs = reader.readMap();
         }
         catch (Exception ex) {
