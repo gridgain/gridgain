@@ -63,6 +63,7 @@ import org.apache.ignite.internal.DiscoverySpiTestListener;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -81,6 +82,10 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
@@ -93,18 +98,29 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.Compactab
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.PAX;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.lifecycle.LifecycleEventType;
+import org.apache.ignite.loadtests.colocation.GridTestLifecycleBean;
+import org.apache.ignite.plugin.AbstractTestPluginProvider;
+import org.apache.ignite.plugin.IgnitePlugin;
+import org.apache.ignite.plugin.PluginProvider;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
@@ -128,6 +144,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
  *
  */
 public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
+    /** */
+    private static final int PARTS = 32;
+
     /** */
     private static final String HAS_CACHE = "HAS_CACHE";
 
@@ -185,12 +204,19 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
+        cfg.setConsistentId(gridName);
+
+        cfg.setFailureDetectionTimeout(100000L);
+        cfg.setClientFailureDetectionTimeout(100000L);
+
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
         CacheConfiguration<Integer, IndexedObject> ccfg = renamed ?
             new CacheConfiguration<>(RENAMED_CACHE_NAME) : new CacheConfiguration<>(CACHE_NAME);
 
         ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
         ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, 32));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, PARTS));
         ccfg.setNodeFilter(new RemoteNodeFilter());
         ccfg.setIndexedTypes(Integer.class, IndexedObject.class);
 
@@ -198,7 +224,17 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         locCcfg.setCacheMode(CacheMode.LOCAL);
         locCcfg.setIndexedTypes(Integer.class, IndexedObject.class);
 
-        cfg.setCacheConfiguration(ccfg, locCcfg);
+        CacheConfiguration<Object, Object> cfg1 = new CacheConfiguration<>("cache1")
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setRebalanceMode(CacheRebalanceMode.SYNC)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
+            .setBackups(0);
+
+        CacheConfiguration<Object, Object> cfg2 = new CacheConfiguration<>(cfg1).setName("cache2").setRebalanceOrder(10);
+
+        cfg.setCacheConfiguration(ccfg, locCcfg, cfg1, cfg2);
 
         DataStorageConfiguration dbCfg = new DataStorageConfiguration();
 
@@ -1704,6 +1740,251 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 }
             }
         }
+    }
+
+//    /**
+//     *
+//     */
+//    @Test
+//    public void testRecoveryAfterRestart() throws Exception {
+//        IgniteEx crd = startGrid(1);
+//        startGrid(2);
+//        crd.cluster().active(true);
+//
+//        for (int i = 0; i < PARTS; i++)
+//            crd.cache(CACHE_NAME).put(i, i);
+//
+//        forceCheckpoint();
+//
+//        stopAllGrids();
+//
+//        crd = startGrid(1);
+//        crd.cluster().active(true);
+//
+//        for (int i = 0; i < PARTS; i++)
+//            crd.cache(CACHE_NAME).put(i, i + 1);
+//
+//        TestRecordingCommunicationSpi.spi(crd).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+//            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+//                if (msg instanceof GridDhtPartitionSupplyMessage) {
+//                    GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
+//
+//                    return msg0.groupId() == CU.cacheId(CACHE_NAME);
+//                }
+//
+//                return false;
+//            }
+//        });
+//
+//        IgniteEx g2 = startGrid(2);
+//
+//        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+//
+//        forceCheckpoint(g2);
+//
+//        g2.close();
+//        //stopGrid(1);
+//
+//        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+//
+//        waitForTopology(1);
+//
+//        //crd = startGrid(1);
+//        startGrid(2);
+//
+//        //crd.cluster().active(true);
+//
+//        awaitPartitionMapExchange();
+//    }
+
+    /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
+    public void testRecoveryAfterRestart2() throws Exception {
+        final String cache1 = "cache1";
+        final String cache2 = "cache2";
+
+        IgniteEx crd = startGrid(1);
+        crd.cluster().active(true);
+
+//        crd.createCache(cfg1);
+//        crd.createCache(cfg2);
+
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < PARTS; i++) {
+            crd.cache(cache1).put(i, i);
+            crd.cache(cache2).put(i, i);
+        }
+
+        TestRecordingCommunicationSpi.spi(crd).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionSupplyMessage) {
+                    GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
+
+                    return msg0.groupId() == CU.cacheId(cache2);
+                }
+
+                return false;
+            }
+        });
+
+        IgniteEx g2 = startGrid(2);
+
+        resetBaselineTopology();
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        forceCheckpoint(g2);
+
+        g2.close();
+        //stopGrid(1);
+
+        TestRecordingCommunicationSpi.spi(crd).stopBlock();
+
+        waitForTopology(1);
+
+        CountDownLatch l1 = new CountDownLatch(1);
+        CountDownLatch l2 = new CountDownLatch(1);
+
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
+                cfg2.setLifecycleBeans(new GridTestLifecycleBean() {
+                    @Override public void onLifecycleEvent(LifecycleEventType type) {
+                        if (type == LifecycleEventType.BEFORE_NODE_START) {
+                            g.context().internalSubscriptionProcessor().registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
+                                @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                                    g.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+                                        @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                                            l1.countDown();
+
+                                            try {
+                                                assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
+                                            } catch (IgniteInterruptedCheckedException e) {
+                                                fail(X.getFullStackTrace(e));
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+
+                startGrid(cfg2);
+
+                return null;
+            }
+        });
+
+        assertTrue(U.await(l1, 10, TimeUnit.SECONDS));
+
+        stopGrid(getTestIgniteInstanceName(1), true, false);
+
+        l2.countDown();
+
+        awaitPartitionMapExchange();
+    }
+
+    /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
+    public void testRecoveryAfterRestart3() throws Exception {
+        final String cache1 = "cache1";
+        final String cache2 = "cache2";
+
+        IgniteEx crd = startGrid(1);
+        crd.cluster().active(true);
+
+//        crd.createCache(cfg1);
+//        crd.createCache(cfg2);
+
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < PARTS; i++) {
+            crd.cache(cache1).put(i, i);
+            crd.cache(cache2).put(i, i);
+        }
+
+        TestRecordingCommunicationSpi.spi(crd).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionSupplyMessage) {
+                    GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
+
+                    return msg0.groupId() == CU.cacheId(cache2);
+                }
+
+                return false;
+            }
+        });
+
+        IgniteEx g2 = startGrid(2);
+
+        resetBaselineTopology();
+
+        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
+
+        forceCheckpoint(g2);
+
+        stopAllGrids();
+
+        waitForTopology(0);
+
+        // Restart and activate.
+        CountDownLatch l1 = new CountDownLatch(1);
+        CountDownLatch l2 = new CountDownLatch(1);
+
+        crd = startGrid(1);
+
+        IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
+        cfg2.setLifecycleBeans(new GridTestLifecycleBean() {
+            @Override public void onLifecycleEvent(LifecycleEventType type) {
+                if (type == LifecycleEventType.BEFORE_NODE_START) {
+                    g.context().internalSubscriptionProcessor().registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
+                        @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                            g.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+                                @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                                    l1.countDown();
+
+                                    try {
+                                        assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
+                                    } catch (IgniteInterruptedCheckedException e) {
+                                        fail(X.getFullStackTrace(e));
+                                    }
+
+                                    System.out.println();
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+
+        startGrid(cfg2);
+
+        GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                grid(1).cluster().active(true);
+            }
+        });
+
+        assertTrue(U.await(l1, 10, TimeUnit.SECONDS));
+
+        stopGrid(getTestIgniteInstanceName(1), true, false);
+
+        l2.countDown();
+
+        awaitPartitionMapExchange();
+    }
+
+    @Override protected long getPartitionMapExchangeTimeout() {
+        return super.getPartitionMapExchangeTimeout() * 1000000;
     }
 
     /**
