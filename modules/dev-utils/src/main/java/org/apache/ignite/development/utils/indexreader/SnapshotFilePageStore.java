@@ -19,6 +19,7 @@ package org.apache.ignite.development.utils.indexreader;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.StandardOpenOption;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
@@ -69,6 +70,11 @@ public class SnapshotFilePageStore extends FilePageStore {
         allocated.set(pageStoreFile.length());
 
         inited = true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void ensure() throws IgniteCheckedException {
+        //no-op
     }
 
     /** {@inheritDoc} */
