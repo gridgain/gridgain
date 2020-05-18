@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Set;
 import java.util.stream.Collectors;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.export.SpanData;
@@ -62,8 +64,13 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
 
         handler().flush();
 
+        Set<String> unexpectedTxSpanNames = Arrays.stream(SpanType.values()).
+            filter(spanType -> spanType.scope() == TX).
+            map(SpanType::traceName).
+            collect(Collectors.toSet());
+
         java.util.List<SpanData> gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> unexpectedTxSpanNames.contains(span.getName()))
             .collect(Collectors.toList());
 
         assertTrue(gotSpans.isEmpty());

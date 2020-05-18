@@ -29,7 +29,7 @@ public interface SpanManager {
      *
      * @param spanType Type of span to create.
      */
-    public default Span create(@NotNull SpanType spanType) {
+    default Span create(@NotNull SpanType spanType) {
         return create(spanType, (Span)null);
     }
 
@@ -40,16 +40,16 @@ public interface SpanManager {
      * @param parentSpan Parent span.
      * @return Created span.
      */
-    public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan);
+    Span create(@NotNull SpanType spanType, @Nullable Span parentSpan);
 
     /**
      * Creates Span given name and explicit parent.
      *
      * @param spanType Type of span to create.
-     * @param serializedSpan Parent span as serialized bytes.
+     * @param serializedParentSpan Parent span as serialized bytes.
      * @return Created span.
      */
-    public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedSpan);
+    Span create(@NotNull SpanType spanType, @Nullable byte[] serializedParentSpan);
 
     /**
      * Creates Span given name and explicit parent.
@@ -65,7 +65,7 @@ public interface SpanManager {
      *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      * @return Created span.
      */
-    public @NotNull Span create (
+    @NotNull Span create (
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
         double samplingRate,
@@ -76,5 +76,5 @@ public interface SpanManager {
      *
      * @param span Span.
      */
-    public byte[] serialize(@NotNull Span span);
+    byte[] serialize(@NotNull Span span);
 }

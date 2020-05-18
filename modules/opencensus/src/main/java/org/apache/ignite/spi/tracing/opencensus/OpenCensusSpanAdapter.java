@@ -16,51 +16,28 @@
 
 package org.apache.ignite.spi.tracing.opencensus;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
-import org.apache.ignite.internal.processors.tracing.Scope;
-import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanStatus;
-import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.processors.tracing.SpiSpecificSpan;
 
 /**
  * Span implementation based on OpenCensus library.
  */
-public class OpenCensusSpanAdapter implements Span {
+public class OpenCensusSpanAdapter implements SpiSpecificSpan {
     /** OpenCensus span delegate. */
     private final io.opencensus.trace.Span span;
 
     /** Flag indicates that span is ended. */
     private volatile boolean ended;
 
-    /** Span type. */
-    private final SpanType spanType;
-
-    /** Set of extra included scopes for given span in addition to span's scope that is supported by default. */
-    private final Set<Scope> includedScopes;
-
     /**
      * @param span OpenCensus span delegate.
-     * @param spanType Type of span to create.
      */
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType) {
+    OpenCensusSpanAdapter(io.opencensus.trace.Span span) {
         this.span = span;
-        this.spanType = spanType;
-        includedScopes = Collections.emptySet();
-    }
-
-    /**
-     * @param span OpenCensus span delegate.
-     * @param spanType Type of span to create.
-     */
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType, Set<Scope> includedScopes) {
-        this.span = span;
-        this.spanType = spanType;
-        this.includedScopes = includedScopes;
     }
 
     /** Implementation object. */
@@ -78,7 +55,7 @@ public class OpenCensusSpanAdapter implements Span {
     }
 
     /** {@inheritDoc} */
-    @Override public Span addTag(String tagName, long tagVal) {
+    @Override public SpiSpecificSpan addTag(String tagName, long tagVal) {
         span.putAttribute(tagName, AttributeValue.longAttributeValue(tagVal));
 
         return this;
@@ -124,15 +101,5 @@ public class OpenCensusSpanAdapter implements Span {
     /** {@inheritDoc} */
     @Override public boolean isEnded() {
         return ended;
-    }
-
-    /** {@inheritDoc} */
-    @Override public SpanType type() {
-        return spanType;
-    }
-
-    /** {@inheritDoc} */
-    @Override public Set<Scope> includedScopes() {
-        return includedScopes;
     }
 }

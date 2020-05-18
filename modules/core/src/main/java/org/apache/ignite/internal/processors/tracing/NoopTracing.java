@@ -28,24 +28,32 @@ import org.jetbrains.annotations.Nullable;
  * Noop implementation of {@link Tracing}.
  */
 public class NoopTracing implements Tracing {
-    /** */
-    private static final TracingSpi NOOP_SPI = new NoopTracingSpi();
-    /** */
-    private static final TraceableMessagesHandler MSG_HND = new TraceableMessagesHandler(NOOP_SPI, new NullLogger());
+    /** Noop serialized span. */
+    public static final byte[] NOOP_SERIALIZED_SPAN = new byte[0];
+
+    /** Traceable messages handler. */
+    private final TraceableMessagesHandler msgHnd;
+
+    /**
+     * Constructor.
+     */
+    public NoopTracing() {
+        msgHnd = new TraceableMessagesHandler(this, new NullLogger());
+    }
 
     /** {@inheritDoc} */
     @Override public TraceableMessagesHandler messages() {
-        return MSG_HND;
+        return msgHnd;
     }
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan) {
-        return NOOP_SPI.create(spanType, parentSpan);
+        return NoopSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedSpan) {
-        return NOOP_SPI.create(spanType, serializedSpan);
+    @Override public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedParentSpan) {
+        return NoopSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
@@ -54,12 +62,12 @@ public class NoopTracing implements Tracing {
         @Nullable Span parentSpan,
         double samplingRate,
         @NotNull Set<Scope> includedScopes) {
-        return NOOP_SPI.create(spanType, parentSpan, samplingRate, includedScopes);
+        return NoopSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
     @Override public byte[] serialize(@NotNull Span span) {
-        return NOOP_SPI.serialize(span);
+        return NOOP_SERIALIZED_SPAN;
     }
 
     /** {@inheritDoc} */

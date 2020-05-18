@@ -22,7 +22,7 @@ package org.apache.ignite.internal.processors.tracing;
 public enum SpanType {
     // Discovery traces.
     /** Node join request. */
-    DISCOVERY_NODE_JOIN_REQUEST(Scope.DISCOVERY, "discovery.node.join.request", 1),
+    DISCOVERY_NODE_JOIN_REQUEST(Scope.DISCOVERY, "discovery.node.join.request", 1, true),
 
     /** Node join add. */
     DISCOVERY_NODE_JOIN_ADD(Scope.DISCOVERY, "discovery.node.join.add", 2),
@@ -30,14 +30,15 @@ public enum SpanType {
     /** Node join finish. */
     DISCOVERY_NODE_JOIN_FINISH(Scope.DISCOVERY, "discovery.node.join.finish", 3),
 
+    // TODO not sure that not failed is rootSpanType
     /** Node failed. */
-    DISCOVERY_NODE_FAILED(Scope.DISCOVERY, "discovery.node.failed", 4),
+    DISCOVERY_NODE_FAILED(Scope.DISCOVERY, "discovery.node.failed", 4, true),
 
     /** Node left. */
-    DISCOVERY_NODE_LEFT(Scope.DISCOVERY, "discovery.node.left", 5),
+    DISCOVERY_NODE_LEFT(Scope.DISCOVERY, "discovery.node.left", 5, true),
 
     /** Custom event. */
-    DISCOVERY_CUSTOM_EVENT(Scope.DISCOVERY, "discovery.custom.event", 6),
+    DISCOVERY_CUSTOM_EVENT(Scope.DISCOVERY, "discovery.custom.event", 6, true),
 
     /** Exchange future. */
     EXCHANGE_FUTURE(Scope.DISCOVERY, "exchange.future", 7),
@@ -50,10 +51,10 @@ public enum SpanType {
     COMMUNICATION_JOB_EXECUTE_REQUEST(Scope.COMMUNICATION, "communication.job.execute.request", 9),
 
     /** Job execution response. */
-    COMMUNICATION_JOB_EXECUTE_RESPONSE(Scope.COMMUNICATION, "communication.job.execute.response",10),
+    COMMUNICATION_JOB_EXECUTE_RESPONSE(Scope.COMMUNICATION, "communication.job.execute.response", 10),
 
     /** Socket write action. */
-    COMMUNICATION_SOCKET_WRITE(Scope.COMMUNICATION, "socket.write", 11),
+    COMMUNICATION_SOCKET_WRITE(Scope.COMMUNICATION, "socket.write", 11, true),
 
     /** Socket read action. */
     COMMUNICATION_SOCKET_READ(Scope.COMMUNICATION, "socket.read", 12),
@@ -66,69 +67,69 @@ public enum SpanType {
 
     // Tx traces.
     /** Transaction start. */
-    TX(Scope.TX, "transaction", 15),
+    TX(Scope.TX, "transaction", 15, true),
 
-    /** Transaction commit.*/
+    /** Transaction commit. */
     TX_COMMIT(Scope.TX, "transactions.commit", 16),
 
-    /** Transaction rollback.*/
+    /** Transaction rollback. */
     TX_ROLLBACK(Scope.TX, "transactions.rollback", 17),
 
-    /** Transaction close.*/
+    /** Transaction close. */
     TX_CLOSE(Scope.TX, "transactions.close", 18),
 
-    /** Transaction suspend.*/
+    /** Transaction suspend. */
     TX_SUSPEND(Scope.TX, "transactions.suspend", 19),
 
-    /** Transaction resume.*/
+    /** Transaction resume. */
     TX_RESUME(Scope.TX, "transactions.resume", 20),
 
-    /** Transaction near prepare.*/
+    /** Transaction near prepare. */
     TX_NEAR_PREPARE(Scope.TX, "transactions.near.prepare", 21),
 
-    /** Transaction near prepare ondone.*/
+    /** Transaction near prepare ondone. */
     TX_NEAR_PREPARE_ON_DONE(Scope.TX, "transactions.near.prepare.ondone", 22),
 
-    /** Transaction near prepare onerror.*/
+    /** Transaction near prepare onerror. */
     TX_NEAR_PREPARE_ON_ERROR(Scope.TX, "transactions.near.prepare.onerror", 23),
 
-    /** Transaction near prepare ontimeout.*/
+    /** Transaction near prepare ontimeout. */
     TX_NEAR_PREPARE_ON_TIMEOUT(Scope.TX, "transactions.near.prepare.ontimeout", 24),
 
-    /** Transaction dht prepare.*/
+    /** Transaction dht prepare. */
     TX_DHT_PREPARE(Scope.TX, "transactions.dht.prepare", 25),
 
-    /** Transaction dht prepare ondone.*/
+    /** Transaction dht prepare ondone. */
     TX_DHT_PREPARE_ON_DONE(Scope.TX, "transactions.dht.prepare.ondone", 26),
 
-    /** Transaction near finish.*/
+    /** Transaction near finish. */
     TX_NEAR_FINISH(Scope.TX, "transactions.near.finish", 27),
 
-    /** Transaction near finish ondone.*/
+    /** Transaction near finish ondone. */
     TX_NEAR_FINISH_ON_DONE(Scope.TX, "transactions.near.finish.ondone", 28),
 
-    /** Transaction dht finish.*/
+    /** Transaction dht finish. */
     TX_DHT_FINISH(Scope.TX, "transactions.dht.finish", 29),
 
-    /** Transaction dht finish ondone.*/
+    /** Transaction dht finish ondone. */
     TX_DHT_FINISH_ON_DONE(Scope.TX, "transactions.dht.finish.ondone", 30),
 
-    /** Transaction map proceed.*/
+    /** Transaction map proceed. */
     TX_MAP_PROCEED(Scope.TX, "transactions.lock.map.proceed", 31),
 
-    /** Transaction map proceed.*/
+    /** Transaction map proceed. */
     TX_COLOCATED_LOCK_MAP(Scope.TX, "transactions.colocated.lock.map", 32),
 
-    /** Transaction lock map.*/
+    /** Transaction lock map. */
     TX_DHT_LOCK_MAP(Scope.TX, "transactions.dht.lock.map", 33),
 
-    /** Transaction near enlist read.*/
+    /** Transaction near enlist read. */
     TX_NEAR_ENLIST_READ(Scope.TX, "transactions.near.enlist.read", 34),
 
-    /** Transaction near enlist write.*/
+    /** Transaction near enlist write. */
     TX_NEAR_ENLIST_WRITE(Scope.TX, "transactions.near.enlist.write", 35),
 
-    /** Transaction dht process prepare request.*/
+    /** Transaction dht process prepare request. */
     TX_PROCESS_DHT_PREPARE_REQ(Scope.TX, "tx.dht.process.prepare.req", 36),
 
     /** Transaction dht process finish request. */
@@ -157,7 +158,7 @@ public enum SpanType {
 
     // TODO GG-28559 Instead of creating custom span with Ignite api, open census api should be used.
     /** Custom job call. */
-    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 45);
+    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 45, true);
 
     /** Scope */
     private Scope scope;
@@ -170,6 +171,9 @@ public enum SpanType {
 
     /** Values. */
     private static final SpanType[] VALS;
+
+    /** {@code true} if given span is a root span within it's scope. */
+    private boolean rootSpan;
 
     /**
      * Constructor.
@@ -185,6 +189,20 @@ public enum SpanType {
     }
 
     /**
+     * Constructor.
+     *
+     * @param scope Scope.
+     * @param traceName Trace name.
+     * @param idx Index.
+     * @param rootSpan Boolean flag, that indicates whether given span is root within it's scope or not.
+     */
+    SpanType(Scope scope, String traceName, int idx, boolean rootSpan) {
+        this(scope, traceName, idx);
+
+        this.rootSpan = rootSpan;
+    }
+
+    /**
      * @return Scope.
      */
     public Scope scope() {
@@ -194,6 +212,7 @@ public enum SpanType {
     /**
      * @return Trace name.
      */
+    // TODO: 14.05.20 Rename to some more suitable thing.
     public String traceName() {
         return traceName;
     }
@@ -201,8 +220,17 @@ public enum SpanType {
     /**
      * @return idx.
      */
+    // TODO: 14.05.20 rename to index.
     public int idx() {
         return idx;
+    }
+
+
+    /**
+     * @return Root span.
+     */
+    public boolean rootSpan() {
+        return rootSpan;
     }
 
     static {

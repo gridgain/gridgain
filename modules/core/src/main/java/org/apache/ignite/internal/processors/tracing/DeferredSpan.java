@@ -16,14 +16,80 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
+import java.util.Map;
+import java.util.Set;
+
 /**
- * Encapsulates concept deferred-initialized span. It's used to overcome OpenCensus span implementation, that starts
+ * Encapsulates concept of a deferred-initialized span. It's used to overcome OpenCensus span implementation, that starts
  * span immediately after deserialization.
  */
-public interface DeferredSpan {
+public class DeferredSpan implements Span{
+    /** */
+    private byte[] serializedSpan;
 
     /**
-     * @return Serialized span as bytes array.
+     * Constructor.
+     *
+     * @param serializedSpan Serialized span bytes.
      */
-    byte[] serializedSpan();
+    public DeferredSpan(byte[] serializedSpan) {
+        this.serializedSpan = serializedSpan;
+    }
+
+    /**
+     * @return Serialized span.
+     */
+    public byte[] serializedSpan() {
+        return serializedSpan;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span addTag(String tagName, String tagVal) {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span addTag(String tagName, long tagVal) {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span addLog(String logDesc) {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span addLog(String logDesc, Map<String, String> attrs) {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span setStatus(SpanStatus spanStatus) {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span end() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isEnded() {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public SpanType type() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Set<Scope> includedScopes() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isChainable(Scope scope) {
+        return false;
+    }
 }

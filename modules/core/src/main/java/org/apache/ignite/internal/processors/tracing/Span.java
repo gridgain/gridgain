@@ -26,64 +26,60 @@ import java.util.Set;
  * status, time events, attributes, links.
  * You can use tracing to debug errors and latency issues in your applications.
  */
-public interface Span {
+public interface Span extends SpiSpecificSpan {
     /**
      * Adds tag to span with {@code String} value.
      *
      * @param tagName Tag name.
      * @param tagVal Tag value.
      */
-    public Span addTag(String tagName, String tagVal);
+    @Override Span addTag(String tagName, String tagVal);
     /**
      * Adds tag to span with {@code long} value.
      *
      * @param tagName Tag name.
      * @param tagVal Tag value.
      */
-    public Span addTag(String tagName, long tagVal);
+    @Override Span addTag(String tagName, long tagVal);
     /**
      * Logs work to span.
      *
      * @param logDesc Log description.
      */
-    public Span addLog(String logDesc);
+    @Override Span addLog(String logDesc);
     /**
      * Adds log to span with additional attributes.
      *
      * @param logDesc Log description.
      * @param attrs Attributes.
      */
-    public Span addLog(String logDesc, Map<String, String> attrs);
+    @Override Span addLog(String logDesc, Map<String, String> attrs);
     /**
      * Explicitly set status for span.
      *
      * @param spanStatus Status.
      */
-    public Span setStatus(SpanStatus spanStatus);
+    @Override Span setStatus(SpanStatus spanStatus);
     /**
      * Ends span. This action sets default status if not set and mark the span as ready to be exported.
      */
-    public Span end();
-    /**
-     * @return {@code true} if span has already ended.
-     */
-    public boolean isEnded();
+    @Override Span end();
 
     /**
      * @return Type of given span.
      */
-    public SpanType type();
+    SpanType type();
 
     /**
      * @return Set of included scopes.
      */
-    public Set<Scope> includedScopes();
+    Set<Scope> includedScopes();
 
     /**
      * @param scope Chainable scope candidate.
      * @return {@code true} if given span is chainable with other spans with specified scope.
      */
-    public default boolean isChainable(Scope scope) {
+    default boolean isChainable(Scope scope) {
         return type().scope() == scope || includedScopes().contains(scope);
     }
 }

@@ -61,34 +61,34 @@ import static org.apache.ignite.internal.processors.tracing.Scope.TX;
  */
 public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** Grid count. */
-    protected static final int GRID_CNT = 3;
+    static final int GRID_CNT = 3;
 
     /** Span buffer count - hardcode in open census. */
     private static final int SPAN_BUFFER_COUNT = 32;
 
     /** Default configuration map. */
-    protected static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DFLT_CONFIG_MAP =
+    static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DFLT_CONFIG_MAP =
         new HashMap<>();
 
     /** TX scope specific coordinates to be used within several tests. */
-    protected static final TracingConfigurationCoordinates TX_SCOPE_SPECIFIC_COORDINATES =
+    static final TracingConfigurationCoordinates TX_SCOPE_SPECIFIC_COORDINATES =
         new TracingConfigurationCoordinates.Builder(TX).build();
 
     /** EXCHANGE scope specific coordinates to be used within several tests. */
-    protected static final TracingConfigurationCoordinates EXCHANGE_SCOPE_SPECIFIC_COORDINATES =
+    static final TracingConfigurationCoordinates EXCHANGE_SCOPE_SPECIFIC_COORDINATES =
         new TracingConfigurationCoordinates.Builder(EXCHANGE).build();
 
     /** Updated scope specific parameters to be used within several tests. */
-    protected static final TracingConfigurationParameters SOME_SCOPE_SPECIFIC_PARAMETERS =
+    static final TracingConfigurationParameters SOME_SCOPE_SPECIFIC_PARAMETERS =
         new TracingConfigurationParameters.Builder().withSamplingRate(0.75).
             withIncludedScopes(Collections.singleton(COMMUNICATION)).build();
 
     /** TX Label specific coordinates to be used within several tests. */
-    protected static final TracingConfigurationCoordinates TX_LABEL_SPECIFIC_COORDINATES =
+    static final TracingConfigurationCoordinates TX_LABEL_SPECIFIC_COORDINATES =
         new TracingConfigurationCoordinates.Builder(TX).withLabel("label").build();
 
     /** Updated label specific parameters to be used within several tests. */
-    protected static final TracingConfigurationParameters SOME_LABEL_SPECIFIC_PARAMETERS =
+    static final TracingConfigurationParameters SOME_LABEL_SPECIFIC_PARAMETERS =
         new TracingConfigurationParameters.Builder().withSamplingRate(0.111).
             withIncludedScopes(Collections.singleton(EXCHANGE)).build();
 
@@ -184,7 +184,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /**
      * @return Handler.
      */
-    protected OpenCensusTxTracingTest.TraceExporterTestHandler handler() {
+    OpenCensusTxTracingTest.TraceExporterTestHandler handler() {
         return hnd;
     }
 
@@ -197,11 +197,11 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
      * @param expAttrs Attributes to check.
      * @return List of founded span ids.
      */
-    protected java.util.List<SpanId> checkSpan(
+    java.util.List<SpanId> checkSpan(
         SpanType spanType,
         SpanId parentSpanId,
         int expSpansCnt,
-        /** tagName: tagValue*/ Map<String, String> expAttrs
+        /* tagName: tagValue*/ Map<String, String> expAttrs
     ) {
         java.util.List<SpanData> gotSpans = hnd.allSpans()
             .filter(
@@ -228,7 +228,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
      * @param spanData Span data to check.
      * @param expAttrs Attributes to check.
      */
-    private void checkSpanAttributes(SpanData spanData, /** tagName: tagValue*/ Map<String, String> expAttrs) {
+    private void checkSpanAttributes(SpanData spanData, /* tagName: tagValue*/ Map<String, String> expAttrs) {
         Map<String, AttributeValue> attrs = spanData.getAttributes().getAttributeMap();
 
         if (expAttrs != null) {
@@ -273,7 +273,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         /**
          * @return Stream of all exported spans.
          */
-        public Stream<SpanData> allSpans() {
+        Stream<SpanData> allSpans() {
             return collectedSpans.values().stream();
         }
 
@@ -281,7 +281,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
          * @param id Span id.
          * @return Exported span by given id.
          */
-        public SpanData spanById(SpanId id) {
+        SpanData spanById(SpanId id) {
             return collectedSpans.get(id);
         }
 
@@ -289,7 +289,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
          * @param name Span name for search.
          * @return Span with given name.
          */
-        public SpanData spanByName(String name) {
+        SpanData spanByName(String name) {
             return allSpans()
                 .filter(span -> span.getName().contains(name))
                 .findFirst()
@@ -300,7 +300,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
          * @param parentId Parent id.
          * @return All spans by parent id.
          */
-        public java.util.List<SpanData> spanByParentId(SpanId parentId) {
+        java.util.List<SpanData> spanByParentId(SpanId parentId) {
             return collectedSpansByParents.get(parentId);
         }
 
@@ -308,7 +308,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
          * @param parentSpan Top span.
          * @return All span which are child of parentSpan in any generation.
          */
-        public java.util.List<SpanData> unrollByParent(SpanData parentSpan) {
+        java.util.List<SpanData> unrollByParent(SpanData parentSpan) {
             ArrayList<SpanData> spanChain = new ArrayList<>();
 
             LinkedList<SpanData> queue = new LinkedList<>();
@@ -319,6 +319,8 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
 
             while (!queue.isEmpty()) {
                 SpanData cur = queue.pollFirst();
+
+                assert cur != null;
 
                 List<SpanData> child = spanByParentId(cur.getContext().getSpanId());
 
@@ -336,7 +338,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
          * @param igniteInstanceName Ignite instance name.
          * @return Stream of SpanData.
          */
-        public Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
+        Stream<SpanData> spansReportedByNode(String igniteInstanceName) {
             return collectedSpans.values().stream()
                 .filter(spanData -> stringAttributeValue(igniteInstanceName)
                     .equals(spanData.getAttributes().getAttributeMap().get("node.name")));
@@ -345,7 +347,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         /**
          * Forces to flush ended spans that not passed to exporter yet.
          */
-        public void flush() throws IgniteInterruptedCheckedException {
+        void flush() throws IgniteInterruptedCheckedException {
             // There is hardcoded invariant, that ended spans will be passed to exporter in 2 cases:
             // By 5 seconds timeout and if buffer size exceeds 32 spans.
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
