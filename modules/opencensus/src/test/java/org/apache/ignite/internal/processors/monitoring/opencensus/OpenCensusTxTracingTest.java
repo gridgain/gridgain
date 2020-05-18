@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import java.util.Collections;
 import java.util.List;
 import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
@@ -44,7 +43,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_PRE
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_FINISH_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_RESP;
-import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -68,7 +67,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         grid(0).tracingConfiguration().set(
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
             new TracingConfigurationParameters.Builder().
-                withSamplingRate(SAMPLING_RATE_NEVER).withIncludedScopes(Collections.singleton(Scope.COMMUNICATION)).build());
+                withSamplingRate(SAMPLING_RATE_ALWAYS).build());
     }
 
     /**
