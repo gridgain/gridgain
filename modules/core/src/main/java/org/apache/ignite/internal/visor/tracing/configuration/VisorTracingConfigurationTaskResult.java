@@ -81,7 +81,7 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
      * Fills printer {@link Consumer <String>} by string view of this class.
      */
     public void print(Consumer<String> printer) {
-        printer.accept("Scope, Label, Sampling Rate, Supported Scopes");
+        printer.accept("Scope, Label, Sampling Rate, included scopes");
 
         Collections.sort(tracingConfigurations, Comparator.comparing(VisorTracingConfigurationItem::scope));
 
@@ -90,7 +90,7 @@ public class VisorTracingConfigurationTaskResult extends IgniteDataTransferObjec
                 tracingConfiguration.scope().name() + RES_PRINTER_SEPARATOR +
                     (tracingConfiguration.label() == null ? "" : tracingConfiguration.label()) + RES_PRINTER_SEPARATOR +
                     tracingConfiguration.samplingRate() + RES_PRINTER_SEPARATOR +
-                    Arrays.toString(tracingConfiguration.supportedScopes().toArray()));
+                    Arrays.toString(tracingConfiguration.includedScopes().toArray()));
         }
     }
 

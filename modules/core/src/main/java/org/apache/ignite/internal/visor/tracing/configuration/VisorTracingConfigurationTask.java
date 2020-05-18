@@ -77,10 +77,11 @@ public class VisorTracingConfigurationTask
                     return resetAll(arg.scope());
 
                 case SET:
-                    return set(arg.scope(), arg.label(), arg.samplingRate(), arg.supportedScopes());
+                    return set(arg.scope(), arg.label(), arg.samplingRate(), arg.includedScopes());
 
                 default: {
-                    assert false; // We should never get here.
+                    // We should never get here.
+                    assert false: "Unexpected tracing configuration argument [arg= " + arg + ']';
 
                     return getAll(null); // Just in case.
                 }
@@ -168,7 +169,7 @@ public class VisorTracingConfigurationTask
          * @param scope Scope.
          * @param lb Label.
          * @param samplingRate Sampling rate.
-         * @param supportedScopes Set of supported scopes.
+         * @param includedScopes Set of included scopes.
          * @return Scope based configuration that was partly of fully updated as
          *          *  {@link VisorTracingConfigurationTaskResult} instance.
          */
@@ -176,7 +177,7 @@ public class VisorTracingConfigurationTask
             @NotNull Scope scope,
             @Nullable String lb,
             @Nullable Double samplingRate,
-            @Nullable Set<Scope> supportedScopes)
+            @Nullable Set<Scope> includedScopes)
         {
             TracingConfigurationCoordinates coordinates =
                 new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build();
@@ -186,8 +187,8 @@ public class VisorTracingConfigurationTask
             if (samplingRate != null)
                 parametersBuilder.withSamplingRate(samplingRate);
 
-            if (supportedScopes != null)
-                parametersBuilder.withIncludedScopes(supportedScopes);
+            if (includedScopes != null)
+                parametersBuilder.withIncludedScopes(includedScopes);
 
             ignite.tracingConfiguration().set(coordinates, parametersBuilder.build());
 

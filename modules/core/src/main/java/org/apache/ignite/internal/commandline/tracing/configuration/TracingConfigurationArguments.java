@@ -50,24 +50,24 @@ import org.jetbrains.annotations.Nullable;
      * @param lb Specifies the label of a traced operation. It's an optional attribute.
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      *  0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+     * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
      *  In other words, if child's span scope is equals to parent's scope
-     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
      *  otherwise it'll be skipped.
      *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
-    public TracingConfigurationArguments(
+    private TracingConfigurationArguments(
         TracingConfigurationSubcommand cmd,
         Scope scope,
         String lb,
         double samplingRate,
-        Set<Scope> supportedScopes)
-    {
+        Set<Scope> includedScopes
+    ) {
         super(
             scope,
             lb,
             samplingRate,
-            supportedScopes);
+            includedScopes);
 
         this.cmd = cmd;
     }
@@ -95,8 +95,8 @@ import org.jetbrains.annotations.Nullable;
         /** Counterpart of {@code TracingConfigurationArguments}'s samplingRate. */
         private double samplingRate;
 
-        /** Counterpart of {@code TracingConfigurationArguments}'s supportedScopes. */
-        private Set<Scope> supportedScopes;
+        /** Counterpart of {@code TracingConfigurationArguments}'s includedScopes. */
+        private Set<Scope> includedScopes;
 
         /**
          * Constructor.
@@ -137,7 +137,7 @@ import org.jetbrains.annotations.Nullable;
          * Builder method that allows to set optional label attribute.
          *
          * @param lb Label of traced operation. It's an optional attribute.
-         * @return Current {@code TracingConfigurationCoordinates} instance.
+         * @return Builder
          */
         public @NotNull Builder withLabel(@Nullable String lb) {
             this.lb = lb;
@@ -146,17 +146,18 @@ import org.jetbrains.annotations.Nullable;
         }
 
         /**
-         * Builder method that allows to set supported scopes.
+         * Builder method that allows to set included scopes.
          *
-         * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+         * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
          * In other words, if child's span scope is equals to parent's scope
-         * or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+         * or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
          * otherwise it'll be skipped.
          * See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
-         * @return {@code TracingConfigurationParameters} instance.
+         * @return Builder
          */
-        public @NotNull Builder withSupportedScopes(Set<Scope> supportedScopes) {
-            this.supportedScopes = supportedScopes == null ? Collections.emptySet() : supportedScopes;
+        @SuppressWarnings("UnusedReturnValue")
+        public @NotNull Builder withIncludedScopes(Set<Scope> includedScopes) {
+            this.includedScopes = includedScopes == null ? Collections.emptySet() : includedScopes;
 
             return this;
         }
@@ -172,7 +173,7 @@ import org.jetbrains.annotations.Nullable;
                 scope,
                 lb,
                 samplingRate,
-                supportedScopes);
+                includedScopes);
         }
     }
 }
