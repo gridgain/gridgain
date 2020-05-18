@@ -24,8 +24,8 @@ import java.util.EnumSet;
  * Defines supported bitmask features for thin client.
  */
 public enum ProtocolBitmaskFeature {
-    /** Feature for user attributes. */
-    USER_ATTRIBUTES(0);
+    /** Reserved for future usage. */
+    RESERVED(0);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
