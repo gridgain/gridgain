@@ -19,6 +19,9 @@ package org.apache.ignite.internal.processors.query;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+/**
+ *
+ */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     DefaultQueryTimeoutConfigurationTest.class,
