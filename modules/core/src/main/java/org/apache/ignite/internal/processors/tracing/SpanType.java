@@ -30,7 +30,6 @@ public enum SpanType {
     /** Node join finish. */
     DISCOVERY_NODE_JOIN_FINISH(Scope.DISCOVERY, "discovery.node.join.finish", 3),
 
-    // TODO not sure that not failed is rootSpanType
     /** Node failed. */
     DISCOVERY_NODE_FAILED(Scope.DISCOVERY, "discovery.node.failed", 4, true),
 

@@ -121,7 +121,6 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                 name,
                 Tracing.getPropagationComponent().getBinaryFormat().fromByteArray(parentSerializedSpan)
             )
-                // TODO: 14.05.20 Should it be alwasys sample here?
                 .setSampler(Samplers.alwaysSample())
                 .startSpan()
         );

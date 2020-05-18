@@ -48,8 +48,8 @@ public interface TracingSpi extends IgniteSpi {
      * @param name Name of span to create.
      * @param serializedSpan Parent span as serialized bytes.
      * @return Created span.
+     * @throws Exception If failed to deserialize patent span.
      */
-    // TODO: 14.05.20 add javadoc for Exception.
     SpiSpecificSpan create(@NotNull String name, @Nullable byte[] serializedSpan) throws Exception;
 
     /**
