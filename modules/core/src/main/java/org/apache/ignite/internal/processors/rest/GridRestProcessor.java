@@ -23,7 +23,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -811,7 +810,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
         authCtx.subjectType(REMOTE_CLIENT);
         authCtx.subjectId(req.clientId());
-        authCtx.nodeAttributes(Collections.<String, Object>emptyMap());
+        authCtx.nodeAttributes(req.userAttributes());
         authCtx.address(req.address());
         authCtx.certificates(req.certificates());
 

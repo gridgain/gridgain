@@ -40,6 +40,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature.USER_ATTRIBUTES;
 
 /**
  * JDBC Connection Context.
@@ -205,6 +206,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             // TODO: GG-25595 remove when version 8.7.X support ends
         }
+
+        if (features.contains(USER_ATTRIBUTES))
+            userAttrs = reader.readMap();
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
             String user = null;

@@ -1445,7 +1445,6 @@ public class GridDhtPartitionDemander {
                 if (!isInitial() && log.isInfoEnabled())
                     log.info("Completed rebalance future: " + this);
 
-                // There is no need to start rebalancing for the next cache group if reassign request is issued.
                 if (next != null)
                     next.requestPartitions(); // Go to next item in chain everything if it exists.
 
@@ -1735,10 +1734,19 @@ public class GridDhtPartitionDemander {
                 || ((GridDhtPreloader)grp.preloader()).disableRebalancingCancellationOptimization())
                 return false;
 
-            if (topVer.equals(otherAssignments.topologyVersion())) {
+            if (ctx.exchange().lastAffinityChangedTopologyVersion(topVer).equals(
+                ctx.exchange().lastAffinityChangedTopologyVersion(otherAssignments.topologyVersion()))) {
                 if (log.isDebugEnabled())
                     log.debug("Rebalancing is forced on the same topology [grp="
                         + grp.cacheOrGroupName() + ", " + "top=" + topVer + ']');
+
+                return false;
+            }
+
+            if (otherAssignments.affinityReassign()) {
+                if (log.isDebugEnabled())
+                    log.debug("Some of owned partitions were reassigned through coordinator [grp="
+                        + grp.cacheOrGroupName() + ", " + "init=" + topVer + " ,other=" + otherAssignments.topologyVersion() + ']');
 
                 return false;
             }
