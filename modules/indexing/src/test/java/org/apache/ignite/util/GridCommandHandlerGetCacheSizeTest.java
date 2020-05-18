@@ -47,6 +47,11 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
     public static final int MAX_CACHE_SIZE = 96 * 1024;
 
     /**
+     * Default cache size in createAndFillCache
+     * */
+    public static final int DEFAULT_CACHE_SIZE = 10000;
+
+    /**
      * Test new answer from cache list command
      * */
     @Test
@@ -66,6 +71,12 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
         String out = testOut.toString();
 
         assertContains(log, out, "offHeapCnt=" + testSize);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "list", ".", "--groups"));
+
+        out = testOut.toString();
+
+        assertContains(log, out, "offHeapCnt=" + (testSize + DEFAULT_CACHE_SIZE));
     }
 
     /**
@@ -102,6 +113,7 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
         Ignite client = startGrid(CLIENT_NODE_NAME_PREFIX);
 
         createAndFillCache(client, CACHE_NAME, GROUP_NAME);
+        createAndFillCache(client, CACHE_NAME + "0", GROUP_NAME);
 
         return ignite;
     }
