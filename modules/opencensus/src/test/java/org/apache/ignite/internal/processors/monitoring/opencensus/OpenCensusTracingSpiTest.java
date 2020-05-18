@@ -73,7 +73,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
 
         // Check existence of Traces.Discovery.NODE_JOIN_REQUEST spans with OK status on all nodes:
         Map<AttributeValue, SpanData> nodeJoinReqSpans = handler().allSpans()
-            .filter(span -> DISCOVERY_NODE_JOIN_REQUEST.traceName().equals(span.getName()))
+            .filter(span -> DISCOVERY_NODE_JOIN_REQUEST.spanName().equals(span.getName()))
             .filter(span -> span.getStatus() == Status.OK)
             .filter(span -> stringAttributeValue(joinedNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -98,7 +98,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
         // Check existence of Traces.Discovery.NODE_JOIN_ADD spans with OK status on all nodes:
         for (int i = 0; i <= GRID_CNT; i++) {
             List<SpanData> nodeJoinAddSpans = handler().spansReportedByNode(getTestIgniteInstanceName(i))
-                .filter(span -> DISCOVERY_NODE_JOIN_ADD.traceName().equals(span.getName()))
+                .filter(span -> DISCOVERY_NODE_JOIN_ADD.spanName().equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> stringAttributeValue(joinedNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -119,7 +119,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
                 );
                 Assert.assertEquals(
                     "Parent span name is invalid, parentSpan=" + parentSpan,
-                    DISCOVERY_NODE_JOIN_REQUEST.traceName(),
+                    DISCOVERY_NODE_JOIN_REQUEST.spanName(),
                     parentSpan.getName()
                 );
                 Assert.assertEquals(
@@ -133,7 +133,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
         // Check existence of Traces.Discovery.NODE_JOIN_FINISH spans with OK status on all nodes:
         for (int i = 0; i <= GRID_CNT; i++) {
             List<SpanData> nodeJoinAddSpans = handler().spansReportedByNode(getTestIgniteInstanceName(i))
-                .filter(span -> DISCOVERY_NODE_JOIN_FINISH.traceName().equals(span.getName()))
+                .filter(span -> DISCOVERY_NODE_JOIN_FINISH.spanName().equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> stringAttributeValue(joinedNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -154,7 +154,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
                 );
                 Assert.assertEquals(
                     "Parent span name is invalid " + parentSpan,
-                    DISCOVERY_NODE_JOIN_ADD.traceName(),
+                    DISCOVERY_NODE_JOIN_ADD.spanName(),
                     parentSpan.getName()
                 );
                 Assert.assertEquals(
@@ -185,7 +185,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
 
         // Check existence of DISCOVERY_NODE_LEFT spans with OK status on all nodes:
         Map<AttributeValue, SpanData> nodeLeftSpans = handler().allSpans()
-            .filter(span -> DISCOVERY_NODE_LEFT.traceName().equals(span.getName()))
+            .filter(span -> DISCOVERY_NODE_LEFT.spanName().equals(span.getName()))
             .filter(span -> stringAttributeValue(leftNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
             .filter(span -> span.getStatus() == Status.OK)
@@ -226,7 +226,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
         // Check PME for NODE_LEFT event on remaining nodes:
         for (int i = 0; i < GRID_CNT - 1; i++) {
             List<SpanData> exchFutSpans = handler().spansReportedByNode(getTestIgniteInstanceName(i))
-                .filter(span -> EXCHANGE_FUTURE.traceName().equals(span.getName()))
+                .filter(span -> EXCHANGE_FUTURE.spanName().equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.longAttributeValue(EventType.EVT_NODE_LEFT).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE))))
@@ -249,7 +249,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
                 );
                 Assert.assertEquals(
                     "Parent span name is invalid " + parentSpan,
-                    DISCOVERY_NODE_LEFT.traceName(),
+                    DISCOVERY_NODE_LEFT.spanName(),
                     parentSpan.getName()
                 );
                 Assert.assertEquals(
@@ -295,7 +295,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
 
         handler().flush();
 
-        SpanData jobSpan = handler().spanByName(CUSTOM_JOB_CALL.traceName());
+        SpanData jobSpan = handler().spanByName(CUSTOM_JOB_CALL.spanName());
 
         List<SpanData> data = handler().unrollByParent(jobSpan);
 
@@ -310,16 +310,16 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
 
         assertEquals(nodejobTraces.toString(), 7, nodejobTraces.size());
 
-        assertEquals(1, nodejobTraces.stream().filter(it -> it.contains(CUSTOM_JOB_CALL.traceName())).count());
+        assertEquals(1, nodejobTraces.stream().filter(it -> it.contains(CUSTOM_JOB_CALL.spanName())).count());
 
         //request + response
-        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_SOCKET_WRITE.traceName())).count());
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_SOCKET_WRITE.spanName())).count());
         //request + response
-        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_SOCKET_READ.traceName())).count());
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_SOCKET_READ.spanName())).count());
         //request + response
-        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_REGULAR_PROCESS.traceName())).count());
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_REGULAR_PROCESS.spanName())).count());
 
-        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_REQUEST.traceName()))));
-        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_RESPONSE.traceName()))));
+        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_REQUEST.spanName()))));
+        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_RESPONSE.spanName()))));
     }
 }

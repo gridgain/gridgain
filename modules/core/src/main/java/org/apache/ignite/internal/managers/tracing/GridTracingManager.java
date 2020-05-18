@@ -167,7 +167,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
             if (spanTypeToCreate.rootSpan()) {
                 return new SpanImpl(
                     getSpi().create(
-                        spanTypeToCreate.traceName(),
+                        spanTypeToCreate.spanName(),
                         null,
                         samplingRate),
                     spanTypeToCreate,
@@ -189,7 +189,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
                 return new SpanImpl(
                     getSpi().create(
-                        spanTypeToCreate.traceName(),
+                        spanTypeToCreate.spanName(),
                         ((SpanImpl)parentSpan).spiSpecificSpan(),
                         samplingRate),
                     spanTypeToCreate,
@@ -274,7 +274,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                 mergedIncludedScopes.remove(spanType.scope());
 
                 span = new SpanImpl(
-                    getSpi().create(spanType.traceName(), Arrays.copyOfRange(serializedParentSpan,8,  8 + spiSpecificSpanSize)),
+                    getSpi().create(spanType.spanName(), Arrays.copyOfRange(serializedParentSpan,8,  8 + spiSpecificSpanSize)),
                     spanType,
                     mergedIncludedScopes);
             }
@@ -352,7 +352,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         System.arraycopy(spiSpecificSerializedSpan, 0, serializedSpanBytes, 8, spiSpecificSerializedSpan.length);
 
         // Span type.
-        System.arraycopy(intToBytes(span.type().idx()), 0, serializedSpanBytes, 8 + spiSpecificSerializedSpan.length, 4);
+        System.arraycopy(intToBytes(span.type().index()), 0, serializedSpanBytes, 8 + spiSpecificSerializedSpan.length, 4);
 
         assert span.includedScopes() != null;
 

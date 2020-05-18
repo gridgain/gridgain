@@ -164,7 +164,7 @@ public enum SpanType {
     private Scope scope;
 
     /** Trace name. */
-    private String traceName;
+    private String spanName;
 
     /** Index. */
     private int idx;
@@ -179,12 +179,12 @@ public enum SpanType {
      * Constructor.
      *
      * @param scope Scope.
-     * @param traceName Trace name.
+     * @param spanName Span name.
      * @param idx Index.
      */
-    SpanType(Scope scope, String traceName, int idx) {
+    SpanType(Scope scope, String spanName, int idx) {
         this.scope = scope;
-        this.traceName = traceName;
+        this.spanName = spanName;
         this.idx = idx;
     }
 
@@ -192,13 +192,12 @@ public enum SpanType {
      * Constructor.
      *
      * @param scope Scope.
-     * @param traceName Trace name.
+     * @param spanName Span name.
      * @param idx Index.
      * @param rootSpan Boolean flag, that indicates whether given span is root within it's scope or not.
      */
-    SpanType(Scope scope, String traceName, int idx, boolean rootSpan) {
-        this(scope, traceName, idx);
-
+    SpanType(Scope scope, String spanName, int idx, boolean rootSpan) {
+        this(scope, spanName, idx);
         this.rootSpan = rootSpan;
     }
 
@@ -212,19 +211,16 @@ public enum SpanType {
     /**
      * @return Trace name.
      */
-    // TODO: 14.05.20 Rename to some more suitable thing.
-    public String traceName() {
-        return traceName;
+    public String spanName() {
+        return spanName;
     }
 
     /**
      * @return idx.
      */
-    // TODO: 14.05.20 rename to index.
-    public int idx() {
+    public int index() {
         return idx;
     }
-
 
     /**
      * @return Root span.

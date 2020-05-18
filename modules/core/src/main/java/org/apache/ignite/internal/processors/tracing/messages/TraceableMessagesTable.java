@@ -82,6 +82,6 @@ public class TraceableMessagesTable {
 
         SpanType val = msgTraceLookupTable.get(obj.getClass());
 
-        return val != null ? val.traceName() : obj.getClass().getSimpleName();
+        return val != null ? val.spanName() : obj.getClass().getSimpleName();
     }
 }

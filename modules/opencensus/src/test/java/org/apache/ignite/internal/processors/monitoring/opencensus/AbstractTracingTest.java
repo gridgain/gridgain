@@ -206,8 +206,8 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         java.util.List<SpanData> gotSpans = hnd.allSpans()
             .filter(
                 span -> parentSpanId != null ?
-                    parentSpanId.equals(span.getParentSpanId()) && spanType.traceName().equals(span.getName()) :
-                    spanType.traceName().equals(span.getName()))
+                    parentSpanId.equals(span.getParentSpanId()) && spanType.spanName().equals(span.getName()) :
+                    spanType.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertEquals(expSpansCnt, gotSpans.size());

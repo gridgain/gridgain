@@ -66,7 +66,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
 
         Set<String> unexpectedTxSpanNames = Arrays.stream(SpanType.values()).
             filter(spanType -> spanType.scope() == TX).
-            map(SpanType::traceName).
+            map(SpanType::spanName).
             collect(Collectors.toSet());
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
@@ -94,7 +94,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertEquals(1, gotSpans.size());
@@ -123,7 +123,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         // Cause of probability nature of sampling, it's not possible to check that 0.5 sampling rate will end with
@@ -155,12 +155,12 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         SpanId parentSpanId = handler().allSpans()
-            .filter(span -> SpanType.TX_NEAR_PREPARE.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX_NEAR_PREPARE.spanName().equals(span.getName()))
             .collect(Collectors.toList()).get(0).getContext().getSpanId();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
             .filter(span -> parentSpanId.equals(span.getParentSpanId()) &&
-                SpanType.COMMUNICATION_SOCKET_WRITE.traceName().equals(span.getName()))
+                SpanType.COMMUNICATION_SOCKET_WRITE.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertTrue(gotSpans.isEmpty());
@@ -192,12 +192,12 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         SpanId parentSpanId = handler().allSpans()
-            .filter(span -> SpanType.TX_NEAR_PREPARE.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX_NEAR_PREPARE.spanName().equals(span.getName()))
             .collect(Collectors.toList()).get(0).getContext().getSpanId();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
             .filter(span -> parentSpanId.equals(span.getParentSpanId()) &&
-                SpanType.COMMUNICATION_SOCKET_WRITE.traceName().equals(span.getName()))
+                SpanType.COMMUNICATION_SOCKET_WRITE.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertFalse(gotSpans.isEmpty());
@@ -225,7 +225,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertEquals(1, gotSpans.size());
@@ -238,7 +238,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         // Still only one, previously detected, span is expected.
@@ -263,7 +263,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertEquals(1, gotSpans.size());
@@ -285,7 +285,7 @@ public class OpenCensusTxTracingConfigurationTest extends AbstractTracingTest {
         handler().flush();
 
         java.util.List<SpanData> gotSpans = handler().allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
+            .filter(span -> SpanType.TX.spanName().equals(span.getName()))
             .collect(Collectors.toList());
 
         assertTrue(gotSpans.isEmpty());
