@@ -16,7 +16,14 @@
 
 package org.apache.ignite.internal.client.thin;
 
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.*;
+
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_1_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_2_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_4_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_5_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_1;
 
 /**
  * Thin client feature that was introduced by introducing new protocol version.
