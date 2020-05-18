@@ -84,7 +84,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -98,7 +97,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.Compactab
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -117,9 +115,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.loadtests.colocation.GridTestLifecycleBean;
-import org.apache.ignite.plugin.AbstractTestPluginProvider;
-import org.apache.ignite.plugin.IgnitePlugin;
-import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -173,6 +168,12 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
     /** */
     private static final String LOC_CACHE_NAME = "local";
+
+    /** */
+    private static final String CACHE_1 = "cache1";
+
+    /** */
+    private static final String CACHE_2 = "cache2";
 
     /** */
     private boolean renamed = false;
@@ -1737,81 +1738,18 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         }
     }
 
-//    /**
-//     *
-//     */
-//    @Test
-//    public void testRecoveryAfterRestart() throws Exception {
-//        IgniteEx crd = startGrid(1);
-//        startGrid(2);
-//        crd.cluster().active(true);
-//
-//        for (int i = 0; i < PARTS; i++)
-//            crd.cache(CACHE_NAME).put(i, i);
-//
-//        forceCheckpoint();
-//
-//        stopAllGrids();
-//
-//        crd = startGrid(1);
-//        crd.cluster().active(true);
-//
-//        for (int i = 0; i < PARTS; i++)
-//            crd.cache(CACHE_NAME).put(i, i + 1);
-//
-//        TestRecordingCommunicationSpi.spi(crd).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-//            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-//                if (msg instanceof GridDhtPartitionSupplyMessage) {
-//                    GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
-//
-//                    return msg0.groupId() == CU.cacheId(CACHE_NAME);
-//                }
-//
-//                return false;
-//            }
-//        });
-//
-//        IgniteEx g2 = startGrid(2);
-//
-//        TestRecordingCommunicationSpi.spi(crd).waitForBlocked();
-//
-//        forceCheckpoint(g2);
-//
-//        g2.close();
-//        //stopGrid(1);
-//
-//        TestRecordingCommunicationSpi.spi(crd).stopBlock();
-//
-//        waitForTopology(1);
-//
-//        //crd = startGrid(1);
-//        startGrid(2);
-//
-//        //crd.cluster().active(true);
-//
-//        awaitPartitionMapExchange();
-//    }
-
     /**
-     *
+     * Tests a scenario when a coordinator has failed after recovery during node join.
      */
     @Test
     @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
-    public void testRecoveryAfterRestart2() throws Exception {
-        final String cache1 = "cache1";
-        final String cache2 = "cache2";
-
+    public void testRecoveryAfterRestart_Join() throws Exception {
         IgniteEx crd = startGrid(1);
         crd.cluster().active(true);
 
-//        crd.createCache(cfg1);
-//        crd.createCache(cfg2);
-
-        awaitPartitionMapExchange();
-
         for (int i = 0; i < PARTS; i++) {
-            crd.cache(cache1).put(i, i);
-            crd.cache(cache2).put(i, i);
+            crd.cache(CACHE_1).put(i, i);
+            crd.cache(CACHE_2).put(i, i);
         }
 
         TestRecordingCommunicationSpi.spi(crd).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
@@ -1819,7 +1757,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 if (msg instanceof GridDhtPartitionSupplyMessage) {
                     GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
 
-                    return msg0.groupId() == CU.cacheId(cache2);
+                    return msg0.groupId() == CU.cacheId(CACHE_2);
                 }
 
                 return false;
@@ -1835,7 +1773,6 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         forceCheckpoint(g2);
 
         g2.close();
-        //stopGrid(1);
 
         TestRecordingCommunicationSpi.spi(crd).stopBlock();
 
@@ -1846,30 +1783,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
         GridTestUtils.runAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {
-                IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
-                cfg2.setLifecycleBeans(new GridTestLifecycleBean() {
-                    @Override public void onLifecycleEvent(LifecycleEventType type) {
-                        if (type == LifecycleEventType.BEFORE_NODE_START) {
-                            g.context().internalSubscriptionProcessor().registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
-                                @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-                                    g.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-                                        @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                                            l1.countDown();
-
-                                            try {
-                                                assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
-                                            } catch (IgniteInterruptedCheckedException e) {
-                                                fail(X.getFullStackTrace(e));
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    }
-                });
-
-                startGrid(cfg2);
+                startGrid(getPMEBlockingConfiguration(2, l1, l2));
 
                 return null;
             }
@@ -1885,25 +1799,17 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * Tests a scenario when a coordinator has failed after recovery during activation.
      */
     @Test
     @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
-    public void testRecoveryAfterRestart3() throws Exception {
-        final String cache1 = "cache1";
-        final String cache2 = "cache2";
-
+    public void testRecoveryAfterRestart_Activate() throws Exception {
         IgniteEx crd = startGrid(1);
         crd.cluster().active(true);
 
-//        crd.createCache(cfg1);
-//        crd.createCache(cfg2);
-
-        awaitPartitionMapExchange();
-
         for (int i = 0; i < PARTS; i++) {
-            crd.cache(cache1).put(i, i);
-            crd.cache(cache2).put(i, i);
+            crd.cache(CACHE_1).put(i, i);
+            crd.cache(CACHE_2).put(i, i);
         }
 
         TestRecordingCommunicationSpi.spi(crd).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
@@ -1911,7 +1817,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 if (msg instanceof GridDhtPartitionSupplyMessage) {
                     GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
 
-                    return msg0.groupId() == CU.cacheId(cache2);
+                    return msg0.groupId() == CU.cacheId(CACHE_2);
                 }
 
                 return false;
@@ -1936,32 +1842,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
         crd = startGrid(1);
 
-        IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
-        cfg2.setLifecycleBeans(new GridTestLifecycleBean() {
-            @Override public void onLifecycleEvent(LifecycleEventType type) {
-                if (type == LifecycleEventType.BEFORE_NODE_START) {
-                    g.context().internalSubscriptionProcessor().registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
-                        @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-                            g.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-                                @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                                    l1.countDown();
-
-                                    try {
-                                        assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
-                                    } catch (IgniteInterruptedCheckedException e) {
-                                        fail(X.getFullStackTrace(e));
-                                    }
-
-                                    System.out.println();
-                                }
-                            });
-                        }
-                    });
-                }
-            }
-        });
-
-        startGrid(cfg2);
+        startGrid(getPMEBlockingConfiguration(2, l1, l2));
 
         GridTestUtils.runAsync(new Runnable() {
             @Override public void run() {
@@ -1978,10 +1859,6 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
     }
 
-    @Override protected long getPartitionMapExchangeTimeout() {
-        return super.getPartitionMapExchangeTimeout() * 1000000;
-    }
-
     /**
      * Generate random lowercase string for test purposes.
      */
@@ -1993,6 +1870,45 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
             sb.append(random.nextInt(26) + 'a');
 
         return sb.toString();
+    }
+
+    /**
+     * Returns node start configuration with ability to sync on PME onInitBeforeTopologyLock stage.
+     *
+     * @param idx Node index.
+     * @param l1 Blocked event latch.
+     * @param l2 Released event latch.
+     *
+     * @return A configuration.
+     */
+    private IgniteConfiguration getPMEBlockingConfiguration(
+        int idx,
+        CountDownLatch l1,
+        CountDownLatch l2
+    ) throws Exception {
+        return getConfiguration(getTestIgniteInstanceName(idx)).setLifecycleBeans(new GridTestLifecycleBean() {
+            @Override public void onLifecycleEvent(LifecycleEventType type) {
+                if (type == LifecycleEventType.BEFORE_NODE_START) {
+                    g.context().internalSubscriptionProcessor().registerDistributedMetastorageListener(
+                        new DistributedMetastorageLifecycleListener() {
+                        @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                            g.context().cache().context().exchange().registerExchangeAwareComponent(
+                                new PartitionsExchangeAware() {
+                                @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                                    l1.countDown();
+
+                                    try {
+                                        assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
+                                    } catch (IgniteInterruptedCheckedException e) {
+                                        fail(X.getFullStackTrace(e));
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
     }
 
     /**
