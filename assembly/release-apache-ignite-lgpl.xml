@@ -31,6 +31,7 @@
     <componentDescriptors>
         <componentDescriptor>release-base.xml</componentDescriptor>
         <componentDescriptor>release-apache-ignite-base.xml</componentDescriptor>
+        <componentDescriptor>release-windows.xml</componentDescriptor>
         <componentDescriptor>release-yardstick.xml</componentDescriptor>
         <componentDescriptor>release-sqlline.xml</componentDescriptor>
         <componentDescriptor>release-visor-console.xml</componentDescriptor>
