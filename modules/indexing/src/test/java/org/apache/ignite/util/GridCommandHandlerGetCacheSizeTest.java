@@ -33,16 +33,22 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFi
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
 
 /**
- *
+ * Test for get cache size
  */
 public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-    /** */
+    /**
+     * Grid count from test
+     * */
     public static final int GRID_CNT = 2;
 
-    /** */
+    /**
+     * Max mutable cache size. Real size no more than 10000 (hardcoded in createAndFillCache) + MAX_CACHE_SIZE
+     * */
     public static final int MAX_CACHE_SIZE = 96 * 1024;
 
-    /** */
+    /**
+     * Test new answer from cache list command
+     * */
     @Test
     public void testValidateGridCommandHandlerGetCacheSizeTest() throws Exception {
         IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> filledCache = null;
