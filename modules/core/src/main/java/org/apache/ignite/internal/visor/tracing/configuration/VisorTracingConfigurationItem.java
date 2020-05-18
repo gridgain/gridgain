@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- * Data transfer object that contains scope, label, sampling rate and set of supported scopes.
+ * Data transfer object that contains scope, label, sampling rate and set of included scopes.
  */
 @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
 public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
@@ -53,11 +53,11 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
 
     /**
      * Set of {@link Scope} that defines which sub-traces will be included in given trace. In other words, if child's
-     * span scope is equals to parent's scope or it belongs to the parent's span supported scopes, then given child span
+     * span scope is equals to parent's scope or it belongs to the parent's span included scopes, then given child span
      * will be attached to the current trace, otherwise it'll be skipped. See {@link
      * Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
-    private Set<Scope> supportedScopes;
+    private Set<Scope> includedScopes;
 
     /**
      * Default constructor.
@@ -73,9 +73,9 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
      * @param lb Specifies the label of a traced operation. It's an optional attribute.
      * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
      *  0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @param supportedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
+     * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
      *  In other words, if child's span scope is equals to parent's scope
-     *  or it belongs to the parent's span supported scopes, then given child span will be attached to the current trace,
+     *  or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
      *  otherwise it'll be skipped.
      *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */
@@ -83,12 +83,12 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
         Scope scope,
         String lb,
         Double samplingRate,
-        Set<Scope> supportedScopes)
+        Set<Scope> includedScopes)
     {
         this.scope = scope;
         this.lb = lb;
         this.samplingRate = samplingRate;
-        this.supportedScopes = supportedScopes;
+        this.includedScopes = includedScopes;
     }
 
     /**
@@ -116,11 +116,11 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
 
     /**
      * @return Set of  that defines which sub-traces will be included in given trace. In other words, if child's span
-     * scope is equals to parent's scope or it belongs to the parent's span supported scopes, then given child span will
+     * scope is equals to parent's scope or it belongs to the parent's span included scopes, then given child span will
      * be attached to the current trace, otherwise it'll be skipped. See  for more details.
      */
-    public Set<Scope> supportedScopes() {
-        return supportedScopes;
+    public Set<Scope> includedScopes() {
+        return includedScopes;
     }
 
     /** {@inheritDoc} */
@@ -134,7 +134,7 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
 
         out.writeObject(samplingRate);
 
-        U.writeCollection(out, supportedScopes);
+        U.writeCollection(out, includedScopes);
     }
 
     /** {@inheritDoc} */
@@ -148,7 +148,7 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
 
         samplingRate = (Double)in.readObject();
 
-        supportedScopes = U.readSet(in);
+        includedScopes = U.readSet(in);
     }
 
     /** {@inheritDoc} */
@@ -171,6 +171,6 @@ public class VisorTracingConfigurationItem extends IgniteDataTransferObject {
             return false;
         if (samplingRate != null ? !samplingRate.equals(that.samplingRate) : that.samplingRate != null)
             return false;
-        return supportedScopes != null ? supportedScopes.equals(that.supportedScopes) : that.supportedScopes == null;
+        return includedScopes != null ? includedScopes.equals(that.includedScopes) : that.includedScopes == null;
     }
 }

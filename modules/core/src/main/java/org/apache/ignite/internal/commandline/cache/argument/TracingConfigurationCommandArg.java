@@ -45,7 +45,7 @@ public enum TracingConfigurationCommandArg implements CommandArg {
 
     /**
      * Set of {@link Scope} that defines which sub-traces will be included in given trace. In other words, if child's
-     * span scope is equals to parent's scope or it belongs to the parent's span supported scopes, then given child span
+     * span scope is equals to parent's scope or it belongs to the parent's span included scopes, then given child span
      * will be attached to the current trace, otherwise it'll be skipped. See {@link
      * Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
      */

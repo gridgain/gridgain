@@ -190,7 +190,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
 
         double samplingRate = SAMPLING_RATE_NEVER;
 
-        Set<Scope> supportedScopes = new HashSet<>();
+        Set<Scope> includedScopes = new HashSet<>();
 
         while (argIter.hasNextSubArg()) {
             TracingConfigurationCommandArg arg =
@@ -251,7 +251,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
 
                     for (String scopeStrVal : setStrVals) {
                         try {
-                            supportedScopes.add(Scope.valueOf(scopeStrVal));
+                            includedScopes.add(Scope.valueOf(scopeStrVal));
                         }
                         catch (IllegalArgumentException e) {
                             throw new IllegalArgumentException(
@@ -288,14 +288,14 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
 
             case SET: {
                 tracingConfigurationArgs.withScope(scope).withLabel(lb).withSamplingRate(samplingRate).
-                    withSupportedScopes(supportedScopes);
+                    withIncludedScopes(includedScopes);
 
                 break;
             }
 
             default: {
                 // We should never get here.
-                assert false;
+                assert false : "Unexpected tracing configuration argument [arg= " + cmd +']';
             }
         }
 
@@ -339,7 +339,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
             args.scope(),
             args.label(),
             args.samplingRate(),
-            args.supportedScopes()
+            args.includedScopes()
         );
     }
 }

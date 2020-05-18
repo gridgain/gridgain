@@ -397,12 +397,6 @@ public class CommandHandlerParsingTest {
                     break;
                 }
 
-                case TRACING_CONFIGURATION: {
-                    // TODO: 05.05.20
-
-                    break;
-                }
-
                 default:
                     fail("Unknown command: " + cmd);
             }
