@@ -69,11 +69,6 @@ public abstract class GridCacheClientModesAbstractSelfTest extends GridCacheAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 

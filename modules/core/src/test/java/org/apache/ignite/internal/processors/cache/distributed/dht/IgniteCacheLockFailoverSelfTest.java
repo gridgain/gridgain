@@ -30,6 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFutureTimeoutException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.common.ValidateThreadNames;
 import org.junit.Before;
 import org.junit.Test;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -38,6 +39,7 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
  *
  */
 @SuppressWarnings("unchecked")
+@ValidateThreadNames(ignore = true, ignoreReason = "This test doesn't have default cache instance")
 public class IgniteCacheLockFailoverSelfTest extends GridCacheAbstractSelfTest {
     /** */
     @Before
