@@ -73,6 +73,6 @@ public class DiscoveryListener implements GridLocalEventListener, HighPriorityLi
 
         metricsLsnr.onNodeLeft(consistentId);
 
-        clientPool.onNodeLeft(consistentId);
+        clientPool.onNodeLeft(nodeId);
     }
 }

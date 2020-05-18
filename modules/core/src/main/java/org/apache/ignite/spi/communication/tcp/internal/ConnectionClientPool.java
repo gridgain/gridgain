@@ -544,7 +544,7 @@ public class ConnectionClientPool {
     /**
      * @param nodeId Node id.
      */
-    public void onNodeLeft(Object nodeId) {
+    public void onNodeLeft(UUID nodeId) {
         GridCommunicationClient[] clients0 = clients.remove(nodeId);
 
         if (clients0 != null) {
