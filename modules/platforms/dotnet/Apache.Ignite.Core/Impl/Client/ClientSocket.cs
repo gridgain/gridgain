@@ -397,7 +397,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 if (userAttributes)
                 {
                     // TODO: Implement User Attributes. Need to write Map here.
-                    stream.WriteByte(HdrNull);
+                    stream.WriteByte(BinaryUtils.HdrNull);
                 }
 
                 // Authentication data.
