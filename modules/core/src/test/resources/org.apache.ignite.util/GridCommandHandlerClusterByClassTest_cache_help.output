@@ -83,7 +83,7 @@ Arguments: --cache help --yes
       --node-idnodeId  - Specify node for job execution. If not specified explicitly, info will be gathered from all nodes
 
   --cache indexes_force_rebuild --node-id --cache-name|--group-name
-    Triggeres rebuild of all indexes for specified caches or cache groups.
+    Triggers rebuild of all indexes for specified caches or cache groups.
 
     Parameters:
       --node-id      - Specify node for indexes rebuild.

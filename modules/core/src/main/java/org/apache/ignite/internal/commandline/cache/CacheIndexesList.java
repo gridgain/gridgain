@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
@@ -37,7 +36,6 @@ import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.apache.ignite.internal.visor.cache.index.IndexListTaskArg;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_LIST;
@@ -96,7 +94,7 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
 
 
             if ((id == null && allNodesSupport) ||
-                client.compute().node(id).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
+                id != null && client.compute().node(id).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
             {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client,
                     "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, id, clientCfg);

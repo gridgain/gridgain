@@ -80,7 +80,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
                 .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
 
             if ((nodeId == null && allNodesSupport) ||
-                client.compute().node(nodeId).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
+                nodeId != null && client.compute().node(nodeId).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
             {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
                     nodeId, clientCfg);
