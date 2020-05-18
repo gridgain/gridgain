@@ -883,7 +883,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @throws IgniteInterruptedCheckedException If interrupted.
      */
     public void init(boolean newCrd) throws IgniteInterruptedCheckedException {
-
         if (isDone())
             return;
 
@@ -3658,7 +3657,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             assert partHistSuppliers.isEmpty() : partHistSuppliers;
 
-            if (!exchCtx.mergeExchanges() && !crd.equals(events().discoveryCache().serverNodes().get(0))) {
+            if (!exchCtx.mergeExchanges() &&
+                (!crd.equals(events().discoveryCache().serverNodes().get(0)) || activateCluster())) {
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (grp.isLocal())
                         continue;
@@ -3666,10 +3666,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     // It is possible affinity is not initialized.
                     // For example, dynamic cache start failed.
                     if (grp.affinity().lastVersion().topologyVersion() > 0)
-                        grp.topology().beforeExchange(this, !centralizedAff && !forceAffReassignment, false);
-                    else
+                        grp.topology().beforeExchange(this, true, false);
+                    else {
                         assert exchangeLocE != null :
                             "Affinity is not calculated for the cache group [groupName=" + grp.name() + "]";
+                    }
                 }
             }
 

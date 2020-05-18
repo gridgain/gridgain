@@ -451,14 +451,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
                         }
-//                        else {
-//                            GridDhtLocalPartition locPart = locParts.get(p);
-//
-//                            if (locPart != null) {
-//                                throw new AssertionError("The local partition doesn't belong to the node by affinity " +
-//                                    "[grp" + grp.name() + ", part=" + locPart + ", affVer=" + affVer + ']');
-//                            }
-//                        }
                     }
                 }
                 else
@@ -487,8 +479,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 }
                             }
                         }
-                        else
+                        else {
                             locPart.own();
+
+                            // Make sure partition map is initialized.
+                            updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
+                        }
                     }
                     else if (belongs) {
                         locPart = getOrCreatePartition(p);
@@ -742,34 +738,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public void afterStateRestored(AffinityTopologyVersion topVer) {
-//        lock.writeLock().lock();
-//
-//        try {
-//            long updateSeq = this.updateSeq.incrementAndGet();
-//
-//            initializeFullMap(updateSeq);
-//
-//            for (int p = 0; p < grp.affinity().partitions(); p++) {
-//                GridDhtLocalPartition locPart = locParts.get(p);
-//
-//                if (locPart == null)
-//                    updateLocal(p, EVICTED, updateSeq, topVer);
-//                else {
-//                    GridDhtPartitionState state = locPart.state();
-//
-//                    updateLocal(p, state, updateSeq, topVer);
-//
-//                    // Restart cleaning.
-//                    if (state == RENTING)
-//                        locPart.clearAsync();
-//                }
-//            }
-//        }
-//        finally {
-//            lock.writeLock().unlock();
-//        }
-
-        // Partition maps are initialized as a result of partition map exchanges.
+        /** Partition maps are initialized as a part of partition map exchanges,
+         * see {@link #beforeExchange(GridDhtPartitionsExchangeFuture, boolean, boolean)} */
         for (GridDhtLocalPartition locPart : currentLocalPartitions()) {
             if (locPart != null && locPart.state() == RENTING)
                 locPart.clearAsync(); // Resume clearing
