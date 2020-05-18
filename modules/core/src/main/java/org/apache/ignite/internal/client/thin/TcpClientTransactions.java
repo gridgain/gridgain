@@ -94,7 +94,7 @@ class TcpClientTransactions implements ClientTransactions {
                 ProtocolContext protocolCtx = req.clientChannel().protocolCtx();
 
                 if (!protocolCtx.isFeatureSupported(TRANSACTIONS)) {
-                    throw new ClientProtocolError(String.format("Transactions are not supported by the server's " +
+                    throw new ClientProtocolError(String.format("Transactions have not supported by the server's " +
                         "protocol version %s, required version %s", protocolCtx.version(), TRANSACTIONS.verIntroduced()));
                 }
 
