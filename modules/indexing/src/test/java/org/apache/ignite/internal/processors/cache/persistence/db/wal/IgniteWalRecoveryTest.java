@@ -204,11 +204,6 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setConsistentId(gridName);
-
-        cfg.setFailureDetectionTimeout(100000L);
-        cfg.setClientFailureDetectionTimeout(100000L);
-
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         CacheConfiguration<Integer, IndexedObject> ccfg = renamed ?
