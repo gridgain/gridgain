@@ -84,7 +84,7 @@ public class IgniteWalConverter {
     /**
      * Create File by path if path not empty and check exists.
      *
-     * @param path Path.
+     * @param path        Path.
      * @param description Description path for error message.
      * @return File.
      */
@@ -232,7 +232,7 @@ public class IgniteWalConverter {
     /**
      * Get a field Value in object by field name
      *
-     * @param o Object.
+     * @param o         Object.
      * @param fieldName Field name.
      * @return Field value.
      * @throws IllegalAccessException If failed.
@@ -253,26 +253,25 @@ public class IgniteWalConverter {
     /**
      * Converting {@link WALRecord} to a string with sensitive data.
      *
-     * @param walRecord Instance of {@link WALRecord}.
+     * @param walRecord     Instance of {@link WALRecord}.
      * @param sensitiveData Strategy for processing of sensitive data.
      * @return String representation of {@link WALRecord}.
      */
     private static String toString(WALRecord walRecord, ProcessSensitiveData sensitiveData) {
-        if (SHOW == sensitiveData || HIDE == sensitiveData)
-            return walRecord.toString();
+        if (walRecord instanceof DataRecord) {
+            final DataRecord dataRecord = (DataRecord)walRecord;
 
-        if (MetastoreDataRecord.class.isInstance(walRecord))
-            walRecord = new MetastoreDataRecordWrapper((MetastoreDataRecord)walRecord, sensitiveData);
-        else if (DataRecord.class.isInstance(walRecord)) {
-            DataRecord dataRecord = (DataRecord)walRecord;
+            final List<DataEntry> entryWrappers = new ArrayList<>(dataRecord.writeEntries().size());
 
-            List<DataEntry> entryWrappers = new ArrayList<>(dataRecord.writeEntries().size());
-            for (DataEntry dataEntry : dataRecord.writeEntries()) {
+            for (DataEntry dataEntry : dataRecord.writeEntries())
                 entryWrappers.add(new DataEntryWrapper(dataEntry, sensitiveData));
-            }
 
             dataRecord.setWriteEntries(entryWrappers);
         }
+        else if (SHOW == sensitiveData || HIDE == sensitiveData)
+            return walRecord.toString();
+        else if (walRecord instanceof MetastoreDataRecord)
+            walRecord = new MetastoreDataRecordWrapper((MetastoreDataRecord)walRecord, sensitiveData);
 
         return walRecord.toString();
     }
