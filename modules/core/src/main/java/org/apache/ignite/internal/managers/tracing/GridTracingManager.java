@@ -173,9 +173,8 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                     spanTypeToCreate,
                     includedScopes);
             }
-            else {
+            else
                 return NoopSpan.INSTANCE;
-            }
         }
         else {
             // If there's is parent span and parent span supports given scope then...
@@ -213,11 +212,21 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedParentSpan) {
+        // 1 byte: special flags;
+        // 1 bytes: spi type;
+        // 2 bytes: major protocol version;
+        // 2 bytes: minor protocol version;
+        // 4 bytes: spi specific serialized span length;
+        // n bytes: spi specific serializes span length;
+        // 4 bytes: span type
+        // 4 bytes included scopes size;
+        // 2 * included scopes size: included scopes items one by one;
+
         Span span;
 
         try {
             if (serializedParentSpan == null || serializedParentSpan == NoopTracing.NOOP_SERIALIZED_SPAN)
-                create(spanType, NoopSpan.INSTANCE);
+                return create(spanType, NoopSpan.INSTANCE);
 
             // First byte of the serializedSpan is reserved for special flags - it's not used right now.
 
@@ -234,37 +243,55 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
             // Deserialize and check minor protocol version.
             // within the scope of the same major protocol version, protocol should be backwards compatible
-            byte minProtocolVersion = serializedParentSpan[3];
+            byte minProtoVer = serializedParentSpan[3];
 
             // Deserialize spi specific span size.
-            int spiSpecificSpanSize = bytesToInt(Arrays.copyOfRange(serializedParentSpan, 4, 8), 0);
+            int spiSpecificSpanSize = bytesToInt(
+                Arrays.copyOfRange(
+                    serializedParentSpan,
+                    4,
+                    8),
+                0);
 
             SpanType parentSpanType = null;
 
             Set<Scope> includedScopes = new HashSet<>();
 
             // Fall through.
-            switch (minProtocolVersion) {
+            switch (minProtoVer) {
                 case 0 : {
                     // Deserialize parent span type.
-                    parentSpanType = SpanType.fromIndex(bytesToInt(Arrays.copyOfRange(serializedParentSpan,
-                        8 + spiSpecificSpanSize, 12 + spiSpecificSpanSize), 0));
+                    parentSpanType = SpanType.fromIndex(
+                        bytesToInt(
+                            Arrays.copyOfRange(
+                                serializedParentSpan,
+                                8 + spiSpecificSpanSize,
+                                12 + spiSpecificSpanSize),
+                            0));
 
                     // Deserialize included scopes size.
-                    int includedScopesSize = bytesToInt(Arrays.copyOfRange(serializedParentSpan,
-                        12 + spiSpecificSpanSize, 16 + spiSpecificSpanSize), 0);
+                    int includedScopesSize = bytesToInt(
+                        Arrays.copyOfRange(
+                            serializedParentSpan,
+                        12 + spiSpecificSpanSize,
+                            16 + spiSpecificSpanSize),
+                        0);
 
                     // Deserialize included scopes one by one.
                     for (int i = 0; i < includedScopesSize; i++) {
-                        includedScopes.add(Scope.fromIndex(bytesToShort(Arrays.copyOfRange(serializedParentSpan,
-                            16 + spiSpecificSpanSize + i * 2, 18 + spiSpecificSpanSize + i * 2), 0)));
+                        includedScopes.add(Scope.fromIndex(
+                            bytesToShort(
+                                Arrays.copyOfRange(
+                                    serializedParentSpan,
+                                    16 + spiSpecificSpanSize + i * 2,
+                                    18 + spiSpecificSpanSize + i * 2),
+                                0)));
                     }
                 }
             }
 
             assert parentSpanType != null;
 
-            // TODO: 14.05.20 Refactoring required: same logic as in inChainable() and partly as in generateSpan()
             // If there's is parent span and parent span supports given scope then...
             if (parentSpanType.scope() == spanType.scope() || includedScopes.contains(spanType.scope())) {
                 // create new span as child span for parent span, using parents span included scopes.
@@ -274,7 +301,9 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                 mergedIncludedScopes.remove(spanType.scope());
 
                 span = new SpanImpl(
-                    getSpi().create(spanType.spanName(), Arrays.copyOfRange(serializedParentSpan,8,  8 + spiSpecificSpanSize)),
+                    getSpi().create(
+                        spanType.spanName(),
+                        Arrays.copyOfRange(serializedParentSpan,8,  8 + spiSpecificSpanSize)),
                     spanType,
                     mergedIncludedScopes);
             }
@@ -320,6 +349,16 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
     /** {@inheritDoc} */
     @Override public byte[] serialize(@NotNull Span span) {
+        // 1 byte: special flags;
+        // 1 bytes: spi type;
+        // 2 bytes: major protocol version;
+        // 2 bytes: minor protocol version;
+        // 4 bytes: spi specific serialized span length;
+        // n bytes: spi specific serializes span length;
+        // 4 bytes: span type
+        // 4 bytes included scopes size;
+        // 2 * included scopes size: included scopes items one by one;
+
         if (span instanceof DeferredSpan)
             return ((DeferredSpan)span).serializedSpan();
 
@@ -346,36 +385,52 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         serializedSpanBytes[3] = MINOR_PROTOCOL_VERSION;
 
         // Spi specific serialized span length.
-        System.arraycopy(intToBytes(spiSpecificSerializedSpan.length), 0, serializedSpanBytes, 4, 4);
+        System.arraycopy(
+            intToBytes(spiSpecificSerializedSpan.length),
+            0,
+            serializedSpanBytes,
+            4,
+            4);
 
         // Spi specific span.
-        System.arraycopy(spiSpecificSerializedSpan, 0, serializedSpanBytes, 8, spiSpecificSerializedSpan.length);
+        System.arraycopy(
+            spiSpecificSerializedSpan,
+            0,
+            serializedSpanBytes,
+            8,
+            spiSpecificSerializedSpan.length);
 
         // Span type.
-        System.arraycopy(intToBytes(span.type().index()), 0, serializedSpanBytes, 8 + spiSpecificSerializedSpan.length, 4);
+        System.arraycopy(
+            intToBytes(span.type().index()),
+            0,
+            serializedSpanBytes,
+            8 + spiSpecificSerializedSpan.length, 4);
 
         assert span.includedScopes() != null;
 
         // Supported scope size
-        System.arraycopy(intToBytes(span.includedScopes().size()), 0, serializedSpanBytes, 12 + spiSpecificSerializedSpan.length, 4);
+        System.arraycopy(
+            intToBytes(span.includedScopes().size()),
+            0,
+            serializedSpanBytes,
+            12 + spiSpecificSerializedSpan.length,
+            4);
 
         int includedScopesCnt = 0;
+
         if (!span.includedScopes().isEmpty()) {
             for (Scope includedScope : span.includedScopes()) {
-                System.arraycopy(shortToBytes(includedScope.idx()), 0, serializedSpanBytes, 16 + spiSpecificSerializedSpan.length + 2 * includedScopesCnt++, 2);
+                System.arraycopy(
+                    shortToBytes(includedScope.idx()),
+                    0,
+                    serializedSpanBytes,
+                    16 + spiSpecificSerializedSpan.length + 2 * includedScopesCnt++,
+                    2);
             }
         }
 
         return serializedSpanBytes;
-        // 1 byte: special flags;
-        // 1 bytes: spi type;
-        // 2 bytes major protocol version;
-        // 2 bytes minor protocol version;
-        // 4 bytes spi specific serialized span length;
-        // n bytes spi specific serializes span length;
-        // span type
-        // included scopes size;
-        // included scopes items one by one;
     }
 
     /** {@inheritDoc} */
