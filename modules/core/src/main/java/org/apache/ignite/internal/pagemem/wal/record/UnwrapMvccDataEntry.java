@@ -23,6 +23,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Data Entry for automatic unwrapping key and value from Mvcc Data Entry
@@ -111,6 +113,13 @@ public class UnwrapMvccDataEntry extends MvccDataEntry implements UnwrappedDataE
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return UnwrappedDataEntry.toString(this, super.toString(), cacheObjValCtx);
+        SB sb = new SB();
+
+        sb.a(getClass().getSimpleName()).a('[');
+
+        if (S.includeSensitive())
+            sb.a("k = ").a(unwrappedKey()).a(", v = [ ").a(unwrappedValue()).a("], ");
+
+        return sb.a("super = [").a(super.toString()).a("]]").toString();
     }
 }
