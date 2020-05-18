@@ -22,7 +22,7 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
- * Change tx collisions interval, -1 for disabling.
+ * Change tx collisions interval or negative for disabling.
  */
 public class TxCollisionsDumpSettingsClosure implements IgniteRunnable {
     /** Serialization ID. */
@@ -35,13 +35,13 @@ public class TxCollisionsDumpSettingsClosure implements IgniteRunnable {
     /**
      * Tx key collision dump interval.
      * Check {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} for additional info.
-     **/
+     */
     private final int interval;
 
     /** Constructor.
      *
      * @param timeout New interval for key collisions collection.
-     * */
+     */
     TxCollisionsDumpSettingsClosure(int timeout) {
         interval = timeout;
     }

@@ -23,6 +23,7 @@ import java.util.Collection;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Metrics snapshot.
@@ -1132,7 +1133,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         out.writeBoolean(isEmpty);
         out.writeInt(size);
         out.writeInt(keySize);
-        out.writeUTF(txKeyCollisions);
+        U.writeLongString(out, txKeyCollisions);
     }
 
     /** {@inheritDoc} */
@@ -1211,6 +1212,6 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         isEmpty = in.readBoolean();
         size = in.readInt();
         keySize = in.readInt();
-        txKeyCollisions = in.readUTF();
+        txKeyCollisions = U.readLongString(in);
     }
 }

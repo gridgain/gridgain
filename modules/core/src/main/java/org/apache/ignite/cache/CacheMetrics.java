@@ -22,6 +22,7 @@ import javax.cache.integration.CacheWriter;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.mxbean.TransactionsMXBean;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Cache metrics used to obtain statistics on cache itself.
@@ -715,5 +716,5 @@ public interface CacheMetrics {
      *
      * @return Key collisions and appropriate queue size string representation.
      */
-    public String getTxKeyCollisions();
+    @NotNull public String getTxKeyCollisions();
 }

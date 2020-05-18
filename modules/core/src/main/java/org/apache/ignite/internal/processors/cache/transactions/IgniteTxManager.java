@@ -193,7 +193,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
 
     /** Lower tx collisions queue size threshold. */
-    static final int COLLISIONS_QUEUE_THRESHOLD = 100;
+    private static final int COLLISIONS_QUEUE_THRESHOLD = 100;
 
     /** Committing transactions. */
     private final ThreadLocal<IgniteInternalTx> threadCtx = new ThreadLocal<>();
@@ -3038,7 +3038,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Changes tx key collisions dump interval.
      * For additional info check {@link IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL} description.
      *
-     * @param collisionsDumpInterval New collisions dump interval or -1 for disabling.
+     * @param collisionsDumpInterval New collisions dump interval or negative for disabling.
      */
     public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
         broadcastToNodesSupportingFeature(
@@ -3052,7 +3052,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /**
      * Collect queue size per key collisions info.
      *
-     * @param key Key..
+     * @param key Key.
      * @param queueSize Collisions queue size
      **/
     public void pushCollidingKeysWithQueueSize(GridCacheMapEntry key, int queueSize) {

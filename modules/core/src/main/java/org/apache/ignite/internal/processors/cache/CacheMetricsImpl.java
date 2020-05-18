@@ -209,7 +209,7 @@ public class CacheMetricsImpl implements CacheMetrics {
     private GridCacheWriteBehindStore store;
 
     /** Tx collisions info. */
-    private volatile Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> txKeyCollisionInfo;
+    private volatile Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> txKeyCollisionInfo;
 
     /**
      * Creates cache metrics.
@@ -359,8 +359,8 @@ public class CacheMetricsImpl implements CacheMetrics {
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
 
         mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
-            "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric show " +
-            "appropriate keys.");
+            "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric shows " +
+            "corresponding keys.");
     }
 
     /**
@@ -864,7 +864,7 @@ public class CacheMetricsImpl implements CacheMetrics {
      *
      * @param coll Key collisions info holder.
      **/
-    public void keyCollisionsInfo(Supplier<List<Map.Entry<GridCacheMapEntry, Integer>>> coll) {
+    public void keyCollisionsInfo(Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> coll) {
         txKeyCollisionInfo = coll;
 
         if (delegate != null)

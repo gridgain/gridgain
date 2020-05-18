@@ -126,6 +126,8 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests transactional payload.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -135,6 +137,8 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests transactional payload with near cache enabled.
+     *
      * @throws Exception If failed.
      */
     @Test
