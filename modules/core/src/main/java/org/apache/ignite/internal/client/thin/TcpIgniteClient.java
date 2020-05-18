@@ -19,6 +19,7 @@ package org.apache.ignite.internal.client.thin;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,6 +52,7 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.marshaller.MarshallerContext;
+import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 
 /**
@@ -74,20 +76,19 @@ public class TcpIgniteClient implements IgniteClient {
 
     /**
      * Private constructor. Use {@link TcpIgniteClient#start(ClientConfiguration)} to create an instance of
-     * {@link TcpClientChannel}.
+     * {@code TcpIgniteClient}.
      */
     private TcpIgniteClient(ClientConfiguration cfg) throws ClientException {
-        Function<ClientChannelConfiguration, Result<ClientChannel>> chFactory = chCfg -> {
-            try {
-                return new Result<>(new TcpClientChannel(chCfg));
-            }
-            catch (ClientException e) {
-                return new Result<>(e);
-            }
-        };
+        this(TcpClientChannel::new, cfg);
+    }
 
-        ch = new ReliableChannel(chFactory, cfg);
-
+    /**
+     * Constructor with custom channel factory.
+     */
+    TcpIgniteClient(
+        Function<ClientChannelConfiguration, ClientChannel> chFactory,
+        ClientConfiguration cfg
+    ) throws ClientException {
         marsh = new ClientBinaryMarshaller(new ClientBinaryMetadataHandler(), new ClientMarshallerContext());
 
         marsh.setBinaryConfiguration(cfg.getBinaryConfiguration());
@@ -95,6 +96,8 @@ public class TcpIgniteClient implements IgniteClient {
         serDes = new ClientUtils(marsh);
 
         binary = new ClientBinary(marsh);
+
+        ch = new ReliableChannel(chFactory, cfg, binary);
 
         transactions = new TcpClientTransactions(ch, marsh,
             new ClientTransactionConfiguration(cfg.getTransactionConfiguration()));
@@ -119,8 +122,8 @@ public class TcpIgniteClient implements IgniteClient {
         ClientCacheConfiguration cfg) throws ClientException {
         ensureCacheConfiguration(cfg);
 
-        ch.request(ClientOperation.CACHE_GET_OR_CREATE_WITH_CONFIGURATION, 
-            req -> serDes.cacheConfiguration(cfg, req.out(), req.clientChannel().serverVersion()));
+        ch.request(ClientOperation.CACHE_GET_OR_CREATE_WITH_CONFIGURATION,
+            req -> serDes.cacheConfiguration(cfg, req.out(), req.clientChannel().protocolCtx()));
 
         return new TcpClientCache<>(cfg.getName(), ch, marsh, transactions);
     }
@@ -157,8 +160,8 @@ public class TcpIgniteClient implements IgniteClient {
     @Override public <K, V> ClientCache<K, V> createCache(ClientCacheConfiguration cfg) throws ClientException {
         ensureCacheConfiguration(cfg);
 
-        ch.request(ClientOperation.CACHE_CREATE_WITH_CONFIGURATION, 
-            req -> serDes.cacheConfiguration(cfg, req.out(), req.clientChannel().serverVersion()));
+        ch.request(ClientOperation.CACHE_CREATE_WITH_CONFIGURATION,
+            req -> serDes.cacheConfiguration(cfg, req.out(), req.clientChannel().protocolCtx()));
 
         return new TcpClientCache<>(cfg.getName(), ch, marsh, transactions);
     }
@@ -327,6 +330,21 @@ public class TcpIgniteClient implements IgniteClient {
         /** Type ID -> class name map. */
         private Map<Integer, String> cache = new ConcurrentHashMap<>();
 
+        /** System types. */
+        private final Collection<String> sysTypes = new HashSet<>();
+
+        /**
+         * Default constructor.
+         */
+        public ClientMarshallerContext() {
+            try {
+                MarshallerUtils.processSystemClasses(U.gridClassLoader(), null, sysTypes::add);
+            }
+            catch (IOException e) {
+                throw new IllegalStateException("Failed to initialize marshaller context.", e);
+            }
+        }
+
         /** {@inheritDoc} */
         @Override public boolean registerClassName(
             byte platformId,
@@ -423,7 +441,7 @@ public class TcpIgniteClient implements IgniteClient {
 
         /** {@inheritDoc} */
         @Override public boolean isSystemType(String typeName) {
-            return false;
+            return sysTypes.contains(typeName);
         }
 
         /** {@inheritDoc} */

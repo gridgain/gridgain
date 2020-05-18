@@ -156,11 +156,6 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return 15 * 60 * 1000L;
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         stop.set(false);
 
@@ -177,6 +172,11 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         lockTrackerManager = new PageLockTrackerManager(log, "testTreeManager");
 
         lockTrackerManager.start();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return 10 * 60 * 1000L;
     }
 
     /**
@@ -2299,7 +2299,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         // is impossible if we already have a key in a back page, thus we will have lots of empty routing pages.
         // This way the tree grows faster than shrinks and gets out of height limit of 26 (for this page size) quickly.
         // Since the tree height can not be larger than the key count for this case, we can use 26 as a safe number.
-        final int KEYS = MAX_PER_PAGE == 1 ? 26 : 10_000;
+        final int KEYS = MAX_PER_PAGE == 1 ? 26 : GridTestUtils.SF.applyLB(10_000, 2_500);
 
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 

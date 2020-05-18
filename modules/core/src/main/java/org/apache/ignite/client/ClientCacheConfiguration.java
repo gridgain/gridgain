@@ -17,6 +17,8 @@
 package org.apache.ignite.client;
 
 import java.io.Serializable;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
@@ -114,14 +116,25 @@ public final class ClientCacheConfiguration implements Serializable {
     /** @serial Sql index max inline size. */
     private int sqlIdxMaxInlineSize = CacheConfiguration.DFLT_SQL_INDEX_MAX_INLINE_SIZE;
 
-    /** @serial Sql schema. */
+    /**
+     * @serial Sql schema.
+     */
     private String sqlSchema = null;
 
-    /** @serial Key config. */
+    /**
+     * @serial Key config.
+     */
     private CacheKeyConfiguration[] keyCfg = null;
 
-    /** @serial Query entities. */
+    /**
+     * @serial Query entities.
+     */
     private QueryEntity[] qryEntities = null;
+
+    /**
+     * @serial Expiry policy.
+     */
+    private ExpiryPolicy expiryPlc;
 
     /**
      * @return Cache name.
@@ -649,8 +662,27 @@ public final class ClientCacheConfiguration implements Serializable {
         return this;
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString() {
+    /**
+     * @return Expire policy.
+     */
+    public ExpiryPolicy getExpiryPolicy() {
+        return expiryPlc;
+    }
+
+    /**
+     * @param expiryPlc Expiry policy.
+     */
+    public ClientCacheConfiguration setExpiryPolicy(ExpiryPolicy expiryPlc) {
+        this.expiryPlc = expiryPlc;
+
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
         return S.toString(ClientCacheConfiguration.class, this);
     }
 }
