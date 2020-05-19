@@ -55,6 +55,46 @@ import static org.apache.ignite.internal.util.GridClientByteUtils.shortToBytes;
  * Tracing Manager.
  */
 public class GridTracingManager extends GridManagerAdapter<TracingSpi> implements Tracing {
+    /** */
+    private static final int SPECIAL_FLAGS_OFF = 0;
+
+    /** */
+    private static final int SPI_TYPE_OFF = SPECIAL_FLAGS_OFF + 1;
+
+    /** */
+    private static final int MAJOR_PROTOCOL_VERSION_OFF = SPI_TYPE_OFF + 1;
+
+    /** */
+    private static final int MINOR_PROTOCOL_VERSION_OFF = MAJOR_PROTOCOL_VERSION_OFF + 1;
+
+    /** */
+    private static final int SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH_OFF = MINOR_PROTOCOL_VERSION_OFF + 1;
+
+    /** */
+    private static final int SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF = SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH_OFF + 4;
+
+    /** */
+    private static final int PARENT_SPAN_TYPE_BYTES_LENGTH = 4;
+
+    /** */
+    private static final int INCLUDED_SCOPES_SIZE_BYTE_LENGTH = 4;
+
+    /** */
+    private static final int SCOPE_INDEX_BYTE_LENGTH = 2;
+
+    /** */
+    private static final int SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH = 4;
+
+    // 1 byte: special flags;
+    // 1 bytes: spi type;
+    // 2 bytes: major protocol version;
+    // 2 bytes: minor protocol version;
+    // 4 bytes: spi specific serialized span length;
+    // n bytes: spi specific serialized span body;
+    // 4 bytes: span type
+    // 4 bytes included scopes size;
+    // 2 * included scopes size: included scopes items one by one;
+
     /** Traceable messages handler. */
     private final TraceableMessagesHandler msgHnd;
 
@@ -217,7 +257,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         // 2 bytes: major protocol version;
         // 2 bytes: minor protocol version;
         // 4 bytes: spi specific serialized span length;
-        // n bytes: spi specific serializes span length;
+        // n bytes: spi specific serialized span body;
         // 4 bytes: span type
         // 4 bytes included scopes size;
         // 2 * included scopes size: included scopes items one by one;
@@ -232,25 +272,25 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
             // Deserialize and compare spi types. If they don't match (span was serialized with another spi) then
             // propagate serializedSpan as DeferredSpan.
-            if (serializedParentSpan[1] != getSpi().type().index())
+            if (serializedParentSpan[SPI_TYPE_OFF] != getSpi().type().index())
                 return new DeferredSpan(serializedParentSpan);
 
             // Deserialize and check major protocol version,
             // cause protocol might be incompatible in case of different protocol versions -
             // propagate serializedSpan as DeferredSpan.
-            if (serializedParentSpan[2] != MAJOR_PROTOCOL_VERSION)
+            if (serializedParentSpan[MAJOR_PROTOCOL_VERSION_OFF] != MAJOR_PROTOCOL_VERSION)
                 return new DeferredSpan(serializedParentSpan);
 
             // Deserialize and check minor protocol version.
             // within the scope of the same major protocol version, protocol should be backwards compatible
-            byte minProtoVer = serializedParentSpan[3];
+            byte minProtoVer = serializedParentSpan[MINOR_PROTOCOL_VERSION_OFF];
 
             // Deserialize spi specific span size.
             int spiSpecificSpanSize = bytesToInt(
                 Arrays.copyOfRange(
                     serializedParentSpan,
-                    4,
-                    8),
+                    SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH_OFF,
+                    SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF),
                 0);
 
             SpanType parentSpanType = null;
@@ -265,16 +305,19 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                         bytesToInt(
                             Arrays.copyOfRange(
                                 serializedParentSpan,
-                                8 + spiSpecificSpanSize,
-                                12 + spiSpecificSpanSize),
+                                SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + spiSpecificSpanSize,
+                                SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+                                    spiSpecificSpanSize),
                             0));
 
                     // Deserialize included scopes size.
                     int includedScopesSize = bytesToInt(
                         Arrays.copyOfRange(
                             serializedParentSpan,
-                        12 + spiSpecificSpanSize,
-                            16 + spiSpecificSpanSize),
+                            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+                                spiSpecificSpanSize,
+                            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+                                INCLUDED_SCOPES_SIZE_BYTE_LENGTH + spiSpecificSpanSize),
                         0);
 
                     // Deserialize included scopes one by one.
@@ -283,8 +326,12 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                             bytesToShort(
                                 Arrays.copyOfRange(
                                     serializedParentSpan,
-                                    16 + spiSpecificSpanSize + i * 2,
-                                    18 + spiSpecificSpanSize + i * 2),
+                                    SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+                                        INCLUDED_SCOPES_SIZE_BYTE_LENGTH + spiSpecificSpanSize +
+                                        i * SCOPE_INDEX_BYTE_LENGTH,
+                                    SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+                                        INCLUDED_SCOPES_SIZE_BYTE_LENGTH + SCOPE_INDEX_BYTE_LENGTH +
+                                        spiSpecificSpanSize + i * SCOPE_INDEX_BYTE_LENGTH),
                                 0)));
                     }
                 }
@@ -305,8 +352,8 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                         spanType.spanName(),
                         Arrays.copyOfRange(
                             serializedParentSpan,
-                            8,
-                            8 + spiSpecificSpanSize)),
+                            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF,
+                            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + spiSpecificSpanSize)),
                     spanType,
                     mergedIncludedScopes);
             }
@@ -323,16 +370,6 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
             span = NoopSpan.INSTANCE;
         }
-
-        // 1 byte: special flags;
-        // 1 bytes: spi type;
-        // 2 bytes major protocol version;
-        // 2 bytes minor protocol version;
-        // 4 bytes spi specific serialized span length;
-        // n bytes spi specific serializes span length;
-        // span type
-        // included scopes size;
-        // included scopes items one by one;
 
         return enrichWithLocalNodeParameters(span);
     }
@@ -357,7 +394,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         // 2 bytes: major protocol version;
         // 2 bytes: minor protocol version;
         // 4 bytes: spi specific serialized span length;
-        // n bytes: spi specific serializes span length;
+        // n bytes: spi specific serialized span body;
         // 4 bytes: span type
         // 4 bytes included scopes size;
         // 2 * included scopes size: included scopes items one by one;
@@ -372,35 +409,37 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         // Spi specific serialized span.
         byte[] spiSpecificSerializedSpan = getSpi().serialize(((SpanImpl)span).spiSpecificSpan());
 
-        int serializedSpanLen = 16 + spiSpecificSerializedSpan.length + 4 * span.includedScopes().size();
+        int serializedSpanLen = SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+            INCLUDED_SCOPES_SIZE_BYTE_LENGTH + spiSpecificSerializedSpan.length + SCOPE_INDEX_BYTE_LENGTH *
+            span.includedScopes().size();
 
         byte[] serializedSpanBytes = new byte[serializedSpanLen];
 
         // Skip special flags bytes.
 
         // Spi type idx.
-        serializedSpanBytes[1] = getSpi().type().index();
+        serializedSpanBytes[SPI_TYPE_OFF] = getSpi().type().index();
 
         // Major protocol version;
-        serializedSpanBytes[2] = MAJOR_PROTOCOL_VERSION;
+        serializedSpanBytes[MAJOR_PROTOCOL_VERSION_OFF] = MAJOR_PROTOCOL_VERSION;
 
         // Minor protocol version;
-        serializedSpanBytes[3] = MINOR_PROTOCOL_VERSION;
+        serializedSpanBytes[MINOR_PROTOCOL_VERSION_OFF] = MINOR_PROTOCOL_VERSION;
 
         // Spi specific serialized span length.
         System.arraycopy(
             intToBytes(spiSpecificSerializedSpan.length),
             0,
             serializedSpanBytes,
-            4,
-            4);
+            SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH_OFF,
+            SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH);
 
         // Spi specific span.
         System.arraycopy(
             spiSpecificSerializedSpan,
             0,
             serializedSpanBytes,
-            8,
+            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF,
             spiSpecificSerializedSpan.length);
 
         // Span type.
@@ -408,17 +447,19 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
             intToBytes(span.type().index()),
             0,
             serializedSpanBytes,
-            8 + spiSpecificSerializedSpan.length, 4);
+            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + spiSpecificSerializedSpan.length,
+            PARENT_SPAN_TYPE_BYTES_LENGTH );
 
         assert span.includedScopes() != null;
 
-        // Supported scope size
+        // Included scope size
         System.arraycopy(
             intToBytes(span.includedScopes().size()),
             0,
             serializedSpanBytes,
-            12 + spiSpecificSerializedSpan.length,
-            4);
+            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH  +
+                spiSpecificSerializedSpan.length,
+            INCLUDED_SCOPES_SIZE_BYTE_LENGTH);
 
         int includedScopesCnt = 0;
 
@@ -428,8 +469,10 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                     shortToBytes(includedScope.idx()),
                     0,
                     serializedSpanBytes,
-                    16 + spiSpecificSerializedSpan.length + 2 * includedScopesCnt++,
-                    2);
+                    SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
+                        INCLUDED_SCOPES_SIZE_BYTE_LENGTH + spiSpecificSerializedSpan.length +
+                        SCOPE_INDEX_BYTE_LENGTH * includedScopesCnt++,
+                    SCOPE_INDEX_BYTE_LENGTH);
             }
         }
 
