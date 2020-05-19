@@ -60,11 +60,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Version 1.6.0. */
         public static readonly ClientProtocolVersion Ver160 = new ClientProtocolVersion(1, 6, 0);
 
-        /** Version 1.7.0. */
-        public static readonly ClientProtocolVersion Ver170 = new ClientProtocolVersion(1, 7, 0);
-
         /** Current version. */
-        public static readonly ClientProtocolVersion CurrentProtocolVersion = Ver170;
+        public static readonly ClientProtocolVersion CurrentProtocolVersion = Ver160;
 
         /** Handshake opcode. */
         private const byte OpHandshake = 1;
@@ -382,10 +379,6 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 // Client type: platform.
                 stream.WriteByte(ClientType);
-
-                // TODO User attributes
-                if (version >= Ver170)
-                    stream.WriteByte(BinaryUtils.HdrNull);
 
                 // Authentication data.
                 if (auth)

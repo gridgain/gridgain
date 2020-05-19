@@ -569,27 +569,4 @@ public interface ConnectionProperties {
      * @param keepBinary Whether to keep binary objects in binary form.
      */
     public void setKeepBinary(boolean keepBinary);
-
-    /**
-     * Gets the class name of the custom implementation of the Factory&lt;Map&lt;String, String&gt;&gt;.
-     *
-     * This factory should return user attributes which can be used on server node.
-     *
-     * @return Custom class name that implements Factory&lt;Map&lt;String, String&gt;&gt;.
-     */
-    public String getUserAttributesFactory();
-
-    /**
-     * Sets the class name of the custom implementation of the Factory&lt;Map&lt;String, String&gt;&gt;.
-     *
-     * This factory should return user attributes which can be used on server node.
-     *
-     * Sent attributes can be accessed on server nodes from
-     * {@link org.apache.ignite.internal.processors.rest.request.GridRestRequest GridRestRequest} or
-     * {@link org.apache.ignite.internal.processors.odbc.ClientListenerAbstractConnectionContext
-     * ClientListenerAbstractConnectionContext} (depends on client type).
-     *
-     * @param sslFactory Custom class name that implements Factory&lt;Map&lt;String, String&gt;&gt;.
-     */
-    public void setUserAttributesFactory(String sslFactory);
 }
