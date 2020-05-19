@@ -108,6 +108,8 @@ public abstract class ClusterStateNoRebalanceAbstractTest extends GridCommonAbst
 
         startGrids(GRID_CNT);
 
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
+
         checkInactive(GRID_CNT);
 
         forbidden.clear();
