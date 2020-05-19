@@ -451,6 +451,16 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
                         }
+                        else {
+                            // Apply partitions not belonging by affinity to partition map.
+                            GridDhtLocalPartition locPart = locParts.get(p);
+
+                            if (locPart != null) {
+                                needRefresh = true;
+
+                                updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
+                            }
+                        }
                     }
                 }
                 else
