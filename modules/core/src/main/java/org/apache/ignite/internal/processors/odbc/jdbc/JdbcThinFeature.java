@@ -37,13 +37,8 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
      */
     CUSTOM_OBJECT(2),
 
-    /**
-     * User can pass custom attributes to a server to be associated with connection.
-     */
-    USER_ATTRIBUTES(3),
-
     /** Add ability to set set explicit query timeout on the cluster node by the JDBC client. */
-    QUERY_TIMEOUT(4);
+    QUERY_TIMEOUT(3);
 
     /** */
     private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);

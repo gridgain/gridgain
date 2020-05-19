@@ -24,8 +24,8 @@ import java.util.EnumSet;
  * Defines supported bitmask features for thin client.
  */
 public enum ProtocolBitmaskFeature {
-    /** Feature for user attributes. */
-    USER_ATTRIBUTES(0),
+    /** Reserved for future usage. */
+    RESERVED(0),
 
     /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
     DEFAULT_QRY_TIMEOUT(1);
