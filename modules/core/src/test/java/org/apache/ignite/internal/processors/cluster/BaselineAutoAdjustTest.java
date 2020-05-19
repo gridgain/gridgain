@@ -121,7 +121,11 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
         int timeout = 100;
         ignite0.cluster().baselineAutoAdjustTimeout(timeout);
 
-        Set<Object> initBaseline = ignite0.cluster().currentBaselineTopology().stream()
+        Collection<BaselineNode> bltNodes = ignite0.cluster().currentBaselineTopology();
+
+        log.info("GG-25084: " + bltNodes);
+
+        Set<Object> initBaseline = bltNodes.stream()
             .map(BaselineNode::consistentId)
             .collect(Collectors.toSet());
 
