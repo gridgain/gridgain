@@ -25,14 +25,13 @@ import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.internal.processors.GridProcessor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.X;
@@ -177,7 +176,7 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
     /**
      * Validates clean state on all participating nodes after query cancellation.
      */
-    private void checkCleanState() throws IgniteCheckedException {
+    private void checkCleanState() {
         for (int i = 0; i < GRIDS_CNT; i++) {
             IgniteEx grid = grid(i);
 

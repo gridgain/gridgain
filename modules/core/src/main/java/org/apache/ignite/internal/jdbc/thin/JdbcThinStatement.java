@@ -82,6 +82,7 @@ public class JdbcThinStatement implements Statement {
     /** Query timeout. */
     private int timeout;
 
+    /** Explicit timeout ({@code true} is the timeout is set explicitly for the query. Otherwise {@code false}). */
     boolean explicitTimeout;
 
     /** Request timeout. */

@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;

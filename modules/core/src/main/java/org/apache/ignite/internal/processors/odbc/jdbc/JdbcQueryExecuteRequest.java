@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.io.IOException;
+import java.sql.Statement;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
@@ -223,7 +224,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
     }
 
     /**
-     * @return Query timeout.
+     * @return {@code true} if the query timeout is set explicitly by {@link Statement#setQueryTimeout(int)}.
+     * Otherwise returns {@code false}.
      */
     public boolean explicitTimeout() {
         return explicitTimeout;

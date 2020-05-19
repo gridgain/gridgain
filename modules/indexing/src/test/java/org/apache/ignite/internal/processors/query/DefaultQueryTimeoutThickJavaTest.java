@@ -70,6 +70,8 @@ public class DefaultQueryTimeoutThickJavaTest extends AbstractDefaultQueryTimeou
     private void executeQuery0(SqlFieldsQuery qry) throws Exception {
         IgniteEx cli = grid(10);
 
+        qry.setLazy(lazy);
+
         cli.context().query().querySqlFields(qry, false).getAll();
     }
 }

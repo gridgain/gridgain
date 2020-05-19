@@ -90,6 +90,7 @@ public class TimedQueryHelper {
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+
         return i;
     }
 }
