@@ -24,16 +24,11 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.file.OpenOption;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.Executors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.compress.FileSystemUtils;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.thread.IgniteThreadFactory;
 
 /**
  * File I/O implementation based on {@link AsynchronousFileChannel}.
@@ -67,11 +62,7 @@ public class AsyncFileIO extends AbstractFileIO {
      * @param modes Open modes.
      */
     public AsyncFileIO(File file, ThreadLocal<ChannelOpFuture> holder, OpenOption... modes) throws IOException {
-        Set<OpenOption> modes0 = new HashSet<>();
-        Collections.addAll(modes0, modes);
-        // TODO: use existed executor
-        ch = AsynchronousFileChannel.open(file.toPath(), modes0, Executors
-            .newCachedThreadPool(new IgniteThreadFactory("ignite", "file-async")));
+        ch = AsynchronousFileChannel.open(file.toPath(), modes);
         fd = getFileDescriptor(ch);
         fsBlockSize = FileSystemUtils.getFileSystemBlockSize(fd);
         this.holder = holder;
