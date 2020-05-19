@@ -36,6 +36,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using Apache.Ignite.Core.Impl.Cache.Platform;
     using Apache.Ignite.Core.Impl.Cache.Query;
     using Apache.Ignite.Core.Impl.Cache.Query.Continuous;
+    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Resource;
@@ -196,7 +197,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         public CacheConfiguration GetConfiguration()
         {
             return DoInOp((int) CacheOp.GetConfig, stream => new CacheConfiguration(
-                BinaryUtils.Marshaller.StartUnmarshal(stream)));
+                BinaryUtils.Marshaller.StartUnmarshal(stream), ClientSocket.CurrentProtocolVersion));
         }
 
         /** <inheritDoc /> */

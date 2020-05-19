@@ -27,18 +27,18 @@ public interface ThinProtocolFeature {
     /**
      * @return Feature ID.
      */
-    public int featureId();
+    int featureId();
 
     /**
      * @return Feature name.
      */
-    public String name();
+    String name();
 
     /**
      * @param features Feature set.
      * @return Byte array representing all supported features by current node.
      */
-    public static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(E[] features) {
+    static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(E[] features) {
         final BitSet set = new BitSet();
 
         for (ThinProtocolFeature f : features)
@@ -51,7 +51,7 @@ public interface ThinProtocolFeature {
      * @param features Feature set.
      * @return Byte array representing all supported features.
      */
-    public static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(Collection<E> features) {
+    static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(Collection<E> features) {
         final BitSet set = new BitSet();
 
         for (ThinProtocolFeature f : features)
@@ -66,7 +66,7 @@ public interface ThinProtocolFeature {
      * @param in Byte array representing all supported features.
      * @param enumCls Type of the enum encoded by the bits at the byte array.
      */
-    public static <E extends Enum<E> & ThinProtocolFeature> EnumSet<E> enumSet(byte [] in, Class<E> enumCls) {
+    static <E extends Enum<E> & ThinProtocolFeature> EnumSet<E> enumSet(byte [] in, Class<E> enumCls) {
         EnumSet<E> set = EnumSet.noneOf(enumCls);
 
         if (in == null)

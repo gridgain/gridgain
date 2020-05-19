@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform.client;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
@@ -26,8 +27,7 @@ import org.apache.ignite.internal.processors.platform.client.tx.ClientTxAwareReq
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxContext;
 import org.apache.ignite.plugin.security.SecurityException;
 
-import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.BITMAP_FEATURES;
-import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.PARTITION_AWARENESS;
+import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_4_0;
 
 /**
  * Thin client request handler.
@@ -36,8 +36,8 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
     /** Client context. */
     private final ClientConnectionContext ctx;
 
-    /** Protocol context. */
-    private ClientProtocolContext protocolCtx;
+    /** Protocol version. */
+    private final ClientListenerProtocolVersion ver;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -46,13 +46,13 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
      * Constructor.
      *
      * @param ctx Kernal context.
-     * @param protocolCtx Protocol context.
+     * @param ver Protocol version.
      */
-    ClientRequestHandler(ClientConnectionContext ctx, ClientProtocolContext protocolCtx) {
+    ClientRequestHandler(ClientConnectionContext ctx, ClientListenerProtocolVersion ver) {
         assert ctx != null;
 
         this.ctx = ctx;
-        this.protocolCtx = protocolCtx;
+        this.ver = ver;
         log = ctx.kernalContext().log(getClass());
     }
 
@@ -114,11 +114,9 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
     @Override public void writeHandshake(BinaryWriterExImpl writer) {
         writer.writeBoolean(true);
 
-        if (protocolCtx.isFeatureSupported(BITMAP_FEATURES))
-            writer.writeByteArray(protocolCtx.featureBytes());
-
-        if (protocolCtx.isFeatureSupported(PARTITION_AWARENESS))
+        if (ver.compareTo(VER_1_4_0) >= 0) {
             writer.writeUuid(ctx.kernalContext().localNodeId());
+        }
     }
 
     /** {@inheritDoc} */

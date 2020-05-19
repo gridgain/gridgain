@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Configuration
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Client;
 
     /// <summary>
     /// Data storage configuration for Ignite page memory.
@@ -208,7 +209,8 @@ namespace Apache.Ignite.Core.Configuration
         /// Initializes a new instance of the <see cref="DataStorageConfiguration"/> class.
         /// </summary>
         /// <param name="reader">The reader.</param>
-        internal DataStorageConfiguration(IBinaryRawReader reader)
+        /// <param name="srvVer">Server version.</param>
+        internal DataStorageConfiguration(IBinaryRawReader reader, ClientProtocolVersion srvVer)
         {
             Debug.Assert(reader != null);
 
@@ -249,13 +251,13 @@ namespace Apache.Ignite.Core.Configuration
             if (count > 0)
             {
                 DataRegionConfigurations = Enumerable.Range(0, count)
-                    .Select(x => new DataRegionConfiguration(reader))
+                    .Select(x => new DataRegionConfiguration(reader, srvVer))
                     .ToArray();
             }
 
             if (reader.ReadBoolean())
             {
-                DefaultDataRegionConfiguration = new DataRegionConfiguration(reader);
+                DefaultDataRegionConfiguration = new DataRegionConfiguration(reader, srvVer);
             }
         }
 
@@ -264,7 +266,7 @@ namespace Apache.Ignite.Core.Configuration
         /// </summary>
         /// <param name="writer">The writer.</param>
         /// <param name="srvVer">Server version.</param>
-        internal void Write(IBinaryRawWriter writer)
+        internal void Write(IBinaryRawWriter writer, ClientProtocolVersion srvVer)
         {
             Debug.Assert(writer != null);
 
@@ -312,7 +314,7 @@ namespace Apache.Ignite.Core.Configuration
                             "DataStorageConfiguration.DataRegionConfigurations must not contain null items.");
                     }
 
-                    region.Write(writer);
+                    region.Write(writer, srvVer);
                 }
             }
             else
@@ -323,7 +325,7 @@ namespace Apache.Ignite.Core.Configuration
             if (DefaultDataRegionConfiguration != null)
             {
                 writer.WriteBoolean(true);
-                DefaultDataRegionConfiguration.Write(writer);
+                DefaultDataRegionConfiguration.Write(writer, srvVer);
             }
             else
             {

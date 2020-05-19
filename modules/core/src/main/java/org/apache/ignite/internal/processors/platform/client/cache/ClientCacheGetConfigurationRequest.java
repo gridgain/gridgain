@@ -19,27 +19,27 @@ package org.apache.ignite.internal.processors.platform.client.cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
-import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
  * Cache configuration request.
  */
 public class ClientCacheGetConfigurationRequest extends ClientCacheRequest {
-    /** Client protocol context. */
-    private final ClientProtocolContext protocolCtx;
-
+    /** Client version. */
+    private final ClientListenerProtocolVersion ver;
+    
     /**
      * Constructor.
      *
      * @param reader Reader.
-     * @param protocolCtx Client protocol context.
+     * @param ver Client version.
      */
-    public ClientCacheGetConfigurationRequest(BinaryRawReader reader, ClientProtocolContext protocolCtx) {
+    public ClientCacheGetConfigurationRequest(BinaryRawReader reader, ClientListenerProtocolVersion ver) {
         super(reader);
-
-        this.protocolCtx = protocolCtx;
+        
+        this.ver = ver;
     }
 
     /** {@inheritDoc} */
@@ -48,6 +48,6 @@ public class ClientCacheGetConfigurationRequest extends ClientCacheRequest {
         CacheConfiguration cfg = ((IgniteCache<Object, Object>) rawCache(ctx))
                 .getConfiguration(CacheConfiguration.class);
 
-        return new ClientCacheGetConfigurationResponse(requestId(), cfg, protocolCtx);
+        return new ClientCacheGetConfigurationResponse(requestId(), cfg, ver);
     }
 }

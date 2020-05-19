@@ -64,8 +64,8 @@ import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpir
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.EXPIRY_POLICY;
-import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.QUERY_ENTITY_PRECISION_AND_SCALE;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_2_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
 import static org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy.convertDuration;
 
 /**
@@ -243,7 +243,7 @@ final class ClientUtils {
     }
 
     /** Serialize configuration to stream. */
-    void cacheConfiguration(ClientCacheConfiguration cfg, BinaryOutputStream out, ProtocolContext protocolCtx) {
+    void cacheConfiguration(ClientCacheConfiguration cfg, BinaryOutputStream out, ProtocolVersion ver) {
         try (BinaryRawWriterEx writer = new BinaryWriterExImpl(marsh.context(), out, null, null)) {
             int origPos = out.position();
 
@@ -322,7 +322,7 @@ final class ClientUtils {
                                 w.writeBoolean(qf.isNotNull());
                                 w.writeObject(qf.getDefaultValue());
 
-                                if (protocolCtx.isFeatureSupported(QUERY_ENTITY_PRECISION_AND_SCALE)) {
+                                if (ver.compareTo(V1_2_0) >= 0) {
                                     w.writeInt(qf.getPrecision());
                                     w.writeInt(qf.getScale());
                                 }
@@ -352,7 +352,7 @@ final class ClientUtils {
                 )
             );
 
-            if (protocolCtx.isFeatureSupported(EXPIRY_POLICY)) {
+            if (ver.compareTo(V1_6_0) >= 0) {
                 itemWriter.accept(CfgItem.EXPIRE_POLICY, w -> {
                     ExpiryPolicy expiryPlc = cfg.getExpiryPolicy();
                     if (expiryPlc == null)
@@ -365,8 +365,8 @@ final class ClientUtils {
                     }
                 });
             } else if (cfg.getExpiryPolicy() != null) {
-                throw new ClientProtocolError(String.format("Expire policies are not supported by the server " +
-                        "version %s, required version %s", protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
+                throw new ClientProtocolError(String.format("Expire policies have not supported by the server " +
+                        "version %s, required version %s", ver, V1_6_0));
             }
 
             writer.writeInt(origPos, out.position() - origPos - 4); // configuration length
@@ -375,7 +375,7 @@ final class ClientUtils {
     }
 
     /** Deserialize configuration from stream. */
-    ClientCacheConfiguration cacheConfiguration(BinaryInputStream in, ProtocolContext protocolCtx)
+    ClientCacheConfiguration cacheConfiguration(BinaryInputStream in, ProtocolVersion ver)
         throws IOException {
         try (BinaryReaderExImpl reader = new BinaryReaderExImpl(marsh.context(), in, null, true)) {
             reader.readInt(); // Do not need length to read data. The protocol defines fixed configuration layout.
@@ -420,8 +420,7 @@ final class ClientUtils {
                             .setKeyFieldName(reader.readString())
                             .setValueFieldName(reader.readString());
 
-                        boolean isPrecisionAndScaleSupported =
-                            protocolCtx.isFeatureSupported(QUERY_ENTITY_PRECISION_AND_SCALE);
+                        boolean isCliVer1_2 = ver.compareTo(V1_2_0) >= 0;
 
                         Collection<QueryField> qryFields = ClientUtils.collection(
                             in,
@@ -429,10 +428,10 @@ final class ClientUtils {
                                 String name = reader.readString();
                                 String typeName = reader.readString();
                                 boolean isKey = reader.readBoolean();
-                                boolean isNotNull = reader.readBoolean();
+                                boolean isNotNull = reader.readBoolean(); 
                                 Object dfltVal = reader.readObject();
-                                int precision = isPrecisionAndScaleSupported ? reader.readInt() : -1;
-                                int scale = isPrecisionAndScaleSupported ? reader.readInt() : -1;
+                                int precision = isCliVer1_2 ? reader.readInt() : -1;
+                                int scale = isCliVer1_2 ? reader.readInt() : -1; 
 
                                 return new QueryField(name,
                                     typeName,
@@ -496,8 +495,8 @@ final class ClientUtils {
                             ));
                     }
                     ).toArray(new QueryEntity[0]))
-                    .setExpiryPolicy(!protocolCtx.isFeatureSupported(EXPIRY_POLICY)?
-                             null : reader.readBoolean() ?
+                    .setExpiryPolicy(
+                            ver.compareTo(V1_6_0) < 0 ? null : reader.readBoolean() ?
                                     new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
                     );
         }

@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Configuration
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Client;
 
     /// <summary>
     /// Defines custom data region configuration for Apache Ignite page memory
@@ -97,7 +98,8 @@ namespace Apache.Ignite.Core.Configuration
         /// Initializes a new instance of the <see cref="DataRegionConfiguration"/> class.
         /// </summary>
         /// <param name="reader">The reader.</param>
-        internal DataRegionConfiguration(IBinaryRawReader reader)
+        /// <param name="srvVer">Server version.</param>
+        internal DataRegionConfiguration(IBinaryRawReader reader, ClientProtocolVersion srvVer)
         {
             Name = reader.ReadString();
             PersistenceEnabled = reader.ReadBoolean();
@@ -112,7 +114,10 @@ namespace Apache.Ignite.Core.Configuration
             MetricsRateTimeInterval = reader.ReadLongAsTimespan();
             CheckpointPageBufferSize = reader.ReadLong();
 
-            LazyMemoryAllocation = reader.ReadBoolean();
+            if (srvVer.CompareTo(ClientSocket.Ver130) >= 0)
+            {
+                LazyMemoryAllocation = reader.ReadBoolean();
+            }
         }
 
         /// <summary>
@@ -120,7 +125,7 @@ namespace Apache.Ignite.Core.Configuration
         /// </summary>
         /// <param name="writer">The writer.</param>
         /// <param name="srvVer">Server version.</param>
-        internal void Write(IBinaryRawWriter writer)
+        internal void Write(IBinaryRawWriter writer, ClientProtocolVersion srvVer)
         {
             writer.WriteString(Name);
             writer.WriteBoolean(PersistenceEnabled);
@@ -134,7 +139,11 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteInt(MetricsSubIntervalCount);
             writer.WriteTimeSpanAsLong(MetricsRateTimeInterval);
             writer.WriteLong(CheckpointPageBufferSize);
-            writer.WriteBoolean(LazyMemoryAllocation);
+
+            if (srvVer.CompareTo(ClientSocket.Ver130) >= 0)
+            {
+                writer.WriteBoolean(LazyMemoryAllocation);
+            }
         }
 
         /// <summary>

@@ -37,7 +37,12 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
-import org.apache.ignite.internal.processors.platform.client.*;
+import org.apache.ignite.internal.processors.platform.client.ClientAffinityTopologyVersion;
+import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientCustomQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.ClientResponse;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
+import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQueryRegistry;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.ml.inference.storage.model.DefaultModelStorage;
 import org.apache.ignite.ml.inference.storage.model.FileOrDirectory;
@@ -64,7 +69,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     private static final ClientConnectionContext connCtx = mock(ClientConnectionContext.class);
 
     static {
-        when(connCtx.currentProtocolContext()).thenReturn(new ClientProtocolContext(ClientListenerProtocolVersion.create(1, 4, 0), null));
+        when(connCtx.currentVersion()).thenReturn(ClientListenerProtocolVersion.create(1, 4, 0));
         when(connCtx.checkAffinityTopologyVersion()).thenReturn(new ClientAffinityTopologyVersion(AffinityTopologyVersion.ZERO, false));
     }
 
