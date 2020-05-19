@@ -26,7 +26,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.plugin.security.SecurityPermission.*;
+import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_CREATE;
+import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_DESTROY;
+import static org.apache.ignite.plugin.security.SecurityPermission.JOIN_AS_SERVER;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
@@ -39,10 +41,6 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
     public static Iterable<Boolean[]> data() {
         return Arrays.asList(new Boolean[] {true}, new Boolean[] {false});
     }
-
-    /** */
-    @Parameterized.Parameter()
-    public boolean clientMode;
 
     /** */
     private static final String SRV = "srv";
@@ -63,6 +61,16 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
     private static final String UNMANAGED_CACHE = "UNMANAGED_CACHE";
 
     /** */
+    @Parameterized.Parameter()
+    public boolean clientMode;
+
+    /**
+     * Checks that cache create is authorized if CACHE_CREATE is set as cache-level permission.
+     * Steps:
+     * 1. Configure a user with permission to create a specific cache.
+     * 2. User joins as a cluster node.
+     * 3. Attempt to create cache with name from #1 is successful.
+     */
     @Test
     public void testCreateCacheWithCachePermissions() throws Exception {
         SecurityPermissionSet secPermSet = builder()
@@ -78,7 +86,15 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
         }
     }
 
-    /** */
+    /**
+     * Checks that cache destroy is authorized if CACHE_DESTROY is set as cache-level permission.
+     * Steps:
+     * 1. Configure a user with permission to destroy a specific cache.
+     * 2. Existing server creates two caches: one with name from #1 and another with different name.
+     * 3. User joins as a cluster node.
+     * 4. User attempt to destroy cache with different name fails.
+     * 5. User attempt to destroy cache with name from #1 is successful.
+     */
     @Test
     public void testDestroyCacheWithCachePermissions() throws Exception {
         SecurityPermissionSet secPermSet = builder()
@@ -99,7 +115,14 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
         }
     }
 
-    /** */
+    /**
+     * Checks that cache create is authorized if CACHE_CREATE is set as system permission.
+     * Steps:
+     * 1. Configure a user with system permission to create caches.
+     * 2. Configure another user without such permission.
+     * 3. Node with #2 permissions fails to create a cache.
+     * 4. Node with #1 permissions successfully creates a cache.
+     */
     @Test
     public void testCreateCacheWithSystemPermissions() throws Exception {
         SecurityPermissionSet secPermSet = builder()
@@ -113,7 +136,15 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
         }
     }
 
-    /** */
+    /**
+     * Checks that cache destroy is authorized if CACHE_DESTROY is set as system permission.
+     * Steps:
+     * 1. Configure a user with system permission to destroy caches.
+     * 2. Configure another user without such permission.
+     * 3. Existing server creates two caches: one with name from #1 and another with different name.
+     * 4. Node with #2 permissions fails to destroy a cache.
+     * 5. Node with #1 permissions successfully destroys a cache.
+     */
     @Test
     public void testDestroyCacheWithSystemPermissions() throws Exception {
         SecurityPermissionSet secPermSet = builder()
