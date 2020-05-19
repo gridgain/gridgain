@@ -76,10 +76,6 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
 
             assertNotNull(node.createCache(CACHE_NAME));
         }
-        finally {
-            if (!clientMode)
-                cleanPersistenceDir(TEST_NODE);
-        }
     }
 
     /** */
@@ -101,10 +97,6 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
 
             assertNotNull(grid(SRV).cache(UNMANAGED_CACHE));
         }
-        finally {
-            if (!clientMode)
-                cleanPersistenceDir(TEST_NODE);
-        }
     }
 
     /** */
@@ -118,10 +110,6 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
             assertThrowsWithCause(() -> forbidden(clientMode).createCache(CACHE_NAME), SecurityException.class);
 
             assertNotNull(node.createCache(CACHE_NAME));
-        }
-        finally {
-            if (!clientMode)
-                cleanPersistenceDir(TEST_NODE);
         }
     }
 
@@ -140,10 +128,6 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
             node.destroyCache(CACHE_NAME);
 
             assertNull(grid(SRV).cache(CACHE_NAME));
-        }
-        finally {
-            if (!clientMode)
-                cleanPersistenceDir(TEST_NODE);
         }
     }
 
@@ -177,5 +161,8 @@ public class CacheOperationPermissionCreateDestroyCheckTest extends AbstractSecu
         Ignite server = grid(SRV);
 
         server.cacheNames().forEach(server::destroyCache);
+
+        if (!clientMode)
+            cleanPersistenceDir(TEST_NODE);
     }
 }
