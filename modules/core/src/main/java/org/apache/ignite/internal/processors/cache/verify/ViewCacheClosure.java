@@ -160,13 +160,9 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
      * @param cacheName - name
      * @return off-heap cache size
      */
-    private Long getOffHeapCountFromCache(GridCacheProcessor cacheProcessor, String cacheName) {
+    private Long getOffHeapCountFromCache(GridCacheProcessor cacheProcessor, String cacheName) throws Exception {
         IgniteCache<Object, Object> cache = cacheProcessor.jcache(cacheName);
-        try {
-            return (long)cache.size(CachePeekMode.OFFHEAP);
-        } catch (Exception e){
-        }
-        return null;
+        return cache.sizeLong(CachePeekMode.OFFHEAP);
     }
 
     /**
