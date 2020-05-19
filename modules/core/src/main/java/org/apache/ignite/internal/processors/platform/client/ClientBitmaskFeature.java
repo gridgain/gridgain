@@ -24,7 +24,10 @@ import org.apache.ignite.internal.ThinProtocolFeature;
  */
 public enum ClientBitmaskFeature implements ThinProtocolFeature {
     /** Feature for user attributes. */
-    USER_ATTRIBUTES(0);
+    USER_ATTRIBUTES(0),
+
+    /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
+    DEFAULT_QRY_TIMEOUT(1);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

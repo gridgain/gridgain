@@ -25,7 +25,10 @@ import java.util.EnumSet;
  */
 public enum ProtocolBitmaskFeature {
     /** Feature for user attributes. */
-    USER_ATTRIBUTES(0);
+    USER_ATTRIBUTES(0),
+
+    /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
+    DEFAULT_QRY_TIMEOUT(1);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

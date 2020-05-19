@@ -181,7 +181,7 @@ public class TcpIgniteClient implements IgniteClient {
 
             out.writeInt(0); // no cache ID
             out.writeByte((byte)1); // keep binary
-            serDes.write(qry, out);
+            serDes.write(qry, out, payloadCh.clientChannel().protocolCtx());
         };
 
         return new ClientFieldsQueryCursor<>(new ClientFieldsQueryPager(

@@ -462,7 +462,7 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
 
         Consumer<PayloadOutputChannel> qryWriter = payloadCh -> {
             writeCacheInfo(payloadCh);
-            serDes.write(qry, payloadCh.out());
+            serDes.write(qry, payloadCh.out(), payloadCh.clientChannel().protocolCtx());
         };
 
         return new ClientFieldsQueryCursor<>(new ClientFieldsQueryPager(
