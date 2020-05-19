@@ -67,10 +67,6 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
     /**
      *
      */
-    public final int timeOutWorkerInterval;
-    /**
-     *
-     */
     private final Map<Long, PageLockTracker<? extends PageLockDump>> threadStacks = new HashMap<>();
     /**
      *
@@ -81,7 +77,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
      */
     private final Map<String, Integer> structureNameToId = new HashMap<>();
     /** Thread for clean terminated threads from map. */
-    private final TimeOutWorker timeOutWorker = new TimeOutWorker();
+    private final TimeOutWorker timeOutWorker;
     /**
      *
      */
@@ -129,7 +125,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         MemoryCalculator memCalc
     ) {
         this.threadLimits = threadLimits;
-        this.timeOutWorkerInterval = timeOutWorkerInterval;
+        timeOutWorker = new TimeOutWorker(timeOutWorkerInterval);
         this.hangThreadsCallBack = hangThreadsCallBack;
         this.memCalc = memCalc;
 
@@ -366,8 +362,8 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         /**
          *
          */
-        TimeOutWorker() {
-            super("time-out-worker", TimeUnit.MILLISECONDS.toNanos(timeOutWorkerInterval));
+        TimeOutWorker(long interval) {
+            super("time-out-worker", TimeUnit.MILLISECONDS.toNanos(interval));
         }
 
 
