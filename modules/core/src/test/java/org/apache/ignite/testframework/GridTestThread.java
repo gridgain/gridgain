@@ -19,7 +19,7 @@ package org.apache.ignite.testframework;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**BinaryTxCacheLocalEntriesSelfTest
+/**
  * Test thread that has convenience failure checks.
  */
 @SuppressWarnings({"ProhibitedExceptionThrown"})
