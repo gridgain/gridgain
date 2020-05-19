@@ -87,6 +87,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
+import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
+import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -155,9 +157,41 @@ public final class GridTestUtils {
      */
     public static class DiscoveryHook {
         /**
-         * @param msg Message.
+         * Handles discovery message before {@link DiscoverySpiListener#onDiscovery} invocation.
+         *
+         * @param msg Intercepted discovery message.
          */
-        public void handleDiscoveryMessage(DiscoverySpiCustomMessage msg) {
+        public void beforeDiscovery(DiscoverySpiCustomMessage msg) {
+            if (msg instanceof CustomMessageWrapper)
+                beforeDiscovery(unwrap((CustomMessageWrapper)msg));
+        }
+
+        /**
+         * Handles {@link DiscoveryCustomMessage} before {@link DiscoverySpiListener#onDiscovery} invocation.
+         *
+         * @param customMsg Intercepted {@link DiscoveryCustomMessage}.
+         */
+        public void beforeDiscovery(DiscoveryCustomMessage customMsg) {
+            // No-op.
+        }
+
+        /**
+         * Handles discovery message after {@link DiscoverySpiListener#onDiscovery} completion.
+         *
+         * @param msg Intercepted discovery message.
+         */
+        public void afterDiscovery(DiscoverySpiCustomMessage msg) {
+            if (msg instanceof CustomMessageWrapper)
+                afterDiscovery(unwrap((CustomMessageWrapper)msg));
+        }
+
+        /**
+         * Handles {@link DiscoveryCustomMessage} after {@link DiscoverySpiListener#onDiscovery} completion.
+         *
+         * @param customMsg Intercepted {@link DiscoveryCustomMessage}.
+         */
+        public void afterDiscovery(DiscoveryCustomMessage customMsg) {
+            // No-op.
         }
 
         /**
@@ -165,6 +199,16 @@ public final class GridTestUtils {
          */
         public void ignite(IgniteEx ignite) {
             // No-op.
+        }
+
+        /**
+         * Obtains {@link DiscoveryCustomMessage} from {@link CustomMessageWrapper}.
+         *
+         * @param wrapper Wrapper of {@link DiscoveryCustomMessage}.
+         * @return Unwrapped {@link DiscoveryCustomMessage}.
+         */
+        private DiscoveryCustomMessage unwrap(CustomMessageWrapper wrapper) {
+            return U.field(wrapper, "delegate");
         }
     }
 
@@ -175,12 +219,12 @@ public final class GridTestUtils {
         /** */
         private final DiscoverySpiListener delegate;
 
-        /** */
+        /** Interceptor of discovery messages. */
         private final DiscoveryHook hook;
 
         /**
          * @param delegate Delegate.
-         * @param hook Hook.
+         * @param hook Interceptor of discovery messages.
          */
         private DiscoverySpiListenerWrapper(DiscoverySpiListener delegate, DiscoveryHook hook) {
             this.hook = hook;
@@ -193,11 +237,16 @@ public final class GridTestUtils {
             long topVer,
             ClusterNode node,
             Collection<ClusterNode> topSnapshot,
-            Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
+            @Nullable Map<Long, Collection<ClusterNode>> topHist,
+            @Nullable DiscoverySpiCustomMessage spiCustomMsg
         ) {
-            hook.handleDiscoveryMessage(data);
+            hook.beforeDiscovery(spiCustomMsg);
 
-            return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
+            IgniteFuture<?> fut = delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+
+            fut.listen(f -> hook.afterDiscovery(spiCustomMsg));
+
+            return fut;
         }
 
         /** {@inheritDoc} */
@@ -207,10 +256,10 @@ public final class GridTestUtils {
 
         /**
          * @param delegate Delegate.
-         * @param discoveryHook Discovery hook.
+         * @param discoHook Interceptor of discovery messages.
          */
-        public static DiscoverySpiListener wrap(DiscoverySpiListener delegate, DiscoveryHook discoveryHook) {
-            return new DiscoverySpiListenerWrapper(delegate, discoveryHook);
+        public static DiscoverySpiListener wrap(DiscoverySpiListener delegate, DiscoveryHook discoHook) {
+            return new DiscoverySpiListenerWrapper(delegate, discoHook);
         }
     }
 
