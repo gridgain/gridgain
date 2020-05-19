@@ -60,11 +60,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Version 1.7.0. */
         public static readonly ClientProtocolVersion Ver170 = new ClientProtocolVersion(1, 7, 0);
 
-        /** Version 1.7.1. */
-        public static readonly ClientProtocolVersion Ver171 = new ClientProtocolVersion(1, 7, 1);
-
         /** Current version. */
-        public static readonly ClientProtocolVersion CurrentProtocolVersion = Ver171;
+        public static readonly ClientProtocolVersion CurrentProtocolVersion = Ver170;
 
         /** Handshake opcode. */
         private const byte OpHandshake = 1;
@@ -368,7 +365,6 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             bool auth = version >= Ver110 && clientConfiguration.UserName != null;
             bool features = version >= Ver170;
-            bool userAttributes = version >= Ver171;
 
             // Send request.
             int messageLen;
@@ -392,12 +388,6 @@ namespace Apache.Ignite.Core.Impl.Client
                     var featureBytes = new byte[0];
 
                     BinaryUtils.Marshaller.Marshal(stream, w => w.WriteByteArray(featureBytes));
-                }
-
-                if (userAttributes)
-                {
-                    // TODO: Implement User Attributes. Need to write Map here.
-                    stream.WriteByte(BinaryUtils.HdrNull);
                 }
 
                 // Authentication data.

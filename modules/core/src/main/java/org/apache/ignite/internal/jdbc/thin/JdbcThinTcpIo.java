@@ -70,6 +70,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
 
 import static java.lang.Math.abs;
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanToByte;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature.USER_ATTRIBUTES;
 
 /**
  * JDBC IO layer implementation based on blocking IPC streams.
@@ -96,11 +97,8 @@ public class JdbcThinTcpIo {
     /** Version 2.8.2. Adds features flags support. */
     private static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
 
-    /** Version 2.8.3. Add User Attributes. */
-    private static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
-
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_3;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Initial output stream capacity for handshake. */
     private static final int HANDSHAKE_MSG_SIZE = 13;
@@ -293,11 +291,10 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_8_1) >= 0)
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
-        if (ver.compareTo(VER_2_8_2) >= 0) {
+        if (ver.compareTo(VER_2_8_2) >= 0)
             writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(enabledFeatures()));
-        }
 
-        if (ver.compareTo(VER_2_8_3) >= 0) {
+        if (enabledFeatures().contains(USER_ATTRIBUTES)) {
             String userAttrs = connProps.getUserAttributesFactory();
 
             if (F.isEmpty(userAttrs))
@@ -310,7 +307,8 @@ public class JdbcThinTcpIo {
                     Map<String, String> attrs = cls.newInstance().create();
 
                     writer.writeMap(attrs);
-                } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                }
+                catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
                     throw new SQLException("Could not found user attributes factory class: " + userAttrs,
                             SqlStateCode.CLIENT_CONNECTION_FAILED, e);
                 }

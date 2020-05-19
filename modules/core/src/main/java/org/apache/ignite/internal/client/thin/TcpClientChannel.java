@@ -83,6 +83,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.USER_ATTRIBUTES;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.LATEST_VER;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_0_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_1_0;
@@ -92,10 +93,8 @@ import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_4_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_5_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_1;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
-import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.USER_ATTRIBUTES;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.BITMAP_FEATURES;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.PARTITION_AWARENESS;
@@ -109,7 +108,6 @@ class TcpClientChannel implements ClientChannel {
 
     /** Supported protocol versions. */
     private static final Collection<ProtocolVersion> supportedVers = Arrays.asList(
-        V1_7_1,
         V1_7_0,
         V1_6_0,
         V1_5_0,

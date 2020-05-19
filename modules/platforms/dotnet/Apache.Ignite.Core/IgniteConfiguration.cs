@@ -310,6 +310,7 @@ namespace Apache.Ignite.Core
         /// Writes this instance to a writer.
         /// </summary>
         /// <param name="writer">The writer.</param>
+        /// <param name="srvVer">Server version.</param>
         internal void Write(BinaryWriter writer)
         {
             Debug.Assert(writer != null);
@@ -927,6 +928,7 @@ namespace Apache.Ignite.Core
         /// Reads data from specified reader into current instance.
         /// </summary>
         /// <param name="binaryReader">The binary reader.</param>
+        /// <param name="srvVer">Server version.</param>
         private void Read(BinaryReader binaryReader)
         {
             ReadCore(binaryReader);

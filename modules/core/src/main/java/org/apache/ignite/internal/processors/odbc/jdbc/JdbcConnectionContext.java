@@ -40,6 +40,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature.USER_ATTRIBUTES;
 
 /**
  * JDBC Connection Context.
@@ -72,11 +73,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.2: adds features flags support.*/
     static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
 
-    /** Version 2.8.3: adds user attributes.*/
-    static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
-
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_3;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
@@ -104,7 +102,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
     static {
         SUPPORTED_VERS.add(CURRENT_VER);
-        SUPPORTED_VERS.add(VER_2_8_2);
         SUPPORTED_VERS.add(VER_2_8_1);
         SUPPORTED_VERS.add(VER_2_8_0);
         SUPPORTED_VERS.add(VER_2_7_0);
@@ -202,9 +199,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
                 features = JdbcThinFeature.enumSet(cliFeatures);
             }
-
-            if (ver.compareTo(VER_2_8_3) >= 0)
-                userAttrs = reader.readMap();
         }
         catch (Exception ex) {
             if (ver.compareTo(VER_2_8_0) != 0)
@@ -212,6 +206,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             // TODO: GG-25595 remove when version 8.7.X support ends
         }
+
+        if (features.contains(USER_ATTRIBUTES))
+            userAttrs = reader.readMap();
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
             String user = null;
