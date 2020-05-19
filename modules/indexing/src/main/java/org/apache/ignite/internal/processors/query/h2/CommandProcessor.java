@@ -430,6 +430,8 @@ public class CommandProcessor {
      * @param cmd Command.
      */
     private void processKillQueryCommand(SqlKillQueryCommand cmd) {
+        ctx.security().authorize(SecurityPermission.KILL_QUERY);
+
         GridFutureAdapter<String> fut = new GridFutureAdapter<>();
 
         lock.readLock().lock();

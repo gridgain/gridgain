@@ -113,7 +113,6 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
 
         for (long i = 0; i < KEY_CNT; ++i)
             c.put(i, i);
-
     }
 
     /**

@@ -105,15 +105,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
+            <groupId>net.oneandone.reflections8</groupId>
+            <artifactId>reflections8</artifactId>
             <version>${reflections.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>
@@ -128,6 +122,13 @@
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 

@@ -16,9 +16,9 @@
 
 package org.apache.ignite.internal.processors.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -52,7 +51,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlIndexMetadata;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlMetadata;
 import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandler;
-import org.apache.ignite.internal.util.typedef.C1;
+import org.apache.ignite.internal.processors.rest.model.VisorGatewayArgument;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -130,8 +129,6 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -1902,21 +1899,33 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
      * @throws Exception If failed.
      */
     @Test
-    public void testVisorGateway() throws Exception {
+    public void testVisorGatewayCacheConfigurationCollectorTask() throws Exception {
         ClusterNode locNode = grid(1).localNode();
-
-        final IgniteUuid cid = grid(1).context().cache().internalCache("person").context().dynamicDeploymentId();
 
         String ret = content(new VisorGatewayArgument(VisorCacheConfigurationCollectorTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheConfigurationCollectorTaskArg.class)
-            .addCollectionArgument(IgniteUuid.class, cid));
+            .addCollectionArgument(String.class, "person"));
 
         info("VisorCacheConfigurationCollectorTask result: " + ret);
 
         jsonTaskResult(ret);
 
-        ret = content(new VisorGatewayArgument(VisorCacheNodesTask.class)
+        assertTrue(ret.contains(String.format("\"memoryPolicyName\":\"%s\"",
+            grid(1).configuration().getDataStorageConfiguration().getDefaultDataRegionConfiguration().getName()
+        )));
+    }
+
+        /**
+         * Tests execution of Visor tasks via {@link VisorGatewayTask}.
+         *
+         * @throws Exception If failed.
+         */
+    @Test
+    public void testVisorGateway() throws Exception {
+        ClusterNode locNode = grid(1).localNode();
+
+        String ret = content(new VisorGatewayArgument(VisorCacheNodesTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheNodesTaskArg.class, "person"));
 
@@ -3232,209 +3241,6 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode n) {
             return n.consistentId().equals(consistentId);
-        }
-    }
-
-    /**
-     * Helper for build {@link VisorGatewayTask} arguments.
-     */
-    public static class VisorGatewayArgument extends HashMap<String, String> {
-        /** Latest argument index. */
-        private int idx = 3;
-
-        /**
-         * Construct helper object.
-         *
-         * @param cls Class of executed task.
-         */
-        public VisorGatewayArgument(Class cls) {
-            super(F.asMap(
-                "cmd", GridRestCommand.EXE.key(),
-                "name", VisorGatewayTask.class.getName(),
-                "p1", "null",
-                "p2", cls.getName()
-            ));
-        }
-
-        /**
-         * Execute task on specified node.
-         *
-         * @param node Node.
-         * @return This helper for chaining method calls.
-         */
-        public VisorGatewayArgument setNode(ClusterNode node) {
-            put("p1", node != null ? node.id().toString() : null);
-
-            return this;
-        }
-
-        /**
-         * Execute task on specified nodes.
-         *
-         * @param nodes Collection of nodes.
-         * @return This helper for chaining method calls.
-         */
-        public VisorGatewayArgument setNodes(Collection<ClusterNode> nodes) {
-            put("p1", concat(F.transform(nodes, new C1<ClusterNode, UUID>() {
-                /** {@inheritDoc} */
-                @Override public UUID apply(ClusterNode node) {
-                    return node.id();
-                }
-            }).toArray(), ";"));
-
-            return this;
-        }
-
-        /**
-         * Add custom arguments.
-         *
-         * @param vals Array of values or {@code null}.
-         * @return This helper for chaining method calls.
-         */
-        public VisorGatewayArgument addArguments(@Nullable Object... vals) {
-            if (idx == 3)
-                throw new IllegalStateException("Task argument class should be declared before adding of additional arguments. " +
-                    "Use VisorGatewayArgument.setTaskArgument first");
-
-            if (vals != null && F.isEmpty(vals))
-                throw new IllegalArgumentException("Additional arguments should be configured as null or not empty array of arguments");
-
-            if (vals != null) {
-                for (Object val : vals)
-                    put("p" + idx++, String.valueOf(val));
-            }
-            else
-                put("p" + idx++, null);
-
-            return this;
-        }
-
-        /**
-         * Add task argument class with custom arguments.
-         *
-         * @param cls Class.
-         * @param vals Values.
-         * @return This helper for chaining method calls.
-         */
-        public VisorGatewayArgument setTaskArgument(Class cls, @Nullable Object... vals) {
-            if (idx != 3)
-                throw new IllegalStateException("Task argument class should be declared before adding of additional arguments");
-
-            put("p" + idx++, cls.getName());
-
-            if (vals != null) {
-                for (Object val : vals)
-                    put("p" + idx++, val != null ? val.toString() : null);
-            }
-            else
-                put("p" + idx++, null);
-
-            return this;
-        }
-
-        /**
-         * Add collection argument.
-         *
-         * @param cls Class.
-         * @param vals Values.
-         * @return This helper for chaining method calls.
-         */
-        public VisorGatewayArgument addCollectionArgument(Class cls, @Nullable Object... vals) {
-            if (idx == 3)
-                throw new IllegalStateException("Task argument class should be declared before adding of additional arguments. " +
-                    "Use VisorGatewayArgument.setTaskArgument first");
-
-            put("p" + idx++, Collection.class.getName());
-            put("p" + idx++, cls.getName());
-            put("p" + idx++, concat(vals, ";"));
-
-            return this;
-        }
-
-        /**
-         * Add set argument.
-         *
-         * @param cls Class.
-         * @param vals Values.
-         * @return This helper for chaining method calls.
-         */
-        public VisorGatewayArgument addSetArgument(Class cls, @Nullable Object... vals) {
-            if (idx == 3)
-                throw new IllegalStateException("Task argument class should be declared before adding of additional argument. " +
-                    "Use VisorGatewayArgument.setTaskArgument first");
-
-            put("p" + idx++, Set.class.getName());
-            put("p" + idx++, cls.getName());
-            put("p" + idx++, concat(vals, ";"));
-
-            return this;
-        }
-
-        /**
-         * Add map argument.
-         *
-         * @param keyCls Key class.
-         * @param valCls Value class.
-         * @param map Map.
-         */
-        public VisorGatewayArgument addMapArgument(Class keyCls, Class valCls, @NotNull Map<?, ?> map) throws UnsupportedEncodingException {
-            if (idx == 3)
-                throw new IllegalStateException("Task argument class should be declared before adding of additional arguments. " +
-                    "Use VisorGatewayArgument.setTaskArgument first");
-
-            if (map == null)
-                throw new IllegalArgumentException("Map argument should be specified");
-
-            put("p" + idx++, Map.class.getName());
-            put("p" + idx++, keyCls.getName());
-            put("p" + idx++, valCls.getName());
-
-            SB sb = new SB();
-
-            boolean first = true;
-
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
-                if (!first)
-                    sb.a(";");
-
-                sb.a(entry.getKey());
-
-                if (entry.getValue() != null)
-                    sb.a("=").a(entry.getValue());
-
-                first = false;
-            }
-
-            put("p" + idx++, URLEncoder.encode(sb.toString(), CHARSET));
-
-            return this;
-        }
-
-        /**
-         * Concat object with delimiter.
-         *
-         * @param vals Values.
-         * @param delim Delimiter.
-         */
-        private static String concat(Object[] vals, String delim) {
-            SB sb = new SB();
-
-            boolean first = true;
-
-            if (vals != null) {
-                for (Object val : vals) {
-                    if (!first)
-                        sb.a(delim);
-
-                    sb.a(val);
-
-                    first = false;
-                }
-            }
-            else
-                sb.a(vals);
-
-            return sb.toString();
         }
     }
 

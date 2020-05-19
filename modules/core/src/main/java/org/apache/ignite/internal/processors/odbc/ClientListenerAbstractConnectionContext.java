@@ -17,6 +17,9 @@
 package org.apache.ignite.internal.processors.odbc;
 
 import java.security.cert.Certificate;
+import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -27,9 +30,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.UUID;
 
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
 
@@ -51,6 +51,9 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
 
     /** Authorization context. */
     private AuthorizationContext authCtx;
+
+    /** User attributes. */
+    protected Map<String, String> userAttrs;
 
     /**
      * Describes the client connection:
@@ -134,16 +137,17 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
 
         authCtx.subjectType(REMOTE_CLIENT);
         authCtx.subjectId(UUID.randomUUID());
-        authCtx.nodeAttributes(Collections.emptyMap());
+        authCtx.nodeAttributes(F.isEmpty(userAttrs) ? Collections.emptyMap() : userAttrs);
         authCtx.credentials(cred);
         authCtx.certificates(certificates);
 
         secCtx = ctx.security().authenticate(authCtx);
 
-        if (secCtx == null)
+        if (secCtx == null) {
             throw new IgniteAccessControlException(
                 String.format("The user name or password is incorrect [userName=%s]", user)
             );
+        }
 
         return authCtx;
     }
@@ -162,6 +166,8 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
 
         if (authCtx != null)
             clientDesc += "@" + authCtx.userName();
+        else if (secCtx != null)
+            clientDesc += "@" + secCtx.subject().login();
     }
 
     /**

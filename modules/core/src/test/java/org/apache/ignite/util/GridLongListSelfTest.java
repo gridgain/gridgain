@@ -26,6 +26,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.GridLongList.asList;
+import static org.apache.ignite.internal.util.GridUnsafe.BIG_ENDIAN;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -490,6 +491,7 @@ public class GridLongListSelfTest {
 
         Assert.assertFalse(ll.writeTo(buf, writer));
 
-        Assert.assertEquals(10, buf.position());
+        // Different implementations of writeLongArray
+        Assert.assertEquals(BIG_ENDIAN ? 3 : 10, buf.position());
     }
 }

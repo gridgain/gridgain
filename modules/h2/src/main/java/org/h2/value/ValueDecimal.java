@@ -54,6 +54,7 @@ public class ValueDecimal extends Value {
     private final BigDecimal value;
     private TypeInfo type;
     private String valueString;
+    private Float valueFloat;
 
     private ValueDecimal(BigDecimal value) {
         if (value == null) {
@@ -260,6 +261,18 @@ public class ValueDecimal extends Value {
             throw DbException.getInvalidValueException("scale", scale);
         }
         return bd.setScale(scale, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Get cached float value or calculate using BigDecimal and cache it.
+     *
+     * @return float representation of BigDecimal
+     */
+    public float getFloatValue() {
+        if (valueFloat == null)
+            valueFloat = getBigDecimal().floatValue();
+
+        return valueFloat;
     }
 
 }

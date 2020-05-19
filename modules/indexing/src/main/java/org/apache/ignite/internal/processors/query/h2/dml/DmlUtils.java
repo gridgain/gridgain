@@ -31,6 +31,7 @@ import java.util.Map;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -440,7 +441,13 @@ public class DmlUtils {
                         sqlState = ((IgniteSQLException)e).sqlState();
 
                         code = ((IgniteSQLException)e).statusCode();
-                    } else {
+                    }
+                    else if (e instanceof SqlCacheException) {
+                        sqlState = ((SqlCacheException)e).sqlState();
+
+                        code = ((SqlCacheException)e).statusCode();
+                    }
+                    else {
                         sqlState = SqlStateCode.INTERNAL_ERROR;
 
                         code = IgniteQueryErrorCode.UNKNOWN;

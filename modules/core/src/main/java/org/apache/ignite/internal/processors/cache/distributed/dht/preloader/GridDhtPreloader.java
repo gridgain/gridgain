@@ -17,13 +17,11 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -43,19 +41,16 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNe
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
-import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
@@ -71,8 +66,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
     /** Disable rebalancing cancellation optimization. */
-    private final boolean disableRebalancingCancellationOptimization = IgniteSystemProperties.getBoolean(
-        IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
+    private final boolean disableRebalancingCancellationOptimization =
+        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -188,34 +183,35 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtPreloaderAssignments generateAssignments(GridDhtPartitionExchangeId exchId,
-        GridDhtPartitionsExchangeFuture exchFut) {
+    @Override public GridDhtPreloaderAssignments generateAssignments(
+        GridDhtPartitionExchangeId exchId,
+        GridDhtPartitionsExchangeFuture exchFut
+    ) {
         assert exchFut == null || exchFut.isDone();
 
         // No assignments for disabled preloader.
         GridDhtPartitionTopology top = grp.topology();
 
         if (!grp.rebalanceEnabled())
-            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion());
+            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion(), false);
 
         int partitions = grp.affinity().partitions();
 
         AffinityTopologyVersion topVer = top.readyTopologyVersion();
 
-        assert exchFut == null || exchFut.context().events().topologyVersion().equals(top.readyTopologyVersion()) :
+        assert exchFut == null ||
+            exchFut.context().events().topologyVersion().equals(top.readyTopologyVersion()) ||
+            exchFut.context().events().topologyVersion().equals(ctx.exchange().lastAffinityChangedTopologyVersion(top.readyTopologyVersion())):
             "Topology version mismatch [exchId=" + exchId +
             ", grp=" + grp.name() +
             ", topVer=" + top.readyTopologyVersion() + ']';
 
-        GridDhtPreloaderAssignments assignments = new GridDhtPreloaderAssignments(exchId, topVer);
+        GridDhtPreloaderAssignments assignments = new GridDhtPreloaderAssignments(exchId, topVer,
+            exchFut != null && exchFut.affinityReassign());
 
         AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
-
-        GridIntList skippedPartitionsLackHistSupplier = new GridIntList();
-
-        GridIntList skippedPartitionsCleared = new GridIntList();
 
         boolean changed = false;
 
@@ -296,29 +292,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
                 }
                 else {
-                    if (histSupplier == null)
-                        skippedPartitionsLackHistSupplier.add(p);
+                    int partId = p;
+                    List<ClusterNode> picked = remoteOwners(p, topVer, node -> {
+                        if (exchFut != null && !exchFut.isNodeApplicableForFullRebalance(node.id(), grp.groupId(), partId))
+                            return false;
 
-                    if (histSupplier != null && exchFut.isClearingPartition(grp, p))
-                        skippedPartitionsCleared.add(p);
+                        return true;
+                    });
 
-                    List<ClusterNode> picked = remoteOwners(p, topVer);
-
-                    if (picked.isEmpty()) {
-                        changed |= top.own(part);
-
-                        if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_DATA_LOST)) {
-                            grp.addRebalanceEvent(p,
-                                EVT_CACHE_REBALANCE_PART_DATA_LOST,
-                                exchId.eventNode(),
-                                exchId.event(),
-                                exchId.eventTimestamp());
-                        }
-
-                        if (log.isDebugEnabled())
-                            log.debug("Owning partition as there are no other owners: " + part);
-                    }
-                    else {
+                    if (!picked.isEmpty()) {
                         ClusterNode n = picked.get(p % picked.size());
 
                         GridDhtPartitionDemandMessage msg = assignments.get(n);
@@ -336,24 +318,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             }
         }
 
-        if (log.isInfoEnabled()) {
-            if (!skippedPartitionsLackHistSupplier.isEmpty()) {
-                log.info("Unable to perform historical rebalance cause " +
-                    "history supplier is not available [grpId=" + grp.groupId() + ", grpName=" + grp.name() +
-                    ", parts=" + S.compact(
-                        Arrays.stream(skippedPartitionsLackHistSupplier.array()).boxed().collect(Collectors.toList())) +
-                    ", topVer=" + topVer + ']');
-            }
-
-            if (!skippedPartitionsCleared.isEmpty()) {
-                log.info("Unable to perform historical rebalance because clearing is required for partitions" +
-                    "[grpId=" + grp.groupId() + ", grpName=" + grp.name() +
-                    ", parts=" + S.compact(
-                        Arrays.stream(skippedPartitionsCleared.array()).boxed().collect(Collectors.toList())) +
-                    ", topVer=" + topVer + ']');
-            }
-        }
-
         if (!assignments.isEmpty()) {
             ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
 
@@ -361,9 +325,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 "Unexpected rebalance on rebalanced cluster " +
                     "[top=" + topVer + ", grp=" + grp.groupId() + ", assignments=" + assignments + "]";
         }
-
-        if (changed)
-            ctx.exchange().scheduleResendPartitions();
 
         return assignments;
     }
@@ -381,12 +342,24 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
      * @return Nodes owning this partition.
      */
     private List<ClusterNode> remoteOwners(int p, AffinityTopologyVersion topVer) {
+        return remoteOwners(p, topVer, node -> true);
+    }
+
+    /**
+     * Returns remote owners (excluding local node) for specified partition {@code p}
+     * which is additionally filtered by the specified predicate.
+     *
+     * @param p Partition.
+     * @param topVer Topology version.
+     * @return Nodes owning this partition.
+     */
+    private List<ClusterNode> remoteOwners(int p, AffinityTopologyVersion topVer, IgnitePredicate<ClusterNode> pred) {
         List<ClusterNode> owners = grp.topology().owners(p, topVer);
 
         List<ClusterNode> res = new ArrayList<>(owners.size());
 
         for (ClusterNode owner : owners) {
-            if (!owner.id().equals(ctx.localNodeId()))
+            if (!owner.id().equals(ctx.localNodeId()) && pred.apply(owner))
                 res.add(owner);
         }
 

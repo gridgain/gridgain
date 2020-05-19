@@ -1171,7 +1171,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         FileDescriptor ds = new FileDescriptor(file);
 
         try (
-            SegmentIO fileIO = ds.toIO(ioFactory);
+            SegmentIO fileIO = ds.toReadOnlyIO(ioFactory);
             ByteBufferExpander buf = new ByteBufferExpander(HEADER_RECORD_SIZE, ByteOrder.nativeOrder())
         ) {
             final DataInput in = segmentFileInputFactory.createFileInput(fileIO, buf);
@@ -1601,8 +1601,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public long maxArchivedSegmentToDelete() {
-        //When maxWalArchiveSize==MAX_VALUE deleting files is not permit.
-        if (dsCfg.getMaxWalArchiveSize() == Long.MAX_VALUE)
+        //When maxWalArchiveSize==-1 deleting files is not permit.
+        if (dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE)
             return -1;
 
         FileDescriptor[] archivedFiles = walArchiveFiles();

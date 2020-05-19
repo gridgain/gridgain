@@ -17,12 +17,12 @@
 package org.apache.ignite.internal.processors.affinity;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -59,8 +59,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PART_DISTRIBUTION_
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.internal.IgniteFeatures.PME_FREE_SWITCH;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
@@ -357,9 +355,8 @@ public class GridAffinityAssignmentCache {
 
             hasBaseline = blt != null;
 
-            // Use PME_FREE_SWITCH feature to avoid compatibility issues when BLT is enabled for volatile caches.
             if (!persistentCache && hasBaseline)
-                hasBaseline = bltForInMemoryCachesSup && allNodesSupports(ctx, discoCache.allNodes(), PME_FREE_SWITCH);
+                hasBaseline = bltForInMemoryCachesSup;
 
             changedBaseline = !hasBaseline ? baselineTopology != null : !blt.equals(baselineTopology);
         }
@@ -999,7 +996,7 @@ public class GridAffinityAssignmentCache {
     /**
      * @return All initialized versions.
      */
-    public Collection<AffinityTopologyVersion> cachedVersions() {
+    public NavigableSet<AffinityTopologyVersion> cachedVersions() {
         return affCache.keySet();
     }
 

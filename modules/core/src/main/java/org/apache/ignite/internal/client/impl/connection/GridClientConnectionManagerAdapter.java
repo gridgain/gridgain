@@ -330,9 +330,13 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
             srvs.addAll(resolvedEndpoints);
         }
         else {
-            for (InetSocketAddress endpoint : resolvedEndpoints)
+            for (InetSocketAddress endpoint : resolvedEndpoints) {
                 if (!endpoint.getAddress().isLoopbackAddress())
                     srvs.add(endpoint);
+            }
+
+            if (srvs.isEmpty())
+                srvs.addAll(resolvedEndpoints);
         }
 
         return connection(node.nodeId(), srvs);
@@ -472,7 +476,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                 try {
                     conn = new GridClientNioTcpConnection(srv, clientId, addr, sslCtx, pingExecutor,
                         cfg.getConnectTimeout(), cfg.getPingInterval(), cfg.getPingTimeout(),
-                        cfg.isTcpNoDelay(), marsh, marshId, top, cred);
+                        cfg.isTcpNoDelay(), marsh, marshId, top, cred, cfg.getUserAttributes());
                 }
                 catch (GridClientException e) {
                     if (marsh instanceof GridClientZipOptimizedMarshaller) {
@@ -482,7 +486,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                         conn = new GridClientNioTcpConnection(srv, clientId, addr, sslCtx, pingExecutor,
                             cfg.getConnectTimeout(), cfg.getPingInterval(), cfg.getPingTimeout(),
                             cfg.isTcpNoDelay(), ((GridClientZipOptimizedMarshaller)marsh).defaultMarshaller(), marshId,
-                            top, cred);
+                            top, cred, cfg.getUserAttributes());
                     }
                     else
                         throw e;

@@ -61,7 +61,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.evict.FairFifoPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.NoOpPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
@@ -567,15 +567,18 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             LT.warn(log, "DataRegionConfiguration.maxWalArchiveSize instead DataRegionConfiguration.walHistorySize " +
             "would be used for removing old archive wal files");
         else if(memCfg.getMaxWalArchiveSize() == DFLT_WAL_ARCHIVE_MAX_SIZE)
-            LT.warn(log, "walHistorySize was deprecated. maxWalArchiveSize should be used instead");
+            LT.warn(log, "walHistorySize was deprecated and does not have any effect anymore. " +
+                "maxWalArchiveSize should be used instead");
         else
             throw new IgniteCheckedException("Should be used only one of wal history size or max wal archive size." +
                 "(use DataRegionConfiguration.maxWalArchiveSize because DataRegionConfiguration.walHistorySize was deprecated)"
             );
 
-        if(memCfg.getMaxWalArchiveSize() < memCfg.getWalSegmentSize())
+        if (memCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE
+                && memCfg.getMaxWalArchiveSize() < memCfg.getWalSegmentSize())
             throw new IgniteCheckedException(
-                "DataRegionConfiguration.maxWalArchiveSize should be greater than DataRegionConfiguration.walSegmentSize"
+                "DataRegionConfiguration.maxWalArchiveSize should be greater than DataRegionConfiguration.walSegmentSize " +
+                    "or must be equal to " + DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE + "."
             );
     }
 

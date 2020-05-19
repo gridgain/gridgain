@@ -36,6 +36,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <ignite.edition>apache-ignite</ignite.edition>
+        <ignite.orig.edition>${ignite.edition}</ignite.orig.edition>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>MMMM d yyyy</maven.build.timestamp.format>
         <doxygen.exec>doxygen</doxygen.exec>
@@ -43,6 +44,7 @@
         <git.exec>git</git.exec>
         <javadoc.opts>-Xdoclint:none</javadoc.opts>
         <update.notifier.enabled.by.default>true</update.notifier.enabled.by.default>
+        <failIfNoTests>false</failIfNoTests>
 
         <!-- Dependency versions -->
         <activemq.version>5.12.0</activemq.version>
@@ -140,7 +142,7 @@
         <opencensus.version>0.22.0</opencensus.version>
         <awaitility.version>3.1.6</awaitility.version>
         <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
-        <reflections.version>0.9.11</reflections.version>
+        <reflections.version>0.11.7</reflections.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
         <commons.lang3.version>3.9</commons.lang3.version>
 
@@ -557,7 +559,7 @@
                             </group>
                             <group>
                                 <title>Control Center</title>
-                                <packages>org.apache.ignite.agent*</packages>
+                                <packages>org.apache.ignite.internal.agent*</packages>
                             </group>
                             <group>
                                 <title>System view SPI</title>
@@ -665,10 +667,24 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M3</version>
+                <version>3.0.0-M4</version>
                 <configuration>
                     <forkCount>0</forkCount>
+                    <!--statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>org.apache.ignite.tools.junit.JUnitTeamcityReporter</value>
+                        </property>
+                    </properties-->
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.gridgain</groupId>
+                        <artifactId>ignite-tools</artifactId>
+                        <version>${project.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
@@ -897,12 +913,10 @@
                         <configuration>
                             <addDefaultLicenseMatchers>false</addDefaultLicenseMatchers>
                             <licenses>
-                                <license implementation="org.apache.rat.analysis.license.FullTextMatchingLicense">
-                                    <licenseFamilyCategory>IAL20</licenseFamilyCategory>
-                                    <licenseFamilyName>Ignite Apache License 2.0</licenseFamilyName>
+                                <license implementation="org.apache.ignite.tools.rat.GridGainLicense">
+                                    <!-- Allow 2019+ years in the copyright -->
+                                    <copyright>.*Copyright (2019|20[2-9][0-9]|[2-9][1-9]\d{2,}|[1-9]\d{4,}) GridGain Systems, Inc\. and Contributors\..*</copyright>
                                     <fullText>
-                                        Copyright 2019 GridGain Systems, Inc. and Contributors.
-
                                         Licensed under the GridGain Community Edition License (the "License");
                                         you may not use this file except in compliance with the License.
                                         You may obtain a copy of the License at
@@ -923,6 +937,13 @@
                                 </licenseFamily>
                             </licenseFamilies>
                         </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.gridgain</groupId>
+                                <artifactId>ignite-tools</artifactId>
+                                <version>${project.version}</version>
+                            </dependency>
+                        </dependencies>
                         <executions>
                             <execution>
                                 <phase>validate</phase>

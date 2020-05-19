@@ -139,7 +139,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-assembly-plugin</artifactId>
-                        <version>2.4</version>
+                        <version>2.5.2</version>
                         <inherited>false</inherited>
                         <executions>
                             <execution>
@@ -207,7 +207,7 @@
                                     <reportOutputDirectory>${basedir}/target/javadoc</reportOutputDirectory>
                                     <destDir>core</destDir>
                                     <stylesheetfile>${basedir}/assembly/docfiles/css/stylesheet.css</stylesheetfile>
-                                    <subpackages>org.apache.ignite -exclude org.apache.ignite.codegen:org.apache.ignite.examples:org.apache.ignite.internal:org.apache.ignite.schema:org.apache.ignite.tests:org.apache.ignite.tools:org.apache.ignite.util:org.apache.ignite.spi.discovery.tcp.messages:org.apache.ignite.spi.discovery.tcp.internal:org.apache.ignite.spi.communication.tcp.internal:org.apache.ignite.spi.discovery.zk.internal:org.apache.ignite.spi.deployment.uri.scanners:org.apache.ignite.spi.deployment.uri.tasks:org.apache.ignite.yardstick:org.apache.ignite.webtest:org.apache.ignite.agent</subpackages>
+                                    <subpackages>org.apache.ignite -exclude org.apache.ignite.codegen:org.apache.ignite.examples:org.apache.ignite.internal:org.apache.ignite.schema:org.apache.ignite.tests:org.apache.ignite.tools:org.apache.ignite.util:org.apache.ignite.spi.discovery.tcp.messages:org.apache.ignite.spi.discovery.tcp.internal:org.apache.ignite.spi.communication.tcp.internal:org.apache.ignite.spi.discovery.zk.internal:org.apache.ignite.spi.deployment.uri.scanners:org.apache.ignite.spi.deployment.uri.tasks:org.apache.ignite.yardstick:org.apache.ignite.webtest</subpackages>
                                 </configuration>
                             </execution>
                         </executions>
@@ -480,15 +480,15 @@
                                             <include name="**/*.sh" />
                                         </fixcrlf>
 
-                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}-bin.zip" encoding="UTF-8">
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin" filemode="755">
+                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}.zip" encoding="UTF-8">
+                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}" filemode="755">
                                                 <include name="**/*.sh" />
                                                 <include name="**/configure" />
                                                 <include name="**/install-sh" />
                                                 <include name="**/compile" />
                                                 <include name="**/missing" />
                                             </zipfileset>
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin">
+                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}">
                                                 <exclude name="**/*.sh" />
                                                 <exclude name="**/configure" />
                                                 <exclude name="**/install-sh" />
@@ -516,7 +516,7 @@
                                 </goals>
                                 <configuration>
                                     <descriptors>
-                                        <descriptor>${basedir}/assembly/dependencies-${ignite.edition}.xml</descriptor>
+                                        <descriptor>${basedir}/assembly/dependencies-${ignite.orig.edition}.xml</descriptor>
                                     </descriptors>
                                     <outputDirectory>${basedir}/target/release-package-${ignite.edition}</outputDirectory>
                                     <finalName>libs</finalName>
@@ -532,7 +532,7 @@
                                 </goals>
                                 <configuration>
                                     <descriptors>
-                                        <descriptor>assembly/release-${ignite.edition}.xml</descriptor>
+                                        <descriptor>assembly/release-${ignite.orig.edition}.xml</descriptor>
                                     </descriptors>
                                     <finalName>release-package-${ignite.edition}</finalName>
                                     <appendAssemblyId>false</appendAssemblyId>

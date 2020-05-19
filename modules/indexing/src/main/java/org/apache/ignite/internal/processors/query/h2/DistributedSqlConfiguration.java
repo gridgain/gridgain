@@ -18,16 +18,22 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
-import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.lang.IgniteInClosure;
+import org.h2.util.DateTimeUtils;
 
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
@@ -58,39 +64,90 @@ public class DistributedSqlConfiguration {
     private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
         = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
+    /** Value of cluster time zone. */
+    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sql.timeZone");
+
+    /** Context. */
+    private final GridKernalContext ctx;
+
     /**
-     * @param isp Subscription processor.
+     * @param ctx Kernal context.
      * @param log Logger.
      */
     public DistributedSqlConfiguration(
-        GridInternalSubscriptionProcessor isp,
+        GridKernalContext ctx,
         IgniteLogger log
     ) {
-        isp.registerDistributedConfigurationListener(
+        this.ctx = ctx;
+
+        ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
                     disabledSqlFuncs.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
 
-                    dispatcher.registerProperties(disabledSqlFuncs);
+                    timeZone.addListener((name, oldTz, newTz) -> {
+                        if (!Objects.equals(oldTz, newTz))
+                            DateTimeUtils.setTimeZone(newTz);
+                    });
+
+                    dispatcher.registerProperties(disabledSqlFuncs, timeZone);
                 }
 
                 @Override public void onReadyToWrite() {
-                    setDefaultValue(
-                        disabledSqlFuncs,
-                        DFLT_DISABLED_FUNCS,
-                        log);
+                    if (ReadableDistributedMetaStorage.isSupported(ctx)) {
+                        setDefaultValue(
+                            disabledSqlFuncs,
+                            DFLT_DISABLED_FUNCS,
+                            log);
+
+                        setTimeZoneDefault(log);
+                    }
+                    else {
+                        log.warning("Distributed metastorage is not supported. " +
+                            "All distributed SQL configuration parameters are unavailable.");
+
+                        // Set disabled functions to default.
+                        disabledSqlFuncs.localUpdate(null);
+                    }
                 }
             }
         );
     }
 
     /**
+     * @param log Logger.
+     */
+    private void setTimeZoneDefault(IgniteLogger log) {
+        TimeZone tz = timeZone.get();
+
+        if (tz == null) {
+            try {
+                timeZone.propagateAsync(null, TimeZone.getDefault())
+                    .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
+                        if (future.error() != null)
+                            log.error("Cannot set default value of '" + timeZone.getName() + '\'', future.error());
+                    });
+            }
+            catch (IgniteCheckedException e) {
+                log.error("Cannot initiate setting default value of '" + timeZone.getName() + '\'', e);
+            }
+
+        }
+        else {
+            if (!tz.equals(TimeZone.getDefault())) {
+                log.warning("Node time zone is '" + TimeZone.getDefault().getID() + "'. " +
+                    "SQL timezone is set up to '" + tz.getID() + '\'');
+            }
+
+            DateTimeUtils.setTimeZone(tz);
+        }
+    }
+
+    /**
      * @return Disabled SQL functions.
      */
     public Set<String> disabledFunctions() {
-        Set<String> ret = disabledSqlFuncs.get();
-
-        return ret != null ? ret : DFLT_DISABLED_FUNCS;
+        return disabledSqlFuncs.getOrDefault(DFLT_DISABLED_FUNCS);
     }
 
     /**
@@ -105,5 +162,23 @@ public class DistributedSqlConfiguration {
     /** */
     public void listenDisabledFunctions(DistributePropertyListener<? super HashSet<String>> lsnr) {
         disabledSqlFuncs.addListener(lsnr);
+    }
+
+    /**
+     * @return Cluster SQL time zone.
+     */
+    public TimeZone timeZone() {
+        assert timeZone.get() != null;
+
+        return timeZone.get();
+    }
+
+    /**
+     * @param tz New SQL time zone for cluster.
+     * @throws IgniteCheckedException if failed.
+     */
+    public GridFutureAdapter<?> updateTimeZone(TimeZone tz)
+        throws IgniteCheckedException {
+        return timeZone.propagateAsync(tz);
     }
 }

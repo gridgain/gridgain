@@ -6906,23 +6906,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Indicates that Ignite has been sufficiently tested on the current OS.
-     *
-     * @return {@code true} if current OS was sufficiently tested - {@code false} otherwise.
-     */
-    public static boolean isSufficientlyTestedOs() {
-        return
-            win7 ||
-                win8 ||
-                win81 ||
-                winXp ||
-                winVista ||
-                mac ||
-                linux ||
-                solaris;
-    }
-
-    /**
      * Indicates whether current OS is Windows XP.
      *
      * @return {@code true} if current OS is Windows XP- {@code false} otherwise.
@@ -10886,7 +10869,8 @@ public abstract class IgniteUtils {
      * @return User-set max WAL archive size of triple size of the maximum checkpoint buffer.
      */
     public static long adjustedWalHistorySize(DataStorageConfiguration dsCfg, @Nullable IgniteLogger log) {
-        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE)
+        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE &&
+            dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE)
             return dsCfg.getMaxWalArchiveSize();
 
         // Find out the maximum checkpoint buffer size.

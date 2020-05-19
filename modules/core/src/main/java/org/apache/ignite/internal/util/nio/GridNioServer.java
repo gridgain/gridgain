@@ -42,10 +42,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -157,20 +159,6 @@ public class GridNioServer<T> {
 
     /** */
     public static final String SENT_BYTES_METRIC_DESC = "Total number of bytes sent by current node";
-
-    /**
-     *
-     */
-    static {
-        // This is a workaround for JDK bug (NPE in Selector.open()).
-        // http://bugs.sun.com/view_bug.do?bug_id=6427854
-        try {
-            Selector.open().close();
-        }
-        catch (IOException ignored) {
-            // No-op.
-        }
-    }
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -1977,6 +1965,9 @@ public class GridNioServer<T> {
          * @param req Change request.
          */
         @Override public void offer(SessionChangeRequest req) {
+            if (log.isDebugEnabled())
+                log.debug("The session change request was offered [req=" + req + "]");
+
             changeReqs.offer(req);
 
             if (select)
@@ -1985,6 +1976,12 @@ public class GridNioServer<T> {
 
         /** {@inheritDoc} */
         @Override public void offer(Collection<SessionChangeRequest> reqs) {
+            if (log.isDebugEnabled()) {
+                String strReqs = reqs.stream().map(Objects::toString).collect(Collectors.joining(","));
+
+                log.debug("The session change requests were offered [reqs=" + strReqs + "]");
+            }
+
             for (SessionChangeRequest req : reqs)
                 changeReqs.offer(req);
 
@@ -1994,6 +1991,9 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public List<SessionChangeRequest> clearSessionRequests(GridNioSession ses) {
             List<SessionChangeRequest> sesReqs = null;
+
+            if (log.isDebugEnabled())
+                log.debug("The session was removed [ses=" + ses + "]");
 
             for (SessionChangeRequest changeReq : changeReqs) {
                 if (changeReq.session() == ses && !(changeReq instanceof SessionMoveFuture)) {
@@ -2029,6 +2029,9 @@ public class GridNioServer<T> {
 
                     while ((req0 = changeReqs.poll()) != null) {
                         updateHeartbeat();
+
+                        if (log.isDebugEnabled())
+                            log.debug("The session request will be processed [req=" + req0 + "]");
 
                         switch (req0.operation()) {
                             case CONNECT: {
