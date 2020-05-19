@@ -45,6 +45,8 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
+import org.apache.ignite.internal.util.function.ThrowableBiFunction;
+import org.apache.ignite.internal.util.function.ThrowableSupplier;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridConnectionBytesVerifyFilter;
@@ -175,6 +177,9 @@ public class GridNioServerWrapper {
 
     /** Recovery and idle clients handler. */
     private volatile CommunicationWorker commWorker;
+
+    /** Socket channel factory. */
+    private volatile ThrowableSupplier<SocketChannel, IOException> socketChannelFactory = SocketChannel::open;
 
     /** Enable forcible node kill. */
     private boolean enableForcibleNodeKill = IgniteSystemProperties
@@ -374,7 +379,7 @@ public class GridNioServerWrapper {
                     if (nodeGetter.apply(node.id()) == null)
                         throw new ClusterTopologyCheckedException("Failed to send message (node left topology): " + node);
 
-                    SocketChannel ch = SocketChannel.open();
+                    SocketChannel ch = socketChannelFactory.get();
 
                     ch.configureBlocking(true);
 
@@ -1295,5 +1300,12 @@ public class GridNioServerWrapper {
      */
     public void clientPool(ConnectionClientPool pool) {
         clientPool = pool;
+    }
+
+    /**
+     * @param sockChFactory New socket channel factory.
+     */
+    public void socketChannelFactory(ThrowableSupplier<SocketChannel, IOException> sockChFactory) {
+        socketChannelFactory = sockChFactory;
     }
 }

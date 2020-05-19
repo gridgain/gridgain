@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp.internal;
+package org.apache.ignite.internal.util.function;
 
 /**
- * Specific test interface for transmitting exceptions from lambda to external method without a catch.
+ * Specific interface for transmitting exceptions from lambda to external method without a catch.
  */
 @FunctionalInterface
-public interface ThrowableBiFunction<T, U, R, E extends Throwable> {
+public interface ThrowableSupplier<T, E extends Throwable> {
     /**
-     * Body of lambda.
+     * Gets a result.
+     *
+     * @return a result
      */
-    R apply(T t, U u) throws E;
+    T get() throws E;
 }
