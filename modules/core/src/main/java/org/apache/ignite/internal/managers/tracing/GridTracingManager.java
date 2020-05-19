@@ -303,7 +303,10 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                 span = new SpanImpl(
                     getSpi().create(
                         spanType.spanName(),
-                        Arrays.copyOfRange(serializedParentSpan,8,  8 + spiSpecificSpanSize)),
+                        Arrays.copyOfRange(
+                            serializedParentSpan,
+                            8,
+                            8 + spiSpecificSpanSize)),
                     spanType,
                     mergedIncludedScopes);
             }

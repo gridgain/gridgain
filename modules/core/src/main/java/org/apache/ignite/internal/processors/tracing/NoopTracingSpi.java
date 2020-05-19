@@ -34,12 +34,12 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
 
     /** {@inheritDoc} */
     @Override public SpiSpecificSpan create(@NotNull String name, @Nullable SpiSpecificSpan parentSpan) {
-        return NoopSpan.INSTANCE;
+        return NoopSpiSpecificSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
     @Override public SpiSpecificSpan create(@NotNull String name, @Nullable byte[] serializedSpan) {
-        return NoopSpan.INSTANCE;
+        return NoopSpiSpecificSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
@@ -47,7 +47,7 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
         @NotNull String name,
         @Nullable SpiSpecificSpan parentSpan,
         double samplingRate) {
-        return NoopSpan.INSTANCE;
+        return NoopSpiSpecificSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */

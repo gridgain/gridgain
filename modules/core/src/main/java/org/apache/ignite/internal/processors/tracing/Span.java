@@ -26,44 +26,55 @@ import java.util.Set;
  * status, time events, attributes, links.
  * You can use tracing to debug errors and latency issues in your applications.
  */
-public interface Span extends SpiSpecificSpan {
+public interface Span {
+
     /**
      * Adds tag to span with {@code String} value.
      *
      * @param tagName Tag name.
      * @param tagVal Tag value.
      */
-    @Override Span addTag(String tagName, String tagVal);
+    Span addTag(String tagName, String tagVal);
+
     /**
      * Adds tag to span with {@code long} value.
      *
      * @param tagName Tag name.
      * @param tagVal Tag value.
      */
-    @Override Span addTag(String tagName, long tagVal);
+    Span addTag(String tagName, long tagVal);
+
     /**
      * Logs work to span.
      *
      * @param logDesc Log description.
      */
-    @Override Span addLog(String logDesc);
+    Span addLog(String logDesc);
+
     /**
      * Adds log to span with additional attributes.
      *
      * @param logDesc Log description.
      * @param attrs Attributes.
      */
-    @Override Span addLog(String logDesc, Map<String, String> attrs);
+    Span addLog(String logDesc, Map<String, String> attrs);
+
     /**
      * Explicitly set status for span.
      *
      * @param spanStatus Status.
      */
-    @Override Span setStatus(SpanStatus spanStatus);
+    Span setStatus(SpanStatus spanStatus);
+
     /**
      * Ends span. This action sets default status if not set and mark the span as ready to be exported.
      */
-    @Override Span end();
+    Span end();
+
+    /**
+     * @return {@code true} if span has already ended.
+     */
+    boolean isEnded();
 
     /**
      * @return Type of given span.

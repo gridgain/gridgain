@@ -91,6 +91,11 @@ public class SpanImpl implements Span {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isEnded() {
+        return spiSpecificSpan.isEnded();
+    }
+
+    /** {@inheritDoc} */
     @Override public SpanType type() {
         return spanType;
     }
@@ -98,11 +103,6 @@ public class SpanImpl implements Span {
     /** {@inheritDoc} */
     @Override public Set<Scope> includedScopes() {
         return includedScopes;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isEnded() {
-        return spiSpecificSpan.isEnded();
     }
 
     /**
