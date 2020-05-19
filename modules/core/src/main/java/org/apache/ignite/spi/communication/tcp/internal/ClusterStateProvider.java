@@ -16,17 +16,16 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
-import java.util.Collection;
 import java.util.UUID;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLEngine;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteKernal;
-import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.spi.IgniteSpiContext;
@@ -34,6 +33,8 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
+
+import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE;
 
 /**
  * This class must be removed after refactoring. The role of this is concentrate login of cluster states.
@@ -164,20 +165,11 @@ public class ClusterStateProvider {
      * @return {@code True} if remote nodes support {@link HandshakeWaitMessage}.
      */
     public boolean isHandshakeWaitSupported() {
-        DiscoverySpi discoSpi = igniteExSupplier.get().configuration().getDiscoverySpi();
+        GridKernalContext ctx = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context() : null;
 
-        if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(
-                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE
-            );
-        else {
-            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
+        DiscoverySpi discoSpi = ignite.configuration().getDiscoverySpi();
 
-            return IgniteFeatures.allNodesSupports(
-                (ignite != null) ? ((IgniteEx)ignite).context() : null,
-                nodes,
-                IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
-        }
+        return IgniteFeatures.allNodesSupport(ctx, discoSpi, TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
     }
 
     /**

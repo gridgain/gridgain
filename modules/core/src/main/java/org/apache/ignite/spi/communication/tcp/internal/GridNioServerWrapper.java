@@ -310,7 +310,7 @@ public class GridNioServerWrapper {
         if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
             if (node.isClient() && startedInVirtualizedEnvironment(node)) {
                 String msg = "Failed to connect to node " + node.id() +
-                    " because it is started n virtualized environment; inverse connection will be requested.";
+                    " because it is started in virtualized environment; inverse connection will be requested.";
 
                 GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
 

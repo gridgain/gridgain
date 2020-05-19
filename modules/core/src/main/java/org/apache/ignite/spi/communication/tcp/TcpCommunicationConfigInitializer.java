@@ -48,6 +48,9 @@ import org.apache.ignite.spi.communication.tcp.internal.ConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptyList;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ENVIRONMENT_TYPE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_EXT_ADDRS;
@@ -810,9 +813,13 @@ cfg.socketSendBuffer(sockSndBuf);
             Collection<InetSocketAddress> extAddrs = cfg.addrRslvr() == null ? null :
                 U.resolveAddresses(cfg.addrRslvr(), F.flat(Arrays.asList(addrs.get1(), addrs.get2())), cfg.boundTcpPort());
 
-            HashMap<String, Object> res = new HashMap<>(5);
+            Map<String, Object> res = new HashMap<>(5);
+
+            boolean ip = !F.isEmpty(cfg.localAddress()) && cfg.localHost().getHostAddress().equals(cfg.localAddress());
+            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) && ip;
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());
+            res.put(createSpiAttributeName(ATTR_HOST_NAMES), setEmptyHostNamesAttr ? emptyList() : addrs.get2());
             res.put(createSpiAttributeName(ATTR_HOST_NAMES), addrs.get2());
             res.put(createSpiAttributeName(ATTR_PORT), cfg.boundTcpPort());
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), cfg.boundTcpShmemPort() >= 0 ? cfg.boundTcpShmemPort() : null);

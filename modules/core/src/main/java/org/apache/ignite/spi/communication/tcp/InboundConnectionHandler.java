@@ -389,6 +389,11 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
             UUID id = connId.nodeId();
 
+            if (log.isDebugEnabled()) {
+                String errMsg = e != null ? e.getMessage() : null;
+                log.debug("The node was disconnected [nodeId=" + id + ", err=" + errMsg + "]");
+            }
+
             GridCommunicationClient[] nodeClients = clientPool.clientFor(id);
 
             if (nodeClients != null) {

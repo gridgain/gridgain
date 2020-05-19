@@ -526,6 +526,9 @@ public class ConnectionClientPool {
      * @return {@code True} if client was removed.
      */
     public boolean removeNodeClient(UUID nodeId, GridCommunicationClient rmvClient) {
+        if (log.isDebugEnabled())
+            log.debug("The client was removed [nodeId=" + nodeId + ",  client=" + rmvClient.toString() + "].");
+
         for (; ; ) {
             GridCommunicationClient[] curClients = clients.get(nodeId);
 

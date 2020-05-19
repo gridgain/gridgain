@@ -82,6 +82,7 @@ import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.DiscoveryListener;
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
+import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.RoundRobinConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationSpiMBeanImpl;
@@ -1123,6 +1124,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             catch (Throwable t) {
                 if (stopping)
                     throw new IgniteSpiException("Node is stopping.", t);
+
+                // NodeUnreachableException should not be explicitly logged. Error message will appear if inverse
+                // connection attempt fails as well.
+                if (!(t instanceof NodeUnreachableException))
+                    log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
 
                 log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
 
