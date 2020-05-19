@@ -16,6 +16,8 @@
 
 package org.apache.ignite.util;
 
+import org.junit.Test;
+
 /**
  *
  */
@@ -23,5 +25,17 @@ public class GridCommandHandlerClusterByClassWithSSLTest extends GridCommandHand
     /** {@inheritDoc} */
     @Override protected boolean sslEnabled() {
         return true;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testHelp() {
+        assertTrue("Logic the as in a parent class", true);
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testCacheHelp() {
+        assertTrue("Logic the as in a parent class", true);
     }
 }
