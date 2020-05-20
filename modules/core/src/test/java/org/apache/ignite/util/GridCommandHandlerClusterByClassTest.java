@@ -99,7 +99,6 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
-import static org.apache.ignite.internal.commandline.CommandList.MANAGEMENT;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
@@ -1582,7 +1581,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         Map<CommandList, Collection<String>> cmdArgs = new EnumMap<>(CommandList.class);
 
         cmdArgs.put(WAL, asList("print", "delete"));
-        cmdArgs.put(MANAGEMENT, asList("on", "off", "uri", "status"));
 
         String warning = String.format(
             "For use experimental command add %s=true to JVM_OPTS in %s",
