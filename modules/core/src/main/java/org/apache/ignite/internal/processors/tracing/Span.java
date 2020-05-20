@@ -75,15 +75,15 @@ public interface Span {
     public SpanType type();
 
     /**
-     * @return Set of supported scopes.
+     * @return Set of included scopes.
      */
-    public Set<Scope> supportedScopes();
+    public Set<Scope> includedScopes();
 
     /**
      * @param scope Chainable scope candidate.
      * @return {@code true} if given span is chainable with other spans with specified scope.
      */
     public default boolean isChainable(Scope scope) {
-        return type().scope() == scope || supportedScopes().contains(scope);
+        return type().scope() == scope || includedScopes().contains(scope);
     }
 }

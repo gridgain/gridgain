@@ -40,8 +40,8 @@ public class OpenCensusSpanAdapter implements Span {
     /** Span type. */
     private final SpanType spanType;
 
-    /** Set of extra supported scopes for given span in addition to span's scope that is supported by default. */
-    private final Set<Scope> supportedScopes;
+    /** Set of extra included scopes for given span in addition to span's scope that is supported by default. */
+    private final Set<Scope> includedScopes;
 
     /**
      * @param span OpenCensus span delegate.
@@ -50,17 +50,17 @@ public class OpenCensusSpanAdapter implements Span {
     public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType) {
         this.span = span;
         this.spanType = spanType;
-        supportedScopes = Collections.emptySet();
+        includedScopes = Collections.emptySet();
     }
 
     /**
      * @param span OpenCensus span delegate.
      * @param spanType Type of span to create.
      */
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType, Set<Scope> supportedScopes) {
+    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType, Set<Scope> includedScopes) {
         this.span = span;
         this.spanType = spanType;
-        this.supportedScopes = supportedScopes;
+        this.includedScopes = includedScopes;
     }
 
     /** Implementation object. */
@@ -114,17 +114,6 @@ public class OpenCensusSpanAdapter implements Span {
 
     /** {@inheritDoc} */
     @Override public OpenCensusSpanAdapter end() {
-        try {
-            // TODO: https://ggsystems.atlassian.net/browse/GG-22503
-            // This sleep hack is needed to consider span as sampled.
-            // @see io.opencensus.implcore.trace.export.InProcessSampledSpanStoreImpl.Bucket.considerForSampling
-            // Meaningful only for tracing tests.
-            Thread.sleep(10);
-        }
-        catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
-        }
-
         span.end();
 
         ended = true;
@@ -143,7 +132,7 @@ public class OpenCensusSpanAdapter implements Span {
     }
 
     /** {@inheritDoc} */
-    @Override public Set<Scope> supportedScopes() {
-        return supportedScopes;
+    @Override public Set<Scope> includedScopes() {
+        return includedScopes;
     }
 }

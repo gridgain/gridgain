@@ -75,7 +75,7 @@ public class NoopSpan implements Span {
     }
 
     /** {@inheritDoc} */
-    @Override public Set<Scope> supportedScopes() {
+    @Override public Set<Scope> includedScopes() {
         return Collections.emptySet();
     }
 }

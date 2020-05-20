@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import io.opencensus.trace.BlankSpan;
+import io.opencensus.trace.Sampler;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
@@ -39,6 +40,8 @@ import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToInt;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToShort;
 import static org.apache.ignite.internal.util.GridClientByteUtils.intToBytes;
@@ -55,7 +58,7 @@ import static org.apache.ignite.internal.util.GridClientByteUtils.shortToBytes;
  * </code>
  * If you don't have OpenCensus Tracing:
  * <code>
- *     IgniteConfigiration cfg;
+ *     IgniteConfiguration cfg;
  *
  *     cfg.setTracingSpi(new OpenCensusTracingSpi(new ZipkinExporterHandler(...)));
  * </code>
@@ -129,9 +132,9 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
             SpanType parentTrace = SpanType.fromIndex(bytesToInt(Arrays.copyOfRange(parentSerializedSpan,
                 4 + openTracingSpanSize, 4 + 4 + openTracingSpanSize), 0));
 
-            Set<Scope> supportedScopes = new HashSet<>();
+            Set<Scope> includedScopes = new HashSet<>();
             for (int i = 0; i < parentSerializedSpan.length - (4 + 4 + openTracingSpanSize); i +=2){
-                supportedScopes.add(Scope.fromIndex(bytesToShort(Arrays.copyOfRange(parentSerializedSpan,
+                includedScopes.add(Scope.fromIndex(bytesToShort(Arrays.copyOfRange(parentSerializedSpan,
                     4 + 4 + openTracingSpanSize + (2 * i),
                     4 + 4 + openTracingSpanSize + (2 * (i + 1))), 0)));
             }
@@ -139,17 +142,17 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
             if (parentSerializedSpan == null || parentSerializedSpan.length == 0) {
                 // If there's no parent span or parent span is NoopSpan than =>
                 // create new span that will be closed when TraceSurroundings will be closed.
-                // Use union of scope and supportedScopes as span supported scopes.
+                // Use union of scope and includedScopes as span included scopes.
                 return create(spanType, NoopSpan.INSTANCE);
             }
             else {
                 // If there's is parent span =>
                 // If parent span supports given scope =>
 
-                if (parentTrace.scope() == spanType.scope() || supportedScopes.contains(spanType.scope())) {
-                    // create new span as child span for parent span, using parents span supported scopes.
-                    supportedScopes.add(parentTrace.scope());
-                    supportedScopes.remove(spanType.scope());
+                if (parentTrace.scope() == spanType.scope() || includedScopes.contains(spanType.scope())) {
+                    // create new span as child span for parent span, using parents span included scopes.
+                    includedScopes.add(parentTrace.scope());
+                    includedScopes.remove(spanType.scope());
 
                     return new OpenCensusSpanAdapter(
                         Tracing.getTracer().spanBuilderWithRemoteParent(
@@ -160,14 +163,14 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
                             .setSampler(Samplers.alwaysSample())
                             .startSpan(),
                         spanType,
-                        supportedScopes
+                        includedScopes
                     );
                 }
                 else {
                     // do nothing;
                     return new OpenCensusDeferredSpanAdapter(parentSerializedSpan);
                     // "suppress" parent span for a while, create new span as separate one.
-                    // return spi.create(trace, null, supportedScopes);
+                    // return spi.create(trace, null, includedScopes);
                 }
             }
         }
@@ -180,23 +183,35 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan, Scope... supportedScopes) {
+    @Override public @NotNull Span create(
+        @NotNull SpanType spanType,
+        @Nullable Span parentSpan,
+        double samplingRate,
+        @NotNull Set<Scope> includedScopes) {
         try {
             io.opencensus.trace.Span openCensusParent = null;
 
             if (parentSpan instanceof OpenCensusSpanAdapter)
                 openCensusParent = ((OpenCensusSpanAdapter)parentSpan).impl();
 
+            Sampler sampler;
+
+            if (Double.compare(samplingRate, SAMPLING_RATE_NEVER) == 0)
+                sampler = Samplers.neverSample();
+            else if (Double.compare(samplingRate, SAMPLING_RATE_ALWAYS) == 0)
+                sampler = Samplers.alwaysSample();
+            else
+                sampler = Samplers.probabilitySampler(samplingRate);
+
             return new OpenCensusSpanAdapter(
                 Tracing.getTracer().spanBuilderWithExplicitParent(
                     spanType.traceName(),
                     openCensusParent
                 )
-                    .setSampler(Samplers.alwaysSample())
+                    .setSampler(sampler)
                     .startSpan(),
                 spanType,
-
-                new HashSet<>(Arrays.asList(supportedScopes))
+                includedScopes
             );
         }
         catch (Exception e) {
@@ -220,10 +235,10 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
         //  4 bytes - int that stores inner io.opencensus.trace.Span size +
         //  serialized version of io.opencensus.trace.Span +
         //  4 bytes - int that is trace id. See Trace for more details.
-        //  2 * supported scopes, ids of supported scope binded to given span, every id a short value.
+        //  2 * included scopes, ids of supported scope binded to given span, every id a short value.
         int openTracingSerializedLen = openTracingSerializedSpan.length;
 
-        byte[] serializedSpanBytes = new byte[4 + openTracingSerializedLen + 4 + (2 * span.supportedScopes().size())];
+        byte[] serializedSpanBytes = new byte[4 + openTracingSerializedLen + 4 + (2 * span.includedScopes().size())];
 
         // Serialize io.opencensus.trace.Span size.
         System.arraycopy(intToBytes(openTracingSerializedLen), 0, serializedSpanBytes, 0, 4);
@@ -236,11 +251,11 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
         System.arraycopy(intToBytes(span.type().idx()), 0, serializedSpanBytes,
             4 + openTracingSerializedLen, 4);
 
-        // Serialize supported scopes
-        int supportedScopeIdx = 0;
-        for (Scope supportedScope : span.supportedScopes()) {
-            System.arraycopy(shortToBytes(supportedScope.idx()), 0, serializedSpanBytes,
-                4 + 4 + openTracingSerializedLen + (2 * supportedScopeIdx++), 2);
+        // Serialize included scopes
+        int includedScopeIdx = 0;
+        for (Scope includedScope : span.includedScopes()) {
+            System.arraycopy(shortToBytes(includedScope.idx()), 0, serializedSpanBytes,
+                4 + 4 + openTracingSerializedLen + (2 * includedScopeIdx++), 2);
         }
 
         return serializedSpanBytes;
