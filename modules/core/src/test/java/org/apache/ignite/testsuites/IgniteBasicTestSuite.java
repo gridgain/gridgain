@@ -305,7 +305,7 @@ import org.junit.runners.Suite;
     BaselineEventsLocalTest.class,
     BaselineEventsRemoteTest.class,
 
-    IgniteThreadGroupNodeRestartTest.class
+    IgniteThreadGroupNodeRestartTest.class,
     BaselineEventsRemoteTest.class,
 
     // Tests for tracing configuration
