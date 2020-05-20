@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.managers.tracing;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
@@ -35,8 +34,10 @@ import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
 import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -174,80 +175,13 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         return span;
     }
 
-    /**
-     * Generates child span if it's possible due to parent/child included scopes, otherwise returns patent span as is.
-     * @param parentSpan Parent span.
-     * @param spanTypeToCreate Span type to create.
-     * @param samplingRate Number between 0 and 1 that more or less reflects the probability of sampling specific trace.
-     * 0 and 1 have special meaning here, 0 means never 1 means always. Default value is 0 (never).
-     * @param includedScopes Set of {@link Scope} that defines which sub-traces will be included in given trace.
-     *  In other words, if child's span scope is equals to parent's scope
-     *  or it belongs to the parent's span included scopes, then given child span will be attached to the current trace,
-     *  otherwise it'll be skipped.
-     *  See {@link Span#isChainable(org.apache.ignite.internal.processors.tracing.Scope)} for more details.
-     * @return Span to propagate with.
-     */
-    private @NotNull Span generateSpan(
-        @Nullable Span parentSpan,
-        @NotNull SpanType spanTypeToCreate,
-        double samplingRate,
-        @NotNull Set<Scope> includedScopes
-    ) {
-        // Optimization
-        if (samplingRate == SAMPLING_RATE_NEVER)
-            return NoopSpan.INSTANCE;
-
-        if (parentSpan instanceof DeferredSpan)
-            return create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
-
-        if (parentSpan == null || parentSpan == NoopSpan.INSTANCE) {
-            // If there's no parent span or parent span is NoopSpan then
-            // create new span that will be closed when TraceSurroundings.
-            // Use union of scope and includedScopes as span included scopes.
-            if (spanTypeToCreate.rootSpan()) {
-                return new SpanImpl(
-                    getSpi().create(
-                        spanTypeToCreate.spanName(),
-                        null,
-                        samplingRate),
-                    spanTypeToCreate,
-                    includedScopes);
-            }
-            else
-                return NoopSpan.INSTANCE;
-        }
-        else {
-            // If there's is parent span and parent span supports given scope then...
-            if (parentSpan.isChainable(spanTypeToCreate.scope())) {
-                // create new span as child span for parent span, using parents span included scopes.
-
-                Set<Scope> mergedIncludedScopes = new HashSet<>(parentSpan.includedScopes());
-
-                mergedIncludedScopes.add(parentSpan.type().scope());
-                mergedIncludedScopes.remove(spanTypeToCreate.scope());
-
-                return new SpanImpl(
-                    getSpi().create(
-                        spanTypeToCreate.spanName(),
-                        ((SpanImpl)parentSpan).spiSpecificSpan(),
-                        samplingRate),
-                    spanTypeToCreate,
-                    mergedIncludedScopes);
-            }
-            else {
-                // do nothing;
-                return NoopSpan.INSTANCE;
-            }
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan) {
-        return enrichWithLocalNodeParameters(generateSpan(
-            parentSpan,
-            spanType,
-            SAMPLING_RATE_ALWAYS,
-            Collections.emptySet()));
+        return enrichWithLocalNodeParameters(
+            generateSpan(
+                parentSpan,
+                spanType,
+                null));
     }
 
     /** {@inheritDoc} */
@@ -378,13 +312,12 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     @Override public @NotNull Span create(
         @NotNull SpanType spanType,
         @Nullable Span parentSpan,
-        double samplingRate,
-        @NotNull Set<Scope> includedScopes) {
+        @Nullable String lb
+    ) {
         return enrichWithLocalNodeParameters(generateSpan(
             parentSpan,
             spanType,
-            samplingRate,
-            includedScopes));
+            lb));
     }
 
     /** {@inheritDoc} */
@@ -477,6 +410,66 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         }
 
         return serializedSpanBytes;
+    }
+
+    /**
+     * Generates child span if it's possible due to parent/child included scopes, otherwise returns patent span as is.
+     * @param parentSpan Parent span.
+     * @param spanTypeToCreate Span type to create.
+     * @param lb Label.
+     */
+    private @NotNull Span generateSpan(
+        @Nullable Span parentSpan,
+        @NotNull SpanType spanTypeToCreate,
+        @Nullable String lb
+    ) {
+        if (parentSpan instanceof DeferredSpan)
+            return create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
+
+        if (parentSpan == null || parentSpan == NoopSpan.INSTANCE) {
+            if (spanTypeToCreate.rootSpan()) {
+                // Get tracing configuration.
+                TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
+                    new TracingConfigurationCoordinates.Builder(spanTypeToCreate.scope()).withLabel(lb).build());
+
+                // Optimization
+                if (tracingConfigurationParameters.samplingRate() == SAMPLING_RATE_NEVER)
+                    return NoopSpan.INSTANCE;
+
+                return new SpanImpl(
+                    getSpi().create(
+                        spanTypeToCreate.spanName(),
+                        null,
+                        tracingConfigurationParameters.samplingRate()),
+                    spanTypeToCreate,
+                    tracingConfigurationParameters.includedScopes());
+            }
+            else
+                return NoopSpan.INSTANCE;
+        }
+        else {
+            // If there's is parent span and parent span supports given scope then...
+            if (parentSpan.isChainable(spanTypeToCreate.scope())) {
+                // create new span as child span for parent span, using parents span included scopes.
+
+                Set<Scope> mergedIncludedScopes = new HashSet<>(parentSpan.includedScopes());
+
+                mergedIncludedScopes.add(parentSpan.type().scope());
+                mergedIncludedScopes.remove(spanTypeToCreate.scope());
+
+                return new SpanImpl(
+                    getSpi().create(
+                        spanTypeToCreate.spanName(),
+                        ((SpanImpl)parentSpan).spiSpecificSpan(),
+                        SAMPLING_RATE_ALWAYS),
+                    spanTypeToCreate,
+                    mergedIncludedScopes);
+            }
+            else {
+                // do nothing;
+                return NoopSpan.INSTANCE;
+            }
+        }
     }
 
     /** {@inheritDoc} */
