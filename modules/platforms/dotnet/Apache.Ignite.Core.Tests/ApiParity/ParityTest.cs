@@ -54,21 +54,40 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// <summary>
         /// Checks deprecated java interface method is matched by regexp.
         /// </summary>
-        /// <param name="text"></param>
+        /// <param name="text">Java source code text.</param>
+        /// <param name="expected">Expected method name. Null if should be ignored.</param>
         [TestCase(@"*/ 
                         @Deprecated 
-                        public int getWalHistorySize()")]
+                        public int enableStatistics()", null)]
         [TestCase(@"
-                        @Deprecated @Override public BigDecimal getBigDecimal(int columnIndex, int scale)")]
+                        @Deprecated @Override public BigDecimal enableStatistics(int columnIndex, int scale)", null)]
+        [TestCase(@"
+                        @Deprecated @Whatever @override public BigDecimal enableStatistics(int columnIndex, int scale)",
+            null)]
         [TestCase(@"
                         @Deprecated 
+                        @Whatever
                         @Override 
-                        public BigDecimal getBigDecimal(int columnIndex, int scale)")]
+                        public BigDecimal enableStatistics(int columnIndex, int scale)", null)]
         [TestCase(@"@Nullable
-                        public BigDecimal getBigDecimal(int columnIndex, int scale)")]
-        public static void CheckJavaInterfaceMethodRegex(string text)
+                        public BigDecimal enableStatistics(int columnIndex, int scale)", "enableStatistics")]
+        [TestCase(@"/**
+                         * Enables/disables statistics for caches cluster wide.
+                         *
+                         * @param caches Collection of cache names.
+                         * @param enabled Statistics enabled flag.
+                         */
+                        public void enableStatistics(Collection<String> caches, boolean enabled);",
+            "enableStatistics")]
+        public static void CheckMissingJavaInterfaceMethodRegex(string text, string expected)
         {
-            Assert.IsTrue(JavaInterfaceMethodRegex.IsMatch(text), text);
+            string methodName = JavaInterfaceMethodRegex.Matches(text)
+                .OfType<Match>()
+                .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
+                .Select(m => m.Groups[2].Value)
+                .Except(UnneededMethods).FirstOrDefault();
+
+            Assert.AreEqual(expected, methodName);
         }
 
         /// <summary>
@@ -199,7 +218,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
 
             return JavaPropertyRegex.Matches(text)
                 .OfType<Match>()
-                .Where(m => m.Groups[1].Value == string.Empty)
+                .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
                 .Select(m => m.Groups[2].Value.Replace("get", ""))
                 .Where(x => !x.Contains(" void "))
                 .Except(UnneededMethods);
