@@ -194,12 +194,12 @@ public class GridMemcachedMessage implements GridClientMessage {
     }
 
     /** {@inheritDoc} */
-    @Override public Map<String, String> userAttributes() {
+    public Map<String, String> userAttributes() {
         return null;
     }
 
     /** {@inheritDoc} */
-    @Override public void userAttributes(Map<String, String> userAttrs) {
+    public void userAttributes(Map<String, String> userAttrs) {
         // No-op.
     }
 

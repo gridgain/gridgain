@@ -80,17 +80,17 @@ public interface GridClientMessage extends Serializable {
      */
     public void sessionToken(byte[] sesTok);
 
-    /**
+/*    *//**
      * Gets user attributes.
      *
      * @return User attributes.
-     */
+     *//*
     public Map<String, String> userAttributes();
 
-    /**
+    *//**
      * Gets user attributes.
      *
      * @param userAttrs User attributes.
-     */
-    public void userAttributes(Map<String, String> userAttrs);
+     *//*
+    public void userAttributes(Map<String, String> userAttrs);*/
 }

@@ -458,6 +458,10 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             else
                 restTopReq.command(TOPOLOGY);
 
+            restTopReq.credentials(new SecurityCredentials(req.login(), req.password()));
+
+            restTopReq.userAttributes(req.userAttributes());
+
             restReq = restTopReq;
         }
         else if (msg instanceof GridClientStateRequest) {
@@ -485,14 +489,6 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             restReq.sessionToken(msg.sessionToken());
             restReq.address(ses.remoteAddress());
             restReq.certificates(ses.certificates());
-
-            if (restReq.credentials() == null) {
-                GridClientAbstractMessage msg0 = (GridClientAbstractMessage) msg;
-
-                restReq.credentials(new SecurityCredentials(msg0.login(), msg0.password()));
-            }
-
-            restReq.userAttributes(msg.userAttributes());
         }
 
         return restReq;
