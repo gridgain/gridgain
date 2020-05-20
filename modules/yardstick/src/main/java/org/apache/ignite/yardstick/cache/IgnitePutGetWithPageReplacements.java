@@ -25,6 +25,7 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.yardstickframework.BenchmarkConfiguration;
 import org.yardstickframework.BenchmarkUtils;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -138,7 +139,7 @@ public class IgnitePutGetWithPageReplacements extends IgniteCacheAbstractBenchma
     /**
      * Class for test purpose.
      */
-    private static class TestValue {
+    private static class TestValue implements Serializable {
         /** */
         private int id;
 

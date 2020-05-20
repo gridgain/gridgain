@@ -18,11 +18,7 @@ package org.apache.ignite.internal.processors.platform.client;
 
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_1_0;
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_2_0;
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_4_0;
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_6_0;
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_7_0;
+import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.*;
 
 /**
  * Thin client feature that was introduced by introducing new protocol version.
@@ -45,6 +41,9 @@ public class ClientProtocolVersionFeature {
 
     /** Bitmap features introduced. */
     public static final ClientProtocolVersionFeature BITMAP_FEATURES = new ClientProtocolVersionFeature(VER_1_7_0);
+
+    /** User attributes feature introduced. */
+    public static final ClientProtocolVersionFeature USER_ATTRIBUTES = new ClientProtocolVersionFeature(VER_1_7_1);
 
     /** Version in which the feature was introduced. */
     private final ClientListenerProtocolVersion ver;
