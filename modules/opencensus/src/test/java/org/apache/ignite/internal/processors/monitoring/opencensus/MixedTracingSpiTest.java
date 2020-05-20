@@ -57,10 +57,6 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
         listeners.add(LogListener.matches(
             ">>> Remote SPI with the same name is not configured: NoopTracingSpi").build());
 
-        listeners.add(LogListener.matches(
-            s -> s.contains("Failed to create span from serialized value")).times(2).build());
-
-
         listeners.forEach(testLog::registerListener);
 
         return listeners;
@@ -79,8 +75,7 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    // TODO: 12.05.20 Will be fixed in https://ggsystems.atlassian.net/browse/GG-21434
-//    @Test 
+    @Test
     public void testNodesWithDifferentTracingSpiPrintsWarningOnConsistencyCheck() throws Exception {
         List<LogListener> listeners = prepareLogListeners();
 
