@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.tracing.configuration;
 
 import java.util.Collections;
 import java.util.Map;
-
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.Scope;
 import org.jetbrains.annotations.NotNull;
@@ -33,35 +32,35 @@ public interface TracingConfigurationManager {
     static final TracingConfigurationParameters DEFAULT_TX_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withincludedScopes(Collections.emptySet()).
+            withIncludedScopes(Collections.emptySet()).
             build();
 
     /** Default exchange configuration. */
     static final TracingConfigurationParameters DEFAULT_EXCHANGE_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withincludedScopes(Collections.emptySet()).
+            withIncludedScopes(Collections.emptySet()).
             build();
 
     /** Default discovery configuration. */
     static final TracingConfigurationParameters DEFAULT_DISCOVERY_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withincludedScopes(Collections.emptySet()).
+            withIncludedScopes(Collections.emptySet()).
             build();
 
     /** Default communication configuration. */
     static final TracingConfigurationParameters DEFAULT_COMMUNICATION_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withincludedScopes(Collections.emptySet()).
+            withIncludedScopes(Collections.emptySet()).
             build();
 
     /** Default noop configuration. */
     static final TracingConfigurationParameters NOOP_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
             withSamplingRate(0d).
-            withincludedScopes(Collections.emptySet()).
+            withIncludedScopes(Collections.emptySet()).
             build();
 
     /**

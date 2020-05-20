@@ -60,7 +60,10 @@ public enum CommandList {
     DATA_CENTER_REPLICATION("--dr", new DrCommand()),
 
     /** */
-    MANAGEMENT("--management", new ManagementCommands());
+    MANAGEMENT("--management", new ManagementCommands()),
+
+    /** */
+    TRACING_CONFIGURATION("--tracing-configuration", new TracingConfigurationCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();

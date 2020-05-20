@@ -119,6 +119,6 @@ public class TracingConfigurationValidationTest extends GridCommonAbstractTest {
             Collections.emptySet(),
             Collections.singleton(COMMUNICATION),
             new HashSet<>(Arrays.asList(COMMUNICATION, DISCOVERY, TX, EXCHANGE))})
-            new TracingConfigurationParameters.Builder().withincludedScopes(validincludedScopes).build();
+            new TracingConfigurationParameters.Builder().withIncludedScopes(validincludedScopes).build();
     }
 }
