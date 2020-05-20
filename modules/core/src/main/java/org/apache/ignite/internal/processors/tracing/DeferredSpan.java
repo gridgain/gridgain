@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,32 +46,32 @@ public class DeferredSpan implements Span{
 
     /** {@inheritDoc} */
     @Override public Span addTag(String tagName, String tagVal) {
-        return null;
+        return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span addTag(String tagName, long tagVal) {
-        return null;
+        return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span addLog(String logDesc) {
-        return null;
+        return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span addLog(String logDesc, Map<String, String> attrs) {
-        return null;
+        return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span setStatus(SpanStatus spanStatus) {
-        return null;
+        return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span end() {
-        return null;
+        return this;
     }
 
     /** {@inheritDoc} */
@@ -85,7 +86,7 @@ public class DeferredSpan implements Span{
 
     /** {@inheritDoc} */
     @Override public Set<Scope> includedScopes() {
-        return null;
+        return Collections.emptySet();
     }
 
     /** {@inheritDoc} */

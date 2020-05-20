@@ -340,7 +340,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
         // Only root discovery.custom.event spans have message.class tag.
         List<SpanData> rootCustomEventSpans = handler().allSpans().
             filter(spanData ->
-                DISCOVERY_CUSTOM_EVENT.traceName().equals(spanData.getName()) &&
+                DISCOVERY_CUSTOM_EVENT.spanName().equals(spanData.getName()) &&
                     spanData.getParentSpanId() == null).
             collect(Collectors.toList());
 
