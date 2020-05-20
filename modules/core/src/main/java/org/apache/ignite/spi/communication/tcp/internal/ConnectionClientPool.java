@@ -176,6 +176,9 @@ public class ConnectionClientPool {
 
         UUID nodeId = node.id();
 
+        if (log.isDebugEnabled())
+            log.debug("The node client is going to reserve a connection [nodeId=" + node.id() + ", connIdx=" + connIdx + "]");
+
         while (true) {
             GridCommunicationClient[] curClients = clients.get(nodeId);
 
@@ -488,6 +491,9 @@ public class ConnectionClientPool {
         assert cfg.connectionsPerNode() > 0 : cfg.connectionsPerNode();
         assert connIdx == addClient.connectionIndex() : addClient;
 
+        if (log.isDebugEnabled())
+            log.debug("The node client is going to create a connection [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
+
         if (connIdx >= cfg.connectionsPerNode()) {
             assert !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection()));
 
@@ -514,6 +520,9 @@ public class ConnectionClientPool {
             else {
                 newClients = curClients.clone();
                 newClients[connIdx] = addClient;
+
+                if (log.isDebugEnabled())
+                    log.debug("The node client was replaced [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
 
                 if (clients.replace(node.id(), curClients, newClients))
                     break;
@@ -553,6 +562,9 @@ public class ConnectionClientPool {
      * @throws IgniteCheckedException If occurs.
      */
     public void forceCloseConnection(UUID nodeId) throws IgniteCheckedException {
+        if (log.isDebugEnabled())
+            log.debug("The node client connections were closed [nodeId=" + nodeId + "]");
+
         GridCommunicationClient[] clients = this.clients.remove(nodeId);
         if (nonNull(clients)) {
             for (GridCommunicationClient client : clients)
