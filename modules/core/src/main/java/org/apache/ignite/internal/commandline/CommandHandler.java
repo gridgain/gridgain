@@ -219,7 +219,7 @@ public class CommandHandler {
 
     /**
      * @param rawArgs Arguments to parse.
-     * @return Parsed
+     * @return Parsed parameters.
      */
     protected ConnectionAndSslParameters parseAndValidate(List<String> rawArgs) {
       return new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
