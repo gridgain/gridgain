@@ -47,6 +47,7 @@ import org.apache.ignite.internal.GridStartStopSelfTest;
 import org.apache.ignite.internal.GridStopWithCancelSelfTest;
 import org.apache.ignite.internal.IgniteLocalNodeMapBeforeStartTest;
 import org.apache.ignite.internal.IgniteSlowClientDetectionSelfTest;
+import org.apache.ignite.internal.IgniteThreadGroupNodeRestartTest;
 import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
 import org.apache.ignite.internal.TransactionsMXBeanImplTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
@@ -301,7 +302,9 @@ import org.junit.runners.Suite;
 
     ClusterActivationStartedEventTest.class,
     BaselineEventsLocalTest.class,
-    BaselineEventsRemoteTest.class
+    BaselineEventsRemoteTest.class,
+
+    IgniteThreadGroupNodeRestartTest.class
 })
 public class IgniteBasicTestSuite {
 }
