@@ -424,6 +424,22 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * Test is checking how to --rebalance-status command works through control.sh.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalaceStatus() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        assertEquals(EXIT_CODE_OK, execute("--rebalance-status"));
+    }
+
+    /**
      * Test baseline collect works via control.sh when client node has the smallest order.
      *
      * @throws Exception If failed.
