@@ -3054,7 +3054,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      *
      * @param key Key.
      * @param queueSize Collisions queue size
-     **/
+     */
     public void pushCollidingKeysWithQueueSize(GridCacheMapEntry key, int queueSize) {
         keyCollisionsInfo.put(key, queueSize);
     }

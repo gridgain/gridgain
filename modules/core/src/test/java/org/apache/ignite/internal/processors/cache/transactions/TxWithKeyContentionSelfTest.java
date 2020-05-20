@@ -214,7 +214,7 @@ public class TxWithKeyContentionSelfTest extends GridCommonAbstractTest {
      * @param concurrency Concurrency level.
      * @param isolation Isolation level.
      * @throws Exception If failed.
-     **/
+     */
     private void runKeyCollisionsMetric(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
         if (MvccFeatureChecker.forcedMvcc())
             return; // Not supported.
