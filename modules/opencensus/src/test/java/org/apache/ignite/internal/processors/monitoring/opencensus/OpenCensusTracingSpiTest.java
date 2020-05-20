@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.monitoring.opencensus;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import io.opencensus.common.Functions;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.export.SpanData;
@@ -39,6 +41,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATI
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_READ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CUSTOM_JOB_CALL;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_CUSTOM_EVENT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_ADD;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_FINISH;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_REQUEST;
@@ -321,5 +324,44 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
 
         assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_REQUEST.traceName()))));
         assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_RESPONSE.traceName()))));
+    }
+
+    /**
+     * Ensure that root discovery.custom.event have message.class with corresponding value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCustomEventContainsMessageClassTag() throws Exception {
+        IgniteEx ignite = grid(0);
+
+        ignite.createCache("New cache");
+
+        handler().flush();
+
+        // Only root discovery.custom.event spans have message.class tag.
+        List<SpanData> rootCustomEventSpans = handler().collectedSpans.values().stream().
+            filter(spanData ->
+                DISCOVERY_CUSTOM_EVENT.traceName().equals(spanData.getName()) &&
+                    spanData.getParentSpanId() == null).
+            collect(Collectors.toList());
+
+        // Check that there's at least one discovery.custom.event span with tag "message.class"
+        // and value "CacheAffinityChangeMessage"
+        assertTrue(rootCustomEventSpans.stream().anyMatch(
+            span -> "CacheAffinityChangeMessage".equals(
+                attributeValueToString(span.getAttributes().getAttributeMap().get(SpanTags.MESSAGE_CLASS)))));
+    }
+
+    /**
+     * @param attributeVal Attribute value.
+     */
+    private static String attributeValueToString(AttributeValue attributeVal) {
+        return attributeVal.match(
+            Functions.returnToString(),
+            Functions.returnToString(),
+            Functions.returnToString(),
+            Functions.returnToString(),
+            Functions.returnConstant(""));
     }
 }

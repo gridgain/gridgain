@@ -35,12 +35,7 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     /**
      * Whether to allow sending custom object through Thin JDBC protocol.
      */
-    CUSTOM_OBJECT(2),
-
-    /**
-     * User can pass custom attributes to a server to be associated with connection.
-     */
-    USER_ATTRIBUTES(3);
+    CUSTOM_OBJECT(2);
 
     /** */
     private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);
