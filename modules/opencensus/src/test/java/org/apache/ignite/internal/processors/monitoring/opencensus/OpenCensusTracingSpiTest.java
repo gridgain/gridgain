@@ -57,6 +57,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATI
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_READ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CUSTOM_JOB_CALL;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_CUSTOM_EVENT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_ADD;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_FINISH;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_REQUEST;
@@ -418,7 +419,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         // Only root discovery.custom.event spans have message.class tag.
         List<SpanData> rootCustomEventSpans = hnd.collectedSpans.values().stream().
             filter(spanData ->
-                Traces.Discovery.CUSTOM_EVENT.equals(spanData.getName()) &&
+                DISCOVERY_CUSTOM_EVENT.traceName().equals(spanData.getName()) &&
                     spanData.getParentSpanId() == null).
             collect(Collectors.toList());
 
