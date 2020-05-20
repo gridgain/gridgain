@@ -4337,10 +4337,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      *
      * @param gapStart Update counter corresponds to out-of-order update.
      */
-    protected void logOutOfOrderUpdate(
-        long gapStart
-    ) throws IgniteCheckedException {
-        assert cctx.atomic();
+    protected void logOutOfOrderUpdate(Long gapStart) throws IgniteCheckedException {
+        assert cctx.atomic() : "Individual updates must be logged only for ATOMIC caches.";
+        assert gapStart != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
 
         try {
             if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
@@ -6724,11 +6723,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             cctx.store().put(null, entry.key, val, entry.ver);
                     }
                     else {
+                        outOfOrderUpdate = ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) > 0;
+
                         if (log.isDebugEnabled())
                             log.debug("Received entry update with smaller version than current (will ignore) " +
                                 "[entry=" + this + ", newVer=" + newVer + ']');
-
-                        outOfOrderUpdate = true;
                     }
 
                     treeOp = IgniteTree.OperationType.NOOP;
