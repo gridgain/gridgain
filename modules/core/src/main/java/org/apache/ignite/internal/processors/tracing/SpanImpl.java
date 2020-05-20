@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,81 +16,99 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Encapsulates concept of a deferred-initialized span. It's used to overcome OpenCensus span implementation, that starts
- * span immediately after deserialization.
+ * Implementation of a {@link Span}
  */
-public class DeferredSpan implements Span{
-    /** */
-    private byte[] serializedSpan;
+public class SpanImpl implements Span {
+    /** Spi specific span delegate. */
+    private final SpiSpecificSpan spiSpecificSpan;
+
+    /** Span type. */
+    private final SpanType spanType;
+
+    /** Set of extra included scopes for given span in addition to span's scope that is supported by default. */
+    private final Set<Scope> includedScopes;
 
     /**
-     * Constructor.
+     * Constructor
      *
-     * @param serializedSpan Serialized span bytes.
+     * @param spiSpecificSpan Spi specific span.
+     * @param spanType Type of a span.
+     * @param includedScopes Set of included scopes.
      */
-    public DeferredSpan(byte[] serializedSpan) {
-        this.serializedSpan = serializedSpan;
-    }
-
-    /**
-     * @return Serialized span.
-     */
-    public byte[] serializedSpan() {
-        return serializedSpan;
+    public SpanImpl(
+        SpiSpecificSpan spiSpecificSpan,
+        SpanType spanType,
+        Set<Scope> includedScopes) {
+        this.spiSpecificSpan = spiSpecificSpan;
+        this.spanType = spanType;
+        this.includedScopes = includedScopes;
     }
 
     /** {@inheritDoc} */
     @Override public Span addTag(String tagName, String tagVal) {
+        spiSpecificSpan.addTag(tagName, tagVal);
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span addTag(String tagName, long tagVal) {
+        spiSpecificSpan.addTag(tagName, tagVal);
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span addLog(String logDesc) {
+        spiSpecificSpan.addLog(logDesc);
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span addLog(String logDesc, Map<String, String> attrs) {
+        spiSpecificSpan.addLog(logDesc, attrs);
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span setStatus(SpanStatus spanStatus) {
+        spiSpecificSpan.setStatus(spanStatus);
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public Span end() {
+        spiSpecificSpan.end();
+
         return this;
     }
 
     /** {@inheritDoc} */
     @Override public boolean isEnded() {
-        return false;
+        return spiSpecificSpan.isEnded();
     }
 
     /** {@inheritDoc} */
     @Override public SpanType type() {
-        return null;
+        return spanType;
     }
 
     /** {@inheritDoc} */
     @Override public Set<Scope> includedScopes() {
-        return Collections.emptySet();
+        return includedScopes;
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean isChainable(Scope scope) {
-        return false;
+    /**
+     * @return Spi specific span delegate.
+     */
+    public SpiSpecificSpan spiSpecificSpan() {
+        return spiSpecificSpan;
     }
 }
