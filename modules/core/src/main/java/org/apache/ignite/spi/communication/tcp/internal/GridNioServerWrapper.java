@@ -19,6 +19,7 @@ package org.apache.ignite.spi.communication.tcp.internal;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -40,6 +41,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.tracing.Tracing;
@@ -558,6 +560,9 @@ public class GridNioServerWrapper {
 
                     if (log.isDebugEnabled())
                         log.debug("Client creation failed [addr=" + addr + ", err=" + e + ']');
+
+                    if (X.hasCause(e, "Too many open files", SocketException.class))
+                        throw new IgniteTooManyOpenFilesException(e);
 
                     // check if timeout occured in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {

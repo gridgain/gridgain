@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
+import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -237,6 +238,9 @@ public class ConnectionClientPool {
                             throw e;
 
                         fut.onDone(e);
+
+                        if (e instanceof IgniteTooManyOpenFilesException)
+                            throw e;
 
                         if (e instanceof Error)
                             throw (Error)e;
@@ -572,7 +576,7 @@ public class ConnectionClientPool {
         }
 
         for (ConnectionKey connKey : clientFuts.keySet()) {
-            if (!nodeId.equals(connKey))
+            if (!nodeId.equals(connKey.nodeId()))
                 continue;
 
             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.remove(connKey);

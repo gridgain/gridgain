@@ -32,6 +32,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
@@ -378,6 +379,11 @@ public class CommunicationWorker extends GridWorker {
         catch (ClusterTopologyCheckedException e) {
             if (log.isDebugEnabled())
                 log.debug("Recovery reconnect failed, node stopping [rmtNode=" + recoveryDesc.node().id() + ']');
+        }
+        catch (IgniteTooManyOpenFilesException e) {
+            eRegistrySupplier.get().onException(e.getMessage(), e);
+
+            throw e;
         }
         catch (IgniteCheckedException | IgniteException e) {
             try {

@@ -815,12 +815,12 @@ cfg.socketSendBuffer(sockSndBuf);
 
             Map<String, Object> res = new HashMap<>(5);
 
-            boolean ip = !F.isEmpty(cfg.localAddress()) && cfg.localHost().getHostAddress().equals(cfg.localAddress());
-            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) && ip;
+            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) &&
+                (!F.isEmpty(cfg.localAddress()) && cfg.localHost().getHostAddress().equals(cfg.localAddress())) && !cfg.localHost().isAnyLocalAddress() &&
+                !cfg.localHost().isLoopbackAddress();
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());
             res.put(createSpiAttributeName(ATTR_HOST_NAMES), setEmptyHostNamesAttr ? emptyList() : addrs.get2());
-            res.put(createSpiAttributeName(ATTR_HOST_NAMES), addrs.get2());
             res.put(createSpiAttributeName(ATTR_PORT), cfg.boundTcpPort());
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), cfg.boundTcpShmemPort() >= 0 ? cfg.boundTcpShmemPort() : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);

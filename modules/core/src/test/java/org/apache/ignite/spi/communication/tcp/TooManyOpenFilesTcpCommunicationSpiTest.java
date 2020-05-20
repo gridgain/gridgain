@@ -110,7 +110,5 @@ public class TooManyOpenFilesTcpCommunicationSpiTest extends GridCommonAbstractT
         }
 
         assertTrue(waitForCondition(((IgniteKernal)stopNode)::isStopping, 60_000));
-
-        fail();
     }
 }

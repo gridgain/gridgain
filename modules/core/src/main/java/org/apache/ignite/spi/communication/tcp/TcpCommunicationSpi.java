@@ -1130,8 +1130,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 if (!(t instanceof NodeUnreachableException))
                     log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
 
-                log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
-
                 if (t instanceof Error)
                     throw (Error)t;
 
