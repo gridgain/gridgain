@@ -331,9 +331,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTest()} will be called anyway.
      */
     protected void beforeTest() throws Exception {
-        if (isValidationThreadNamesRequired()) {
-            anonymousThreadCountBeforeTest = getAnonymousThreadCount();
-        }
     }
 
     /**
@@ -2302,6 +2299,10 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         U.quiet(false, ">>> Starting test: " + testDescription() + " <<<");
 
         try {
+            // some suites throws exception in beforeTest.
+            if (isValidationThreadNamesRequired()) {
+                anonymousThreadCountBeforeTest = getAnonymousThreadCount();
+            }
             beforeTest();
         }
         catch (Exception | Error t) {
