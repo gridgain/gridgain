@@ -120,7 +120,6 @@ import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_SIZE;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_STORE_VER;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PART_CNT;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.SNAPSHOT;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.TRANSFORM;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
@@ -250,8 +249,8 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param filePageStoreVer Page store version. If {@code snaphot == true} it is not used.
      * @param indexes Names of index trees to process. If {@code null}, all are used.
      * @param checkParts Check cache data tree in partition files and it's consistency with indexes.
-     * @param fileMask File suffix for find in directory.
      * @param outputStream Stream for print report.
+     * @throws IgniteCheckedException If failed.
      */
     public IgniteIndexReader(
         File dir,
@@ -261,7 +260,6 @@ public class IgniteIndexReader implements AutoCloseable {
         int filePageStoreVer,
         @Nullable String[] indexes,
         boolean checkParts,
-        @Nullable String fileMask,
         @Nullable OutputStream outputStream
     ) throws IgniteCheckedException {
         this.pageSize = pageSize;
@@ -275,36 +273,21 @@ public class IgniteIndexReader implements AutoCloseable {
         this.outErrStream = outStream;
         this.cfg = new IgniteConfiguration();
 
-        File idxFile = getFile(INDEX_PARTITION, fileMask);
+        File idxFile = getFile(dir, INDEX_PARTITION, null);
 
         if (!idxFile.exists())
             throw new IgniteCheckedException(idxFile.getName() + " file not found");
+        else
+            print("Analyzing file: " + idxFile.getPath());
 
-        // TODO: 16.05.2020
-        if (snapshot && 1 != 1) {
-            List<File> files = buildSnapshotChain(dir);
+        List<File> snapshotChain = snapshot ? buildSnapshotChain(dir) : null;
 
-            System.out.println(files);
-        }
-
-        idxStore = snapshot ? createSnapshotFilePageStore(INDEX_PARTITION, FLAG_IDX, idxFile) :
-            (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocationTracker);
-
-        idxStore.ensure();
+        idxStore = createFilePageStore(INDEX_PARTITION, FLAG_IDX, snapshot ? null : idxFile, snapshotChain);
 
         partStores = new FilePageStore[partCnt];
 
-        for (int i = 0; i < partCnt; i++) {
-            File partFile = getFile(i, fileMask);
-
-            // Some of array members will be null if node doesn't have all partition files locally.
-            if (partFile.exists()) {
-                partStores[i] = snapshot ? createSnapshotFilePageStore(i, FLAG_DATA, partFile) :
-                    (FilePageStore)storeFactory.createPageStore(FLAG_DATA, partFile, allocationTracker);
-
-                partStores[i].ensure();
-            }
-        }
+        for (int i = 0; i < partCnt; i++)
+            partStores[i] = createFilePageStore(i, FLAG_DATA, snapshot ? null : getFile(dir, i, null), snapshotChain);
     }
 
     /** */
@@ -388,22 +371,18 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Getting a partition or index file that may not exist.
      *
+     * @param dir Directory to get partition or index file.
      * @param partId ID of partition or index.
      * @param fileExt File extension if it differs from {@link FilePageStoreManager#FILE_SUFFIX}.
      * @return Partition or index file that may not exist.
      */
-    private File getFile(int partId, @Nullable String fileExt) {
+    private File getFile(File dir, int partId, @Nullable String fileExt) {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
 
         if (nonNull(fileExt) && !FILE_SUFFIX.equals(fileExt))
             fileName = fileName.replace(FILE_SUFFIX, fileExt);
 
-        File file = new File(dir, fileName);
-
-        if (file.exists() && partId == INDEX_PARTITION)
-            print("Analyzing file: " + file.getPath());
-
-        return file;
+        return new File(dir, fileName);
     }
 
     /** */
@@ -423,89 +402,9 @@ public class IgniteIndexReader implements AutoCloseable {
         }
         catch (IgniteDataIntegrityViolationException | IllegalArgumentException e) {
             // Replacing exception due to security reasons, as IgniteDataIntegrityViolationException prints page content.
-            throw new IgniteException("Failed to read page, id=" + pageId + ", file=" + store.getFileAbsolutePath());
+            throw new IgniteException("Failed to read page, id=" + pageId + ", idx=" + pageIndex(pageId) +
+                ", file=" + store.getFileAbsolutePath());
         }
-    }
-
-    /**
-     * Creating {@link SnapshotFilePageStore}.
-     *
-     * @param partId Partition ID.
-     * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
-     * @param file Page store file.
-     * @return New instance of {@link SnapshotFilePageStore}.
-     * @throws IgniteCheckedException If there are errors when creating {@link SnapshotFilePageStore}.
-     */
-    private SnapshotFilePageStore createSnapshotFilePageStore(
-        int partId,
-        byte type,
-        File file
-    ) throws IgniteCheckedException {
-        try {
-            return new SnapshotFilePageStore(type, dsCfg, file, pagePositions(file, partId), allocationTracker);
-        }
-        catch (Exception e) {
-            throw new IgniteCheckedException("Error while create of pageStore for: " + file.getAbsolutePath(), e);
-        }
-    }
-
-    /**
-     * Creating mapping pageIdx -> position in file with checking.
-     * Array index - pageIdx, value - position in file.
-     * Value {@code -1} means that page is corrupted.
-     *
-     * @param partId Partition ID.
-     * @param file File.
-     * @return Mapping pageIdx -> position into file.
-     * @throws Exception If there is an error when reading page or it is corrupted.
-     */
-    private long[] pagePositions(File file, int partId) throws Exception {
-        int pageCnt = (int)(file.length() / pageSize);
-
-        long[] positions = new long[pageCnt];
-
-        Arrays.fill(positions, -1);
-
-        int actPageCnt = 0;
-
-        ByteBuffer buf = allocateBuffer(pageSize);
-
-        try (SnapshotInputStream snapshotInputStream = of(file, partId, pageSize, file.getParentFile().getName())) {
-            long bufAddr = bufferAddress(buf);
-
-            while (snapshotInputStream.readNextPage(buf)) {
-                actPageCnt++;
-
-                buf.rewind();
-
-                int crcSaved = getCrc(bufAddr);
-
-                setCrc(bufAddr, 0);
-
-                int calced = calcCrc(buf, pageSize);
-
-                long pageId = getPageId(buf);
-                int pageIdx = pageIndex(pageId);
-
-                buf.rewind();
-
-                if (calced != crcSaved) {
-                    printErr("Corrupted page [file=" + file.getAbsolutePath() + ", pageId=" + pageId +
-                        ", pageIdx=" + pageIdx + ", pageNum=" + (actPageCnt - 1) + "]");
-
-                    continue;
-                }
-
-                positions[pageIdx] = pageIdx * pageSize;
-            }
-        }
-        finally {
-            freeBuffer(buf);
-        }
-
-        assert pageCnt == actPageCnt : "Invalid page count [expected=" + pageCnt + ", actual=" + actPageCnt + "]";
-
-        return positions;
     }
 
     /**
@@ -521,7 +420,7 @@ public class IgniteIndexReader implements AutoCloseable {
         Map<Class, Long> pageClasses = new HashMap<>();
 
         long pagesNum = isNull(idxStore) ? 0 : (idxStore.size() - idxStore.headerSize()) / pageSize;
-        
+
         print("Going to check " + pagesNum + " pages.");
 
         Set<Long> pageIds = new HashSet<>();
@@ -1563,14 +1462,49 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     * For full snapshot returns {@code null} for incremental will build a chain of directories until first full snapshot.
+     * Creating {@link FilePageStore} for snapshot or regular pds and initializing it.
+     * It can return {@code null} if partition file were not found, for example: node should not contain it by affinity.
+     *
+     * @param partId Partition ID.
+     * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
+     * @param file Page store file for regular pds.
+     * @param snapshotChain Snapshot directory chain.
+     * @return New instance of {@link FilePageStore} or {@code null}.
+     * @throws IgniteCheckedException If there are errors when creating or initializing {@link FilePageStore}.
+     */
+    @Nullable private FilePageStore createFilePageStore(
+        int partId,
+        byte type,
+        @Nullable File file,
+        @Nullable List<File> snapshotChain
+    ) throws IgniteCheckedException {
+        assert isNull(snapshotChain) && nonNull(file) || isNull(file) && nonNull(snapshotChain);
+
+        FilePageStore store;
+
+        if (nonNull(file))
+            store = !file.exists() ? null : (FilePageStore)storeFactory.createPageStore(type, file, allocationTracker);
+        else {
+            List<FilePosition> positions = pagePositions(partId, snapshotChain);
+
+            store = positions.isEmpty() ? null : new SnapshotFilePageStore(type, dsCfg, positions, allocationTracker);
+        }
+
+        if (nonNull(store))
+            store.ensure();
+
+        return store;
+    }
+
+    /**
+     * For full snapshot returns {@code dir} for incremental will build a chain of directories until first full snapshot.
      * Chain: current incremental snapshot {@code dir} -> previous incremental snapshot -> ... -> full snapshot
      *
      * @param dir Directory of snapshot for cache group.
-     * @return Chain of directories for incremental snapshot or {@code null} for full snapshot.
+     * @return Chain of directories.
      * @throws IgniteCheckedException If failed.
      */
-    @Nullable private List<File> buildSnapshotChain(File dir) throws IgniteCheckedException {
+    private List<File> buildSnapshotChain(File dir) throws IgniteCheckedException {
         File consistentIdDir = dir.getParentFile();
 
         SnapshotMetadataV2 snapshotMetadata = snapshotMetadata(consistentIdDir);
@@ -1579,7 +1513,7 @@ public class IgniteIndexReader implements AutoCloseable {
             throw new IgniteCheckedException(SNAPSHOT_META_FILE_NAME + " file not found in " + consistentIdDir);
 
         if (snapshotMetadata.fullSnapshot())
-            return null;
+            return singletonList(dir);
 
         String snapshotDirName = generateSnapshotDirName(snapshotMetadata.id());
 
@@ -1635,6 +1569,76 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
+     * Creating mapping pageIdx(list index) -> position(offset) in file, value can be {@code null} if page is corrupted.
+     *
+     * @param partId Partition ID.
+     * @param snapshotChain Snapshot directory chain.
+     * @return Mapping pageIdx(list index) -> position(offset) in file.
+     * @throws IgniteCheckedException if failed.
+     */
+    private List<FilePosition> pagePositions(int partId, List<File> snapshotChain) throws IgniteCheckedException {
+        assert !snapshotChain.isEmpty();
+
+        ByteBuffer buf = allocateBuffer(pageSize);
+
+        long bufAddr = bufferAddress(buf);
+
+        try {
+            ArrayWrapper<FilePosition> positions = new ArrayWrapper<>();
+
+            for (File snapshotDir : snapshotChain) {
+                File partFile = getFile(snapshotDir, partId, null);
+
+                if (!partFile.exists())
+                    continue;
+
+                try (SnapshotInputStream is = of(partFile, partId, pageSize, partFile.getParentFile().getName())) {
+                    int readPageNum = 0;
+
+                    while (is.readNextPage(buf)) {
+                        readPageNum++;
+
+                        buf.rewind();
+
+                        int crcSaved = getCrc(bufAddr);
+
+                        setCrc(bufAddr, 0);
+
+                        int calced = calcCrc(buf, pageSize);
+
+                        long pageId = getPageId(buf);
+                        int pageIdx = pageIndex(pageId);
+
+                        buf.rewind();
+
+                        if (calced != crcSaved) {
+                            printErr("Corrupted page [file=" + partFile.getAbsolutePath() + ", pageId=" + pageId +
+                                ", pageIdx=" + pageIdx + ", readpPageNum=" + (readPageNum - 1) + "]");
+
+                            continue;
+                        }
+
+                        //it's new page? yes - add it
+                        if (pageIdx + 1 > positions.size() || isNull(positions.get(pageIdx)))
+                            positions.set(pageIdx, new FilePosition((readPageNum - 1) * pageSize, partFile));
+                    }
+                }
+            }
+
+            return positions.trimToSize();
+        }
+        catch (Exception e) {
+            throw new IgniteCheckedException(
+                format("Error while build page positions [partId=%s, snapshotChain=%s]", partId, snapshotChain),
+                e
+            );
+        }
+        finally {
+            freeBuffer(buf);
+        }
+    }
+
+    /**
      * Entry point.
      *
      * @param args Arguments.
@@ -1671,11 +1675,10 @@ public class IgniteIndexReader implements AutoCloseable {
                         return null;
                 }
             ),
-            optionalArg(FILE_MASK.arg(), "mask for files (optional).", String.class, () -> ".bin"),
+            optionalArg(FILE_MASK.arg(),
+                    "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
             optionalArg(CHECK_PARTS.arg(),
-                    "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false),
-            optionalArg(SNAPSHOT.arg(), "if specified, this utility assumes that all files in --dir directory are" +
-                " snapshot.", Boolean.class, () -> false)
+                    "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
         );
 
         CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
@@ -1707,13 +1710,12 @@ public class IgniteIndexReader implements AutoCloseable {
         else {
             try (IgniteIndexReader reader = new IgniteIndexReader(
                 p.get(DIR.arg()),
-                p.get(SNAPSHOT.arg()),
+                false,
                 p.get(PAGE_SIZE.arg()),
                 p.get(PART_CNT.arg()),
                 p.get(PAGE_STORE_VER.arg()),
                 p.get(INDEXES.arg()),
                 p.get(CHECK_PARTS.arg()),
-                p.get(FILE_MASK.arg()),
                 destStream
             )) {
                 reader.readIdx();
