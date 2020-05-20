@@ -70,39 +70,6 @@
             </includes>
         </fileSet>
 
-        <!-- Move .Net readme. -->
-        <fileSet>
-            <directory>modules/platforms/dotnet</directory>
-            <outputDirectory>/platforms/dotnet</outputDirectory>
-            <includes>
-                <include>README.txt</include>
-            </includes>
-        </fileSet>
-
-        <!-- Move .Net binaries. -->
-        <fileSet>
-            <directory>modules/platforms/dotnet/bin</directory>
-            <outputDirectory>/platforms/dotnet/bin</outputDirectory>
-        </fileSet>
-
-        <!-- Move .Net docs. -->
-        <fileSet>
-            <directory>modules/clients/target/dotnetdoc</directory>
-            <outputDirectory>/platforms/dotnet/docs</outputDirectory>
-        </fileSet>
-
-        <!-- Move .Net examples. -->
-        <fileSet>
-            <directory>modules/platforms/dotnet/examples</directory>
-            <outputDirectory>/platforms/dotnet/examples</outputDirectory>
-        </fileSet>
-
-        <!-- Move .Net licenses. -->
-        <fileSet>
-            <directory>modules/platforms/licenses</directory>
-            <outputDirectory>/platforms/dotnet/licenses</outputDirectory>
-        </fileSet>
-
         <!-- Move CPP readme. -->
         <fileSet>
             <directory>modules/platforms/cpp</directory>
@@ -177,21 +144,6 @@
         <fileSet>
             <directory>modules/clients/target/cppdoc/html</directory>
             <outputDirectory>/platforms/cpp/docs</outputDirectory>
-        </fileSet>
-
-        <!-- Move CPP binaries. -->
-        <fileSet>
-            <directory>modules/platforms/cpp/bin</directory>
-            <outputDirectory>/platforms/cpp/bin</outputDirectory>
-        </fileSet>
-
-        <!-- Other files. -->
-        <fileSet>
-            <directory>bin</directory>
-            <outputDirectory>/bin</outputDirectory>
-            <includes>
-                <include>igniterouter.bat</include>
-            </includes>
         </fileSet>
 
         <fileSet>
