@@ -670,13 +670,13 @@
                 <version>3.0.0-M4</version>
                 <configuration>
                     <forkCount>0</forkCount>
-                    <statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
+                    <!--statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
                     <properties>
                         <property>
                             <name>listener</name>
                             <value>org.apache.ignite.tools.junit.JUnitTeamcityReporter</value>
                         </property>
-                    </properties>
+                    </properties-->
                 </configuration>
                 <dependencies>
                     <dependency>
