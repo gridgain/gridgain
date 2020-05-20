@@ -86,16 +86,6 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     /** */
     private static final int SPI_SPECIFIC_SERIALIZED_SPAN_BYTES_LENGTH = 4;
 
-    // 1 byte: special flags;
-    // 1 bytes: spi type;
-    // 2 bytes: major protocol version;
-    // 2 bytes: minor protocol version;
-    // 4 bytes: spi specific serialized span length;
-    // n bytes: spi specific serialized span body;
-    // 4 bytes: span type
-    // 4 bytes included scopes size;
-    // 2 * included scopes size: included scopes items one by one;
-
     /** Traceable messages handler. */
     private final TraceableMessagesHandler msgHnd;
 
