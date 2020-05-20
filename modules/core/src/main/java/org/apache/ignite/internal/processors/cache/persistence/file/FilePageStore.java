@@ -415,7 +415,7 @@ public class FilePageStore implements PageStore {
                 ", allocated=" + allocated.get() + ", headerSize=" + headerSize() + ", cfgFile=" +
                 pathProvider.apply().toAbsolutePath();
 
-            int n = readWithFailover(pageBuf, off);
+            int n = readWithFailover(pageBuf, off, fileIO(pageId));
 
             // If page was not written yet, nothing to read.
             if (n < 0) {
@@ -459,7 +459,7 @@ public class FilePageStore implements PageStore {
         try {
             assert buf.remaining() == headerSize();
 
-            readWithFailover(buf, 0);
+            readWithFailover(buf, 0, fileIO);
         }
         catch (IOException e) {
             throw new StorageException("Failed to read header [file=" + getFileAbsolutePath() + "]", e);
@@ -772,19 +772,19 @@ public class FilePageStore implements PageStore {
     /**
      * @param destBuf Destination buffer.
      * @param position Position.
+     * @param fileIO File I/O interface.
      * @return Number of read bytes.
+     * @throws IOException If some I/O error occurs or {@code fileIO} is {@code null}.
      */
-    private int readWithFailover(ByteBuffer destBuf, long position) throws IOException {
+    private int readWithFailover(ByteBuffer destBuf, long position, FileIO fileIO) throws IOException {
+        if (fileIO == null)
+            throw new IOException("FileIO has stopped");
+
         boolean interrupted = false;
 
         int bufPos = destBuf.position();
 
         while (true) {
-            FileIO fileIO = this.fileIO;
-
-            if (fileIO == null)
-                throw new IOException("FileIO has stopped");
-
             try {
                 assert destBuf.remaining() > 0;
 
@@ -807,5 +807,15 @@ public class FilePageStore implements PageStore {
                 reinit(fileIO);
             }
         }
+    }
+
+    /**
+     * Return file I/O interface.
+     *
+     * @param pageId Page ID.
+     * @return File I/O interface.
+     */
+    protected FileIO fileIO(long pageId) {
+        return fileIO;
     }
 }

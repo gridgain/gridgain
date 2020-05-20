@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -41,11 +43,20 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccInnerIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccLeafIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -146,6 +157,13 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
+        incSnapshotDir = new File("C:\\Users\\tkalk\\IdeaProjects\\apache-ignite\\work\\snapshot\\ts_20200519184344_1589903024520.snapshot\\c2fb2a59_0c8a_4359_80eb_7d1e71a25b24");
+        fullSnapshotDir = new File("C:\\Users\\tkalk\\IdeaProjects\\apache-ignite\\work\\snapshot\\ts_20200519184338_1589903018264.snapshot\\c2fb2a59_0c8a_4359_80eb_7d1e71a25b24");
+        workDir = new File("C:\\Users\\tkalk\\IdeaProjects\\apache-ignite\\work\\db\\copy");
+
+        if (1 == 1)
+            return;
+
         cleanPersistenceDir();
 
         try (IgniteEx node = startGrid(0)) {
@@ -173,6 +191,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
+
+        if (1 == 1)
+            return;
 
         cleanPersistenceDir();
     }
@@ -645,8 +666,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testCorrectIdx() throws IgniteCheckedException {
         checkCorrectIdx(workDir, false);
-        checkCorrectIdx(fullSnapshotDir, true);
-//        checkCorrectIdx(incSnapshotDir, true);
+//        checkCorrectIdx(fullSnapshotDir, true);
+        checkCorrectIdx(incSnapshotDir, true);
     }
 
     /**
@@ -657,8 +678,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
         checkCorrectIdxWithCheckParts(workDir, false);
-        checkCorrectIdxWithCheckParts(fullSnapshotDir, true);
-//        checkCorrectIdxWithCheckParts(incSnapshotDir, true);
+//        checkCorrectIdxWithCheckParts(fullSnapshotDir, true);
+        checkCorrectIdxWithCheckParts(incSnapshotDir, true);
     }
 
     /**
@@ -669,8 +690,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testCorrectIdxWithFilter() throws IgniteCheckedException {
         checkCorrectIdxWithFilter(workDir, false);
-        checkCorrectIdxWithFilter(fullSnapshotDir, true);
-//        checkCorrectIdxWithFilter(incSnapshotDir, true);
+//        checkCorrectIdxWithFilter(fullSnapshotDir, true);
+        checkCorrectIdxWithFilter(incSnapshotDir, true);
     }
 
     /**
@@ -681,8 +702,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testEmpty() throws IgniteCheckedException {
         checkEmpty(workDir, false);
-        checkEmpty(fullSnapshotDir, true);
-//        checkEmpty(incSnapshotDir, true);
+//        checkEmpty(fullSnapshotDir, true);
+        checkEmpty(incSnapshotDir, true);
     }
 
     /**
@@ -693,8 +714,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testCorruptedIdx() throws Exception {
         checkCorruptedIdx(workDir, false);
-        checkCorruptedIdx(fullSnapshotDir, true);
-//        checkCorruptedIdx(incSnapshotDir, true);
+//        checkCorruptedIdx(fullSnapshotDir, true);
+        checkCorruptedIdx(incSnapshotDir, true);
     }
 
     /**
@@ -705,9 +726,48 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCorruptedIdxWithCheckParts() throws Exception {
-        checkCorruptedIdxWithCheckParts(workDir, false);
-        checkCorruptedIdxWithCheckParts(fullSnapshotDir, true);
-//        checkCorruptedIdxWithCheckParts(incSnapshotDir, true);
+        if (1 != 1) {
+            PageIO.registerH2(H2InnerIO.VERSIONS, H2LeafIO.VERSIONS, H2MvccInnerIO.VERSIONS, H2MvccLeafIO.VERSIONS);
+
+            H2ExtrasInnerIO.register();
+            H2ExtrasLeafIO.register();
+
+            ByteBuffer buf = GridUnsafe.allocateBuffer(PAGE_SIZE);
+            long addr = GridUnsafe.bufferAddress(buf);
+
+            File file = new File("C:\\Users\\tkalk\\IdeaProjects\\apache-ignite\\work\\snapshot\\ts_20200519184344_1589903024520.snapshot\\c2fb2a59_0c8a_4359_80eb_7d1e71a25b24\\-672468802\\index.bin");
+//            File file = new File("C:\\Users\\tkalk\\IdeaProjects\\apache-ignite\\work\\db\\copy\\cacheGroup-defaultGroup\\index.bin");
+
+            try (FileChannel c = new RandomAccessFile(file, "r").getChannel()) {
+                int h = 0;
+//                int h = PAGE_SIZE;
+
+//                for (int i = 30; i < 50; i++) {
+                for (int i = 0; i < file.length() / PAGE_SIZE; i++) {
+                    buf.rewind();
+
+                    c.read(buf, h + (i * PAGE_SIZE));
+                    buf.rewind();
+
+                    long pageId = PageIO.getPageId(addr);
+                    int pageIdx = PageIdUtils.pageIndex(pageId);
+                    int type = PageIO.getType(addr);
+
+                    System.out.println("pageId0=" + pageId);
+                    System.out.println("pageIdx0=" + pageIdx);
+                    System.out.println("type0=" + type);
+                    System.out.println();
+                }
+            }
+            finally {
+                GridUnsafe.freeBuffer(buf);
+            }
+        }
+        else {
+            checkCorruptedIdxWithCheckParts(workDir, false);
+//        checkCorruptedIdxWithCheckParts(fullSnapshotDir, true);
+            checkCorruptedIdxWithCheckParts(incSnapshotDir, true);
+        }
     }
 
     /**
@@ -718,8 +778,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testCorruptedPart() throws Exception {
         checkCorruptedPart(workDir, false);
-        checkCorruptedPart(fullSnapshotDir, true);
-//        checkCorruptedPart(incSnapshotDir, true);
+//        checkCorruptedPart(fullSnapshotDir, true);
+        checkCorruptedPart(incSnapshotDir, true);
     }
 
     /**
@@ -730,8 +790,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testCorruptedIdxAndPart() throws Exception {
         checkCorruptedIdxAndPart(workDir, false);
-        checkCorruptedIdxAndPart(fullSnapshotDir, true);
-//        checkCorruptedIdxAndPart(incSnapshotDir, true);
+//        checkCorruptedIdxAndPart(fullSnapshotDir, true);
+        checkCorruptedIdxAndPart(incSnapshotDir, true);
     }
 
     /**
@@ -742,8 +802,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     @Test
     public void testQryCacheGroup() throws IgniteCheckedException {
         checkQryCacheGroup(workDir, false);
-        checkQryCacheGroup(fullSnapshotDir, true);
-//        checkQryCacheGroup(incSnapshotDir, true);
+//        checkQryCacheGroup(fullSnapshotDir, true);
+        checkQryCacheGroup(incSnapshotDir, true);
     }
 
     /**
@@ -755,7 +815,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      */
     private void checkCorruptedIdxAndPart(File workDir, boolean snapshot) throws Exception {
         corruptFile(workDir, INDEX_PARTITION, 7, snapshot);
+        if (snapshot)corruptFile(fullSnapshotDir, INDEX_PARTITION, 7, snapshot);
         corruptFile(workDir, 0, 5, snapshot);
+        if (snapshot)corruptFile(fullSnapshotDir, 0, 5, snapshot);
 
         try {
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
@@ -767,7 +829,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         }
         finally {
             restoreFile(workDir, INDEX_PARTITION, snapshot);
+            if (snapshot)restoreFile(fullSnapshotDir, INDEX_PARTITION, snapshot);
             restoreFile(workDir, 0, snapshot);
+            if (snapshot)restoreFile(fullSnapshotDir, 0, snapshot);
         }
     }
 
@@ -802,8 +866,10 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void checkCorruptedIdxWithCheckParts(File workDir, boolean snapshot) throws Exception {
-        for (int i = 30; i < 50; i++)
+        for (int i = snapshot ? 31 : 30; i < (snapshot ? 35 : 50); i++) {
             corruptFile(workDir, INDEX_PARTITION, i, snapshot);
+            if (snapshot) corruptFile(fullSnapshotDir, INDEX_PARTITION, i, snapshot);
+        }
 
         try {
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true, snapshot);
@@ -819,6 +885,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         }
         finally {
             restoreFile(workDir, INDEX_PARTITION, snapshot);
+            if (snapshot) restoreFile(fullSnapshotDir, INDEX_PARTITION, snapshot);
         }
     }
 
@@ -831,6 +898,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      */
     private void checkCorruptedIdx(File workDir, boolean snapshot) throws Exception {
         corruptFile(workDir, INDEX_PARTITION, 5, snapshot);
+        if (snapshot)corruptFile(fullSnapshotDir, INDEX_PARTITION, 5, snapshot);
 
         try {
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
@@ -848,6 +916,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         }
         finally {
             restoreFile(workDir, INDEX_PARTITION, snapshot);
+            if (snapshot)restoreFile(fullSnapshotDir, INDEX_PARTITION, snapshot);
         }
     }
 
