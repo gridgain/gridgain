@@ -156,6 +156,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
+import static org.apache.ignite.internal.IgnitionEx.gridx;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
@@ -661,8 +662,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * Will clean and re-create marshaller directory from scratch.
      */
     private void resolveWorkDirectory() throws Exception {
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", true);
-        U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, true);
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, true);
     }
 
     /** */
@@ -1329,13 +1330,34 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Stop grid waiting for it to come up
      * @param igniteInstanceName Ignite instance name.
      * @param cancel Cancel flag.
      * @param awaitTop Await topology change flag.
      */
     protected void stopGrid(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
+        stopGrid0(igniteInstanceName, cancel, awaitTop, false);
+    }
+
+    /**
+     * Stop grid without waiting for it to come up
+     * @param igniteInstanceName Ignite instance name.
+     * @param cancel Cancel flag.
+     * @param awaitTop Await topology change flag.
+     */
+    protected void stopGridx(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
+        stopGrid0(igniteInstanceName, cancel, awaitTop, true);
+    }
+
+
+    /**
+     * @param igniteInstanceName Ignite instance name.
+     * @param cancel Cancel flag.
+     * @param awaitTop Await topology change flag.
+     */
+    private void stopGrid0(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop, boolean stopNotStarted) {
         try {
-            IgniteEx ignite = grid(igniteInstanceName);
+            IgniteEx ignite = stopNotStarted ? gridx(igniteInstanceName) : grid(igniteInstanceName);
 
             assert ignite != null : "Ignite returned null grid for name: " + igniteInstanceName;
 
@@ -1344,7 +1366,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             info(">>> Stopping grid [name=" + ignite.name() + ", id=" + id + ']');
 
             if (!isRemoteJvm(igniteInstanceName))
-                IgnitionEx.stop(igniteInstanceName, cancel, null, false);
+                IgnitionEx.stop(igniteInstanceName, cancel, null, stopNotStarted);
             else
                 IgniteProcessProxy.stop(igniteInstanceName, cancel);
 
@@ -1369,14 +1391,24 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Stop all grids waiting for them to start
      * @param cancel Cancel flag.
      */
     protected void stopAllGrids(boolean cancel) {
+        stopAllGrids(cancel, true);
+    }
+
+    /**
+     * Stop all grids
+     * @param cancel Cancel flag.
+     * @param wait Wait for grids to start first.
+     */
+    protected void stopAllGrids(boolean cancel, boolean wait) {
         try {
             Collection<Ignite> clients = new ArrayList<>();
             Collection<Ignite> srvs = new ArrayList<>();
 
-            for (Ignite g : G.allGrids()) {
+            for (Ignite g : wait ? G.allGrids() : IgnitionEx.allGridsx()) {
                 if (g.configuration().getDiscoverySpi().isClientMode())
                     clients.add(g);
                 else
@@ -1384,10 +1416,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
 
             for (Ignite g : clients)
-                stopGrid(g.name(), cancel, false);
+                if (wait)
+                    stopGrid(g.name(), cancel, false);
+                else
+                    stopGridx(g.name(), cancel, false);
 
             for (Ignite g : srvs)
-                stopGrid(g.name(), cancel, false);
+                if (wait)
+                    stopGrid(g.name(), cancel, false);
+                else
+                    stopGridx(g.name(), cancel, false);
 
             List<Ignite> nodes = G.allGrids();
 

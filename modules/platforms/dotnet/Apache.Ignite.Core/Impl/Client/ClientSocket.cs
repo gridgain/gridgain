@@ -48,9 +48,6 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Version 1.2.0. */
         public static readonly ClientProtocolVersion Ver120 = new ClientProtocolVersion(1, 2, 0);
 
-        /** Version 1.3.0. */
-        public static readonly ClientProtocolVersion Ver130 = new ClientProtocolVersion(1, 3, 0);
-
         /** Version 1.4.0. */
         public static readonly ClientProtocolVersion Ver140 = new ClientProtocolVersion(1, 4, 0);
 
@@ -60,8 +57,14 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Version 1.6.0. */
         public static readonly ClientProtocolVersion Ver160 = new ClientProtocolVersion(1, 6, 0);
 
+        /** Version 1.7.0. */
+        public static readonly ClientProtocolVersion Ver170 = new ClientProtocolVersion(1, 7, 0);
+
+        /** Version 1.7.1. */
+        public static readonly ClientProtocolVersion Ver171 = new ClientProtocolVersion(1, 7, 1);
+
         /** Current version. */
-        public static readonly ClientProtocolVersion CurrentProtocolVersion = Ver160;
+        public static readonly ClientProtocolVersion CurrentProtocolVersion = Ver171;
 
         /** Handshake opcode. */
         private const byte OpHandshake = 1;
@@ -364,6 +367,8 @@ namespace Apache.Ignite.Core.Impl.Client
         private void Handshake(IgniteClientConfiguration clientConfiguration, ClientProtocolVersion version)
         {
             bool auth = version >= Ver110 && clientConfiguration.UserName != null;
+            bool features = version >= Ver170;
+            bool userAttributes = version >= Ver171;
 
             // Send request.
             int messageLen;
@@ -380,15 +385,29 @@ namespace Apache.Ignite.Core.Impl.Client
                 // Client type: platform.
                 stream.WriteByte(ClientType);
 
+                // Writing features.
+                if (features)
+                {
+                    // TODO: Implement client-side features.
+                    var featureBytes = new byte[0];
+
+                    BinaryUtils.Marshaller.Marshal(stream, w => w.WriteByteArray(featureBytes));
+                }
+
+                if (userAttributes)
+                {
+                    // TODO: Implement User Attributes. Need to write Map here.
+                    stream.WriteByte(BinaryUtils.HdrNull);
+                }
+
                 // Authentication data.
                 if (auth)
                 {
-                    var writer = BinaryUtils.Marshaller.StartMarshal(stream);
-
-                    writer.WriteString(clientConfiguration.UserName);
-                    writer.WriteString(clientConfiguration.Password);
-
-                    BinaryUtils.Marshaller.FinishMarshal(writer);
+                    BinaryUtils.Marshaller.Marshal(stream, writer =>
+                    {
+                        writer.WriteString(clientConfiguration.UserName);
+                        writer.WriteString(clientConfiguration.Password);
+                    });
                 }
             }, 12, out messageLen);
 
@@ -404,6 +423,12 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (success)
                 {
+                    if (version >= Ver170)
+                    {
+                        // TODO: Implement features support
+                        BinaryUtils.Marshaller.Unmarshal<byte[]>(stream);
+                    }
+
                     if (version >= Ver140)
                     {
                         ServerNodeId = BinaryUtils.Marshaller.Unmarshal<Guid>(stream);

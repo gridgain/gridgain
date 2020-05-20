@@ -31,7 +31,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
@@ -44,7 +43,6 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
@@ -138,7 +136,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     /** */
     @After
     public void after() throws Exception {
-        stopAllGrids();
+        stopAllGrids(true, false);
     }
 
     /**
@@ -164,21 +162,18 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
-     *
-     * After successful join DMS on client becomes operational.
+     * Test verifies that Distributed Metastorage on client yields error if client is not connected to some cluster.
      *
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-27178")
     public void testDistributedMetastorageOperationsOnClient() throws Exception {
         String clientName = "client0";
 
         String key = "key";
         String value = "value";
 
-        IgniteInternalFuture<IgniteEx> clFut = GridTestUtils.runAsync(() -> startGrid(clientName));
+        GridTestUtils.runAsync(() -> startGrid(clientName));
 
         GridTestUtils.waitForCondition(() -> {
             try {
@@ -197,40 +192,13 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         assertNotNull(clDms);
 
-        // DMS on client blocks if client is not connected to the cluster
-        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
-            try {
-                clDms.write(key, value);
-            }
-            catch (IgniteCheckedException ignored) {
-                // No-op.
-            }
-        });
-
         GridTestUtils.assertThrows(null, new Callable<Object>() {
             @Override public Object call() throws Exception {
-                fut.get(1000);
+                clDms.write(key, value);
 
                 return null;
             }
-        }, IgniteFutureTimeoutCheckedException.class, null);
-
-        startGrid(0);
-
-        clFut.get();
-
-        DistributedMetaStorage clDms0 = cl0.context().distributedMetastorage();
-
-        GridTestUtils.waitForCondition(() -> {
-            try {
-                return clDms0.read(key) != null;
-            }
-            catch (IgniteCheckedException ignored) {
-                return false;
-            }
-        }, 20_000);
-
-        assertEquals(value, clDms0.read(key));
+        }, IgniteCheckedException.class, null);
     }
 
     /**
