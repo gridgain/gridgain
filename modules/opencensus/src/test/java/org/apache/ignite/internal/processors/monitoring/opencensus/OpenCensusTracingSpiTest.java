@@ -19,8 +19,6 @@ package org.apache.ignite.internal.processors.monitoring.opencensus;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import io.opencensus.common.Functions;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Status;
 import io.opencensus.trace.export.SpanData;
@@ -340,7 +338,7 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
         handler().flush();
 
         // Only root discovery.custom.event spans have message.class tag.
-        List<SpanData> rootCustomEventSpans = handler().collectedSpans.values().stream().
+        List<SpanData> rootCustomEventSpans = handler().allSpans().
             filter(spanData ->
                 DISCOVERY_CUSTOM_EVENT.traceName().equals(spanData.getName()) &&
                     spanData.getParentSpanId() == null).
@@ -351,17 +349,5 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
         assertTrue(rootCustomEventSpans.stream().anyMatch(
             span -> "CacheAffinityChangeMessage".equals(
                 attributeValueToString(span.getAttributes().getAttributeMap().get(SpanTags.MESSAGE_CLASS)))));
-    }
-
-    /**
-     * @param attributeVal Attribute value.
-     */
-    private static String attributeValueToString(AttributeValue attributeVal) {
-        return attributeVal.match(
-            Functions.returnToString(),
-            Functions.returnToString(),
-            Functions.returnToString(),
-            Functions.returnToString(),
-            Functions.returnConstant(""));
     }
 }
