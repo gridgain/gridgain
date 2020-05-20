@@ -311,6 +311,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
         CacheObject val;
 
+        cctx.tm().detectPossibleCollidingKeys(this);
+
         lockEntry();
 
         try {
@@ -370,6 +372,8 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         GridCacheVersion deferredDelVer;
 
         CacheObject val;
+
+        cctx.tm().detectPossibleCollidingKeys(this);
 
         lockEntry();
 
