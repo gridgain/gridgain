@@ -29,6 +29,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_CLOSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_COLOCATED_LOCK_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_COMMIT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_DHT_FINISH;
@@ -44,6 +45,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_RESP;
 import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_ROLLBACK;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -984,6 +986,140 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_FINISH_RESP,
             txNearFinishReqSpanIds.get(0),
+            1,
+            null);
+    }
+
+    /**
+     * <ol>
+     *     <li>Run some transaction with some label.</li>
+     *     <li>Call two puts inside the transaction.</li>
+     *     <li>Rollback given transaction.</li>
+     * </ol>
+     *
+     * Check that got trace is equal to:
+     *  transaction
+     *      transactions.near.enlist.write
+     *      transactions.near.enlist.write
+     *      transactions.rollback
+     *
+     *   <p>
+     *   Also check that root transaction span contains following tags:
+     *   <ol>
+     *       <li>node.id</li>
+     *       <li>node.consistent.id</li>
+     *       <li>node.name</li>
+     *       <li>concurrency</li>
+     *       <li>isolation</li>
+     *       <li>timeout</li>
+     *       <li>label</li>
+     *   </ol>
+     *
+     */
+    @Test
+    public void testRollbackTransaction() throws Exception {
+        IgniteEx client = startGrid("client");
+
+        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
+
+        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
+        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
+
+        tx.rollback();
+
+        handler().flush();
+
+        List<SpanId> txSpanIds = checkSpan(
+            TX,
+            null,
+            1,
+            ImmutableMap.<String, String>builder()
+                .put("node.id", client.localNode().id().toString())
+                .put("node.consistent.id", client.localNode().consistentId().toString())
+                .put("node.name", client.name())
+                .put("concurrency", OPTIMISTIC.name())
+                .put("isolation", REPEATABLE_READ.name())
+                .put("timeout", String.valueOf(0))
+                .put("label", "label1")
+                .build()
+        );
+
+        checkSpan(
+            TX_NEAR_ENLIST_WRITE,
+            txSpanIds.get(0),
+            2,
+            null);
+
+        checkSpan(
+            TX_ROLLBACK,
+            txSpanIds.get(0),
+            1,
+            null);
+    }
+
+    /**
+     * <ol>
+     *     <li>Run some transaction with some label.</li>
+     *     <li>Call two puts inside the transaction.</li>
+     *     <li>Close given transaction.</li>
+     * </ol>
+     *
+     * Check that got trace is equal to:
+     *  transaction
+     *      transactions.near.enlist.write
+     *      transactions.near.enlist.write
+     *      transactions.close
+     *
+     *   <p>
+     *   Also check that root transaction span contains following tags:
+     *   <ol>
+     *       <li>node.id</li>
+     *       <li>node.consistent.id</li>
+     *       <li>node.name</li>
+     *       <li>concurrency</li>
+     *       <li>isolation</li>
+     *       <li>timeout</li>
+     *       <li>label</li>
+     *   </ol>
+     *
+     */
+    @Test
+    public void testCloseTransaction() throws Exception {
+        IgniteEx client = startGrid("client");
+
+        Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
+
+        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
+        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
+
+        tx.close();
+
+        handler().flush();
+
+        List<SpanId> txSpanIds = checkSpan(
+            TX,
+            null,
+            1,
+            ImmutableMap.<String, String>builder()
+                .put("node.id", client.localNode().id().toString())
+                .put("node.consistent.id", client.localNode().consistentId().toString())
+                .put("node.name", client.name())
+                .put("concurrency", OPTIMISTIC.name())
+                .put("isolation", REPEATABLE_READ.name())
+                .put("timeout", String.valueOf(0))
+                .put("label", "label1")
+                .build()
+        );
+
+        checkSpan(
+            TX_NEAR_ENLIST_WRITE,
+            txSpanIds.get(0),
+            2,
+            null);
+
+        checkSpan(
+            TX_CLOSE,
+            txSpanIds.get(0),
             1,
             null);
     }

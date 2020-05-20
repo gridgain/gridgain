@@ -20,6 +20,9 @@ import org.apache.ignite.TracingConfigurationValidationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+/**
+ * Suite to test OpenCensus integration.
+ */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     OpenCensusMetricExporterSpiTest.class,
@@ -34,8 +37,5 @@ import org.junit.runners.Suite;
     OpenCensusTracingConfigurationResetAllTest.class,
     OpenCensusTracingConfigurationSetTest.class
 })
-/**
- * Suite to test OpenCensus integration.
- */
 public class IgniteOpenCensusSuite {
 }

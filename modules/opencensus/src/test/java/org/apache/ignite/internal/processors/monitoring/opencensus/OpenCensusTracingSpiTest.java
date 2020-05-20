@@ -39,6 +39,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATI
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_READ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CUSTOM_JOB_CALL;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_CUSTOM_EVENT;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_ADD;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_FINISH;
 import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_REQUEST;
@@ -321,5 +322,32 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
 
         assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_REQUEST.spanName()))));
         assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_RESPONSE.spanName()))));
+    }
+
+    /**
+     * Ensure that root discovery.custom.event have message.class with corresponding value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCustomEventContainsMessageClassTag() throws Exception {
+        IgniteEx ignite = grid(0);
+
+        ignite.createCache("New cache");
+
+        handler().flush();
+
+        // Only root discovery.custom.event spans have message.class tag.
+        List<SpanData> rootCustomEventSpans = handler().allSpans().
+            filter(spanData ->
+                DISCOVERY_CUSTOM_EVENT.traceName().equals(spanData.getName()) &&
+                    spanData.getParentSpanId() == null).
+            collect(Collectors.toList());
+
+        // Check that there's at least one discovery.custom.event span with tag "message.class"
+        // and value "CacheAffinityChangeMessage"
+        assertTrue(rootCustomEventSpans.stream().anyMatch(
+            span -> "CacheAffinityChangeMessage".equals(
+                attributeValueToString(span.getAttributes().getAttributeMap().get(SpanTags.MESSAGE_CLASS)))));
     }
 }
