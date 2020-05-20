@@ -3984,12 +3984,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     onDone(exchCtx.events().topologyVersion(), null);
             }
 
-            // Check if a late affinity can be switched right now.
-            if (!centralizedAff && error() == null) {
-                assert isDone() : this;
-
+            // Try switch late affinity right now if an exchange has been completed normally.
+            if (!centralizedAff && isDone() && error() == null && !cctx.kernalContext().isStopping())
                 cctx.exchange().checkRebalanceState();
-            }
         }
         catch (IgniteCheckedException e) {
             if (reconnectOnError(e))
