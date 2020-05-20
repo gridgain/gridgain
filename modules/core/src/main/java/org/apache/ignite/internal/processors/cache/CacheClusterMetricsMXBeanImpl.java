@@ -494,6 +494,11 @@ class CacheClusterMetricsMXBeanImpl implements CacheMetricsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return cache.clusterMetrics().getTxKeyCollisions();
+    }
+
+    /** {@inheritDoc} */
     @Override public void enableStatistics() {
         try {
             cache.context().shared().cache().enableStatistics(Collections.singleton(cache.name()), true);

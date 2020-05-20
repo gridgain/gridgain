@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import io.opencensus.common.Functions;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.SpanId;
@@ -94,10 +95,10 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     public static void beforeTests() {
         /* Uncomment following code to see visualisation on local Zipkin: */
 
-        //ZipkinTraceExporter.createAndRegister(ZipkinExporterConfiguration.builder()
-        //   .setV2Url("http://localhost:9411/api/v2/spans")
-        //   .setServiceName("ignite")
-        //   .build());
+//        ZipkinTraceExporter.createAndRegister(ZipkinExporterConfiguration.builder()
+//           .setV2Url("http://localhost:9411/api/v2/spans")
+//           .setServiceName("ignite")
+//           .build());
     }
 
     /**
@@ -399,6 +400,33 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Ensure that root discovery.custom.event have message.class with corresponding value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCustomEventContainsMessageClassTag() throws Exception {
+        IgniteEx ignite = grid(0);
+
+        ignite.createCache("New cache");
+
+        hnd.flush();
+
+        // Only root discovery.custom.event spans have message.class tag.
+        List<SpanData> rootCustomEventSpans = hnd.collectedSpans.values().stream().
+            filter(spanData ->
+                Traces.Discovery.CUSTOM_EVENT.equals(spanData.getName()) &&
+                    spanData.getParentSpanId() == null).
+            collect(Collectors.toList());
+
+        // Check that there's at least one discovery.custom.event span with tag "message.class"
+        // and value "CacheAffinityChangeMessage"
+        assertTrue(rootCustomEventSpans.stream().anyMatch(
+            span -> "CacheAffinityChangeMessage".equals(
+                attributeValueToString(span.getAttributes().getAttributeMap().get(SpanTags.MESSAGE_CLASS)))));
+    }
+
+    /**
      * Test span exporter handler.
      */
     static class TraceExporterTestHandler extends SpanExporter.Handler {
@@ -501,5 +529,17 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 span.end();
             }
         }
+    }
+
+    /**
+     * @param attributeVal Attribute value.
+     */
+    private static String attributeValueToString(AttributeValue attributeVal) {
+        return attributeVal.match(
+            Functions.returnToString(),
+            Functions.returnToString(),
+            Functions.returnToString(),
+            Functions.returnToString(),
+            Functions.returnConstant(""));
     }
 }
