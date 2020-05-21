@@ -35,6 +35,9 @@ import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
 
+/**
+ * Check threads for default names in single and thread pool instances.
+ */
 public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
 
     /** {@link Executors.DefaultThreadFactory} count before test. */
