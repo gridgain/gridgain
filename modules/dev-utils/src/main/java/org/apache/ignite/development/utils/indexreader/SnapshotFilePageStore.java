@@ -20,9 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
@@ -33,9 +33,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccess
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 
 import static java.util.Objects.isNull;
-import static java.util.function.Function.identity;
+import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 
 /**
@@ -82,8 +81,12 @@ public class SnapshotFilePageStore extends FilePageStore {
 
         this.pageFilePositions = pageFilePositions;
 
-        this.fileIOs = pageFilePositions.stream()
-            .filter(Objects::nonNull).map(FilePosition::file).distinct().collect(toMap(identity(), file -> null));
+        fileIOs = new HashMap<>();
+
+        for (FilePosition filePosition : pageFilePositions) {
+            if (nonNull(filePosition))
+                fileIOs.put(filePosition.file(), null);
+        }
     }
 
     /** {@inheritDoc} */
