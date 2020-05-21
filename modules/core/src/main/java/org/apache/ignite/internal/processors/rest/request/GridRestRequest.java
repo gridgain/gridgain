@@ -187,7 +187,7 @@ public class GridRestRequest {
      *
      * @return User attributes.
      */
-    public Map<String, String> userAttributes() {
+    @Nullable public Map<String, String> userAttributes() {
         return userAttrs;
     }
 

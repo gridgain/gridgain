@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
+
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.SecurityCredentials;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Client authentication request.
@@ -54,7 +56,7 @@ public class GridClientAuthenticationRequest extends GridClientAbstractMessage {
     /**
      * @return User attributes.
      */
-    public Map<String, String> userAttributes() {
+    @Nullable public Map<String, String> userAttributes() {
         return userAttrs;
     }
 

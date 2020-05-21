@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public class AttributeSecurityCheckTest extends CommonSecurityCheckTest {
         try (GridClient client = GridClientFactory.start(getGridClientConfiguration())) {
             assertTrue(client.connected());
 
-            assertEquals(userAttrs.get("key"), "val");
+            assertEquals("val", userAttrs.get("key"));
 
             GridClientClusterState state = client.state();
 
@@ -75,7 +75,7 @@ public class AttributeSecurityCheckTest extends CommonSecurityCheckTest {
 
             state.active();
 
-            assertEquals(userAttrs.get("key"), "val");
+            assertEquals("val", userAttrs.get("key"));
         }
     }
 
