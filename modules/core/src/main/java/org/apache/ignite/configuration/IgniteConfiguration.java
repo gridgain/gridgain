@@ -3137,10 +3137,7 @@ public class IgniteConfiguration {
      * @param pluginCfgs Plugin configurations.
      * @return {@code this} for chaining.
      * @see PluginProvider
-     * @deprecated Since {@link PluginProvider}s can be set explicitly via {@link #setPluginProviders(PluginProvider[])}
-     * it's preferable to store {@link PluginConfiguration} as a part of {@link PluginProvider}.
      */
-    @Deprecated
     public IgniteConfiguration setPluginConfigurations(PluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 
