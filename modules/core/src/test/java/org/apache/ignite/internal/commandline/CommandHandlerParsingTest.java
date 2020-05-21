@@ -796,7 +796,7 @@ public class CommandHandlerParsingTest {
             "--tracing-configuration", "set", "--included-scopes");
 
         assertParseArgsThrows("Invalid supported scope 'aaa'. The following values can be used: "
-                + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--included-scopesGet", "TX,aaa");
+                + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--included-scopes", "TX,aaa");
     }
 
     /**

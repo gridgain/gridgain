@@ -1585,7 +1585,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         cmdArgs.put(WAL, asList("print", "delete"));
         cmdArgs.put(MANAGEMENT, asList("on", "off", "uri", "status"));
-        cmdArgs.put(TRACING_CONFIGURATION, Collections.singletonList("retrieve-all"));
+        cmdArgs.put(TRACING_CONFIGURATION, Collections.singletonList("get_all"));
 
         String warning = String.format(
             "For use experimental command add %s=true to JVM_OPTS in %s",
