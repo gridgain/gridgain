@@ -1508,9 +1508,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             if (res.rejected())
                 throw res.error();
-            else if (!ctx.clientNode()) {
-                // Wait for store remove complete
-            }
         }
         catch (IgniteCheckedException e) {
             IgniteCheckedException ex = e;
