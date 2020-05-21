@@ -166,4 +166,12 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
     public void clearMessages() {
         messages = new ConcurrentHashMap<>();
     }
+
+    /**
+     * @param target Class (or interface) whose annotations to effectively override
+     * @param mixinSource Class (or interface) whose annotations are to be "added" to target's annotations, overriding as necessary
+     */
+    public void addMixIn(Class<?> target, Class<?> mixinSource) {
+        mapper.addMixIn(target, mixinSource);
+    }
 }
