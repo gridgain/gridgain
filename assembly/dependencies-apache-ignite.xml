@@ -198,8 +198,13 @@
             <directory>${basedir}/../control-center-agent/modules/control-center-agent/target</directory>
             <outputDirectory>optional/control-center-agent</outputDirectory>
             <includes>
-                <include>gridgain-control-center-agent-*.jar</include>
+                <include>*.jar</include>
             </includes>
+            <excludes>		
+                <exclude>*-tests.jar</exclude>		
+                <exclude>*-javadoc.jar</exclude>		
+                <exclude>*-sources.jar</exclude>		
+            </excludes>    
         </fileSet>
         <fileSet>
             <directory>${basedir}/../control-center-agent/modules/control-center-agent/target/libs</directory>
