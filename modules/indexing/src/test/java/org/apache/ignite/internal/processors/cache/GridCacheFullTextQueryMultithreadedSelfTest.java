@@ -27,7 +27,6 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.testframework.junits.common.ValidateThreadNames;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -36,7 +35,6 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  * Multithreaded reduce query tests with lots of data.
  */
-@ValidateThreadNames(ignore = true, ignoreReason = "Lucene internal code")
 public class GridCacheFullTextQueryMultithreadedSelfTest extends GridCacheAbstractSelfTest {
     /** */
     private static final int GRID_CNT = 3;

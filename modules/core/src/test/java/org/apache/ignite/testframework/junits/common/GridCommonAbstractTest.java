@@ -2727,5 +2727,4 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             }
         }
     }
-
 }

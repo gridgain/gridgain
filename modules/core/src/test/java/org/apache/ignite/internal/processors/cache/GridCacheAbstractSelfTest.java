@@ -54,7 +54,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.testframework.junits.common.ValidateThreadNames;
 import org.apache.ignite.transactions.Transaction;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +64,6 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  * Abstract class for cache tests.
  */
-@ValidateThreadNames
 public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
     /** Test timeout */
     private static final long TEST_TIMEOUT = 30 * 1000;
@@ -124,7 +122,6 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         assert jcache().unwrap(Ignite.class).transactions().tx() == null;
         assertEquals(0, jcache().localSize());
-        super.beforeTest();
     }
 
     /** {@inheritDoc} */
@@ -199,7 +196,6 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
 
         if (storeStgy != null)
             storeStgy.resetStore();
-        super.afterTest();
     }
 
     /** {@inheritDoc} */
