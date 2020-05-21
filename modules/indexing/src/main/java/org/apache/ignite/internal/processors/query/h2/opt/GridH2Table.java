@@ -31,8 +31,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -226,7 +228,7 @@ public class GridH2Table extends TableBase {
         lock = new ReentrantReadWriteLock();
 
         if (cacheInfo.affinityNode()) {
-            long totalTblSize = rowCount(false);
+            long totalTblSize = cacheSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP);
 
             size.add(totalTblSize);
         }
@@ -1232,7 +1234,7 @@ public class GridH2Table extends TableBase {
 
         // Update stats if total table size changed significantly since the last stats update.
         if (needRefreshStats(statsTotalRowCnt, curTotalRowCnt)) {
-            long primaryRowCnt = rowCount(true);
+            long primaryRowCnt = cacheSize(CachePeekMode.PRIMARY);
 
             tblStats = new TableStatistics(curTotalRowCnt, primaryRowCnt);
         }
@@ -1253,15 +1255,17 @@ public class GridH2Table extends TableBase {
     }
 
     /**
-     * Retrieves partitions rows count for all segments.
+     * Retrieves partitions size.
      *
-     * @param primaryOnly If {@code true}, only primary rows will be counted.
      * @return Rows count.
      */
-    private long rowCount(boolean primaryOnly) {
-        IndexingQueryCacheFilter partsFilter = primaryOnly ? backupFilter() : null;
-
-        return ((GridH2IndexBase)getUniqueIndex()).totalRowCount(partsFilter);
+    private long cacheSize(CachePeekMode ... modes) {
+        try {
+            return cacheInfo.cacheContext().cache().localSize(modes);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /**
