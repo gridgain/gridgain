@@ -35,12 +35,12 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         public const string IgnoreReason = "API parity tests are supposed to be run manually.";
 
         /** Property regex. */
-        private static readonly Regex JavaPropertyRegex = 
-            new Regex("(@Deprecated)?\\s+public [^=^\r^\n]+ (\\w+)\\(\\) {", RegexOptions.Compiled);
+        private static readonly Regex JavaPropertyRegex =
+            new Regex("(@Deprecated\\s+)?(?:@\\w+\\s+)*public [^=^\r^\n]+ (\\w+)\\(\\) {", RegexOptions.Compiled);
 
         /** Interface method regex. */
-        private static readonly Regex JavaInterfaceMethodRegex = 
-            new Regex("(@Deprecated)?\\s+(@Override)?\\s+public [^=^\r^\n]+ (\\w+)\\(.*?\\)",
+        private static readonly Regex JavaInterfaceMethodRegex =
+            new Regex("\n\\s+(@Deprecated\\s+)?(?:@\\w+\\s+)*public [^=^\r^\n]+ (\\w+)\\(.*?\\)",
                 RegexOptions.Compiled | RegexOptions.Singleline);
 
         /** Properties that are not needed on .NET side. */
@@ -50,6 +50,45 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "hashCode",
             "writeReplace"
         };
+
+        /// <summary>
+        /// Checks deprecated java interface method is matched by regexp.
+        /// </summary>
+        /// <param name="text">Java source code text.</param>
+        /// <param name="expected">Expected method name. Null if should be ignored.</param>
+        [TestCase(@"*/ 
+                        @Deprecated 
+                        public int enableStatistics()", null)]
+        [TestCase(@"
+                        @Deprecated @Override public BigDecimal enableStatistics(int columnIndex, int scale)", null)]
+        [TestCase(@"
+                        @Deprecated @Whatever @override public BigDecimal enableStatistics(int columnIndex, int scale)",
+            null)]
+        [TestCase(@"
+                        @Deprecated 
+                        @Whatever
+                        @Override 
+                        public BigDecimal enableStatistics(int columnIndex, int scale)", null)]
+        [TestCase(@"@Nullable
+                        public BigDecimal enableStatistics(int columnIndex, int scale)", "enableStatistics")]
+        [TestCase(@"/**
+                         * Enables/disables statistics for caches cluster wide.
+                         *
+                         * @param caches Collection of cache names.
+                         * @param enabled Statistics enabled flag.
+                         */
+                        public void enableStatistics(Collection<String> caches, boolean enabled);",
+            "enableStatistics")]
+        public static void CheckMissingJavaInterfaceMethodRegex(string text, string expected)
+        {
+            string methodName = JavaInterfaceMethodRegex.Matches(text)
+                .OfType<Match>()
+                .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
+                .Select(m => m.Groups[2].Value)
+                .Except(UnneededMethods).FirstOrDefault();
+
+            Assert.AreEqual(expected, methodName);
+        }
 
         /// <summary>
         /// Tests the configuration parity.
@@ -179,7 +218,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
 
             return JavaPropertyRegex.Matches(text)
                 .OfType<Match>()
-                .Where(m => m.Groups[1].Value == string.Empty)
+                .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
                 .Select(m => m.Groups[2].Value.Replace("get", ""))
                 .Where(x => !x.Contains(" void "))
                 .Except(UnneededMethods);
@@ -194,8 +233,8 @@ namespace Apache.Ignite.Core.Tests.ApiParity
 
             return JavaInterfaceMethodRegex.Matches(text)
                 .OfType<Match>()
-                .Where(m => m.Groups[1].Value == string.Empty)
-                .Select(m => m.Groups[3].Value.Replace("get", ""))
+                .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
+                .Select(m => m.Groups[2].Value.Replace("get", ""))
                 .Except(UnneededMethods);
         }
 
