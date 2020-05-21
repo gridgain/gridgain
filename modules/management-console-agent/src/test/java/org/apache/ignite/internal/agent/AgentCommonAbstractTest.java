@@ -30,6 +30,9 @@ import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
+import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -58,6 +61,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.awaitility.Awaitility.with;
 
 /**
@@ -230,5 +234,25 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
      */
     private static boolean isMac() {
         return System.getProperty("os.name").toLowerCase().contains("mac");
+    }
+
+    /**
+     * Enables cluster wide DISCOVERY, COMMUNICATION and EXCHANGE tracing by setting sampling rate to 1.0.
+     * Please pay attention that tracing will be enabled only on nodes with non NoopTracingSpi,.
+     *
+     * @param ignite Started Ignite instance.
+     */
+    protected void enableTracingUsingSamplingRateAlways(IgniteEx ignite) {
+        ignite.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+            new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
+
+        ignite.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
+            new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
+
+        ignite.tracingConfiguration().set(
+            new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
+            new TracingConfigurationParameters.Builder().withSamplingRate(SAMPLING_RATE_ALWAYS).build());
     }
 }

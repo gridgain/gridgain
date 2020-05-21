@@ -112,6 +112,8 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     public void shouldSendSpans() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
 
+        enableTracingUsingSamplingRateAlways(ignite_1);
+
         changeManagementConsoleConfig(ignite_1);
 
         IgniteClusterEx cluster = ignite_1.cluster();

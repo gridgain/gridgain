@@ -50,6 +50,8 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     public void shouldSendInitialSpans() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
+        enableTracingUsingSamplingRateAlways(ignite);
+
         changeManagementConsoleConfig(ignite);
 
         IgniteClusterEx cluster = ignite.cluster();
@@ -94,6 +96,8 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     @Test
     public void shouldSendSpansFromFirstNodeWithTracing_And_NoSpansFromSecondNodeWithDisabledTracing() throws Exception {
         IgniteEx ignite = startGrid(0);
+
+        enableTracingUsingSamplingRateAlways(ignite);
 
         changeManagementConsoleConfig(ignite);
 
@@ -154,6 +158,8 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     public void shouldNotSendSpansWithDisabledTracingOnAllNodes() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing",
             getIgniteConfigurationWithoutTracing());
+
+        enableTracingUsingSamplingRateAlways(ignite);
 
         changeManagementConsoleConfig(ignite);
 
