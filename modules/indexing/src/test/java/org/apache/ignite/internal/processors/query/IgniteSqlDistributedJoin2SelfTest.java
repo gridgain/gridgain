@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
@@ -51,7 +52,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-        
+
         super.afterTest();
     }
 
@@ -62,13 +63,17 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
     public void testNonCollocatedDistributedJoinSingleCache() throws Exception {
         startGridsMultiThreaded(NODES_COUNT, false);
 
+        final QueryEntity bgQueryEntity = new QueryEntity(String.class, BloodGroupInfoP.class).setTableName(BLOOD_INFO_P_CACHE)
+            .setKeyFieldName("blood_group");
+        bgQueryEntity.getFields().put("blood_group", String.class.toString());
+
         IgniteCache<Object, Object> cache = ignite(0).createCache(
             new CacheConfiguration<>(DEFAULT_CACHE_NAME)
                 .setQueryEntities(Arrays.asList(
                     new QueryEntity(String.class, Person.class).setTableName(PERSON_CACHE),
                     new QueryEntity(Long.class, MedicalInfo.class).setTableName(MED_INFO_CACHE),
                     new QueryEntity(Long.class, BloodGroupInfoPJ.class).setTableName(BLOOD_INFO_PJ_CACHE),
-                    new QueryEntity(String.class, BloodGroupInfoP.class).setTableName(BLOOD_INFO_P_CACHE)
+                  bgQueryEntity
                 ))
         );
 
@@ -107,9 +112,13 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
                 .setSqlSchema("PUBLIC")
         );
 
+        final QueryEntity bgQueryEntity = new QueryEntity(String.class, BloodGroupInfoP.class).setTableName(BLOOD_INFO_P_CACHE)
+            .setKeyFieldName("blood_group");
+        bgQueryEntity.getFields().put("blood_group", String.class.toString());
+
         IgniteCache<Object, Object> bloodGrpCache2 = ignite(0).createCache(
             new CacheConfiguration<>(BLOOD_INFO_P_CACHE).setQueryEntities(Collections.singleton(
-                new QueryEntity(String.class, BloodGroupInfoP.class).setTableName(BLOOD_INFO_P_CACHE)))
+                bgQueryEntity))
                 .setSqlSchema("PUBLIC")
         );
 
@@ -136,15 +145,22 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         SqlFieldsQuery qry2 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_P.universal_donor FROM person\n" +
             "  LEFT JOIN medical_info ON medical_info.name = person.name \n" +
             "  LEFT JOIN blood_group_info_P ON blood_group_info_P.blood_group = medical_info.blood_group;");
+        final SqlFieldsQuery qry3 = new SqlFieldsQuery(
+            "SELECT medical_info.blood_group, blood_group_info_P.universal_donor FROM \n" +
+                "  medical_info \n" +
+                "  LEFT JOIN blood_group_info_P ON blood_group_info_P.blood_group = medical_info.blood_group;");
 
         qry1.setDistributedJoins(true);
         qry2.setDistributedJoins(true);
+        qry3.setDistributedJoins(true);
 
         final String res1 = queryResultAsString(cache.query(qry1).getAll());
         final String res2 = queryResultAsString(cache.query(qry2).getAll());
+       final String res3 = queryResultAsString(cache.query(qry3).getAll());
 
         log.info("Query1 result: \n" + res1);
         log.info("Query2 result: \n" + res2);
+        log.info("Query3 result: \n" + res3);
 
         String expOut = "2001,Shravya,null,null\n" +
             "2002,Kiran,O+,O+A+B+AB+\n" +
@@ -337,7 +353,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         private long id;
 
         /** */
-        @QuerySqlField(index = true, name = "blood_group")
+        @QuerySqlField
         private String bloodGroup;  // PK
 
         /** */
