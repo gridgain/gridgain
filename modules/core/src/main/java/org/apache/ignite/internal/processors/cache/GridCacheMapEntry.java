@@ -45,6 +45,7 @@ import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
@@ -4331,6 +4332,26 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
+     * Appends a new rollback record to the write-ahead log if persistence enabled.
+     * This record keeps track the gap that corresponds to the update counter of out-of-order update in the ATOMIC cache.
+     *
+     * @param gapStart Update counter corresponds to out-of-order update.
+     */
+    protected void logOutOfOrderUpdate(Long gapStart) throws IgniteCheckedException {
+        assert cctx.atomic() : "Individual updates must be logged only for ATOMIC caches.";
+        assert gapStart != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
+
+        try {
+            if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+                cctx.shared().wal().log(new RollbackRecord(cctx.groupId(), partition(), gapStart, 1));
+        }
+        catch (StorageException e) {
+            throw new IgniteCheckedException("Failed to log ATOMIC cache out-of-order update [key=" + key +
+                ", updCntr=" + gapStart + ']', e);
+        }
+    }
+
+    /**
      * @param tx Transaction.
      * @param val Value.
      * @param expireTime Expire time (or 0 if not applicable).
@@ -5956,6 +5977,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** Disable interceptor invocation onAfter* methods flag. */
         private boolean wasIntercepted;
 
+        /** Flag indicates that a new update has version less than the version that is already stored. */
+        private boolean outOfOrderUpdate;
+
         /** */
         AtomicCacheUpdateClosure(
             GridCacheMapEntry entry,
@@ -6108,6 +6132,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 if (updateRes != null) {
                     assert treeOp == IgniteTree.OperationType.NOOP : treeOp;
+
+                    if (outOfOrderUpdate)
+                        entry.logOutOfOrderUpdate(updateCntr);
 
                     return;
                 }
@@ -6680,7 +6707,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (verCheck) {
                 if (!entry.isStartVersion() && ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) >= 0) {
-                    if (ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) == 0 && cctx.writeThrough() && primary) {
+                    outOfOrderUpdate = ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) > 0;
+
+                    if (!outOfOrderUpdate && cctx.writeThrough() && primary) {
                         if (log.isDebugEnabled())
                             log.debug("Received entry update with same version as current (will update store) " +
                                 "[entry=" + this + ", newVer=" + newVer + ']');
