@@ -20,22 +20,17 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
-import org.apache.ignite.lifecycle.LifecycleBean;
-import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_STOP;
 
 
 /**
@@ -63,7 +58,9 @@ public class RestProcessorHangTest extends GridCommonAbstractTest {
     public void nodeStopOnDiscoverySpiFailTest() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        IgniteConfiguration failJoinCfg = getConfiguration();
+        String rejectorGridName = "rejector";
+
+        IgniteConfiguration regjectorGridCfg = getConfiguration(rejectorGridName);
 
         // discovery spi that never allows connecting
         TestTcpDiscoverySpi discoSpi = new TestTcpDiscoverySpi() {
@@ -80,27 +77,19 @@ public class RestProcessorHangTest extends GridCommonAbstractTest {
 
         discoSpi.setIpFinder(sharedStaticIpFinder);
 
-        failJoinCfg.setDiscoverySpi(discoSpi);
+        regjectorGridCfg.setDiscoverySpi(discoSpi);
 
-        startGrid(failJoinCfg);
+        startGrid(regjectorGridCfg);
 
-        String gridName = "impossibleToJoin";
+        String hangGridName = "impossibleToJoin";
 
-        IgniteConfiguration hangNodeCfg = getConfiguration(gridName);
-
-        final LifecycleEventType[] lastEvent = {null};
-
-        hangNodeCfg.setLifecycleBeans(new LifecycleBean() {
-            @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
-                lastEvent[0] = evt;
-            }
-        });
+        IgniteConfiguration hangNodeCfg = getConfiguration(hangGridName);
 
         GridTestUtils.runAsync(() -> startGrid(hangNodeCfg));
 
         GridTestUtils.waitForCondition(() -> {
             try {
-                IgniteKernal failingGrid = IgnitionEx.gridx(gridName);
+                IgniteKernal failingGrid = IgnitionEx.gridx(hangGridName);
 
                 return failingGrid != null && failingGrid.context().rest() != null;
             } catch (Exception ignored) {
@@ -108,7 +97,7 @@ public class RestProcessorHangTest extends GridCommonAbstractTest {
             }
         }, 20_000);
 
-        IgniteEx hangGrid = IgnitionEx.gridx(gridName);
+        IgniteEx hangGrid = IgnitionEx.gridx(hangGridName);
 
         GridRestProcessor rest = hangGrid.context().rest();
 
@@ -133,9 +122,11 @@ public class RestProcessorHangTest extends GridCommonAbstractTest {
             }
         }).start();
 
+        stopGrid(rejectorGridName);
+
         // node should stop correctly
         assertTrue(GridTestUtils.waitForCondition(() -> {
-            return lastEvent[0] == AFTER_NODE_STOP;
+            return IgnitionEx.allGrids().size() == 0;
         }, 10_000));
     }
 
