@@ -47,6 +47,15 @@ public interface PartitionsExchangeAware {
     }
 
     /**
+     * Callback called after partition states restore.
+     *
+     * @param fut Partition map exchange future.
+     */
+    public default void onPartitionStatesRestored(GridDhtPartitionsExchangeFuture fut) {
+        // No-op.
+    }
+
+    /**
      * Callback from exchange process completion; called before topology is unlocked.
      * Guarantees that no updates were performed on local node since exchange process started.
      *
