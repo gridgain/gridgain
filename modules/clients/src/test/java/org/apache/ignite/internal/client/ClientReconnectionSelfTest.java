@@ -34,7 +34,7 @@ public class ClientReconnectionSelfTest extends GridCommonAbstractTest {
     public static final String HOST = "127.0.0.1";
 
     /** */
-    private ClientTestRestServer[] srvs = new ClientTestRestServer[ClientTestRestServer.SERVERS_CNT];
+    private volatile ClientTestRestServer[] srvs = new ClientTestRestServer[ClientTestRestServer.SERVERS_CNT];
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {

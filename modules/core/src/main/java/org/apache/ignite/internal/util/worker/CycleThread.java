@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.util.worker;
 
-import java.util.concurrent.locks.LockSupport;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -24,33 +23,36 @@ import org.jetbrains.annotations.NotNull;
  */
 public abstract class CycleThread extends Thread {
 
-    private final long sleepIntervalNs;
+    private final long sleepInterval;
 
     /**
      * Creates new cycle thread with given parameters.
      * @param name thread name
-     * @param sleepIntervalNs interval between iterations
+     * @param sleepInterval sleep interval before each iteration
      */
-    protected CycleThread(@NotNull String name, long sleepIntervalNs) {
+    protected CycleThread(@NotNull String name, long sleepInterval) {
         super(name);
-        this.sleepIntervalNs = sleepIntervalNs;
+        this.sleepInterval = sleepInterval;
     }
 
     /** {@inheritDoc} */
+    @SuppressWarnings("BusyWait")
     @Override public final void run() {
-        LockSupport.parkNanos(sleepIntervalNs);
-        while (!isInterrupted()) {
-            iteration();
-            if (isInterrupted()) {
-                return;
+        try {
+            while (!isInterrupted()) {
+                Thread.sleep(sleepInterval);
+                iteration();
             }
-            LockSupport.parkNanos(sleepIntervalNs);
+        } catch (InterruptedException e) {
+            // No op
         }
     }
 
+
     /**
      * Called on each iteration.
+     * @throws InterruptedException throws if no specific handling required
      */
-    public abstract void iteration();
+    public abstract void iteration() throws InterruptedException;
 
 }

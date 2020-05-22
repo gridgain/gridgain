@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -520,11 +519,11 @@ public class GridClientImpl implements GridClient {
          * Creates topology refresh thread.
          */
         private TopologyUpdaterThread() {
-            super(id + "-topology-update", TimeUnit.MILLISECONDS.toNanos(cfg.getTopologyRefreshFrequency()));
+            super(id + "-topology-update", cfg.getTopologyRefreshFrequency());
         }
 
         /** {@inheritDoc} */
-        @Override public void iteration() {
+        @Override public void iteration() throws InterruptedException {
             try {
                 tryInitTopology();
             }
@@ -533,9 +532,6 @@ public class GridClientImpl implements GridClient {
 
                 if (log.isLoggable(Level.FINE))
                     log.fine("Failed to update topology: " + e.getMessage());
-            } catch (InterruptedException ignored) {
-                // Client is shutting down.
-                interrupt();
             }
         }
     }

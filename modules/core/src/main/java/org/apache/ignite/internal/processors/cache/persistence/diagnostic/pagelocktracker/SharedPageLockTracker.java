@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
@@ -363,7 +362,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
          *
          */
         TimeOutWorker(long interval) {
-            super("time-out-worker", TimeUnit.MILLISECONDS.toNanos(interval));
+            super("time-out-worker", interval);
         }
 
 
