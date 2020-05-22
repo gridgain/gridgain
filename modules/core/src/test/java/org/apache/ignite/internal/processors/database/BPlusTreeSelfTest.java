@@ -2273,7 +2273,9 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIterateConcurrentPutRemove_2() throws Exception {
-        System.exit(137);
+        MAX_PER_PAGE = 2;
+
+        iterateConcurrentPutRemove();
     }
 
     /**
