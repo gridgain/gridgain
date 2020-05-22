@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
@@ -56,6 +57,11 @@ public class MarkerPageIO extends PageIO {
         return PageUtils.getInt(pageAddr, MARKER_TYPE_OFF);
     }
 
+    /** Type of a marker. */
+    public int markerType(ByteBuffer buffer) {
+        return buffer.getInt(MARKER_TYPE_OFF);
+    }
+
     /** Sets marker type. */
     public void setMarkerType(long pageAddr, int markerType) {
         PageUtils.putInt(pageAddr, MARKER_TYPE_OFF, markerType);
@@ -64,6 +70,11 @@ public class MarkerPageIO extends PageIO {
     /** Int parameter 1. */
     public int int1(long pageAddr) {
         return PageUtils.getInt(pageAddr, MARKER_INT_PARAM_1_OFF);
+    }
+
+    /** Int parameter 1. */
+    public int int1(ByteBuffer buffer) {
+        return buffer.getInt(MARKER_INT_PARAM_1_OFF);
     }
 
     /** Sets int parameter 1. */
