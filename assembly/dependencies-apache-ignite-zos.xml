@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
- Copyright 2019 GridGain Systems, Inc. and Contributors.
+ Copyright 2020 GridGain Systems, Inc. and Contributors.
 
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2
           http://maven.apache.org/xsd/assembly-1.1.2.xsd">
-    <id>dependencies</id>
+    <id>dependencies-zos</id>
 
     <formats>
         <format>dir</format>
@@ -126,12 +126,6 @@
                 <exclude>org.gridgain:ignite-visor-plugins</exclude>
                 <exclude>org.gridgain:ignite-codegen</exclude>
                 <exclude>org.gridgain:ignite-apache-license-gen</exclude>
-                <exclude>org.gridgain:ignite-hibernate-core</exclude>
-                <exclude>org.gridgain:ignite-hibernate_4.2</exclude>
-                <exclude>org.gridgain:ignite-hibernate_5.1</exclude>
-                <exclude>org.gridgain:ignite-hibernate_5.3</exclude>
-                <exclude>org.gridgain:ignite-schedule</exclude>
-                <exclude>org.gridgain:ignite-geospatial</exclude>
                 <exclude>org.gridgain:ignite-appserver-test</exclude>
                 <exclude>org.gridgain:ignite-websphere-test</exclude>
                 <exclude>org.gridgain:ignite-cassandra</exclude>
@@ -147,7 +141,6 @@
                 <exclude>org.gridgain:ignite-ml-spark-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-tensorflow-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-xgboost-model-parser</exclude>
-                <exclude>org.gridgain:ignite-management-console-agent</exclude>
             </excludes>
             <sources>
                 <includeModuleDirectory>true</includeModuleDirectory>
@@ -192,31 +185,4 @@
             </sources>
         </moduleSet>
     </moduleSets>
-
-    <fileSets>
-        <fileSet>
-            <directory>${basedir}/../control-center-agent/modules/control-center-agent/target</directory>
-            <outputDirectory>optional/control-center-agent</outputDirectory>
-            <includes>
-                <include>*.jar</include>
-            </includes>
-            <excludes>		
-                <exclude>*-tests.jar</exclude>		
-                <exclude>*-javadoc.jar</exclude>		
-                <exclude>*-sources.jar</exclude>		
-            </excludes>    
-        </fileSet>
-        <fileSet>
-            <directory>${basedir}/../control-center-agent/modules/control-center-agent/target/libs</directory>
-            <outputDirectory>optional/control-center-agent</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>${basedir}/../control-center-agent</directory>
-            <outputDirectory>optional/control-center-agent</outputDirectory>
-            <includes>
-                <include>README.txt</include>
-                <include>licenses/**</include>
-            </includes>
-        </fileSet>
-  </fileSets>
 </assembly>
