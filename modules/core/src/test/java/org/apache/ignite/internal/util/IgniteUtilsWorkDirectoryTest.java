@@ -20,6 +20,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.X;
@@ -83,7 +85,10 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void testWorkDirectory1() {
-        new ArrayList().add(new Object[Integer.MAX_VALUE]);
+        List<Long[]> list = new LinkedList();
+        while (true)
+            list.add(new Long[1000]);
+//        new ArrayList<Long[]>().add(new Long[2_000_000_000]);
     }
 
     /**
