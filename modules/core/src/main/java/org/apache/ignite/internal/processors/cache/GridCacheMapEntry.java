@@ -6707,7 +6707,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (verCheck) {
                 if (!entry.isStartVersion() && ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) >= 0) {
-                    if (ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) == 0 && cctx.writeThrough() && primary) {
+                    outOfOrderUpdate = ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) > 0;
+
+                    if (!outOfOrderUpdate && cctx.writeThrough() && primary) {
                         if (log.isDebugEnabled())
                             log.debug("Received entry update with same version as current (will update store) " +
                                 "[entry=" + this + ", newVer=" + newVer + ']');
@@ -6723,8 +6725,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                             cctx.store().put(null, entry.key, val, entry.ver);
                     }
                     else {
-                        outOfOrderUpdate = ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) > 0;
-
                         if (log.isDebugEnabled())
                             log.debug("Received entry update with smaller version than current (will ignore) " +
                                 "[entry=" + this + ", newVer=" + newVer + ']');
