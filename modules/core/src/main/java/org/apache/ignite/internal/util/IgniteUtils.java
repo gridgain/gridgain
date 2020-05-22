@@ -16,23 +16,6 @@
 
 package org.apache.ignite.internal.util;
 
-import java.io.UTFDataFormatException;
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
-import javax.management.DynamicMBean;
-import javax.management.JMException;
-import javax.management.MBeanRegistrationException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.naming.Context;
-import javax.naming.NamingException;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -56,6 +39,7 @@ import java.io.PrintStream;
 import java.io.Reader;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.io.UTFDataFormatException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.management.CompilationMXBean;
@@ -166,6 +150,22 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.management.DynamicMBean;
+import javax.management.JMException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -9455,7 +9455,7 @@ public abstract class IgniteUtils {
      * @return Socket addresses for given addresses and host names.
      */
     public static Collection<InetSocketAddress> toSocketAddresses(ClusterNode node, int port) {
-        return toSocketAddresses(node.addresses(), node.hostNames(), port);
+        return toSocketAddresses(node.addresses(), node.hostNames(), port, true);
     }
 
     /**
@@ -9465,10 +9465,11 @@ public abstract class IgniteUtils {
      * @param addrs Addresses.
      * @param hostNames Host names.
      * @param port Port.
+     * @param resolve Whether to resolve addresses or not.
      * @return Socket addresses for given addresses and host names.
      */
     public static Collection<InetSocketAddress> toSocketAddresses(Collection<String> addrs,
-        Collection<String> hostNames, int port) {
+        Collection<String> hostNames, int port, boolean resolve) {
         Set<InetSocketAddress> res = new HashSet<>(addrs.size());
 
         Iterator<String> hostNamesIt = hostNames.iterator();
@@ -9477,9 +9478,13 @@ public abstract class IgniteUtils {
             String hostName = hostNamesIt.hasNext() ? hostNamesIt.next() : null;
 
             if (!F.isEmpty(hostName)) {
-                InetSocketAddress inetSockAddr = new InetSocketAddress(hostName, port);
+                InetSocketAddress inetSockAddr = resolve
+                    ? new InetSocketAddress(hostName, port)
+                    : InetSocketAddress.createUnresolved(hostName, port);
 
-                if (inetSockAddr.isUnresolved() || inetSockAddr.getAddress().isLoopbackAddress())
+                if (resolve && inetSockAddr.isUnresolved() ||
+                    !inetSockAddr.isUnresolved() && inetSockAddr.getAddress().isLoopbackAddress()
+                )
                     inetSockAddr = new InetSocketAddress(addr, port);
 
                 res.add(inetSockAddr);

@@ -58,8 +58,9 @@ setIgniteHome
 #
 osname=`uname`
 
-if [ $osname -eq "OS/390" ] ; then
+if [ $osname = "OS/390" ] ; then
     export TERM=dumb
+    JVM_OPTS="-Dfile.encoding=IBM-1047 $JVM_OPTS"
 fi
 
 #

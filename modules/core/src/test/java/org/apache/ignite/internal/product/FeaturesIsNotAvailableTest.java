@@ -18,6 +18,7 @@ package org.apache.ignite.internal.product;
 
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXING;
@@ -53,6 +54,7 @@ public class FeaturesIsNotAvailableTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-29326")
     @Test
     public void testManagementConsoleFeatureIsNotAvailable() {
         assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), MANAGEMENT_CONSOLE));
