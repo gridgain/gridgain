@@ -166,26 +166,20 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
+        File file = new File(metadataDir, typeId + ".bin");
 
-        try {
-            File file = new File(metadataDir, typeId + ".bin");
-
-            if(!file.delete()) {
-                throw new IgniteException("Cannot remove metadata file: " + file.getAbsolutePath() +
-                    ", exists=" + file.exists());
-            }
-        }
-        catch (Exception e) {
-            final String msg = "Failed to remove metadata for typeId: " + typeId +
-                "; exception was thrown: " + e.getMessage();
+        if (!file.delete()) {
+            final String msg = "Failed to remove metadata for typeId: " + typeId;
 
             U.error(log, msg);
 
             writer.cancel();
 
+            IgniteException e = new IgniteException(msg);
+
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
-            throw new IgniteException(msg, e);
+            throw e;
         }
     }
 
