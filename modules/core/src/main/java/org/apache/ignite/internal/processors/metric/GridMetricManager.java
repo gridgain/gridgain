@@ -220,14 +220,15 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         gcCpuLoad = sysreg.doubleMetric(GC_CPU_LOAD, GC_CPU_LOAD_DESCRIPTION);
         cpuLoad = sysreg.doubleMetric(CPU_LOAD, CPU_LOAD_DESCRIPTION);
 
-        sysreg.register("SystemLoadAverage", os::getSystemLoadAverage, Double.class, null);
-        sysreg.register(UP_TIME, rt::getUptime, null);
-        sysreg.register(THREAD_CNT, threads::getThreadCount, null);
-        sysreg.register(PEAK_THREAD_CNT, threads::getPeakThreadCount, null);
-        sysreg.register(TOTAL_STARTED_THREAD_CNT, threads::getTotalStartedThreadCount, null);
-        sysreg.register(DAEMON_THREAD_CNT, threads::getDaemonThreadCount, null);
-        sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
-        sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
+        sysreg.register("SystemLoadAverage", os::getSystemLoadAverage, Double.class,
+            "System load average reported by the JVM OS MBean");
+        sysreg.register(UP_TIME, rt::getUptime, "JVM uptime");
+        sysreg.register(THREAD_CNT, threads::getThreadCount, "Number of live JVM threads");
+        sysreg.register(PEAK_THREAD_CNT, threads::getPeakThreadCount, "Peak number of live JVM threads");
+        sysreg.register(TOTAL_STARTED_THREAD_CNT, threads::getTotalStartedThreadCount, "Total number of created and started threads since JVM started");
+        sysreg.register(DAEMON_THREAD_CNT, threads::getDaemonThreadCount, "Number of live deamon threads");
+        sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, "Total CPU time for the current thread in nanoseconds");
+        sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, "CPU time that the current thread has executed in user mode in nanoseconds");
 
         MetricRegistry pmeReg = registry(PME_METRICS);
 
@@ -488,7 +489,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         mreg.register("ActiveCount",
             svc::activeStripesCount,
-            "Number of active tasks of all stripes.");
+            "Approximate number of threads that are actively executing tasks.");
 
         mreg.register("StripesActiveStatuses",
             svc::stripesActiveStatuses,
@@ -652,10 +653,13 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         public MemoryUsageMetrics(String group, String metricNamePrefix) {
             MetricRegistry mreg = registry(group);
 
-            init = mreg.longMetric(metricName(metricNamePrefix, "init"), null);
-            used = mreg.longMetric(metricName(metricNamePrefix, "used"), null);
-            committed = mreg.longMetric(metricName(metricNamePrefix, "committed"), null);
-            max = mreg.longMetric(metricName(metricNamePrefix, "max"), null);
+            init = mreg.longMetric(metricName(metricNamePrefix, "init"),
+                "Amount of memory that the JVM initially requests from the operating system for memory management in bytes");
+            used = mreg.longMetric(metricName(metricNamePrefix, "used"), "Amount of used memory in bytes");
+            committed = mreg.longMetric(metricName(metricNamePrefix, "committed"),
+                "Amount of memory that is committed for the JVM to use in bytes");
+            max = mreg.longMetric(metricName(metricNamePrefix, "max"),
+                "Maximum amount of memory that can be used for memory management in bytes");
         }
 
         /** Updates metric to the provided values. */

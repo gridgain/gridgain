@@ -95,7 +95,7 @@ public class CacheGroupMetricsImpl {
 
         MetricRegistry mreg = ctx.shared().kernalContext().metric().registry(metricGroupName());
 
-        mreg.register("Caches", this::getCaches, List.class, null);
+        mreg.register("Caches", this::getCaches, List.class, "List of caches in the cache group");
 
         storageSize = mreg.register("StorageSize",
             () -> persistentEnabled ? database().forGroupPageStores(ctx, PageStore::size) : 0,

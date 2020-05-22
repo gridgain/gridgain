@@ -358,9 +358,8 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
 
-        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
-            "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric shows " +
-            "corresponding keys.");
+        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "List of cache keys with large " +
+            "number of lock collisions and long wait queue");
     }
 
     /**

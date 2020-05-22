@@ -52,14 +52,14 @@ public class SqlMemoryStatisticsHolder {
     public SqlMemoryStatisticsHolder(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
-            "How many times memory quota have been requested on this node by all the queries in total.");
+            "Total number of times memory quota have been requested on the current node by all the queries");
 
         offloadingWritten = quotasMetrics.longAdderMetric("OffloadingWritten",
-            "Metrics that indicates the number of bytes written to the disk during SQL query offloading.");
+            "Number of bytes written to the disk during SQL query offloading");
         offloadingRead = quotasMetrics.longAdderMetric("OffloadingRead",
-            "Metrics that indicates the number of bytes read from the disk during SQL query offloading.");
+            "Number of bytes read from the disk during SQL query offloading");
         offloadedQueriesNum = quotasMetrics.longAdderMetric("OffloadedQueriesNumber",
-            "Metrics that indicates the number of queries were offloaded to disk locally.");
+            "Number of queries that were offloaded to disk locally");
 
         quotasMetrics.register("maxMem",
             new LongSupplier() {
@@ -67,9 +67,8 @@ public class SqlMemoryStatisticsHolder {
                     return memMgr.memoryLimit();
                 }
             },
-            "How much memory in bytes it is possible to reserve by all the queries in total on this node. " +
-                "Negative value if sql memory quotas are disabled. " +
-                "Individual queries have additional per query quotas."
+            "Total amount of memory available for all queries on the current node " +
+                "(negative value if sql memory quotas are disabled)"
         );
 
         quotasMetrics.register("freeMem",
@@ -78,8 +77,8 @@ public class SqlMemoryStatisticsHolder {
                     return memMgr.memoryLimit() - memMgr.reserved();
                 }
             },
-            "How much memory in bytes currently left available for the queries on this node. " +
-                "Negative value if sql memory quotas are disabled."
+            "Amount of memory left available for the queries on this node, in bytes " +
+                "(negative value if sql memory quotas are disabled)"
         );
     }
 

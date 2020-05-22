@@ -63,12 +63,14 @@ public class IoStatisticsHolderCache implements IoStatisticsHolder {
 
         MetricRegistry mreg = mmgr.registry(metricName(CACHE_GROUP.metricGroupName(), cacheName));
 
-        mreg.longMetric("startTime", null).value(U.currentTimeMillis());
-        mreg.objectMetric("name", String.class, null).value(cacheName);
-        mreg.intMetric("grpId", null).value(grpId);
+        mreg.longMetric("startTime", "Group start timestamp").value(U.currentTimeMillis());
+        mreg.objectMetric("name", String.class, "Group name").value(cacheName);
+        mreg.intMetric("grpId", "Group identifier").value(grpId);
 
-        this.logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS, null);
-        this.physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS, null);
+        this.logicalReadCtr = mreg.longAdderMetric(LOGICAL_READS,
+            "Number of times a page was read regardless whether the page was in memory or not");
+        this.physicalReadCtr = mreg.longAdderMetric(PHYSICAL_READS,
+            "Number of times a page was read from disk to memory");
     }
 
     /** {@inheritDoc} */

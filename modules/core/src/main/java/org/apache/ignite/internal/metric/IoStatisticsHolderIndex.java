@@ -87,14 +87,18 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
 
         MetricRegistry mreg = mmgr.registry(metricName(type.metricGroupName(), cacheName, idxName));
 
-        mreg.longMetric("startTime", null).value(U.currentTimeMillis());
-        mreg.objectMetric("name", String.class, null).value(cacheName);
-        mreg.objectMetric("indexName", String.class, null).value(idxName);
+        mreg.longMetric("startTime", "Index creation time").value(U.currentTimeMillis());
+        mreg.objectMetric("name", String.class, "Cache name").value(cacheName);
+        mreg.objectMetric("indexName", String.class, "Index name").value(idxName);
 
-        logicalReadLeafCtr = mreg.longAdderMetric(LOGICAL_READS_LEAF, null);
-        logicalReadInnerCtr = mreg.longAdderMetric(LOGICAL_READS_INNER, null);
-        physicalReadLeafCtr = mreg.longAdderMetric(PHYSICAL_READS_LEAF, null);
-        physicalReadInnerCtr = mreg.longAdderMetric(PHYSICAL_READS_INNER, null);
+        logicalReadLeafCtr = mreg.longAdderMetric(LOGICAL_READS_LEAF,
+            "Number of times a leaf index page was read regardless whether the page was in memory or not");
+        logicalReadInnerCtr = mreg.longAdderMetric(LOGICAL_READS_INNER,
+            "Number of times an inner index page was read regardless whether the page was in memory or not");
+        physicalReadLeafCtr = mreg.longAdderMetric(PHYSICAL_READS_LEAF,
+            "Number of times a leaf index page was read from disk to memory");
+        physicalReadInnerCtr = mreg.longAdderMetric(PHYSICAL_READS_INNER,
+            "Number of times an inner index page was read from disk to memory");
 
         this.statCache = statCache;
     }

@@ -141,16 +141,18 @@ public class RunningQueryManager {
         MetricRegistry userMetrics = ctx.metric().registry(SQL_USER_QUERIES_REG_NAME);
 
         successQrsCnt = userMetrics.longAdderMetric("success",
-            "Number of successfully executed user queries that have been started on this node.");
+            "Number of successfully executed queries initiated by the current node");
 
-        failedQrsCnt = userMetrics.longMetric("failed", "Total number of failed by any reason (cancel, oom etc)" +
-            " queries that have been started on this node.");
+        failedQrsCnt = userMetrics.longMetric("failed",
+            "Number of failed queries (including OOME) initiated by the current node");
 
-        canceledQrsCnt = userMetrics.longMetric("canceled", "Number of canceled queries that have been started " +
-            "on this node. This metric number included in the general 'failed' metric.");
+        canceledQrsCnt = userMetrics.longMetric("canceled",
+            "Number of canceled queries initiated by the current node. This number is included in the general " +
+                "'failed' metric");
 
-        oomQrsCnt = userMetrics.longMetric("failedByOOM", "Number of queries started on this node failed due to " +
-            "out of memory protection. This metric number included in the general 'failed' metric.");
+        oomQrsCnt = userMetrics.longMetric("failedByOOM",
+            "Number of queries failed due to out of memory protection initiated by the current node. This number is " +
+                "included in the general 'failed' metric");
     }
 
     /**
