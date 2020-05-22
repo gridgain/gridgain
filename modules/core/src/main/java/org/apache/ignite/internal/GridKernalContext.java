@@ -51,7 +51,6 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -747,11 +746,6 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Rolling Upgrade processor.
      */
     public RollingUpgradeProcessor rollingUpgrade();
-
-    /**
-     * @return Control Center processor.
-     */
-    public ManagementConsoleProcessor managementConsole();
 
     /**
      * @return Local continuous tasks processor.
