@@ -103,12 +103,10 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
             stmt.executeUpdate("CREATE TABLE blood_group_info_PJ (id LONG, blood_group VARCHAR(64), universal_donor VARCHAR(64), PRIMARY KEY (id)) " +
                 "WITH \"cache_name=blood_group_info_PJ,backups=1\";");
 
-
             stmt.executeUpdate("CREATE INDEX medical_info_name_ASC_IDX ON medical_info (name);");
             stmt.executeUpdate("CREATE INDEX medical_info_blood_group_ASC_IDX ON medical_info (blood_group);");
 
             stmt.executeUpdate("CREATE INDEX blood_group_info_PJ_blood_group_ASC_IDX ON blood_group_info_PJ (blood_group);");
-            stmt.executeUpdate("CREATE INDEX blood_group_info_P_blood_group_ASC_IDX ON blood_group_info_P (blood_group);");
         }
 
         awaitPartitionMapExchange();
