@@ -289,6 +289,7 @@ public final class JoinBatch {
                     // get future cursors for join and go right to fetch them
                     current = join.find(current);
                 }
+//                current = join.find(current);
                 if (current.row(join.id) != null) {
                     // either find called or outer join with null-row
                     jfId = join.id;
@@ -331,7 +332,8 @@ public final class JoinBatch {
 
     @SuppressWarnings("unchecked")
     private void fetchCurrent(final int jfId) {
-        assert current.prev == null || current.prev.isRow(jfId) : "prev must be already fetched";
+        if (current.prev != null && !current.prev.isRow(jfId))
+            throw new AssertionError("prev must be already fetched");
         assert jfId == 0 || current.isRow(jfId - 1) : "left must be already fetched";
 
         assert !current.isRow(jfId) : "double fetching";
@@ -388,13 +390,13 @@ public final class JoinBatch {
                 }
             }
             if (c != null) {
-                current = current.copyBehind(jfId);
+                this.current = this.current.copyBehind(jfId);
                 // update jf, set current row from cursor
-                current.updateRow(jfId, c.get(), JoinRow.S_CURSOR, JoinRow.S_ROW);
+                this.current.updateRow(jfId, c.get(), JoinRow.S_CURSOR, JoinRow.S_ROW);
             }
             if (joinEmpty) {
                 // update jf.join, set an empty cursor
-                current.updateRow(join.id, EMPTY_CURSOR, JoinRow.S_NULL, JoinRow.S_CURSOR);
+//                current.updateRow(join.id, EMPTY_CURSOR, JoinRow.S_NULL, JoinRow.S_CURSOR);
             }
             return;
         }
