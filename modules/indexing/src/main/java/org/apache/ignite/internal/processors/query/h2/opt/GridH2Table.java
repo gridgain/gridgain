@@ -233,9 +233,8 @@ public class GridH2Table extends TableBase {
             size.add(totalTblSize);
         }
 
-        // Init stats with the dummy values. This prevents us from scanning index with backup filter when
-        // topology may not be initialized yet.
-        tblStats = new TableStatistics(0, 0);
+        // Init stats with the default values.
+        tblStats = new TableStatistics(10_000, 10_000);
 
         if (desc != null && desc.context() != null) {
             GridKernalContext ctx = desc.context().kernalContext();
@@ -1233,10 +1232,14 @@ public class GridH2Table extends TableBase {
         long curTotalRowCnt = size.sum();
 
         // Update stats if total table size changed significantly since the last stats update.
-        if (needRefreshStats(statsTotalRowCnt, curTotalRowCnt)) {
+        if (needRefreshStats(statsTotalRowCnt, curTotalRowCnt) && cacheInfo.affinityNode()) {
             long primaryRowCnt = cacheSize(CachePeekMode.PRIMARY);
+            long totalRowCnt = cacheSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP);
 
-            tblStats = new TableStatistics(curTotalRowCnt, primaryRowCnt);
+            size.reset();
+            size.add(totalRowCnt);
+
+            tblStats = new TableStatistics(totalRowCnt, primaryRowCnt);
         }
     }
 
