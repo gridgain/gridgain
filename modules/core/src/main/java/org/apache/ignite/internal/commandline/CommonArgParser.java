@@ -173,13 +173,23 @@ public class CommonArgParser {
     }
 
     /**
+     * @param s String to parse.
+     * @return Parsed command or {@code null} otherwise.
+     */
+    protected Command parseCommand(String s) {
+        CommandList cmd = CommandList.of(s);
+
+        return cmd != null ? cmd.command() : null;
+    }
+
+    /**
      * Parses and validates arguments.
      *
      * @param rawArgIter Iterator of arguments.
      * @return Arguments bean.
      * @throws IllegalArgumentException In case arguments aren't valid.
      */
-    ConnectionAndSslParameters parseAndValidate(Iterator<String> rawArgIter) {
+    public ConnectionAndSslParameters parseAndValidate(Iterator<String> rawArgIter) {
         String host = DFLT_HOST;
 
         String port = DFLT_PORT;
@@ -216,24 +226,23 @@ public class CommonArgParser {
 
         CommandArgIterator argIter = new CommandArgIterator(rawArgIter, AUX_COMMANDS);
 
-        CommandList command = null;
+        Command command = null;
 
         while (argIter.hasNextArg()) {
             String str = argIter.nextArg("").toLowerCase();
 
-            CommandList cmd = CommandList.of(str);
+            Command cmd = parseCommand(str);
 
             if (cmd != null) {
                 if (command != null)
                     throw new IllegalArgumentException("Only one action can be specified, but found at least two:" +
                         cmd.toString() + ", " + command.toString());
 
-                cmd.command().parseArguments(argIter);
+                cmd.parseArguments(argIter);
 
                 command = cmd;
             }
             else {
-
                 switch (str) {
                     case CMD_HOST:
                         host = argIter.nextArg("Expected host name");
@@ -344,7 +353,7 @@ public class CommonArgParser {
         if (command == null)
             throw new IllegalArgumentException("No action was specified");
 
-        return new ConnectionAndSslParameters(command.command(), host, port, user, pwd,
+        return new ConnectionAndSslParameters(command, host, port, user, pwd,
                 pingTimeout, pingInterval, autoConfirmation, verbose,
                 sslProtocol, sslCipherSuites,
                 sslKeyAlgorithm, sslKeyStorePath, sslKeyStorePassword, sslKeyStoreType,
