@@ -139,172 +139,172 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    IgniteMarshallerSelfTestSuite.class,
-    IgniteLangSelfTestSuite.class,
-    IgniteUtilSelfTestSuite.class,
+//    IgniteMarshallerSelfTestSuite.class,
+//    IgniteLangSelfTestSuite.class,
+//    IgniteUtilSelfTestSuite.class,
 
-    IgniteKernalSelfTestSuite.class,
-    IgniteStartUpTestSuite.class,
-    IgniteExternalizableSelfTestSuite.class,
-    IgniteP2PSelfTestSuite.class,
-    IgniteCacheP2pUnmarshallingErrorTestSuite.class,
-    IgniteStreamSelfTestSuite.class,
-
-    IgnitePlatformsTestSuite.class,
-
-    SecurityTestSuite.class,
-
-    GridSelfTest.class,
-    ClusterGroupHostsSelfTest.class,
-    IgniteMessagingWithClientTest.class,
-    IgniteMessagingSendAsyncTest.class,
-
-    ClusterProcessorCheckGlobalStateComputeRequestTest.class,
-    ClusterGroupSelfTest.class,
-    GridMessagingSelfTest.class,
-    GridMessagingNoPeerClassLoadingSelfTest.class,
-
-    GridReleaseTypeSelfTest.class,
-    GridProductVersionSelfTest.class,
-    GridAffinityAssignmentV2Test.class,
-    GridAffinityAssignmentV2TestNoOptimizations.class,
-    GridHistoryAffinityAssignmentTest.class,
-    GridHistoryAffinityAssignmentTestNoOptimization.class,
-    GridAffinityProcessorRendezvousSelfTest.class,
-    GridAffinityProcessorMemoryLeakTest.class,
-    GridClosureProcessorSelfTest.class,
-    GridClosureProcessorRemoteTest.class,
-    GridClosureSerializationTest.class,
-    GridStartStopSelfTest.class,
-    GridProjectionForCachesSelfTest.class,
-    GridProjectionForCachesOnDaemonNodeSelfTest.class,
-    GridSpiLocalHostInjectionTest.class,
-    GridLifecycleBeanSelfTest.class,
-    GridStopWithCancelSelfTest.class,
-    GridReduceSelfTest.class,
-    GridEventConsumeSelfTest.class,
-    GridSuppressedExceptionSelfTest.class,
-    GridLifecycleAwareSelfTest.class,
-    GridMessageListenSelfTest.class,
-    GridFailFastNodeFailureDetectionSelfTest.class,
-    IgniteSlowClientDetectionSelfTest.class,
-    IgniteDaemonNodeMarshallerCacheTest.class,
-    IgniteMarshallerCacheConcurrentReadWriteTest.class,
-    GridNodeMetricsLogSelfTest.class,
-    GridLocalIgniteSerializationTest.class,
-    GridMBeansTest.class,
-    GridMbeansMiscTest.class,
-    TransactionsMXBeanImplTest.class,
-    SetTxTimeoutOnPartitionMapExchangeTest.class,
-    DiscoveryDataDeserializationFailureHanderTest.class,
-
-    FeaturesIsNotAvailableTest.class,
-
-    PartitionsEvictionTaskFailureHandlerTest.class,
-    DropCacheContextDuringEvictionTest.class,
-    EvictPartitionInLogTest.class,
-
-    IgniteExceptionInNioWorkerSelfTest.class,
-    IgniteLocalNodeMapBeforeStartTest.class,
-    OdbcConfigurationValidationSelfTest.class,
-    OdbcEscapeSequenceSelfTest.class,
-    SqlListenerUtilsTest.class,
-
-    DynamicProxySerializationMultiJvmSelfTest.class,
-
-    MarshallerContextLockingSelfTest.class,
-    MarshallerContextSelfTest.class,
-
-    SecurityPermissionSetBuilderTest.class,
-
-    AttributeNodeFilterSelfTest.class,
-
-    WALRecordTest.class,
-    WALRecordSerializationTest.class,
-
-    GridPeerDeploymentRetryTest.class,
-    GridPeerDeploymentRetryModifiedTest.class,
-
-    // Basic DB data structures.
-    PagePoolTest.class,
-    BPlusTreeSelfTest.class,
-    BPlusTreeFakeReuseSelfTest.class,
-    BPlusTreeReuseSelfTest.class,
-    IndexStorageSelfTest.class,
-    CacheFreeListSelfTest.class,
-    DataRegionMetricsSelfTest.class,
-    SwapPathConstructionSelfTest.class,
-    BitSetIntSetTest.class,
-    ImmutableIntSetTest.class,
-    IntHashMapTest.class,
-    IntRWHashMapTest.class,
-
-    IgniteMarshallerCacheFSRestoreTest.class,
-    IgniteMarshallerCacheClassNameConflictTest.class,
-    IgniteMarshallerCacheClientRequestsMappingOnMissTest.class,
-
-    IgniteDiagnosticMessagesTest.class,
-    IgniteDiagnosticMessagesMultipleConnectionsTest.class,
-
-    IgniteRejectConnectOnNodeStopTest.class,
-
-    GridCleanerTest.class,
-
-    ClassSetTest.class,
-
-    // Basic failure handlers.
-    FailureHandlerTriggeredTest.class,
-    StopNodeFailureHandlerTest.class,
-    StopNodeOrHaltFailureHandlerTest.class,
-    OomFailureHandlerTest.class,
-    TransactionIntegrityWithSystemWorkerDeathTest.class,
-    FailureProcessorLoggingTest.class,
-    FailureProcessorThreadDumpThrottlingTest.class,
-
-    AtomicOperationsInTxTest.class,
-
-    RebalanceWithDifferentThreadPoolSizeTest.class,
-
-    ListeningTestLoggerTest.class,
-
-    MessageOrderLogListenerTest.class,
-
-    CacheLocalGetSerializationTest.class,
-
-    PluginNodeValidationTest.class,
-    PluginConfigurationTest.class,
-
-    // In-memory Distributed MetaStorage.
-    DistributedMetaStorageTest.class,
-    DistributedMetaStorageFeatureTest.class,
-    DistributedMetaStorageStopTest.class,
-    DistributedMetaStorageHistoryCacheTest.class,
-    DmsDataWriterWorkerTest.class,
-    InMemoryCachedDistributedMetaStorageBridgeTest.class,
-    DistributedConfigurationInMemoryTest.class,
-    BaselineAutoAdjustMXBeanTest.class,
-
-    ConsistentIdImplicitlyExplicitlyTest.class,
-    DiagnosticLogForPartitionStatesTest.class,
-
-    // Tests against configuration variations framework.
-    ParametersTest.class,
-    VariationsIteratorTest.class,
-    NotStringSystemPropertyTest.class,
-    ConfigVariationsExecutionTest.class,
-    ConfigVariationsTestSuiteBuilderTest.class,
-
-    DeadLockOnNodeLeftExchangeTest.class,
-
-    ClassPathContentLoggingTest.class,
-
-    IncompleteDeserializationExceptionTest.class,
-
-    ClusterActivationStartedEventTest.class,
-    BaselineEventsLocalTest.class,
-    BaselineEventsRemoteTest.class,
-
-    IgniteThreadGroupNodeRestartTest.class
+    IgniteKernalSelfTestSuite.class
+//    IgniteStartUpTestSuite.class,
+//    IgniteExternalizableSelfTestSuite.class,
+//    IgniteP2PSelfTestSuite.class,
+//    IgniteCacheP2pUnmarshallingErrorTestSuite.class,
+//    IgniteStreamSelfTestSuite.class,
+//
+//    IgnitePlatformsTestSuite.class,
+//
+//    SecurityTestSuite.class,
+//
+//    GridSelfTest.class,
+//    ClusterGroupHostsSelfTest.class,
+//    IgniteMessagingWithClientTest.class,
+//    IgniteMessagingSendAsyncTest.class,
+//
+//    ClusterProcessorCheckGlobalStateComputeRequestTest.class,
+//    ClusterGroupSelfTest.class,
+//    GridMessagingSelfTest.class,
+//    GridMessagingNoPeerClassLoadingSelfTest.class,
+//
+//    GridReleaseTypeSelfTest.class,
+//    GridProductVersionSelfTest.class,
+//    GridAffinityAssignmentV2Test.class,
+//    GridAffinityAssignmentV2TestNoOptimizations.class,
+//    GridHistoryAffinityAssignmentTest.class,
+//    GridHistoryAffinityAssignmentTestNoOptimization.class,
+//    GridAffinityProcessorRendezvousSelfTest.class,
+//    GridAffinityProcessorMemoryLeakTest.class,
+//    GridClosureProcessorSelfTest.class,
+//    GridClosureProcessorRemoteTest.class,
+//    GridClosureSerializationTest.class,
+//    GridStartStopSelfTest.class,
+//    GridProjectionForCachesSelfTest.class,
+//    GridProjectionForCachesOnDaemonNodeSelfTest.class,
+//    GridSpiLocalHostInjectionTest.class,
+//    GridLifecycleBeanSelfTest.class,
+//    GridStopWithCancelSelfTest.class,
+//    GridReduceSelfTest.class,
+//    GridEventConsumeSelfTest.class,
+//    GridSuppressedExceptionSelfTest.class,
+//    GridLifecycleAwareSelfTest.class,
+//    GridMessageListenSelfTest.class,
+//    GridFailFastNodeFailureDetectionSelfTest.class,
+//    IgniteSlowClientDetectionSelfTest.class,
+//    IgniteDaemonNodeMarshallerCacheTest.class,
+//    IgniteMarshallerCacheConcurrentReadWriteTest.class,
+//    GridNodeMetricsLogSelfTest.class,
+//    GridLocalIgniteSerializationTest.class,
+//    GridMBeansTest.class,
+//    GridMbeansMiscTest.class,
+//    TransactionsMXBeanImplTest.class,
+//    SetTxTimeoutOnPartitionMapExchangeTest.class,
+//    DiscoveryDataDeserializationFailureHanderTest.class,
+//
+//    FeaturesIsNotAvailableTest.class,
+//
+//    PartitionsEvictionTaskFailureHandlerTest.class,
+//    DropCacheContextDuringEvictionTest.class,
+//    EvictPartitionInLogTest.class,
+//
+//    IgniteExceptionInNioWorkerSelfTest.class,
+//    IgniteLocalNodeMapBeforeStartTest.class,
+//    OdbcConfigurationValidationSelfTest.class,
+//    OdbcEscapeSequenceSelfTest.class,
+//    SqlListenerUtilsTest.class,
+//
+//    DynamicProxySerializationMultiJvmSelfTest.class,
+//
+//    MarshallerContextLockingSelfTest.class,
+//    MarshallerContextSelfTest.class,
+//
+//    SecurityPermissionSetBuilderTest.class,
+//
+//    AttributeNodeFilterSelfTest.class,
+//
+//    WALRecordTest.class,
+//    WALRecordSerializationTest.class,
+//
+//    GridPeerDeploymentRetryTest.class,
+//    GridPeerDeploymentRetryModifiedTest.class,
+//
+//    // Basic DB data structures.
+//    PagePoolTest.class,
+//    BPlusTreeSelfTest.class,
+//    BPlusTreeFakeReuseSelfTest.class,
+//    BPlusTreeReuseSelfTest.class,
+//    IndexStorageSelfTest.class,
+//    CacheFreeListSelfTest.class,
+//    DataRegionMetricsSelfTest.class,
+//    SwapPathConstructionSelfTest.class,
+//    BitSetIntSetTest.class,
+//    ImmutableIntSetTest.class,
+//    IntHashMapTest.class,
+//    IntRWHashMapTest.class,
+//
+//    IgniteMarshallerCacheFSRestoreTest.class,
+//    IgniteMarshallerCacheClassNameConflictTest.class,
+//    IgniteMarshallerCacheClientRequestsMappingOnMissTest.class,
+//
+//    IgniteDiagnosticMessagesTest.class,
+//    IgniteDiagnosticMessagesMultipleConnectionsTest.class,
+//
+//    IgniteRejectConnectOnNodeStopTest.class,
+//
+//    GridCleanerTest.class,
+//
+//    ClassSetTest.class,
+//
+//    // Basic failure handlers.
+//    FailureHandlerTriggeredTest.class,
+//    StopNodeFailureHandlerTest.class,
+//    StopNodeOrHaltFailureHandlerTest.class,
+//    OomFailureHandlerTest.class,
+//    TransactionIntegrityWithSystemWorkerDeathTest.class,
+//    FailureProcessorLoggingTest.class,
+//    FailureProcessorThreadDumpThrottlingTest.class,
+//
+//    AtomicOperationsInTxTest.class,
+//
+//    RebalanceWithDifferentThreadPoolSizeTest.class,
+//
+//    ListeningTestLoggerTest.class,
+//
+//    MessageOrderLogListenerTest.class,
+//
+//    CacheLocalGetSerializationTest.class,
+//
+//    PluginNodeValidationTest.class,
+//    PluginConfigurationTest.class,
+//
+//    // In-memory Distributed MetaStorage.
+//    DistributedMetaStorageTest.class,
+//    DistributedMetaStorageFeatureTest.class,
+//    DistributedMetaStorageStopTest.class,
+//    DistributedMetaStorageHistoryCacheTest.class,
+//    DmsDataWriterWorkerTest.class,
+//    InMemoryCachedDistributedMetaStorageBridgeTest.class,
+//    DistributedConfigurationInMemoryTest.class,
+//    BaselineAutoAdjustMXBeanTest.class,
+//
+//    ConsistentIdImplicitlyExplicitlyTest.class,
+//    DiagnosticLogForPartitionStatesTest.class,
+//
+//    // Tests against configuration variations framework.
+//    ParametersTest.class,
+//    VariationsIteratorTest.class,
+//    NotStringSystemPropertyTest.class,
+//    ConfigVariationsExecutionTest.class,
+//    ConfigVariationsTestSuiteBuilderTest.class,
+//
+//    DeadLockOnNodeLeftExchangeTest.class,
+//
+//    ClassPathContentLoggingTest.class,
+//
+//    IncompleteDeserializationExceptionTest.class,
+//
+//    ClusterActivationStartedEventTest.class,
+//    BaselineEventsLocalTest.class,
+//    BaselineEventsRemoteTest.class,
+//
+//    IgniteThreadGroupNodeRestartTest.class
 })
 public class IgniteBasicTestSuite {
 }
