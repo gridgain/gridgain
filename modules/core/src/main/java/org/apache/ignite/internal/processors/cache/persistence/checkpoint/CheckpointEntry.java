@@ -206,9 +206,11 @@ public class CheckpointEntry {
         }
 
         /**
+         * Returns number of partitions.
          *
+         * @return Number of partitions.
          */
-        public long size(){
+        public int size(){
             return idx;
         }
 
