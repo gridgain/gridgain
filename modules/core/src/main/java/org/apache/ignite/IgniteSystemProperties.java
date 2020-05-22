@@ -272,7 +272,10 @@ public final class IgniteSystemProperties {
     /**
      * Timeout after which all uncompleted transactions originated by left node will be
      * salvaged (i.e. invalidated and committed).
+     *
+     * @deprecated Transactions are salvaged immediately to reduce PME latency.
      */
+    @Deprecated
     public static final String IGNITE_TX_SALVAGE_TIMEOUT = "IGNITE_TX_SALVAGE_TIMEOUT";
 
     /**

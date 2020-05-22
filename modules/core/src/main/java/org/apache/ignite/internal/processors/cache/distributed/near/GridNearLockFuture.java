@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlock;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
+import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -700,8 +701,10 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
      * Cancellation has special meaning for lock futures. It's called then lock must be released on rollback.
      */
     @Override public boolean cancel() {
-        if (inTx())
-            onError(tx.rollbackException());
+        if (inTx()) {
+            onError(tx.commitError() != null ?
+                new IgniteTxRollbackCheckedException(tx.commitError()) : tx.rollbackException());
+        }
 
         return onComplete(false, true);
     }
