@@ -83,13 +83,6 @@ public interface H2MemoryTracker extends AutoCloseable {
     public H2MemoryTracker createChildTracker();
 
     /**
-     * Callback to release resources allocated for child tracker.
-     *
-     * @param child Child whose resources should be released.
-     */
-    public void onChildClosed(H2MemoryTracker child);
-
-    /**
      * Whether current tracker was closed or not.
      *
      * @return {@code true} if current tracker was closed.

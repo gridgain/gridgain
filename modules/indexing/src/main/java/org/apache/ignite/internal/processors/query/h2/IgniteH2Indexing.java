@@ -964,6 +964,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2MemoryTracker tracker = null;
 
         if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
+            // we have to create child tracker here because the tracker will be reused
+            // for all local steps (maps and reduce) and will be closed along with each sessions.
             tracker = ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
 
         if (tracker == null)

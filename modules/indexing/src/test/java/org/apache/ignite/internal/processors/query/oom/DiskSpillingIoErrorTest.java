@@ -204,10 +204,6 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void onChildClosed(H2MemoryTracker child) {
-        }
-
-        /** {@inheritDoc} */
         @Override public boolean closed() {
             return false;
         }

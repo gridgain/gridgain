@@ -500,13 +500,14 @@ public class GridReduceQueryExecutor {
                         else {
                             ensureQueryNotCancelled(cancel);
 
-                        QueryContext qctx = new QueryContext(
-                            0,
-                            null,
-                            null,
-                            null,
-                            null,
-                            true);
+                            QueryContext qctx = new QueryContext(
+                                0,
+                                null,
+                                null,
+                                null,
+                                null,
+                                true
+                            );
 
                             H2Utils.setupConnection(conn, qctx, false, enforceJoinOrder);
 

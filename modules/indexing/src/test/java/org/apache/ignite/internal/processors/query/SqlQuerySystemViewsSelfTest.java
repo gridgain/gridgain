@@ -547,11 +547,6 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void onChildClosed(H2MemoryTracker child) {
-            // NO-OP
-        }
-
-        /** {@inheritDoc} */
         @Override public boolean closed() {
             return false;
         }

@@ -171,10 +171,6 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
                 return null;
             }
 
-            @Override public void onChildClosed(H2MemoryTracker child) {
-
-            }
-
             @Override public boolean closed() {
                 return false;
             }

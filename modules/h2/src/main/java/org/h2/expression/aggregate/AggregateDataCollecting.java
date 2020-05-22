@@ -10,7 +10,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.TreeSet;
-
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.api.ErrorCode;
 import org.h2.engine.Constants;
@@ -38,7 +37,7 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
     private Value shared;
 
-    private H2MemoryTracker tracker;
+    private long memReserved;
 
 
     /**
@@ -71,15 +70,14 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
             values = c = distinct ? new TreeSet<>(ses.getDatabase().getCompareMode()) : new ArrayList<Value>();
         }
 
-        if (tracker == null && ses.memoryTracker() != null)
-            tracker = ses.memoryTracker().createChildTracker();
-
-        if (c.add(v) && tracker != null) {
+        H2MemoryTracker tracker;
+        if (c.add(v) && (tracker = ses.memoryTracker()) != null) {
             long size = distinct ? 40 /* TreeMap.Entry */ : Constants.MEMORY_POINTER;
 
             size += v.getMemory();
 
             tracker.reserve(size);
+            memReserved += size;
         }
     }
 
@@ -158,13 +156,18 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
         if (values != null)
             values = null;
 
-        if (tracker != null)
-            tracker.release(tracker.reserved());
+        if (memReserved > 0) {
+            assert ses.memoryTracker() != null;
+
+            ses.memoryTracker().release(memReserved);
+
+            memReserved = 0;
+        }
     }
 
     /** */
     @Override public long getMemory() {
-        return tracker.reserved();
+        return memReserved;
     }
 
     /** */

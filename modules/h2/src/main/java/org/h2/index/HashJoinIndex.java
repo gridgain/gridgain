@@ -69,8 +69,8 @@ public class HashJoinIndex extends BaseIndex {
     /** Filter index condition. */
     private ArrayList<IndexCondition> filterIdxCond;
 
-    /** Memory tracker. */
-    private H2MemoryTracker tracker;
+    /** Memory reserved by this index. */
+    private long memReserved;
 
     /**
      * @param tbl Table to build temporary hash join index.
@@ -425,7 +425,7 @@ public class HashJoinIndex extends BaseIndex {
         hashTbl = new HashMap<>();
 
         // Don't use ignorecase on build.
-        tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
+        H2MemoryTracker tracker = ses.memoryTracker();
 
         while (cur.next()) {
             Row r = cur.get();
@@ -446,6 +446,8 @@ public class HashJoinIndex extends BaseIndex {
                     size += Constants.MEMORY_POINTER + r.getMemory();
 
                     tracker.reserve(size);
+
+                    memReserved += size;
                 }
 
                 if (keyRows == null) {
@@ -507,10 +509,11 @@ public class HashJoinIndex extends BaseIndex {
     public void clearHashTable(Session session) {
         hashTbl = null;
 
-        if (tracker != null)
-            tracker.close();
+        if (memReserved > 0) {
+            assert session.memoryTracker() != null;
 
-        tracker = null;
+            session.memoryTracker().release(memReserved);
+        }
     }
 
     /**

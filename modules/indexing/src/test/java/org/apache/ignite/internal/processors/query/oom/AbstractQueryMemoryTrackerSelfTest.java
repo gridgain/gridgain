@@ -56,6 +56,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Row count. */
     static final int BIG_TABLE_SIZE = 10_000;
 
+    /** Reservation block size. */
+    protected static final long RESERVATION_BLOCK_SIZE = KB;
+
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
 
@@ -73,7 +76,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         super.beforeTestsStarted();
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
-        System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(KB));
+        System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(RESERVATION_BLOCK_SIZE));
 
         startGrid(0);
 
@@ -188,7 +191,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      */
     private void populateData() {
         for (int i = 0; i < SMALL_TABLE_SIZE; ++i)
-            execSql("insert into T VALUES (?, ?, ?)", i, i, UUID.randomUUID().toString());
+            // move integers out of H2's integer cache range to make row size more predictable
+            execSql("insert into T VALUES (?, ?, ?)", i + 512, i + 512, UUID.randomUUID().toString());
 
         for (int i = 0; i < BIG_TABLE_SIZE; ++i)
             execSql("insert into K VALUES (?, ?, ?, ?, ?)", i, i, i % 100, i % 100, UUID.randomUUID().toString());

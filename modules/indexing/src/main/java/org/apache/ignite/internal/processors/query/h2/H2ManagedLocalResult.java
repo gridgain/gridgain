@@ -57,9 +57,6 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Disk spilling (offloading) manager. */
     private ResultExternal external;
 
-    /** Query memory tracker. */
-    private H2MemoryTracker memTracker;
-
     /** Reserved memory. */
     private long memReserved;
 
@@ -86,11 +83,6 @@ public class H2ManagedLocalResult implements LocalResult {
         this.expressions = expressions;
     }
 
-    private void initMemTracker() {
-        if (memTracker == null)
-            memTracker = session.memoryTracker() != null ? session.memoryTracker().createChildTracker() : null;
-    }
-
     /**
      * Checks available memory.
      *
@@ -101,6 +93,8 @@ public class H2ManagedLocalResult implements LocalResult {
      */
     private boolean hasAvailableMemory(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
+
+        H2MemoryTracker memTracker = session.memoryTracker();
 
         if (memTracker == null)
             return true; // No memory management set.
@@ -336,7 +330,6 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void addRow(Value[] values) {
         cloneLobs(values);
-        initMemTracker();
         if (isAnyDistinct()) {
             if (distinctRows != null) {
                 ValueRow array = getDistinctRow(values);
@@ -384,7 +377,7 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
-        memTracker.release(memTracker.reserved());
+        session.memoryTracker().release(memReserved);
 
         memReserved = 0;
     }
@@ -396,7 +389,6 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void done() {
-        initMemTracker();
         if (external != null)
             addRowsToDisk(false);
 
@@ -482,7 +474,6 @@ public class H2ManagedLocalResult implements LocalResult {
         external = null;
 
         temp.reset();
-        initMemTracker();
 
         while (--offset >= 0)
             temp.next();
@@ -634,7 +625,7 @@ public class H2ManagedLocalResult implements LocalResult {
      * @return Memory tracker.
      */
     public H2MemoryTracker memoryTracker() {
-        return memTracker;
+        return session.memoryTracker();
     }
 
 
@@ -644,7 +635,14 @@ public class H2ManagedLocalResult implements LocalResult {
         distinctRows = null;
         rows = null;
 
-        if (memTracker != null)
-            memTracker.close();
+        if (memReserved > 0) {
+            H2MemoryTracker tracker = session.memoryTracker();
+
+            assert tracker != null;
+
+            tracker.release(memReserved);
+
+            memReserved = 0;
+        }
     }
 }

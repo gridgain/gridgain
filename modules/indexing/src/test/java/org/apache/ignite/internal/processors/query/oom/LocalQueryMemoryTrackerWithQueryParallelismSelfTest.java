@@ -17,17 +17,17 @@
 package org.apache.ignite.internal.processors.query.oom;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.UUID;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.h2.value.ValueInt;
+import org.h2.value.ValueString;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
@@ -75,36 +75,44 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
     /** {@inheritDoc} */
     @Test
+    @SuppressWarnings("ThrowableNotThrown")
     @Override public void testGlobalQuota() throws Exception {
         maxMem = -1L;
 
-        final List<QueryCursor> cursors = new ArrayList<>();
+        final List<QueryCursor<?>> cursors = new ArrayList<>();
 
         IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
-        assertEquals(10L * MB, h2.memoryManager().memoryLimit());
-
         try {
-            CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
+            GridTestUtils.assertThrows(log, () -> {
                 for (int i = 0; i < 100; i++) {
-                    QueryCursor<List<?>> cur = query("select T.name, avg(T.id), sum(T.ref_key) from T GROUP BY T.name",
-                        true);
+                    QueryCursor<List<?>> cur = query("select * from T", false);
 
                     cursors.add(cur);
 
-                    Iterator<List<?>> iter = cur.iterator();
-                    iter.next();
+                    cur.iterator();
                 }
 
                 return null;
             }, CacheException.class, "SQL query run out of memory: Global quota exceeded.");
 
-            assertEquals(9, cursors.size());
+            long rowSize = H2Utils.rowSizeInBytes(new Object[] {ValueInt.get(1024), ValueInt.get(1024),
+                ValueString.get(UUID.randomUUID().toString())});
+
+            long resSetSize = rowSize * SMALL_TABLE_SIZE;
+
+            // align to the size of the reservation block
+            if (resSetSize % RESERVATION_BLOCK_SIZE != 0)
+                resSetSize = (resSetSize / RESERVATION_BLOCK_SIZE + 1) * RESERVATION_BLOCK_SIZE;
+
+            int expCnt = (int)(globalQuotaSize() / resSetSize);
+
+            assertEquals(expCnt, cursors.size());
 
             assertTrue(h2.memoryManager().memoryLimit() < h2.memoryManager().reserved() + MB);
         }
         finally {
-            for (QueryCursor c : cursors)
+            for (QueryCursor<?> c : cursors)
                 IgniteUtils.closeQuiet(c);
         }
     }
@@ -121,10 +129,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         long rowCnt = localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum();
 
         assertTrue(3000 > rowCnt);
-
-        Map<H2MemoryTracker, Long> collect = localResults.stream().collect(
-            Collectors.toMap(H2ManagedLocalResult::memoryTracker, H2ManagedLocalResult::memoryReserved, Long::sum));
-        assertTrue(collect.values().stream().allMatch(s -> s < maxMem));
+        assertTrue(localResults.stream().allMatch(r -> r.memoryReserved() < maxMem));
     }
 
     /** {@inheritDoc} */

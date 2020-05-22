@@ -25,23 +25,15 @@ import org.h2.value.ValueRow;
  */
 public abstract class GroupByData {
     /** */
-    public H2MemoryTracker tracker;
-
-    /** */
     protected final Session ses;
+
+    private long memReserved;
 
     /**
      * @param ses Session.
      */
     protected GroupByData(Session ses) {
         this.ses = ses;
-        tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
-    }
-
-    /** */
-    protected void initTracker() {
-        if (tracker == null)
-            tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
     }
 
     /**
@@ -105,7 +97,7 @@ public abstract class GroupByData {
      * @param row New row.
      */
     protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
-        initTracker();
+        H2MemoryTracker tracker = ses.memoryTracker();
 
         if (tracker == null)
             return;
@@ -132,5 +124,21 @@ public abstract class GroupByData {
             tracker.reserve(size);
         else if (size < 0)
             tracker.release(-size);
+
+        memReserved += size;
+    }
+
+    /** */
+    protected void resetTracker() {
+        if (memReserved == 0)
+            return;
+
+        H2MemoryTracker tracker = ses.memoryTracker();
+
+        assert tracker != null;
+
+        tracker.release(memReserved);
+
+        memReserved = 0;
     }
 }
