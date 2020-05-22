@@ -287,9 +287,9 @@ public final class JoinBatch {
                 JoinFilter join = filters[jfId + 1];
                 if (join.isBatchFull()) {
                     // get future cursors for join and go right to fetch them
-                    current = join.find(current);
+//                    current = join.find(current);
                 }
-//                current = join.find(current);
+                current = join.find(current);
                 if (current.row(join.id) != null) {
                     // either find called or outer join with null-row
                     jfId = join.id;
@@ -396,7 +396,7 @@ public final class JoinBatch {
             }
             if (joinEmpty) {
                 // update jf.join, set an empty cursor
-//                current.updateRow(join.id, EMPTY_CURSOR, JoinRow.S_NULL, JoinRow.S_CURSOR);
+                current.updateRow(join.id, EMPTY_CURSOR, JoinRow.S_NULL, JoinRow.S_CURSOR);
             }
             return;
         }
