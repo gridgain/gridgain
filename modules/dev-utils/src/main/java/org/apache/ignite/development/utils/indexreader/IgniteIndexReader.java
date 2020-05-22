@@ -1592,9 +1592,9 @@ public class IgniteIndexReader implements AutoCloseable {
                 if (!partFile.exists())
                     continue;
 
-                try (SnapshotInputStream is = of(partFile, partId, pageSize, partFile.getParentFile().getName())) {
-                    int readPageNum = 0;
+                int readPageNum = 0;
 
+                try (SnapshotInputStream is = of(partFile, partId, pageSize, partFile.getParentFile().getName())) {
                     while (is.readNextPage(buf)) {
                         readPageNum++;
 
@@ -1623,15 +1623,14 @@ public class IgniteIndexReader implements AutoCloseable {
                             positions.set(pageIdx, new FilePosition((readPageNum - 1) * pageSize, partFile));
                     }
                 }
+                catch (Exception e) {
+                    throw new IgniteCheckedException("Error while build page positions [partId=" + partId +
+                        ", file=" + partFile.getAbsolutePath() + ", readPageNum=" + readPageNum +
+                        ", snapshotChain=" + snapshotChain + "]");
+                }
             }
 
             return positions.trimToSize();
-        }
-        catch (Exception e) {
-            throw new IgniteCheckedException(
-                format("Error while build page positions [partId=%s, snapshotChain=%s]", partId, snapshotChain),
-                e
-            );
         }
         finally {
             freeBuffer(buf);

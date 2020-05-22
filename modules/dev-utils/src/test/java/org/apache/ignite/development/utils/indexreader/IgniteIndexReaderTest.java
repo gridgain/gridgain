@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -41,11 +43,12 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
-import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -81,6 +84,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
 /**
  * Class for testing {@link IgniteIndexReader}.
@@ -317,11 +321,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      *
      * @param workDir Work directory.
      * @param partId Partition id.
-     * @param pageNum Page to corrupt.
+     * @param pageIdxCorrupt Page index to corrupt.
      * @param snapshot Snapshot directory or not.
-     * @throws IOException If failed.
+     * @throws Exception If failed.
      */
-    private void corruptFile(File workDir, int partId, int pageNum, boolean snapshot) throws IOException {
+    private void corruptFile(File workDir, int partId, int pageIdxCorrupt, boolean snapshot) throws Exception {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
 
         File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME, snapshot));
@@ -333,25 +337,50 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         if (!backup.exists())
             Files.copy(file.toPath(), backup.toPath());
 
-        try (RandomAccessFile f = new RandomAccessFile(file, "rw")) {
+        ByteBuffer buf = GridUnsafe.allocateBuffer(PAGE_SIZE);
+
+        long addr = GridUnsafe.bufferAddress(buf);
+
+        try (FileChannel c = new RandomAccessFile(file, "rw").getChannel()) {
             byte[] trash = new byte[PAGE_SIZE];
 
             ThreadLocalRandom.current().nextBytes(trash);
 
-            int hdrSize = snapshot ? 0 : new FileVersionCheckingFactory(
-                new AsyncFileIOFactory(),
-                new AsyncFileIOFactory(),
-                new DataStorageConfiguration().setPageSize(PAGE_SIZE)
-            ).headerSize(PAGE_STORE_VER);
+            int pageCnt = 0;
 
-            f.seek(pageNum * PAGE_SIZE + hdrSize);
+            while (true) {
+                buf.rewind();
 
-            f.write(trash);
+                if (c.read(buf) == -1)
+                    break;
+
+                pageCnt++;
+
+                buf.rewind();
+
+                long pageId = PageIO.getPageId(addr);
+                int pageIdx = PageIdUtils.pageIndex(pageId);
+
+                if (pageIdx != pageIdxCorrupt)
+                    continue;
+
+                buf.put(trash);
+                buf.rewind();
+
+                c.write(buf, (pageCnt - 1) * PAGE_SIZE);
+
+                return;
+            }
+
+            throw new IgniteCheckedException("Don't find pageIdx=" + pageIdxCorrupt);
+        }
+        finally {
+            GridUnsafe.freeBuffer(buf);
         }
     }
 
     /**
-     * Restores corrupted file from backup after corruption.
+     * Restores corrupted file from backup after corruption if exists.
      *
      * @param workDir Work directory.
      * @param partId Partition id.
@@ -363,7 +392,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME, snapshot));
 
-        Path backupFilesPath = new File(cacheWorkDir, fileName + ".backup").toPath();
+        File backupFiles = new File(cacheWorkDir, fileName + ".backup");
+
+        if (!backupFiles.exists())
+            return;
+
+        Path backupFilesPath = backupFiles.toPath();
 
         Files.copy(backupFilesPath, new File(cacheWorkDir, fileName).toPath(), REPLACE_EXISTING);
 
@@ -501,25 +535,25 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param travErrCnt Count of errors that can occur during traversal.
      * @param pageListsErrCnt Count of errors that can occur during page lists scan.
      * @param seqErrCnt Count of errors that can occur during sequential scan.
+     * @param idxSizeConsistent Index size should be consistent
      */
     private void checkOutput(
         String output,
         int treesCnt,
         int travErrCnt,
         int pageListsErrCnt,
-        int seqErrCnt
+        int seqErrCnt,
+        boolean idxSizeConsistent
     ) {
         assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total trees: " + treesCnt);
         assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total trees: " + treesCnt);
-        assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " +
-            (travErrCnt >= 0 ? travErrCnt : ""));
-        assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " +
-            (travErrCnt >= 0 ? travErrCnt : ""));
+        assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " + travErrCnt);
+        assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " + travErrCnt);
         assertContains(log, output, "Total errors during lists scan: " + pageListsErrCnt);
 
-        if (travErrCnt == 0)
+        if (idxSizeConsistent)
             assertContains(log, output, "No index size consistency errors found.");
-        else if (travErrCnt > 0)
+        else
             assertContains(log, output, "Index size inconsistency");
 
         if (seqErrCnt >= 0)
@@ -528,7 +562,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             assertContains(log, output, "Orphan pages were not reported due to --indexes filter.");
 
         if (travErrCnt == 0 && pageListsErrCnt == 0 && seqErrCnt == 0)
-            assertFalse(output.contains(ERROR_PREFIX));
+            assertNotContains(log, output, ERROR_PREFIX);
     }
 
     /**
@@ -642,6 +676,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /**
      * Test checks correctness of index for normal pds and snapshots.
      *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 2)Check that there are no errors in output and 19 B+trees were found;
+     * 3)Check that all indexes are present in output.
+     *
      * @throws IgniteCheckedException If failed.
      */
     @Test
@@ -653,6 +692,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
     /**
      * Test checks correctness of index and consistency of partitions with it for normal pds and snapshots.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with check partitions;
+     * 2)Check that there are no errors in output and 19 B+trees were found;
+     * 3)Check that all indexes are present in output.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -666,6 +710,11 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /**
      * Test verifies that specific indexes being checked are correct for normal pds and snapshots.
      *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with filter by indexes;
+     * 2)Check that there are no errors in output and 3 B+trees were found;
+     * 3)Check filtered indexes are present in output.
+     *
      * @throws IgniteCheckedException If failed.
      */
     @Test
@@ -678,6 +727,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /**
      * Test checks whether the index of an empty group is correct for normal pds and snapshots.
      *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #EMPTY_CACHE_GROUP_NAME};
+     * 2)Check that there are no errors in output and 1 B+tree were found;
+     * 4)Run {@link IgniteIndexReader} for a non-existent cache group;
+     * 3)Check that an exception is thrown.
+     *
      * @throws IgniteCheckedException If failed.
      */
     @Test
@@ -689,6 +744,13 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
     /**
      * Test for finding corrupted pages in index for normal pds and snapshots.
+     *
+     * Steps:
+     * 1)Currupt page in index.bin and backup it;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 3)Check that found 19 B+trees, 2 errors in sequential and transversal analysis;
+     * 4)Check that all indexes are present in output;
+     * 5)Restore backup index.bin.
      *
      * @throws Exception If failed.
      */
@@ -703,6 +765,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * Test for finding corrupted pages in index
      * and checking for consistency in partitions for normal pds and snapshots.
      *
+     * Steps:
+     * 1)Currupt pages not in reuseList of index.bin and backup it;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with check partitions;
+     * 3)Check that there are errors when checking partitions and there are no errors in reuseList;
+     * 4)Restore backup index.bin.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -713,19 +781,33 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test for finding corrupted pages in partition for normal pds and snapshots.
+     * Test for finding corrupted page in partition for normal pds and snapshots.
+     *
+     * Steps:
+     * 1)Currupt page in part-0.bin and backup it;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 2)Check that found 19 B+trees and errors when reading currupted page from partition;
+     * 3)Check that all indexes are present in output;
+     * 4)Restore backup part-0.bin.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testCorruptedPart() throws Exception {
-        checkCorruptedPart(workDir, false);
-        checkCorruptedPart(fullSnapshotDir, true);
-        checkCorruptedPart(incSnapshotDir, true);
+        checkCorruptedPart(workDir, null, false);
+        checkCorruptedPart(fullSnapshotDir, null, true);
+        checkCorruptedPart(incSnapshotDir, incFullSnapshotDir, true);
     }
 
     /**
      * Test for finding corrupted pages in index and partition for normal pds and snapshots.
+     *
+     * Steps:
+     * 1)Currupt page in index.bin, part-0.bin and backup them;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 2)Check that found 19 B+trees and errors when reading currupted page from index and partition;
+     * 3)Check that all indexes are present in output;
+     * 4)Restore backup index.bin and part-0.bin.
      *
      * @throws Exception If failed.
      */
@@ -738,6 +820,10 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
     /**
      * Test checks correctness of index of {@link #QUERY_CACHE_GROUP_NAME} for normal pds and snapshots.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #QUERY_CACHE_GROUP_NAME};
+     * 2)Check that there are no errors in output and 5 B+trees were found.
      *
      * @throws IgniteCheckedException If failed.
      */
@@ -761,18 +847,18 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         @Nullable File fullSnapshotDir,
         boolean snapshot
     ) throws Exception {
-        corruptFile(workDir, INDEX_PARTITION, 7, snapshot);
-        corruptFile(workDir, 0, 5, snapshot);
-
-        if (nonNull(fullSnapshotDir)) {
-            corruptFile(fullSnapshotDir, INDEX_PARTITION, 7, snapshot);
-            corruptFile(fullSnapshotDir, 0, 5, snapshot);
-        }
-
         try {
+            corruptFile(workDir, INDEX_PARTITION, 7, snapshot);
+            corruptFile(workDir, 0, 8, snapshot);
+
+            if (nonNull(fullSnapshotDir)) {
+                corruptFile(fullSnapshotDir, INDEX_PARTITION, 7, snapshot);
+                corruptFile(fullSnapshotDir, 0, 8, snapshot);
+            }
+
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
 
-            checkOutput(output, 19, -1, 0, 2);
+            checkOutput(output, 19, 22, 0, 2, false);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -789,25 +875,32 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checks whether corrupted pages are found in partition.
+     * Checks whether corrupted page are found in partition.
      *
      * @param workDir Work directory.
+     * @param fullSnapshotDir Only if {@code workDir} is incremental snapshot.
      * @param snapshot Snapshot directory or not.
      * @throws Exception If failed.
      */
-    private void checkCorruptedPart(File workDir, boolean snapshot) throws Exception {
-        corruptFile(workDir, 0, 7, snapshot);
-
+    private void checkCorruptedPart(File workDir, @Nullable File fullSnapshotDir, boolean snapshot) throws Exception {
         try {
+            corruptFile(workDir, 0, 8, snapshot);
+
+            if (nonNull(fullSnapshotDir))
+                corruptFile(fullSnapshotDir, 0, 8, snapshot);
+
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
 
-            checkOutput(output, 19, -1, 0, 0);
+            checkOutput(output, 19, 22, 0, 0, true);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
         }
         finally {
             restoreFile(workDir, 0, snapshot);
+
+            if (nonNull(fullSnapshotDir))
+                restoreFile(fullSnapshotDir, 0, snapshot);
         }
     }
 
@@ -823,14 +916,14 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         @Nullable File fullSnapshotDir,
         boolean snapshot
     ) throws Exception {
-        for (int i = 31; i < 35; i++) {
-            corruptFile(workDir, INDEX_PARTITION, i, snapshot);
-
-            if (nonNull(fullSnapshotDir))
-                corruptFile(fullSnapshotDir, INDEX_PARTITION, i, snapshot);
-        }
-
         try {
+            for (int i = 31; i < 35; i++) {
+                corruptFile(workDir, INDEX_PARTITION, i, snapshot);
+
+                if (nonNull(fullSnapshotDir))
+                    corruptFile(fullSnapshotDir, INDEX_PARTITION, i, snapshot);
+            }
+
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true, snapshot);
 
             // Pattern with errors count > 9
@@ -859,12 +952,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void checkCorruptedIdx(File workDir, @Nullable File fullSnapshotDir, boolean snapshot) throws Exception {
-        corruptFile(workDir, INDEX_PARTITION, 5, snapshot);
-
-        if (nonNull(fullSnapshotDir))
-            corruptFile(fullSnapshotDir, INDEX_PARTITION, 5, snapshot);
-
         try {
+            corruptFile(workDir, INDEX_PARTITION, 5, snapshot);
+
+            if (nonNull(fullSnapshotDir))
+                corruptFile(fullSnapshotDir, INDEX_PARTITION, 5, snapshot);
+
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
 
             // 1 corrupted page detected while traversing, and 1 index size inconsistency error.
@@ -873,7 +966,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
             int seqErrCnt = 2;
 
-            checkOutput(output, 19, travErrCnt, 0, seqErrCnt);
+            checkOutput(output, 19, travErrCnt, 0, seqErrCnt, false);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -896,7 +989,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     private void checkQryCacheGroup(File workDir, boolean snapshot) throws IgniteCheckedException {
         String output = runIndexReader(workDir, QUERY_CACHE_GROUP_NAME, null, false, snapshot);
 
-        checkOutput(output, 5, 0, 0, 0);
+        checkOutput(output, 5, 0, 0, 0, true);
     }
 
     /**
@@ -909,7 +1002,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     private void checkCorrectIdx(File workDir, boolean snapshot) throws IgniteCheckedException {
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false, snapshot);
 
-        checkOutput(output, 19, 0, 0, 0);
+        checkOutput(output, 19, 0, 0, 0, true);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
@@ -925,7 +1018,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     private void checkCorrectIdxWithCheckParts(File workDir, boolean snapshot) throws IgniteCheckedException {
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true, snapshot);
 
-        checkOutput(output, 19, 0, 0, 0);
+        checkOutput(output, 19, 0, 0, 0, true);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
@@ -946,7 +1039,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, idxsToCheck, false, snapshot);
 
-        checkOutput(output, 3, 0, 0, -1);
+        checkOutput(output, 3, 0, 0, -1, true);
 
         Set<String> idxSet = new HashSet<>(asList(idxsToCheck));
 
@@ -978,7 +1071,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         // Check output for empty cache group.
         String output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME, null, false, snapshot);
 
-        checkOutput(output, 1, 0, 0, 0);
+        checkOutput(output, 1, 0, 0, 0, true);
 
         // Create an empty directory and try to check it.
         String newCleanGrp = "noCache";
