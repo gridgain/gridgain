@@ -147,7 +147,6 @@
                 <exclude>org.gridgain:ignite-ml-spark-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-tensorflow-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-xgboost-model-parser</exclude>
-                <exclude>org.gridgain:ignite-management-console-agent</exclude>
             </excludes>
             <sources>
                 <includeModuleDirectory>true</includeModuleDirectory>
