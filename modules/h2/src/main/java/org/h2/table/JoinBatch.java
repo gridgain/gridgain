@@ -285,11 +285,10 @@ public final class JoinBatch {
                     return true;
                 }
                 JoinFilter join = filters[jfId + 1];
-                if (join.isBatchFull()) {
-                    // get future cursors for join and go right to fetch them
-//                    current = join.find(current);
-                }
+
+                // get future cursors for join and go right to fetch them
                 current = join.find(current);
+
                 if (current.row(join.id) != null) {
                     // either find called or outer join with null-row
                     jfId = join.id;
