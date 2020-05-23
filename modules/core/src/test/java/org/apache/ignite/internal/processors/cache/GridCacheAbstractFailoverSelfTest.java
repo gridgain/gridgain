@@ -39,6 +39,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -310,11 +311,11 @@ public abstract class GridCacheAbstractFailoverSelfTest extends GridCacheAbstrac
             });
         }
         catch (Exception e) {
-            // It is ok to fail with topology exception.
-            if (!X.hasCause(e, ClusterTopologyCheckedException.class))
+            // It is ok to fail with topology exception or tx rollback.
+            if (!X.hasCause(e, ClusterTopologyCheckedException.class) && !X.hasCause(e, TransactionRollbackException.class))
                 throw e;
             else
-                info("Failed to put values to cache due to topology exception [0," + cnt + ')');
+                info("Failed to put values to cache due to expected exception [0," + cnt + ')');
         }
     }
 
@@ -362,8 +363,8 @@ public abstract class GridCacheAbstractFailoverSelfTest extends GridCacheAbstrac
             });
         }
         catch (Exception e) {
-            // It is ok to fail with topology exception.
-            if (!X.hasCause(e, ClusterTopologyCheckedException.class))
+            // It is ok to fail with topology exception or tx rollback.
+            if (!X.hasCause(e, ClusterTopologyCheckedException.class) && !X.hasCause(e, TransactionRollbackException.class))
                 throw e;
             else
                 info("Failed to remove values from cache due to topology exception [0," + cnt + ')');
