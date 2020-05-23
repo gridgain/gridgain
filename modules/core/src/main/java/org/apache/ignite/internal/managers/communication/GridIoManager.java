@@ -138,12 +138,9 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.UTILITY_CACHE_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.isReservedGridIoPolicy;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.supportSpan;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
-import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
-import static org.apache.ignite.internal.processors.tracing.Traces.Communication.ORDERED_PROCESS;
-import static org.apache.ignite.internal.processors.tracing.Traces.Communication.REGULAR_PROCESS;
+import static org.apache.ignite.internal.processors.tracing.MTC.support;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_ORDERED_PROCESS;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_REGULAR_PROCESS;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioBackPressureControl.threadProcessingMessage;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_PAIRED_CONN;
@@ -1197,11 +1194,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         final byte plc,
         final IgniteRunnable msgC
     ) throws IgniteCheckedException {
-        Runnable c = new TraceRunnable(ctx.tracing(), REGULAR_PROCESS) {
+        Runnable c = new TraceRunnable(ctx.tracing(), COMMUNICATION_REGULAR_PROCESS) {
             @Override public void execute() {
                 try {
-                    if (isTraceable())
-                        traceTag(SpanTags.MESSAGE, traceName(msg));
+                    MTC.span().addTag(SpanTags.MESSAGE, traceName(msg));
 
                     threadProcessingMessage(true, msgC);
 
@@ -1239,7 +1235,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
         };
 
-        trace("Regular process queued");
+        MTC.span().addLog("Regular process queued");
 
         if (msg.topicOrdinal() == TOPIC_IO_TEST.ordinal()) {
             IgniteIoTestMessage msg0 = (IgniteIoTestMessage)msg.message();
@@ -1642,7 +1638,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         };
 
         try {
-            trace("Ordered process queued");
+            MTC.span().addLog("Ordered process queued");
 
             pools.poolForPolicy(plc).execute(c);
         }
@@ -1699,7 +1695,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param secCtxMsg Security subject that will be used to open a security session.
      */
     private void invokeListener(Byte plc, GridMessageListener lsnr, UUID nodeId, Object msg, @Nullable T2<UUID, SecurityContext> secCtxMsg) {
-        trace("Invoke listener");
+        MTC.span().addLog("Invoke listener");
 
         Byte oldPlc = CUR_PLC.get();
 
@@ -1753,7 +1749,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param skipOnTimeout Whether message can be skipped on timeout.
      * @param ackC Ack closure.
      * @param async If {@code true} message for local node will be processed in pool, otherwise in current thread.
-     * @param span Current span for tracing.
      * @throws IgniteCheckedException Thrown in case of any errors.
      */
     private void send(
@@ -1767,7 +1762,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         boolean skipOnTimeout,
         IgniteInClosure<IgniteException> ackC,
         boolean async,
-        Span span,
         int connIdx
     ) throws IgniteCheckedException {
         assert node != null;
@@ -1776,9 +1770,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         assert !async || msg instanceof GridIoUserMessage : msg; // Async execution was added only for IgniteMessaging.
         assert topicOrd >= 0 || !(topic instanceof GridTopic) : msg;
 
-        try (TraceSurroundings ignored = supportSpan(span)) {
-            if (isTraceable())
-                trace("Create communication msg - " + traceName(msg));
+        try (TraceSurroundings ignored = support(null)) {
+            MTC.span().addLog("Create communication msg - " + traceName(msg));
 
             GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout, connIdx);
 
@@ -1932,7 +1925,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (node == null)
             throw new ClusterTopologyCheckedException("Failed to send message to node (has node left grid?): " + nodeId);
 
-        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -1944,7 +1937,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      */
     public void sendToGridTopic(ClusterNode node, GridTopic topic, Message msg, byte plc)
         throws IgniteCheckedException {
-        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -1956,7 +1949,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      */
     public void sendToCustomTopic(ClusterNode node, Object topic, Message msg, byte plc)
         throws IgniteCheckedException {
-        send(node, topic, -1, msg, plc, false, 0, false, null, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, -1, msg, plc, false, 0, false, null, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -1969,7 +1962,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      */
     public void sendToGridTopic(ClusterNode node, GridTopic topic, Message msg, byte plc, Span span)
         throws IgniteCheckedException {
-        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, span, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -1982,7 +1975,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      */
     public void sendGeneric(ClusterNode node, Object topic, int topicOrd, Message msg, byte plc)
         throws IgniteCheckedException {
-        send(node, topic, topicOrd, msg, plc, false, 0, false, null, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, topicOrd, msg, plc, false, 0, false, null, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -2004,7 +1997,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     ) throws IgniteCheckedException {
         assert timeout > 0 || skipOnTimeout;
 
-        send(node, topic, (byte)-1, msg, plc, true, timeout, skipOnTimeout, null, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, (byte)-1, msg, plc, true, timeout, skipOnTimeout, null, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -2021,7 +2014,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         byte plc,
         IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException
     {
-        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, ackC, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, topic.ordinal(), msg, plc, false, 0, false, ackC, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -2048,7 +2041,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         for (ClusterNode node : nodes) {
             try {
-                send(node, topic, topic.ordinal(), msg, plc, true, timeout, skipOnTimeout, null, false, null, UNDEFINED_CONNECTION_INDEX);
+                send(node, topic, topic.ordinal(), msg, plc, true, timeout, skipOnTimeout, null, false, UNDEFINED_CONNECTION_INDEX);
             }
             catch (IgniteCheckedException e) {
                 if (err == null)
@@ -2079,7 +2072,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         for (ClusterNode node : nodes) {
             try {
-                send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, null, UNDEFINED_CONNECTION_INDEX);
+                send(node, topic, topic.ordinal(), msg, plc, false, 0, false, null, false, UNDEFINED_CONNECTION_INDEX);
             }
             catch (IgniteCheckedException e) {
                 if (err == null)
@@ -2114,7 +2107,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     ) throws IgniteCheckedException {
         assert timeout > 0 || skipOnTimeout;
 
-        send(node, topic, (byte)-1, msg, plc, true, timeout, skipOnTimeout, ackC, false, null, UNDEFINED_CONNECTION_INDEX);
+        send(node, topic, (byte)-1, msg, plc, true, timeout, skipOnTimeout, ackC, false, UNDEFINED_CONNECTION_INDEX);
     }
 
     /**
@@ -2190,7 +2183,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 false,
                 null,
                 async,
-                null,
                 UNDEFINED_CONNECTION_INDEX
             );
         }
@@ -2216,7 +2208,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     false,
                     null,
                     async,
-                    null,
                     UNDEFINED_CONNECTION_INDEX
                 );
             }
@@ -3025,10 +3016,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             assert reserved.get();
 
             for (OrderedMessageContainer mc = msgs.poll(); mc != null; mc = msgs.poll()) {
-                try(TraceSurroundings ignore = ctx.tracing().startChild(ORDERED_PROCESS, mc.parentSpan)) {
+                try(TraceSurroundings ignore = support(ctx.tracing().create(
+                    COMMUNICATION_ORDERED_PROCESS, mc.parentSpan))) {
                     try {
-                        if (isTraceable())
-                            traceTag(SpanTags.MESSAGE, traceName(mc.message));
+                        MTC.span().addTag(SpanTags.MESSAGE, traceName(mc.message));
 
                         invokeListener(plc, lsnr, nodeId, mc.message.message(), secSubj(mc.message));
                     }
@@ -3544,7 +3535,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                         false,
                         null,
                         false,
-                        null,
                         connIdx
                     );
                 }
