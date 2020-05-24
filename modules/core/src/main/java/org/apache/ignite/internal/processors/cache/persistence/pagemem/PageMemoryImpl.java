@@ -2318,7 +2318,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                     boolean pinned = PageHeader.isAcquired(absPageAddr);
 
                     if (pinned || ignored != null && ignored.contains(rndAddr) ||
-                        !electedPages.add(new PageWithAttrHolder(absPageAddr, rndAddr, fullId))) {
+                        !electedPages.add(new PageWithAttrHolder(absPageAddr, rndAddr, fullId)) ||
+                        fullId.pageId() == storeMgr.metaPageId(fullId.groupId())) {
                         i--;
 
                         continue;
@@ -2701,33 +2702,16 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         /** {@inheritDoc} */
         @Override public int compareTo(@NotNull PageWithAttrHolder pageIn) {
-            if (!dirty && !meta) {
-                if (pageIn.dirty || pageIn.meta)
-                    return -1;
-                else
-                    return Long.compare(ts, pageIn.ts);
-            }
-            else if (dirty && !meta) {
-                if (!pageIn.dirty && !pageIn.meta)
-                    return 1;
-                else if (pageIn.dirty && !pageIn.meta)
-                    return Long.compare(ts, pageIn.ts);
-                else if (pageIn.meta)
-                    return -1;
-            }
-            else if (meta) {
-                if (!pageIn.dirty && !pageIn.meta)
-                    return 1;
-                else if (pageIn.dirty && !pageIn.meta)
-                    return 1;
-                else if (pageIn.meta)
-                    return Long.compare(ts, pageIn.ts);
-            }
+            if (meta && pageIn.meta)
+                return Long.compare(ts, pageIn.ts);
 
-            // never step here.
-            assert false : "Forgotten comparator branch, this=" + this + " pageIn=" + pageIn;
+            if (meta || pageIn.meta)
+                return meta ? 1 : -1;
 
-            return Long.compare(ts, pageIn.ts);
+            if(dirty == pageIn.dirty)
+                return Long.compare(ts, pageIn.ts);
+
+            return dirty ? 1 : -1;
         }
 
         /** {@inheritDoc} */
