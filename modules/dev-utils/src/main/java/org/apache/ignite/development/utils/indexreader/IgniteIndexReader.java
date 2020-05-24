@@ -91,13 +91,21 @@ import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.internal.util.lang.IgnitePair;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.gridgain.grid.internal.processors.cache.database.snapshot.CacheSnapshotMetadata;
 import org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotInputStream;
 import org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotMetadataV2;
 import org.jetbrains.annotations.Nullable;
+import org.openjdk.jol.info.ClassData;
+import org.openjdk.jol.info.ClassLayout;
+import org.openjdk.jol.info.GraphLayout;
+import org.openjdk.jol.layouters.CurrentLayouter;
 
 import static java.lang.Integer.parseInt;
+import static java.lang.Math.log;
+import static java.lang.Math.max;
+import static java.lang.Math.pow;
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -107,6 +115,7 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
@@ -281,6 +290,18 @@ public class IgniteIndexReader implements AutoCloseable {
             print("Analyzing file: " + idxFile.getPath());
 
         List<File> snapshotChain = snapshot ? buildSnapshotChain(dir) : null;
+
+        if (snapshot) {
+            List<File> partFiles = partitionFiles(snapshotChain);
+
+            long sizePagePositions = sizePagePositions(partFiles);
+            long freeMemory = freeMemory();
+
+            if (freeMemory < sizePagePositions) {
+                throw new IgniteCheckedException("To analyze need to add more memory no less than " +
+                    humanReadableByteCount(sizePagePositions));
+            }
+        }
 
         idxStore = createFilePageStore(INDEX_PARTITION, FLAG_IDX, snapshot ? null : idxFile, snapshotChain);
 
@@ -1635,6 +1656,98 @@ public class IgniteIndexReader implements AutoCloseable {
         finally {
             freeBuffer(buf);
         }
+    }
+
+    /**
+     * Search for all partition and index files.
+     *
+     * @param partDirs Directories containing partition and index files.
+     * @return All partition and index files.
+     */
+    private List<File> partitionFiles(List<File> partDirs) {
+        assert !partDirs.isEmpty();
+
+        List<File> partFiles = new ArrayList<>();
+
+        for (File partDir : partDirs) {
+            File idxFile = getFile(partDir, INDEX_PARTITION, null);
+
+            if (idxFile.exists())
+                partFiles.add(idxFile);
+
+            for (int i = 0; i < partCnt; i++) {
+                File partFile = getFile(partDir, i, null);
+
+                if (partFile.exists())
+                    partFiles.add(partFile);
+            }
+        }
+
+        return partFiles;
+    }
+
+    /**
+     * Approximate estimate of memory size for storing and building
+     * {@link ArrayWrapper} of {@link FilePosition} used in {@link SnapshotFilePageStore}.
+     *
+     * @param partFiles Partiton and index files.
+     * @return Estimated size of memory in bytes.
+     */
+    private long sizePagePositions(List<File> partFiles) {
+        assert !partFiles.isEmpty();
+
+        long sizeEstimated = 0;
+
+        Map<String, List<File>> byFileName = partFiles.stream().collect(groupingBy(File::getName));
+
+        long filePosSize = ClassLayout.parseClass(FilePosition.class).instanceSize();
+        long arrWrapSize = ClassLayout.parseClass(ArrayWrapper.class).instanceSize();
+
+        for (Map.Entry<String, List<File>> entry : byFileName.entrySet()) {
+            int maxPageCnt = 0;
+
+            for (File partFile : entry.getValue()) {
+                sizeEstimated += GraphLayout.parseInstance(partFile).totalSize();
+
+                int pageCnt = (int)(partFile.length() / pageSize);
+                maxPageCnt = max(maxPageCnt, pageCnt);
+
+                sizeEstimated += filePosSize * pageCnt;
+            }
+
+            sizeEstimated += arrWrapSize;
+
+            //Size of array in {@link ArrayWrapper} for {@link SnapshotFilePageStore}, taking into account its increase during filling
+            ClassData clsData = new ClassData(Object[].class.getName(), FilePosition.class.getName(), maxPageCnt);
+            sizeEstimated += new CurrentLayouter().layout(clsData).instanceSize() * 1.5;
+        }
+
+        return sizeEstimated;
+    }
+
+    /**
+     * Converts count of bytes to a human-readable format.
+     * Examples: 10 -> 10,0 B, 2048 -> 2,0 KB, etc.
+     *
+     * @param bytes Byte count.
+     * @return Human readable format for count of bytes.
+     */
+    private String humanReadableByteCount(long bytes) {
+        long base = U.KB;
+
+        int exponent = max((int)(log(bytes) / log(base)), 0);
+        String unit = valueOf(" KMGTPE".charAt(exponent)).trim();
+
+        return format("%.1f %sB", bytes / pow(base, exponent), unit);
+    }
+
+    /**
+     * Return approximation to total amount of memory currently available for future allocated objects.
+     *
+     * @return Approximation to total amount of memory currently available for future allocated objects in bytes.
+     */
+    protected long freeMemory() {
+        return Runtime.getRuntime().freeMemory();
     }
 
     /**
