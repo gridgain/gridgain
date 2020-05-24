@@ -53,7 +53,6 @@ import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.grid.GridGain;
 import org.gridgain.grid.configuration.GridGainConfiguration;
@@ -85,6 +84,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Class for testing {@link IgniteIndexReader}.
@@ -835,6 +835,40 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test checks that if there is not enough memory to build and store {@link FilePosition}'s for snapshots,
+     * an exception will be thrown.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with return {@code 0} free memory;
+     * 2)Check that a memory failure exception was thrown.
+     */
+    @Test
+    public void testMemoryEstimation() {
+        checkMemoryEstimationForSnapshot(fullSnapshotDir);
+        checkMemoryEstimationForSnapshot(incSnapshotDir);
+    }
+
+    /**
+     * Checking estimate of amount of memory to build and store {@link FilePosition}'s for snapshot.
+     *
+     * @param workDir Work directory.
+     */
+    private void checkMemoryEstimationForSnapshot(File workDir) {
+        assertThrows(log, () -> {
+            File grpDir = new File(workDir, dataDir(CACHE_GROUP_NAME, true));
+
+            new IgniteIndexReader(grpDir, true, PAGE_SIZE, PART_CNT, PAGE_STORE_VER, null, false, null) {
+                /** {@inheritDoc} */
+                @Override protected long freeMemory() {
+                    return 0;
+                }
+            };
+
+            return null;
+        }, IgniteCheckedException.class, "To analyze need to add more memory no less than");
+    }
+
+    /**
      * Checks whether corrupted pages are found in index and partition.
      *
      * @param workDir Work directory.
@@ -1081,7 +1115,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         try {
             cleanDir.mkdir();
 
-            GridTestUtils.assertThrows(
+            assertThrows(
                 log,
                 () -> runIndexReader(workDir, newCleanGrp, null, false, snapshot),
                 IgniteCheckedException.class,
