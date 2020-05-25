@@ -18,7 +18,10 @@ package org.apache.ignite.internal.processors.rest;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -53,6 +56,12 @@ public class RestProcessorHangTest extends GridCommonAbstractTest {
     /**
      * Test that node doesn't hang if there are rest requests and discovery SPI failed
      * https://ggsystems.atlassian.net/browse/GG-28633
+     *
+     * Description: Fire up one node that always rejects connections.
+     * Fire up another node and without waiting for it to start up publish CACHE_GET request to the rest processor.
+     * This request will hang until the node start. As soon as this node fails to connect to the first one it should
+     * stop itself causing RestProcessor to wait indefinitely for all rest-workers to finish which leads to node
+     * hang on stop process.
      */
     @Test
     public void nodeStopOnDiscoverySpiFailTest() throws Exception {
@@ -122,12 +131,15 @@ public class RestProcessorHangTest extends GridCommonAbstractTest {
             }
         }).start();
 
-        stopGrid(rejectorGridName);
+        latch.await();
 
         // node should stop correctly
         assertTrue(GridTestUtils.waitForCondition(() -> {
-            return IgnitionEx.allGrids().size() == 0;
-        }, 10_000));
+            List<Ignite> ignites = IgnitionEx.allGrids();
+            return ignites.stream().noneMatch(ignite -> Objects.equals(ignite.name(), hangGridName));
+        }, 20_000));
+
+        stopGrid(rejectorGridName);
     }
 
 }
