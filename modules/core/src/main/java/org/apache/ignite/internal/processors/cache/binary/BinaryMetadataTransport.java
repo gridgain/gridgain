@@ -977,8 +977,10 @@ final class BinaryMetadataTransport {
             if (msg.origNodeId().equals(ctx.localNodeId()))
                 fut = unlabeledFutures.poll();
 
-            if (msg.rejected() && fut != null)
-                fut.onDone(MetadataUpdateResult.createFailureResult(msg.rejectionError()));
+            if (msg.rejected()) {
+                if (fut != null)
+                    fut.onDone(MetadataUpdateResult.createFailureResult(msg.rejectionError()));
+            }
             else {
                 assert !metaHld.removing() : "Invalid removing: " + metaHld;
 
