@@ -107,8 +107,16 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched5.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote in the quoted field content. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE_EMPTY_NUMERIC =
+    private static final String BULKLOAD_THREE_LINE_CSV_FILE_EMPTY_NUMERIC =
         Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric.csv")).getAbsolutePath();
+
+    /** A CSV file with one record and unmatched quote in the quoted field content. */
+    private static final String BULKLOAD_WITH_NULL_STRING =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_null_string.csv")).getAbsolutePath();
+
+    /** A CSV file with one record and unmatched quote in the quoted field content. */
+    private static final String BULKLOAD_WITH_TRIM_OFF =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_trim_off.csv")).getAbsolutePath();
 
     /** Basic COPY statement used in majority of the tests. */
     public static final String BASIC_SQL_COPY_STMT =
@@ -272,16 +280,50 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports two-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
      *
      * @throws SQLException If failed.
      */
     @Test
     public void testThreeLineFileWithEmptyNumericColumn() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_EMPTY_NUMERIC + "' into " + TBL_NAME +
+            "copy from '" + BULKLOAD_THREE_LINE_CSV_FILE_EMPTY_NUMERIC + "' into " + TBL_NAME +
                 " (_key, age, firstName, lastName)" +
                 " format csv");
+
+        assertEquals(3, updatesCnt);
+
+        checkCacheContents(TBL_NAME, true, 3);
+    }
+
+    /**
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testThreeLineFileWithEmptyNumericColumnWithNullString() throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+            "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+            " (_key, age, firstName, lastName)" +
+            " format csv nullstring 'a'");
+
+        assertEquals(3, updatesCnt);
+
+        checkCacheContents(TBL_NAME, true, 3);
+    }
+
+    /**
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testThreeLineFileWithEmptyNumericColumnWithTrimOff() throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+            "copy from '" + BULKLOAD_WITH_TRIM_OFF + "' into " + TBL_NAME +
+                " (_key, age, firstName, lastName)" +
+                " format csv nullstring 'a' trim off");
 
         assertEquals(3, updatesCnt);
 
@@ -981,6 +1023,8 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                 sp.validateValues(0, "FirstName102 MiddleName102", "LastName102", checkLastName);
             else if (id == 103)
                 sp.validateValues(0, "FirstName103 MiddleName103", "LastName103", checkLastName);
+            else if (id == 104)
+                sp.validateValues(0, " FirstName104 MiddleName104", "LastName104", checkLastName);
             else if (id == 123)
                 sp.validateValues(12, "FirstName123 MiddleName123", "LastName123", checkLastName);
             else if (id == 234)
