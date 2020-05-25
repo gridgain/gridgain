@@ -50,6 +50,7 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionOptimisticException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Assume;
 import org.junit.Test;
@@ -326,6 +327,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
                         }
                         catch (Exception e) {
                             if (X.hasCause(e,
+                                TransactionOptimisticException.class,
                                 TransactionRollbackException.class,
                                 ClusterTopologyException.class,
                                 NodeStoppingException.class))
