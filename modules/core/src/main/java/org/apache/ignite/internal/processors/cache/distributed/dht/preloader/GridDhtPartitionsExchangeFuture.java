@@ -3348,7 +3348,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top, boolean resetOwners) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
-        Map<Integer, TreeSet<Long>> nonMaxCntrs = new HashMap<>();
+        Map<Integer, TreeSet<Long>> varCntrs = new HashMap<>();
 
         for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e : msgs.entrySet()) {
             CachePartitionPartialCountersMap nodeCntrs = e.getValue().partitionUpdateCounters(top.groupId(),
@@ -3370,7 +3370,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     nodeCntrs.initialUpdateCounterAt(i) :
                     nodeCntrs.updateCounterAt(i);
 
-                nonMaxCntrs.computeIfAbsent(p, key -> new TreeSet<>()).add(cntr);
+                varCntrs.computeIfAbsent(p, key -> new TreeSet<>()).add(cntr);
 
                 if (state != GridDhtPartitionState.OWNING)
                     continue;
@@ -3395,7 +3395,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 part.initialUpdateCounter() :
                 part.updateCounter();
 
-            nonMaxCntrs.computeIfAbsent(part.id(), key -> new TreeSet<>()).add(cntr);
+            varCntrs.computeIfAbsent(part.id(), key -> new TreeSet<>()).add(cntr);
 
             if (state != GridDhtPartitionState.OWNING)
                 continue;
@@ -3420,7 +3420,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         Set<Integer> haveHistory = new HashSet<>();
 
-        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, nonMaxCntrs, haveHistory);
+        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHistory);
 
         if (resetOwners)
             resetOwnersByCounter(top, maxCntrs, haveHistory);
@@ -3466,14 +3466,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      * @param top Topology.
      * @param maxCntrs Max counter partiton map.
-     * @param nonMaxCntrs Min counter partiton map.
+     * @param varCntrs Various counters for each partition.
      * @param haveHistory Set of partitions witch have historical supplier.
      * @return List of partitions which does not have historical supplier.
      */
     private List<SupplyPartitionInfo> assignHistoricalSuppliers(
         GridDhtPartitionTopology top,
         Map<Integer, CounterWithNodes> maxCntrs,
-        Map<Integer, TreeSet<Long>> nonMaxCntrs,
+        Map<Integer, TreeSet<Long>> varCntrs,
         Set<Integer> haveHistory
     ) {
         Map<Integer, Map<Integer, Long>> partHistReserved0 = partHistReserved;
@@ -3482,17 +3482,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         List<SupplyPartitionInfo> list = new ArrayList<>();
 
-        for (Map.Entry<Integer, TreeSet<Long>> e : nonMaxCntrs.entrySet()) {
+        for (Map.Entry<Integer, TreeSet<Long>> e : varCntrs.entrySet()) {
             int p = e.getKey();
 
             CounterWithNodes maxCntrObj = maxCntrs.get(p);
 
             long maxCntr = maxCntrObj != null ? maxCntrObj.cnt : 0;
 
-            NavigableSet<Long> minCntrs = e.getValue().headSet(maxCntr, false);
+            NavigableSet<Long> nonMaxCntrs = e.getValue().headSet(maxCntr, false);
 
             // If minimal counter equals maximum then historical supplier does not necessary.
-            if (minCntrs.isEmpty())
+            if (nonMaxCntrs.isEmpty())
                 continue;
 
             T2<UUID, Long> deepestReserved = new T2<>(null, Long.MAX_VALUE);
@@ -3501,7 +3501,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 Long localHistCntr = localReserved.get(p);
 
                 if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
-                    Long ceilingMinReserved = minCntrs.ceiling(localHistCntr);
+                    Long ceilingMinReserved = nonMaxCntrs.ceiling(localHistCntr);
 
                     if (ceilingMinReserved != null) {
                         partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, ceilingMinReserved);
@@ -3518,7 +3518,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
 
                 if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
-                    Long ceilingMinReserved = minCntrs.ceiling(histCntr);
+                    Long ceilingMinReserved = nonMaxCntrs.ceiling(histCntr);
 
                     if (ceilingMinReserved != null) {
                         partHistSuppliers.put(e0.getKey(), top.groupId(), p, ceilingMinReserved);
@@ -3535,7 +3535,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (!haveHistory.contains(p)) {
                 list.add(new SupplyPartitionInfo(
                     p,
-                    minCntrs.last(),
+                    nonMaxCntrs.last(),
                     deepestReserved.get2(),
                     deepestReserved.get1()
                 ));

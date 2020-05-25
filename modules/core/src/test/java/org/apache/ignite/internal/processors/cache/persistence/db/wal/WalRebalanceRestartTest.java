@@ -98,7 +98,7 @@ public class WalRebalanceRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
-    public void testAnotherServerJoinedAndChengeBlt() throws Exception {
+    public void testAnotherServerJoinedAndChangeBlt() throws Exception {
         restartRebalance((ignite) -> {
             startGrid("new_srv");
 
