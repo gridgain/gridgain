@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvParser;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.ComparisonFailure;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -305,8 +306,63 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     public void testThreeLineFileWithEmptyNumericColumnWithNullString() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
             "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
-            " (_key, age, firstName, lastName)" +
-            " format csv nullstring 'a'");
+                " (_key, age, firstName, lastName)" +
+                " format csv nullstring 'a'");
+
+        assertEquals(3, updatesCnt);
+
+        checkCacheContents(TBL_NAME, true, 3);
+    }
+
+    /**
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testThreeLineFileWithEmptyNumericColumnWithEmptyNullString() throws SQLException {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Value conversion failed");
+    }
+
+    /**
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testThreeLineFileWithEmptyNumericColumnWithNullStringAndTrimOff() throws SQLException {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv nullstring 'a' trim off");
+
+                return null;
+            }
+        }, SQLException.class, "Value conversion failed");
+    }
+
+    /**
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testThreeLineFileWithEmptyNumericColumnWithNullStringAndTrimOn() throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+            "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                " (_key, age, firstName, lastName)" +
+                " format csv nullstring 'a' trim on");
 
         assertEquals(3, updatesCnt);
 
@@ -328,6 +384,29 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         assertEquals(3, updatesCnt);
 
         checkCacheContents(TBL_NAME, true, 3);
+    }
+
+    /**
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testThreeLineFileWithEmptyNumericColumnWithTrimOn() throws SQLException {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                int updatesCnt = stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_WITH_TRIM_OFF + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv nullstring 'a' trim on");
+
+                assertEquals(3, updatesCnt);
+
+                checkCacheContents(TBL_NAME, true, 3);
+
+                return null;
+            }
+        }, ComparisonFailure.class, "expected:<[ ]FirstName104");
     }
 
     /**
