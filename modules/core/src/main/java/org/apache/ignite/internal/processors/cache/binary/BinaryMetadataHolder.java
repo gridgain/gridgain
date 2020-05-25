@@ -35,6 +35,7 @@ final class BinaryMetadataHolder implements Serializable {
     /** */
     private final int acceptedVer;
 
+    /** */
     private final transient boolean removing;
 
     /**

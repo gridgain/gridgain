@@ -405,7 +405,7 @@ final class BinaryMetadataTransport {
      *
      * @param typeId Type ID to remove metadata.
      */
-    public GridFutureAdapter<MetadataUpdateResult> requestMetadataRemove(int typeId) throws IgniteCheckedException {
+    public GridFutureAdapter<MetadataUpdateResult> requestMetadataRemove(int typeId) {
         MetadataUpdateResultFuture resFut;
 
         do {
@@ -530,7 +530,7 @@ final class BinaryMetadataTransport {
         @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
             MetadataUpdateProposedMessage msg) {
             if (log.isDebugEnabled())
-                log.debug("Received MetadataUpdateProposedListener [typeId=" + msg.typeId() +
+                log.debug("Received MetadataUpdateProposed message [typeId=" + msg.typeId() +
                     ", typeName=" + msg.metadata().typeName() +
                     ", pendingVer=" + msg.pendingVersion() +
                     ", acceptedVer=" + msg.acceptedVersion() +
@@ -549,8 +549,8 @@ final class BinaryMetadataTransport {
                     if (holder.removing()) {
                         msg.markRejected(new BinaryObjectException("The type is removing now [typeId=" + typeId + ']'));
 
-                        pendingVer = -2;
-                        acceptedVer = -2;
+                        pendingVer = REMOVED_VERSION;
+                        acceptedVer = REMOVED_VERSION;
                     }
                     else {
                         pendingVer = holder.pendingVersion() + 1;
@@ -948,13 +948,13 @@ final class BinaryMetadataTransport {
         @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
             MetadataRemoveProposedMessage msg) {
             if (log.isDebugEnabled())
-                log.debug("Received MetadataUpdateAcceptedMessage " + msg);
+                log.debug("Received MetadataRemoveProposed message: " + msg);
 
             int typeId = msg.typeId();
 
             BinaryMetadataHolder metaHld = metaLocCache.get(typeId);
 
-            assert metaHld != null : "No metadata found for typeId " + typeId;
+            assert metaHld != null : "No metadata found for typeId: " + typeId;
 
             if (msg.isOnCoordinator()) {
                 if (metaHld == null)
@@ -962,7 +962,11 @@ final class BinaryMetadataTransport {
 
                 if (metaHld.pendingVersion() != metaHld.acceptedVersion()) {
                     msg.markRejected(new BinaryObjectException(
-                        "Remove type failed. Type is being updated now [typeId=" + typeId + ']'));
+                        "Remove type failed. " +
+                            "Type is being updated now [typeId=" + typeId
+                            + ", pendingVersion=" + metaHld.pendingVersion()
+                            + ", acceptedVersion=" + metaHld.acceptedVersion()
+                            + ']'));
                 }
 
                 msg.setOnCoordinator(false);
@@ -997,7 +1001,7 @@ final class BinaryMetadataTransport {
         @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
             MetadataRemoveAcceptedMessage msg) {
             if (log.isDebugEnabled())
-                log.debug("Received MetadataUpdateAcceptedMessage " + msg);
+                log.debug("Received MetadataRemoveAccepted message: " + msg);
 
             if (msg.duplicated())
                 return;

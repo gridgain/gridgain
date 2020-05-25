@@ -460,7 +460,7 @@ class BinaryMetadataFileStore {
                             ", typeVer=" + task.typeVersion() + ']'
                     );
 
-                task.body(BinaryMetadataFileStore.this);
+                task.execute(BinaryMetadataFileStore.this);
             }
             finally {
                 blockingSectionEnd();
@@ -491,12 +491,13 @@ class BinaryMetadataFileStore {
          * @param task Task to remove.
          */
         void finishWriteFuture(int typeId, int typeVer, OperationTask task) {
-            boolean removed = false;
+            boolean removed;
 
             if (task != null)
                 removed = preparedTasks.remove(new OperationSyncKey(typeId, typeVer), task);
             else {
                 task = preparedTasks.remove(new OperationSyncKey(typeId, typeVer));
+
                 removed = task != null;
             }
 
@@ -612,7 +613,7 @@ class BinaryMetadataFileStore {
         private final GridFutureAdapter<Void> future = new GridFutureAdapter<>();
 
         /** */
-        abstract void body(BinaryMetadataFileStore store);
+        abstract void execute(BinaryMetadataFileStore store);
 
         /** */
         abstract int typeId();
@@ -647,7 +648,7 @@ class BinaryMetadataFileStore {
         }
 
         /** {@inheritDoc} */
-        @Override void body(BinaryMetadataFileStore store) {
+        @Override void execute(BinaryMetadataFileStore store) {
             store.writeMetadata(meta);
         }
 
@@ -676,7 +677,7 @@ class BinaryMetadataFileStore {
         }
 
         /** {@inheritDoc} */
-        @Override void body(BinaryMetadataFileStore store) {
+        @Override void execute(BinaryMetadataFileStore store) {
             store.removeMeta(typeId);
         }
 
