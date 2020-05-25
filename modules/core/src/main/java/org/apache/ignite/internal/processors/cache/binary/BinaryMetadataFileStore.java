@@ -473,7 +473,16 @@ class BinaryMetadataFileStore {
          * @param typeId Binary metadata type id.
          */
         synchronized void cancelTasksForType(int typeId) {
-            preparedTasks.entrySet().removeIf(entry -> entry.getKey().typeId == typeId);
+            final IgniteCheckedException err = new IgniteCheckedException("Operation has been cancelled by type remove.");
+
+            preparedTasks.entrySet().removeIf(entry -> {
+                if (entry.getKey().typeId == typeId) {
+                    entry.getValue().future().onDone(err);
+
+                    return true;
+                }
+                return false;
+            });
         }
 
         /**
