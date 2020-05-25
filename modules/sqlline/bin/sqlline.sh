@@ -54,6 +54,16 @@ checkJava
 setIgniteHome
 
 #
+# Set supported terminal type for z/OS.
+#
+osname=`uname`
+
+if [ $osname = "OS/390" ] ; then
+    export TERM=dumb
+    JVM_OPTS="-Dfile.encoding=IBM-1047 $JVM_OPTS"
+fi
+
+#
 # Set IGNITE_LIBS.
 #
 . "${SCRIPTS_HOME}"/include/setenv.sh

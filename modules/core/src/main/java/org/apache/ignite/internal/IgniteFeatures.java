@@ -146,7 +146,10 @@ public enum IgniteFeatures {
     INVERSE_TCP_CONNECTION(35),
 
     /** Check secondary indexes inline size on join/by control utility request. */
-    CHECK_INDEX_INLINE_SIZES(36);
+    CHECK_INDEX_INLINE_SIZES(36),
+
+    /** Distributed propagation of tx collisions dump interval. */
+    DISTRIBUTED_TX_COLLISIONS_DUMP(37);
 
     /**
      * Unique feature identifier.
@@ -311,10 +314,6 @@ public enum IgniteFeatures {
 
             // Add only when tracing is enabled.
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
-                continue;
-
-            // Add only when Control Center is enabled.
-            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
             // Add only when scheduling is disabled.
