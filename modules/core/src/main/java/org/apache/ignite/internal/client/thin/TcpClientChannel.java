@@ -383,14 +383,14 @@ class TcpClientChannel implements ClientChannel {
             if (msgSize > hdrSize)
                 res = dataInput.read(msgSize - hdrSize);
         }
-        else if (status == ClientStatus.SECURITY_VIOLATION)
-            err = new ClientAuthorizationException();
         else {
             resIn = new BinaryHeapInputStream(dataInput.read(msgSize - hdrSize));
 
             String errMsg = new BinaryReaderExImpl(null, resIn, null, true).readString();
 
-            err = new ClientServerError(errMsg, status, resId);
+            err = status == ClientStatus.SECURITY_VIOLATION
+                    ? new ClientAuthorizationException(errMsg)
+                    : new ClientServerError(errMsg, status, resId);
         }
 
         if (notificationOp == null) { // Respone received.
