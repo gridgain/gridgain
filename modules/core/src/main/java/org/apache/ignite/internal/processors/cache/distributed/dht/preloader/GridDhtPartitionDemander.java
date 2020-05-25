@@ -94,6 +94,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.preloa
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.cacheGroupRebalanceStatistics;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.totalRebalanceStatistic;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
 
@@ -1442,11 +1443,22 @@ public class GridDhtPartitionDemander {
             }
 
             if (super.onDone(res, err)) {
-                if (!isInitial() && log.isInfoEnabled())
-                    log.info("Completed rebalance future: " + this);
+                if (!isInitial()) {
+                    if (log.isInfoEnabled())
+                        log.info("Completed rebalance future: " + this);
 
-                if (next != null)
-                    next.requestPartitions(); // Go to next item in chain everything if it exists.
+                    if (next != null)
+                        next.requestPartitions(); // Go to next item in chain everything if it exists.
+                    else if (res) {
+                        try {
+                            ctx.database().forceCheckpoint("Rebalance completed that started at top=" + topVer)
+                                .futureFor(FINISHED).get();
+                        }
+                        catch (IgniteCheckedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
 
                 return true;
             }

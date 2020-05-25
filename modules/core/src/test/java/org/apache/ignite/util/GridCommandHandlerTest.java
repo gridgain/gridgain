@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -66,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
@@ -337,8 +337,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Ignite ignite = startGrids(1);
 
-        injectTestSystemOut();
-
         assertFalse(ignite.cluster().active());
 
         injectTestSystemOut();
@@ -390,8 +388,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState1() throws Exception {
         Ignite ignite = startGrids(1);
 
-        injectTestSystemOut();
-
         assertFalse(ignite.cluster().active());
 
         injectTestSystemOut();
@@ -437,6 +433,54 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         ignite.cluster().active(true);
 
         assertEquals(EXIT_CODE_OK, execute("--rebalance-status"));
+    }
+
+    @Test
+    public void testRebalaceStatusDuringRebalance() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        IgniteCache cache = ignite.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setBackups(1));
+
+        cache.put(0, 0);
+
+        awaitPartitionMapExchange();
+
+        ignite(1).close();
+
+        cache.put(0, 1);
+
+        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(1));
+
+        TestRecordingCommunicationSpi spi = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
+
+        spi.blockMessages(GridDhtPartitionDemandMessage.class, getTestIgniteInstanceName(0));
+
+        startGrid(optimize(cfg));
+
+        spi.waitForBlocked();
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--rebalance-status", "caches_view"));
+
+        assertContains(log, testOut.toString(), "Rebalance is progressing.");
+
+        sysOut.println(testOut);
+
+        testOut.reset();
+
+        spi.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertEquals(EXIT_CODE_OK, execute("--rebalance-status"));
+
+        assertContains(log, testOut.toString(), "Rebalance completed.");
     }
 
     /**

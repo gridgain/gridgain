@@ -332,6 +332,48 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
+     * @return Map grout id by nodes.
+     */
+    public Map<Integer, Set<ClusterNode>> waitGroupNodes() {
+        synchronized (mux) {
+            if (waitInfo == null || !waitInfo.topVer.equals(lastAffVer))
+                return Collections.emptyMap();
+
+            Map<Integer, Set<ClusterNode>>  res = new HashMap<>();
+
+            for (Integer grpId : waitInfo.waitGrps.keySet()) {
+                CacheGroupContext grpCtx = context().cache().cacheGroup(grpId);
+
+                if (grpCtx == null)
+                    continue;
+
+                Set<Integer> partWait = waitInfo.waitGrps.get(grpId);
+
+                GridDhtPartitionTopology top = grpCtx.topology();
+
+                if (partWait != null) {
+                    Set<ClusterNode> nodes = new HashSet<>();
+
+                    for (Integer part : partWait) {
+                        List<ClusterNode> owners = top.owners(part, waitInfo.topVer);
+
+                        Set<ClusterNode> differFromIdeal = new HashSet<ClusterNode>(waitInfo.assignments.get(grpId).get(part));
+
+                        differFromIdeal.removeAll(owners);
+
+                        nodes.addAll(differFromIdeal);
+                    }
+
+                    if (!nodes.isEmpty())
+                        res.put(grpId, nodes);
+                }
+            }
+
+            return res;
+        }
+    }
+
+    /**
      * @return {@code true} if rebalance expected.
      */
     public boolean rebalanceRequired() {
