@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequestV2;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
@@ -406,7 +407,9 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             restReq.command(NOOP);
 
             ses.addMeta(CREDS_KEY, req.credentials());
-            ses.addMeta(USER_ATTR_KEY, req.userAttributes());
+
+            if (msg instanceof GridClientAuthenticationRequestV2)
+                ses.addMeta(USER_ATTR_KEY, ((GridClientAuthenticationRequestV2)req).userAttributes());
         }
         else if (msg instanceof GridClientCacheRequest) {
             GridClientCacheRequest req = (GridClientCacheRequest)msg;

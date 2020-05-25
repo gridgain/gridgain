@@ -56,6 +56,7 @@ import org.apache.ignite.internal.client.marshaller.jdk.GridClientJdkMarshaller;
 import org.apache.ignite.internal.client.marshaller.optimized.GridClientOptimizedMarshaller;
 import org.apache.ignite.internal.client.marshaller.optimized.GridClientZipOptimizedMarshaller;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequestV2;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
@@ -661,7 +662,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
      * @return AuthenticationRequest message.
      */
     private GridClientAuthenticationRequest buildAuthRequest() {
-        GridClientAuthenticationRequest req = new GridClientAuthenticationRequest();
+        GridClientAuthenticationRequestV2 req = new GridClientAuthenticationRequestV2();
 
         req.clientId(clientId);
 
