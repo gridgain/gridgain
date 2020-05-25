@@ -70,7 +70,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testNonCollocatedDistributedJoinSingleCache() throws Exception {
+    public void testNonCollocatedDistributedJoin() throws Exception {
         try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             stmt.executeUpdate("CREATE TABLE person (id LONG, name VARCHAR(64), age LONG, city_id DOUBLE, PRIMARY KEY (name)) WITH \"backups=1\";");
             stmt.executeUpdate("CREATE TABLE medical_info (id LONG, name VARCHAR(64), age LONG, blood_group VARCHAR(64), PRIMARY KEY (id)) WITH \"backups=1\";");
@@ -83,33 +83,6 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
             stmt.executeUpdate("CREATE INDEX blood_group_info_PJ_blood_group_ASC_IDX ON blood_group_info_PJ (blood_group);");
         }
 
-        populateData();
-
-        checkQueries();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNonCollocatedDistributedJoin() throws Exception {
-        try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
-            stmt.executeUpdate("CREATE TABLE person (id LONG, name VARCHAR(64), age LONG, city_id DOUBLE, PRIMARY KEY (name)) " +
-                "WITH \"cache_name=person,backups=1\";");
-            stmt.executeUpdate("CREATE TABLE medical_info (id LONG, name VARCHAR(64), age LONG, blood_group VARCHAR(64), PRIMARY KEY (id)) " +
-                "WITH \"cache_name=medical_info,backups=1\";");
-            stmt.executeUpdate("CREATE TABLE blood_group_info_P (id LONG, blood_group VARCHAR(64), universal_donor VARCHAR(64), PRIMARY KEY (blood_group)) " +
-                "WITH \"cache_name=blood_group_info_P,backups=1\";");
-            stmt.executeUpdate("CREATE TABLE blood_group_info_PJ (id LONG, blood_group VARCHAR(64), universal_donor VARCHAR(64), PRIMARY KEY (id)) " +
-                "WITH \"cache_name=blood_group_info_PJ,backups=1\";");
-
-            stmt.executeUpdate("CREATE INDEX medical_info_name_ASC_IDX ON medical_info (name);");
-            stmt.executeUpdate("CREATE INDEX medical_info_blood_group_ASC_IDX ON medical_info (blood_group);");
-
-            stmt.executeUpdate("CREATE INDEX blood_group_info_PJ_blood_group_ASC_IDX ON blood_group_info_PJ (blood_group);");
-        }
-
-        awaitPartitionMapExchange();
         populateData();
 
         checkQueries();

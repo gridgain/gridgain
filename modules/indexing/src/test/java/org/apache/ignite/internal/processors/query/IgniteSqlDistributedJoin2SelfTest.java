@@ -73,7 +73,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
                     new QueryEntity(String.class, Person.class).setTableName(PERSON_CACHE),
                     new QueryEntity(Long.class, MedicalInfo.class).setTableName(MED_INFO_CACHE),
                     new QueryEntity(Long.class, BloodGroupInfoPJ.class).setTableName(BLOOD_INFO_PJ_CACHE),
-                  bgQueryEntity
+                    bgQueryEntity
                 ))
         );
 
