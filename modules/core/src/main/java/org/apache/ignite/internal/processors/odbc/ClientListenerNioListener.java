@@ -203,7 +203,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                         long dur = (System.nanoTime() - startTime) / 1000;
 
                         log.debug("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
-                                ", resp=" + resp.status() + ']');
+                            ", resp=" + resp.status() + ']');
                     }
 
                     byte[] outMsg = parser.encode(resp);
