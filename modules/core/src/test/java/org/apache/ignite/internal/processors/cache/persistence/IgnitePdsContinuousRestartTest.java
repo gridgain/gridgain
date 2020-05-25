@@ -24,7 +24,6 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -37,8 +36,10 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -46,14 +47,22 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Assume;
 import org.junit.Test;
 
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
+
 /**
  * Cause by https://issues.apache.org/jira/browse/IGNITE-7278
  */
+@WithSystemProperty(key = "IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT", value = "1000")
 public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
     /** */
     private static final int GRID_CNT = 4;
@@ -258,7 +267,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
 
         startGrids(GRID_CNT);
 
-        final Ignite load = ignite(0);
+        final IgniteEx load = ignite(0);
 
         load.cluster().active(true);
 
@@ -278,6 +287,8 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
                 Random rnd = ThreadLocalRandom.current();
 
                 while (!done.get()) {
+                    final int mode = rnd.nextInt(3);
+
                     Map<Integer, Person> map = new TreeMap<>();
 
                     for (int i = 0; i < batch; i++) {
@@ -288,7 +299,28 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
 
                     while (true) {
                         try {
-                            cache.putAll(map);
+                            switch (mode) {
+                                case 0: // Pessimistic tx.
+                                    try (Transaction tx = load.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                                        cache.putAll(map);
+
+                                        tx.commit();
+                                    }
+
+                                    break;
+
+                                case 1: // Optimistic serializable tx.
+                                    try (Transaction tx = load.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
+                                        cache.putAll(map);
+
+                                        tx.commit();
+                                    }
+
+                                    break;
+
+                                default: // Implicit tx.
+                                    cache.putAll(map);
+                            }
 
                             break;
                         }
@@ -313,7 +345,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
         Random rnd = ThreadLocalRandom.current();
 
         while (System.currentTimeMillis() < end) {
-            int idx = rnd.nextInt(GRID_CNT - 1) + 1;
+            int idx = rnd.nextInt(2) + 1; // Prevent data loss.
 
             stopGrid(idx, cancel);
 
@@ -327,6 +359,13 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
         done.set(true);
 
         busyFut.get();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(load, CACHE_NAME));
+
+        for (GridDhtPartitionsExchangeFuture fut : load.context().cache().context().exchange().exchangeFutures())
+            assertTrue(fut.toString(), fut.invalidPartitions().isEmpty());
     }
 
     /**

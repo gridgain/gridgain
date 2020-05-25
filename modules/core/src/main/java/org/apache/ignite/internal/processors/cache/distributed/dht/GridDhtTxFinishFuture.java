@@ -293,11 +293,7 @@ public final class GridDhtTxFinishFuture<K, V> extends GridCacheCompoundIdentity
      * @return {@code True} if counters must be applied.
      */
     private boolean shouldApplyCountersOnRollbackError(Throwable e) {
-        return e == null ||
-            e instanceof IgniteTxRollbackCheckedException ||
-            e instanceof IgniteTxTimeoutCheckedException ||
-            e instanceof IgniteTxOptimisticCheckedException ||
-            e instanceof IgniteTxSerializationCheckedException;
+        return !(e instanceof NodeStoppingException);
     }
 
     /**
