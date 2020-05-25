@@ -542,10 +542,10 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
     /**
      *
      */
-    private void dropAllThinClientConnections() {
+    private void dropAllThinClientConnections() throws Exception {
         for (Ignite ignite : G.allGrids()) {
             ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
-                ClientListenerProcessor.class, ClientProcessorMXBean.class);
+                ClientProcessorMXBean.class, ClientListenerProcessor.class);
 
             mxBean.dropAllConnections();
         }
