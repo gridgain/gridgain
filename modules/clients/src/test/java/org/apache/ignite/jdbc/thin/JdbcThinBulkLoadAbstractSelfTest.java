@@ -325,7 +325,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Quotes are not allowed in the unquoted field, line");
+        }, SQLException.class, "Unexpected quote in the field, line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }
@@ -388,7 +388,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Quotes are not allowed in the unquoted field, line");
+        }, SQLException.class, "Unexpected quote in the field, line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }

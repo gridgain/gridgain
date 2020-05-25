@@ -141,7 +141,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                     if (c == quoteChars) {
                         if (state == ReaderState.UNQUOTED)
                             throw new IgniteCheckedException(
-                                new SQLException("Quotes are not allowed in the unquoted field, line " + line
+                                new SQLException("Unexpected quote in the field, line " + line
                                     + ", symbol " + symbol));
 
                         quotesMatched = !quotesMatched;

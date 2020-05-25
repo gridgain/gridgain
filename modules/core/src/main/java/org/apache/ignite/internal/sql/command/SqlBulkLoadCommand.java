@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
+import static org.apache.ignite.internal.sql.SqlParserUtils.parseBoolean;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseIdentifier;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseInt;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseQualifiedIdentifier;
@@ -192,6 +193,26 @@ public class SqlBulkLoadCommand implements SqlCommand {
                     String delimiter = parseString(lex);
 
                     format.fieldSeparator(Pattern.compile(delimiter));
+
+                    break;
+                }
+
+                case SqlKeyword.TRIM: {
+                    lex.shift();
+
+                    Boolean trim = parseBoolean(lex);
+
+                    format.trim(trim);
+
+                    break;
+                }
+
+                case SqlKeyword.NULLSTRING: {
+                    lex.shift();
+
+                    String nullString = parseString(lex);
+
+                    format.nullString(nullString);
 
                     break;
                 }
