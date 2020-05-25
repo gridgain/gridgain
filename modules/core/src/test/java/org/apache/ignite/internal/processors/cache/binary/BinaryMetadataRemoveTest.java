@@ -175,7 +175,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
         AtomicBoolean hookMsgs = new AtomicBoolean(true);
 
         discoveryHook = new GridTestUtils.DiscoveryHook() {
-            @Override public void handleDiscoveryMessage(DiscoverySpiCustomMessage msg) {
+            @Override public void beforeDiscovery(DiscoverySpiCustomMessage msg) {
                 if (!hookMsgs.get())
                     return;
 
