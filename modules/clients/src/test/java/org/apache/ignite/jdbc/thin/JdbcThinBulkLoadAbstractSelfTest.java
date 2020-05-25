@@ -298,7 +298,9 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement with specified
+     * null string and trim mode (ON).
+     * This test verifies that specific null string values will be correctly interpreted as null and will be inserted.
      *
      * @throws SQLException If failed.
      */
@@ -315,7 +317,10 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement with default null
+     * string and trim mode (ON).
+     * This test verifies that it is expected to fail on second value in case if there is unexpected text value
+     * in the fields that are expected to be numeric.
      *
      * @throws SQLException If failed.
      */
@@ -331,10 +336,15 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                 return null;
             }
         }, SQLException.class, "Value conversion failed");
+
+        checkCacheContents(TBL_NAME, true, 1);
     }
 
     /**
-     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement with null string
+     * specified and trim OFF.
+     * This test verifies that the field which is equal to nullstring after trimming whitespaces will fail on insert
+     * with trim turned off with 'Value conversion failed' message.
      *
      * @throws SQLException If failed.
      */
@@ -353,7 +363,10 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement with null string
+     * specified and trim ON.
+     * This test verifies that the field which is equal to nullstring after trimming whitespaces will be correctly
+     * interpreted as null and will result in integer default value (0).
      *
      * @throws SQLException If failed.
      */
@@ -370,7 +383,8 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement with trim OFF.
+     * This test verifies that values will be inserted and whitespace in the field content is expected in this case.
      *
      * @throws SQLException If failed.
      */
@@ -387,7 +401,8 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports three-entry CSV file into a table and checks the entry created using SELECT statement with trim OFF.
+     * This test verifies that values will be inserted, but value conversion will fail on whitespace in the field ([ ]).
      *
      * @throws SQLException If failed.
      */
