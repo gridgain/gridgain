@@ -44,6 +44,8 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
             .andMatches("User's query completed")
             .build();
 
+        setRootLoggerDebugLevel();
+
         testLog(grid(0)).registerListener(logLsnr);
 
         setGlobalQuota("60%");
@@ -64,6 +66,8 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
             .matches("User's query started")
             .andMatches("User's query completed")
             .build();
+
+        setRootLoggerDebugLevel();
 
         testLog(grid(0)).registerListener(logLsnr);
 

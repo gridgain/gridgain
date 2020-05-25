@@ -18,6 +18,8 @@ package org.apache.ignite.stream.kafka;
 
 import org.apache.ignite.stream.kafka.connect.IgniteSinkConnectorTest;
 import org.apache.ignite.stream.kafka.connect.IgniteSourceConnectorTest;
+import org.apache.ignite.tools.junit.JUnitTeamcityReporter;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -34,4 +36,9 @@ import org.junit.runners.Suite;
     IgniteSourceConnectorTest.class
 })
 public class IgniteKafkaStreamerSelfTestSuite {
+    /** */
+    @BeforeClass
+    public static void setUpClass() {
+        JUnitTeamcityReporter.suite = IgniteKafkaStreamerSelfTestSuite.class.getName();
+    }
 }

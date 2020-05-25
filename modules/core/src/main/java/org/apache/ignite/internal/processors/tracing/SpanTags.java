@@ -34,7 +34,7 @@ public class SpanTags {
     /** */
     public static final String ID = "id";
     /** */
-    public static final String ORDER = "id";
+    public static final String ORDER = "order";
     /** */
     public static final String EVENT = "event";
     /** */
@@ -63,6 +63,8 @@ public class SpanTags {
     public static final String NODE_ID = tag(NODE, ID);
     /** */
     public static final String MESSAGE = "message";
+    /** */
+    public static final String MESSAGE_CLASS = "message.class";
 
     /** */
     private SpanTags() {}

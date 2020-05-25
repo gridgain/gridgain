@@ -16,23 +16,6 @@
 
 package org.apache.ignite.internal.util;
 
-import java.io.UTFDataFormatException;
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
-import javax.management.DynamicMBean;
-import javax.management.JMException;
-import javax.management.MBeanRegistrationException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.naming.Context;
-import javax.naming.NamingException;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -56,6 +39,7 @@ import java.io.PrintStream;
 import java.io.Reader;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.io.UTFDataFormatException;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.management.CompilationMXBean;
@@ -166,9 +150,26 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.management.DynamicMBean;
+import javax.management.JMException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.naming.Context;
+import javax.naming.NamingException;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
+import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteDeploymentException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteIllegalStateException;
@@ -177,6 +178,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.binary.BinaryRawWriter;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
@@ -193,6 +195,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -251,6 +254,7 @@ import org.apache.ignite.lang.IgniteFutureTimeoutException;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.marshaller.Marshaller;
@@ -9451,7 +9455,7 @@ public abstract class IgniteUtils {
      * @return Socket addresses for given addresses and host names.
      */
     public static Collection<InetSocketAddress> toSocketAddresses(ClusterNode node, int port) {
-        return toSocketAddresses(node.addresses(), node.hostNames(), port);
+        return toSocketAddresses(node.addresses(), node.hostNames(), port, true);
     }
 
     /**
@@ -9461,10 +9465,11 @@ public abstract class IgniteUtils {
      * @param addrs Addresses.
      * @param hostNames Host names.
      * @param port Port.
+     * @param resolve Whether to resolve addresses or not.
      * @return Socket addresses for given addresses and host names.
      */
     public static Collection<InetSocketAddress> toSocketAddresses(Collection<String> addrs,
-        Collection<String> hostNames, int port) {
+        Collection<String> hostNames, int port, boolean resolve) {
         Set<InetSocketAddress> res = new HashSet<>(addrs.size());
 
         Iterator<String> hostNamesIt = hostNames.iterator();
@@ -9473,9 +9478,13 @@ public abstract class IgniteUtils {
             String hostName = hostNamesIt.hasNext() ? hostNamesIt.next() : null;
 
             if (!F.isEmpty(hostName)) {
-                InetSocketAddress inetSockAddr = new InetSocketAddress(hostName, port);
+                InetSocketAddress inetSockAddr = resolve
+                    ? new InetSocketAddress(hostName, port)
+                    : InetSocketAddress.createUnresolved(hostName, port);
 
-                if (inetSockAddr.isUnresolved() || inetSockAddr.getAddress().isLoopbackAddress())
+                if (resolve && inetSockAddr.isUnresolved() ||
+                    !inetSockAddr.isUnresolved() && inetSockAddr.getAddress().isLoopbackAddress()
+                )
                     inetSockAddr = new InetSocketAddress(addr, port);
 
                 res.add(inetSockAddr);
@@ -10869,7 +10878,8 @@ public abstract class IgniteUtils {
      * @return User-set max WAL archive size of triple size of the maximum checkpoint buffer.
      */
     public static long adjustedWalHistorySize(DataStorageConfiguration dsCfg, @Nullable IgniteLogger log) {
-        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE)
+        if (dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE &&
+            dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE)
             return dsCfg.getMaxWalArchiveSize();
 
         // Find out the maximum checkpoint buffer size.
@@ -12283,5 +12293,31 @@ public abstract class IgniteUtils {
      */
     public static int utfBytes(char c) {
         return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? 3 : 2;
+    }
+
+    /**
+     * Broadcasts given job to nodes that support ignite feature.
+     *
+     * @param kctx Kernal context.
+     * @param job Ignite job.
+     * @param srvrsOnly Broadcast only on server nodes.
+     * @param feature Ignite feature.
+     */
+    public static void broadcastToNodesSupportingFeature(
+        GridKernalContext kctx,
+        IgniteRunnable job,
+        boolean srvrsOnly,
+        IgniteFeatures feature
+    ) {
+        ClusterGroup cl = kctx.grid().cluster();
+
+        if (srvrsOnly)
+            cl = cl.forServers();
+
+        ClusterGroup grp = cl.forPredicate(node -> IgniteFeatures.nodeSupports(kctx, node, feature));
+
+        IgniteCompute compute = kctx.grid().compute(grp);
+
+        compute.broadcast(job);
     }
 }
