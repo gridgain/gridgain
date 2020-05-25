@@ -32,23 +32,23 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public void testAssumptionFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[testIgnored name='%s' message='%s']",
+        report(String.format("##teamcity[testIgnored name='%s' message='%s']",
             testName(failure.getDescription()), escapeForTeamcity(failure.getMessage())));
     }
 
     /** */
     @Override public void testStarted(Description desc) {
-        System.out.println(String.format("##teamcity[testStarted name='%s' captureStandardOutput='false']", testName(desc)));
+        report(String.format("##teamcity[testStarted name='%s' captureStandardOutput='false']", testName(desc)));
     }
 
     /** */
     @Override public void testFinished(Description desc) {
-        System.out.println(String.format("##teamcity[testFinished name='%s']", testName(desc)));
+        report(String.format("##teamcity[testFinished name='%s']", testName(desc)));
     }
 
     /** */
     @Override public void testFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[testFailed name='%s' message='%s' details='%s']",
+        report(String.format("##teamcity[testFailed name='%s' message='%s' details='%s']",
             testName(failure.getDescription()),
             escapeForTeamcity(failure.getException() == null ? "null" : failure.getException().getMessage()),
             escapeForTeamcity(X.getFullStackTrace(failure.getException()))));
@@ -58,8 +58,17 @@ public class JUnitTeamcityReporter extends RunListener {
     @Override public void testIgnored(Description desc) {
         Ignore annotation = desc.getAnnotation(Ignore.class);
 
-        System.out.println(String.format("##teamcity[testIgnored name='%s' message='%s']", testName(desc),
+        report(String.format("##teamcity[testIgnored name='%s' message='%s']", testName(desc),
             escapeForTeamcity(annotation == null ? null : annotation.value())));
+    }
+
+    /** */
+    private void report(String msg) {
+        System.out.flush();
+
+        System.out.println(msg);
+
+        System.out.flush();
     }
 
     /** */
