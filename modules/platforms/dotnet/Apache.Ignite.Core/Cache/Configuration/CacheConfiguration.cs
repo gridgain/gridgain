@@ -40,6 +40,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
     using Apache.Ignite.Core.Impl.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Cache.Expiry;
     using Apache.Ignite.Core.Impl.Client;
+    using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Plugin.Cache;
     using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
@@ -249,7 +250,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Initializes a new instance of the <see cref="CacheConfiguration"/> class,
         /// performing a deep copy of specified cache configuration.
         /// </summary>
-        /// <param name="other">The other configuration to perfrom deep copy from.</param>
+        /// <param name="other">The other configuration to perform deep copy from.</param>
         public CacheConfiguration(CacheConfiguration other)
         {
             if (other != null)
@@ -342,12 +343,11 @@ namespace Apache.Ignite.Core.Cache.Configuration
             AffinityFunction = AffinityFunctionSerializer.Read(reader);
             ExpiryPolicyFactory = ExpiryPolicySerializer.ReadPolicyFactory(reader);
 
+            NodeFilter = reader.ReadBoolean() ? new AttributeNodeFilter(reader) : null;
+
             KeyConfiguration = reader.ReadCollectionRaw(r => new CacheKeyConfiguration(r));
-            
-            if (reader.ReadBoolean())
-            {
-                PlatformCacheConfiguration = new PlatformCacheConfiguration(reader);
-            }
+
+            PlatformCacheConfiguration = reader.ReadBoolean() ? new PlatformCacheConfiguration(reader) : null;
 
             var count = reader.ReadInt();
 
@@ -440,29 +440,17 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
             writer.WriteCollectionRaw(QueryEntities, srvVer);
 
-            if (NearConfiguration != null)
-            {
-                writer.WriteBoolean(true);
-                NearConfiguration.Write(writer);
-            }
-            else
-                writer.WriteBoolean(false);
+            WriteNullableObject(NearConfiguration, writer, w => NearConfiguration.Write(w));
 
             EvictionPolicyBase.Write(writer, EvictionPolicy);
             AffinityFunctionSerializer.Write(writer, AffinityFunction);
             ExpiryPolicySerializer.WritePolicyFactory(writer, ExpiryPolicyFactory);
 
+            WriteNullableObject(NodeFilter, writer, w => NodeFilter.Write(w));
+
             writer.WriteCollectionRaw(KeyConfiguration);
-            
-            if (PlatformCacheConfiguration != null)
-            {
-                writer.WriteBoolean(true);
-                PlatformCacheConfiguration.Write(writer);
-            }
-            else
-            {
-                writer.WriteBoolean(false);
-            }
+
+            WriteNullableObject(PlatformCacheConfiguration, writer, w => PlatformCacheConfiguration.Write(w));
 
             if (PluginConfigurations != null)
             {
@@ -497,6 +485,27 @@ namespace Apache.Ignite.Core.Cache.Configuration
             {
                 writer.WriteInt(0);
             }
+        }
+
+        /// <summary>
+        /// Writes cache property that could be null.
+        /// If an object is null, the <code>False</code> will be written,
+        /// otherwise it will write <code>True</code> and the serialized
+        /// representation of the object.
+        /// </summary>
+        /// <param name="obj">Object.</param>
+        /// <param name="writer">Writer.</param>
+        /// <param name="action">An action that write the object to a stream.</param>
+        private static void WriteNullableObject(object obj, BinaryWriter writer, Action<BinaryWriter> action)
+        {
+            if (obj != null)
+            {
+                writer.WriteBoolean(true);
+
+                action(writer);
+            }
+            else
+                writer.WriteBoolean(false);
         }
 
         /// <summary>
@@ -953,5 +962,11 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         [IgniteExperimental]
         public PlatformCacheConfiguration PlatformCacheConfiguration { get; set; }
+
+        /// <summary>
+        /// Gets or sets node attribute filters configuration.
+        /// More details: <see cref="AttributeNodeFilter"/>. 
+        /// </summary>
+        public AttributeNodeFilter NodeFilter { get; set; }
     }
 }

@@ -110,6 +110,7 @@
     <Compile Include="Impl\Client\Endpoint.cs" />
     <Compile Include="Impl\Client\MinVersionAttribute.cs" />
     <Compile Include="Impl\Client\SocketEndpoint.cs" />
+    <Compile Include="Impl\Cluster\AttributeNodeFilter.cs" />
     <Compile Include="Impl\Common\PlatformType.cs" />
     <Compile Include="Impl\Common\TaskRunner.cs" />
     <Compile Include="Impl\Compute\ComputeRunner.cs" />

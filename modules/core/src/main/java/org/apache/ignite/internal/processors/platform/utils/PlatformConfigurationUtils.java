@@ -53,7 +53,6 @@ import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.configuration.*;
-import org.apache.ignite.configuration.PlatformCacheConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
@@ -93,6 +92,7 @@ import org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.apache.ignite.util.AttributeNodeFilter;
 
 import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_2_0;
 import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.VER_1_3_0;
@@ -232,6 +232,9 @@ public class PlatformConfigurationUtils {
         ccfg.setAffinity(readAffinityFunction(in));
         ccfg.setExpiryPolicyFactory(readExpiryPolicyFactory(in));
 
+        if (in.readBoolean())
+            ccfg.setNodeFilter(readNodeFilterConfiguration(in));
+
         int keyCnt = in.readInt();
 
         if (keyCnt > 0) {
@@ -320,6 +323,22 @@ public class PlatformConfigurationUtils {
     }
 
     /**
+     * Reads the node filter config.
+     *
+     * @param in Stream.
+     * @return AttributeNodeFilter.
+     */
+    public static AttributeNodeFilter readNodeFilterConfiguration(BinaryRawReader in) {
+        int cnt = in.readInt();
+
+        Map<String, Object> attrs = new HashMap<>(cnt);
+        for (int i = 0; i < cnt; i++)
+            attrs.put(in.readString(), in.readObject());
+
+        return new AttributeNodeFilter(attrs);
+    }
+
+    /**
      * Reads platform cache config.
      *
      * @param in Stream.
@@ -403,7 +422,7 @@ public class PlatformConfigurationUtils {
     }
 
     /**
-     * Reads the near config.
+     * Writes the near config.
      *
      * @param out Stream.
      * @param cfg NearCacheConfiguration.
@@ -413,6 +432,25 @@ public class PlatformConfigurationUtils {
 
         out.writeInt(cfg.getNearStartSize());
         writeEvictionPolicy(out, cfg.getNearEvictionPolicy());
+    }
+
+    /**
+     * Writes the node filter.
+     *
+     * @param out Stream.
+     * @param nodeFilter AttributeNodeFilter.
+     */
+    private static void writeNodefilter(BinaryRawWriter out, AttributeNodeFilter nodeFilter) {
+        assert nodeFilter != null;
+
+        Map<String, Object> attrs = nodeFilter.getAttrs();
+
+        out.writeInt(attrs.size());
+
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            out.writeString(entry.getKey());
+            out.writeObject(entry.getValue());
+        }
     }
 
     /**
@@ -1080,6 +1118,16 @@ public class PlatformConfigurationUtils {
         writeEvictionPolicy(writer, ccfg.getEvictionPolicy());
         writeAffinityFunction(writer, ccfg.getAffinity());
         writeExpiryPolicyFactory(writer, ccfg.getExpiryPolicyFactory());
+
+        IgnitePredicate nodeFilter = ccfg.getNodeFilter();
+
+        if (nodeFilter instanceof AttributeNodeFilter) {
+            writer.writeBoolean(true);
+
+            writeNodefilter(writer, (AttributeNodeFilter) nodeFilter);
+        }
+        else
+            writer.writeBoolean(false);
 
         CacheKeyConfiguration[] keys = ccfg.getKeyConfiguration();
 
