@@ -37,4 +37,16 @@ public interface DurableBackgroundTask extends Serializable {
      * @param ctx Grid kernal context.
      */
     public void execute(GridKernalContext ctx);
+
+    /**
+     * Method that marks task as complete.
+     */
+    public void complete();
+
+    /**
+     * Method that return completion flag.
+     *
+     * @return flag that task completed.
+     */
+    public boolean isCompleted();
 }

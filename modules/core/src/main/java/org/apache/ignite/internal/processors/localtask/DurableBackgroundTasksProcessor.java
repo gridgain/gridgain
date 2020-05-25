@@ -25,6 +25,8 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
@@ -41,7 +43,8 @@ import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
  * Processor that is responsible for durable background tasks that are executed on local node
  * and should be continued even after node restart.
  */
-public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
+public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener,
+        DbCheckpointListener {
     /** Prefix for metastorage keys for durable background tasks. */
     private static final String STORE_DURABLE_BACKGROUND_TASK_PREFIX = "durable-background-task-";
 
@@ -73,8 +76,10 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     private void asyncDurableBackgroundTasksExecution() {
         assert durableBackgroundTasks != null;
 
-        for (DurableBackgroundTask task : durableBackgroundTasks.values())
-            asyncDurableBackgroundTaskExecute(task, false);
+        for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
+            if (!task.isCompleted())
+                asyncDurableBackgroundTaskExecute(task, false);
+        }
     }
 
     /**
@@ -94,13 +99,13 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
                     log.info("Execution of durable background task completed: " + task.shortName());
 
-                    removeDurableBackgroundTask(task);
+                    task.complete();
                 }
                 catch (Throwable e) {
                     log.error("Could not execute durable background task: " + task.shortName(), e);
 
                     if (dropTaskIfFailed)
-                        removeDurableBackgroundTask(task);
+                        task.complete();
                 }
                 finally {
                     asyncDurableBackgroundTaskWorkers.remove(this);
@@ -124,6 +129,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     @Override public void onKernalStop(boolean cancel) {
         // Waiting for workers, but not cancelling them, trying to complete running tasks.
         awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, false, log);
+
+        ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).removeCheckpointListener(this);
     }
 
     /** {@inheritDoc} */
@@ -170,6 +177,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
                 throw new IgniteException("Failed to read key from durable background tasks storage.", e);
             }
         }
+
+        ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).addCheckpointListener(this);
 
         this.metastorage = metastorage;
     }
@@ -260,5 +269,23 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
             addDurableBackgroundTask(task);
 
         asyncDurableBackgroundTaskExecute(task, false);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+        for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
+            if (task.isCompleted())
+                removeDurableBackgroundTask(task);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+
     }
 }
