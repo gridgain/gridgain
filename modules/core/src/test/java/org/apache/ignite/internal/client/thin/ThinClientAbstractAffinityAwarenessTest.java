@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.ignite.internal.client.thin;
 
 import java.util.Arrays;
