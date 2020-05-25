@@ -39,13 +39,13 @@
 
     <files>
         <file>
-            <source>examples/pom-standalone-lgpl.xml</source>
+            <source>examples/pom-standalone.xml</source>
             <outputDirectory>/examples</outputDirectory>
             <destName>pom.xml</destName>
         </file>
 
         <file>
-            <source>examples/README-LGPL.txt</source>
+            <source>examples/README.txt</source>
             <outputDirectory>/examples</outputDirectory>
             <destName>README.txt</destName>
         </file>

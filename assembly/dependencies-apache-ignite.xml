@@ -126,12 +126,6 @@
                 <exclude>org.gridgain:ignite-visor-plugins</exclude>
                 <exclude>org.gridgain:ignite-codegen</exclude>
                 <exclude>org.gridgain:ignite-apache-license-gen</exclude>
-                <exclude>org.gridgain:ignite-hibernate-core</exclude>
-                <exclude>org.gridgain:ignite-hibernate_4.2</exclude>
-                <exclude>org.gridgain:ignite-hibernate_5.1</exclude>
-                <exclude>org.gridgain:ignite-hibernate_5.3</exclude>
-                <exclude>org.gridgain:ignite-schedule</exclude>
-                <exclude>org.gridgain:ignite-geospatial</exclude>
                 <exclude>org.gridgain:ignite-appserver-test</exclude>
                 <exclude>org.gridgain:ignite-websphere-test</exclude>
                 <exclude>org.gridgain:ignite-cassandra</exclude>

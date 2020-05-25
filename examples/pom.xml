@@ -113,6 +113,24 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
+            <artifactId>ignite-hibernate_5.1</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-schedule</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-geospatial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-shmem</artifactId>
             <version>1.0.0</version>
             <scope>test</scope>
@@ -189,35 +207,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-
-        <profile>
-            <id>lgpl</id>
-
-            <properties>
-                <lgpl.folder>src/main/java-lgpl</lgpl.folder>
-                <lgpl.test.folder>src/test/java-lgpl</lgpl.test.folder>
-            </properties>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-hibernate_5.1</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-schedule</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-geospatial</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-            </dependencies>
         </profile>
     </profiles>
 
