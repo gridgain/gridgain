@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.Checkpoint;
@@ -89,6 +90,9 @@ public class CheckpointHistory {
 
     /** Maximum size of WAL archive (in bytes) */
     private final long maxWalArchiveSize;
+
+    /** Map stores the earliest checkpoint for each partition from particular group. */
+    private Map<T2<Integer, Integer>, CheckpointEntry> erliestCp = new HashMap<>();
 
     /**
      * Constructor.
@@ -181,6 +185,59 @@ public class CheckpointHistory {
      * @param entry Entry to add.
      */
     public void addCheckpoint(CheckpointEntry entry) {
+        try {
+            Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
+
+            Set<Integer> inapplicableGrps = new HashSet<>();
+
+            Iterator<Map.Entry<T2<Integer, Integer>, CheckpointEntry>> iter = erliestCp.entrySet().iterator();
+
+            while (iter.hasNext()) {
+                Map.Entry<T2<Integer, Integer>, CheckpointEntry> grpPartCp = iter.next();
+
+                Integer grpId = grpPartCp.getKey().get1();
+
+                if (inapplicableGrps.contains(grpId) || !isCheckpointApplicableForGroup(grpId, entry)) {
+                    inapplicableGrps.add(grpId);
+
+                    iter.remove();
+
+                    continue;
+                }
+
+                Integer part = grpPartCp.getKey().get2();
+
+                int pIdx = states.get(grpId).indexByPartition(part);
+
+                if (pIdx < 0)
+                    iter.remove();
+            }
+
+            for (Integer grpId : states.keySet()) {
+                CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
+
+                if (grp == null)
+                    continue;
+
+                for (int part = 0; part < grp.config().getAffinity().partitions(); part++) {
+                    int pIdx = states.get(grpId).indexByPartition(part);
+
+                    if (pIdx >= 0) {
+                        T2<Integer, Integer> grpPartKey = new T2<>(grpId, part);
+
+                        if (!erliestCp.containsKey(grpPartKey))
+                            erliestCp.put(grpPartKey, entry);
+                    }
+
+                }
+            }
+        }
+        catch (IgniteCheckedException ex) {
+            U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
+
+            erliestCp.clear();
+        }
+
         histMap.put(entry.timestamp(), entry);
     }
 
@@ -255,7 +312,18 @@ public class CheckpointHistory {
             return false;
         }
 
-        histMap.remove(checkpoint.timestamp());
+        CheckpointEntry deletedCpEntry = histMap.remove(checkpoint.timestamp());
+
+        CheckpointEntry lastCpEntry = lastCheckpoint();
+
+        Iterator<Map.Entry<T2<Integer, Integer>, CheckpointEntry>> iter = erliestCp.entrySet().iterator();
+
+        while (iter.hasNext()) {
+            Map.Entry<T2<Integer, Integer>, CheckpointEntry> grpParCp = iter.next();
+
+            if (grpParCp.getValue() == deletedCpEntry)
+                grpParCp.setValue(lastCpEntry);
+        }
 
         return true;
     }
@@ -416,6 +484,31 @@ public class CheckpointHistory {
             return Collections.emptyMap();
 
         final Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
+
+        if (true) {
+            Set<CheckpointEntry> reservedCps = new HashSet<>();
+
+            for (Integer grpId : groupsAndPartitions.keySet()) {
+                for (Integer part : groupsAndPartitions.get(grpId)) {
+                    CheckpointEntry cpEntry = erliestCp.get(new T2<>(grpId, part));
+
+                    if (cpEntry == null)
+                        continue;
+
+                    boolean reserved = reservedCps.contains(cpEntry) ? true : cctx.wal().reserve(cpEntry.checkpointMark());
+
+                    if (reserved) {
+                        res.computeIfAbsent(grpId, partCpMap ->
+                            new T2<>("searchAndReserveCheckpoints", new HashMap<>()))
+                            .get2().put(part, cpEntry);
+                    }
+                    else
+                        log.warning("Could not reserve cp " + cpEntry.checkpointMark());
+                }
+            }
+
+            return res;
+        }
 
         CheckpointEntry prevReserved = null;
 
