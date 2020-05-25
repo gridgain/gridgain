@@ -726,10 +726,17 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
                 transitionFuts.put(msg.requestId(), new GridFutureAdapter<>());
 
+                BaselineTopology blt;
+
+                if (activate(state.state(), msg.state()) || msg.forceChangeBaselineTopology() || ClusterState.active(msg.state()) && isInMemoryCluster())
+                    blt = msg.baselineTopology();
+                else
+                    blt = state.baselineTopology();
+
                 DiscoveryDataClusterState newState = globalState = DiscoveryDataClusterState.createTransitionState(
                     msg.state(),
                     state,
-                    activate(state.state(), msg.state()) || msg.forceChangeBaselineTopology() ? msg.baselineTopology() : state.baselineTopology(),
+                    blt,
                     msg.requestId(),
                     topVer,
                     !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
@@ -1780,19 +1787,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         DiscoveryDataClusterState oldState = globalState;
 
-        boolean isInMemoryCluster = CU.isInMemoryCluster(
-            ctx.discovery().allNodes(),
-            ctx.marshallerContext().jdkMarshaller(),
-            U.resolveClassLoader(ctx.config())
-        );
-
         // We need to call this method before cluster.isBaselineAutoAdjustEnabled() because
         // by default this param is false (see cluster.isBaselineAutoAdjustEnabled())
         // for supporting compatibility, but the real value might be different and
         // might not been set because of the ordering in disco
         baselineConfiguration().initDfltAutoAdjustVars(ctx);
 
-        boolean autoAdjustBaseline = isInMemoryCluster
+        boolean autoAdjustBaseline = isInMemoryCluster()
             && ClusterState.active(oldState.state())
             && !oldState.transition()
             && cluster.isBaselineAutoAdjustEnabled()
@@ -1835,6 +1836,17 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         }
 
         return false;
+    }
+
+    /**
+     * @return {@code True} if cluster has only in-memory nodes and {@code false} otherwise.
+     */
+    private boolean isInMemoryCluster() {
+        return CU.isInMemoryCluster(
+            ctx.discovery().allNodes(),
+            ctx.marshallerContext().jdkMarshaller(),
+            U.resolveClassLoader(ctx.config())
+        );
     }
 
     /**

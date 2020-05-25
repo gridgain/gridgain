@@ -18,10 +18,7 @@ package org.apache.ignite.internal.processors.cluster;
 
 import java.util.UUID;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
-
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 
 /** */
 public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
@@ -100,11 +97,5 @@ public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
         startClientGrid(1);
 
         ig.cluster().active(true);
-    }
-
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
-    public void testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse() throws Exception {
-        super.testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse();
     }
 }
