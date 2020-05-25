@@ -95,6 +95,23 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
      * @return Future returned by closure.
      */
     protected <R> GridClientFuture<R> withReconnectHandling(ClientProjectionClosure<R> c) {
+        return withReconnectHandling(c, null);
+    }
+
+    /**
+     * This method executes request to a communication layer and handles connection error, if it occurs.
+     * In case of communication exception client instance is notified and new instance of client is created.
+     * If none of the grid servers can be reached, an exception is thrown.
+     *
+     * @param c Closure to be executed.
+     * @param excludeNodeFilter Filter for exclude some nodes (optional).
+     * @param <R> Result future type.
+     * @return Future returned by closure.
+     */
+    protected <R> GridClientFuture<R> withReconnectHandling(
+        ClientProjectionClosure<R> c,
+        @Nullable GridClientPredicate<GridClientNode> excludeNodeFilter
+    ) {
         try {
             GridClientNode node = null;
 
@@ -105,7 +122,7 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
             for (int i = 0; i < RETRY_CNT; i++) {
                 if (node == null || changeNode)
                     try {
-                        node = balancedNode(node);
+                        node = balancedNode(excludeFilter(node, excludeNodeFilter));
                     }
                     catch (GridClientException e) {
                         if (node == null)
@@ -175,8 +192,11 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
      * @param <R> Type of result in future.
      * @return Operation future.
      */
-    protected <R> GridClientFuture<R> withReconnectHandling(ClientProjectionClosure<R> c, String cacheName,
-        @Nullable Object affKey) {
+    protected <R> GridClientFuture<R> withReconnectHandling(
+        ClientProjectionClosure<R> c,
+        String cacheName,
+        @Nullable Object affKey
+    ) {
         GridClientDataAffinity affinity = client.affinity(cacheName);
 
         // If pinned (fixed-nodes) or no affinity provided use balancer.
@@ -302,8 +322,9 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
      * @return Most recently refreshed topology.
      * @throws GridClientException If failed to refresh topology.
      */
-    protected Collection<? extends GridClientNode> projectionNodes(@Nullable GridClientPredicate<GridClientNode> pred)
-        throws GridClientException {
+    protected Collection<? extends GridClientNode> projectionNodes(
+        @Nullable GridClientPredicate<GridClientNode> pred
+    ) throws GridClientException {
         Collection<? extends GridClientNode> prjNodes;
 
         if (nodes == null) {
@@ -322,32 +343,11 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
     /**
      * Return balanced node for current projection.
      *
-     * @param exclude Nodes to exclude.
+     * @param excludeFilter Nodes to exclude filter.
      * @return Balanced node.
      * @throws GridServerUnreachableException If topology is empty.
      */
-    private GridClientNode balancedNode(@Nullable final GridClientNode exclude) throws GridClientException {
-        GridClientPredicate<GridClientNode> excludeFilter = exclude == null ?
-            new GridClientPredicate<GridClientNode>() {
-                @Override public boolean apply(GridClientNode e) {
-                    return restAvailable(e, client.cfg.getProtocol());
-                }
-
-                @Override public String toString() {
-                    return "Filter nodes with available REST.";
-                }
-            } :
-            new GridClientPredicate<GridClientNode>() {
-                @Override public boolean apply(GridClientNode e) {
-                    return !exclude.equals(e) && restAvailable(e, client.cfg.getProtocol());
-                }
-
-                @Override public String toString() {
-                    return "Filter nodes with available REST and " +
-                        "exclude (probably due to connection failure) node: " + exclude.nodeId();
-                }
-            };
-
+    private GridClientNode balancedNode(GridClientPredicate<GridClientNode> excludeFilter) throws GridClientException {
         Collection<? extends GridClientNode> prjNodes = projectionNodes(excludeFilter);
 
         if (prjNodes.isEmpty())
@@ -364,6 +364,44 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
 
         return balancer.balancedNode(prjNodes);
     }
+
+    /**
+     * Creates exclude nodes filter. The node must support REST, not be same as {@code excludeNode} and not be excluded
+     * by custom {@code excludeNodesPred}.
+     *
+     * @param excludeNode Node to exclude (optional).
+     * @param excludeNodesPred Custom filter (optional).
+     * @return Filter.
+     */
+    private GridClientPredicate<GridClientNode> excludeFilter(
+        @Nullable GridClientNode excludeNode,
+        @Nullable GridClientPredicate<GridClientNode> excludeNodesPred
+    ) {
+        return new GridClientPredicate<GridClientNode>() {
+            @Override public boolean apply(GridClientNode n) {
+                if (excludeNode != null && excludeNode.equals(n))
+                    return false;
+
+                if (excludeNodesPred != null && excludeNodesPred.apply(n))
+                    return false;
+
+                return restAvailable(n, client.cfg.getProtocol());
+            }
+
+            @Override public String toString() {
+                StringBuilder sb = new StringBuilder("Filter nodes with available REST");
+
+                if (excludeNode != null)
+                    sb.append(" and exclude (probably due to connection failure) node: ").append(excludeNode.nodeId());
+
+                if (excludeNodesPred != null)
+                    sb.append(" and exclude nodes by filter: ").append(excludeNodesPred);
+
+                return sb.append(".").toString();
+            }
+        };
+    }
+
 
     /**
      * Creates a sub-projection for current projection.

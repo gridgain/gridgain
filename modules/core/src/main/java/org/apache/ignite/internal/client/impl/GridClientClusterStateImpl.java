@@ -29,6 +29,8 @@ import org.apache.ignite.internal.client.impl.id_and_tag.IdAndTagViewTask;
 import org.apache.ignite.internal.client.impl.id_and_tag.IdAndTagViewTaskResult;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
+import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
+
 /**
  *
  */
@@ -74,12 +76,12 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
 
     /** {@inheritDoc} */
     @Override public ClusterState state() throws GridClientException {
-        return withReconnectHandling(GridClientConnection::state).get();
+        return withReconnectHandling(GridClientConnection::state, nonSupportedNodes).get();
     }
 
     /** {@inheritDoc} */
     @Override public void state(ClusterState newState) throws GridClientException {
-        withReconnectHandling((con, nodeId) -> con.changeState(newState, nodeId)).get();
+        withReconnectHandling((con, nodeId) -> con.changeState(newState, nodeId), nonSupportedNodes).get();
     }
 
     /** {@inheritDoc} */
@@ -96,4 +98,19 @@ public class GridClientClusterStateImpl extends GridClientAbstractProjection<Gri
     @Override public String clusterName() throws GridClientException {
         return withReconnectHandling(GridClientConnection::clusterName).get();
     }
+
+    /**
+     * Filter nodes without support cluster read-only mode.
+     */
+    private static final GridClientPredicate<GridClientNode> nonSupportedNodes = new GridClientPredicate<GridClientNode>() {
+        /** {@inheritDoc} */
+        @Override public boolean apply(GridClientNode n) {
+            return !n.supports(CLUSTER_READ_ONLY_MODE);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Filter nodes without support " + CLUSTER_READ_ONLY_MODE + " feature.";
+        }
+    };
 }

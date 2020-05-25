@@ -312,7 +312,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
      * @param cause The cause of connection close, or {@code null} if it is an ordinal close.
      */
     @SuppressWarnings("NonPrivateFieldAccessedInSynchronizedContext")
-    private void close(GridClientConnectionCloseReason reason, boolean waitCompletion, @Nullable Throwable cause) {
+    void close(GridClientConnectionCloseReason reason, boolean waitCompletion, @Nullable Throwable cause) {
         synchronized (this) {
             if (closeReason != null)
                 return;

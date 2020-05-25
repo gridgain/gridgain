@@ -518,7 +518,10 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
         closeIdle();
 
-        conn.close(FAILED, false);
+        if (conn instanceof GridClientNioTcpConnection)
+            ((GridClientNioTcpConnection)conn).close(FAILED, false, e);
+        else
+            conn.close(FAILED, false);
     }
 
     /**
@@ -623,7 +626,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                 GridClientNioTcpConnection conn = ses.meta(GridClientNioTcpConnection.SES_META_CONN);
 
                 if (conn != null)
-                    conn.close(FAILED, false);
+                    conn.close(FAILED, false, e);
             }
         }
 
