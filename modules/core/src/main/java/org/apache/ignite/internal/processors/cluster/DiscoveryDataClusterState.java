@@ -181,8 +181,6 @@ public class DiscoveryDataClusterState implements Serializable {
         this.transitionTopVer = transitionTopVer;
         this.transitionNodes = transitionNodes;
         this.prevClusterState = prevClusterState;
-
-        new RuntimeException(this.toString()).printStackTrace();
     }
 
     /**
