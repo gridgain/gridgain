@@ -1996,6 +1996,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param req Request.
      * @param res Response.
      * @param dhtUpdRes DHT update result
+     * @param taskName Task name.
      * @return Operation result.
      * @throws GridCacheEntryRemovedException If got obsolete entry.
      */

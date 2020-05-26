@@ -591,17 +591,17 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
             cctx.tm().addCommittedTx(this);
 
         if (!empty) {
-            batchStoreCommit(writeEntries());
-
-            WALPointer ptr = null;
-
-            IgniteCheckedException err;
-
             boolean needTaskName = cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_READ) ||
                 cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_PUT) ||
                 cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_REMOVED);
 
             String taskName = needTaskName ? resolveTaskName() : null;
+
+            batchStoreCommit(writeEntries(), taskName);
+
+            WALPointer ptr = null;
+
+            IgniteCheckedException err;
 
             cctx.database().checkpointReadLock();
 
@@ -650,8 +650,11 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                 if (!F.isEmpty(txEntry.entryProcessors()) || !F.isEmpty(txEntry.filters()))
                                     txEntry.cached().unswap(false);
 
-                                IgniteBiTuple<GridCacheOperation, CacheObject> res = applyTransformClosures(txEntry,
-                                    true, null);
+                                IgniteBiTuple<GridCacheOperation, CacheObject> res = applyTransformClosures(
+                                    txEntry,
+                                    true,
+                                    null,
+                                    taskName);
 
                                 GridCacheVersion dhtVer = null;
 

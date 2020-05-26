@@ -537,7 +537,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         // Data entry to write to WAL and associated with it TxEntry.
                         List<T2<DataEntry, IgniteTxEntry>> dataEntries = null;
 
-                        batchStoreCommit(writeMap().values());
+                        batchStoreCommit(writeMap().values(), taskName);
 
                         // Node that for near transactions we grab all entries.
                         for (IgniteTxEntry txEntry : entries) {
@@ -589,7 +589,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                         txEntry.cached().unswap(false);
 
                                     IgniteBiTuple<GridCacheOperation, CacheObject> res =
-                                        applyTransformClosures(txEntry, false, ret);
+                                        applyTransformClosures(txEntry, false, ret, taskName);
 
                                     GridCacheOperation op = res.get1();
                                     CacheObject val = res.get2();
