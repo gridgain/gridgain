@@ -84,11 +84,8 @@ public class H2ManagedLocalResult implements LocalResult {
         this.visibleColumnCount = visibleColCnt;
         rowId = -1;
         this.expressions = expressions;
-    }
 
-    private void initMemTracker() {
-        if (memTracker == null)
-            memTracker = session.memoryTracker() != null ? session.memoryTracker().createChildTracker() : null;
+        memTracker = session.memoryTracker();
     }
 
     /**
@@ -336,7 +333,6 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void addRow(Value[] values) {
         cloneLobs(values);
-        initMemTracker();
         if (isAnyDistinct()) {
             if (distinctRows != null) {
                 ValueRow array = getDistinctRow(values);
@@ -384,7 +380,7 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
-        memTracker.release(memTracker.reserved());
+        memTracker.release(memReserved);
 
         memReserved = 0;
     }
@@ -396,7 +392,6 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void done() {
-        initMemTracker();
         if (external != null)
             addRowsToDisk(false);
 
@@ -482,7 +477,6 @@ public class H2ManagedLocalResult implements LocalResult {
         external = null;
 
         temp.reset();
-        initMemTracker();
 
         while (--offset >= 0)
             temp.next();
@@ -644,7 +638,14 @@ public class H2ManagedLocalResult implements LocalResult {
         distinctRows = null;
         rows = null;
 
-        if (memTracker != null)
-            memTracker.close();
+        if (memReserved > 0) {
+            H2MemoryTracker tracker = session.memoryTracker();
+
+            assert tracker != null;
+
+            tracker.release(memReserved);
+
+            memReserved = 0;
+        }
     }
 }
