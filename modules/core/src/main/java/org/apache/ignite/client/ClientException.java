@@ -17,7 +17,7 @@
 package org.apache.ignite.client;
 
 /**
- * Common thin client checked exception.
+ * Common thin client unchecked exception.
  */
 public class ClientException extends RuntimeException {
     /** Serial version uid. */
