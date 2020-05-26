@@ -969,6 +969,13 @@ final class BinaryMetadataTransport {
                             + ']'));
                 }
 
+                if (metaHld.removing()) {
+                    msg.markRejected(new BinaryObjectException(
+                        "Remove type failed. " +
+                            "Type is being removed now [typeId=" + typeId
+                            + ']'));
+                }
+
                 msg.setOnCoordinator(false);
             }
 
@@ -982,8 +989,6 @@ final class BinaryMetadataTransport {
                     fut.onDone(MetadataUpdateResult.createFailureResult(msg.rejectionError()));
             }
             else {
-                assert !metaHld.removing() : "Invalid removing: " + metaHld;
-
                 if (fut != null)
                     initSyncFor(typeId, REMOVED_VERSION, fut);
 
