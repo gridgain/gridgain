@@ -2318,8 +2318,9 @@ public class PageMemoryImpl implements PageMemoryEx {
                     boolean pinned = PageHeader.isAcquired(absPageAddr);
 
                     if (pinned || ignored != null && ignored.contains(rndAddr) ||
-                        !electedPages.add(new PageWithAttrHolder(absPageAddr, rndAddr, fullId)) ||
-                        fullId.pageId() == storeMgr.metaPageId(fullId.groupId())) {
+                        fullId.pageId() == storeMgr.metaPageId(fullId.groupId()) ||
+                        !electedPages.add(new PageWithAttrHolder(absPageAddr, rndAddr, fullId))) {
+
                         i--;
 
                         continue;
