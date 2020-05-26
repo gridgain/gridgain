@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -41,15 +42,20 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
+ *
  */
 public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     /** Max retry cont. */
     private static final int MAX_RETRY_CONT = 10;
 
-    /** */
+    /**
+     *
+     */
     private static final String CACHE_NAME = "cache";
 
-    /** */
+    /**
+     *
+     */
     private GridTestUtils.DiscoveryHook discoveryHook;
 
     /** {@inheritDoc} */
@@ -79,6 +85,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     }
 
     /**
+     *
      */
     protected void startCluster() throws Exception {
         startGrid("srv0");
@@ -106,6 +113,21 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests remove not existent type and checks the exception.
+     */
+    @Test
+    public void testRemoveNotExistentType() {
+        for (Ignite testNode : G.allGrids()) {
+            GridTestUtils.assertThrows(log, () -> {
+                    ((IgniteEx)testNode).context().cacheObjects().removeType
+                        (((IgniteEx)testNode).context().cacheObjects().typeId("NotExistentType"));
+                    return null;
+                },
+                IgniteException.class, "Failed to remove metadata, type not found");
+        }
+    }
+
+    /**
      * Tests remove type metadata at all nodes (coordinator, server, client).
      */
     @Test
@@ -123,16 +145,16 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
                     if (!ignx0.context().clientNode()
                         && !ignx1.context().clientNode()
                         && !ignx2.context().clientNode())
-                        testNodeSets.add(new IgniteEx[]{ignx0, ignx1, ignx2});
+                        testNodeSets.add(new IgniteEx[] {ignx0, ignx1, ignx2});
                 }
             }
         }
 
-        testNodeSets.add(new IgniteEx[]{grid("srv0"), grid("cli0"), grid("cli0")});
-        testNodeSets.add(new IgniteEx[]{grid("cli0"), grid("cli0"), grid("cli0")});
-        testNodeSets.add(new IgniteEx[]{grid("cli0"), grid("cli1"), grid("cli2")});
+        testNodeSets.add(new IgniteEx[] {grid("srv0"), grid("cli0"), grid("cli0")});
+        testNodeSets.add(new IgniteEx[] {grid("cli0"), grid("cli0"), grid("cli0")});
+        testNodeSets.add(new IgniteEx[] {grid("cli0"), grid("cli1"), grid("cli2")});
 
-        for (IgniteEx [] testNodeSet : testNodeSets) {
+        for (IgniteEx[] testNodeSet : testNodeSets) {
             IgniteEx ignCreateType = testNodeSet[0];
             IgniteEx ignRemoveType = testNodeSet[1];
             IgniteEx ignRecreateType = testNodeSet[2];
@@ -180,7 +202,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
                     return;
 
                 DiscoveryCustomMessage customMsg = msg == null ? null
-                    : (DiscoveryCustomMessage) IgniteUtils.field(msg, "delegate");
+                    : (DiscoveryCustomMessage)IgniteUtils.field(msg, "delegate");
 
                 if (customMsg instanceof MetadataRemoveProposedMessage) {
                     try {
@@ -210,7 +232,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
         builder0.setField("f", 1);
         builder0.build();
 
-        GridTestUtils.runAsync(()-> {
+        GridTestUtils.runAsync(() -> {
             try {
                 removeType(ign, "Type0");
             }
@@ -229,7 +251,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
             bld.setField("f1", 1);
 
             // Short delay guarantee that we go into update metadata before remove metadata continue processing.
-            GridTestUtils.runAsync(()-> {
+            GridTestUtils.runAsync(() -> {
                 try {
                     U.sleep(200);
 
@@ -261,7 +283,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
                 break;
             }
-            catch(Exception e) {
+            catch (Exception e) {
                 err = e;
 
                 U.sleep(200);
@@ -277,7 +299,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      *
      * @param igns Tests nodes.
      */
-    protected void delayIfClient(Ignite ... igns) throws IgniteInterruptedCheckedException {
+    protected void delayIfClient(Ignite... igns) throws IgniteInterruptedCheckedException {
         boolean isThereCli = Arrays.stream(igns).anyMatch(ign -> ((IgniteEx)ign).context().clientNode());
 
         if (isThereCli)
