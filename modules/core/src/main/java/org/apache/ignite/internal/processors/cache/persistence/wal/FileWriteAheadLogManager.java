@@ -1176,6 +1176,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         ) {
             final DataInput in = segmentFileInputFactory.createFileInput(fileIO, buf);
 
+            // File may be empty when LOG_ONLY mode is enabled and mmap is disabled
+            if (fileIO.size() == 0)
+                return null;
+
             // Header record must be agnostic to the serializer version.
             final int type = in.readUnsignedByte();
 
