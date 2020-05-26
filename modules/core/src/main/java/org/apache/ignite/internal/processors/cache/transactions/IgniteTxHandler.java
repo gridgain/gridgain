@@ -2063,6 +2063,7 @@ public class IgniteTxHandler {
                     nodeId,
                     req.nearNodeId(),
                     req.version(),
+                    req.nearXidVersion(),
                     null,
                     req.system(),
                     req.policy(),
