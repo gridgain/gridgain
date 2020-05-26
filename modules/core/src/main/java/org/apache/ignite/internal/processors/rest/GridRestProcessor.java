@@ -616,7 +616,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
                 while (workersCnt.sum() != 0) {
                     try {
                         Thread.sleep(200);
-                    } catch (InterruptedException ignored) {
+                    }
+                    catch (InterruptedException ignored) {
                         interrupted = true;
                     }
                 }
