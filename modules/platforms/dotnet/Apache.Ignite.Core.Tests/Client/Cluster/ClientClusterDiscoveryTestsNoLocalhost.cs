@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,33 +14,22 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Client
+namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
-    using System;
+    using NUnit.Framework;
 
     /// <summary>
-    /// Version attribute for <see cref="ClientOp"/>.
+    /// Discovery test with no <see cref="IgniteConfiguration.Localhost"/> set.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field)]
-    internal sealed class MinVersionAttribute : Attribute
+    [TestFixture]
+    public class ClientClusterDiscoveryTestsNoLocalhost : ClientClusterDiscoveryTests
     {
-        /** */
-        private readonly ClientProtocolVersion _version;
-
         /// <summary>
-        /// Initializes a new instance of <see cref="MinVersionAttribute"/> class.
+        /// Initializes a new instance of <see cref="ClientClusterDiscoveryTestsNoLocalhost"/> class.
         /// </summary>
-        public MinVersionAttribute(short major, short minor, short maintenance)
+        public ClientClusterDiscoveryTestsNoLocalhost() : base(true, false)
         {
-            _version = new ClientProtocolVersion(major, minor, maintenance);
-        }
-
-        /// <summary>
-        /// Gets the version.
-        /// </summary>
-        public ClientProtocolVersion Version
-        {
-            get { return _version; }
+            // No-op.
         }
     }
 }
