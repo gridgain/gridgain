@@ -71,7 +71,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
-import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -995,7 +994,7 @@ public class JdbcThinConnection implements Connection {
                         stmt.requestTimeout() != NO_TIMEOUT && reqTimeoutTask != null &&
                         reqTimeoutTask.expired.get()) {
 
-                        throw new SQLTimeoutException(QueryCancelledException.ERR_MSG, SqlStateCode.QUERY_CANCELLED,
+                        throw new SQLTimeoutException("The query was cancelled while executing due to timeout. Query timeout was : " + stmt.getQueryTimeout() + ".", SqlStateCode.QUERY_CANCELLED,
                             IgniteQueryErrorCode.QUERY_CANCELED);
                     }
                     else if (res.status() != ClientListenerResponse.STATUS_SUCCESS)
