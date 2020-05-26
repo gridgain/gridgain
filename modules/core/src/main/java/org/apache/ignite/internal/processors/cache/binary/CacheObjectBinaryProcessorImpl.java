@@ -1491,8 +1491,12 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void removeType(int typeId) {
-        if (!metadataLocCache.containsKey(typeId))
-            throw new IgniteException("Failed to remove metadata, type not found [type="  + typeId + ']');
+        if (metadataLocCache.computeIfAbsent(typeId,
+                (id) -> {
+                    throw new IgniteException("Failed to remove metadata, type not found: " + id);
+                })
+            .removing())
+            throw new IgniteException("Failed to remove metadata, type is being removed: " + typeId);
 
         if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.REMOVE_METADATA)) {
             throw new IgniteException("Failed to remove metadata, " +
