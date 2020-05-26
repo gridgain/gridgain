@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Client.Cache
+namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
     using NUnit.Framework;
 
     /// <summary>
-    /// SSL cache test.
+    /// Discovery test with no <see cref="IgniteConfiguration.Localhost"/> set.
     /// </summary>
     [TestFixture]
-    public sealed class CacheTestSsl : CacheTest
+    public class ClientClusterDiscoveryTestsNoLocalhost : ClientClusterDiscoveryTests
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="CacheTestSsl"/> class.
+        /// Initializes a new instance of <see cref="ClientClusterDiscoveryTestsNoLocalhost"/> class.
         /// </summary>
-        public CacheTestSsl() : base(1, true)
+        public ClientClusterDiscoveryTestsNoLocalhost() : base(true, false)
         {
-            //No-op.
+            // No-op.
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Client.Cache
+namespace Apache.Ignite.Core.Impl.Client
 {
-    using NUnit.Framework;
-
     /// <summary>
-    /// SSL cache test.
+    /// Client feature ids. Values represent the index in the bit array.
     /// </summary>
-    [TestFixture]
-    public sealed class CacheTestSsl : CacheTest
+    internal enum ClientBitmaskFeature
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CacheTestSsl"/> class.
-        /// </summary>
-        public CacheTestSsl() : base(1, true)
-        {
-            //No-op.
-        }
+        // UserAttributes = 0,
+        // ExecuteTaskByName = 1,
+        // ClusterApi = 2,
+        ClusterGroupGetNodesEndpoints = 3
     }
 }
