@@ -364,10 +364,13 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        assertPartitionsSame(idleVerify(load, CACHE_NAME));
+        // Skip consistency check if expiration is on.
+        if (load.cachex(CACHE_NAME).configuration().getExpiryPolicyFactory() == null) {
+            assertPartitionsSame(idleVerify(load, CACHE_NAME));
 
-        for (GridDhtPartitionsExchangeFuture fut : load.context().cache().context().exchange().exchangeFutures())
-            assertTrue(fut.toString(), fut.invalidPartitions().isEmpty());
+            for (GridDhtPartitionsExchangeFuture fut : load.context().cache().context().exchange().exchangeFutures())
+                assertTrue(fut.toString(), fut.invalidPartitions().isEmpty());
+        }
     }
 
     /**
