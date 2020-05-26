@@ -83,11 +83,6 @@ public class TxTimeoutOnPartitionMapExchangeChangeMessage implements DiscoveryCu
     }
 
     /** {@inheritDoc} */
-    @Override public boolean stopProcess() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr, AffinityTopologyVersion topVer,
         DiscoCache discoCache) {
         throw new UnsupportedOperationException();

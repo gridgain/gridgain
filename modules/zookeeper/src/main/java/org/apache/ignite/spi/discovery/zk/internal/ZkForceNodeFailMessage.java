@@ -53,6 +53,7 @@ public class ZkForceNodeFailMessage implements DiscoverySpiCustomMessage, ZkInte
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     @Override public boolean stopProcess() {
         return false;
     }

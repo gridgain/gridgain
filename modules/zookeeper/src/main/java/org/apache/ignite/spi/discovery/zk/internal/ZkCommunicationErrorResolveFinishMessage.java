@@ -57,6 +57,7 @@ class ZkCommunicationErrorResolveFinishMessage implements DiscoverySpiCustomMess
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     @Override public boolean stopProcess() {
         return false;
     }

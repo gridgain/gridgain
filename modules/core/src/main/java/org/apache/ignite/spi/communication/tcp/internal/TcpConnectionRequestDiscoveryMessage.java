@@ -85,11 +85,6 @@ public class TcpConnectionRequestDiscoveryMessage implements DiscoveryCustomMess
     }
 
     /** {@inheritDoc} */
-    @Override public boolean stopProcess() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override public DiscoCache createDiscoCache(
         GridDiscoveryManager mgr,
         AffinityTopologyVersion topVer,
