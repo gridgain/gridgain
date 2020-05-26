@@ -1490,11 +1490,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void removeType(String typeName) {
-        int typeId = typeId(typeName);
-
+    @Override public void removeType(int typeId) {
         if (!metadataLocCache.containsKey(typeId))
-            throw new IgniteException("Failed to remove metadata, type not found [type="  + typeName + ']');
+            throw new IgniteException("Failed to remove metadata, type not found [type="  + typeId + ']');
 
         if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.REMOVE_METADATA)) {
             throw new IgniteException("Failed to remove metadata, " +
@@ -1518,7 +1516,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 ex.addSuppressed(e);
             }
 
-            throw new BinaryObjectException("Failed to remove metadata for type: " + typeName, ex);
+            throw new BinaryObjectException("Failed to remove metadata for type: " + typeId, ex);
         }
     }
 
