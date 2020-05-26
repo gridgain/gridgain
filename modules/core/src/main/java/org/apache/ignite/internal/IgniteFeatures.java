@@ -124,6 +124,9 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
+    /** Cluster has task to clear sender store. */
+    WC_DR_CLEAR_SENDER_STORE(29),
+
     /** Distributed change timeout for dump long operations. */
     DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
 
