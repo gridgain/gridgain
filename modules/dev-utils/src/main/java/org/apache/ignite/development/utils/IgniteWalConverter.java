@@ -16,18 +16,16 @@
 
 package org.apache.ignite.development.utils;
 
-import java.io.File;
 import java.io.PrintStream;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TimeStampRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
@@ -39,15 +37,9 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccLeafIO;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.logger.NullLogger;
-import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
-import static org.apache.ignite.IgniteSystemProperties.getEnum;
-import static org.apache.ignite.development.utils.ProcessSensitiveData.HIDE;
-import static org.apache.ignite.development.utils.ProcessSensitiveData.SHOW;
 
 /**
  * Print WAL log data in human-readable form.
@@ -58,102 +50,46 @@ public class IgniteWalConverter {
      * @throws Exception If failed.
      */
     public static void main(String[] args) throws Exception {
-        if (args.length < 2)
-            throw new IllegalArgumentException("\nYou need to provide:\n" +
-                "\t1. Size of pages, which was selected for file store (1024, 2048, 4096, etc).\n" +
-                "\t2. Path to dir with wal files.\n" +
-                "\t3. (Optional) Path to dir with archive wal files.");
+        final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
 
-        final int pageSize = Integer.parseInt(args[0]);
-        final String walPath = args[1];
-        final String walArchivePath = (args.length > 2) ? args[2] : null;
-
-        if (F.isEmpty(walPath) && F.isEmpty(walArchivePath))
-            throw new IllegalArgumentException("The paths to the WAL files are not specified.");
-
-        File walDir = checkFile(walPath, "wal");
-
-        File walArchiveDir = checkFile(walArchivePath, "archive wal");
-
-        convert(System.out, pageSize,
-            walDir, walArchiveDir,
-            null, null,
-            true, true);
-    }
-
-    /**
-     * Create File by path if path not empty and check exists.
-     *
-     * @param path        Path.
-     * @param description Description path for error message.
-     * @return File.
-     */
-    private static File checkFile(String path, String description) {
-        File file = null;
-
-        if (!F.isEmpty(path)) {
-            file = new File(path);
-
-            if (!file.exists())
-                throw new IllegalArgumentException("Incorrect path to dir with " + description + " files: " +
-                    path + "(" + file.getAbsolutePath() + ")");
-        }
-
-        return file;
+        if (parameters != null)
+            convert(System.out, parameters);
     }
 
     /**
      * Write to out WAL log data in human-readable form.
      *
-     * @param out                           Receiver of result.
-     * @param pageSize                      Size of pages, which was selected for file store (1024, 2048, 4096, etc).
-     * @param walDir                        Path to dir with wal files.
-     * @param walArchiveDir                 Path to dir with archive wal files.
-     * @param binaryMetadataFileStoreDir    Path to binary metadata dir.
-     * @param marshallerMappingFileStoreDir Path to marshaller dir.
-     * @param keepBinary                    Keep binary flag.
-     * @throws IgniteCheckedException If failed.
+     * @param out        Receiver of result.
+     * @param parameters Parameters.
      */
-    public static void convert(
-        final PrintStream out,
-        final int pageSize,
-        final File walDir,
-        final File walArchiveDir,
-        final File binaryMetadataFileStoreDir,
-        final File marshallerMappingFileStoreDir,
-        final boolean keepBinary,
-        final boolean skipCrc
-    ) throws IgniteCheckedException {
+    public static void convert(final PrintStream out, final IgniteWalConverterArguments parameters) {
         PageIO.registerH2(H2InnerIO.VERSIONS, H2LeafIO.VERSIONS, H2MvccInnerIO.VERSIONS, H2MvccLeafIO.VERSIONS);
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
 
-        System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(skipCrc));
-        RecordV1Serializer.skipCrc = skipCrc;
+        System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE,
+            Boolean.toString(parameters.getProcessSensitiveData() == ProcessSensitiveData.HIDE));
+
+        System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(parameters.isSkipCrc()));
+        RecordV1Serializer.skipCrc = parameters.isSkipCrc();
+
         System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_MAX_LENGTH, String.valueOf(Integer.MAX_VALUE));
 
-        boolean printRecords = IgniteSystemProperties.getBoolean("PRINT_RECORDS", false); //TODO read them from argumetns
-        boolean printStat = IgniteSystemProperties.getBoolean("PRINT_STAT", true); //TODO read them from argumetns
-        ProcessSensitiveData sensitiveData = getEnum("SENSITIVE_DATA", SHOW); //TODO read them from argumetns
-
-        if (printRecords && HIDE == sensitiveData)
-            System.setProperty(IGNITE_TO_STRING_INCLUDE_SENSITIVE, Boolean.FALSE.toString());
-
-        final IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory(new NullLogger());
-
-        @Nullable final WalStat stat = printStat ? new WalStat() : null;
+        final WalStat stat = parameters.isPrintStat() ? new WalStat() : null;
 
         IgniteWalIteratorFactory.IteratorParametersBuilder iteratorParametersBuilder = new IgniteWalIteratorFactory.IteratorParametersBuilder().
-            pageSize(pageSize).
-            binaryMetadataFileStoreDir(binaryMetadataFileStoreDir).
-            marshallerMappingFileStoreDir(marshallerMappingFileStoreDir).
-            keepBinary(keepBinary);
+            pageSize(parameters.getPageSize()).
+            binaryMetadataFileStoreDir(parameters.getBinaryMetadataFileStoreDir()).
+            marshallerMappingFileStoreDir(parameters.getMarshallerMappingFileStoreDir()).
+            keepBinary(parameters.isKeepBinary());
 
-        if (walDir != null)
-            iteratorParametersBuilder.filesOrDirs(walDir);
+        if (parameters.getWalDir() != null)
+            iteratorParametersBuilder.filesOrDirs(parameters.getWalDir());
 
-        if (walArchiveDir != null)
-            iteratorParametersBuilder.filesOrDirs(walArchiveDir);
+        if (parameters.getWalArchiveDir() != null)
+            iteratorParametersBuilder.filesOrDirs(parameters.getWalArchiveDir());
+
+        final IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory();
 
         try (WALIterator stIt = factory.iterator(iteratorParametersBuilder)) {
             String currentWalPath = null;
@@ -176,7 +112,23 @@ public class IgniteWalConverter {
                 if (stat != null)
                     stat.registerRecord(record, pointer, true);
 
-                out.println(toString(record, sensitiveData));
+                if (F.isEmpty(parameters.getRecordTypes()) || parameters.getRecordTypes().contains(record.type())) {
+
+                    boolean print = true;
+                    if ((parameters.getFromTime() != null || parameters.getToTime() != null) && record instanceof TimeStampRecord) {
+                        TimeStampRecord dataRecord = (TimeStampRecord)record;
+                        if (parameters.getFromTime() != null && dataRecord.timestamp() < parameters.getFromTime())
+                            print = false;
+
+                        if (print && parameters.getToTime() != null && dataRecord.timestamp() > parameters.getToTime())
+                            print = false;
+                    }
+
+                    final String recordStr = toString(record, parameters.getProcessSensitiveData());
+
+                    if (print && (F.isEmpty(parameters.getRecordContainsText()) || recordStr.contains(parameters.getRecordContainsText())))
+                        out.println(recordStr);
+                }
             }
         }
         catch (Exception e) {
@@ -196,56 +148,15 @@ public class IgniteWalConverter {
     private static String getCurrentWalFilePath(WALIterator it) {
         String result = null;
         try {
-            final Integer curIdx = (Integer)getFieldValue(it, "curIdx");
+            final Integer curIdx = IgniteUtils.field(it, "curIdx");
 
-            final List<FileDescriptor> walFileDescriptors = (List)getFieldValue(it, "walFileDescriptors");
+            final List<FileDescriptor> walFileDescriptors = IgniteUtils.field(it, "walFileDescriptors");
 
             if (curIdx != null && walFileDescriptors != null && !walFileDescriptors.isEmpty())
                 result = walFileDescriptors.get(curIdx).getAbsolutePath();
         }
         catch (Exception e) {
             e.printStackTrace();
-        }
-        return result;
-    }
-
-    /**
-     * Find field in class by name
-     *
-     * @param c         Class.
-     * @param fieldName Field name.
-     * @return Field.
-     */
-    public static Field getField(Class<?> c, String fieldName) {
-        Field result = null;
-        while (c != null && result == null) {
-            try {
-                result = c.getDeclaredField(fieldName);
-            }
-            catch (NoSuchFieldException e) {
-                c = c.getSuperclass();
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Get a field Value in object by field name
-     *
-     * @param o         Object.
-     * @param fieldName Field name.
-     * @return Field value.
-     * @throws IllegalAccessException If failed.
-     */
-    public static Object getFieldValue(Object o, String fieldName) throws IllegalAccessException {
-        Object result = null;
-
-        Field field = getField(o.getClass(), fieldName);
-
-        if (field != null) {
-            field.setAccessible(true);
-
-            result = field.get(o);
         }
         return result;
     }
@@ -268,8 +179,6 @@ public class IgniteWalConverter {
 
             dataRecord.setWriteEntries(entryWrappers);
         }
-        else if (SHOW == sensitiveData || HIDE == sensitiveData)
-            return walRecord.toString();
         else if (walRecord instanceof MetastoreDataRecord)
             walRecord = new MetastoreDataRecordWrapper((MetastoreDataRecord)walRecord, sensitiveData);
 
