@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.ignite.internal.client.thin;
 
 import java.util.Arrays;
@@ -310,6 +309,9 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         /** Channel configuration. */
         private final ClientChannelConfiguration cfg;
 
+        /** Closed flag. */
+        private boolean closed;
+
         /**
          * @param cfg Config.
          */
@@ -336,6 +338,20 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
                 opsQueue.offer(new T2<>(this, op));
 
             return res;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+            super.close();
+
+            closed = true;
+        }
+
+        /**
+         * Channel is closed.
+         */
+        public boolean isClosed() {
+            return closed;
         }
 
         /** {@inheritDoc} */
