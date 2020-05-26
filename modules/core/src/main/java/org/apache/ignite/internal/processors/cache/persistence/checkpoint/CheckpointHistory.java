@@ -116,8 +116,11 @@ public class CheckpointHistory {
      * @param checkpoints Checkpoints.
      */
     public void initialize(List<CheckpointEntry> checkpoints) {
-        for (CheckpointEntry e : checkpoints)
+        for (CheckpointEntry e : checkpoints) {
+            updateErliestCpMap(e);
+
             histMap.put(e.timestamp(), e);
+        }
     }
 
     /**
@@ -185,6 +188,17 @@ public class CheckpointHistory {
      * @param entry Entry to add.
      */
     public void addCheckpoint(CheckpointEntry entry) {
+        updateErliestCpMap(entry);
+
+        histMap.put(entry.timestamp(), entry);
+    }
+
+    /**
+     * Update map which stored the earliest checkpoint each partitions for groups.
+     *
+     * @param entry Checkpoint entry.
+     */
+    private void updateErliestCpMap(CheckpointEntry entry) {
         try {
             Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
 
@@ -237,8 +251,6 @@ public class CheckpointHistory {
 
             erliestCp.clear();
         }
-
-        histMap.put(entry.timestamp(), entry);
     }
 
     /**
