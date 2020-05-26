@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -66,7 +65,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                     {
                         nodes.Pop().Dispose();
                     }
-                    
+
                     AssertClientConnectionCount(client, 3 + nodes.Count);
                 }
             }
@@ -91,11 +90,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             // Client starts and discovers other server nodes.
             var client = Ignition.StartClient(cfg);
             AssertClientConnectionCount(client, 4);
-            
+
             // Original node leaves. Client is still connected.
             ignite.Dispose();
             AssertClientConnectionCount(client, 3);
-            
+
             // Perform any operation to verify that client works.
             Assert.AreEqual(3, client.GetCluster().GetNodes().Count);
         }
@@ -124,7 +123,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             var cfg = GetIgniteConfiguration();
             cfg.ClientConnectorConfigurationEnabled = false;
-            
+
             using (Ignition.Start(cfg))
             {
                 var client = GetClient();
@@ -143,10 +142,10 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                 // Fixed baseline means that rebalance to a new node won't happen.
                 return;
             }
-            
+
             var ignite = Ignition.GetAll().First();
             var cache = ignite.CreateCache<int, int>("c");
-            
+
             using (var ignite2 = Ignition.Start(GetIgniteConfiguration()))
             {
                 var client = GetClient();
@@ -158,9 +157,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
                 var localNode = ignite2.GetCluster().GetLocalNode();
 
                 TestUtils.WaitForTrueCondition(() => aff.GetAllPartitions(localNode).Length > 0, 5000);
-                
+
                 var key = TestUtils.GetPrimaryKey(ignite2, cache.Name);
-                
+
                 TestUtils.WaitForTrueCondition(() =>
                 {
                     clientCache.Put(key, key);
