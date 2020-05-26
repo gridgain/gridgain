@@ -291,7 +291,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         boolean res = queue.offerFirst(writeFut);
 
-        MTC.span().addLog("Added to system queue - " + traceName(writeFut.message()));
+        // // MTC.span().add("Added to system queue - " + traceName(writeFut.message()));
 
         assert res : "Future was not added to queue";
 
@@ -321,7 +321,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         boolean res = queue.offer(writeFut);
 
-        MTC.span().addLog("Added to queue - " + traceName(writeFut.message()));
+        // // MTC.span().add("Added to queue - " + traceName(writeFut.message()));
 
         assert res : "Future was not added to queue";
 
