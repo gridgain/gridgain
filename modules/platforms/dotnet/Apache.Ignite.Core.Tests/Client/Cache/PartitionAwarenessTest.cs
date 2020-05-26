@@ -23,7 +23,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Linq;
     using System.Net;
     using System.Threading.Tasks;
-    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
