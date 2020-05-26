@@ -192,6 +192,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     private final int DIAGNOSTIC_WARN_LIMIT = IgniteSystemProperties.getInteger(IGNITE_DIAGNOSTIC_WARN_LIMIT, 10);
 
     /** */
+    private final int IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT =
+        IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT, 10);
+
+    /** */
     private static final IgniteProductVersion EXCHANGE_PROTOCOL_2_SINCE = IgniteProductVersion.fromString("2.1.4");
 
     /** */
@@ -1822,7 +1826,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 skipped++;
 
-                if (skipped > 10)
+                if (skipped > IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT)
                     fut.cleanUp();
             }
         }

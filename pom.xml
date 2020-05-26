@@ -480,6 +480,44 @@
                                             <include name="**/*.sh" />
                                         </fixcrlf>
 
+                                        <available file="${release.dir}/platforms/cpp/configure.ac" property="cpp"/>
+                                    </target>
+                                    <exportAntProperties>true</exportAntProperties>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>release-cpp</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <target name="release-autotools" if="${cpp}">
+                                        <exec executable="libtoolize" dir="${release.dir}/platforms/cpp">
+                                            <arg value="--copy"/>
+                                        </exec>
+
+                                        <exec executable="aclocal" dir="${release.dir}/platforms/cpp"/>
+
+                                        <exec executable="autoheader" dir="${release.dir}/platforms/cpp"/>
+
+                                        <exec executable="automake" dir="${release.dir}/platforms/cpp">
+                                            <arg value="--add-missing"/>
+                                            <arg value="--copy"/>
+                                        </exec>
+
+                                        <exec executable="autoreconf" dir="${release.dir}/platforms/cpp"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>release-zip</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <target name="release-zip">
                                         <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}.zip" encoding="UTF-8">
                                             <zipfileset dir="${release.dir}" prefix="${ignite.edition}-${project.version}" filemode="755">
                                                 <include name="**/*.sh" />
