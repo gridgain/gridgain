@@ -2645,7 +2645,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         protected final long ts;
 
         /** Absolute pointer. */
-        private final long absAddr;
+        protected final long absAddr;
 
         /** Relative pointer. */
         private final long relAddr;

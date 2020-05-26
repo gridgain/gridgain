@@ -698,17 +698,23 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
         Set<PageMemoryImpl.PageWithAttrHolder> checkedSet = new TreeSet<>();
 
-        for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, true, true));
+        long clearPageAddr = 1000;
+
+        long onlyDirtyPageAddr = 2000;
+
+        long dirtyOrMetaAddr = 3000;
 
         for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, false, false));
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(dirtyOrMetaAddr + i, 1, null, ts + i, true, true));
 
         for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, true, false));
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(clearPageAddr + i, 1, null, ts + i, false, false));
 
         for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(1, 1, null, ts + i, false, true));
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(onlyDirtyPageAddr + i, 1, null, ts + i, true, false));
+
+        for (int i = 0; i < 5; ++i)
+            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(dirtyOrMetaAddr + i, 1, null, ts + i, false, true));
 
         assertTrue(checkedSet.size() == ethalonSize);
 
@@ -721,6 +727,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 assertTrue(!holder.meta);
 
                 assertEquals(holder.ts, 1000 + i);
+
+                assertTrue(holder.absAddr >= clearPageAddr && holder.absAddr < onlyDirtyPageAddr);
             }
             else if (i < 10) {
                 assertTrue(holder.dirty);
@@ -728,11 +736,15 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 assertTrue(!holder.meta);
 
                 assertEquals(holder.ts, 1000 + (i % 5));
+
+                assertTrue(holder.absAddr >= onlyDirtyPageAddr && holder.absAddr < dirtyOrMetaAddr);
             }
             else if (i < 15) {
                 assertTrue(holder.meta);
 
                 assertEquals(holder.ts, 1000 + (i % 5));
+
+                assertTrue(holder.absAddr >= dirtyOrMetaAddr);
             }
 
             ++i;
