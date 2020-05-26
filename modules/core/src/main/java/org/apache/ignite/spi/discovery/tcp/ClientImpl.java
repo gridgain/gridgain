@@ -214,8 +214,12 @@ class ClientImpl extends TcpDiscoveryImpl {
      */
     ClientImpl(TcpDiscoverySpi adapter) {
         super(adapter);
+
+        String instanceName = adapter.ignite() == null || adapter.ignite().name() == null
+            ? "client-node" : adapter.ignite().name();
+
         executorService = Executors.newSingleThreadScheduledExecutor(
-            new IgniteThreadFactory("client-node", "tcp-discovery-exec"));
+            new IgniteThreadFactory(instanceName, "tcp-discovery-exec"));
     }
 
     /** {@inheritDoc} */
@@ -2119,7 +2123,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 final int joinCnt0 = joinCnt;
 
                 executorService.schedule(() -> {
-                    queue.add(new JoinTimeout(joinCnt0));
+                        queue.add(new JoinTimeout(joinCnt0));
                     }, spi.joinTimeout, MILLISECONDS);
             }
 

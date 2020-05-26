@@ -1115,7 +1115,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             try {
                 if (jobs.size() > 1) {
                     execSvc = Executors.newFixedThreadPool(jobs.size() - 1,
-                        new IgniteThreadFactory(ctx.igniteInstanceName(), "exec-cache-clear"));
+                        new IgniteThreadFactory(ctx.igniteInstanceName(), "async-cache-cleaner"));
 
                     for (int i = 1; i < jobs.size(); i++)
                         execSvc.execute(jobs.get(i));

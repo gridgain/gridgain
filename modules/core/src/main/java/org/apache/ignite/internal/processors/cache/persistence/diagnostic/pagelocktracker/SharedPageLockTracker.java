@@ -362,7 +362,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
          *
          */
         TimeOutWorker(long interval) {
-            super("time-out-worker", interval);
+            super("page-lock-tracker-timeout", interval);
         }
 
 

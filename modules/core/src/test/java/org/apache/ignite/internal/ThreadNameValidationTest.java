@@ -22,13 +22,16 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
-import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -37,14 +40,20 @@ import org.junit.runners.model.Statement;
 
 /**
  * Check threads for default names in single and thread pool instances.
+ * Actually, this checks may be moved to the base test, but we already have:
+ * 1) A lot of tests with default Threads/ThreadPools
+ * 2) Part of functionality uses integrations, which may creates Threads/ThreadPools without name specification.
  */
-public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
+public class ThreadNameValidationTest extends GridCommonAbstractTest {
 
     /** {@link Executors.DefaultThreadFactory} count before test. */
     private static transient int defaultThreadFactoryCountBeforeTest;
 
     /** {@link Thread#threadInitNumber} count before test. */
     private static transient int anonymousThreadCountBeforeTest;
+
+    /** Sequence for sets objects. */
+    private static final transient AtomicLong SEQUENCE = new AtomicLong();
 
 
     /** */
@@ -60,49 +69,28 @@ public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
         = RuleChain.outerRule(beforeAllTestRule).around(GridAbstractTest.firstLastTestRule);
 
     /** */
-    private static final String FIELD = "user-name";
-
-    /** */
     private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
-
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         anonymousThreadCountBeforeTest = getAnonymousThreadCount();
+
+        // MBean used LogManager with anonymous shutdown hook Thread.
+        if (!U.IGNITE_MBEANS_DISABLED)
+            anonymousThreadCountBeforeTest++;
+
         super.beforeTest();
     }
-
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
             defaultThreadFactoryCountBeforeTest, getDefaultPoolCount());
+
         assertEquals("Thread without specific name detected",
             anonymousThreadCountBeforeTest, getAnonymousThreadCount());
+
         super.afterTest();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected int gridCount() {
-        return 1;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected CacheConfiguration cacheConfiguration(String igniteInstanceName) throws Exception {
-        CacheConfiguration ccfg = super.cacheConfiguration(igniteInstanceName);
-
-        ccfg.setStoreKeepBinary(true);
-
-        return ccfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setMarshaller(new BinaryMarshaller());
-
-        return cfg;
     }
 
     /**
@@ -112,7 +100,9 @@ public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
     public void testThreadsWithDefaultNames() throws Exception {
         validateThreadNames();
 
-        IgniteCache<Integer, BinaryObject> cache = grid(0).cache(DEFAULT_CACHE_NAME).withKeepBinary();
+        IgniteEx ignite = startGrids(1);
+
+        IgniteCache<Object, Object> cache = ignite.createCache(DEFAULT_CACHE_NAME);
 
         final int ENTRY_CNT = 10;
 
@@ -130,8 +120,8 @@ public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
      * @param userName User name.
      * @return Binary object.
      */
-    private BinaryObject userObject(String userName) {
-        return grid(0).binary().builder("orders").setField(FIELD, userName).build();
+    private UserEntry userObject(String userName) {
+        return new UserEntry(SEQUENCE.getAndIncrement(), userName);
     }
 
     /**
@@ -140,13 +130,16 @@ public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
     private void validateThreadNames() {
         Arrays.stream(threadMXBean.dumpAllThreads(false, false))
             .filter(t -> t.getThreadName().startsWith("Thread-")).forEach(threadInfo -> {
+
             StringBuilder sb = new StringBuilder();
             sb.append("Thread with default name detected. StackTrace: ");
+
             for (StackTraceElement element : threadInfo.getStackTrace()) {
                 sb.append(System.lineSeparator())
                     .append(element.toString());
             }
-            assertTrue(sb.toString(), false);
+
+            fail(sb.toString());
         });
     }
 
@@ -171,4 +164,27 @@ public class ThreadNameValidationTest extends GridCacheAbstractSelfTest {
         threadInitNumberField.setAccessible(true);
         return threadInitNumberField.getInt(null);
     }
+
+    /** Entity for tests.  */
+    private static class UserEntry {
+
+        /** Id. */
+        long id;
+
+        String name;
+        /** Name. */
+
+        /**
+         * Constructor.
+         *
+         * @param id user ID
+         * @param name user name
+         */
+        public UserEntry(Long id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+    }
+
 }

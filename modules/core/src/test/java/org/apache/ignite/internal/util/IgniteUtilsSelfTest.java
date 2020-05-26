@@ -998,7 +998,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         CyclicBarrier barrier = new CyclicBarrier(3);
 
         ExecutorService executorService = Executors.newFixedThreadPool(3,
-            new IgniteThreadFactory("testscope", "exec-test"));
+            new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         try {
             IgniteUtils.doInParallel(3,
@@ -1028,7 +1028,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         CyclicBarrier barrier = new CyclicBarrier(3);
 
         ExecutorService executorService = Executors.newFixedThreadPool(3,
-            new IgniteThreadFactory("testscope", "exec-test"));
+            new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         try {
             IgniteUtils.doInParallel(2,
@@ -1093,7 +1093,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     @Test
     public void testDoInParallelResultsOrder() throws IgniteCheckedException {
         ExecutorService executorService = Executors.newFixedThreadPool(4,
-            new IgniteThreadFactory("testscope", "exec-test"));
+            new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         try {
             for(int parallelism = 1; parallelism < 16; parallelism++)
@@ -1111,7 +1111,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     public void testDoInParallelWithStealingJob() throws IgniteCheckedException {
         // Pool size should be less that input data collection.
         ExecutorService executorService = Executors
-            .newSingleThreadExecutor(new IgniteThreadFactory("testscope", "exec-test"));
+            .newSingleThreadExecutor(new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         CountDownLatch mainThreadLatch = new CountDownLatch(1);
         CountDownLatch poolThreadLatch = new CountDownLatch(1);
@@ -1185,7 +1185,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     public void testDoInParallelWithStealingJobRunTaskInExecutor() throws Exception {
         // Pool size should be less that input data collection.
         ExecutorService executorService = Executors.newFixedThreadPool(2,
-            new IgniteThreadFactory("testscope", "exec-test"));
+            new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         Future<?> f1 = executorService.submit(()-> runTask(executorService));
         Future<?> f2 = executorService.submit(()-> runTask(executorService));
@@ -1285,7 +1285,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         String expectedException = "ExpectedException";
 
         ExecutorService executorService = Executors
-            .newSingleThreadExecutor(new IgniteThreadFactory("testscope", "exec-test"));
+            .newSingleThreadExecutor(new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         try {
             IgniteUtils.doInParallel(

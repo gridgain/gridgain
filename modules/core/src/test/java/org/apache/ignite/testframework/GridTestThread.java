@@ -72,6 +72,7 @@ public class GridTestThread extends Thread {
      */
     public GridTestThread(Callable<?> call, String name) {
         super(name != null ? name : "grid-test-thread-" + NAME_SEQUENCE.getAndIncrement());
+
         assert call != null;
 
         this.call = call;

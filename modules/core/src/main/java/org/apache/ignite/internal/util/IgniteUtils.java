@@ -2132,7 +2132,6 @@ public abstract class IgniteUtils {
 
         Collection<Future<?>> futs = new ArrayList<>(addrs.size());
 
-        // TODO: Any Ignite pool???
         ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, addrs.size()),
             new IgniteThreadFactory("utils", "reachable"));
 

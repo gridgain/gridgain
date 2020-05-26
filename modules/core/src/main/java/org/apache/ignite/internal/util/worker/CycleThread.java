@@ -23,15 +23,18 @@ import org.jetbrains.annotations.NotNull;
  */
 public abstract class CycleThread extends Thread {
 
+    /** Sleep interval before each iteration. */
     private final long sleepInterval;
 
     /**
      * Creates new cycle thread with given parameters.
+     *
      * @param name thread name
      * @param sleepInterval sleep interval before each iteration
      */
     protected CycleThread(@NotNull String name, long sleepInterval) {
         super(name);
+
         this.sleepInterval = sleepInterval;
     }
 
@@ -41,6 +44,7 @@ public abstract class CycleThread extends Thread {
         try {
             while (!isInterrupted()) {
                 Thread.sleep(sleepInterval);
+
                 iteration();
             }
         } catch (InterruptedException e) {
@@ -51,6 +55,7 @@ public abstract class CycleThread extends Thread {
 
     /**
      * Called on each iteration.
+     *
      * @throws InterruptedException throws if no specific handling required
      */
     public abstract void iteration() throws InterruptedException;

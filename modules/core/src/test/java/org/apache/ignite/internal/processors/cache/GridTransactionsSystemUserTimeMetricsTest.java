@@ -268,7 +268,7 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
      * @param userDelay User delay for each transaction.
      */
     private void doAsyncTransactions(Ignite client, int txCnt, long userDelay) {
-        ExecutorService executorSrvc = Executors.newFixedThreadPool(txCnt, new IgniteThreadFactory("testscope", "async-exec"));
+        ExecutorService executorSrvc = Executors.newFixedThreadPool(txCnt, new IgniteThreadFactory("testscope", "async-tx-with-delay"));
 
         for (int i = 0; i < txCnt; i++) {
             executorSrvc.submit(() -> {

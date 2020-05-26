@@ -237,7 +237,7 @@ public class GridFutureAdapterSelfTest extends GridCommonAbstractTest {
     public void testChaining() throws Exception {
         checkChaining(null);
 
-        ExecutorService exec = Executors.newSingleThreadExecutor(new IgniteThreadFactory("testscope", "exec"));
+        ExecutorService exec = Executors.newSingleThreadExecutor(new IgniteThreadFactory("testscope", "grid-future-adapter-test-exec"));
 
         try {
             checkChaining(exec);

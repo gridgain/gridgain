@@ -50,7 +50,8 @@ public abstract class PushMetricsExporterAdapter extends IgniteSpiAdapter implem
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
-        execSvc = Executors.newSingleThreadScheduledExecutor(new IgniteThreadFactory(igniteInstanceName, "spi-start"));
+        execSvc = Executors.newSingleThreadScheduledExecutor(new IgniteThreadFactory(igniteInstanceName,
+            "push-metrics-exporter"));
 
         fut = execSvc.scheduleWithFixedDelay(() -> {
             try {
