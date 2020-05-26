@@ -18,7 +18,9 @@ package org.apache.ignite.internal.processors.platform.client.compute;
 
 import java.util.Set;
 import java.util.UUID;
-import org.apache.ignite.binary.BinaryRawReader;
+
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
@@ -48,7 +50,7 @@ public class ClientExecuteTaskRequest extends ClientRequest {
      *
      * @param reader Reader.
      */
-    public ClientExecuteTaskRequest(BinaryRawReader reader) {
+    public ClientExecuteTaskRequest(BinaryRawReaderEx reader) {
         super(reader);
 
         int cnt = reader.readInt();
@@ -64,7 +66,7 @@ public class ClientExecuteTaskRequest extends ClientRequest {
 
         taskName = reader.readString();
 
-        arg = reader.readObject();
+        arg = reader.readObjectDetached();
     }
 
     /** {@inheritDoc} */
@@ -76,7 +78,14 @@ public class ClientExecuteTaskRequest extends ClientRequest {
         long taskId = ctx.resources().put(task);
 
         try {
-            task.execute(taskId, taskName, arg, nodeIds, flags, timeout);
+            Object arg0 = arg;
+
+            // Deserialize as part of process() call - not in constructor - for proper error handling.
+            // Failure to deserialize binary object should not be treated as a failure to decode request.
+            if ((flags & ClientComputeTask.KEEP_BINARY_FLAG_MASK) == 0 && arg instanceof BinaryObject)
+                arg0 = ((BinaryObject) arg).deserialize();
+
+            task.execute(taskId, taskName, arg0, nodeIds, flags, timeout);
         }
         catch (Exception e) {
             ctx.resources().release(taskId);
