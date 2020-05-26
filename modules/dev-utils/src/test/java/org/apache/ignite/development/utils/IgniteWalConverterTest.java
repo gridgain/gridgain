@@ -40,44 +40,6 @@ import org.junit.Test;
 
 /**
  * Test for IgniteWalConverter
- * <br>
- * Test case:
- * <ol>
- *     <li>
- *     Checking utility IgniteWalConverter
- *         <ul>
- *             <li>Start node</li>
- *             <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
- *             <li>Put several entity</li>
- *             <li>Stop node</li>
- *             <li>Read wal with specifying binaryMetadata</li>
- *             <li>Check that the output contains all DataRecord with previously added entities</li>
- *         </ul>
- *     </li>
- *     <li>
- *     Checking utility IgniteWalConverter with out binary_meta
- *         <ul>
- *             <li>Start node</li>
- *             <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
- *             <li>Put several entity</li>
- *             <li>Stop node</li>
- *             <li>Read wal with <b>out</b> specifying binaryMetadata</li>
- *             <li>Check that the output contains all DataRecord and in DataRecord not empty key and value</li>
- *         </ul>
- *     </li>
- *     <li>
- *     Checking utility IgniteWalConverter on broken WAL
- *         <ul>
- *             <li>Start node</li>
- *             <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
- *             <li>Put several entity</li>
- *             <li>Stop node</li>
- *             <li>Change byte in WAL</li>
- *             <li>Read wal</li>
- *             <li>Check one error when reading WAL</li>
- *         </ul>
- *     </li>
- * </ol>
  */
 public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
@@ -124,7 +86,6 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             .setWalMode(WALMode.LOG_ONLY)
             .setCheckpointFrequency(1000)
             .setWalCompactionEnabled(true)
-            .setWalArchivePath("wal_archive")
             .setDefaultDataRegionConfiguration(getDataRegionConfiguration());
 
         return dataStorageConfiguration;
@@ -162,16 +123,18 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         final PrintStream out = new PrintStream(outByte);
 
-        IgniteWalConverter.convert(
-            out,
+        final IgniteWalConverterArguments arg = new IgniteWalConverterArguments(
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_PATH, false),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH, false),
             DataStorageConfiguration.DFLT_PAGE_SIZE,
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "db" + File.separator + "wal", false),
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "wal_archive", false),
-            new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false), nodeFolder),
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false),
+            new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false), nodeFolder),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
             false,
-            true
+            null,
+            null, null, null, null, true,true
         );
+
+        IgniteWalConverter.convert(out, arg);
 
         final String result = outByte.toString();
 
@@ -231,16 +194,18 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         final PrintStream out = new PrintStream(outByte);
 
-        IgniteWalConverter.convert(
-            out,
+        final IgniteWalConverterArguments arg = new IgniteWalConverterArguments(
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_PATH, false),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH, false),
             DataStorageConfiguration.DFLT_PAGE_SIZE,
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "db" + File.separator + "wal", false),
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "wal_archive", false),
             null,
             null,
             false,
-            true
+            null,
+            null, null, null, null, true,true
         );
+
+        IgniteWalConverter.convert(out, arg);
 
         final String result = outByte.toString();
 
@@ -250,6 +215,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             boolean find = false;
 
             index = result.indexOf("DataRecord", index);
+
             if (index > 0) {
                 index = result.indexOf(" v = [", index + 10);
 
@@ -290,7 +256,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         final String nodeFolder = createWal(list);
 
-        final File walDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "db" + File.separator + "wal", false);
+        final File walDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_PATH, false);
 
         final File wal = new File(walDir, nodeFolder + File.separator + "0000000000000000.wal");
 
@@ -325,9 +291,8 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
                                 if (i == findByte.length)
                                     find = true;
                             }
-                            else {
+                            else
                                 i = 0;
-                            }
                         }
                         if (find) {
                             raf.seek(raf.getFilePointer() - 1);
@@ -345,16 +310,18 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         final PrintStream out = new PrintStream(outByte);
 
-        IgniteWalConverter.convert(
-            out,
-            DataStorageConfiguration.DFLT_PAGE_SIZE,
+        final IgniteWalConverterArguments arg = new IgniteWalConverterArguments(
             walDir,
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "wal_archive", false),
-            new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false), nodeFolder),
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH, false),
+            DataStorageConfiguration.DFLT_PAGE_SIZE,
+            new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false), nodeFolder),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
             false,
-            true
+            null,
+            null, null, null, null, true,true
         );
+
+        IgniteWalConverter.convert(out, arg);
 
         final String result = outByte.toString();
 
@@ -415,7 +382,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         final String nodeFolder = createWal(list);
 
-        final File walDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "db" + File.separator + "wal", false);
+        final File walDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_PATH, false);
 
         final File wal = new File(walDir, nodeFolder + File.separator + "0000000000000000.wal");
 
@@ -455,16 +422,18 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         final PrintStream out = new PrintStream(outByte);
 
-        IgniteWalConverter.convert(
-            out,
-            DataStorageConfiguration.DFLT_PAGE_SIZE,
+        final IgniteWalConverterArguments arg = new IgniteWalConverterArguments(
             walDir,
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "wal_archive", false),
-            new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false), nodeFolder),
-            U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_WAL_ARCHIVE_PATH, false),
+            DataStorageConfiguration.DFLT_PAGE_SIZE,
+            new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false), nodeFolder),
+            U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
             false,
-            true
+            null,
+            null, null, null, null, true,true
         );
+
+        IgniteWalConverter.convert(out, arg);
 
         final String result = outByte.toString();
 
@@ -533,9 +502,9 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
                 final PersonKey key = new PersonKey(i);
 
                 final Person value;
+
                 if (i % 2 == 0)
                     value = new Person(i, PERSON_NAME_PREFIX + i);
-
                 else
                     value = new PersonEx(i, PERSON_NAME_PREFIX + i, "Additional information " + i, "Description " + i);
 

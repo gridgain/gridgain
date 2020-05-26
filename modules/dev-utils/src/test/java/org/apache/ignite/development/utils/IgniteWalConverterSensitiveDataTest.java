@@ -186,42 +186,13 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Test checks that by default {@link WALRecord} will not be output without
-     * system option {@link IgniteWalConverter#PRINT_RECORDS}.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNotPrintRecordsByDefault() throws Exception {
-        exeWithCheck(false, false, identity());
-    }
-
-    /**
      * Test checks that by default sensitive data is displayed.
      *
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
     public void testShowSensitiveDataByDefault() throws Exception {
-        exeWithCheck(true, true, identity());
-    }
-
-    /**
-     * Test checks that sensitive data is displayed.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
-    @WithSystemProperty(key = "SENSITIVE_DATA", value = "SHOW")
-    public void testShowSensitiveData() throws Exception {
-        exeWithCheck(true, true, identity());
-
-        setProperty("SENSITIVE_DATA", currentTestMethod().getName());
-        resetTestOut();
-
-        exeWithCheck(true, true, identity());
+        exeWithCheck(null, true, true, identity());
     }
 
     /**
@@ -230,11 +201,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
-    @WithSystemProperty(key = "SENSITIVE_DATA", value = "HIDE")
-    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     public void testHideSensitiveData() throws Exception {
-        exeWithCheck(false, false, identity());
+        exeWithCheck(ProcessSensitiveData.HIDE, false, false, identity());
     }
 
     /**
@@ -243,10 +211,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
-    @WithSystemProperty(key = "SENSITIVE_DATA", value = "HASH")
     public void testHashSensitiveData() throws Exception {
-        exeWithCheck(true, false, s -> valueOf(s.hashCode()));
+        exeWithCheck(ProcessSensitiveData.HASH, true, false, s -> valueOf(s.hashCode()));
     }
 
     /**
@@ -255,21 +221,21 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
-    @WithSystemProperty(key = "SENSITIVE_DATA", value = "MD5")
     public void testMd5HashSensitiveData() throws Exception {
-        exeWithCheck(true, false, ProcessSensitiveDataUtils::md5);
+        exeWithCheck(ProcessSensitiveData.MD5, true, false, ProcessSensitiveDataUtils::md5);
     }
 
     /**
      * Executing {@link IgniteWalConverter} with checking the content of its output.
      *
-     * @param containsData Contains or not elements {@link #sensitiveValues} in utility output.
-     * @param containsPrefix Contains or not {@link #SENSITIVE_DATA_VALUE_PREFIX} in utility output.
-     * @param converter Converting elements {@link #sensitiveValues} for checking in utility output.
+     * @param processSensitiveData Strategy for the processing of sensitive data.
+     * @param containsData         Contains or not elements {@link #sensitiveValues} in utility output.
+     * @param containsPrefix       Contains or not {@link #SENSITIVE_DATA_VALUE_PREFIX} in utility output.
+     * @param converter            Converting elements {@link #sensitiveValues} for checking in utility output.
      * @throws Exception If failed.
      */
     private void exeWithCheck(
+        ProcessSensitiveData processSensitiveData,
         boolean containsData,
         boolean containsPrefix,
         Function<String, String> converter
@@ -278,7 +244,13 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
         injectTestSystemOut();
 
-        IgniteWalConverter.main(new String[] {valueOf(pageSize), walDirPath});
+        List<String> args = new ArrayList<>();
+        args.add("pageSize=" + pageSize);
+        args.add("walDir=" + walDirPath);
+        if (processSensitiveData != null)
+            args.add("processSensitiveData=" + processSensitiveData.name());
+
+        IgniteWalConverter.main(args.toArray(new String[args.size()]));
 
         String testOutStr = testOut.toString();
 
@@ -370,7 +342,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
          * Constructor.
          *
          * @param orgId Organization id.
-         * @param name Organization name.
+         * @param name  Organization name.
          */
         Person(int orgId, String name) {
             this.orgId = orgId;

@@ -22,6 +22,8 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.UnwrappedDataEntry;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
@@ -73,24 +75,6 @@ class DataEntryWrapper extends DataEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-//        if (unwrappedDataEntry == null)
-//            return super.toString();
-//
-//        Object key = unwrappedDataEntry.unwrappedKey();
-//        Object value = unwrappedDataEntry.unwrappedValue();
-//
-//        if (HASH == sensitiveData) {
-//            key = valueOf(key).hashCode();
-//            value = valueOf(value).hashCode();
-//        }
-//        else if (MD5 == sensitiveData) {
-//            key = md5(valueOf(key));
-//            value = md5(valueOf(value));
-//        }
-//
-//        return new SB().a(unwrappedDataEntry.getClass().getSimpleName())
-//            .a("[k = ").a(key).a(", v = [ ").a(value).a("], super = [").a(super.toString()).a("]]").toString();
-
         final String keyStr;
         final String valueStr;
         if (source instanceof UnwrappedDataEntry) {
@@ -128,9 +112,9 @@ class DataEntryWrapper extends DataEntry {
 
         if (sensitiveData == HASH)
             if (value != null)
-                return Integer.toHexString(value.hashCode());
+                return Integer.toString(value.hashCode());
             else
-                return Integer.toHexString(co.hashCode());
+                return Integer.toString(co.hashCode());
 
         if (value instanceof String)
             str = (String)value;
@@ -146,14 +130,17 @@ class DataEntryWrapper extends DataEntry {
         if (str == null || str.isEmpty()) {
 
             try {
-//               TODO str = Base64.getEncoder().encodeToString(co.valueBytes(source.cacheObjValCtx));
-                str = Base64.getEncoder().encodeToString(co.valueBytes(null));
-                System.out.println("!!!!" + str);
+                CacheObjectValueContext ctx = null;
+                try {
+                    ctx = IgniteUtils.field(source, "cacheObjValCtx");
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+                str = Base64.getEncoder().encodeToString(co.valueBytes(ctx));
             }
             catch (IgniteCheckedException e) {
-                // TODO
-//                cacheObjValCtx.kernalContext().log(UnwrapDataEntry.class)
-//                    .error("Unable to convert " + (isValue ? "value" : "key") + " [" + co + "]", e);
+                e.printStackTrace();
             }
         }
 
