@@ -78,7 +78,7 @@
             <outputDirectory>/bin</outputDirectory>
             <fileMode>0755</fileMode>
             <includes>
-                <include>**/*.sh</include>
+                <include>**/management.sh</include>
             </includes>
         </fileSet>
     </fileSets>
