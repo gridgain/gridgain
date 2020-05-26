@@ -255,7 +255,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < MAX_RETRY_CONT; ++i) {
             try {
-                ign.context().cacheObjects().removeType(typeName);
+                ign.context().cacheObjects().removeType(ign.context().cacheObjects().typeId(typeName));
 
                 err = null;
 

@@ -338,7 +338,7 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * Attention: this is not safe feature, the grid must not contain binary objects
      * with specified type, operations with specified type must not be processed on the cluster.
      *
-     * @param typeName Binary type name.
+     * @param typeId Type ID.
      */
-    public void removeType(String typeName);
+    public void removeType(int typeId);
 }
