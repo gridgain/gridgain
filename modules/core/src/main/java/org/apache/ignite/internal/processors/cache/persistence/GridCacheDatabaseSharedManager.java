@@ -1488,11 +1488,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             cctx.exchange().exchangerBlockingSectionBegin();
 
             try {
-                for (Iterator<PartitionsExchangeAware> iter = cctx.exchange().exchangeAwareComponents().iterator(); iter.hasNext();) {
-                    PartitionsExchangeAware comp = iter.next();
+                List<PartitionsExchangeAware> exchangeAwareComponents = cctx.exchange().exchangeAwareComponents();
 
+                for (PartitionsExchangeAware comp : exchangeAwareComponents)
                     comp.onPartitionStatesRestored(fut);
-                }
             }
             finally {
                 cctx.exchange().exchangerBlockingSectionEnd();
