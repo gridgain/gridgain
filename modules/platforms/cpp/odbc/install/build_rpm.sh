@@ -6,26 +6,26 @@ RPMBUILD_DIR=$2
 CPP_ROOT="$IGNITE_ROOT/modules/platforms/cpp"
 SPEC_NAME="gridgain-odbc.spec"
 
-mkdir -p "$RPMBUILD_DIR/BUILD"     || exit 1
-mkdir -p "$RPMBUILD_DIR/BUILDROOT" || exit 1
-mkdir -p "$RPMBUILD_DIR/RPMS"      || exit 1
-mkdir -p "$RPMBUILD_DIR/SOURCES"   || exit 1
-mkdir -p "$RPMBUILD_DIR/SPECS"     || exit 1
-mkdir -p "$RPMBUILD_DIR/SRPMS"     || exit 1
-mkdir -p "$RPMBUILD_DIR/TMP"       || exit 1
+mkdir -p "$RPMBUILD_DIR/BUILD"
+mkdir -p "$RPMBUILD_DIR/BUILDROOT"
+mkdir -p "$RPMBUILD_DIR/RPMS"
+mkdir -p "$RPMBUILD_DIR/SOURCES"
+mkdir -p "$RPMBUILD_DIR/SPECS"
+mkdir -p "$RPMBUILD_DIR/SRPMS"
+mkdir -p "$RPMBUILD_DIR/TMP"
 
 # Copying specification for building RPM
-cp "$CPP_ROOT/odbc/install/$SPEC_NAME" "$RPMBUILD_DIR/SPECS" || exit 1
+cp "$CPP_ROOT/odbc/install/$SPEC_NAME" "$RPMBUILD_DIR/SPECS"
 
 # Creating tar archive from sources in a needed format for build RPM
 ARCHIVE_BUILD_DIR="$RPMBUILD_DIR/TMP/gridgain-$WIN_GRIDGAIN_VERSION"
 
-mkdir -p "$ARCHIVE_BUILD_DIR/modules/platforms" || exit 1
-cp "$IGNITE_ROOT/LICENSE" "$ARCHIVE_BUILD_DIR"  || exit 1
-cp -r "$IGNITE_ROOT/modules/platforms/cpp" "$ARCHIVE_BUILD_DIR/modules/platforms"  || exit 1
+mkdir -p "$ARCHIVE_BUILD_DIR/modules/platforms"
+cp "$IGNITE_ROOT/LICENSE" "$ARCHIVE_BUILD_DIR"
+cp -r "$IGNITE_ROOT/modules/platforms/cpp" "$ARCHIVE_BUILD_DIR/modules/platforms"
 
 pushd "$ARCHIVE_BUILD_DIR/.."
-tar -czf "$RPMBUILD_DIR/SOURCES/$WIN_GRIDGAIN_VERSION.tar.gz" "gridgain-$WIN_GRIDGAIN_VERSION" || exit 1
+tar -czf "$RPMBUILD_DIR/SOURCES/$WIN_GRIDGAIN_VERSION.tar.gz" "gridgain-$WIN_GRIDGAIN_VERSION"
 popd
 
 # Building RPM...
