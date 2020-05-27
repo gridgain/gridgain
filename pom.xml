@@ -754,6 +754,14 @@
                                             </fileset>
                                         </replaceregexp>
 
+                                        <replaceregexp byline="true" encoding="UTF-8">
+                                            <regexp pattern="(Version:.+)\d+\.\d+\.\d+(.+)" />
+                                            <substitution expression="\1${new.client.version}\2" />
+                                            <fileset dir="${basedir}/">
+                                                <include name="**/*.spec" />
+                                            </fileset>
+                                        </replaceregexp>
+
                                         <script language="javascript">
                                             function setBinVersion(clientVer, binVer) {
                                             var p = project.getProperty(clientVer).replace(".", ",");
