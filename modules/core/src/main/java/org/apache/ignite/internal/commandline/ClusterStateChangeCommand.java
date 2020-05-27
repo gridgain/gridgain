@@ -73,19 +73,21 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Set<GridClientNode> unsupportedServerNodes = client.compute().nodes().stream()
+            Set<GridClientNode> serverNodes = client.compute().nodes().stream()
                 .filter(n -> !n.isClient() && !n.isDaemon())
-                .filter(n -> !n.supports(CLUSTER_READ_ONLY_MODE))
                 .collect(toSet());
 
-            if (F.isEmpty(unsupportedServerNodes))
+            Set<GridClientNode> supportedServerNodes = serverNodes.stream()
+                .filter(n -> n.supports(CLUSTER_READ_ONLY_MODE))
+                .collect(toSet());
+
+            if (state == ACTIVE_READ_ONLY && !supportedServerNodes.equals(serverNodes))
+                throw new IgniteException("Not all nodes in cluster supports cluster state " + state);
+
+            if (F.isEmpty(supportedServerNodes))
+                client.state().active(ClusterState.active(state));
+            else
                 client.state().state(state);
-            else {
-                if (state == ACTIVE_READ_ONLY)
-                    throw new IgniteException("Not all nodes in cluster supports cluster state " + state);
-                else
-                    client.state().active(ClusterState.active(state));
-            }
 
             log.info("Cluster state changed to " + state);
 
