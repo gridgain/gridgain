@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.security.cache.ScanQueryPermissionC
 import org.apache.ignite.internal.processors.security.cache.closure.CacheLoadRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.EntryProcessorRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.ScanQueryRemoteSecurityContextCheckTest;
+import org.apache.ignite.internal.processors.security.client.AttributeSecurityCheckTest;
 import org.apache.ignite.internal.processors.security.client.AdditionalSecurityCheckTest;
 import org.apache.ignite.internal.processors.security.client.AdditionalSecurityCheckWithGlobalAuthTest;
 import org.apache.ignite.internal.processors.security.client.ThinClientPermissionCheckSecurityTest;
@@ -71,6 +72,7 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
 
     MultipleSSLContextsTest.class,
     AdditionalSecurityCheckTest.class,
+    AttributeSecurityCheckTest.class,
     AdditionalSecurityCheckWithGlobalAuthTest.class,
 
     InvalidServerTest.class
