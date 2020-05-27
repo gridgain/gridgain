@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
-import java.io.File;
 import java.io.Serializable;
 import java.util.List;
-import java.util.UUID;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -35,7 +33,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -53,10 +50,14 @@ public class IgnitePdsMultiNodePutGetRestartTest extends GridCommonAbstractTest 
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
+        cfg.setAutoActivationEnabled(false);
+
+        cfg.setConsistentId(gridName);
+
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration().setMaxSize(100L * 1024 * 1024).setPersistenceEnabled(true))
-            .setWalMode(WALMode.LOG_ONLY);
+            .setWalMode(WALMode.LOG_ONLY).setWalSegmentSize(4 * 1024 * 1024);
 
         cfg.setDataStorageConfiguration(memCfg);
 
@@ -85,9 +86,9 @@ public class IgnitePdsMultiNodePutGetRestartTest extends GridCommonAbstractTest 
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        cleanPersistenceDir();
-
         super.beforeTest();
+
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -102,14 +103,6 @@ public class IgnitePdsMultiNodePutGetRestartTest extends GridCommonAbstractTest 
      */
     @Test
     public void testPutGetSimple() throws Exception {
-        String home = U.getIgniteHome();
-
-        File allocPath = new File(home, "work/db/" + UUID.randomUUID());
-
-        allocPath.mkdirs();
-
-        info(">>> Will use path: " + allocPath);
-
         startGrids(GRID_CNT);
 
         try {
