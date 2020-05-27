@@ -103,9 +103,11 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     /** Minor span serialization protocol version. */
     private static final byte MINOR_PROTOCOL_VERSION = 0;
 
-    private static final TraceableMessagesHandler NOOP_TRACBLE_MSG_HANDLER =
+    /** Noop traceable message handler. */
+    private static final TraceableMessagesHandler NOOP_TRACEABLE_MSG_HANDLER =
         new TraceableMessagesHandler(new NoopTracing(), new NullLogger());
 
+    /** Flag that indicates that noop tracing spi is used. */
     private boolean noop = true;
 
     /**
@@ -487,7 +489,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     /** {@inheritDoc} */
     @Override public TraceableMessagesHandler messages() {
         if (noop)
-            return NOOP_TRACBLE_MSG_HANDLER;
+            return NOOP_TRACEABLE_MSG_HANDLER;
 
         return msgHnd;
     }
