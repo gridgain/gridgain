@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,53 +16,55 @@
 
 package org.apache.ignite.internal.processors.rest.client.message;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.security.SecurityCredentials;
+import java.util.Map;
 
 /**
- * Client authentication request.
+ * Client authentication request with user attributes.
  */
-public class GridClientAuthenticationRequest extends GridClientAbstractMessage {
+public class GridClientAuthenticationRequestV2 extends GridClientAuthenticationRequest {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Credentials. */
-    private SecurityCredentials cred;
+    /** User attributes. */
+    private Map<String, String> userAttrs;
 
     /**
-     * @return Credentials object.
+     * @return User attributes.
      */
-    public SecurityCredentials credentials() {
-        return cred;
+    @Nullable public Map<String, String> userAttributes() {
+        return userAttrs;
     }
 
     /**
-     * @param cred Credentials object.
+     * @param userAttrs User attributes.
      */
-    public void credentials(SecurityCredentials cred) {
-        this.cred = cred;
+    public void userAttributes(Map<String, String> userAttrs) {
+        this.userAttrs = userAttrs;
     }
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         super.writeExternal(out);
 
-        out.writeObject(cred);
+        U.writeMap(out, userAttrs);
     }
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         super.readExternal(in);
 
-        cred = (SecurityCredentials)in.readObject();
+        userAttrs = U.readMap(in);
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridClientAuthenticationRequest.class, this, super.toString());
+        return S.toString(GridClientAuthenticationRequestV2.class, this, super.toString());
     }
 }
