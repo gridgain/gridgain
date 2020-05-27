@@ -124,9 +124,6 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /** */
-    MANAGEMENT_CONSOLE(28),
-
     /** Cluster has task to clear sender store. */
     WC_DR_CLEAR_SENDER_STORE(29),
 
