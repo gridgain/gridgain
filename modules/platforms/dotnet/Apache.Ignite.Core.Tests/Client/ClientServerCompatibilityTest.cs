@@ -119,22 +119,6 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
-        /// Tests that cluster group operations throw proper exception on older server versions.
-        /// </summary>
-        [Test]
-        public void TestClusterGroupOperationsThrowCorrectExceptionWhenFeatureIsMissing()
-        {
-            using (var client = StartClient())
-            {
-                // ReSharper disable once AccessToDisposedClosure
-                ClientProtocolCompatibilityTest.AssertNotSupportedFeatureOperation(
-                    () => client.GetCluster().ForServers().GetNodes(),
-                    ClientBitmaskFeature.ClusterGroups,
-                    ClientOp.ClusterGroupGetNodeIds);
-            }
-        }
-
-        /// <summary>
         /// Tests that compute operations throw proper exception on older server versions.
         /// </summary>
         [Test]
