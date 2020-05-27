@@ -632,6 +632,7 @@ public class GridDhtPartitionDemander {
 
                 d.timeout(grp.preloader().timeout());
 
+                // TODO do not send message if supplied.
                 if (!rebalanceFut.isDone()) {
                     // Send demand message.
                     try {
@@ -1466,6 +1467,7 @@ public class GridDhtPartitionDemander {
          * @return true in case future created for specified {@code rebalanceId}, false in other case.
          */
         private boolean isActual(long rebalanceId) {
+            // TOODO need compare topver!???
             return this.rebalanceId == rebalanceId;
         }
 
