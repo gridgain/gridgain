@@ -228,21 +228,15 @@ public class CheckpointHistory {
             }
 
             for (Integer grpId : states.keySet()) {
-                CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
+                CheckpointEntry.GroupState grpState = states.get(grpId);
 
-                if (grp == null)
-                    continue;
+                for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
+                    int part = grpState.getPartitionByIndex(pIdx);
 
-                for (int part = 0; part < grp.config().getAffinity().partitions(); part++) {
-                    int pIdx = states.get(grpId).indexByPartition(part);
+                    T2<Integer, Integer> grpPartKey = new T2<>(grpId, part);
 
-                    if (pIdx >= 0) {
-                        T2<Integer, Integer> grpPartKey = new T2<>(grpId, part);
-
-                        if (!erliestCp.containsKey(grpPartKey))
-                            erliestCp.put(grpPartKey, entry);
-                    }
-
+                    if (!erliestCp.containsKey(grpPartKey))
+                        erliestCp.put(grpPartKey, entry);
                 }
             }
         }
@@ -326,7 +320,7 @@ public class CheckpointHistory {
 
         CheckpointEntry deletedCpEntry = histMap.remove(checkpoint.timestamp());
 
-        CheckpointEntry lastCpEntry = lastCheckpoint();
+        CheckpointEntry oldestCpInHistory = firstCheckpoint();
 
         Iterator<Map.Entry<T2<Integer, Integer>, CheckpointEntry>> iter = erliestCp.entrySet().iterator();
 
@@ -334,7 +328,7 @@ public class CheckpointHistory {
             Map.Entry<T2<Integer, Integer>, CheckpointEntry> grpParCp = iter.next();
 
             if (grpParCp.getValue() == deletedCpEntry)
-                grpParCp.setValue(lastCpEntry);
+                grpParCp.setValue(oldestCpInHistory);
         }
 
         return true;

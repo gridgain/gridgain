@@ -844,6 +844,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 fillWalDisabledGroups();
 
+                cpHist.initialize(retreiveHistory());
+
                 notifyMetastorageReadyForRead();
             }
             finally {
@@ -2521,8 +2523,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             finalizeCheckpointOnRecovery(status.cpStartTs, status.cpStartId, status.startPtr, exec);
         }
-
-        cpHist.initialize(retreiveHistory());
 
         return restoreBinaryState;
     }

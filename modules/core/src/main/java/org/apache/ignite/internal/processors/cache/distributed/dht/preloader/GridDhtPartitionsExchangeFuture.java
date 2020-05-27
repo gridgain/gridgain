@@ -1637,22 +1637,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         timeBag.finishGlobalStage("Preloading notification");
 
-        cctx.exchange().exchangerBlockingSectionBegin();
-
-        try {
-            cctx.database().releaseHistoryForPreloading();
-
-            // To correctly rebalance when persistence is enabled, it is necessary to reserve history within exchange.
-            partHistReserved = cctx.database().reserveHistoryForExchange();
-        }
-        finally {
-            cctx.exchange().exchangerBlockingSectionEnd();
-        }
-
-        clearingPartitions = new HashMap();
-
-        timeBag.finishGlobalStage("WAL history reservation");
-
         // Skipping wait on local join is available when all cluster nodes have the same protocol.
         boolean skipWaitOnLocalJoin = cctx.exchange().latch().canSkipJoiningNodes(initialVersion())
             && localJoinExchange();
@@ -1745,6 +1729,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         timeBag.finishGlobalStage("After states restored callback");
+
+        cctx.exchange().exchangerBlockingSectionBegin();
+
+        try {
+            cctx.database().releaseHistoryForPreloading();
+
+            // To correctly rebalance when persistence is enabled, it is necessary to reserve history within exchange.
+            partHistReserved = cctx.database().reserveHistoryForExchange();
+        }
+        finally {
+            cctx.exchange().exchangerBlockingSectionEnd();
+        }
+
+        clearingPartitions = new HashMap();
+
+        timeBag.finishGlobalStage("WAL history reservation");
 
         changeWalModeIfNeeded();
 
