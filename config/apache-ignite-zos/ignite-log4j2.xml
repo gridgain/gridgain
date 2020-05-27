@@ -19,12 +19,12 @@
 <Configuration monitorInterval="60">
     <Appenders>
         <Console name="CONSOLE" target="SYSTEM_OUT">
-            <PatternLayout charset="IBM-1047" pattern="[%d{ISO8601}][%-5p][%t][%c{1}]%notEmpty{[%markerSimpleName]} %m%n"/>
+            <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}]%notEmpty{[%markerSimpleName]} %m%n"/>
             <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
         </Console>
 
         <Console name="CONSOLE_ERR" target="SYSTEM_ERR">
-            <PatternLayout charset="IBM-1047" pattern="[%d{ISO8601}][%-5p][%t][%c{1}]%notEmpty{[%markerSimpleName]} %m%n"/>
+            <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}]%notEmpty{[%markerSimpleName]} %m%n"/>
         </Console>
 
         <Routing name="FILE">
