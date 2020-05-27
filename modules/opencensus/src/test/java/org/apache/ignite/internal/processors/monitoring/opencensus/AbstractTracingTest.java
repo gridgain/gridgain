@@ -38,12 +38,12 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
-import org.apache.ignite.internal.processors.tracing.TracingSpi;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationManager;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationCoordinates;
-import org.apache.ignite.internal.processors.tracing.configuration.TracingConfigurationParameters;
+import org.apache.ignite.spi.tracing.TracingSpi;
+import org.apache.ignite.spi.tracing.TracingConfigurationManager;
+import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
+import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -52,9 +52,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
-import static org.apache.ignite.internal.processors.tracing.Scope.COMMUNICATION;
-import static org.apache.ignite.internal.processors.tracing.Scope.EXCHANGE;
-import static org.apache.ignite.internal.processors.tracing.Scope.TX;
+import static org.apache.ignite.spi.tracing.Scope.COMMUNICATION;
+import static org.apache.ignite.spi.tracing.Scope.EXCHANGE;
+import static org.apache.ignite.spi.tracing.Scope.TX;
 
 /**
  * Abstract class for open census tracing tests.

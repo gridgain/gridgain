@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.tracing.configuration;
+package org.apache.ignite.spi.tracing;
 
 import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.tracing.Scope;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Allows to configure tracing, read the configuration and restore it to the defaults.
  */
+@IgniteExperimental
 public interface TracingConfigurationManager {
     // TODO: 04.05.20 After implementing GG-21041 and GG-21042 default TX config will include Scope.CACHE_GET, etc.
     /** Default transaction tracing configuration. */

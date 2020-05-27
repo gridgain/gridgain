@@ -20,8 +20,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
-import org.apache.ignite.internal.processors.tracing.SpanStatus;
-import org.apache.ignite.internal.processors.tracing.SpiSpecificSpan;
+import org.apache.ignite.spi.tracing.SpanStatus;
+import org.apache.ignite.spi.tracing.SpiSpecificSpan;
 
 /**
  * Span implementation based on OpenCensus library.
