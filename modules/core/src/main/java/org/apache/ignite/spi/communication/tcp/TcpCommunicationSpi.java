@@ -2825,7 +2825,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         assert node != null;
         assert msg != null;
 
-        if (log.isTraceEnabled())
+        if (log != null && log.isTraceEnabled())
             log.trace("Sending message with ack to node [node=" + node + ", msg=" + msg + ']');
 
         if (isLocalNodeDisconnected()) {
@@ -3380,7 +3380,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
         // Try to connect first on bound addresses.
         if (isRmtAddrsExist) {
-            List<InetSocketAddress> addrs0 = new ArrayList<>(U.toSocketAddresses(rmtAddrs0, rmtHostNames0, boundPort));
+            List<InetSocketAddress> addrs0 = new ArrayList<>(U.toSocketAddresses(rmtAddrs0, rmtHostNames0, boundPort, true));
 
             boolean sameHost = U.sameMacs(getSpiContext().localNode(), node);
 
@@ -3826,16 +3826,18 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             log.debug("The node client connections were closed [nodeId=" + nodeId + "]");
 
         GridCommunicationClient[] clients = this.clients.remove(nodeId);
+
         if (nonNull(clients)) {
             for (GridCommunicationClient client : clients)
                 client.forceClose();
         }
 
         for (ConnectionKey connKey : clientFuts.keySet()) {
-            if (!nodeId.equals(connKey))
+            if (!nodeId.equals(connKey.nodeId()))
                 continue;
 
             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.remove(connKey);
+
             if (nonNull(fut))
                 fut.get().forceClose();
         }

@@ -1078,6 +1078,7 @@ public class GridDhtPartitionDemander {
         private final GridCacheSharedContext<?, ?> ctx;
 
         /** Internal state. */
+        @GridToStringExclude
         private volatile RebalanceFutureState state = RebalanceFutureState.INIT;
 
         /** */
@@ -1431,16 +1432,19 @@ public class GridDhtPartitionDemander {
 
         /** {@inheritDoc} */
         @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err) {
-            if (super.onDone(res, err)) {
-                try {
-                    if (availablePrintRebalanceStatistics() && !isInitial())
+            if (availablePrintRebalanceStatistics() && !isInitial()) {
+                // Avoid race with next rebalancing.
+                listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                    @Override public void apply(IgniteInternalFuture<Boolean> fut) {
                         printRebalanceStatistics();
-                }
-                catch (IgniteCheckedException e) {
-                    log.warning("Failed to print rebalance statistic for cache " + grp.cacheOrGroupName(), e);
-                }
+                    }
+                });
+            }
 
-                // There is no need to start rebalancing for the next cache group if reassign request is issued.
+            if (super.onDone(res, err)) {
+                if (!isInitial() && log.isInfoEnabled())
+                    log.info("Completed rebalance future: " + this);
+
                 if (next != null)
                     next.requestPartitions(); // Go to next item in chain everything if it exists.
 
@@ -1664,9 +1668,6 @@ public class GridDhtPartitionDemander {
             if (remaining.isEmpty()) {
                 sendRebalanceFinishedEvent();
 
-                if (log.isInfoEnabled())
-                    log.info("Completed rebalance future: " + this);
-
                 if (log.isDebugEnabled())
                     log.debug("Partitions have been scheduled to resend [reason=" +
                         "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
@@ -1733,10 +1734,19 @@ public class GridDhtPartitionDemander {
                 || ((GridDhtPreloader)grp.preloader()).disableRebalancingCancellationOptimization())
                 return false;
 
-            if (topVer.equals(otherAssignments.topologyVersion())) {
+            if (ctx.exchange().lastAffinityChangedTopologyVersion(topVer).equals(
+                ctx.exchange().lastAffinityChangedTopologyVersion(otherAssignments.topologyVersion()))) {
                 if (log.isDebugEnabled())
                     log.debug("Rebalancing is forced on the same topology [grp="
                         + grp.cacheOrGroupName() + ", " + "top=" + topVer + ']');
+
+                return false;
+            }
+
+            if (otherAssignments.affinityReassign()) {
+                if (log.isDebugEnabled())
+                    log.debug("Some of owned partitions were reassigned through coordinator [grp="
+                        + grp.cacheOrGroupName() + ", " + "init=" + topVer + " ,other=" + otherAssignments.topologyVersion() + ']');
 
                 return false;
             }
@@ -1798,7 +1808,7 @@ public class GridDhtPartitionDemander {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(RebalanceFuture.class, this);
+            return S.toString(RebalanceFuture.class, this, "result", result());
         }
 
         /**
@@ -1824,7 +1834,7 @@ public class GridDhtPartitionDemander {
          *
          * @throws IgniteCheckedException If error occurs.
          */
-        private void printRebalanceStatistics() throws IgniteCheckedException {
+        private void printRebalanceStatistics() {
             assert isDone() : "RebalanceFuture should be done.";
             assert availablePrintRebalanceStatistics();
             assert nonNull(stat);
@@ -1835,7 +1845,7 @@ public class GridDhtPartitionDemander {
             stat.end(U.currentTimeMillis());
 
             if (log.isInfoEnabled())
-                log.info(cacheGroupRebalanceStatistics(grp, stat, get(), topVer));
+                log.info(cacheGroupRebalanceStatistics(grp, stat, result(), topVer));
 
             totalStat.merge(stat);
             stat.reset();
@@ -1844,7 +1854,7 @@ public class GridDhtPartitionDemander {
             for (GridCacheContext<?, ?> cacheCtx : ctx.cacheContexts()) {
                 IgniteInternalFuture<Boolean> rebFut = cacheCtx.preloader().rebalanceFuture();
 
-                if (!rebFut.isDone() || !rebFut.get())
+                if (!rebFut.isDone() || !rebFut.result())
                     return;
             }
 

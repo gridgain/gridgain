@@ -36,6 +36,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <ignite.edition>apache-ignite</ignite.edition>
+        <ignite.orig.edition>${ignite.edition}</ignite.orig.edition>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>MMMM d yyyy</maven.build.timestamp.format>
         <doxygen.exec>doxygen</doxygen.exec>
@@ -55,6 +56,7 @@
         <aws.sdk.version>1.11.75</aws.sdk.version>
         <camel.version>2.22.3</camel.version>
         <aws.encryption.sdk.version>1.3.2</aws.encryption.sdk.version>
+        <bouncycastle.version>1.60</bouncycastle.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
         <commons.beanutils.version>1.9.4</commons.beanutils.version>
         <commons.codec.version>1.12</commons.codec.version>
@@ -141,7 +143,7 @@
         <opencensus.version>0.22.0</opencensus.version>
         <awaitility.version>3.1.6</awaitility.version>
         <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
-        <reflections.version>0.9.11</reflections.version>
+        <reflections.version>0.11.7</reflections.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
         <commons.lang3.version>3.9</commons.lang3.version>
 
@@ -669,13 +671,13 @@
                 <version>3.0.0-M4</version>
                 <configuration>
                     <forkCount>0</forkCount>
-                    <statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
+                    <!--statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
                     <properties>
                         <property>
                             <name>listener</name>
                             <value>org.apache.ignite.tools.junit.JUnitTeamcityReporter</value>
                         </property>
-                    </properties>
+                    </properties-->
                 </configuration>
                 <dependencies>
                     <dependency>

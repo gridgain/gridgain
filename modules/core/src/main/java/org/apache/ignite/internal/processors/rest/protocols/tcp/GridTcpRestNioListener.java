@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequestV2;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
@@ -57,6 +58,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestTopologyReques
 import org.apache.ignite.internal.util.nio.GridNioFuture;
 import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
+import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.annotation.InterruptibleVisorTask;
@@ -100,6 +102,12 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     /** Mapping of {@code GridCacheOperation} to {@code GridRestCommand}. */
     private static final Map<GridClientCacheRequest.GridCacheOperation, GridRestCommand> cacheCmdMap =
         new EnumMap<>(GridClientCacheRequest.GridCacheOperation.class);
+
+    /** User attributes key. */
+    private static final int USER_ATTR_KEY = GridNioSessionMetaKey.nextUniqueKey();
+
+    /** Credentials key. */
+    private static final int CREDS_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
     /** Supported protocol versions. */
     private static final Collection<Short> SUPP_VERS = new HashSet<>();
@@ -398,7 +406,10 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
 
             restReq.command(NOOP);
 
-            restReq.credentials(req.credentials());
+            ses.addMeta(CREDS_KEY, req.credentials());
+
+            if (msg instanceof GridClientAuthenticationRequestV2)
+                ses.addMeta(USER_ATTR_KEY, ((GridClientAuthenticationRequestV2)req).userAttributes());
         }
         else if (msg instanceof GridClientCacheRequest) {
             GridClientCacheRequest req = (GridClientCacheRequest)msg;
@@ -480,6 +491,8 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             restReq.sessionToken(msg.sessionToken());
             restReq.address(ses.remoteAddress());
             restReq.certificates(ses.certificates());
+            restReq.credentials(ses.meta(CREDS_KEY));
+            restReq.userAttributes(ses.meta(USER_ATTR_KEY));
         }
 
         return restReq;

@@ -56,9 +56,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.System.lineSeparator;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_ROLLING_UPGRADE_MODE;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
@@ -120,7 +120,7 @@ public class CommandHandler {
     private final Scanner in = new Scanner(System.in);
 
     /** JULs logger. */
-    private final Logger logger;
+    protected final Logger logger;
 
     /** Session. */
     protected final String ses = U.id8(UUID.randomUUID());
@@ -211,6 +211,21 @@ public class CommandHandler {
     }
 
     /**
+     * Print commands usage.
+     */
+    protected void printCommandsUsage() {
+        Arrays.stream(CommandList.values()).filter(this::skipCommand).forEach(c -> c.command().printUsage(logger));
+    }
+
+    /**
+     * @param rawArgs Arguments to parse.
+     * @return Parsed parameters.
+     */
+    protected ConnectionAndSslParameters parseAndValidate(List<String> rawArgs) {
+      return new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
+    }
+
+    /**
      * Parse and execute command.
      *
      * @param rawArgs Arguments to parse and execute.
@@ -240,7 +255,7 @@ public class CommandHandler {
 
             verbose = F.exist(rawArgs, CMD_VERBOSE::equalsIgnoreCase);
 
-            ConnectionAndSslParameters args = new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
+            ConnectionAndSslParameters args = parseAndValidate(rawArgs);
 
             Command command = args.command();
             commandName = command.name();
@@ -703,20 +718,27 @@ public class CommandHandler {
             .collect(Collectors.toList());
     }
 
+    /**
+     * @return Utility name.
+     */
+    protected String utilityName() {
+        return UTILITY_NAME;
+    }
+
     /** */
     private void printHelp() {
         logger.info("Control utility script is used to execute admin commands on cluster or get common cluster info. " +
             "The command has the following syntax:");
         logger.info("");
 
-        logger.info(INDENT + CommandLogger.join(" ", CommandLogger.join(" ", UTILITY_NAME, CommandLogger.join(" ", getCommonOptions())),
+        logger.info(INDENT + CommandLogger.join(" ", CommandLogger.join(" ", utilityName(), CommandLogger.join(" ", getCommonOptions())),
             optional("command"), "<command_parameters>"));
         logger.info("");
         logger.info("");
 
         logger.info("This utility can do the following commands:");
 
-        Arrays.stream(CommandList.values()).filter(this::skipCommand).forEach(c -> c.command().printUsage(logger));
+        printCommandsUsage();
 
         logger.info("By default commands affecting the cluster require interactive confirmation.");
         logger.info("Use " + CMD_AUTO_CONFIRMATION + " option to disable it.");
