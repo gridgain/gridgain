@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp;
+package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -34,7 +34,6 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
 import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
-import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
@@ -46,15 +45,9 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.CommunicationListener;
-import org.apache.ignite.spi.communication.tcp.internal.ClusterStateProvider;
-import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectFuture;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectGateway;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
-import org.apache.ignite.spi.communication.tcp.internal.DisconnectedSessionInfo;
-import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
-import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationNodeConnectionCheckFuture;
+import org.apache.ignite.spi.communication.tcp.AttributeNames;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
@@ -80,7 +73,7 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 /**
  * Process incoming messages.
  */
-public class InboundConnectionHandler extends GridNioServerListenerAdapter<Message> {
+public class InboundConnectionHandler extends IncomingConnectionHandler {
     /**
      * Version when client is ready to wait to connect to server (could be needed when client tries to open connection
      * before it starts being visible for server)
@@ -438,7 +431,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     /**
      * @param stopping New stopping flag (set to  when SPI gets stopping signal).
      */
-    public void stop() {
+    @Override public void stop() {
         this.stopping = true;
     }
 

@@ -43,6 +43,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
@@ -82,6 +83,8 @@ import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.DiscoveryListener;
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
+import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
+import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.RoundRobinConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
@@ -357,7 +360,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     private volatile CommunicationWorker commWorker;
 
     /** Server listener. */
-    private volatile InboundConnectionHandler srvLsnr;
+    private volatile IncomingConnectionHandler srvLsnr;
 
     /** Disco listener. */
     private volatile GridLocalEventListener discoLsnr;
@@ -606,6 +609,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
+        GridResourceProcessor rp = ((IgniteEx)ignite).context().resource();
+
         final Function<UUID, ClusterNode> nodeGetter = (nodeId) -> getSpiContext().node(nodeId);
         final Supplier<ClusterNode> locNodeSupplier = () -> getSpiContext().localNode();
         final Supplier<Ignite> igniteExSupplier = this::ignite;
@@ -648,7 +653,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
-        this.srvLsnr = new InboundConnectionHandler(
+        final InboundConnectionHandler inboundHandler = new InboundConnectionHandler(
             log,
             cfg,
             nodeGetter,
@@ -676,9 +681,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             }
         );
 
+        this.srvLsnr = rp.delegate(IncomingConnectionHandler.class, inboundHandler);
+
         TimeObjectProcessorWrapper timeObjProcessorWrapper = new TimeObjectProcessorWrapper(stateProvider);
 
-        this.nioSrvWrapper = new GridNioServerWrapper(
+        this.nioSrvWrapper = rp.delegate(GridNioServerWrapper.class, new GridNioServerWrapper(
             log,
             cfg,
             timeObjProcessorWrapper,
@@ -696,11 +703,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             getWorkersRegistry(ignite),
             ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
             this::createTcpClient
-        );
+        ));
 
-        this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
+        inboundHandler.setNioSrvWrapper(nioSrvWrapper);
 
-        this.clientPool = new ConnectionClientPool(
+        this.clientPool = rp.delegate(ConnectionClientPool.class, new ConnectionClientPool(
             cfg,
             attributeNames,
             log,
@@ -713,9 +720,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             timeObjProcessorWrapper,
             stateProvider,
             nioSrvWrapper
-        );
+        ));
 
-        srvLsnr.setClientPool(clientPool);
+        inboundHandler.setClientPool(clientPool);
         nioSrvWrapper.clientPool(clientPool);
 
         discoLsnr = new DiscoveryListener(clientPool, metricsLsnr);
@@ -864,7 +871,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             getName()
         );
 
-        this.srvLsnr.communicationWorker(commWorker);
+        inboundHandler.communicationWorker(commWorker);
         this.nioSrvWrapper.communicationWorker(commWorker);
 
         new IgniteSpiThread(igniteInstanceName, commWorker.name(), log) {

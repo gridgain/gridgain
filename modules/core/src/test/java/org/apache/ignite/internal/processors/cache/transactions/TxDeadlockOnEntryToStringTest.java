@@ -16,152 +16,216 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.query.ContinuousQuery;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.resource.WrappableResource;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.util.UUIDCollectionMessage;
+import org.apache.ignite.internal.util.nio.GridNioSession;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.resources.LoggerResource;
-import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
+import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.transactions.Transaction;
-import org.apache.ignite.transactions.TransactionConcurrency;
-import org.apache.ignite.transactions.TransactionIsolation;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
- * GridDhtCacheEntry::toString leads to system "deadlock".
+ * GridDhtCacheEntry::toString leads to system "deadlock" on the timeoutWorker.
  */
 public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
+    /** Test key. */
+    private static final int TEST_KEY = 1;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
-        /*if(getTestIgniteInstanceName(2).equals(igniteInstanceName))
-            cfg.setCommunicationSpi(new BlockTcpCommunicationSpi());*/
-
         return cfg;
     }
 
+    /**
+     * We removed locks from toString on Entry. The case, a thread X lock entry, after that trying to do a handshake
+     * with connecting node. But, handshake fails on the first attempt. Between these events, timeout worked trying to
+     * print this entry, but I locked. The thread X can't reconnect, because timeout worker hangs.
+     */
     @Test
-    public void testDeadlockReproducer() throws Exception {
-        Ignite keyAffinityNode = startGrid(0);
-        Ignite nearNode = startGrid(1);
-        Ignite listenerNode = startGrid(2);
+    public void testDeadlockOnTimeoutWorkerAndToString() throws Exception {
+        // Setup
+        IgniteEx nearNode = startGrid(0);
+        IgniteEx incomingNode = startGrid(1, new BlockingIncomingHandler());
 
+        GridTimeoutProcessor tp = nearNode.context().timeout();
+        ConnectionClientPool pool = getInstance(nearNode, ConnectionClientPool.class);
 
-        Integer keyNode0 = primaryKey(keyAffinityNode.cache(DEFAULT_CACHE_NAME));
+        BlockingIncomingHandler incomingHandler = (BlockingIncomingHandler)getInstance(incomingNode, IncomingConnectionHandler.class);
 
-        ContinuousQuery<Integer, Integer> qry = new ContinuousQuery<>();
+        GridCacheEntryEx ex = getEntry(nearNode, DEFAULT_CACHE_NAME, TEST_KEY);
 
-        qry.setLocalListener((evts) ->
-            evts.forEach(e -> System.out.println("key=" + e.getKey() + ", val=" + e.getValue())));
+        // Act
+        ex.lockEntry(); // Lock entry in current thread
 
-        listenerNode.cache(DEFAULT_CACHE_NAME).query(qry);
+        // Print the entry from another thread via timeObject.
+        CountDownLatch entryPrinted = new CountDownLatch(1);
+        CountDownLatch entryReadyToPrint = new CountDownLatch(1);
+        tp.addTimeoutObject(new EntryPrinterTimeoutObject(ex, entryPrinted, entryReadyToPrint));
 
-        try(Transaction tx = nearNode.transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED, 10000, 10)) {
-            nearNode.cache(DEFAULT_CACHE_NAME).put(keyNode0, 1235);
+        entryReadyToPrint.await();
 
+        // Try to do first handshake with hangs, after reconnect handshake should be passed.
+        pool.forceClose();
 
-            tx.commit();
-        }
+        incomingHandler.rejectHandshake();
 
-        /*
+        nearNode.configuration().getCommunicationSpi().sendMessage(incomingNode.localNode(), UUIDCollectionMessage.of(UUID.randomUUID()));
 
-        Stan  5:10 PM
-таймаут воркер пытается взять лок энтри
-лок энтри держит поток X
-поток X пытается открыть комуникейшн соединение
-комуникейшн подвисает - ему нужен таймаут воркер, чтобы продолжить
-
-         */
-
-
-
-        // 1. run 3 nodes
-        // 2. node 1 does transaction with key is affinity on node 0
-        // 3. node node 2 has continious listener
-        // 4. connection on node 3 doesn't exist and can't connect
-
+        // Check
+        assertTrue(GridTestUtils.waitForCondition(() -> entryPrinted.getCount() == 0, 5_000));
     }
 
-/*
-    *//**
-     *
-     *//*
-    protected static class BlockTcpCommunicationSpi extends TcpCommunicationSpi {
-        *//** *//*
-        volatile Class msgCls;
+    /**
+     * @param node Node.
+     * @param cacheName Cache name.
+     * @param key Key.
+     */
+    private GridCacheEntryEx getEntry(IgniteEx node, String cacheName, Object key) {
+        return node.cachex(cacheName).context().cache()
+            .entryEx(
+                node.cachex(cacheName).context().toCacheKeyObject(key),
+                node.context().discovery().topologyVersionEx()
+            );
+    }
 
-        *//** *//*
-        AtomicBoolean collectStart = new AtomicBoolean(false);
+    /**
+     * Call toString via time interval.
+     */
+    private class EntryPrinterTimeoutObject implements GridTimeoutObject {
+        /** Id. */
+        private final IgniteUuid id = IgniteUuid.randomUuid();
+        /** Entry. */
+        private final GridCacheEntryEx entry;
+        /** Entry printed. */
+        private final CountDownLatch entryPrinted;
+        /** Entry ready to print. */
+        private final CountDownLatch entryReadyToPrint;
 
-        *//** *//*
-        ConcurrentHashMap<String, ClusterNode> classes = new ConcurrentHashMap<>();
+        /**
+         * @param entry Entry.
+         * @param entryPrinted Entry printed.
+         * @param entryReadyToPrint Entry ready to print.
+         */
+        private EntryPrinterTimeoutObject(GridCacheEntryEx entry, CountDownLatch entryPrinted,
+            CountDownLatch entryReadyToPrint) {
+            this.entry = entry;
+            this.entryPrinted = entryPrinted;
+            this.entryReadyToPrint = entryReadyToPrint;
+        }
 
-        *//** *//*
-        @LoggerResource
-        private IgniteLogger log;
+        /** {@inheritDoc} */
+        @Override public IgniteUuid timeoutId() {
+            return id;
+        }
 
-        *//** {@inheritDoc} *//*
-        @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC)
-            throws IgniteSpiException {
-            Class msgCls0 = msgCls;
+        /** {@inheritDoc} */
+        @Override public long endTime() {
+            return 1;
+        }
 
-            if (collectStart.get() && msg instanceof GridIoMessage)
-                classes.put(((GridIoMessage)msg).message().getClass().getName(), node);
+        /** {@inheritDoc} */
+        @Override public void onTimeout() {
+            entryReadyToPrint.countDown();
 
-            if (msgCls0 != null && msg instanceof GridIoMessage
-                && ((GridIoMessage)msg).message().getClass().equals(msgCls)) {
-                log.info("Block message: " + msg);
+            entry.toString();
+
+            entryPrinted.countDown();
+        }
+    }
+
+    /**
+     * Handler makes reject on handshake and delegate logic of work.
+     */
+    private class BlockingIncomingHandler extends IncomingConnectionHandler implements WrappableResource<IncomingConnectionHandler> {
+        /**
+         * Mark that incoming connect must be rejected.
+         */
+        private final AtomicBoolean rejectHandshake = new AtomicBoolean(false);
+        /**
+         * Delegate of original class.
+         */
+        private volatile IncomingConnectionHandler delegate;
+
+        /** {@inheritDoc} */
+        @Override public void onSessionWriteTimeout(GridNioSession ses) {
+            delegate.onSessionWriteTimeout(ses);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onSessionIdleTimeout(GridNioSession ses) {
+            delegate.onSessionIdleTimeout(ses);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onMessageSent(GridNioSession ses, Message msg) {
+            delegate.onMessageSent(ses, msg);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onFailure(FailureType failureType, Throwable failure) {
+            delegate.onFailure(failureType, failure);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onConnected(GridNioSession ses) {
+            delegate.onConnected(ses);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+            delegate.onDisconnected(ses, e);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onMessage(GridNioSession ses, Message msg) {
+            if (rejectHandshake.get() && msg instanceof HandshakeMessage2) {
+                rejectHandshake.set(false);
+
+                ses.close();
 
                 return;
             }
 
-            super.sendMessage(node, msg, ackC);
+            delegate.onMessage(ses, msg);
         }
 
+        /** {@inheritDoc} */
+        @Override public IncomingConnectionHandler wrap(IncomingConnectionHandler rsrc) {
+            delegate = rsrc;
 
-
-        *//**
-         * @param clazz Class of messages which will be block.
-         *//*
-        public void blockMessage(Class clazz) {
-            msgCls = clazz;
+            return this;
         }
 
-        *//**
-         * Unlock all message.
-         *//*
-        public void unblockMessage() {
-            msgCls = null;
+        /** {@inheritDoc} */
+        @Override public void stop() {
+            delegate.stop();
         }
 
-        *//**
-         * Start collect messages.
-         *//*
-        public void start() {
-            collectStart.set(true);
+        /**
+         * Mark that handshake must be rejected.
+         */
+        void rejectHandshake() {
+            rejectHandshake.set(true);
         }
-
-        *//**
-         * Print collected messages.
-         *//*
-        public void print() {
-            for (String s : classes.keySet())
-                log.error(s);
-        }
-    }*/
-
+    }
 }
