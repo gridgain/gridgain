@@ -99,6 +99,9 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
@@ -372,6 +375,12 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             ExpiryPolicy expiry = cacheCtx.expiryForTxEntry(txEntry);
 
+            boolean needTaskName = txEntry.context().events().isRecordable(EVT_CACHE_OBJECT_READ) ||
+                txEntry.context().events().isRecordable(EVT_CACHE_OBJECT_PUT) ||
+                txEntry.context().events().isRecordable(EVT_CACHE_OBJECT_REMOVED);
+
+            String taskName = needTaskName ? tx.resolveTaskName() : null;
+
             cctx.database().checkpointReadLock();
 
             try {
@@ -416,7 +425,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                         /*event*/evt,
                         tx.subjectId(),
                         entryProc,
-                        tx.resolveTaskName(),
+                        taskName,
                         null,
                         keepBinary);
 
