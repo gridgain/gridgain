@@ -98,7 +98,6 @@
         <module>modules/tensorflow</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
-        <module>modules/management-console-agent</module>
     </modules>
 
     <profiles>
@@ -110,7 +109,6 @@
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
                 <module>modules/geospatial</module>
-                <module>modules/management-console-agent</module>
                 <module>modules/hibernate-4.2</module>
                 <module>modules/hibernate-5.1</module>
                 <module>modules/hibernate-5.3</module>
@@ -361,7 +359,7 @@
             <id>release</id>
             <build>
                 <plugins>
-                     <plugin>
+                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
                         <version>1.7</version>
@@ -381,11 +379,13 @@
                                 </goals>
                                 <phase>initialize</phase>
                                 <configuration>
-                                    <target>
+                                    <target name="release-postprocessing">
+                                        <property name="release.dir" value="${basedir}/target/release-package-${ignite.edition}"/>
+
                                         <replaceregexp byline="true">
                                             <regexp pattern="pushd &quot;%~dp0&quot;/\.\./\.\.(\s*&amp;::.+)?" />
                                             <substitution expression="pushd &quot;%~dp0&quot;/.." />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
@@ -393,7 +393,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="IGNITE_HOME_TMP=&quot;\$\(dirname &quot;\$\{IGNITE_HOME_TMP\}&quot;\)&quot;(\s*#.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
@@ -401,7 +401,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="set SCRIPTS_HOME=%IGNITE_HOME%\\bin(\s*&amp;::.*)?" />
                                             <substitution expression="set SCRIPTS_HOME=%IGNITE_HOME%\\\\bin" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
@@ -409,7 +409,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="SCRIPTS_HOME=&quot;\$\{IGNITE_HOME_TMP\}/bin&quot;(\s*#.*)?" />
                                             <substitution expression="SCRIPTS_HOME=&quot;$${IGNITE_HOME_TMP}/bin&quot;" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
@@ -417,7 +417,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="\. &quot;\$\{SCRIPTS_HOME\}&quot;/include/build-classpath.sh(\s*#.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
@@ -425,7 +425,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="call &quot;%SCRIPTS_HOME%\\include\\build-classpath.bat&quot;(\s*&amp;::.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
@@ -433,7 +433,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="ENABLE_ASSERTIONS=.*" />
                                             <substitution expression="ENABLE_ASSERTIONS=&quot;0&quot;" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
@@ -441,7 +441,7 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="ENABLE_ASSERTIONS=.*" />
                                             <substitution expression="ENABLE_ASSERTIONS=0" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
@@ -449,46 +449,84 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="-DIGNITE_UPDATE_NOTIFIER=false" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                            <fileset dir="${release.dir}">
                                                 <include name="bin/**/*.sh" />
                                                 <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
-                                        <replaceregexp file="${basedir}/target/release-package-${ignite.edition}/examples/pom.xml" byline="true">
+                                        <replaceregexp file="${release.dir}/examples/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
 
-                                        <replaceregexp file="${basedir}/target/release-package-${ignite.edition}/examples-ml/pom.xml" byline="true">
+                                        <replaceregexp file="${release.dir}/examples-ml/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
 
-                                        <replaceregexp file="${basedir}/target/release-package-${ignite.edition}/benchmarks/sources/pom.xml" byline="true">
+                                        <replaceregexp file="${release.dir}/benchmarks/sources/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
 
-                                        <chmod dir="${basedir}/target/release-package-${ignite.edition}" perm="755" includes="**/*.sh" />
+                                        <chmod dir="${release.dir}" perm="755" includes="**/*.sh" />
 
                                         <!--
                                         Line ending bugfix for builds packaged in MS Windows machine to adjust Linux based
                                         end-of-line characters for Linux shell scripts
                                         -->
-                                        <fixcrlf srcdir="${basedir}/target/release-package-${ignite.edition}" eol="lf" eof="remove">
+                                        <fixcrlf srcdir="${release.dir}" eol="lf" eof="remove">
                                             <include name="**/*.sh" />
                                         </fixcrlf>
 
+                                        <available file="${release.dir}/platforms/cpp/configure.ac" property="cpp"/>
+                                    </target>
+                                    <exportAntProperties>true</exportAntProperties>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>release-cpp</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <target name="release-autotools" if="${cpp}">
+                                        <exec executable="libtoolize" dir="${release.dir}/platforms/cpp">
+                                            <arg value="--copy"/>
+                                        </exec>
+
+                                        <exec executable="aclocal" dir="${release.dir}/platforms/cpp"/>
+
+                                        <exec executable="autoheader" dir="${release.dir}/platforms/cpp"/>
+
+                                        <exec executable="automake" dir="${release.dir}/platforms/cpp">
+                                            <arg value="--add-missing"/>
+                                            <arg value="--copy"/>
+                                        </exec>
+
+                                        <exec executable="autoreconf" dir="${release.dir}/platforms/cpp"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>release-zip</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <target name="release-zip">
                                         <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}.zip" encoding="UTF-8">
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}" filemode="755">
+                                            <zipfileset dir="${release.dir}" prefix="${ignite.edition}-${project.version}" filemode="755">
                                                 <include name="**/*.sh" />
                                                 <include name="**/configure" />
                                                 <include name="**/install-sh" />
                                                 <include name="**/compile" />
                                                 <include name="**/missing" />
                                             </zipfileset>
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}">
+                                            <zipfileset dir="${release.dir}" prefix="${ignite.edition}-${project.version}">
                                                 <exclude name="**/*.sh" />
                                                 <exclude name="**/configure" />
                                                 <exclude name="**/install-sh" />

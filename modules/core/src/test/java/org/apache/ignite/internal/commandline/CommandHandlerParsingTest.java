@@ -687,7 +687,6 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WAL ||
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
-            cmd == CommandList.DATA_CENTER_REPLICATION ||
-            cmd == CommandList.MANAGEMENT;
+            cmd == CommandList.DATA_CENTER_REPLICATION;
     }
 }

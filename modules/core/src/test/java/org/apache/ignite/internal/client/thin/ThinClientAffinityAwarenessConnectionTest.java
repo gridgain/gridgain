@@ -104,7 +104,7 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
             fail("Must throw exception");
         }
         catch (ClientConnectionException err) {
-            assertTrue(err.getMessage().contains("Ignite cluster is unavailable"));
+            assertTrue(err.getMessage(), err.getMessage().contains("Channel is closed"));
         }
     }
 
