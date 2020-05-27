@@ -74,7 +74,7 @@ public class JdbcAuthorizationTest extends AbstractSecurityTest {
     /** Name of the user with the {@link SecurityPermission#CACHE_DESTROY} system permission granted. */
     private static final String CACHE_DESTROY_SYS_PERMS_USER = "cache-destroy-sys-perm-user";
 
-    /** Name of the user with {@link SecurityPermission#CACHE_CREATE} granted for {@link #TEST_CREATE_TABLE_CACHE}.*/
+    /** Name of the user with {@link SecurityPermission#CACHE_CREATE} granted for {@link #TEST_CREATE_TABLE_CACHE}. */
     private static final String CACHE_CREATE_CACHE_PERMS_USER = "cache-create-cache-perm-user";
 
     /** Name of the user with {@link SecurityPermission#CACHE_DESTROY} granted for {@link #TEST_DROP_TABLE_CACHE}. */
