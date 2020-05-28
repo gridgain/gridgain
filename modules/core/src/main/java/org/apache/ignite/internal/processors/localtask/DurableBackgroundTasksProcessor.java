@@ -27,6 +27,7 @@ import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
@@ -130,7 +131,13 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
         // Waiting for workers, but not cancelling them, trying to complete running tasks.
         awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, false, log);
 
-        ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).removeCheckpointListener(this);
+        IgniteCacheDatabaseSharedManager dbSharedMgr = ctx.cache().context().database();
+
+        if (dbSharedMgr instanceof GridCacheDatabaseSharedManager) {
+            GridCacheDatabaseSharedManager mgr = (GridCacheDatabaseSharedManager)dbSharedMgr;
+
+            mgr.removeCheckpointListener(this);
+        }
     }
 
     /** {@inheritDoc} */
