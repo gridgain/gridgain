@@ -1,5 +1,5 @@
 Name:           gridgain-odbc
-Version:        8.7.17
+Version:        8.7.19
 Release:        1%{?dist}
 Summary:        ODBC driver for GridGain.
 
