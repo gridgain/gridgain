@@ -38,7 +38,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpU
 /**
  * Does handshake for a shmem mode.
  */
-public class HandshakeClosure extends IgniteInClosure2X<InputStream, OutputStream> {
+public class SHMemHandshakeClosure extends IgniteInClosure2X<InputStream, OutputStream> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -60,7 +60,7 @@ public class HandshakeClosure extends IgniteInClosure2X<InputStream, OutputStrea
      * @param stateProvider Cluster state provider.
      * @param locNodeSupplier Local node getter.
      */
-    public HandshakeClosure(
+    public SHMemHandshakeClosure(
         IgniteLogger log,
         UUID rmtNodeId,
         ClusterStateProvider stateProvider,

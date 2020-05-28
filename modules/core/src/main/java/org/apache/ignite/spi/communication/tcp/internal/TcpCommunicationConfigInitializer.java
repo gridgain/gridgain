@@ -14,7 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp;
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -35,6 +51,7 @@ import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryServerEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteExperimental;
@@ -44,8 +61,9 @@ import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiConfiguration;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionPolicy;
-import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
+import org.apache.ignite.spi.communication.tcp.AttributeNames;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
@@ -60,10 +78,9 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_P
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_SHMEM_PORT;
 
 /**
- * Only may implement it TcpCommunicationSpi. Should remove after refactoring.
+ * Only may implement it TcpCommunicationSpi.
  */
-@IgniteExperimental
-abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter implements CommunicationSpi<Message> {
+public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter implements CommunicationSpi<Message> {
     /** Config. */
     protected final TcpCommunicationConfiguration cfg = new TcpCommunicationConfiguration();
 
@@ -201,6 +218,8 @@ abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter implem
      */
     @IgniteSpiConfiguration(optional = true)
     public TcpCommunicationSpi setLocalPortRange(int locPortRange) {
+        A.ensure(locPortRange >= 0, "The port range must be positive.");
+
         cfg.localPortRange(locPortRange);
 
         return  (TcpCommunicationSpi)this;

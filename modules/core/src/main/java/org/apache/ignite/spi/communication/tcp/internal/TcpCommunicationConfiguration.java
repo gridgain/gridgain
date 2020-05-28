@@ -14,7 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp;
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.io.Serializable;
 import java.net.InetAddress;
@@ -22,6 +38,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.AddressResolver;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_ACK_SND_THRESHOLD;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_CONN_PER_NODE;
@@ -40,9 +58,8 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_S
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_TCP_NODELAY;
 
 /**
- * Class of configuration for {@link TcpCommunicationSpi} segregation. Uses for refactoring.
+ * Class of configuration for {@link TcpCommunicationSpi} segregation.
  */
-@IgniteExperimental
 public class TcpCommunicationConfiguration implements Serializable {
     /** Serial version uid. */
     private static final long serialVersionUID = 5471893193030200809L;
@@ -534,7 +551,12 @@ public class TcpCommunicationConfiguration implements Serializable {
     }
 
     /**
-     * @return Failure detection timeout. Initialized with the value of .
+     * Returns failure detection timeout used by {@link TcpDiscoverySpi} and {@link TcpCommunicationSpi}.
+     * <p>
+     * Default is {@link #DFLT_FAILURE_DETECTION_TIMEOUT}.
+     *
+     * @see #setFailureDetectionTimeout(long)
+     * @return Failure detection timeout in milliseconds.
      */
     public long failureDetectionTimeout() {
         return failureDetectionTimeout;

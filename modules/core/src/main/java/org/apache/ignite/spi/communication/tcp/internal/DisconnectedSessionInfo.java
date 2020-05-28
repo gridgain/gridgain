@@ -21,7 +21,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *
+ *  Class marker that say that connection must be interacted.
  */
 public class DisconnectedSessionInfo {
     /** */

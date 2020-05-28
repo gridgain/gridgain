@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.tracing.Tracing;
+import org.apache.ignite.internal.util.ipc.IpcEndpoint;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryServerEndpoint;
 import org.apache.ignite.internal.util.nio.GridNioMessageReaderFactory;
 import org.apache.ignite.internal.util.nio.GridNioMessageWriterFactory;
@@ -33,7 +34,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.thread.IgniteThread;
 
 /**
- * This worker takes responsibility to shut the server down when stopping, No other thread shall stop passed server.
+ * This worker takes request created via shmem.
  */
 public class ShmemAcceptWorker extends GridWorker {
     /** Worker name. */
@@ -104,11 +105,13 @@ public class ShmemAcceptWorker extends GridWorker {
     @Override protected void body() throws InterruptedException {
         try {
             while (!Thread.interrupted()) {
+                IpcEndpoint ipcEndpoint = srv.accept();
+
                 ShmemWorker e = new ShmemWorker(
                     igniteInstanceName(),
                     log,
                     tracing,
-                    srv.accept(),
+                    ipcEndpoint,
                     srvLsnr,
                     metricsLsnr,
                     readerFactory,

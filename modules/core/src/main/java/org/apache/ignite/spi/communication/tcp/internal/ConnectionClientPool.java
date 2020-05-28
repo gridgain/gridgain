@@ -33,6 +33,8 @@ import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.processors.timeout.GridSpiTimeoutObject;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.ipc.shmem.IpcOutOfSystemResourcesException;
@@ -49,10 +51,9 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.shmem.HandshakeClosure;
+import org.apache.ignite.spi.communication.tcp.internal.shmem.SHMemHandshakeClosure;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
@@ -99,7 +100,7 @@ public class ConnectionClientPool {
     private final TcpCommunicationSpi tcpCommSpi;
 
     /** Time object processor. */
-    private final TimeObjectProcessorWrapper timeObjProcessor;
+    private final GridTimeoutProcessor timeObjProcessor;
 
     /** Cluster state provider. */
     private final ClusterStateProvider clusterStateProvider;
@@ -138,7 +139,7 @@ public class ConnectionClientPool {
         Supplier<MessageFormatter> msgFormatterSupplier,
         WorkersRegistry registry,
         TcpCommunicationSpi tcpCommSpi,
-        TimeObjectProcessorWrapper timeObjProcessor,
+        GridTimeoutProcessor timeObjProcessor,
         ClusterStateProvider clusterStateProvider,
         GridNioServerWrapper nioSrvWrapper
     ) {
@@ -214,9 +215,10 @@ public class ConnectionClientPool {
                                     GridTcpNioCommunicationClient tcpClient = ((GridTcpNioCommunicationClient)client0);
 
                                     if (tcpClient.session().closeTime() > 0 && removeNodeClient(nodeId, client0)) {
-                                        if (log.isDebugEnabled())
+                                        if (log.isDebugEnabled()) {
                                             log.debug("Session was closed after client creation, will retry " +
                                                 "[node=" + node + ", client=" + client0 + ']');
+                                        }
 
                                         client0 = null;
                                     }
@@ -345,9 +347,10 @@ public class ConnectionClientPool {
                     LT.warn(log, OUT_OF_RESOURCES_TCP_MSG);
                 else if (nodeGetter.apply(node.id()) != null)
                     LT.warn(log, e.getMessage());
-                else if (log.isDebugEnabled())
+                else if (log.isDebugEnabled()) {
                     log.debug("Failed to establish shared memory connection with local node (node has left): " +
                         node.id());
+                }
             }
         }
 
@@ -398,9 +401,11 @@ public class ConnectionClientPool {
      * @return Client.
      * @throws IgniteCheckedException If failed.
      */
-    @Nullable public GridCommunicationClient createShmemClient(ClusterNode node,
+    @Nullable public GridCommunicationClient createShmemClient(
+        ClusterNode node,
         int connIdx,
-        Integer port) throws IgniteCheckedException {
+        Integer port
+    ) throws IgniteCheckedException {
         int attempt = 1;
 
         int connectAttempts = 1;
@@ -442,25 +447,28 @@ public class ConnectionClientPool {
                 client.forceClose();
 
                 if (cfg.failureDetectionTimeoutEnabled() && timeoutHelper.checkFailureTimeoutReached(e)) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Handshake timed out (failure threshold reached) [failureDetectionTimeout=" +
                             cfg.failureDetectionTimeout() + ", err=" + e.getMessage() + ", client=" + client + ']');
+                    }
 
                     throw e;
                 }
 
                 assert !cfg.failureDetectionTimeoutEnabled();
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Handshake timed out (will retry with increased timeout) [timeout=" + connTimeout0 +
                         ", err=" + e.getMessage() + ", client=" + client + ']');
+                }
 
                 if (attempt == cfg.reconCount() || connTimeout0 > cfg.maxConnectionTimeout()) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Handshake timedout (will stop attempts to perform the handshake) " +
                             "[timeout=" + connTimeout0 + ", maxConnTimeout=" + cfg.maxConnectionTimeout() +
                             ", attempt=" + attempt + ", reconCnt=" + cfg.reconCount() +
                             ", err=" + e.getMessage() + ", client=" + client + ']');
+                    }
 
                     throw e;
                 }
@@ -474,8 +482,7 @@ public class ConnectionClientPool {
             }
             catch (IgniteCheckedException | RuntimeException | Error e) {
                 if (log.isDebugEnabled())
-                    log.debug(
-                        "Caught exception (will close client) [err=" + e.getMessage() + ", client=" + client + ']');
+                    log.debug("Caught exception (will close client) [err=" + e.getMessage() + ", client=" + client + ']');
 
                 client.forceClose();
 
@@ -594,9 +601,10 @@ public class ConnectionClientPool {
         if (clients0 != null) {
             for (GridCommunicationClient client : clients0) {
                 if (client != null) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Forcing NIO client close since node has left [nodeId=" + nodeId +
                             ", client=" + client + ']');
+                    }
 
                     client.forceClose();
                 }
@@ -637,8 +645,10 @@ public class ConnectionClientPool {
      * @param key Key.
      * @param fut Future.
      */
-    public GridFutureAdapter<GridCommunicationClient> putIfAbsentFut(ConnectionKey key,
-        GridFutureAdapter<GridCommunicationClient> fut) {
+    public GridFutureAdapter<GridCommunicationClient> putIfAbsentFut(
+        ConnectionKey key,
+        GridFutureAdapter<GridCommunicationClient> fut
+    ) {
         return clientFuts.putIfAbsent(key, fut);
     }
 
@@ -679,14 +689,14 @@ public class ConnectionClientPool {
         HandshakeTimeoutObject<GridCommunicationClient> obj = new HandshakeTimeoutObject<>(client,
             U.currentTimeMillis() + timeout);
 
-        timeObjProcessor.addTimeoutObject(obj);
+        timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
 
         try {
-            client.doHandshake(new HandshakeClosure(log, rmtNodeId, clusterStateProvider, locNodeSupplier));
+            client.doHandshake(new SHMemHandshakeClosure(log, rmtNodeId, clusterStateProvider, locNodeSupplier));
         }
         finally {
             if (obj.cancel())
-                timeObjProcessor.removeTimeoutObject(obj);
+                timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
             else
                 throw handshakeTimeoutException();
         }

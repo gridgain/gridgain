@@ -44,7 +44,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
@@ -97,7 +96,6 @@ public class CommunicationWorker extends GridWorker {
      * @param cfg Config.
      * @param attrs Attributes.
      * @param clientPool Client pool.
-     * @param locNodeSupplier Local node supplier.
      * @param failureProcessorSupplier Failure processor supplier.
      * @param nodeGetter Node getter.
      * @param pingNode Ping node.
@@ -388,16 +386,18 @@ public class CommunicationWorker extends GridWorker {
         catch (IgniteCheckedException | IgniteException e) {
             try {
                 if (recoveryDesc.nodeAlive(nodeGetter.apply(node.id())) && pingNode.apply(node.id())) {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Recovery reconnect failed, will retry " +
                             "[rmtNode=" + recoveryDesc.node().id() + ", err=" + e + ']');
+                    }
 
                     addProcessDisconnectRequest(sesInfo);
                 }
                 else {
-                    if (log.isDebugEnabled())
+                    if (log.isDebugEnabled()) {
                         log.debug("Recovery reconnect failed, " +
                             "node left [rmtNode=" + recoveryDesc.node().id() + ", err=" + e + ']');
+                    }
 
                     eRegistrySupplier.get().onException("Recovery reconnect failed, node left [rmtNode=" + recoveryDesc.node().id() + "]",
                         e);

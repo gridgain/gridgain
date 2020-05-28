@@ -21,7 +21,9 @@ import org.apache.ignite.cluster.ClusterNode;
 /**
  * This class was created for the refactoring approach. It contains attribute names into a {@link ClusterNode}.
  * It should be remove after global refactoring. The values of these attributes should pass via constructors of appropriate classes.
+ * @deprecated fix it in the ticket https://ggsystems.atlassian.net/browse/GG-29546
  */
+@Deprecated
 public class AttributeNames {
     /** Paired connection. */
     private final String pairedConn;

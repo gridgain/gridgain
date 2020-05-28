@@ -42,15 +42,13 @@ import org.apache.ignite.spi.communication.tcp.AttributeNames;
 @IgniteExperimental
 public class CommunicationTcpUtils {
     /** No-op runnable. */
-    public static final IgniteRunnable NOOP = () -> {
-    };
+    public static final IgniteRunnable NOOP = () -> {};
 
     /**
      * @param node Node.
      * @return {@code True} if can use in/out connection pair for communication.
      */
-    public static boolean usePairedConnections(ClusterNode node,
-        String attributeName) { //TODO rename and add check from if awry ware
+    public static boolean usePairedConnections(ClusterNode node, String attributeName) {
         Boolean attr = node.attribute(attributeName);
 
         return attr != null && attr;

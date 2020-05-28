@@ -44,6 +44,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.timeout.GridSpiTimeoutObject;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
@@ -83,7 +85,6 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.TimeoutStrategy;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
@@ -108,7 +109,9 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.UNKNOWN_NODE;
 
 /**
- * Container for nio server with required dependencies. Should be removed after refactoring of nio server.
+ * Container for nio server with required dependencies.
+ *
+ * @deprecated Should be removed.
  */
 @IgniteExperimental
 public class GridNioServerWrapper {
@@ -128,7 +131,7 @@ public class GridNioServerWrapper {
     private final TcpCommunicationConfiguration cfg;
 
     /** Time object processor. */
-    private final TimeObjectProcessorWrapper timeObjProcessor;
+    private final GridTimeoutProcessor timeObjProcessor;
 
     /** Attribute names. */
     private final AttributeNames attrs;
@@ -222,7 +225,7 @@ public class GridNioServerWrapper {
     public GridNioServerWrapper(
         IgniteLogger log,
         TcpCommunicationConfiguration cfg,
-        TimeObjectProcessorWrapper timeObjProcessor,
+        GridTimeoutProcessor timeObjProcessor,
         AttributeNames attributeNames,
         Tracing tracing,
         Function<UUID, ClusterNode> nodeGetter,
@@ -1030,7 +1033,7 @@ public class GridNioServerWrapper {
     ) throws IgniteCheckedException {
         HandshakeTimeoutObject obj = new HandshakeTimeoutObject<>(ch, U.currentTimeMillis() + timeout);
 
-        timeObjProcessor.addTimeoutObject(obj);
+        timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
 
         long rcvCnt;
 
@@ -1217,7 +1220,7 @@ public class GridNioServerWrapper {
         }
         finally {
             if (obj.cancel())
-                timeObjProcessor.removeTimeoutObject(obj);
+                timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
             else
                 throw handshakeTimeoutException();
         }

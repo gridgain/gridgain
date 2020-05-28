@@ -14,7 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp;
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -46,15 +62,8 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.CommunicationListener;
-import org.apache.ignite.spi.communication.tcp.internal.ClusterStateProvider;
-import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectFuture;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectGateway;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
-import org.apache.ignite.spi.communication.tcp.internal.DisconnectedSessionInfo;
-import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
-import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationNodeConnectionCheckFuture;
+import org.apache.ignite.spi.communication.tcp.AttributeNames;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
@@ -78,7 +87,7 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.UNKNOWN_NODE;
 
 /**
- * Process incoming messages.
+ * This class implement NioListener which process handshake stage, and transmit messages to session.
  */
 public class InboundConnectionHandler extends GridNioServerListenerAdapter<Message> {
     /**
@@ -214,9 +223,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             "'socketWriteTimeout' " + "configuration property) [remoteAddr=" + ses.remoteAddress() +
             ", writeTimeout=" + cfg.socketWriteTimeout() + ']');
 
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()) {
             log.debug("Closing communication SPI session on write timeout [remoteAddr=" + ses.remoteAddress() +
                 ", writeTimeout=" + cfg.socketWriteTimeout() + ']');
+        }
 
         ses.close();
     }
@@ -224,9 +234,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
         if (ses.accepted()) {
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled()) {
                 log.info("Accepted incoming communication connection [locAddr=" + ses.localAddress() +
                     ", rmtAddr=" + ses.remoteAddress() + ']');
+            }
 
             try {
                 if (client || ctxInitLatch.getCount() == 0 || !stateProvider.isHandshakeWaitSupported()) {
@@ -413,9 +424,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 if (outDesc != null) {
                     if (outDesc.nodeAlive(nodeGetter.apply(id))) {
                         if (!outDesc.messagesRequests().isEmpty()) {
-                            if (log.isDebugEnabled())
+                            if (log.isDebugEnabled()) {
                                 log.debug("Session was closed but there are unacknowledged messages, " +
                                     "will try to reconnect [rmtNode=" + outDesc.node().id() + ']');
+                            }
 
                             DisconnectedSessionInfo disconnectData =
                                 new DisconnectedSessionInfo(outDesc, connId.connectionIndex());
@@ -515,9 +527,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
         HandshakeMessage msg0 = (HandshakeMessage)msg;
 
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()) {
             log.debug("Received handshake message [locNodeId=" + locNode.id() + ", rmtNodeId=" + sndId +
                 ", msg=" + msg0 + ']');
+        }
 
         if (cfg.usePairedConnections() && usePairedConnections(rmtNode, attributeNames.pairedConnection())) {
             final GridNioRecoveryDescriptor recoveryDesc = nioSrvWrapper.inRecoveryDescriptor(rmtNode, connKey);
@@ -607,10 +620,11 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 boolean reserved = recoveryDesc.tryReserve(msg0.connectCount(),
                     new ConnectClosure(ses, recoveryDesc, rmtNode, connKey, msg0, !hasShmemClient, fut));
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Received incoming connection from remote node " +
                         "[rmtNode=" + rmtNode.id() + ", reserved=" + reserved +
                         ", recovery=" + recoveryDesc + ']');
+                }
 
                 if (reserved) {
                     try {
@@ -788,9 +802,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                             connectedNew(recoveryDesc, ses, false);
                         }
                         catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled())
+                            if (log.isDebugEnabled()) {
                                 log.debug("Failed to send recovery handshake " +
                                     "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
+                            }
 
                             recoveryDesc.release();
                         }
@@ -858,7 +873,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
          * @param rmtNode Remote node.
          * @param connKey Connection key.
          * @param msg Handshake message.
-         * @param createClient If {@code true} creates NIO communication client..
+         * @param createClient If {@code true} creates NIO communication client.
          * @param fut Connect future.
          */
         ConnectClosure(GridNioSession ses,
@@ -891,9 +906,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                             fut.onDone(client);
                         }
                         catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled())
+                            if (log.isDebugEnabled()) {
                                 log.debug("Failed to send recovery handshake " +
                                     "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
+                            }
 
                             recoveryDesc.release();
 
