@@ -1,3 +1,19 @@
+#
+# Copyright 2020 GridGain Systems, Inc. and Contributors.
+#
+# Licensed under the GridGain Community Edition License (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 Name:           gridgain-odbc
 Version:        8.7.19
 Release:        1%{?dist}
@@ -85,6 +101,6 @@ odbcinst -i -d -f %{_tmppath}/%{name}-%{version}-%{release}.ini -v
 odbcinst -u -d -n "Apache Ignite" -v
 
 %changelog
-* Tue May 19 2020 Igor Sapego <isapego@gridgain.com> - 8.7.17-1
+* Fri May 29 2020 GridGain Systems <info@gridgain.com> - 8.7.19-1
 - First version of RPM package for GridGain ODBC driver
 
