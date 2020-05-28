@@ -762,6 +762,18 @@
                                             </fileset>
                                         </replaceregexp>
 
+                                        <tstamp>
+                                            <format property="odbc.timestamp" pattern="EEE MMMMM d yyyy" locale="en" />
+                                        </tstamp>
+
+                                        <replaceregexp byline="true" encoding="UTF-8">
+                                            <regexp pattern="(^\%changelog.*$)" />
+                                            <substitution expression="\1${line.separator}* ${odbc.timestamp} GridGain Systems &lt;support@gridgain.com&gt; - ${new.ignite.version.fixed}-1" />
+                                            <fileset dir="${basedir}/">
+                                                <include name="**/gridgain-odbc.spec" />
+                                            </fileset>
+                                        </replaceregexp>
+
                                         <script language="javascript">
                                             function setBinVersion(clientVer, binVer) {
                                             var p = project.getProperty(clientVer).replace(".", ",");
