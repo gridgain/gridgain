@@ -28,6 +28,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public interface CheckpointProgress {
     /** */
+    public String reason();
+
+    /** */
     public boolean inProgress();
 
     /** */

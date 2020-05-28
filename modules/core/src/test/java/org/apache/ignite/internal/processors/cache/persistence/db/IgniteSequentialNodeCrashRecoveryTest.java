@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
@@ -320,6 +321,11 @@ public class IgniteSequentialNodeCrashRecoveryTest extends GridCommonAbstractTes
     /** */
     private static class DummyCheckpointContext implements DbCheckpointListener.Context {
         /** {@inheritDoc} */
+        @Override public CheckpointProgress progress() {
+            return null;
+        }
+
+        /** {@inheritDoc} */
         @Override public boolean nextSnapshot() {
             return false;
         }
@@ -337,11 +343,6 @@ public class IgniteSequentialNodeCrashRecoveryTest extends GridCommonAbstractTes
         /** {@inheritDoc} */
         @Override public @Nullable Executor executor() {
             return null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean hasPages() {
-            return false;
         }
     }
 

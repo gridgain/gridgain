@@ -4211,12 +4211,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 tracker.onLockRelease();
             }
 
-            DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, dirtyPagesCount > 0);
-
             curr.transitTo(LOCK_RELEASED);
 
             for (DbCheckpointListener lsnr : lsnrs)
-                lsnr.onCheckpointBegin(ctx);
+                lsnr.onCheckpointBegin(ctx0);
 
             if (snapFut != null) {
                 try {
@@ -4442,39 +4440,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             return curr;
         }
 
-        /** */
-        private DbCheckpointListener.Context createOnCheckpointBeginContext(
-            DbCheckpointListener.Context delegate,
-            boolean hasPages
-        ) {
-            return new DbCheckpointListener.Context() {
-                /** {@inheritDoc} */
-                @Override public boolean nextSnapshot() {
-                    return delegate.nextSnapshot();
-                }
-
-                /** {@inheritDoc} */
-                @Override public PartitionAllocationMap partitionStatMap() {
-                    return delegate.partitionStatMap();
-                }
-
-                /** {@inheritDoc} */
-                @Override public boolean needToSnapshot(String cacheOrGrpName) {
-                    return delegate.needToSnapshot(cacheOrGrpName);
-                }
-
-                /** {@inheritDoc} */
-                @Override public @Nullable Executor executor() {
-                    return delegate.executor();
-                }
-
-                /** {@inheritDoc} */
-                @Override public boolean hasPages() {
-                    return hasPages;
-                }
-            };
-        }
-
         /**
          * @param chp Checkpoint snapshot.
          */
@@ -4568,6 +4533,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
 
             /** {@inheritDoc} */
+            @Override public CheckpointProgress progress() {
+                return curr;
+            }
+
+            /** {@inheritDoc} */
             @Override public boolean nextSnapshot() {
                 return curr.nextSnapshot();
             }
@@ -4598,13 +4568,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         handleRejectiedExecutionException(e);
                     }
                 };
-            }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasPages() {
-                throw new IllegalStateException(
-                    "Property is unknown at this moment. You should use onCheckpointBegin() method."
-                );
             }
 
             /**

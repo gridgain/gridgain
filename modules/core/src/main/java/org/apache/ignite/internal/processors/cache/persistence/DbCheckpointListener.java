@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.util.concurrent.Executor;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionAllocationMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +31,12 @@ public interface DbCheckpointListener {
      */
     public interface Context {
         /**
-         *
+         * @return Checkpoint progress callback.
+         */
+        public CheckpointProgress progress();
+
+        /**
+         * @return {@code True} if a snapshot have to be created after.
          */
         public boolean nextSnapshot();
 
@@ -48,11 +54,6 @@ public interface DbCheckpointListener {
          * @return Context executor.
          */
         @Nullable public Executor executor();
-
-        /**
-         * @return {@code True} if at least one page is dirty.
-         */
-        public boolean hasPages();
     }
 
     /**

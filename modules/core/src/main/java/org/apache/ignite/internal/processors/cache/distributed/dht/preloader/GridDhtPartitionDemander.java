@@ -331,10 +331,12 @@ public class GridDhtPartitionDemander {
                 });
             }
 
-            if (!oldFut.isInitial())
-                oldFut.tryCancel();
-            else
-                fut.listen(f -> oldFut.onDone(f.result()));
+            if (!oldFut.isDone()) {
+                if (!oldFut.isInitial())
+                    oldFut.tryCancel();
+                else
+                    fut.listen(f -> oldFut.onDone(f.result()));
+            }
 
             // Make sure partitions sceduled for full rebalancing are first cleared.
             if (grp.persistenceEnabled()) {
@@ -1601,9 +1603,10 @@ public class GridDhtPartitionDemander {
         /**
          * @param nodeId Node id.
          * @param p Partition number.
+         * @param own {@code True} to own partition if possible.
          */
-        private synchronized void partitionDone(UUID nodeId, int p, boolean updateState) {
-            if (updateState && grp.localWalEnabled())
+        private synchronized void partitionDone(UUID nodeId, int p, boolean own) {
+            if (own && grp.localWalEnabled())
                 grp.topology().own(grp.topology().localPartition(p));
 
             if (isDone())
@@ -1674,6 +1677,7 @@ public class GridDhtPartitionDemander {
                     log.debug("Partitions have been scheduled to resend [reason=" +
                         "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
 
+                // TODO do not send state if not owned.
                 ctx.exchange().scheduleResendPartitions();
 
                 Collection<Integer> m = new HashSet<>();

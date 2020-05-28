@@ -17,6 +17,10 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -27,9 +31,21 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.WalStateManager;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -57,7 +73,7 @@ public class IgnitePdsConsistencyOnSupplierLeftTest extends GridCommonAbstractTe
                     .setPersistenceEnabled(true))
             .setWalSegmentSize(4 * 1024 * 1024)
             .setWalMode(WALMode.LOG_ONLY)
-            .setCheckpointFrequency(8000);
+            .setCheckpointFrequency(100000); // Disable automatic checkpoints.
 
         cfg.setDataStorageConfiguration(memCfg);
 
@@ -129,14 +145,227 @@ public class IgnitePdsConsistencyOnSupplierLeftTest extends GridCommonAbstractTe
         spi2.waitForBlocked();
         spi3.waitForBlocked();
 
-        System.out.println();
+//        TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+//            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+//                if (msg instanceof GridDhtPartitionDemandMessage) {
+//                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
+//
+//                    return msg0.topologyVersion().equals(new AffinityTopologyVersion(7, 0));
+//                }
+//
+//                return false;
+//            }
+//        });
 
-//        spi0.stopBlock();
-//        spi2.stopBlock();
+
+        CountDownLatch stopLatch = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        CountDownLatch latch3 = new CountDownLatch(1);
+
+
+        grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                latch3.countDown();
+            }
+        });
+
+        AtomicBoolean check = new AtomicBoolean(true);
+
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager) grid(1).context().cache().context().database();
+        dbMgr.addCheckpointListener(new DbCheckpointListener() {
+            @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                if (check.get()) {
+                    String reason = ctx.progress().reason();
+
+                    assertTrue(reason, reason.startsWith(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING));
+
+                    stopLatch.countDown();
+
+                    try {
+                        latch2.await(10000, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        fail();
+                    }
+
+                    check.set(false);
+                }
+            }
+
+            @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+
+            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+        });
+
+        TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return true;
+                }
+
+                return false;
+            }
+        });
+
+        spi0.stopBlock();
+        spi2.stopBlock();
         spi3.stopBlock();
 
-        doSleep(5000);
+        // Wait for cp.
+        stopLatch.await(10000, TimeUnit.MILLISECONDS);
 
-        awaitPartitionMapExchange();
+        // Will cause rebalancing remap.
+        GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                stopGrid(2);
+            }
+        });
+
+        // Wait for PME start.
+        latch3.await(10000, TimeUnit.MILLISECONDS);
+
+        // Trigger spurious switch.
+        latch2.countDown();
+
+        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked(2);
+
+        TestRecordingCommunicationSpi.spi(grid(0)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsFullMessage) {
+                    GridDhtPartitionsFullMessage msg0 = (GridDhtPartitionsFullMessage) msg;
+
+                    return msg0.exchangeId() != null;
+                }
+
+                return false;
+            }
+        });
+
+        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+            @Override public boolean apply(T2<ClusterNode, GridIoMessage> tuple) {
+                GridIoMessage msg = tuple.get2();
+                GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg.message();
+
+                return msg0.exchangeId() != null;
+            }
+        });
+
+        TestRecordingCommunicationSpi.spi(grid(0)).waitForBlocked();
+
+        // Finish exchange.
+        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
+
+        //doSleep(3000000);
+
+        //awaitPartitionMapExchange();
+    }
+
+    @Test
+    public void testSupplierLeft2() throws Exception {
+        IgniteEx crd = startGrids(4); // TODO multithreaded.
+        crd.cluster().active(true);
+
+        for (int i = 0; i < PARTS; i++)
+            crd.cache(DEFAULT_CACHE_NAME).put(i, i);
+
+        forceCheckpoint();
+
+        stopGrid(1);
+
+        for (int i = 0; i < PARTS; i++)
+            crd.cache(DEFAULT_CACHE_NAME).put(i, i + 1);
+
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(grid(0));
+        TestRecordingCommunicationSpi spi2 = TestRecordingCommunicationSpi.spi(grid(2));
+        TestRecordingCommunicationSpi spi3 = TestRecordingCommunicationSpi.spi(grid(3));
+
+        IgniteBiPredicate<ClusterNode, Message> pred = new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                return msg instanceof GridDhtPartitionSupplyMessage;
+            }
+        };
+
+        spi0.blockMessages(pred);
+        spi2.blockMessages(pred);
+        spi3.blockMessages(pred);
+
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(1);
+
+                return null;
+            }
+        });
+
+        spi0.waitForBlocked();
+        spi2.waitForBlocked();
+        spi3.waitForBlocked();
+
+        spi0.stopBlock();
+        spi2.stopBlock();
+
+        CountDownLatch delayListener = new CountDownLatch(1);
+        CountDownLatch l2 = new CountDownLatch(1);
+
+        AtomicBoolean first = new AtomicBoolean(true);
+
+        IgniteInternalFuture<Boolean> rebFut = grid(1).cachex(DEFAULT_CACHE_NAME).context().preloader().rebalanceFuture();
+        rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+            @Override public void apply(IgniteInternalFuture<Boolean> fut) {
+                if (first.get()) {
+                    delayListener.countDown();
+
+                    try {
+                        l2.await(115000, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        fail();
+                    }
+
+                    first.set(false);
+                }
+            }
+        });
+
+        TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage) {
+                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
+
+                    return msg0.topologyVersion().equals(new AffinityTopologyVersion(7, 0));
+                }
+
+                return false;
+            }
+        });
+
+        grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+            @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                delayListener.countDown();
+            }
+        });
+
+        // Will cause rebalancing remap.
+        GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                stopGrid(2);
+            }
+        });
+
+        delayListener.await();
+
+        spi3.stopBlock(); // Finish rebalancing but delay on "group rebalanced" listener
+
+        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked();
+
+        l2.countDown();
+
+        //TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
+
+        doSleep(10000);
     }
 }

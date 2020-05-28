@@ -76,6 +76,12 @@ import static org.apache.ignite.internal.processors.cache.persistence.Checkpoint
  * Write-ahead log state manager. Manages WAL enable and disable.
  */
 public class WalStateManager extends GridCacheSharedManagerAdapter {
+    /** */
+    public static final String ENABLE_DURABILITY_AFTER_REBALANCING = "enable-durability-rebalance-finished-";
+
+    /** */
+    private static final String ENABLE_DURABILITY_AFTER_PME = "enable-durability-";
+
     /** History size for to track stale messages. */
     private static final int HIST_SIZE = 1000;
 
@@ -423,7 +429,6 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
 
         Set<Integer> grpsToEnableWal = new HashSet<>();
         Set<Integer> grpsToDisableWal = new HashSet<>();
-        Set<Integer> grpsWithWalDisabled = new HashSet<>();
 
         boolean hasNonEmptyOwning = false;
 
@@ -471,8 +476,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             return;
 
         try {
+            // TODO FIXME sync checkpoint during PME.
             if (hasNonEmptyOwning && !grpsToEnableWal.isEmpty())
-                triggerCheckpoint("wal-local-state-change-" + topVer).futureFor(FINISHED).get();
+                triggerCheckpoint(ENABLE_DURABILITY_AFTER_PME + topVer).futureFor(FINISHED).get();
         }
         catch (IgniteCheckedException ex) {
             throw new IgniteException(ex);
@@ -501,11 +507,11 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
 
         assert grp != null: "Can not find group with id: " + grpId;
 
-        AffinityTopologyVersion lastGroupTop = grp.topology().readyTopologyVersion();
+        AffinityTopologyVersion lastGrpTop = grp.topology().readyTopologyVersion();
 
         // Pending updates in groups with disabled WAL are not protected from crash.
         // Need to trigger checkpoint for attempt to persist them.
-        CheckpointProgress cpFut = triggerCheckpoint("wal-local-state-changed-rebalance-finished-" + lastGroupTop);
+        CheckpointProgress cpFut = triggerCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING + lastGrpTop);
 
         assert cpFut != null;
 
@@ -527,7 +533,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                     CacheGroupContext grp = cctx.cache().cacheGroup(grpId0);
 
                     if (grp != null)
-                        grp.topology().ownMoving(lastGroupTop);
+                        grp.topology().ownMoving(lastGrpTop);
                     else if (log.isDebugEnabled())
                         log.debug("Cache group was destroyed before checkpoint finished, [grpId=" + grpId0 + ']');
                 }
