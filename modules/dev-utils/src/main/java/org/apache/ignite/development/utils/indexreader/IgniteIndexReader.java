@@ -97,10 +97,6 @@ import org.gridgain.grid.internal.processors.cache.database.snapshot.CacheSnapsh
 import org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotInputStream;
 import org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotMetadataV2;
 import org.jetbrains.annotations.Nullable;
-import org.openjdk.jol.info.ClassData;
-import org.openjdk.jol.info.ClassLayout;
-import org.openjdk.jol.info.GraphLayout;
-import org.openjdk.jol.layouters.CurrentLayouter;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.log;
@@ -1700,15 +1696,13 @@ public class IgniteIndexReader implements AutoCloseable {
 
         Map<String, List<File>> byFileName = partFiles.stream().collect(groupingBy(File::getName));
 
-        long filePosSize = ClassLayout.parseClass(FilePosition.class).instanceSize();
-        long arrWrapSize = ClassLayout.parseClass(ArrayWrapper.class).instanceSize();
+        long filePosSize = FilePosition.instanceSize();
+        long arrWrapSize = ArrayWrapper.instanceSize();
 
         for (Map.Entry<String, List<File>> entry : byFileName.entrySet()) {
             int maxPageCnt = 0;
 
             for (File partFile : entry.getValue()) {
-                sizeEstimated += GraphLayout.parseInstance(partFile).totalSize();
-
                 int pageCnt = (int)(partFile.length() / pageSize);
                 maxPageCnt = max(maxPageCnt, pageCnt);
 
@@ -1718,8 +1712,7 @@ public class IgniteIndexReader implements AutoCloseable {
             sizeEstimated += arrWrapSize;
 
             //Size of array in {@link ArrayWrapper} for {@link SnapshotFilePageStore}, taking into account its increase during filling
-            ClassData clsData = new ClassData(Object[].class.getName(), FilePosition.class.getName(), maxPageCnt);
-            sizeEstimated += new CurrentLayouter().layout(clsData).instanceSize() * 1.5;
+            sizeEstimated += IndexReaderUtils.objectArraySize(maxPageCnt) * 1.5;
         }
 
         return sizeEstimated;

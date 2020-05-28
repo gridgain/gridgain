@@ -56,4 +56,13 @@ public class FilePosition {
     public File file() {
         return file;
     }
+
+    /**
+     * Return approximate instance size.
+     *
+     * @return Approximate instance size.
+     */
+    public static long instanceSize() {
+        return IndexReaderUtils.objectSize(IndexReaderUtils.linkSize() + 8);
+    }
 }

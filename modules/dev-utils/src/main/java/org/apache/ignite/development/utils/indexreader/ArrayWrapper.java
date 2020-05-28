@@ -98,4 +98,13 @@ public class ArrayWrapper<E> extends AbstractList<E> implements RandomAccess {
 
         arr = Arrays.copyOf(arr, (int)(minCap * 1.5));
     }
+
+    /**
+     * Return approximate instance size.
+     *
+     * @return Approximate instance size.
+     */
+    public static long instanceSize() {
+        return IndexReaderUtils.objectSize(IndexReaderUtils.linkSize() + 4);
+    }
 }
