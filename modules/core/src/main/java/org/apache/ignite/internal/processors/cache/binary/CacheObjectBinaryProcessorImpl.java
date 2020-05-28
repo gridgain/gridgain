@@ -893,6 +893,18 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         });
     }
 
+    /**
+     * @return Custer binary metadata.
+     * @throws BinaryObjectException on error.
+     */
+    public Collection<BinaryMetadata> binaryMetadata() throws BinaryObjectException {
+        return F.viewReadOnly(metadataLocCache.values(), new IgniteClosure<BinaryMetadataHolder, BinaryMetadata>() {
+            @Override public BinaryMetadata apply(BinaryMetadataHolder metaHolder) {
+                return metaHolder.metadata();
+            }
+        });
+    }
+
     /** {@inheritDoc} */
     @Override public BinaryObject buildEnum(String typeName, int ord) throws BinaryObjectException {
         A.notNullOrEmpty(typeName, "enum type name");
