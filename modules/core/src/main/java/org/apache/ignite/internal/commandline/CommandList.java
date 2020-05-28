@@ -60,6 +60,12 @@ public enum CommandList {
     DATA_CENTER_REPLICATION("--dr", new DrCommand()),
 
     /** */
+    TRACING_CONFIGURATION("--tracing-configuration", new TracingConfigurationCommand()),
+
+    /** */
+    DATA_CENTER_REPLICATION("--dr", new DrCommand()),
+
+    /** */
     METADATA("--meta", new MetadataCommand());
 
     /** Private values copy so there's no need in cloning it every time. */

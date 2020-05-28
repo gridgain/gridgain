@@ -1322,7 +1322,8 @@ public class GridSqlQuerySplitter {
      * @return Copy of the function or {@code null} if any argument not presented in the replacement map.
      */
     private static GridSqlFunction copyFunction(GridSqlFunction orig, Map<String, String> replacement) {
-        GridSqlFunction func = new GridSqlFunction(null, orig.name());
+        GridSqlFunction func = orig.copy();
+
         // try to copy children with alias replacement
         if (!copyChildrenWithReplacement(orig, func, replacement))
             return null;
