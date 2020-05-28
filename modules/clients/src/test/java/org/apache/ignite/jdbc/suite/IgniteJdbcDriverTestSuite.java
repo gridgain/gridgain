@@ -63,6 +63,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinDataPageScanPropertySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataSourceSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDeleteStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDiskSpillingClientsTest;
+import org.apache.ignite.jdbc.thin.JdbcThinDistributedJoinsSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicPartitionedNearSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicPartitionedSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicReplicatedSelfTest;
@@ -192,6 +193,7 @@ import org.junit.runners.Suite;
 
     JdbcThinStatementSelfTest.class,
     JdbcThinComplexQuerySelfTest.class,
+    JdbcThinDistributedJoinsSelfTest.class,
     JdbcThinNoDefaultSchemaTest.class,
     JdbcThinSchemaCaseSelfTest.class,
     JdbcThinEmptyCacheSelfTest.class,

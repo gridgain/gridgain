@@ -67,6 +67,14 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Check distributed OUTER join of 3 tables (T1 -> T2 -> T3) returns correct result for non-collocated data.
+     *
+     * <ul>
+     *     <li>Create tables.</li>
+     *     <li>Put data into tables.</li>
+     *     <li>Check query with distributedJoin=true returns correct results.</li>
+     * </ul>
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -96,6 +104,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
         String res1;
         String res2;
 
+        // Join on non-primary key.
         try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             final ResultSet resultSet = stmt.executeQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_PJ.universal_donor FROM person " +
                 "LEFT JOIN medical_info ON medical_info.name = person.name " +
@@ -106,6 +115,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
             resultSet.close();
         }
 
+        // Join on primary key.
         try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             final ResultSet resultSet = stmt.executeQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_P.universal_donor FROM person " +
                 "LEFT JOIN medical_info ON medical_info.name = person.name " +
@@ -141,14 +151,12 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
         List<String> results = new ArrayList<>();
 
         while (res.next()){
-            StringBuilder sb = new StringBuilder('\t');
+            String row = String.valueOf(res.getLong(1)) + ',' +
+                res.getString(2) + ',' +
+                res.getString(3) + ',' +
+                res.getString(4);
 
-            sb.append(res.getLong(1)).append(',');
-            sb.append(res.getString(2)).append(',');
-            sb.append(res.getString(3)).append(',');
-            sb.append(res.getString(4));
-
-            results.add(sb.toString());
+            results.add(row);
         }
 
         results.sort(String::compareTo);

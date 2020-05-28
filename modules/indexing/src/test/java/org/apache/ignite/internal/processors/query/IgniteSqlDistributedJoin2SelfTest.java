@@ -27,6 +27,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -36,17 +37,25 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
     /** */
     private static final int NODES_COUNT = 3;
 
-    /** */
-    private static String PERSON_CACHE = "person";
+    /**
+     *
+     */
+    private static final String PERSON_CACHE = "person";
 
-    /** */
-    private static String MED_INFO_CACHE = "medical_info";
+    /**
+     *
+     */
+    private static final String MED_INFO_CACHE = "medical_info";
 
-    /** */
-    private static String BLOOD_INFO_PJ_CACHE = "blood_group_info_PJ";
+    /**
+     *
+     */
+    private static final String BLOOD_INFO_PJ_CACHE = "blood_group_info_PJ";
 
-    /** */
-    private static String BLOOD_INFO_P_CACHE = "blood_group_info_P";
+    /**
+     *
+     */
+    private static final String BLOOD_INFO_P_CACHE = "blood_group_info_P";
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -56,14 +65,26 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
     }
 
     /**
+     * Check distributed OUTER join of 3 tables (T1 -> T2 -> T3) returns correct result
+     * for non-collocated data.
+     *
+     * <ul>
+     *     <li>Create single cache with multiple query entities.</li>
+     *     <li>Put data into cache.</li>
+     *     <li>Check query with distributedJoin=true returns correct results.</li>
+     * </ul>
+     *
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-29449")
     @Test
     public void testNonCollocatedDistributedJoinSingleCache() throws Exception {
         startGridsMultiThreaded(NODES_COUNT, false);
 
-        final QueryEntity bgQueryEntity = new QueryEntity(String.class, BloodGroupInfoP.class).setTableName(BLOOD_INFO_P_CACHE)
+        QueryEntity bgQueryEntity = new QueryEntity(String.class, BloodGroupInfoP.class)
+            .setTableName(BLOOD_INFO_P_CACHE)
             .setKeyFieldName("blood_group");
+
         bgQueryEntity.getFields().put("blood_group", String.class.toString());
 
         IgniteCache<Object, Object> cache = ignite(0).createCache(
@@ -87,6 +108,15 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
     }
 
     /**
+     * Check distributed OUTER join of 3 tables (T1 -> T2 -> T3) returns correct result
+     * for non-collocated data.
+     *
+     * <ul>
+     *     <li>Create caches for query entities (single query entity per cache).</li>
+     *     <li>Put data into cache.</li>
+     *     <li>Check query with distributedJoin=true returns correct results.</li>
+     * </ul>
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -137,29 +167,24 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
      * @param cache Cache.
      */
     private void checkQueries(IgniteCache<Object, Object> cache) {
+        // Join on secondary index.
         SqlFieldsQuery qry1 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_PJ.universal_donor FROM person\n" +
             "  LEFT JOIN medical_info ON medical_info.name = person.name \n" +
             "  LEFT JOIN blood_group_info_PJ ON blood_group_info_PJ.blood_group = medical_info.blood_group;");
 
+        // Join on primary index.
         SqlFieldsQuery qry2 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_P.universal_donor FROM person\n" +
             "  LEFT JOIN medical_info ON medical_info.name = person.name \n" +
             "  LEFT JOIN blood_group_info_P ON blood_group_info_P.blood_group = medical_info.blood_group;");
-        final SqlFieldsQuery qry3 = new SqlFieldsQuery(
-            "SELECT medical_info.blood_group, blood_group_info_P.universal_donor FROM \n" +
-                "  medical_info \n" +
-                "  LEFT JOIN blood_group_info_P ON blood_group_info_P.blood_group = medical_info.blood_group;");
 
         qry1.setDistributedJoins(true);
         qry2.setDistributedJoins(true);
-        qry3.setDistributedJoins(true);
 
         final String res1 = queryResultAsString(cache.query(qry1).getAll());
         final String res2 = queryResultAsString(cache.query(qry2).getAll());
-       final String res3 = queryResultAsString(cache.query(qry3).getAll());
 
         log.info("Query1 result: \n" + res1);
         log.info("Query2 result: \n" + res2);
-        log.info("Query3 result: \n" + res3);
 
         String expOut = "2001,Shravya,null,null\n" +
             "2002,Kiran,O+,O+A+B+AB+\n" +
@@ -169,7 +194,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
             "2006,Deeps,null,null\n" +
             "2007,Hope,null,null\n";
 
-        assertEquals("Not equal results", res1, res2);
+        assertEquals("Wrong result", expOut, res1);
         assertEquals("Wrong result", expOut, res2);
     }
 
@@ -183,7 +208,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         List<String> results = new ArrayList<>();
 
         for (List<?> row : res) {
-            StringBuilder sb = new StringBuilder('\t');
+            StringBuilder sb = new StringBuilder();
             for (Iterator<?> iterator = row.iterator(); iterator.hasNext(); ) {
                 sb.append(iterator.next());
 
@@ -260,7 +285,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         @QuerySqlField
         private String name;
 
-        public Person(long id, String name) {
+        Person(long id, String name) {
             this.id = id;
             this.name = name;
         }
@@ -290,7 +315,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         @QuerySqlField(name = "blood_group")
         private String bloodGroup;
 
-        public MedicalInfo(long id, String name, String bloodGroup) {
+        MedicalInfo(long id, String name, String bloodGroup) {
             this.id = id;
             this.name = name;
             this.bloodGroup = bloodGroup;
@@ -325,7 +350,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         @QuerySqlField(name = "universal_donor")
         private String universalDonor;
 
-        public BloodGroupInfoPJ(long id, String bloodGroup, String universalDonor) {
+        BloodGroupInfoPJ(long id, String bloodGroup, String universalDonor) {
             this.id = id;
             this.bloodGroup = bloodGroup;
             this.universalDonor = universalDonor;
@@ -359,7 +384,7 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
         @QuerySqlField(name = "universal_donor")
         private String universalDonor;
 
-        public BloodGroupInfoP(long id, String bloodGroup, String universalDonor) {
+        BloodGroupInfoP(long id, String bloodGroup, String universalDonor) {
             this.id = id;
             this.bloodGroup = bloodGroup;
             this.universalDonor = universalDonor;
