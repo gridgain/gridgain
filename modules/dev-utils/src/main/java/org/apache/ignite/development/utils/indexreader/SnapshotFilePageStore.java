@@ -120,7 +120,10 @@ public class SnapshotFilePageStore extends FilePageStore {
     }
 
     /** {@inheritDoc} */
-    @Override protected FileIO fileIO(long pageId) {
+    @Override protected FileIO fileIO(long pageId, boolean hdr) {
+        if (hdr)
+            throw new IllegalArgumentException("Header not supported");
+
         return fileIOs.get(pageFilePositions.get(pageIndex(pageId)).file());
     }
 
