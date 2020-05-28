@@ -77,6 +77,7 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
      * @param nodeId Node ID.
      * @param nearNodeId Near node ID.
      * @param xidVer XID version.
+     * @param nearXidVer Near transaction ID.
      * @param commitVer Commit version.
      * @param sys System flag.
      * @param plc IO policy.
@@ -99,6 +100,7 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
         UUID nodeId,
         UUID nearNodeId,
         GridCacheVersion xidVer,
+        GridCacheVersion nearXidVer,
         GridCacheVersion commitVer,
         boolean sys,
         byte plc,
@@ -132,6 +134,8 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
         assert nearNodeId != null;
 
         this.nearNodeId = nearNodeId;
+
+        this.nearXidVer = nearXidVer;
 
         int writeSize = writeEntries != null ? Math.max(txSize, writeEntries.size()) : txSize;
 

@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
@@ -25,6 +26,11 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 public class MarkerPageIO extends PageIO {
     /** Offset for marker type value. */
     private static final int MARKER_TYPE_OFF = COMMON_HEADER_END;
+
+    /**
+     * Offset for WAL record serializer version, see {@link #walRecordSerializerVersion(long)}.
+     */
+    private static final int WAL_RECORD_SERIALIZER_VERSION_OFF = MARKER_TYPE_OFF + 4;
 
     /** This type of marker is used to mark the end of pages stream. */
     public static final int MARKER_TYPE_TERMINATION = 1;
@@ -40,6 +46,7 @@ public class MarkerPageIO extends PageIO {
     public MarkerPageIO(int ver) {
         super(T_MARKER_PAGE, ver);
     }
+
     /**
      * @param type Page type.
      * @param ver  Page format version.
@@ -48,18 +55,66 @@ public class MarkerPageIO extends PageIO {
         super(type, ver);
     }
 
-    /** Type of a marker. */
+    /**
+     * Type of a marker.
+     *
+     * @param pageAddr Page address.
+     */
     public int markerType(long pageAddr) {
         return PageUtils.getInt(pageAddr, MARKER_TYPE_OFF);
     }
 
-    /** Sets marker type. */
+    /**
+     * Type of a marker.
+     *
+     * @param buffer Page buffer.
+     */
+    public int markerType(ByteBuffer buffer) {
+        return buffer.getInt(MARKER_TYPE_OFF);
+    }
+
+    /**
+     * Sets marker type.
+     *
+     * @param pageAddr Page address.
+     * @param markerType Marker type.
+     */
     public void setMarkerType(long pageAddr, int markerType) {
         PageUtils.putInt(pageAddr, MARKER_TYPE_OFF, markerType);
     }
 
+    /**
+     * Pages stream can be followed by serialized WAL records, version of record serializer is stored in marker page.
+     * This method returns WAL record serializer version.
+     *
+     * @param pageAddr Page address.
+     */
+    public int walRecordSerializerVersion(long pageAddr) {
+        return PageUtils.getInt(pageAddr, WAL_RECORD_SERIALIZER_VERSION_OFF);
+    }
+
+    /**
+     * Returns WAL record serializer version, see {@link #walRecordSerializerVersion(long)}.
+     *
+     * @param buffer Page buffer.
+     */
+    public int walRecordSerializerVersion(ByteBuffer buffer) {
+        return buffer.getInt(WAL_RECORD_SERIALIZER_VERSION_OFF);
+    }
+
+    /**
+     * Sets WAL record serializer version, see {@link #walRecordSerializerVersion(long)}.
+     *
+     * @param pageAddr Page address.
+     * @param v Version.
+     */
+    public void setWalRecordSerializerVersion(long pageAddr, int v) {
+        PageUtils.putInt(pageAddr, WAL_RECORD_SERIALIZER_VERSION_OFF, v);
+    }
+
     /** {@inheritDoc} */
     @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
-        sb.a("MarkerPage [markerType=" + markerType(addr) + "]");
+        sb.a("MarkerPage [markerType=" + markerType(addr) +
+            ", walRecordSerializerVersion=" + walRecordSerializerVersion(addr) + "]");
     }
 }
