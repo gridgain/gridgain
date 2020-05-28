@@ -22,8 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.cache.Cache;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
@@ -40,40 +43,80 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.client.thin.TcpClientTransactions.TcpClientTransaction;
 
 import static java.util.AbstractMap.SimpleEntry;
+import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.EXPIRY_POLICY;
+import static org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy.convertDuration;
 
 /**
  * Implementation of {@link ClientCache} over TCP protocol.
  */
 class TcpClientCache<K, V> implements ClientCache<K, V> {
-    /** "Keep binary" flag mask. */
+    /**
+     * "Keep binary" flag mask.
+     */
     private static final byte KEEP_BINARY_FLAG_MASK = 0x01;
 
-    /** "Transactional" flag mask. */
+    /**
+     * "Transactional" flag mask.
+     */
     private static final byte TRANSACTIONAL_FLAG_MASK = 0x02;
 
-    /** Cache id. */
+    /**
+     * "With expiry policy" flag mask.
+     */
+    private static final byte WITH_EXPIRY_POLICY_FLAG_MASK = 0x04;
+
+    /**
+     * Cache id.
+     */
     private final int cacheId;
 
-    /** Channel. */
+    /**
+     * Channel.
+     */
     private final ReliableChannel ch;
 
-    /** Cache name. */
+    /**
+     * Cache name.
+     */
     private final String name;
 
-    /** Marshaller. */
+    /**
+     * Marshaller.
+     */
     private final ClientBinaryMarshaller marsh;
 
-    /** Transactions facade. */
+    /**
+     * Transactions facade.
+     */
     private final TcpClientTransactions transactions;
 
-    /** Serializer/deserializer. */
+    /**
+     * Serializer/deserializer.
+     */
     private final ClientUtils serDes;
 
-    /** Indicates if cache works with Ignite Binary format. */
-    private boolean keepBinary = false;
+    /**
+     * Indicates if cache works with Ignite Binary format.
+     */
+    private final boolean keepBinary;
 
-    /** Constructor. */
+    /**
+     * Expiry policy.
+     */
+    private final ExpiryPolicy expiryPlc;
+
+    /**
+     * Constructor.
+     */
     TcpClientCache(String name, ReliableChannel ch, ClientBinaryMarshaller marsh, TcpClientTransactions transactions) {
+        this(name, ch, marsh, transactions, false, null);
+    }
+
+    /**
+     * Constructor.
+     */
+    TcpClientCache(String name, ReliableChannel ch, ClientBinaryMarshaller marsh, TcpClientTransactions transactions,
+                   boolean keepBinary, ExpiryPolicy expiryPlc) {
         this.name = name;
         this.cacheId = ClientUtils.cacheId(name);
         this.ch = ch;
@@ -81,6 +124,9 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         this.transactions = transactions;
 
         serDes = new ClientUtils(marsh);
+
+        this.keepBinary = keepBinary;
+        this.expiryPlc = expiryPlc;
     }
 
     /** {@inheritDoc} */
@@ -88,12 +134,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             this::readObject
         );
     }
@@ -106,13 +150,11 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        ch.request(
+        cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_PUT,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            }
+            req -> writeObject(req, val),
+            null
         );
     }
 
@@ -121,12 +163,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_CONTAINS_KEY,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             res -> res.in().readBoolean()
         );
     }
@@ -143,7 +183,7 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
             this::writeCacheInfo,
             res -> {
                 try {
-                    return serDes.cacheConfiguration(res.in(), res.clientChannel().serverVersion());
+                    return serDes.cacheConfiguration(res.in(), res.clientChannel().protocolCtx());
                 }
                 catch (IOException e) {
                     return null;
@@ -219,11 +259,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (newVal == null)
             throw new NullPointerException("newVal");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REPLACE_IF_EQUALS,
             req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
                 writeObject(req, oldVal);
                 writeObject(req, newVal);
             },
@@ -239,13 +278,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REPLACE,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             res -> res.in().readBoolean()
         );
     }
@@ -255,12 +291,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REMOVE_KEY,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             res -> res.in().readBoolean()
         );
     }
@@ -273,13 +307,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (oldVal == null)
             throw new NullPointerException("oldVal");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_REMOVE_IF_EQUALS,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, oldVal);
-            },
+            req -> writeObject(req, oldVal),
             res -> res.in().readBoolean()
         );
     }
@@ -314,13 +345,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET_AND_PUT,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             this::readObject
         );
     }
@@ -330,12 +358,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (key == null)
             throw new NullPointerException("key");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET_AND_REMOVE,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-            },
+            null,
             this::readObject
         );
     }
@@ -348,13 +374,10 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_GET_AND_REPLACE,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
+            req -> writeObject(req, val),
             this::readObject
         );
     }
@@ -367,47 +390,50 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         if (val == null)
             throw new NullPointerException("val");
 
-        return ch.service(
+        return cacheSingleKeyOperation(
+            key,
             ClientOperation.CACHE_PUT_IF_ABSENT,
-            req -> {
-                writeCacheInfo(req);
-                writeObject(req, key);
-                writeObject(req, val);
-            },
-            res -> res.in().readBoolean()
+                req -> writeObject(req, val),
+                res -> res.in().readBoolean()
         );
     }
 
-    /** {@inheritDoc} */
-    @Override public void clear() throws ClientException {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void clear() throws ClientException {
         ch.request(ClientOperation.CACHE_CLEAR, this::writeCacheInfo);
     }
 
-    /** {@inheritDoc} */
-    @Override public <K1, V1> ClientCache<K1, V1> withKeepBinary() {
-        TcpClientCache<K1, V1> binCache;
-
-        if (keepBinary) {
-            try {
-                binCache = (TcpClientCache<K1, V1>)this;
-            }
-            catch (ClassCastException ex) {
-                throw new IllegalStateException(
-                    "Trying to enable binary mode on already binary cache with different key/value type arguments.",
-                    ex
-                );
-            }
-        }
-        else {
-            binCache = new TcpClientCache<>(name, ch, marsh, transactions);
-
-            binCache.keepBinary = true;
-        }
-
-        return binCache;
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <K1, V1> ClientCache<K1, V1> withKeepBinary() {
+        return keepBinary ? (ClientCache<K1, V1>) this :
+                new TcpClientCache<>(name, ch, marsh, transactions, true, expiryPlc);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expiryPlc) {
+        return withExpiryPolicy(expiryPlc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <K1, V1> ClientCache<K1, V1> withExpiryPolicy(ExpiryPolicy expiryPlc) {
+        return new TcpClientCache<>(name, ch, marsh, transactions, keepBinary, expiryPlc);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @SuppressWarnings("unchecked")
     @Override public <R> QueryCursor<R> query(Query<R> qry) {
         if (qry == null)
@@ -505,7 +531,33 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         ));
     }
 
-    /** Write cache ID and flags. */
+
+    /**
+     * Execute cache operation with a single key.
+     */
+    private <T> T cacheSingleKeyOperation(
+        K key,
+        ClientOperation op,
+        Consumer<PayloadOutputChannel> additionalPayloadWriter,
+        Function<PayloadInputChannel, T> payloadReader
+    ) throws ClientException {
+        Consumer<PayloadOutputChannel> payloadWriter = req -> {
+            writeCacheInfo(req);
+            writeObject(req, key);
+
+            if (additionalPayloadWriter != null)
+                additionalPayloadWriter.accept(req);
+        };
+
+        // Transactional operation cannot be executed on affinity node, it should be executed on node started
+        // the transaction.
+        return transactions.tx() == null ? ch.affinityService(cacheId, key, op, payloadWriter, payloadReader) :
+                ch.service(op, payloadWriter, payloadReader);
+    }
+
+    /**
+     * Write cache ID and flags.
+     */
     private void writeCacheInfo(PayloadOutputChannel payloadCh) {
         BinaryOutputStream out = payloadCh.out();
 
@@ -515,19 +567,36 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
 
         TcpClientTransaction tx = transactions.tx();
 
-        if (tx != null) {
-            flags |= TRANSACTIONAL_FLAG_MASK;
+        if (expiryPlc != null) {
+            ProtocolContext protocolCtx = payloadCh.clientChannel().protocolCtx();
 
-            if (tx.clientChannel() != payloadCh.clientChannel()) {
-                throw new ClientException("Transaction context has been lost due to connection errors. " +
-                    "Cache operations are prohibited until current transaction closed.");
+            if (!protocolCtx.isFeatureSupported(EXPIRY_POLICY)) {
+                throw new ClientProtocolError(String.format("Expire policies are not supported by the server " +
+                        "version %s, required version %s", protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
             }
 
-            out.writeByte(flags);
-            out.writeInt(tx.txId());
+            flags |= WITH_EXPIRY_POLICY_FLAG_MASK;
         }
-        else
-            out.writeByte(flags);
+
+        if (tx != null) {
+            if (tx.clientChannel() != payloadCh.clientChannel()) {
+                throw new ClientException("Transaction context has been lost due to connection errors. " +
+                        "Cache operations are prohibited until current transaction closed.");
+            }
+
+            flags |= TRANSACTIONAL_FLAG_MASK;
+        }
+
+        out.writeByte(flags);
+
+        if ((flags & WITH_EXPIRY_POLICY_FLAG_MASK) != 0) {
+            out.writeLong(convertDuration(expiryPlc.getExpiryForCreation()));
+            out.writeLong(convertDuration(expiryPlc.getExpiryForUpdate()));
+            out.writeLong(convertDuration(expiryPlc.getExpiryForAccess()));
+        }
+
+        if ((flags & TRANSACTIONAL_FLAG_MASK) != 0)
+            out.writeInt(tx.txId());
     }
 
     /** */

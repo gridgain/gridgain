@@ -85,7 +85,7 @@ import org.apache.ignite.internal.processors.datastructures.DataStructuresProces
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
-import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
+import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -359,8 +359,9 @@ public class IgnitionEx {
         if (waitForBackups == null)
             waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
 
-        if (grid != null && grid.state() == STARTED) {
-            grid.stop(cancel, waitForBackups);
+        if (grid != null) {
+            if (grid.state() == STARTED)
+                grid.stop(cancel, waitForBackups);
 
             boolean fireEvt;
 
@@ -2033,7 +2034,7 @@ public class IgnitionEx {
                 GridIoPolicy.UNDEFINED,
                 oomeHnd);
 
-            rebalanceExecSvc.allowsCoreThreadTimeOut();
+            rebalanceExecSvc.allowCoreThreadTimeOut(true);
 
             if (!F.isEmpty(cfg.getExecutorConfiguration())) {
                 validateCustomExecutorsConfiguration(cfg.getExecutorConfiguration());

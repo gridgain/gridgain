@@ -19,7 +19,9 @@ package org.apache.ignite.internal.processors.rest.client.message;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.plugin.security.SecurityCredentials;
 
 /**
  * Client authentication request.
@@ -29,19 +31,19 @@ public class GridClientAuthenticationRequest extends GridClientAbstractMessage {
     private static final long serialVersionUID = 0L;
 
     /** Credentials. */
-    private Object cred;
+    private SecurityCredentials cred;
 
     /**
      * @return Credentials object.
      */
-    public Object credentials() {
+    public SecurityCredentials credentials() {
         return cred;
     }
 
     /**
      * @param cred Credentials object.
      */
-    public void credentials(Object cred) {
+    public void credentials(SecurityCredentials cred) {
         this.cred = cred;
     }
 
@@ -56,7 +58,7 @@ public class GridClientAuthenticationRequest extends GridClientAbstractMessage {
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         super.readExternal(in);
 
-        cred = in.readObject();
+        cred = (SecurityCredentials)in.readObject();
     }
 
     /** {@inheritDoc} */

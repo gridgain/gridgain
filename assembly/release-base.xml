@@ -22,28 +22,8 @@
            http://maven.apache.org/xsd/component-1.1.2.xsd">
     <files>
         <file>
-            <source>RELEASE_NOTES.txt</source>
-            <outputDirectory>/</outputDirectory>
-        </file>
-
-        <file>
             <source>README.txt</source>
             <outputDirectory>/</outputDirectory>
-        </file>
-
-        <file>
-            <source>config/ignite-log4j.xml</source>
-            <outputDirectory>/config</outputDirectory>
-        </file>
-
-        <file>
-            <source>config/ignite-log4j2.xml</source>
-            <outputDirectory>/config</outputDirectory>
-        </file>
-
-        <file>
-            <source>config/java.util.logging.properties</source>
-            <outputDirectory>/config</outputDirectory>
         </file>
 
         <file>
@@ -57,17 +37,9 @@
             <directory>bin</directory>
             <outputDirectory>/bin</outputDirectory>
             <includes>
-                <include>**/*.bat</include>
-                <include>**/*.exe</include>
                 <include>**/*.jar</include>
                 <include>**/*.txt</include>
             </includes>
-            <excludes>
-                <exclude>**/*hadoop*.bat</exclude>
-                <exclude>igniterouter.bat</exclude>
-                <exclude>**/build-classpath.bat</exclude>
-                <exclude>ignitevisorcmd.bat</exclude>
-            </excludes>
         </fileSet>
 
         <fileSet>
@@ -87,8 +59,27 @@
         </fileSet>
 
         <fileSet>
-            <directory>config/${ignite.edition}</directory>
+            <directory>config/${ignite.orig.edition}</directory>
             <outputDirectory>/config</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>config</directory>
+            <outputDirectory>/config</outputDirectory>
+            <includes>
+                <include>ignite-log4j.xml</include>
+                <include>ignite-log4j2.xml</include>
+                <include>java.util.logging.properties</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/../control-center-agent/bin</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>0755</fileMode>
+            <includes>
+                <include>**/management.sh</include>
+            </includes>
         </fileSet>
     </fileSets>
 </component>

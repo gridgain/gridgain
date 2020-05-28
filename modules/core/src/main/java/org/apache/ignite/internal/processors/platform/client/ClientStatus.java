@@ -36,6 +36,9 @@ public final class ClientStatus {
     /** Invalid op code. */
     public static final int INVALID_OP_CODE = 2;
 
+    /** Functionality is disabled. */
+    public static final int FUNCTIONALITY_DISABLED = 100;
+
     /** Cache does not exist. */
     public static final int CACHE_DOES_NOT_EXIST = 1000;
 
@@ -59,6 +62,9 @@ public final class ClientStatus {
 
     /** Transaction timed out. */
     public static final int TX_TIMED_OUT = 1022;
+
+    /** Too many compute tasks. */
+    public static final int TOO_MANY_COMPUTE_TASKS = 1030;
 
     /** Authentication failed. */
     public static final int AUTH_FAILED = 2000;

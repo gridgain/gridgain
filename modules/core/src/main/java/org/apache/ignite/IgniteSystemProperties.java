@@ -272,7 +272,10 @@ public final class IgniteSystemProperties {
     /**
      * Timeout after which all uncompleted transactions originated by left node will be
      * salvaged (i.e. invalidated and committed).
+     *
+     * @deprecated Transactions are salvaged immediately to reduce PME latency.
      */
+    @Deprecated
     public static final String IGNITE_TX_SALVAGE_TIMEOUT = "IGNITE_TX_SALVAGE_TIMEOUT";
 
     /**
@@ -1403,6 +1406,20 @@ public final class IgniteSystemProperties {
      * compatibility. By default, {@code false}.
      */
     public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
+
+    /**
+     * When above zero, prints tx key collisions once per interval.
+     * Each transaction besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons
+     * per key lock queue may rise. This property sets the interval during which statistics are collected.
+     * Default is 1000 ms.
+     */
+    public static final String IGNITE_DUMP_TX_COLLISIONS_INTERVAL = "IGNITE_DUMP_TX_COLLISIONS_INTERVAL";
+
+    /**
+     * Defines how many exchange futures are kept uncleared in the queue. Default is 10.
+     */
+    public static final String IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT =
+        "IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT";
 
     /**
      * Enforces singleton.
