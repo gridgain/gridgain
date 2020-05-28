@@ -53,6 +53,7 @@ public class HistoricalReservationTest extends GridCommonAbstractTest {
                 .setAffinity(new RendezvousAffinityFunction(false, 32))
                 .setBackups(1))
             .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setCheckpointFrequency(300_000)
                 .setWalCompactionEnabled(true)
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(true)));
@@ -167,6 +168,8 @@ public class HistoricalReservationTest extends GridCommonAbstractTest {
         ignite0.cluster().active(true);
 
         preloadData(ignite0, 0, 100);
+
+        forceCheckpoint();
 
         awaitPartitionMapExchange();
 

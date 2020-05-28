@@ -231,7 +231,7 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
                 for (int g = 0; g < initGridCnt; g++) {
                     IgniteEx ig = grid(g);
 
-                    if (isReserveListEmpty(ig))
+                    if (!isReserveListEmpty(ig))
                         return false;
                 }
 
@@ -500,7 +500,7 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
                 for (int g = 0; g < initGridCnt - 1; g++) {
                     IgniteEx ig = grid(g);
 
-                    if (isReserveListEmpty(ig))
+                    if (!isReserveListEmpty(ig))
                         return false;
                 }
 
