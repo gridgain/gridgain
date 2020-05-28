@@ -758,7 +758,7 @@
                                             <regexp pattern="(Version:.+)\d+\.\d+\.\d+(.*)" />
                                             <substitution expression="\1${new.ignite.version.fixed}\2" />
                                             <fileset dir="${basedir}/">
-                                                <include name="**/*.spec" />
+                                                <include name="**/gridgain-odbc.spec" />
                                             </fileset>
                                         </replaceregexp>
 

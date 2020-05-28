@@ -101,6 +101,5 @@ odbcinst -i -d -f %{_tmppath}/%{name}-%{version}-%{release}.ini -v
 odbcinst -u -d -n "Apache Ignite" -v
 
 %changelog
-* Fri May 29 2020 GridGain Systems <info@gridgain.com> - 8.7.19-1
 - First version of RPM package for GridGain ODBC driver
 
