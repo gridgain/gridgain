@@ -492,7 +492,7 @@ public class CheckpointHistory {
         final Map<Integer, T2<String, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
 
         if (true) {
-            Set<CheckpointEntry> reservedCps = new HashSet<>();
+            CheckpointEntry oldestCpForReservation = null;
 
             for (Integer grpId : groupsAndPartitions.keySet()) {
                 for (Integer part : groupsAndPartitions.get(grpId)) {
@@ -501,15 +501,20 @@ public class CheckpointHistory {
                     if (cpEntry == null)
                         continue;
 
-                    boolean reserved = reservedCps.contains(cpEntry) ? true : cctx.wal().reserve(cpEntry.checkpointMark());
+                    if (oldestCpForReservation == null || oldestCpForReservation.timestamp() > cpEntry.timestamp())
+                        oldestCpForReservation = cpEntry;
 
-                    if (reserved) {
-                        res.computeIfAbsent(grpId, partCpMap ->
-                            new T2<>("searchAndReserveCheckpoints", new HashMap<>()))
-                            .get2().put(part, cpEntry);
-                    }
-                    else
-                        log.warning("Could not reserve cp " + cpEntry.checkpointMark());
+                    res.computeIfAbsent(grpId, partCpMap ->
+                        new T2<>("searchAndReserveCheckpoints", new HashMap<>()))
+                        .get2().put(part, cpEntry);
+                }
+            }
+
+            if (oldestCpForReservation != null) {
+                if (!cctx.wal().reserve(oldestCpForReservation.checkpointMark())) {
+                    log.warning("Could not reserve cp " + oldestCpForReservation.checkpointMark());
+
+                    return Collections.emptyMap();
                 }
             }
 
