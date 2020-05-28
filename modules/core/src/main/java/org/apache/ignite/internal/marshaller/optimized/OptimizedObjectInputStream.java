@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
@@ -100,6 +102,12 @@ import static org.apache.ignite.internal.marshaller.optimized.OptimizedMarshalle
 class OptimizedObjectInputStream extends ObjectInputStream {
     /** Dummy object for HashSet. */
     private static final Object DUMMY = new Object();
+
+    /** Suppress errors on this type due to compatibility. */
+    private static final Set<String> EXCLUDED_MARSHALLING_ERROR_TYPES =
+        Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        "org.gridgain.grid.internal.processors.security.SecuritySubjectAdapter",
+            "org.gridgain.grid.internal.processors.cache.database.snapshot.schedule.SnapshotSchedule")));
 
     /** */
     private final HandleTable handles = new HandleTable(10);
@@ -344,7 +352,7 @@ class OptimizedObjectInputStream extends ObjectInputStream {
                 try {
                     return desc.read(this);
                 }
-                catch (IOException e){
+                catch (IOException e) {
                     throw new IOException("Failed to deserialize object [typeName=" +
                         desc.describedClass().getName() + ']', e);
                 }
@@ -520,6 +528,9 @@ class OptimizedObjectInputStream extends ObjectInputStream {
                 }
             }
             catch (IOException e) {
+                if (EXCLUDED_MARSHALLING_ERROR_TYPES.contains(obj.getClass().getName()))
+                    return;
+
                 throw new IOException("Failed to deserialize field [name=" + t.name() + ']', e);
             }
         }

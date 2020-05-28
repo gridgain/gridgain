@@ -60,9 +60,11 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
+import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -89,12 +91,10 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
-import static org.apache.ignite.internal.processors.tracing.Traces.Communication.SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.MSG_WRITER;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.NIO_OPERATION;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 
 /**
  * TCP NIO server. Due to asynchronous nature of connections processing
@@ -1234,14 +1234,16 @@ public class GridNioServer<T> {
                 }
 
                 if (!skipWrite) {
-                    try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
+                    Span span = tracing.create(COMMUNICATION_SOCKET_WRITE, req.span());
+
+                    try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
                         int cnt = sockCh.write(buf);
 
                         if (log.isTraceEnabled())
                             log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
 
-                    if (sentBytesCntMetric != null)
-                        sentBytesCntMetric.add(cnt);
+                        if (sentBytesCntMetric != null)
+                            sentBytesCntMetric.add(cnt);
 
                         ses.bytesSent(cnt);
                     }
@@ -1567,9 +1569,10 @@ public class GridNioServer<T> {
             boolean finished;
             msg = (Message)req.message();
 
-            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
-                if (isTraceable())
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
+            Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
+
+            try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
+                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 assert msg != null;
 
@@ -1747,9 +1750,10 @@ public class GridNioServer<T> {
 
             assert msg != null : req;
 
-            try (TraceSurroundings ignore = tracing.startChild(SOCKET_WRITE, req.span())) {
-                if (isTraceable())
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
+            Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
+
+            try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
+                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 if (writer != null)
                     writer.setCurrentWriteClass(msg.getClass());
@@ -2319,7 +2323,7 @@ public class GridNioServer<T> {
          * @param keys Keys.
          */
         private void dumpSelectorInfo(StringBuilder sb, Set<SelectionKey> keys) {
-            sb.append(">> Selector info [idx=").append(idx)
+            sb.append(">> Selector info [id=").append(idx)
                 .append(", keysCnt=").append(keys.size())
                 .append(", bytesRcvd=").append(bytesRcvd)
                 .append(", bytesRcvd0=").append(bytesRcvd0)

@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -41,8 +40,6 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
-import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -193,7 +190,7 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
 
                         if (partState != OWNING) {
                             if (partState == LOST)
-                                ignoreLostPartitionIfPossible(cctx, part);
+                                failQueryOnLostData(cctx, part);
                             else {
                                 return new PartitionReservation(reserved,
                                         String.format("Failed to reserve partitions " +
@@ -240,7 +237,7 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
 
                         if (partState != OWNING) {
                             if (partState == LOST)
-                                ignoreLostPartitionIfPossible(cctx, part);
+                                failQueryOnLostData(cctx, part);
                             else {
                                 return new PartitionReservation(reserved,
                                         String.format("Failed to reserve partitions for " +
@@ -294,22 +291,13 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
     }
 
     /**
-     * Decide whether to ignore or proceed with lost partition.
-     *
      * @param cctx Cache context.
      * @param part Partition.
-     * @throws IgniteCheckedException If failed.
      */
-    private static void ignoreLostPartitionIfPossible(GridCacheContext cctx, GridDhtLocalPartition part)
+    private static void failQueryOnLostData(GridCacheContext cctx, GridDhtLocalPartition part)
         throws IgniteCheckedException {
-        PartitionLossPolicy plc = cctx.config().getPartitionLossPolicy();
-
-        if (plc != null) {
-            if (plc == READ_ONLY_SAFE || plc == READ_WRITE_SAFE) {
-                throw new CacheInvalidStateException("Failed to execute query because cache partition has been " +
-                    "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
-            }
-        }
+        throw new CacheInvalidStateException("Failed to execute query because cache partition has been " +
+            "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
     }
 
     /**
