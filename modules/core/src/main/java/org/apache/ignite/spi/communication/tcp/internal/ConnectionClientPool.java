@@ -689,14 +689,20 @@ public class ConnectionClientPool {
         HandshakeTimeoutObject<GridCommunicationClient> obj = new HandshakeTimeoutObject<>(client,
             U.currentTimeMillis() + timeout);
 
-        timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
+        if(timeObjProcessor != null)
+            timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
+        else
+            clusterStateProvider.getSpiContext().addTimeoutObject(obj);
 
         try {
             client.doHandshake(new SHMemHandshakeClosure(log, rmtNodeId, clusterStateProvider, locNodeSupplier));
         }
         finally {
             if (obj.cancel())
-                timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
+                if (timeObjProcessor != null)
+                    timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
+                else
+                    clusterStateProvider.getSpiContext().removeTimeoutObject(obj);
             else
                 throw handshakeTimeoutException();
         }

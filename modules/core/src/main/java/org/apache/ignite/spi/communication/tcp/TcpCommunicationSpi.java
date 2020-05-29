@@ -39,6 +39,7 @@ import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -687,7 +688,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             }
         );
 
-        GridTimeoutProcessor timeoutProcessor = ignite.context().timeout();
+        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ?
+            ((IgniteKernal)ignite).context().timeout() : null;
 
         this.nioSrvWrapper = new GridNioServerWrapper(
             log,
@@ -705,7 +707,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             this.srvLsnr,
             getName(),
             getWorkersRegistry(ignite),
-            ignite.context().metric(),
+            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
             this::createTcpClient
         );
 

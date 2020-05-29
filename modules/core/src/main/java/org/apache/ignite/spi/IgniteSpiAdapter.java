@@ -33,7 +33,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -74,7 +73,7 @@ public abstract class IgniteSpiAdapter implements IgniteSpi {
     protected IgniteLogger log;
 
     /** Ignite instance. */
-    protected IgniteEx ignite;
+    protected Ignite ignite;
 
     /** Ignite instance name. */
     protected String igniteInstanceName;
@@ -261,7 +260,7 @@ public abstract class IgniteSpiAdapter implements IgniteSpi {
      */
     @IgniteInstanceResource
     protected void injectResources(Ignite ignite) {
-        this.ignite = (IgniteEx)ignite;
+        this.ignite = ignite;
 
         if (ignite != null)
             igniteInstanceName = ignite.name();

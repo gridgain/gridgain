@@ -1033,7 +1033,10 @@ public class GridNioServerWrapper {
     ) throws IgniteCheckedException {
         HandshakeTimeoutObject obj = new HandshakeTimeoutObject<>(ch, U.currentTimeMillis() + timeout);
 
-        timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
+        if(timeObjProcessor != null)
+            timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
+        else
+            stateProvider.getSpiContext().addTimeoutObject(obj);
 
         long rcvCnt;
 
@@ -1220,7 +1223,10 @@ public class GridNioServerWrapper {
         }
         finally {
             if (obj.cancel())
-                timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
+                if (timeObjProcessor != null)
+                    timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
+                else
+                    stateProvider.getSpiContext().removeTimeoutObject(obj);
             else
                 throw handshakeTimeoutException();
         }
