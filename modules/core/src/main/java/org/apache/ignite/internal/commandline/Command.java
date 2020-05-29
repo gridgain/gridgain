@@ -59,7 +59,7 @@ public interface Command<T> {
     default String getFullClusterInfo(GridClientClusterState clientCfg){
         String clusterName = getClusterInfo(clientCfg);
         String clusterInfo = "Cluster";
-        if (clusterName != null)
+        if(clusterName != null)
             clusterInfo = "Cluster \"" + clusterName + "\"";
         return clusterInfo;
     }
