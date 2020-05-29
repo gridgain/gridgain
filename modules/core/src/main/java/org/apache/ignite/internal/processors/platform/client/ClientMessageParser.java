@@ -422,6 +422,7 @@ public class ClientMessageParser implements ClientListenerMessageParser {
                 return new ClientCacheSqlFieldsQueryRequest(reader);
 
             case OP_QUERY_SQL_FIELDS_CURSOR_GET_PAGE:
+                //noinspection DuplicateBranchesInSwitch
                 return new ClientCacheQueryNextPageRequest(reader);
 
             case OP_TX_START:

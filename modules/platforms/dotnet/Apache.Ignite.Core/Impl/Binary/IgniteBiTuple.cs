@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,36 +14,36 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Client
+namespace Apache.Ignite.Core.Impl.Binary
 {
-    using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Binary.IO;
+    using System;
+    using Apache.Ignite.Core.Binary;
 
     /// <summary>
-    /// Response context.
+    /// Tuple of two values, maps to a Java class with the same name.
     /// </summary>
-    internal sealed class ClientResponseContext : ClientContextBase
+    internal class IgniteBiTuple : Tuple<object, object>, IBinaryWriteAware
     {
-        /** */
-        private BinaryReader _reader;
-
         /// <summary>
-        /// Initializes a new instance of <see cref="ClientResponseContext"/> class.
+        /// Initializes a new instance of <see cref="IgniteBiTuple"/> class.
         /// </summary>
-        /// <param name="stream">Stream.</param>
-        /// <param name="socket">Socket.</param>
-        public ClientResponseContext(IBinaryStream stream, ClientSocket socket)
-            : base(stream, socket)
+        public IgniteBiTuple(object item1, object item2) : base(item1, item2)
         {
             // No-op.
         }
 
-        /// <summary>
-        /// Reader.
-        /// </summary>
-        public BinaryReader Reader
+        public IgniteBiTuple(BinaryReader reader) : base(reader.ReadObject<object>(), reader.ReadObject<object>())
         {
-            get { return _reader ?? (_reader = Marshaller.StartUnmarshal(Stream)); }
+            // No-op.
+        }
+
+        /** <inheritdoc /> */
+        public void WriteBinary(IBinaryWriter writer)
+        {
+            var raw = (BinaryWriter) writer.GetRawWriter();
+
+            raw.WriteObjectDetached(Item1);
+            raw.WriteObjectDetached(Item2);
         }
     }
 }

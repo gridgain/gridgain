@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Impl.Client
     internal enum ClientFlags : short
     {
         Error = 1,
-        AffinityTopologyChanged = 2
+        AffinityTopologyChanged = 2,
+        Notification = 4
     }
 }
