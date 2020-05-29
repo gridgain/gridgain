@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
