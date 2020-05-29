@@ -159,8 +159,6 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
             @Override public void apply(IgniteInternalFuture<Boolean> fut) {
                 if (delay.get()) {
-                    topInitLatch.countDown();
-
                     try {
                         assertTrue(U.await(newRebalancingScheduledLatch, 10_000, TimeUnit.MILLISECONDS));
                     } catch (IgniteInterruptedCheckedException e) {
@@ -186,7 +184,8 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
 
         grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                topInitLatch.countDown();
+                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0)))
+                    topInitLatch.countDown();
             }
         });
 
@@ -197,7 +196,7 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
             }
         });
 
-        // Wait for topology (7,0) init on grid1.
+        // Wait for topology (7,0) init on grid1 before finishing rebalancing on (6,0).
         assertTrue(U.await(topInitLatch, 10_000, TimeUnit.MILLISECONDS));
 
         // Release last supply message, causing rebalancing finish on (6,0).

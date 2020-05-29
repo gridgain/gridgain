@@ -424,7 +424,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
 
         if (actions != null && !F.isEmpty(actions.cacheGroupsToStop())) {
             for (ExchangeActions.CacheGroupActionData grpActionData : actions.cacheGroupsToStop())
-                onGroupRebalanceFinished(grpActionData.descriptor().groupId());
+                onGroupRebalanceFinished(grpActionData.descriptor().groupId(), topVer);
         }
 
         Set<Integer> grpsToEnableWal = new HashSet<>();
@@ -494,8 +494,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
      * Callback when group rebalancing is finished. If there are no pending groups, it should trigger checkpoint and
      * change partition states.
      * @param grpId Group ID.
+     * @param topVer Topology version.
      */
-    public void onGroupRebalanceFinished(int grpId) {
+    public void onGroupRebalanceFinished(int grpId, AffinityTopologyVersion topVer) {
         Set<Integer> groupsToEnable = tmpDisabledWal.enable(grpId);
 
         if (F.isEmpty(groupsToEnable))
@@ -507,11 +508,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
 
         assert grp != null: "Can not find group with id: " + grpId;
 
-        AffinityTopologyVersion lastGrpTop = grp.topology().readyTopologyVersion();
-
         // Pending updates in groups with disabled WAL are not protected from crash.
         // Need to trigger checkpoint for attempt to persist them.
-        CheckpointProgress cpFut = triggerCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING + lastGrpTop);
+        CheckpointProgress cpFut = triggerCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING + topVer);
 
         assert cpFut != null;
 
@@ -533,7 +532,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                     CacheGroupContext grp = cctx.cache().cacheGroup(grpId0);
 
                     if (grp != null)
-                        grp.topology().ownMoving(lastGrpTop);
+                        grp.topology().ownMoving(topVer);
                     else if (log.isDebugEnabled())
                         log.debug("Cache group was destroyed before checkpoint finished, [grpId=" + grpId0 + ']');
                 }
