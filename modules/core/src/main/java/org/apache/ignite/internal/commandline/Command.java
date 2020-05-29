@@ -19,7 +19,9 @@ package org.apache.ignite.internal.commandline;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientFactory;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
@@ -49,6 +51,29 @@ public interface Command<T> {
             client.throwLastError();
 
         return client;
+    }
+
+    /**
+     * @return Cluster information to show user for.
+     */
+    default String getFullClusterInfo(GridClientClusterState clientCfg){
+        String clusterName = getClusterInfo(clientCfg);
+        String clusterInfo = "Cluster";
+        if(clusterName != null)
+            clusterInfo = "Cluster \"" + clusterName + "\"";
+        return clusterInfo;
+    }
+
+    /**
+     * @return Cluster information to show user for.
+     */
+    default String getClusterInfo(GridClientClusterState clientCfg){
+        String clusterName = null;
+        try{
+            clusterName = clientCfg.clusterName();
+        } catch (GridClientException ignored){
+        }
+        return clusterName;
     }
 
     /**

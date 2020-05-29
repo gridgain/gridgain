@@ -138,6 +138,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     protected static File customDiagnosticDir;
 
+    /**
+     * Test cluster name
+     */
+    public static final String IGNITE_TEST_CLUSTER_NAME = "TEST_CLUSTER_NAME";
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -188,12 +193,17 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testActivate() throws Exception {
         Ignite ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         assertFalse(ignite.cluster().active());
 
         assertEquals(EXIT_CODE_OK, execute("--activate"));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\" activated");
 
         assertTrue(ignite.cluster().active());
     }
@@ -206,7 +216,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @Test
     @SystemPropertiesList({
         @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     })
     public void testClusterChangeTag() throws Exception {
         final String newTag = "new_tag";
@@ -228,6 +239,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> newTag.equals(cl.cluster().tag()), 10_000);
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
         assertTrue("Tag has not been updated in 10 seconds", tagUpdated);
     }
 
@@ -237,8 +251,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testDeactivate() throws Exception {
         Ignite ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         assertFalse(ignite.cluster().active());
 
@@ -247,6 +264,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertTrue(ignite.cluster().active());
 
         assertEquals(EXIT_CODE_OK, execute("--deactivate"));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
 
         assertFalse(ignite.cluster().active());
     }
@@ -258,12 +277,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = "TEST_CLUSTER_NAME")
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testDeactivateWithCheckClusterNameInConfirmationBySystemProperty() throws Exception {
         IgniteEx igniteEx = startGrid(0);
         assertFalse(igniteEx.cluster().active());
 
-        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(igniteEx, "TEST_CLUSTER_NAME");
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(igniteEx, IGNITE_TEST_CLUSTER_NAME);
     }
 
     /**
@@ -330,7 +349,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @Test
     @SystemPropertiesList({
         @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     })
     public void testState() throws Exception {
         final String newTag = "new_tag";
@@ -350,7 +370,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         UUID clId = ((IgniteClusterEx)ignite.cluster()).id();
         String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
-        assertContains(log, out, "Cluster is inactive");
+        assertContains(log, out, "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\" is inactive");
         assertContains(log, out, "Cluster  ID: " + clId);
         assertContains(log, out, "Cluster tag: " + clTag);
 
@@ -360,7 +380,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
-        assertContains(log, testOut.toString(), "Cluster is active");
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\" is active");
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
             try {
@@ -386,7 +406,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false")
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
+    })
     public void testState1() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -400,7 +423,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String out = testOut.toString();
 
-        assertContains(log, out, "Cluster is inactive");
+        assertContains(log, out, "Cluster \"" + IGNITE_TEST_CLUSTER_NAME +"\" is inactive");
         assertNotContains(log, out, "Cluster  ID: ");
         assertNotContains(log, out, "Cluster tag: ");
     }
@@ -411,8 +434,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineCollect() throws Exception {
         Ignite ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         assertFalse(ignite.cluster().active());
 
@@ -421,6 +447,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
 
         assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
     }
 
     /**
@@ -429,8 +456,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineCollectWhenClientNodeHasSmallestOrder() throws Exception {
         startGrid(0);
+
+        injectTestSystemOut();
 
         IgniteEx ignite = startClientGrid(1);
         startGrid(2);
@@ -445,6 +475,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
     }
 
     /**
@@ -453,6 +485,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineCollectCrd() throws Exception {
         Ignite ignite = startGrids(2);
 
@@ -463,6 +496,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "--port", "11212"));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
 
         String crdStr = findCrdInfo();
 
@@ -537,8 +572,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAdd() throws Exception {
         IgniteEx ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -555,6 +593,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline", "add", consistentIds(other)));
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
     }
 
     /**
@@ -563,8 +604,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineRemove() throws Exception {
         IgniteEx ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -579,7 +623,14 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         stopGrid("nodeToStop");
 
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
+        testOut.reset();
+
         assertEquals(EXIT_CODE_OK, execute("--baseline", "remove", offlineNodeConsId));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
 
         assertEquals(1, ignite.cluster().currentBaselineTopology().size());
     }
@@ -623,8 +674,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineSet() throws Exception {
         IgniteEx ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -638,6 +692,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
         assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--baseline", "set", "invalidConsistentId"));
     }
 
@@ -647,8 +703,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineSetWithOfflineNode() throws Exception {
         IgniteEx ignite0 = startGrid(0);
+
+        injectTestSystemOut();
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
@@ -668,6 +727,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline", "set", consistentIds));
 
         assertEquals(3, ignite0.cluster().currentBaselineTopology().size());
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
     }
 
     /**
@@ -676,8 +738,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineVersion() throws Exception {
         IgniteEx ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
@@ -688,6 +753,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         startGrid(2);
 
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "version", String.valueOf(ignite.cluster().topologyVersion())));
 
@@ -700,6 +767,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAutoAdjustmentAutoRemoveNode() throws Exception {
         Ignite ignite = startGrids(3);
 
@@ -761,12 +829,18 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().active(true);
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
 
         assertEquals(1, ignite.cluster().currentBaselineTopology().size());
 
@@ -780,6 +854,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Collection<BaselineNode> baselineNodesAfter = ignite.cluster().currentBaselineTopology();
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "disable"));
 
         startGrid(2);
@@ -792,6 +869,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
             baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
         );
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
     }
 
     /**
@@ -800,9 +880,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    @SystemPropertiesList({
+        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
+    })
     public void testBaselineAutoAdjustmentAutoFeatureDisabled() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -815,8 +898,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * Tests that baseline auto-adjustment enabling works from control.sh
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAutoAdjustmentCouldBeEnabled() throws Exception {
         IgniteEx ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().active(true);
 
@@ -828,19 +914,28 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "disable"));
 
         assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
 
         assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
     }
 
     /**
      * Tests that baseline auto-adjustment timeout setting works from control.sh
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAutoAdjustmentTimeoutCouldBeChanged() throws Exception {
         IgniteEx ignite = startGrids(1);
+
+        injectTestSystemOut();
 
         ignite.cluster().active(true);
 
@@ -852,18 +947,24 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(12345, ignite.cluster().baselineAutoAdjustTimeout());
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "54321"));
 
         assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
 
         assertEquals(54321, ignite.cluster().baselineAutoAdjustTimeout());
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
     }
 
     /**
      * Tests correct error exit code for wrong baseline auto-adjustment timeout setting in control.sh
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAutoAdjustmentTimeoutWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 
@@ -882,6 +983,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * Tests correct error exit code for wrong baseline auto-adjustment enabling in control.sh
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAutoAdjustmentWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 
@@ -900,6 +1002,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testActiveTransactions() throws Exception {
         Ignite ignite = startGridsMultiThreaded(2);
 
@@ -1058,6 +1161,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * Simulate uncommitted backup transactions and test rolling back using utility.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testKillHangingRemoteTransactions() throws Exception {
         final int cnt = 3;
 
@@ -1247,6 +1351,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testBaselineAddOnNotActiveCluster() throws Exception {
         Ignite ignite = startGrid(1);
 
@@ -1282,6 +1387,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
         checkpointFreq = 1000L;
 
@@ -1327,6 +1433,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String out = testOut.toString();
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
         assertContains(log, out, "idle_verify failed");
         assertContains(log, out, "See log for additional information.");
 
@@ -1343,6 +1450,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyDumpWhenNodeFailing() throws Exception {
         Ignite ignite = startGrids(3);
 
@@ -1370,6 +1478,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         fut.get();
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
         checkExceptionMessageOnReport(unstableNodeId);
     }
 
@@ -1379,6 +1489,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyDumpWhenSeveralNodesFailing() throws Exception {
         int nodes = 6;
 
@@ -1420,6 +1531,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         fut.get();
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
         for (UUID unstableId : unstableNodeIds)
             checkExceptionMessageOnReport(unstableId);
     }
@@ -1428,11 +1540,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyCrcWithCorruptedPartition() throws Exception {
         testCacheIdleVerifyWithCorruptedPartition("--cache", "idle_verify", "--check-crc");
 
         String out = testOut.toString();
 
+        assertContains(log, out, "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
         assertContains(log, out, "idle_verify failed on 1 node.");
         assertContains(log, out, "See log for additional information.");
     }
@@ -1441,6 +1555,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyDumpCrcWithCorruptedPartition() throws Exception {
         testCacheIdleVerifyWithCorruptedPartition("--cache", "idle_verify", "--dump", "--check-crc");
 
@@ -1536,6 +1651,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyDumpForCorruptedDataOnNonePersistenceClientCache() throws Exception {
         int parts = 32;
 
@@ -1569,6 +1685,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             execute("--cache", "idle_verify", "--dump", "--cache-filter", "NOT_PERSISTENT")
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
         Matcher fileNameMatcher = dumpFileNameMatcher();
 
         if (fileNameMatcher.find()) {
@@ -1594,6 +1712,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyMovingParts() throws Exception {
         IgniteEx ignite = startGrids(2);
 
@@ -1618,6 +1737,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertContains(log, testOut.toString(), "no conflicts have been found");
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
+        testOut.reset();
+
         startGrid(2);
 
         resetBaselineTopology();
@@ -1625,12 +1748,16 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
         assertContains(log, testOut.toString(), "MOVING partitions");
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
     }
 
     /**
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheSequence() throws Exception {
         Ignite ignite = startGrid();
 
@@ -1650,6 +1777,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String out = testOut.toString();
 
+        assertContains(log, out, "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
         assertContains(log, out, "testSeq");
         assertContains(log, out, "testSeq2");
     }
@@ -1685,8 +1813,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception if failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testDiagnosticPageLocksTracker() throws Exception {
         Ignite ignite = startGrids(4);
+
+        injectTestSystemOut();
 
         Collection<ClusterNode> nodes = ignite.cluster().nodes();
 
@@ -1715,6 +1846,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             execute("--diagnostic", "pageLocks", "dump")
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+
         // Check file dump in default path.
         checkNumberFiles(defaultDiagnosticDir, 1);
 
@@ -1723,11 +1856,17 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             execute("--diagnostic", "pageLocks", "dump_log")
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         // Dump locks only on connected node to specific path.
         assertEquals(
             EXIT_CODE_OK,
             execute("--diagnostic", "pageLocks", "dump", "--path", customDiagnosticDir.getAbsolutePath())
         );
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
 
         // Check file dump in specific path.
         checkNumberFiles(customDiagnosticDir, 1);
@@ -1738,6 +1877,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             execute("--diagnostic", "pageLocks", "dump", "--all")
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         // Current cluster 4 nodes -> 4 files + 1 from previous operation.
         checkNumberFiles(defaultDiagnosticDir, 5);
 
@@ -1746,11 +1888,17 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             execute("--diagnostic", "pageLocks", "dump_log", "--all")
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         assertEquals(
             EXIT_CODE_OK,
             execute("--diagnostic", "pageLocks", "dump",
                 "--path", customDiagnosticDir.getAbsolutePath(), "--all")
         );
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
 
         // Current cluster 4 nodes -> 4 files + 1 from previous operation.
         checkNumberFiles(customDiagnosticDir, 5);
@@ -1762,6 +1910,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                 "--nodes", node0.id().toString() + "," + node2.id().toString())
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         // Dump locks only for 2 nodes -> 2 files + 5 from previous operation.
         checkNumberFiles(defaultDiagnosticDir, 7);
 
@@ -1772,11 +1923,17 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                 "--nodes", node0.consistentId().toString() + "," + node2.consistentId().toString())
         );
 
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
+
         assertEquals(
             EXIT_CODE_OK,
             execute("--diagnostic", "pageLocks", "dump_log",
                 "--nodes", node1.id().toString() + "," + node3.id().toString())
         );
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
 
         assertEquals(
             EXIT_CODE_OK,
@@ -1785,6 +1942,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                 "--path", customDiagnosticDir.getAbsolutePath(),
                 "--nodes", node1.consistentId().toString() + "," + node3.consistentId().toString())
         );
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        testOut.reset();
 
         // Dump locks only for 2 nodes -> 2 files + 5 from previous operation.
         checkNumberFiles(customDiagnosticDir, 7);
@@ -1906,6 +2066,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testKillHangingLocalTransactions() throws Exception {
         Ignite ignite = startGridsMultiThreaded(2);
 
@@ -1979,6 +2140,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     @SuppressWarnings("unchecked")
     public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
         Ignite ignite = startGrids(2);
@@ -1996,6 +2158,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = IGNITE_TEST_CLUSTER_NAME)
     public void testCacheIdleVerifyPrintLostPartitions() throws Exception {
         IgniteEx ignite = startGrids(3);
 
