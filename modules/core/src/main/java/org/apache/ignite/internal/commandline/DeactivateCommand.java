@@ -40,7 +40,7 @@ public class DeactivateCommand implements Command<Void> {
     /** {@inheritDoc} */
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = getClusterName(client.state());
+            clusterName = getClusterInfo(client.state());
         }
     }
 
@@ -59,9 +59,11 @@ public class DeactivateCommand implements Command<Void> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
-            printClusterInfoBanner(state, logger);
+            String clusterNameTmp = getFullClusterInfo(state);
 
             state.active(false);
+
+            logger.info(clusterNameTmp  + " deactivated");
         }
         catch (Exception e) {
             logger.severe("Failed to deactivate cluster.");

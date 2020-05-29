@@ -151,7 +151,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), log);
             return partitionReconciliationCheck(client, clientCfg, log);
         }
         catch (Throwable e) {

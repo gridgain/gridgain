@@ -56,25 +56,23 @@ public interface Command<T> {
     /**
      * @return Cluster information to show user for.
      */
-    default void printClusterInfoBanner(GridClientClusterState clientCfg, Logger logger){
-        String clusterName = getClusterName(clientCfg);
-        if (clusterName != null) {
-            logger.info(CommandHandler.DELIM);
-            logger.info("Cluster \"" + clusterName + "\"");
-            logger.info(CommandHandler.DELIM);
-        }
+    default String getFullClusterInfo(GridClientClusterState clientCfg){
+        String clusterName = getClusterInfo(clientCfg);
+        String clusterInfo = "Cluster";
+        if (clusterName != null)
+            clusterInfo = "Cluster \"" + clusterName + "\"";
+        return clusterInfo;
     }
 
     /**
      * @return Cluster information to show user for.
      */
-    default String getClusterName(GridClientClusterState clientCfg){
+    default String getClusterInfo(GridClientClusterState clientCfg){
         String clusterName = null;
         try{
             clusterName = clientCfg.clusterName();
+        } catch (GridClientException ignored){
         }
-        catch (GridClientException ignored){
-        };
         return clusterName;
     }
 

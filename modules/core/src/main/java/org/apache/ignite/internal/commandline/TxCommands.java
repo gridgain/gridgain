@@ -113,8 +113,6 @@ public class TxCommands implements Command<VisorTxTaskArg> {
         this.logger = logger;
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), logger);
-
             if (args.getOperation() == VisorTxOperation.INFO)
                 return transactionInfo(client, clientCfg);
 

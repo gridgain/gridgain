@@ -86,10 +86,10 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
                 clientCfg
             );
 
-            printClusterInfoBanner(client.state(), logger);
+            clusterInfo = getFullClusterInfo(client.state());
         }
 
-        printResult(res);
+        printResult(res, clusterInfo);
 
         return res;
     }
@@ -175,7 +175,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
      * @param res Result.
      * @param clusterInfo
      */
-    private void printResult(Map<ClusterNode, VisorPageLocksResult> res) {
+    private void printResult(Map<ClusterNode, VisorPageLocksResult> res, String clusterInfo) {
+        logger.info(clusterInfo);
         res.forEach((n, res0) -> {
             logger.info(n.id() + " (" + n.consistentId() + ") " + res0.result());
         });

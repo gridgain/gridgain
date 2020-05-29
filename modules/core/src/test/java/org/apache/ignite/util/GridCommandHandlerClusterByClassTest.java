@@ -86,6 +86,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -1673,6 +1674,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * without {@link CommonArgParser#CMD_VERBOSE} flag.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = "TEST_CLUSTER_NAME")
     public void testErrUnexpectedWithWithoutVerbose() {
         injectTestSystemOut();
 
@@ -1682,7 +1684,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             @Override public String format(LogRecord record) {
                 String msg = record.getMessage();
 
-                if (msg.contains("Cluster state:"))
+                if (msg.contains("Cluster \"TEST_CLUSTER_NAME\" state:"))
                     throw new Error();
 
                 return msg + "\n";
