@@ -49,4 +49,9 @@ public interface DurableBackgroundTask extends Serializable {
      * @return flag that task completed.
      */
     public boolean isCompleted();
+
+    /**
+     * Callback for task cancellation.
+     */
+    public void onCancel();
 }
