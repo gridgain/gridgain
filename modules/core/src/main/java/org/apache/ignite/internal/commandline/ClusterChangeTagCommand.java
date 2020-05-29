@@ -65,8 +65,10 @@ public class ClusterChangeTagCommand implements Command<String> {
                 clientCfg
             );
 
-            if (res.success())
-                logger.info( getFullClusterInfo(client.state()) + " tag updated successfully, old tag was: " + res.tag());
+            if (res.success()) {
+                printClusterInfoBanner(client.state(), logger);
+                logger.info("Cluster tag updated successfully, old tag was: " + res.tag());
+            }
             else
                 logger.warning("Error has occurred during tag update: " + res.errorMessage());
         }

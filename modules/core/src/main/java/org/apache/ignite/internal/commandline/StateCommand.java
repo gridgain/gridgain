@@ -45,6 +45,8 @@ public class StateCommand implements Command<Void> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
+            printClusterInfoBanner(state, log);
+
             if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
                 UUID id = state.id();
                 String tag = state.tag();
@@ -55,7 +57,7 @@ public class StateCommand implements Command<Void> {
                 log.info(CommandHandler.DELIM);
             }
 
-            log.info(getFullClusterInfo(state) + " is " + (state.active() ? "active" : "inactive"));
+            log.info("Cluster is " + (state.active() ? "active" : "inactive"));
         }
         catch (Throwable e) {
             if (!CommandHandler.isAuthError(e))

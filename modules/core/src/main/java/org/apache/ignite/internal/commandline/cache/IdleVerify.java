@@ -210,7 +210,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
                 }
             }
 
-            logger.info(getFullClusterInfo(client.state()));
+            printClusterInfoBanner(client.state(), logger);
 
             if (args.dump())
                 cacheIdleVerifyDump(client, clientCfg, logger);

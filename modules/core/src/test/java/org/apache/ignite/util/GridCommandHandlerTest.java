@@ -203,7 +203,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
-        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\" activated");
+
+        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        assertContains(log, testOut.toString(), "Cluster activated");
 
         assertTrue(ignite.cluster().active());
     }
@@ -370,7 +372,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         UUID clId = ((IgniteClusterEx)ignite.cluster()).id();
         String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
-        assertContains(log, out, "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\" is inactive");
+        assertContains(log, testOut.toString(),"Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        assertContains(log, out, "Cluster is inactive");
         assertContains(log, out, "Cluster  ID: " + clId);
         assertContains(log, out, "Cluster tag: " + clTag);
 
@@ -380,7 +383,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
-        assertContains(log, testOut.toString(), "Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\" is active");
+        assertContains(log, testOut.toString(),"Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        assertContains(log, testOut.toString(), "Cluster is active");
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
             try {
@@ -423,7 +427,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String out = testOut.toString();
 
-        assertContains(log, out, "Cluster \"" + IGNITE_TEST_CLUSTER_NAME +"\" is inactive");
+        assertContains(log, testOut.toString(),"Cluster \"" + IGNITE_TEST_CLUSTER_NAME + "\"");
+        assertContains(log, out, "Cluster is inactive");
         assertNotContains(log, out, "Cluster  ID: ");
         assertNotContains(log, out, "Cluster tag: ");
     }

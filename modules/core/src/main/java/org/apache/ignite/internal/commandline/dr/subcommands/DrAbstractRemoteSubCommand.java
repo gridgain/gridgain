@@ -70,6 +70,7 @@ public abstract class DrAbstractRemoteSubCommand<
         try (GridClient client = Command.startClient(clientCfg)) {
             VisorResultDto res = execute0(clientCfg, client);
 
+            printClusterInfoBanner(client.state(), log);
             printResult(res, log);
         }
         catch (Throwable e) {

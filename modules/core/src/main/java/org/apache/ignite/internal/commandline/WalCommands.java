@@ -87,6 +87,7 @@ public class WalCommands implements Command<T2<String, String>> {
             this.logger = logger;
 
             try (GridClient client = Command.startClient(clientCfg)) {
+                printClusterInfoBanner(client.state(), logger);
                 switch (walAct) {
                     case WAL_DELETE:
                         deleteUnusedWalSegments(client, walArgs, clientCfg);

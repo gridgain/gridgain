@@ -124,6 +124,8 @@ public class FindAndDeleteGarbage implements Command<FindAndDeleteGarbage.Argume
             VisorFindAndDeleteGarbageInPersistenceTaskResult taskRes = executeTask(
                 client, VisorFindAndDeleteGarbageInPersistenceTask.class, taskArg, clientCfg);
 
+            printClusterInfoBanner(client.state(), logger);
+
             CommandLogger.printErrors(taskRes.exceptions(), "Scanning for garbage failed on nodes:", logger);
 
             for (Map.Entry<UUID, VisorFindAndDeleteGarbageInPersistenceJobResult> nodeEntry : taskRes.result().entrySet()) {

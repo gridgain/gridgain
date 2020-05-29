@@ -115,14 +115,10 @@ public class CacheContention implements Command<CacheContention.Arguments> {
 
         VisorContentionTaskResult res;
 
-        String clusterName;
-
         try (GridClient client = Command.startClient(clientCfg);) {
             res = executeTaskByNameOnNode(client, VisorContentionTask.class.getName(), taskArg, nodeId, clientCfg);
-            clusterName = getFullClusterInfo(client.state());
+            printClusterInfoBanner(client.state(), logger);
         }
-
-        logger.info(clusterName);
 
         CommandLogger.printErrors(res.exceptions(), "Contention check failed on nodes:", logger);
 
