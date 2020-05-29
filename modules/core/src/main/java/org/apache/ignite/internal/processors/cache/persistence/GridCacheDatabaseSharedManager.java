@@ -5291,8 +5291,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             CheckpointEntry lastCp = cpHist.lastCheckpoint();
             long lastCpTs = lastCp != null ? lastCp.timestamp() : 0;
 
-            if (lastCpTs != 0)
+            if (lastCpTs != 0) {
                 metaStorage.write(checkpointInapplicableCpAndGroupIdToKey(lastCpTs, grpId), true);
+
+                U.dumpStack(log, "Checkpint mrked as not applicable for group: [cp=" + lastCp.checkpointId()
+                    + ", ger=" + grpId + ']');
+            }
         }
         catch (IgniteCheckedException e) {
             log.error("Failed to mark last checkpoint as inapplicable for WAL rebalance for group: " + grpId, e);

@@ -33,7 +33,6 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.Checkpoint;
@@ -202,7 +201,7 @@ public class CheckpointHistory {
         try {
             Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
 
-            Set<Integer> inapplicableGrps = new HashSet<>();
+            HashMap<Integer, Boolean> applicableGrps = new HashMap<>();
 
             Iterator<Map.Entry<T2<Integer, Integer>, CheckpointEntry>> iter = erliestCp.entrySet().iterator();
 
@@ -211,9 +210,10 @@ public class CheckpointHistory {
 
                 Integer grpId = grpPartCp.getKey().get1();
 
-                if (inapplicableGrps.contains(grpId) || !isCheckpointApplicableForGroup(grpId, entry)) {
-                    inapplicableGrps.add(grpId);
+                if (!applicableGrps.containsKey(grpId))
+                    applicableGrps.put(grpId, isCheckpointApplicableForGroup(grpId, entry));
 
+                if (!applicableGrps.get(grpId)) {
                     iter.remove();
 
                     continue;
