@@ -45,7 +45,8 @@ public class ActivateCommand implements Command<Void> {
             GridClientClusterState state = client.state();
             state.active(true);
 
-            logger.info(getFullClusterInfo(state) + " activated");
+            printClusterInfoBanner(state, logger);
+            logger.info("Cluster activated");
         }
         catch (Throwable e) {
             logger.severe("Failed to activate cluster.");

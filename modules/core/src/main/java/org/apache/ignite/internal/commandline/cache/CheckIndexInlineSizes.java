@@ -79,7 +79,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
                 .filter(n -> !supportedServerNodeIds.contains(n))
                 .collect(toSet());
 
-            log.info(getFullClusterInfo(client.state()));
+            printClusterInfoBanner(client.state(), log);
 
             analyzeResults(log, unsupportedNodes, res);
         }
