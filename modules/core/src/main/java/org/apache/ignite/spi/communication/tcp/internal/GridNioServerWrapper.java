@@ -72,7 +72,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgniteBiInClosure;
-import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -113,7 +112,6 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
  *
  * @deprecated Should be removed.
  */
-@IgniteExperimental
 public class GridNioServerWrapper {
     /** Default initial connect/handshake timeout in case of failure detection enabled. */
     private static final int DFLT_INITIAL_TIMEOUT = 500;
@@ -220,7 +218,6 @@ public class GridNioServerWrapper {
      * @param srvLsnr Server listener.
      * @param igniteInstanceName Ignite instance name.
      * @param workersRegistry Workers registry.
-     * @param createTcpClientFun
      */
     public GridNioServerWrapper(
         IgniteLogger log,
@@ -1033,7 +1030,7 @@ public class GridNioServerWrapper {
     ) throws IgniteCheckedException {
         HandshakeTimeoutObject obj = new HandshakeTimeoutObject<>(ch, U.currentTimeMillis() + timeout);
 
-        if(timeObjProcessor != null)
+        if (timeObjProcessor != null)
             timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
         else
             stateProvider.getSpiContext().addTimeoutObject(obj);

@@ -448,7 +448,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     }
 
     /**
-     * @param stopping New stopping flag (set to  when SPI gets stopping signal).
+     * Disable processing of incoming messages.
      */
     public void stop() {
         this.stopping = true;

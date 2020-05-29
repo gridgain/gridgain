@@ -689,7 +689,7 @@ public class ConnectionClientPool {
         HandshakeTimeoutObject<GridCommunicationClient> obj = new HandshakeTimeoutObject<>(client,
             U.currentTimeMillis() + timeout);
 
-        if(timeObjProcessor != null)
+        if (timeObjProcessor != null)
             timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
         else
             clusterStateProvider.getSpiContext().addTimeoutObject(obj);
