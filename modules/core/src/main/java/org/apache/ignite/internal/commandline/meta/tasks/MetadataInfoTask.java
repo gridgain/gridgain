@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.commandline.meta.tasks;
 
+import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
@@ -31,12 +32,12 @@ import org.jetbrains.annotations.Nullable;
  * Task for {@link MetadataListCommand} command.
  */
 @GridInternal
-public class MetadataListTask extends VisorMultiNodeTask<Void, MetadataListResult, MetadataListResult> {
+public class MetadataInfoTask extends VisorMultiNodeTask<MetadataTypeArgs, MetadataListResult, MetadataListResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<Void, MetadataListResult> job(Void arg) {
+    @Override protected VisorJob<MetadataTypeArgs, MetadataListResult> job(MetadataTypeArgs arg) {
         return new MetadataListJob(arg, debug);
     }
 
@@ -57,7 +58,7 @@ public class MetadataListTask extends VisorMultiNodeTask<Void, MetadataListResul
     /**
      * Job for {@link CheckIndexInlineSizes} command.
      */
-    private static class MetadataListJob extends VisorJob<Void, MetadataListResult> {
+    private static class MetadataListJob extends VisorJob<MetadataTypeArgs, MetadataListResult> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -65,14 +66,29 @@ public class MetadataListTask extends VisorMultiNodeTask<Void, MetadataListResul
          * @param arg Argument.
          * @param debug Debug.
          */
-        protected MetadataListJob(@Nullable Void arg, boolean debug) {
+        protected MetadataListJob(@Nullable MetadataTypeArgs arg, boolean debug) {
             super(arg, debug);
         }
 
         /** {@inheritDoc} */
-        @Override protected MetadataListResult run(@Nullable Void arg) throws IgniteException {
-            return new MetadataListResult(
-                ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata());
+        @Override protected MetadataListResult run(@Nullable MetadataTypeArgs arg) throws IgniteException {
+            if (arg == null) {
+                // returns full metadata
+                return new MetadataListResult(
+                    ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata());
+            }
+            else {
+                // returns specified metadata
+                int typeId;
+
+                if (arg.typeId() != null)
+                    typeId = arg.typeId();
+                else
+                    typeId = ignite.context().cacheObjects().typeId(arg.typeName());
+
+                return new MetadataListResult(Collections.singleton(
+                    ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata(typeId)));
+            }
         }
     }
 }

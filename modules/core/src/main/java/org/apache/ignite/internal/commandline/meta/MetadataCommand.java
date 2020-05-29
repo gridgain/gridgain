@@ -21,19 +21,27 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.Command.usage;
-import static org.apache.ignite.internal.commandline.CommandList.DATA_CENTER_REPLICATION;
+import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.METADATA;
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.LIST;
 
-/** */
+/**
+ *
+ */
 public class MetadataCommand implements Command<Object> {
-    /** */
+    /**
+     *
+     */
     private Command<?> delegate;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
+        if (!experimentalEnabled())
+            return;
+
         usage(log, "Print metadata command help:",
             METADATA,
             HELP.toString()
@@ -47,19 +55,24 @@ public class MetadataCommand implements Command<Object> {
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return DATA_CENTER_REPLICATION.toCommandName();
+        return METADATA.toCommandName();
     }
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
-        MetadataSubCommandsList subcommand = MetadataSubCommandsList.parse(argIter.nextArg("Expected dr action."));
+        MetadataSubCommandsList subcommand = MetadataSubCommandsList.parse(argIter.nextArg("Expected metadata action."));
 
         if (subcommand == null)
-            throw new IllegalArgumentException("Expected correct dr action.");
+            throw new IllegalArgumentException("Expected correct metadata action.");
 
         delegate = subcommand.command();
 
         delegate.parseArguments(argIter);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean experimental() {
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -69,7 +82,14 @@ public class MetadataCommand implements Command<Object> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        return delegate.execute(clientCfg, log);
+        if (experimentalEnabled())
+            return delegate.execute(clientCfg, log);
+        else {
+            log.warning(String.format("For use experimental command add %s=true to JVM_OPTS in %s",
+                IGNITE_ENABLE_EXPERIMENTAL_COMMAND, UTILITY_NAME));
+
+            return null;
+        }
     }
 
     /** {@inheritDoc} */

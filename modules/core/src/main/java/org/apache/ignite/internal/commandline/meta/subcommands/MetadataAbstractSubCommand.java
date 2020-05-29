@@ -19,12 +19,9 @@ package org.apache.ignite.internal.commandline.meta.subcommands;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
@@ -38,8 +35,10 @@ public abstract class MetadataAbstractSubCommand<
     /** */
     private MetadataArgsDto args;
 
-    /** */
-    private final List<GridClientNode> nodesWithoutDrTasks = new ArrayList<>();
+    /** {@inheritDoc} */
+    @Override public boolean experimental() {
+        return true;
+    }
 
     /** {@inheritDoc} */
     @Override public final void printUsage(Logger log) {

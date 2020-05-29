@@ -16,79 +16,115 @@
 
 package org.apache.ignite.util;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
+import org.apache.ignite.internal.binary.BinarySchema;
+import org.apache.ignite.internal.binary.BinaryTypeImpl;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static java.lang.String.format;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.processors.cache.CheckIndexesInlineSizeOnNodeJoinMultiJvmTest.getSqlStatements;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
  * Checks command line metadata commands.
  */
-public class GridCommandHandlerMetadataTest extends GridCommandHandlerAbstractTest {
-    /** Nodes count. */
-    private static final int NODES_CNT = 2;
-
-    /** Max payload inline index size for local node. */
-    private static final int INITIAL_PAYLOAD_SIZE = 1;
-
-    /** Max payload inline index size. */
-    private int payloadSize;
-
-    /** */
-    private static final UUID remoteNodeId = UUID.randomUUID();
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        cleanPersistenceDir();
-
-        startGrids(NODES_CNT).cluster().active(true);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        stopAllGrids();
-
-        super.afterTestsStopped();
-    }
+public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByClassAbstractTest {
+    /** Types count. */
+    private static final int TYPES_CNT = 10;
 
     /**
-     * See class description.
+     * Check the command '--meta list'.
+     * Steps:
+     * - Creates binary types for a test (by BinaryObjectBuilder);
+     * - execute the command '--meta list'.
+     * - Check command output (must contains all created types).
      */
     @Test
-    public void test() {
+    public void testMetadataList() {
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "check_index_inline_sizes"));
+        for (int typeNum = 0; typeNum < TYPES_CNT; ++typeNum) {
+            BinaryObjectBuilder bob = crd.binary().builder("Type_" + typeNum);
 
-        checkUtilityOutput(log, testOut.toString(), grid(0).localNode().id(), remoteNodeId);
+            for (int fldNum = 0; fldNum <= typeNum; ++fldNum)
+                bob.setField("fld_" + fldNum, 0);
+
+            bob.build();
+        }
+
+        assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+
+        String out = testOut.toString();
+
+        for (int typeNum = 0; typeNum < TYPES_CNT; ++typeNum)
+            assertContains(log, out, "typeName=Type_" + typeNum);
     }
 
     /**
-     * Checks that control.sh output as expected.
      *
-     * @param log Logger.
-     * @param output Uitlity output.
-     * @param localNodeId Local node id.
-     * @param remoteNodeId Remote node id.
      */
-    public static void checkUtilityOutput(IgniteLogger log, String output, UUID localNodeId, UUID remoteNodeId) {
-        assertContains(log, output, "Found 4 secondary indexes.");
-        assertContains(log, output, "3 index(es) have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
-        assertContains(log, output, "Index(es):");
-        assertContains(log, output, "  Check that value of property IGNITE_MAX_INDEX_PAYLOAD_SIZE are the same on all nodes.");
-        assertContains(log, output, "  Recreate indexes (execute DROP INDEX, CREATE INDEX commands) with different inline size.");
+    @Test
+    public void testMetadataDetails() {
+        injectTestSystemOut();
+
+        BinaryObjectBuilder bob0 = crd.binary().builder("TypeName0");
+        bob0.setField("fld0", 0);
+        bob0.build();
+
+        bob0 = crd.binary().builder("TypeName0");
+        bob0.setField("fld1", "0");
+        bob0.build();
+
+        bob0 = crd.binary().builder("TypeName0");
+        bob0.setField("fld0", 1);
+        bob0.setField("fld2", UUID.randomUUID());
+        BinaryObject bo0 = bob0.build();
+
+        BinaryObjectBuilder bob1 = crd.binary().builder("TypeName1");
+        bob1.setField("fld0", 0);
+        bob1.build();
+
+        bob1 = crd.binary().builder("TypeName1");
+        bob1.setField("fld0", 0);
+        bob1.setField("fld1", new Date());
+        bob1.setField("fld2", 0.1);
+        bob1.setField("fld3", new long[]{0, 1, 2, 3});
+
+        BinaryObject bo1 = bob1.build();
+
+        assertEquals(EXIT_CODE_OK, execute("--meta", "details", "--typeName", "TypeName0"));
+        checkTypeDetails(log, testOut.toString(), crd.context().cacheObjects().metadata(bo0.type().typeId()));
+
+        assertEquals(EXIT_CODE_OK, execute("--meta", "details", "--typeId",
+            "0x" + Integer.toHexString(crd.context().cacheObjects().typeId("TypeName1"))));
+        checkTypeDetails(log, testOut.toString(), crd.context().cacheObjects().metadata(bo1.type().typeId()));
+
+        assertEquals(EXIT_CODE_OK, execute("--meta", "details", "--typeId",
+            Integer.toString(crd.context().cacheObjects().typeId("TypeName1"))));
+        checkTypeDetails(log, testOut.toString(), crd.context().cacheObjects().metadata(bo1.type().typeId()));
+    }
+
+    /**
+     * @param t Binary type.
+     */
+    private void checkTypeDetails(@Nullable IgniteLogger log, String cmdOut, BinaryType t) {
+        assertContains(log, cmdOut, "typeId=" + "0x" + Integer.toHexString(t.typeId()).toUpperCase());
+        assertContains(log, cmdOut, "typeName=" + t.typeName());
+        assertContains(log, cmdOut, "Fields:");
+
+        for (String fldName : t.fieldNames())
+            assertContains(log, cmdOut, "name=" + fldName + ", type=" + t.fieldTypeName(fldName));
+
+        for (BinarySchema s : ((BinaryTypeImpl)t).metadata().schemas())
+            assertContains(log, cmdOut, "schemaId=0x" + Integer.toHexString(s.schemaId()).toUpperCase());
     }
 }

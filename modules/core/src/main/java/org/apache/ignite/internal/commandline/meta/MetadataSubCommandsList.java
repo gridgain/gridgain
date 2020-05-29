@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline.meta;
 
 import org.apache.ignite.internal.commandline.Command;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataDetailsCommand;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataHelpCommand;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataListCommand;
 import org.jetbrains.annotations.NotNull;
@@ -26,7 +27,9 @@ public enum MetadataSubCommandsList {
     /** */
     HELP("help", new MetadataHelpCommand()),
     /** */
-    LIST("list", new MetadataListCommand())
+    LIST("list", new MetadataListCommand()),
+    /** */
+    DETAILS("DETAILS", new MetadataDetailsCommand())
 //    ,
 //    /** */
 //    DETAILS("details", new DrTopologyCommand()),

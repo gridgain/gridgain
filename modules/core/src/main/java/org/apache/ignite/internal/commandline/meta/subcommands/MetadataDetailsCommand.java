@@ -16,9 +16,14 @@
 
 package org.apache.ignite.internal.commandline.meta.subcommands;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.apache.ignite.internal.binary.BinaryMetadata;
+import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
@@ -28,21 +33,49 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataListResult;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataInfoTask;
+import org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+
 /** */
-public class MetadataListCommand
-    extends MetadataAbstractSubCommand<MetadataAbstractSubCommand.VoidDto, MetadataListResult>
+public class MetadataDetailsCommand
+    extends MetadataAbstractSubCommand<MetadataTypeArgs, MetadataListResult>
 {
+    /** Type name argument. */
+    private static final String OPT_TYPE_NAME = "--typeName";
+
+    /** Type ID argument. */
+    private static final String OPT_TYPE_ID = "--typeId";
+
     /** {@inheritDoc} */
     @Override protected String taskName() {
         return MetadataInfoTask.class.getName();
     }
 
     /** {@inheritDoc} */
-    @Override public VoidDto parseArguments0(CommandArgIterator argIter) {
-        return null;
+    @Override public MetadataTypeArgs parseArguments0(CommandArgIterator argIter) {
+        String typeName = null;
+        Integer typeId = null;
+
+        while (argIter.hasNextArg()) {
+            String optName = argIter.nextArg("Expecting " + OPT_TYPE_NAME + " or " + OPT_TYPE_ID);
+
+            switch (optName) {
+                case OPT_TYPE_NAME:
+                    typeName = argIter.nextArg("type name");
+
+                    break;
+
+                case OPT_TYPE_ID:
+                    typeId = argIter.nextIntArg("typeId");
+
+                    break;
+            }
+        }
+
+        return new MetadataTypeArgs(typeName, typeId);
     }
 
     /** {@inheritDoc} */
@@ -65,19 +98,52 @@ public class MetadataListCommand
 
         return compute.projection(node).execute(
             taskName(),
-            new VisorTaskArgument<>(node.nodeId(), false)
+            new VisorTaskArgument<>(node.nodeId(), arg(), false)
         );
     }
 
     /** {@inheritDoc} */
     @Override protected void printResult(MetadataListResult res, Logger log) {
-        for (BinaryMetadata m : res.metadata()) {
-            log.info("typeId=0x" + Integer.toHexString(m.typeId()).toUpperCase() +
-                ", typeName=" + m.typeName() +
-                ", fields=" + m.fields().size() +
-                ", schemas=" + m.schemas().size() +
-                ", isEnum=" + m.isEnum());
+        if (res.metadata() == null) {
+            log.info("Type not found");
+
+            return;
         }
+
+        assert res.metadata().size() == 1 : "Unexpected  metadata results: " + res.metadata();
+
+        BinaryMetadata m = F.first(res.metadata());
+
+        log.info("typeId=" + printInt(m.typeId()));
+        log.info("typeName=" + m.typeName());
+        log.info("Fields:");
+
+        final Map<Integer, String> fldMap = new HashMap<>();
+        m.fieldsMap().forEach((name, fldMeta) -> {
+            log.info(INDENT +
+                "name=" + name +
+                ", type=" + BinaryUtils.fieldTypeName(fldMeta.typeId()) +
+                ", fieldId=" + printInt(fldMeta.fieldId()));
+
+            fldMap.put(fldMeta.fieldId(), name);
+        });
+
+        log.info("Schemas:");
+
+        m.schemas().forEach(s ->
+            log.info(INDENT +
+                "schemaId=" + printInt(s.schemaId()) +
+                ", fields=" + Arrays.stream(s.fieldIds())
+                    .mapToObj(fldMap::get)
+                    .collect(Collectors.toList())));
+    }
+
+    /**
+     * @param val Integer value.
+     * @return String.
+     */
+    private String printInt(int val) {
+        return "0x" + Integer.toHexString(val).toUpperCase() + " (" + val + ')';
     }
 
     /** {@inheritDoc} */

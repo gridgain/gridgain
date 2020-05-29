@@ -905,6 +905,16 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         });
     }
 
+    /**
+     * @return Binary metadata for specified type.
+     * @throws BinaryObjectException on error.
+     */
+    public BinaryMetadata binaryMetadata(int typeId) throws BinaryObjectException {
+        BinaryMetadataHolder hld = metadataLocCache.get(typeId);
+
+        return  hld != null ? hld.metadata() : null;
+    }
+
     /** {@inheritDoc} */
     @Override public BinaryObject buildEnum(String typeName, int ord) throws BinaryObjectException {
         A.notNullOrEmpty(typeName, "enum type name");

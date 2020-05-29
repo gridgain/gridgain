@@ -23,7 +23,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /** */
-public class MetadataListArgs extends IgniteDataTransferObject {
+public class MetadataTypeArgs extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
@@ -36,12 +36,12 @@ public class MetadataListArgs extends IgniteDataTransferObject {
     /**
      * Default constructor.
      */
-    public MetadataListArgs() {
+    public MetadataTypeArgs() {
         // No-op.
     }
 
     /** */
-    public MetadataListArgs(String typeName, Integer typeId) {
+    public MetadataTypeArgs(String typeName, Integer typeId) {
         assert typeName != null ^ typeId != null;
 
         this.typeName = typeName;

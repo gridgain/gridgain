@@ -100,6 +100,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
+import static org.apache.ignite.internal.commandline.CommandList.METADATA;
 import static org.apache.ignite.internal.commandline.CommandList.TRACING_CONFIGURATION;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
@@ -1584,6 +1585,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         cmdArgs.put(WAL, asList("print", "delete"));
         cmdArgs.put(TRACING_CONFIGURATION, Collections.singletonList("get_all"));
+        cmdArgs.put(METADATA, asList("help", "list"));
 
         String warning = String.format(
             "For use experimental command add %s=true to JVM_OPTS in %s",
@@ -1592,7 +1594,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         );
 
         stream(CommandList.values()).filter(cmd -> cmd.command().experimental())
-            .peek(cmd -> assertTrue(cmdArgs.containsKey(cmd)))
+            .peek(cmd -> assertTrue("Not contains " + cmd, cmdArgs.containsKey(cmd)))
             .forEach(cmd -> cmdArgs.get(cmd).forEach(cmdArg -> {
                 assertEquals(EXIT_CODE_OK, execute(cmd.text(), cmdArg));
 

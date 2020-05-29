@@ -38,6 +38,13 @@ public class MetadataListResult extends IgniteDataTransferObject {
     private Collection<BinaryMetadata> meta = new ArrayList<>();
 
     /**
+     * Constructor for optimized marshaller.
+     */
+    public MetadataListResult() {
+        // No-op.
+    }
+
+    /**
      * @param meta Meta.
      */
     public MetadataListResult(Collection<BinaryMetadata> meta) {

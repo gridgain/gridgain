@@ -19,7 +19,7 @@ package org.apache.ignite.internal.commandline.meta.subcommands;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
-import org.apache.ignite.internal.commandline.dr.DrCommand;
+import org.apache.ignite.internal.commandline.meta.MetadataCommand;
 import org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList;
 
 /** */
@@ -31,9 +31,14 @@ public class MetadataHelpCommand implements Command<Void> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        new DrCommand().printUsage(log);
+        new MetadataCommand().printUsage(log);
 
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean experimentalEnabled() {
+        return true;
     }
 
     /** {@inheritDoc} */
