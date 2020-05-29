@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
 import java.util.List;
-import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
+import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -56,10 +56,6 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
 
         listeners.add(LogListener.matches(
             ">>> Remote SPI with the same name is not configured: NoopTracingSpi").build());
-
-        listeners.add(LogListener.matches(
-            s -> s.contains("Failed to create span from serialized value")).times(2).build());
-
 
         listeners.forEach(testLog::registerListener);
 

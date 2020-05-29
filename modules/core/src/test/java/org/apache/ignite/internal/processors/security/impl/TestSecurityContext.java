@@ -43,10 +43,13 @@ public class TestSecurityContext implements SecurityContext, Serializable {
      */
     public boolean operationAllowed(String opName, SecurityPermission perm) {
         switch (perm) {
+            case CACHE_CREATE:
+            case CACHE_DESTROY:
+                return systemOperationAllowed(perm) || cacheOperationAllowed(opName, perm);
+
             case CACHE_PUT:
             case CACHE_READ:
             case CACHE_REMOVE:
-
                 return cacheOperationAllowed(opName, perm);
 
             case TASK_CANCEL:
@@ -64,8 +67,6 @@ public class TestSecurityContext implements SecurityContext, Serializable {
             case ADMIN_CACHE:
             case ADMIN_QUERY:
             case ADMIN_OPS:
-            case CACHE_CREATE:
-            case CACHE_DESTROY:
             case JOIN_AS_SERVER:
                 return systemOperationAllowed(perm);
 

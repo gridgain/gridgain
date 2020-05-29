@@ -85,6 +85,17 @@ public class GridSqlFunction extends GridSqlElement {
         this(schema, TYPE_MAP.get(name), name);
     }
 
+    /**
+     * @return Copy function.
+     */
+    public GridSqlFunction copy() {
+        GridSqlFunction func = new GridSqlFunction(schema, type, name);
+
+        func.resultType(resultType());
+
+        return func;
+    }
+
     /** {@inheritDoc}  */
     @Override public String getSQL() {
         StringBuilder buff = new StringBuilder();

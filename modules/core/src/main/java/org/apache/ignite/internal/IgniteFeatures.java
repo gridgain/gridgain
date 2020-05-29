@@ -152,8 +152,10 @@ public enum IgniteFeatures {
     DISTRIBUTED_TX_COLLISIONS_DUMP(37),
 
     /** Support for compatibility of command-line utility for snapshots. */
-    SNAPSHOT_UTILITY_COMPATIBILITY_SUPPORT(40);
+    SNAPSHOT_UTILITY_COMPATIBILITY_SUPPORT(40),
 
+    /** Remove metadata from cluster for specified type. */
+    REMOVE_METADATA(39);
     /**
      * Unique feature identifier.
      */
