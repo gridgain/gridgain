@@ -28,7 +28,6 @@ import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -174,7 +173,6 @@ public class ClientSslParametersTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-10245")
     @Test
     public void testNonExistentCipherSuite() throws Exception {
         cipherSuites = new String[] {
@@ -188,8 +186,7 @@ public class ClientSslParametersTest extends GridCommonAbstractTest {
                 "TLC_FAKE_CIPHER",
                 "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
             },
-            null,
-            "Unsupported ciphersuite"
+            null
         );
     }
 
@@ -217,7 +214,6 @@ public class ClientSslParametersTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-10245")
     @Test
     public void testNonExistentProtocol() throws Exception {
         protocols = new String[] {
@@ -231,8 +227,7 @@ public class ClientSslParametersTest extends GridCommonAbstractTest {
             new String[] {
                 "SSLv3",
                 "SSLvDoesNotExist"
-            },
-            "SSLvDoesNotExist"
+            }
         );
     }
 

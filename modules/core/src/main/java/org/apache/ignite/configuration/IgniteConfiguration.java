@@ -46,7 +46,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -2420,7 +2420,7 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets fully configured instance of {@link TracingSpi}.
+     * Set fully configured instance of {@link TracingSpi}.
      *
      * @param tracingSpi Fully configured instance of {@link TracingSpi}.
      * @return {@code this} for chaining.

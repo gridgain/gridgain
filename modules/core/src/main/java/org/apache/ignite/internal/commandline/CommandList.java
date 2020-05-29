@@ -59,7 +59,10 @@ public enum CommandList {
     CLUSTER_CHANGE_TAG("--change-tag", new ClusterChangeTagCommand()),
 
     /** */
-    DATA_CENTER_REPLICATION("--dr", new DrCommand());
+    DATA_CENTER_REPLICATION("--dr", new DrCommand()),
+
+    /** */
+    TRACING_CONFIGURATION("--tracing-configuration", new TracingConfigurationCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();

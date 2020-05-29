@@ -609,6 +609,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
+            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
+
             if (readOnly(discoClusterState.lastState()) || readOnly(globalState.state()))
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
 
@@ -742,6 +744,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
                     nodeIds
                 );
+
+                ctx.durableBackgroundTasksProcessor().onStateChange(msg);
 
                 if (msg.forceChangeBaselineTopology())
                     globalState.setTransitionResult(msg.requestId(), msg.state());
