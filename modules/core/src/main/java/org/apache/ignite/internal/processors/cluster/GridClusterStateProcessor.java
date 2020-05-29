@@ -2051,7 +2051,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * Checks that all nodes supports {@link IgniteFeatures#CLUSTER_READ_ONLY_MODE} or not.
+     * Checks that all server nodes supports {@link IgniteFeatures#CLUSTER_READ_ONLY_MODE} or not.
      *
      * @return {@code True} if all nodes supports, and {@code false} otherwise.
      */

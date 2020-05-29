@@ -518,10 +518,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
         closeIdle();
 
-        if (conn instanceof GridClientNioTcpConnection)
-            ((GridClientNioTcpConnection)conn).close(FAILED, false, e);
-        else
-            conn.close(FAILED, false);
+        conn.close(FAILED, false, e);
     }
 
     /**

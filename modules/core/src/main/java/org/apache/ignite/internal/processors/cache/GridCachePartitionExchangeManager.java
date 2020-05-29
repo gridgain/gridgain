@@ -705,7 +705,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         }
     }
 
-    /** */
+    /**
+     * Callback for creating events after cluster state finish.
+     *
+     * @param fut Cluster state change future.
+     * @param exchActions Exchange actions.
+     * @param baselineChanging Baseline changed flag.
+     */
     private void onClusterStateChangeFinish(
         IgniteInternalFuture<AffinityTopologyVersion> fut,
         ExchangeActions exchActions,
@@ -720,11 +726,24 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             exchActions.changedClusterState() && evtMngr.isRecordable(EVT_CLUSTER_STATE_CHANGED) ||
             baselineChanging && evtMngr.isRecordable(EVT_BASELINE_CHANGED)
         ) {
+            long topVer;
+
+            try {
+                topVer = fut.get().topologyVersion();
+            }
+            catch (IgniteCheckedException e) {
+                if (log.isDebugEnabled())
+                    log.error("Failed to get affinity topology version for events", e);
+
+                return;
+            }
+
             List<Event> evts = new ArrayList<>(2);
 
             ClusterNode locNode = cctx.kernalContext().discovery().localNode();
 
-            Collection<BaselineNode> bltNodes = cctx.kernalContext().cluster().get().currentBaselineTopology();
+            Collection<BaselineNode> bltNodes =
+                F.transform(cctx.kernalContext().cluster().get().topology(topVer), n -> (BaselineNode) n);
 
             boolean collectionUsed = false;
 

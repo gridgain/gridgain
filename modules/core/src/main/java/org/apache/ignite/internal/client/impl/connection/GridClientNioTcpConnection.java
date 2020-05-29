@@ -312,15 +312,8 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         close(reason, waitCompletion, null);
     }
 
-    /**
-     * Closes connection facade.
-     *
-     * @param reason Why this connection should be closed.
-     * @param waitCompletion If {@code true} this method will wait for all pending requests to be completed.
-     * @param cause The cause of connection close, or {@code null} if it is an ordinal close.
-     */
-    @SuppressWarnings("NonPrivateFieldAccessedInSynchronizedContext")
-    void close(GridClientConnectionCloseReason reason, boolean waitCompletion, @Nullable Throwable cause) {
+    /** {@inheritDoc} */
+    @Override void close(GridClientConnectionCloseReason reason, boolean waitCompletion, @Nullable Throwable cause) {
         synchronized (this) {
             if (closeReason != null)
                 return;
