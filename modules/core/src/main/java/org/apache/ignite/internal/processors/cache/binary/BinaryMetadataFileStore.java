@@ -158,6 +158,32 @@ class BinaryMetadataFileStore {
     }
 
     /**
+     * Remove metadata for specified type.
+     *
+     * @param typeId Type identifier.
+     */
+    private void removeMeta(int typeId) {
+        if (!isPersistenceEnabled)
+            return;
+
+        File file = new File(metadataDir, typeId + ".bin");
+
+        if (!file.delete()) {
+            final String msg = "Failed to remove metadata for typeId: " + typeId;
+
+            U.error(log, msg);
+
+            writer.cancel();
+
+            IgniteException e = new IgniteException(msg);
+
+            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+
+            throw e;
+        }
+    }
+
+    /**
      * Restores metadata on startup of {@link CacheObjectBinaryProcessorImpl} but before starting discovery.
      */
     void restoreMetadata() {
@@ -236,7 +262,17 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
-        writer.startWritingAsync(typeId, typeVer);
+        writer.startTaskAsync(typeId, typeVer);
+    }
+
+    /**
+     * @param typeId Type ID.
+     */
+    public void removeMetadataAsync(int typeId) {
+        if (!isPersistenceEnabled)
+            return;
+
+        writer.startTaskAsync(typeId, BinaryMetadataTransport.REMOVED_VERSION);
     }
 
     /**
@@ -266,7 +302,7 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
-        writer.finishWriteFuture(typeId, typeVer);
+        writer.finishWriteFuture(typeId, typeVer, null);
     }
 
     /**
@@ -309,32 +345,46 @@ class BinaryMetadataFileStore {
     }
 
     /**
+     * @param typeId Type ID.
+     */
+    void prepareMetadataRemove(int typeId) {
+        if (!isPersistenceEnabled)
+            return;
+
+        writer.cancelTasksForType(typeId);
+
+        writer.prepareRemoveFuture(typeId);
+    }
+
+    /**
      *
      */
     private class BinaryMetadataAsyncWriter extends GridWorker {
         /**
          * Queue of write tasks submitted for execution.
          */
-        private final BlockingQueue<WriteOperationTask> queue = new LinkedBlockingQueue<>();
+        private final BlockingQueue<OperationTask> queue = new LinkedBlockingQueue<>();
+
         /**
          * Write operation tasks prepared for writing (but not yet submitted to execution (actual writing).
          */
-        private final ConcurrentMap<OperationSyncKey, WriteOperationTask> preparedWriteTasks = new ConcurrentHashMap<>();
+        private final ConcurrentMap<OperationSyncKey, OperationTask> preparedTasks = new ConcurrentHashMap<>();
 
         /** */
         BinaryMetadataAsyncWriter() {
-            super(ctx.igniteInstanceName(), "binary-metadata-writer", BinaryMetadataFileStore.this.log, ctx.workersRegistry());
+            super(ctx.igniteInstanceName(), "binary-metadata-writer",
+                BinaryMetadataFileStore.this.log, ctx.workersRegistry());
         }
 
         /**
          * @param typeId Type ID.
          * @param typeVer Type version.
          */
-        synchronized void startWritingAsync(int typeId, int typeVer) {
+        synchronized void startTaskAsync(int typeId, int typeVer) {
             if (isCancelled())
                 return;
 
-            WriteOperationTask task = preparedWriteTasks.get(new OperationSyncKey(typeId, typeVer));
+            OperationTask task = preparedTasks.get(new OperationSyncKey(typeId, typeVer));
 
             if (task != null) {
                 if (log.isDebugEnabled())
@@ -364,7 +414,7 @@ class BinaryMetadataFileStore {
 
             IgniteCheckedException err = new IgniteCheckedException("Operation has been cancelled (node is stopping).");
 
-            for (Map.Entry<OperationSyncKey, WriteOperationTask> e : preparedWriteTasks.entrySet()) {
+            for (Map.Entry<OperationSyncKey, OperationTask> e : preparedTasks.entrySet()) {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Cancelling future for write operation for" +
@@ -375,7 +425,7 @@ class BinaryMetadataFileStore {
                 e.getValue().future.onDone(err);
             }
 
-            preparedWriteTasks.clear();
+            preparedTasks.clear();
         }
 
         /** {@inheritDoc} */
@@ -396,7 +446,7 @@ class BinaryMetadataFileStore {
 
         /** */
         private void body0() throws InterruptedException {
-            WriteOperationTask task;
+            OperationTask task;
 
             blockingSectionBegin();
 
@@ -406,27 +456,52 @@ class BinaryMetadataFileStore {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Starting write operation for" +
-                            " [typeId=" + task.meta.typeId() +
-                            ", typeVer=" + task.typeVer + ']'
+                            " [typeId=" + task.typeId() +
+                            ", typeVer=" + task.typeVersion() + ']'
                     );
 
-                writeMetadata(task.meta);
+                task.execute(BinaryMetadataFileStore.this);
             }
             finally {
                 blockingSectionEnd();
             }
 
-            finishWriteFuture(task.meta.typeId(), task.typeVer);
+            finishWriteFuture(task.typeId(), task.typeVersion(), task);
+        }
+
+        /**
+         * @param typeId Binary metadata type id.
+         */
+        synchronized void cancelTasksForType(int typeId) {
+            final IgniteCheckedException err = new IgniteCheckedException("Operation has been cancelled by type remove.");
+
+            preparedTasks.entrySet().removeIf(entry -> {
+                if (entry.getKey().typeId == typeId) {
+                    entry.getValue().future().onDone(err);
+
+                    return true;
+                }
+                return false;
+            });
         }
 
         /**
          * @param typeId Binary metadata type id.
          * @param typeVer Type version.
+         * @param task Task to remove.
          */
-        void finishWriteFuture(int typeId, int typeVer) {
-            WriteOperationTask task = preparedWriteTasks.remove(new OperationSyncKey(typeId, typeVer));
+        void finishWriteFuture(int typeId, int typeVer, OperationTask task) {
+            boolean removed;
 
-            if (task != null) {
+            if (task != null)
+                removed = preparedTasks.remove(new OperationSyncKey(typeId, typeVer), task);
+            else {
+                task = preparedTasks.remove(new OperationSyncKey(typeId, typeVer));
+
+                removed = task != null;
+            }
+
+            if (removed) {
                 if (log.isDebugEnabled())
                     log.debug(
                         "Future for write operation for" +
@@ -464,7 +539,23 @@ class BinaryMetadataFileStore {
                         ", typeVersion=" + typeVer + ']'
                 );
 
-            preparedWriteTasks.putIfAbsent(new OperationSyncKey(meta.typeId(), typeVer), new WriteOperationTask(meta, typeVer));
+            preparedTasks.putIfAbsent(new OperationSyncKey(meta.typeId(), typeVer), new WriteOperationTask(meta, typeVer));
+        }
+
+        /**
+         */
+        synchronized void prepareRemoveFuture(int typeId) {
+            if (isCancelled())
+                return;
+
+            if (log.isDebugEnabled())
+                log.debug(
+                    "Prepare task for async remove for" +
+                        "[typeId=" + typeId + ']'
+                );
+
+            preparedTasks.putIfAbsent(new OperationSyncKey(typeId, BinaryMetadataTransport.REMOVED_VERSION),
+                new RemoveOperationTask(typeId));
         }
 
         /**
@@ -481,7 +572,7 @@ class BinaryMetadataFileStore {
                 return;
             }
 
-            WriteOperationTask task = preparedWriteTasks.get(new OperationSyncKey(typeId, typeVer));
+            OperationTask task = preparedTasks.get(new OperationSyncKey(typeId, typeVer));
 
             if (task != null) {
                 if (log.isDebugEnabled())
@@ -517,13 +608,35 @@ class BinaryMetadataFileStore {
     /**
      *
      */
-    private static final class WriteOperationTask {
+    private abstract static class OperationTask {
+        /** */
+        private final GridFutureAdapter<Void> future = new GridFutureAdapter<>();
+
+        /** */
+        abstract void execute(BinaryMetadataFileStore store);
+
+        /** */
+        abstract int typeId();
+
+        /** */
+        abstract int typeVersion();
+
+        /**
+         * @return Task future.
+         */
+        GridFutureAdapter<Void> future() {
+            return future;
+        }
+    }
+
+    /**
+     *
+     */
+    private static final class WriteOperationTask extends OperationTask {
         /** */
         private final BinaryMetadata meta;
         /** */
         private final int typeVer;
-        /** */
-        private final GridFutureAdapter future = new GridFutureAdapter();
 
         /**
          * @param meta Metadata for binary type.
@@ -532,6 +645,50 @@ class BinaryMetadataFileStore {
         private WriteOperationTask(BinaryMetadata meta, int ver) {
             this.meta = meta;
             typeVer = ver;
+        }
+
+        /** {@inheritDoc} */
+        @Override void execute(BinaryMetadataFileStore store) {
+            store.writeMetadata(meta);
+        }
+
+        /** {@inheritDoc} */
+        @Override int typeId() {
+            return meta.typeId();
+        }
+
+        /** {@inheritDoc} */
+        @Override int typeVersion() {
+            return typeVer;
+        }
+    }
+
+    /**
+     *
+     */
+    private static final class RemoveOperationTask extends OperationTask {
+        /** */
+        private final int typeId;
+
+        /**
+         */
+        private RemoveOperationTask(int typeId) {
+            this.typeId = typeId;
+        }
+
+        /** {@inheritDoc} */
+        @Override void execute(BinaryMetadataFileStore store) {
+            store.removeMeta(typeId);
+        }
+
+        /** {@inheritDoc} */
+        @Override int typeId() {
+            return typeId;
+        }
+
+        /** {@inheritDoc} */
+        @Override int typeVersion() {
+            return BinaryMetadataTransport.REMOVED_VERSION;
         }
     }
 

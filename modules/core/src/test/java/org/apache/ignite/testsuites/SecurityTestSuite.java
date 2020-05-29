@@ -19,11 +19,13 @@ package org.apache.ignite.testsuites;
 import org.apache.ignite.internal.processors.security.IgniteSecurityProcessorTest;
 import org.apache.ignite.internal.processors.security.InvalidServerTest;
 import org.apache.ignite.internal.processors.security.cache.CacheOperationPermissionCheckTest;
+import org.apache.ignite.internal.processors.security.cache.CacheOperationPermissionCreateDestroyCheckTest;
 import org.apache.ignite.internal.processors.security.cache.EntryProcessorPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.cache.ScanQueryPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.CacheLoadRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.EntryProcessorRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.cache.closure.ScanQueryRemoteSecurityContextCheckTest;
+import org.apache.ignite.internal.processors.security.client.AttributeSecurityCheckTest;
 import org.apache.ignite.internal.processors.security.client.AdditionalSecurityCheckTest;
 import org.apache.ignite.internal.processors.security.client.AdditionalSecurityCheckWithGlobalAuthTest;
 import org.apache.ignite.internal.processors.security.client.ThinClientPermissionCheckSecurityTest;
@@ -51,6 +53,7 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
 @WithSystemProperty(key = "IGNITE_SECURITY_PROCESSOR", value = "true")
 @Suite.SuiteClasses({
     CacheOperationPermissionCheckTest.class,
+    CacheOperationPermissionCreateDestroyCheckTest.class,
     DataStreamerPermissionCheckTest.class,
     ScanQueryPermissionCheckTest.class,
     EntryProcessorPermissionCheckTest.class,
@@ -71,6 +74,7 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
 
     MultipleSSLContextsTest.class,
     AdditionalSecurityCheckTest.class,
+    AttributeSecurityCheckTest.class,
     AdditionalSecurityCheckWithGlobalAuthTest.class,
 
     InvalidServerTest.class
