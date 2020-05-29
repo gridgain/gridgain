@@ -115,10 +115,16 @@ public class CheckpointHistory {
      * @param checkpoints Checkpoints.
      */
     public void initialize(List<CheckpointEntry> checkpoints) {
-        for (CheckpointEntry e : checkpoints) {
-            updateErliestCpMap(e);
-
+        for (CheckpointEntry e : checkpoints)
             histMap.put(e.timestamp(), e);
+
+        for (Long timestamp : checkpoints(false)) {
+            try {
+                updateErliestCpMap(entry(timestamp));
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
+            }
         }
     }
 
