@@ -119,7 +119,7 @@ public class JdbcAuthorizationTest extends AbstractSecurityTest {
 
         startSecurityGrid(1);
 
-        srv.cluster().state(ACTIVE);
+        srv.cluster().active(true);
 
         CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
@@ -349,7 +349,6 @@ public class JdbcAuthorizationTest extends AbstractSecurityTest {
                 login,
                 "",
                 systemPermissions(CACHE_CREATE, JOIN_AS_SERVER),
-                null,
                 false,
                 clients
             ))
