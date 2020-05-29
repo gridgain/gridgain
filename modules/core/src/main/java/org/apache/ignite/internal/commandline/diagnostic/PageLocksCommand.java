@@ -66,7 +66,6 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
         Set<String> nodeIds = arguments.nodeIds;
 
-        String clusterInfo;
         Map<ClusterNode, VisorPageLocksResult> res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
@@ -85,11 +84,9 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
                 taskArg,
                 clientCfg
             );
-
-            clusterInfo = getFullClusterInfo(client.state());
         }
 
-        printResult(res, clusterInfo);
+        printResult(res);
 
         return res;
     }
@@ -173,10 +170,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
     /**
      * @param res Result.
-     * @param clusterInfo
      */
-    private void printResult(Map<ClusterNode, VisorPageLocksResult> res, String clusterInfo) {
-        logger.info(clusterInfo);
+    private void printResult(Map<ClusterNode, VisorPageLocksResult> res) {
         res.forEach((n, res0) -> {
             logger.info(n.id() + " (" + n.consistentId() + ") " + res0.result());
         });

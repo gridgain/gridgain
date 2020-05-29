@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
@@ -109,7 +108,7 @@ public class BaselineCommand implements Command<BaselineArguments> {
                 clientCfg
             );
 
-            baselinePrint0(res, logger, getFullClusterInfo(client.state()));
+            baselinePrint0(res, logger);
         }
         catch (Throwable e) {
             logger.severe("Failed to execute baseline command='" + baselineArgs.getCmd().text() + "'");
@@ -154,8 +153,8 @@ public class BaselineCommand implements Command<BaselineArguments> {
      *
      * @param res Task result with baseline topology.
      */
-    private void baselinePrint0(VisorBaselineTaskResult res, Logger logger, String clusterInfo) {
-        logger.info(clusterInfo + " state: " + (res.isActive() ? "active" : "inactive"));
+    private void baselinePrint0(VisorBaselineTaskResult res, Logger logger) {
+        logger.info("Cluster state: " + (res.isActive() ? "active" : "inactive"));
         logger.info("Current topology version: " + res.getTopologyVersion());
 
         if (res.isAutoAdjustEnabled() != null && isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {

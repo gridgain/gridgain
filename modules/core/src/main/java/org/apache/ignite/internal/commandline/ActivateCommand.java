@@ -43,9 +43,10 @@ public class ActivateCommand implements Command<Void> {
     @Override public Object execute(GridClientConfiguration cfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(cfg)) {
             GridClientClusterState state = client.state();
+
             state.active(true);
 
-            logger.info(getFullClusterInfo(state) + " activated");
+            logger.info("Cluster activated");
         }
         catch (Throwable e) {
             logger.severe("Failed to activate cluster.");

@@ -176,12 +176,10 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
                 clientCfg
             );
 
-            String clusterName = getFullClusterInfo(client.state());
-
             if (args.fullConfig() && args.cacheCommand() == CACHES)
-                cachesConfig(client, args, res, clientCfg, logger, clusterName);
+                cachesConfig(client, args, res, clientCfg, logger);
             else
-                printCacheInfos(res.cacheInfos(), args.cacheCommand(), logger, clusterName);
+                printCacheInfos(res.cacheInfos(), args.cacheCommand(), logger);
         }
 
 
@@ -397,8 +395,7 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
         Arguments cacheArgs,
         VisorViewCacheTaskResult viewRes,
         GridClientConfiguration clientCfg,
-        Logger logger,
-        String clusterName
+        Logger logger
     ) throws GridClientException {
         VisorCacheConfigurationCollectorTaskArg taskArg = new VisorCacheConfigurationCollectorTaskArg(cacheArgs.regex());
 
@@ -410,8 +407,6 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
         Map<String, Integer> cacheToMapped =
             viewRes.cacheInfos().stream().collect(Collectors.toMap(CacheInfo::getCacheName, CacheInfo::getMapped));
 
-        logger.info(clusterName);
-
         printCachesConfig(res, cacheArgs.outputFormat(), cacheToMapped, logger);
     }
 
@@ -421,8 +416,7 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
      * @param infos Caches info.
      * @param cmd Command.
      */
-    private void printCacheInfos(Collection<CacheInfo> infos, VisorViewCacheCmd cmd, Logger logger, String clusterName) {
-        logger.info(clusterName);
+    private void printCacheInfos(Collection<CacheInfo> infos, VisorViewCacheCmd cmd, Logger logger) {
         for (CacheInfo info : infos) {
             Map<String, Object> map = info.toMap(cmd);
 
