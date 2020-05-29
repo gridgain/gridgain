@@ -80,6 +80,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.Tracing;
@@ -180,9 +181,6 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE;
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
-import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
@@ -804,10 +802,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             }
 
             @Override public void onMessage(final GridNioSession ses, Message msg) {
-                if (isTraceable()) {
-                    trace("Communication received");
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
-                }
+                MTC.span().addLog(() -> "Communication received");
+                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
@@ -2825,7 +2821,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         assert node != null;
         assert msg != null;
 
-        if (log.isTraceEnabled())
+        if (log != null && log.isTraceEnabled())
             log.trace("Sending message with ack to node [node=" + node + ", msg=" + msg + ']');
 
         if (isLocalNodeDisconnected()) {
@@ -3380,7 +3376,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
         // Try to connect first on bound addresses.
         if (isRmtAddrsExist) {
-            List<InetSocketAddress> addrs0 = new ArrayList<>(U.toSocketAddresses(rmtAddrs0, rmtHostNames0, boundPort));
+            List<InetSocketAddress> addrs0 = new ArrayList<>(U.toSocketAddresses(rmtAddrs0, rmtHostNames0, boundPort, true));
 
             boolean sameHost = U.sameMacs(getSpiContext().localNode(), node);
 
@@ -4190,7 +4186,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
         CommunicationListener<Message> lsnr = this.lsnr;
 
-        trace( "Communication listeners notified");
+        MTC.span().addLog(() -> "Communication listeners notified");
 
         if (lsnr != null)
             // Notify listener of a new message.
