@@ -98,7 +98,7 @@ import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.NOOP;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 
@@ -1076,7 +1076,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         assert node != null;
         assert msg != null;
 
-        if (log.isTraceEnabled())
+        if (log != null && log.isTraceEnabled())
             log.trace("Sending message with ack to node [node=" + node + ", msg=" + msg + ']');
 
         if (stateProvider.isLocalNodeDisconnected()) {
@@ -1203,7 +1203,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      * @param msgC Closure to call when message processing finished.
      */
     protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
-        trace("Communication listeners notified");
+        MTC.span().addLog(() -> "Communication listeners notified");
 
         if (this.lsnr != null)
             // Notify listener of a new message.
