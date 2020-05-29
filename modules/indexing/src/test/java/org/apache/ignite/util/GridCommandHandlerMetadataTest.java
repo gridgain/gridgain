@@ -16,22 +16,18 @@
 
 package org.apache.ignite.util;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryType;
-import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.binary.BinarySchema;
 import org.apache.ignite.internal.binary.BinaryTypeImpl;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
