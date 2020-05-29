@@ -548,6 +548,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
+            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
+
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
             if (joinFut != null)
@@ -667,6 +669,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
                     nodeIds
                 );
+
+                ctx.durableBackgroundTasksProcessor().onStateChange(msg);
 
                 if (msg.forceChangeBaselineTopology())
                     newState.setTransitionResult(msg.requestId(), msg.activate());

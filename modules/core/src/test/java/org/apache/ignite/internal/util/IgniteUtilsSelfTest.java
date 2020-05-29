@@ -806,7 +806,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         Collection<String> hostNames = new ArrayList<>();
         int port = 1234;
 
-        assertEquals(1, U.toSocketAddresses(addrs, hostNames, port).size());
+        assertEquals(1, U.toSocketAddresses(addrs, hostNames, port, true).size());
     }
 
     /**
