@@ -2147,6 +2147,12 @@ public class ZookeeperDiscoveryImpl {
 
         try {
             secSubjZipBytes = marshalZip(subj);
+
+            Map<String, Object> attrs = new HashMap<>(node.getAttributes());
+
+            attrs.put(ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
+
+            node.setAttributes(attrs);
         }
         catch (Exception e) {
             U.error(log, "Failed to marshal node security subject: " + e, e);
@@ -2290,7 +2296,8 @@ public class ZookeeperDiscoveryImpl {
 
             assert secSubjPartCnt > 0 : secSubjPartCnt;
 
-            setNodeSecuritySubject(joinedNode, secSubjZipBytes);
+            if (spi.getAuthenticator() == null)
+                setNodeSecuritySubject(joinedNode, secSubjZipBytes);
         }
 
         ZkJoinedNodeEvtData nodeEvtData = new ZkJoinedNodeEvtData(

@@ -76,9 +76,16 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>${zookeeper.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
-            <version>${curator.test.version}</version>
+            <version>${curator.version}</version>
             <scope>test</scope>
             <!-- https://github.com/confluentinc/kafka-connect-elasticsearch/issues/143 -->
             <exclusions>
