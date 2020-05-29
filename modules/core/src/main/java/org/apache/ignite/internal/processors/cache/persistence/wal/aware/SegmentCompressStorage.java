@@ -70,8 +70,6 @@ public class SegmentCompressStorage {
 
         this.compactionEnabled = compactionEnabled;
 
-        this.segmentArchivedStorage.addObserver(this::onSegmentArchived);
-
         this.log = log;
     }
 

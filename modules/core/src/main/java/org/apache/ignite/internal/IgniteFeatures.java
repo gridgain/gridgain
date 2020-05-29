@@ -124,8 +124,8 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /** */
-    MANAGEMENT_CONSOLE(28),
+    /** Cluster has task to clear sender store. */
+    WC_DR_CLEAR_SENDER_STORE(29),
 
     /** Distributed change timeout for dump long operations. */
     DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
@@ -148,9 +148,14 @@ public enum IgniteFeatures {
     /** Check secondary indexes inline size on join/by control utility request. */
     CHECK_INDEX_INLINE_SIZES(36),
 
-    /** */
-    METASTORAGE_LONG_KEYS(37);
+    /** Distributed propagation of tx collisions dump interval. */
+    DISTRIBUTED_TX_COLLISIONS_DUMP(37),
 
+    /** */
+    METASTORAGE_LONG_KEYS(38),
+
+    /** Remove metadata from cluster for specified type. */
+    REMOVE_METADATA(39);
     /**
      * Unique feature identifier.
      */
@@ -314,10 +319,6 @@ public enum IgniteFeatures {
 
             // Add only when tracing is enabled.
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
-                continue;
-
-            // Add only when Control Center is enabled.
-            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
             // Add only when scheduling is disabled.
