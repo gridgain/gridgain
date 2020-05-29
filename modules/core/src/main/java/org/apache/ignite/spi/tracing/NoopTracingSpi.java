@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *      https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.tracing;
+package org.apache.ignite.spi.tracing;
 
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiConsistencyChecked;
@@ -29,25 +29,30 @@ import org.jetbrains.annotations.Nullable;
 @IgniteSpiMultipleInstancesSupport(value = true)
 @IgniteSpiConsistencyChecked(optional = true)
 public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
-    /** Noop span. */
-    private static final Span NOOP_SPAN = NoopSpan.INSTANCE;
-
     /** Noop serialized span. */
-    private static final byte[] NOOP_SERIALIZED_SPAN = new byte[0];
+    private static final byte[] NOOP_SPI_SPECIFIC_SERIALIZED_SPAN = new byte[0];
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
-        return NOOP_SPAN;
+    @Override public SpiSpecificSpan create(@NotNull String name, @Nullable SpiSpecificSpan parentSpan) {
+        return NoopSpiSpecificSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
-        return NOOP_SPAN;
+    @Override public SpiSpecificSpan create(@NotNull String name, @Nullable byte[] serializedSpan) {
+        return NoopSpiSpecificSpan.INSTANCE;
     }
 
     /** {@inheritDoc} */
-    @Override public byte[] serialize(@NotNull Span span) {
-        return NOOP_SERIALIZED_SPAN;
+    @Override public @NotNull SpiSpecificSpan create(
+        @NotNull String name,
+        @Nullable SpiSpecificSpan parentSpan,
+        double samplingRate) {
+        return NoopSpiSpecificSpan.INSTANCE;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte[] serialize(@NotNull SpiSpecificSpan span) {
+        return NOOP_SPI_SPECIFIC_SERIALIZED_SPAN;
     }
 
     /** {@inheritDoc} */
@@ -58,5 +63,10 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi {
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public TracingSpiType type() {
+        return TracingSpiType.NOOP_TRACING_SPI;
     }
 }

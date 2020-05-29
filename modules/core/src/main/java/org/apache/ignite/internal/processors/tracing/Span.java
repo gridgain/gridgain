@@ -16,7 +16,10 @@
 
 package org.apache.ignite.internal.processors.tracing;
 
-import java.util.Map;
+import java.util.Set;
+import java.util.function.Supplier;
+import org.apache.ignite.spi.tracing.Scope;
+import org.apache.ignite.spi.tracing.SpanStatus;
 
 /**
  * Logical piece of a trace that represents a single operation.
@@ -30,41 +33,52 @@ public interface Span {
      * Adds tag to span with {@code String} value.
      *
      * @param tagName Tag name.
-     * @param tagVal Tag value.
+     * @param tagValSupplier Tag value supplier. Supplier is used instead of strict tag value cause of it's lazy nature.
+     *  So that it's possible not to generate String tag value in case of NoopSpan.
      */
-    public Span addTag(String tagName, String tagVal);
-    /**
-     * Adds tag to span with {@code long} value.
-     *
-     * @param tagName Tag name.
-     * @param tagVal Tag value.
-     */
-    public Span addTag(String tagName, long tagVal);
+    Span addTag(String tagName, Supplier<String> tagValSupplier);
+
     /**
      * Logs work to span.
      *
-     * @param logDesc Log description.
+     * @param logDescSupplier Log description supplier.
+     *  Supplier is used instead of strict log description cause of it's lazy nature.
+     *  So that it's possible not to generate String log description in case of NoopSpan.
      */
-    public Span addLog(String logDesc);
-    /**
-     * Adds log to span with additional attributes.
-     *
-     * @param logDesc Log description.
-     * @param attributes Attributes.
-     */
-    public Span addLog(String logDesc, Map<String, String> attributes);
+    Span addLog(Supplier<String> logDescSupplier);
+
     /**
      * Explicitly set status for span.
      *
      * @param spanStatus Status.
      */
-    public Span setStatus(SpanStatus spanStatus);
+    Span setStatus(SpanStatus spanStatus);
+
     /**
      * Ends span. This action sets default status if not set and mark the span as ready to be exported.
      */
-    public Span end();
+    Span end();
+
     /**
      * @return {@code true} if span has already ended.
      */
-    public boolean isEnded();
+    boolean isEnded();
+
+    /**
+     * @return Type of given span.
+     */
+    SpanType type();
+
+    /**
+     * @return Set of included scopes.
+     */
+    Set<Scope> includedScopes();
+
+    /**
+     * @param scope Chainable scope candidate.
+     * @return {@code true} if given span is chainable with other spans with specified scope.
+     */
+    default boolean isChainable(Scope scope) {
+        return type().scope() == scope || includedScopes().contains(scope);
+    }
 }
