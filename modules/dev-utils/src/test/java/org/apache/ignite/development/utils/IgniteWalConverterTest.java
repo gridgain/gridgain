@@ -24,6 +24,7 @@ import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -42,8 +43,19 @@ import org.junit.Test;
  * Test for IgniteWalConverter
  */
 public class IgniteWalConverterTest extends GridCommonAbstractTest {
-
+    /** */
     public static final String PERSON_NAME_PREFIX = "Name ";
+
+    private String beforeIgnitePdsSkipCrc;
+    private boolean beforeSkipCrc;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        beforeIgnitePdsSkipCrc = System.getProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC);
+        beforeSkipCrc = RecordV1Serializer.skipCrc;
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -59,6 +71,18 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
 
         super.afterTest();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        if (beforeIgnitePdsSkipCrc != null)
+            System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, beforeIgnitePdsSkipCrc);
+        else
+            System.clearProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC);
+
+        RecordV1Serializer.skipCrc = beforeSkipCrc;
+
+        super.afterTestsStopped();
     }
 
     /** {@inheritDoc} */
