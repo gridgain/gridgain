@@ -177,7 +177,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
     /**
      * Sets local port for socket binding.
      * <p>
-     * If not provided, default value is {@link #DFLT_PORT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_PORT}.
      *
      * @param locPort Port number.
      * @return {@code this} for chaining.
@@ -210,7 +210,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * Local port range is very useful during development when more than one grid nodes need to run
      * on the same physical machine.
      * <p>
-     * If not provided, default value is {@link #DFLT_PORT_RANGE}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_PORT_RANGE}.
      *
      * @param locPortRange New local port range.
      * @return {@code this} for chaining.
@@ -295,7 +295,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * <p>
      * If set to {@code -1} shared memory communication will be disabled.
      * <p>
-     * If not provided, default value is {@link #DFLT_SHMEM_PORT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_SHMEM_PORT}.
      *
      * @param shmemPort Port number.
      * @return {@code this} for chaining.
@@ -320,7 +320,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * Sets maximum idle connection timeout upon which a connection
      * to client will be closed.
      * <p>
-     * If not provided, default value is {@link #DFLT_IDLE_CONN_TIMEOUT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_IDLE_CONN_TIMEOUT}.
      *
      * @param idleConnTimeout Maximum idle connection time.
      * @return {@code this} for chaining.
@@ -354,7 +354,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * Sets socket write timeout for TCP connection. If message can not be written to
      * socket within this time then connection is closed and reconnect is attempted.
      * <p>
-     * Default to {@link #DFLT_SOCK_WRITE_TIMEOUT}.
+     * Default to {@link TcpCommunicationSpi#DFLT_SOCK_WRITE_TIMEOUT}.
      *
      * @param sockWriteTimeout Socket write timeout for TCP connection.
      * @return {@code this} for chaining.
@@ -378,7 +378,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
     /**
      * Sets number of received messages per connection to node after which acknowledgment message is sent.
      * <p>
-     * Default to {@link #DFLT_ACK_SND_THRESHOLD}.
+     * Default to {@link TcpCommunicationSpi#DFLT_ACK_SND_THRESHOLD}.
      *
      * @param ackSndThreshold Number of received messages after which acknowledgment is sent.
      * @return {@code this} for chaining.
@@ -420,7 +420,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * <p>
      * {@code 0} is interpreted as infinite timeout.
      * <p>
-     * If not provided, default value is {@link #DFLT_CONN_TIMEOUT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_CONN_TIMEOUT}.
      * <p>
      * When this property is explicitly set {@link IgniteConfiguration#getFailureDetectionTimeout()} is ignored.
      *
@@ -453,7 +453,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * <p>
      * {@code 0} is interpreted as infinite timeout.
      * <p>
-     * If not provided, default value is {@link #DFLT_MAX_CONN_TIMEOUT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_MAX_CONN_TIMEOUT}.
      * <p>
      * When this property is explicitly set {@link IgniteConfiguration#getFailureDetectionTimeout()} is ignored.
      *
@@ -482,7 +482,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * Sets maximum number of reconnect attempts used when establishing connection
      * with remote nodes.
      * <p>
-     * If not provided, default value is {@link #DFLT_RECONNECT_CNT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_RECONNECT_CNT}.
      * <p>
      * When this property is explicitly set {@link IgniteConfiguration#getFailureDetectionTimeout()} is ignored.
      *
@@ -561,7 +561,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
     /**
      * Sets the count of selectors te be used in TCP server.
      * <p/>
-     * If not provided, default value is {@link #DFLT_SELECTORS_CNT}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_SELECTORS_CNT}.
      *
      * @param selectorsCnt Selectors count.
      * @return {@code this} for chaining.
@@ -616,7 +616,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * For systems that work under heavy network load it is advisable to
      * set this value to {@code false}.
      * <p>
-     * If not provided, default value is {@link #DFLT_TCP_NODELAY}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_TCP_NODELAY}.
      *
      * @param tcpNoDelay {@code True} to disable TCP delay.
      * @return {@code this} for chaining.
@@ -652,7 +652,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * <p>
      * Usually its advised to set this value to {@code false}.
      * <p>
-     * If not provided, default value is {@link #DFLT_FILTER_REACHABLE_ADDRESSES}.
+     * If not provided, default value is {@link TcpCommunicationSpi#DFLT_FILTER_REACHABLE_ADDRESSES}.
      *
      * @param filterReachableAddresses {@code True} to filter reachable addresses.
      * @return {@code this} for chaining.
@@ -667,7 +667,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
     /**
      * Sets receive buffer size for sockets created or accepted by this SPI.
      * <p>
-     * If not provided, default is {@link #DFLT_SOCK_BUF_SIZE}.
+     * If not provided, default is {@link TcpCommunicationSpi#DFLT_SOCK_BUF_SIZE}.
      *
      * @param sockRcvBuf Socket receive buffer size.
      * @return {@code this} for chaining.
@@ -691,7 +691,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
     /**
      * Sets send buffer size for sockets created or accepted by this SPI.
      * <p>
-     * If not provided, default is {@link #DFLT_SOCK_BUF_SIZE}.
+     * If not provided, default is {@link TcpCommunicationSpi#DFLT_SOCK_BUF_SIZE}.
      *
      * @param sockSndBuf Socket send buffer size.
      * @return {@code this} for chaining.
@@ -718,7 +718,7 @@ cfg.socketSendBuffer(sockSndBuf);
      * When set to positive number send queue is limited to the configured value.
      * {@code 0} disables the size limitations.
      * <p>
-     * If not provided, default is {@link #DFLT_MSG_QUEUE_LIMIT}.
+     * If not provided, default is {@link TcpCommunicationSpi#DFLT_MSG_QUEUE_LIMIT}.
      *
      * @param msgQueueLimit Send queue size limit.
      * @return {@code this} for chaining.

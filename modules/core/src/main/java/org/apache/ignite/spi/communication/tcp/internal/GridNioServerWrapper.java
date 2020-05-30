@@ -202,7 +202,6 @@ public class GridNioServerWrapper {
     private ConnectionClientPool clientPool;
 
     /**
-     * @param metricMgrSupplier Metric manager supplier.
      * @param log Logger.
      * @param cfg Config.
      * @param timeObjProcessor Time object processor.

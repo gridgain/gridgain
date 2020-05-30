@@ -552,9 +552,9 @@ public class TcpCommunicationConfiguration implements Serializable {
     /**
      * Returns failure detection timeout used by {@link TcpDiscoverySpi} and {@link TcpCommunicationSpi}.
      * <p>
-     * Default is {@link #DFLT_FAILURE_DETECTION_TIMEOUT}.
+     * Default is {@link IgniteConfiguration#DFLT_FAILURE_DETECTION_TIMEOUT}.
      *
-     * @see #setFailureDetectionTimeout(long)
+     * @see IgniteConfiguration#setFailureDetectionTimeout(long)
      * @return Failure detection timeout in milliseconds.
      */
     public long failureDetectionTimeout() {

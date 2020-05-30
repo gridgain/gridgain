@@ -81,7 +81,7 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectGateway;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
-import org.apache.ignite.spi.communication.tcp.internal.DiscoveryListener;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationDiscoveryEventListener;
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
@@ -731,7 +731,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         srvLsnr.setClientPool(clientPool);
         nioSrvWrapper.clientPool(clientPool);
 
-        discoLsnr = new DiscoveryListener(clientPool, metricsLsnr);
+        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
 
         try {
             shmemSrv = resetShmemServer();

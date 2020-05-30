@@ -30,7 +30,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 /**
  * Listener on discovery events.
  */
-public class DiscoveryListener implements GridLocalEventListener, HighPriorityListener {
+public class CommunicationDiscoveryEventListener implements GridLocalEventListener, HighPriorityListener {
     /** Client pool. */
     private final ConnectionClientPool clientPool;
 
@@ -41,7 +41,7 @@ public class DiscoveryListener implements GridLocalEventListener, HighPriorityLi
      * @param clientPool Client pool.
      * @param metricsLsnr Metrics listener.
      */
-    public DiscoveryListener(
+    public CommunicationDiscoveryEventListener(
         ConnectionClientPool clientPool,
         TcpCommunicationMetricsListener metricsLsnr
     ) {
