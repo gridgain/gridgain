@@ -333,7 +333,6 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
 
             spi.setListener(new MessageListener(rsrcs.getNodeId()));
 
-            node.setAttributes(spi.getNodeAttributes());
             node.setAttribute(ATTR_MACS, F.concat(U.allLocalMACs(), ", "));
 
             node.order(i + 1);
@@ -341,6 +340,8 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
             nodes.add(node);
 
             spi.spiStart(getTestIgniteInstanceName() + (i + 1));
+
+            node.setAttributes(spi.getNodeAttributes());
 
             spis.put(rsrcs.getNodeId(), spi);
 
