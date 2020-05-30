@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Client
+namespace Apache.Ignite.BenchmarkDotNet
 {
+    using Apache.Ignite.BenchmarkDotNet.ThinClient;
+    using global::BenchmarkDotNet.Running;
+
     /// <summary>
-    /// Client feature ids. Values represent the index in the bit array.
+    /// Benchmark runner.
     /// </summary>
-    internal enum ClientBitmaskFeature
+    public static class Program
     {
-        // UserAttributes = 0,
-        ExecuteTaskByName = 1,
-        // ClusterStates = 2,
-        ClusterGroupGetNodesEndpoints = 3,
-        ClusterGroups = 4
+        /// <summary>
+        /// Main.
+        /// </summary>
+        public static void Main()
+        {
+            BenchmarkRunner.Run<ThinClientCacheGetBenchmark>();
+        }
     }
 }

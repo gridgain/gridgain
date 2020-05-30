@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,36 +14,41 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Client
+namespace Apache.Ignite.BenchmarkDotNet.ThinClient
 {
-    using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core;
+    using Apache.Ignite.Core.Client;
+    using global::BenchmarkDotNet.Attributes;
 
     /// <summary>
-    /// Response context.
+    /// Base class for thin client benchmarks.
     /// </summary>
-    internal sealed class ClientResponseContext : ClientContextBase
+    public abstract class ThinClientBenchmarkBase
     {
         /** */
-        private BinaryReader _reader;
+        public IIgnite Ignite { get; set; }
+
+        /** */
+        public IIgniteClient Client { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of <see cref="ClientResponseContext"/> class.
+        /// Sets up the benchmark.
         /// </summary>
-        /// <param name="stream">Stream.</param>
-        /// <param name="socket">Socket.</param>
-        public ClientResponseContext(IBinaryStream stream, ClientSocket socket)
-            : base(stream, socket)
+        [GlobalSetup]
+        public virtual void GlobalSetup()
         {
-            // No-op.
+            Ignite = Ignition.Start(Utils.GetIgniteConfiguration());
+            Client = Ignition.StartClient(Utils.GetIgniteClientConfiguration());
         }
 
         /// <summary>
-        /// Reader.
+        /// Cleans up the benchmark.
         /// </summary>
-        public BinaryReader Reader
+        [GlobalCleanup]
+        public virtual void GlobalCleanup()
         {
-            get { return _reader ?? (_reader = Marshaller.StartUnmarshal(Stream)); }
+            Client.Dispose();
+            Ignite.Dispose();
         }
     }
 }
