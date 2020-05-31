@@ -40,6 +40,7 @@ public class MetaPageInitRecord extends InitNewPageRecord {
      * @param grpId Cache group ID.
      * @param pageId Page ID.
      * @param ioType IO type.
+     * @param ioVer Io version.
      * @param treeRoot Tree root.
      * @param reuseListRoot Reuse list root.
      */
@@ -70,6 +71,7 @@ public class MetaPageInitRecord extends InitNewPageRecord {
         this.reuseListRoot = reuseListRoot;
         this.ioType = ioType;
     }
+
 
     /**
      * @return Tree root.

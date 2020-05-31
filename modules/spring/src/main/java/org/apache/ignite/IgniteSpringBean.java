@@ -29,11 +29,13 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.IgnitePlugin;
 import org.apache.ignite.plugin.PluginNotFoundException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
@@ -306,6 +308,13 @@ public class IgniteSpringBean implements Ignite, DisposableBean, SmartInitializi
         checkIgnite();
 
         return g.dataStorageMetrics();
+    }
+
+    /** {@inheritDoc} */
+    @Override public @NotNull TracingConfigurationManager tracingConfiguration() {
+        checkIgnite();
+
+        return g.tracingConfiguration();
     }
 
     /** {@inheritDoc} */

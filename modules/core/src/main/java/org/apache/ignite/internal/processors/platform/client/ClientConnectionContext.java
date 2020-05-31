@@ -37,9 +37,9 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxContext;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 
-import static org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature.USER_ATTRIBUTES;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.BITMAP_FEATURES;
+import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.USER_ATTRIBUTES;
 
 /**
  * Thin Client connection context.
@@ -73,8 +73,13 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      */
     public static final ClientListenerProtocolVersion VER_1_7_0 = ClientListenerProtocolVersion.create(1, 7, 0);
 
+    /**
+     * Version 1.7.1. User Attributes introduced. New version is needed because user attributes passed in handshake.
+     */
+    public static final ClientListenerProtocolVersion VER_1_7_1 = ClientListenerProtocolVersion.create(1, 7, 1);
+
     /** Default version. */
-    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_7_0;
+    public static final ClientListenerProtocolVersion DEFAULT_VER = VER_1_7_1;
 
     /** Default protocol context. */
     public static final ClientProtocolContext DEFAULT_PROTOCOL_CONTEXT =
@@ -82,6 +87,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
     /** Supported versions. */
     private static final Collection<ClientListenerProtocolVersion> SUPPORTED_VERS = Arrays.asList(
+        VER_1_7_1,
         VER_1_7_0,
         VER_1_6_0,
         VER_1_5_0,
@@ -110,6 +116,9 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopologyVersion = new AtomicReference<>();
 
+    /** Client session. */
+    private GridNioSession ses;
+
     /** Cursor counter. */
     private final AtomicLong curCnt = new AtomicLong();
 
@@ -124,6 +133,12 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
     /** Active transactions count. */
     private final AtomicInteger txsCnt = new AtomicInteger();
+
+    /** Active compute tasks limit. */
+    private final int maxActiveComputeTasks;
+
+    /** Active compute tasks count. */
+    private final AtomicInteger activeTasksCnt = new AtomicInteger();
 
     /**
      * Ctor.
@@ -140,6 +155,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
         this.maxCursors = maxCursors;
         maxActiveTxCnt = thinCfg.getMaxActiveTxPerConnection();
+        maxActiveComputeTasks = thinCfg.getMaxActiveComputeTasksPerConnection();
     }
 
     /**
@@ -210,6 +226,8 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
         handler = new ClientRequestHandler(this, currentProtocolContext);
         parser = new ClientMessageParser(this, currentProtocolContext);
+
+        this.ses = ses;
     }
 
     /** {@inheritDoc} */
@@ -331,5 +349,43 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
             txCtx.close();
 
         txs.clear();
+    }
+
+    /**
+     * Send notification to the client.
+     *
+     * @param notification Notification.
+     */
+    public void notifyClient(ClientNotification notification) {
+        ses.send(parser.encode(notification));
+    }
+
+    /**
+     * Increments the active compute tasks count.
+     */
+    public void incrementActiveTasksCount() {
+        if (maxActiveComputeTasks == 0) {
+            throw new IgniteClientException(ClientStatus.FUNCTIONALITY_DISABLED,
+                "Compute grid functionality is disabled for thin clients on server node. " +
+                    "To enable it set up the ThinClientConfiguration.MaxActiveComputeTasksPerConnection property.");
+        }
+
+        if (activeTasksCnt.incrementAndGet() > maxActiveComputeTasks) {
+            activeTasksCnt.decrementAndGet();
+
+            throw new IgniteClientException(ClientStatus.TOO_MANY_COMPUTE_TASKS, "Active compute tasks per connection " +
+                "limit (" + maxActiveComputeTasks + ") exceeded. To start a new task you need to wait for some of " +
+                "currently active tasks complete. To change the limit set up the " +
+                "ThinClientConfiguration.MaxActiveComputeTasksPerConnection property.");
+        }
+    }
+
+    /**
+     * Decrements the active compute tasks count.
+     */
+    public void decrementActiveTasksCount() {
+        int cnt = activeTasksCnt.decrementAndGet();
+
+        assert cnt >= 0 : "Unexpected active tasks count: " + cnt;
     }
 }

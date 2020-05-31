@@ -39,6 +39,7 @@ import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
@@ -272,7 +273,10 @@ public final class IgniteSystemProperties {
     /**
      * Timeout after which all uncompleted transactions originated by left node will be
      * salvaged (i.e. invalidated and committed).
+     *
+     * @deprecated Transactions are salvaged immediately to reduce PME latency.
      */
+    @Deprecated
     public static final String IGNITE_TX_SALVAGE_TIMEOUT = "IGNITE_TX_SALVAGE_TIMEOUT";
 
     /**
@@ -1403,6 +1407,27 @@ public final class IgniteSystemProperties {
      * compatibility. By default, {@code false}.
      */
     public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
+
+    /**
+     * When above zero, prints tx key collisions once per interval.
+     * Each transaction besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons
+     * per key lock queue may rise. This property sets the interval during which statistics are collected.
+     * Default is 1000 ms.
+     */
+    public static final String IGNITE_DUMP_TX_COLLISIONS_INTERVAL = "IGNITE_DUMP_TX_COLLISIONS_INTERVAL";
+
+    /**
+     * Defines how many exchange futures are kept uncleared in the queue. Default is 10.
+     */
+    public static final String IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT =
+        "IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT";
+
+    /**
+     * If specified, enforces legacy behavior for system properties authorization when
+     * {@link SecurityPermissionSet#defaultAllowAll()} is set to true: if user's system permission set is empty,
+     * all system actions will be prohibited.
+     */
+    public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
 
     /**
      * Enforces singleton.

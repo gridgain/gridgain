@@ -24,7 +24,16 @@ import org.apache.ignite.internal.ThinProtocolFeature;
  */
 public enum ClientBitmaskFeature implements ThinProtocolFeature {
     /** Feature for user attributes. */
-    USER_ATTRIBUTES(0);
+    USER_ATTRIBUTES(0),
+
+    /** Compute tasks (execute by task name). */
+    EXECUTE_TASK_BY_NAME(1),
+
+    /** Adds cluster states besides ACTIVE and INACTIVE. */
+    // CLUSTER_STATES(2),
+
+    /** Client discovery. */
+    CLUSTER_GROUP_GET_NODES_ENDPOINTS(3);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
