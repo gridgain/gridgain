@@ -2509,15 +2509,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             Map<T2<Integer, Integer>, Long> localReserved = partHistSuppliers.getReservations(cctx.localNodeId());
 
             if (localReserved != null) {
-                for (Map.Entry<T2<Integer, Integer>, Long> e : localReserved.entrySet()) {
-                    boolean success = cctx.database().reserveHistoryForPreloading(
-                        e.getKey().get1(), e.getKey().get2(), e.getValue());
+                boolean success = cctx.database().reserveHistoryForPreloading(localReserved);
 
-                    if (!success) {
-                        // TODO: how to handle?
-                        err = new IgniteCheckedException("Could not reserve history");
-                    }
-                }
+                // TODO: how to handle?
+                if (!success)
+                    err = new IgniteCheckedException("Could not reserve history");
             }
 
             cctx.database().releaseHistoryForExchange();

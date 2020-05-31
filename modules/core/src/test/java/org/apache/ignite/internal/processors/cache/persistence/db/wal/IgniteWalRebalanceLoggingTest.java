@@ -16,19 +16,27 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.internal.pagemem.wal.record.RolloverType.CURRENT_SEGMENT;
 
 /**
  * Tests for checking historical rebalance log messages.
@@ -56,7 +64,7 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
 
         storageCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true);
 
-        storageCfg.setWalMode(WALMode.LOG_ONLY).setWalCompactionEnabled(true).setWalCompactionLevel(1);
+        storageCfg.setWalMode(WALMode.LOG_ONLY).setMaxWalArchiveSize(-1).setWalCompactionEnabled(true).setWalCompactionLevel(1);
 
         storageCfg.setCheckpointFrequency(CHECKPOINT_FREQUENCY);
 
@@ -101,7 +109,8 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         LogListener expMsgsLsnr = LogListener.matches(str ->
             str.startsWith("Reserved cache groups with first reserved checkpoint IDs and reasons why previous checkpoint was inapplicable:") &&
                 str.contains("cache_group1") && str.contains("cache_group2")).times(3).
-            andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
+            andMatches(str -> str.startsWith("Starting rebalance routine") &&
+                (str.contains("cache_group1") || str.contains("cache_group2")) &&
                 str.contains("fullPartitions=[], histPartitions=[0-7]")).times(2).build();
 
         LogListener unexpectedMessagesLsnr = LogListener.matches((str) ->
@@ -137,7 +146,29 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         LogListener expMsgsLsnr = LogListener.
             matches("Partitions weren't present in any history reservation: " +
                 "[[grp=cache_group2 part=[[0-7]]], [grp=cache_group1 part=[[0-7]]]]").
-            andMatches(str -> (str.contains("cache_group1") || str.contains("cache_group2")) &&
+            andMatches(str -> str.startsWith("Starting rebalance routine") &&
+                (str.contains("cache_group1") || str.contains("cache_group2")) &&
+                str.contains("fullPartitions=[0-7], histPartitions=[]")).times(2).build();
+
+        checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr);
+
+        assertTrue(expMsgsLsnr.check());
+    }
+
+    /**
+     * Test checks log messages in case of short history of checkpoint.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, value = "2")
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "1")
+    public void testFullRebalanceWithShortCpHistoryLogMsgs() throws Exception {
+        LogListener expMsgsLsnr = LogListener.
+            matches(str -> str.startsWith("Partitions were reserved, but maximum available counter is greater than demanded: ") &&
+                str.contains("grp=cache_group1") && str.contains("grp=cache_group2")).
+            andMatches(str -> str.startsWith("Starting rebalance routine") &&
+                (str.contains("cache_group1") || str.contains("cache_group2")) &&
                 str.contains("fullPartitions=[0-7], histPartitions=[]")).times(2).build();
 
         checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr);
@@ -161,18 +192,20 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         for (int i = 0; i < KEYS_LOW_BORDER; i++) {
             cache1.put(i, "abc" + i);
             cache2.put(i, "abc" + i);
-        }
 
-        forceCheckpoint();
+            if (i % 20 == 0)
+                forceCheckpointAndRollOwerWal();
+        }
 
         stopGrid(1);
 
         for (int i = KEYS_LOW_BORDER; i < KEYS_UPPER_BORDER; i++) {
             cache1.put(i, "abc" + i);
             cache2.put(i, "abc" + i);
-        }
 
-        forceCheckpoint();
+            if (i % 20 == 0)
+                forceCheckpointAndRollOwerWal();
+        }
 
         srvLog.clearListeners();
 
@@ -196,5 +229,41 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
                 setAffinity(new RendezvousAffinityFunction().setPartitions(8))
                 .setGroupName(cacheGrpName).
                 setBackups(1));
+    }
+
+    /**
+     * Invokes checkpoint forcibly and rollovers WAL segment.
+     * It might be need for simulate long checkpoint history in test.
+     *
+     * @throws Exception If failed.
+     */
+    private void forceCheckpointAndRollOwerWal() throws Exception {
+        forceCheckpoint();
+
+        for (Ignite ignite : G.allGrids()) {
+            if (ignite.cluster().localNode().isClient())
+                continue;
+
+            IgniteEx ig = (IgniteEx)ignite;
+
+            IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+
+            ig.context().cache().context().database().checkpointReadLock();
+
+            try {
+                WALPointer ptr = walMgr.log(new AdHocWALRecord(), CURRENT_SEGMENT);
+            }
+            finally {
+                ig.context().cache().context().database().checkpointReadUnlock();
+            }
+        }
+    }
+
+    /** Tets WAL record. */
+    private static class AdHocWALRecord extends CheckpointRecord {
+        /** Default constructor. */
+        private AdHocWALRecord() {
+            super(null);
+        }
     }
 }
