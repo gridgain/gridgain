@@ -72,5 +72,14 @@
                 <include>java.util.logging.properties</include>
             </includes>
         </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/../control-center-agent/bin</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>0755</fileMode>
+            <includes>
+                <include>**/management.sh</include>
+            </includes>
+        </fileSet>
     </fileSets>
 </component>

@@ -20,7 +20,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 
 /**
- * Connect future.
+ * Connect future which uses as a marker of type connection releted with TCP, no SHMEM.
  */
 public class ConnectFuture extends GridFutureAdapter<GridCommunicationClient> {
     // No-op.

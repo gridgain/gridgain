@@ -39,11 +39,12 @@ import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
-import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
@@ -80,17 +81,16 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectGateway;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
-import org.apache.ignite.spi.communication.tcp.internal.DiscoveryListener;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationDiscoveryEventListener;
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
-import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.RoundRobinConnectionPolicy;
+import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConfigInitializer;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationSpiMBeanImpl;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage;
-import org.apache.ignite.spi.communication.tcp.internal.TimeObjectProcessorWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.shmem.ShmemAcceptWorker;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
@@ -98,7 +98,7 @@ import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.NOOP;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 
@@ -106,30 +106,38 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * <tt>TcpCommunicationSpi</tt> is default communication SPI which uses
  * TCP/IP protocol and Java NIO to communicate with other nodes.
  * <p>
- * To enable communication with other nodes, this SPI adds {@link #ATTR_ADDRS} and {@link #ATTR_PORT} local node
- * attributes (see {@link ClusterNode#attributes()}.
+ * To enable communication with other nodes, this SPI adds {@link #ATTR_ADDRS}
+ * and {@link #ATTR_PORT} local node attributes (see {@link ClusterNode#attributes()}.
  * <p>
- * At startup, this SPI tries to start listening to local port specified by {@link #setLocalPort(int)} method. If local
- * port is occupied, then SPI will automatically increment the port number until it can successfully bind for listening.
- * {@link #setLocalPortRange(int)} configuration parameter controls maximum number of ports that SPI will try before it
- * fails. Port range comes very handy when starting multiple grid nodes on the same machine or even in the same VM. In
- * this case all nodes can be brought up without a single change in configuration.
+ * At startup, this SPI tries to start listening to local port specified by
+ * {@link #setLocalPort(int)} method. If local port is occupied, then SPI will
+ * automatically increment the port number until it can successfully bind for
+ * listening. {@link #setLocalPortRange(int)} configuration parameter controls
+ * maximum number of ports that SPI will try before it fails. Port range comes
+ * very handy when starting multiple grid nodes on the same machine or even
+ * in the same VM. In this case all nodes can be brought up without a single
+ * change in configuration.
  * <p>
- * This SPI caches connections to remote nodes so it does not have to reconnect every time a message is sent. By
- * default, idle connections are kept active for {@link #DFLT_IDLE_CONN_TIMEOUT} period and then are closed. Use {@link
- * #setIdleConnectionTimeout(long)} configuration parameter to configure you own idle connection timeout.
+ * This SPI caches connections to remote nodes so it does not have to reconnect every
+ * time a message is sent. By default, idle connections are kept active for
+ * {@link #DFLT_IDLE_CONN_TIMEOUT} period and then are closed. Use
+ * {@link #setIdleConnectionTimeout(long)} configuration parameter to configure
+ * you own idle connection timeout.
  * <h1 class="header">Failure Detection</h1>
- * Configuration defaults (see Configuration section below and {@link IgniteConfiguration#getFailureDetectionTimeout()})
- * for details) are chosen to make possible for communication SPI work reliably on most of hardware and virtual
- * deployments, but this has made failure detection time worse.
+ * Configuration defaults (see Configuration section below and
+ * {@link IgniteConfiguration#getFailureDetectionTimeout()}) for details) are chosen to make possible for
+ * communication SPI work reliably on most of hardware and virtual deployments, but this has made failure detection
+ * time worse.
  * <p>
- * If it's needed to tune failure detection then it's highly recommended to do this using {@link
- * IgniteConfiguration#setFailureDetectionTimeout(long)}. This failure timeout automatically controls the following
- * parameters: {@link #getConnectTimeout()}, {@link #getMaxConnectTimeout()}, {@link #getReconnectCount()}. If any of
- * those parameters is set explicitly, then the failure timeout setting will be ignored.
+ * If it's needed to tune failure detection then it's highly recommended to do this using
+ * {@link IgniteConfiguration#setFailureDetectionTimeout(long)}. This failure timeout automatically controls the
+ * following parameters: {@link #getConnectTimeout()}, {@link #getMaxConnectTimeout()},
+ * {@link #getReconnectCount()}. If any of those parameters is set explicitly, then the failure timeout setting will be
+ * ignored.
  * <p>
- * If it's required to perform advanced settings of failure detection and {@link IgniteConfiguration#getFailureDetectionTimeout()}
- * is unsuitable then various {@code TcpCommunicationSpi} configuration parameters may be used.
+ * If it's required to perform advanced settings of failure detection and
+ * {@link IgniteConfiguration#getFailureDetectionTimeout()} is unsuitable then various {@code TcpCommunicationSpi}
+ * configuration parameters may be used.
  * <h1 class="header">Configuration</h1>
  * <h2 class="header">Mandatory</h2>
  * This SPI has no mandatory configuration parameters.
@@ -162,8 +170,8 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * <li>Maximum number of unacknowledged messages (see {@link #setUnacknowledgedMessagesBufferSize(int)})</li>
  * </ul>
  * <h2 class="header">Java Example</h2>
- * TcpCommunicationSpi is used by default and should be explicitly configured only if some SPI configuration parameters
- * need to be overridden.
+ * TcpCommunicationSpi is used by default and should be explicitly configured
+ * only if some SPI configuration parameters need to be overridden.
  * <pre name="code" class="java">
  * TcpCommunicationSpi commSpi = new TcpCommunicationSpi();
  *
@@ -196,7 +204,6 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * <img src="http://ignite.apache.org/images/spring-small.png">
  * <br>
  * For information about Spring framework visit <a href="http://www.springframework.org/">www.springframework.org</a>
- *
  * @see CommunicationSpi
  */
 @IgniteSpiMultipleInstancesSupport(true)
@@ -252,7 +259,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     public static final int DFLT_MSG_QUEUE_LIMIT = GridNioServer.DFLT_SEND_QUEUE_LIMIT;
 
     /**
-     * Default count of selectors for TCP server equals to {@code "Math.max(4, Runtime.getRuntime().availableProcessors()
+     * Default count of selectors for TCP server equals to
+     * {@code "Math.max(4, Runtime.getRuntime().availableProcessors()
      * / 2)"}.
      */
     public static final int DFLT_SELECTORS_CNT = Math.max(4, Runtime.getRuntime().availableProcessors() / 2);
@@ -264,7 +272,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     public static final int CONSISTENT_ID_META = GridNioSessionMetaKey.nextUniqueKey();
 
     /**
-     * Default local port range (value is <tt>100</tt>). See {@link #setLocalPortRange(int)} for details.
+     * Default local port range (value is <tt>100</tt>).
+     * See {@link #setLocalPortRange(int)} for details.
      */
     public static final int DFLT_PORT_RANGE = 100;
 
@@ -611,14 +620,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
         GridResourceProcessor rp = ((IgniteEx)ignite).context().resource();
 
+        cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
         final Function<UUID, ClusterNode> nodeGetter = (nodeId) -> getSpiContext().node(nodeId);
         final Supplier<ClusterNode> locNodeSupplier = () -> getSpiContext().localNode();
         final Supplier<Ignite> igniteExSupplier = this::ignite;
         final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
         final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
         final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
-
-        cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
 
         attributeNames = new AttributeNames(
             createSpiAttributeName(ATTR_PAIRED_CONN),
@@ -628,9 +636,34 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             createSpiAttributeName(ATTR_EXT_ADDRS),
             createSpiAttributeName(ATTR_PORT),
             createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
+        cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
 
         boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
+        attributeNames = new AttributeNames(
+            createSpiAttributeName(ATTR_PAIRED_CONN),
+            createSpiAttributeName(ATTR_SHMEM_PORT),
+            createSpiAttributeName(ATTR_ADDRS),
+            createSpiAttributeName(ATTR_HOST_NAMES),
+            createSpiAttributeName(ATTR_EXT_ADDRS),
+            createSpiAttributeName(ATTR_PORT),
+            createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
 
+        this.stateProvider = new ClusterStateProvider(
+            ignite,
+            locNodeSupplier,
+            this,
+            isStopped,
+            () -> super.getSpiContext(),
+            log,
+            igniteExSupplier
+        );
+        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
+
+        try {
+            cfg.localHost(U.resolveLocalHost(cfg.localAddress()));
+        }
+        catch (IOException e) {
+            throw new IgniteSpiException("Failed to initialize local address: " + cfg.localAddress(), e);
         this.stateProvider = new ClusterStateProvider(
             ignite,
             locNodeSupplier,
@@ -653,6 +686,78 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
+        this.srvLsnr = new InboundConnectionHandler(
+            log,
+            cfg,
+            nodeGetter,
+            locNodeSupplier,
+            stateProvider,
+            clientPool,
+            commWorker,
+            connectGate,
+            failureProcessorSupplier,
+            attributeNames,
+            metricsLsnr,
+            nioSrvWrapper,
+            ctxInitLatch,
+            client,
+            igniteExSupplier,
+            new CommunicationListener<Message>() {
+                @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
+                    notifyListener(nodeId, msg, msgC);
+                }
+
+                @Override public void onDisconnected(UUID nodeId) {
+                    if (lsnr != null)
+                        lsnr.onDisconnected(nodeId);
+                }
+            }
+        );
+
+        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ?
+            ((IgniteKernal)ignite).context().timeout() : null;
+
+        this.nioSrvWrapper = new GridNioServerWrapper(
+            log,
+            cfg,
+            timeoutProcessor,
+            attributeNames,
+            tracing,
+            nodeGetter,
+            locNodeSupplier,
+            connectGate,
+            stateProvider,
+            this::getExceptionRegistry,
+            commWorker,
+            ignite.configuration(),
+            this.srvLsnr,
+            getName(),
+            getWorkersRegistry(ignite),
+            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
+            this::createTcpClient
+        );
+
+        this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
+
+        this.clientPool = new ConnectionClientPool(
+            cfg,
+            attributeNames,
+            log,
+            metricsLsnr,
+            locNodeSupplier,
+            nodeGetter,
+            null,
+            getWorkersRegistry(ignite),
+            this,
+            timeoutProcessor,
+            stateProvider,
+            nioSrvWrapper
+        );
+
+        srvLsnr.setClientPool(clientPool);
+        nioSrvWrapper.clientPool(clientPool);
+
+        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
         final InboundConnectionHandler inboundHandler = new InboundConnectionHandler(
             log,
             cfg,
@@ -1070,7 +1175,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         assert node != null;
         assert msg != null;
 
-        if (log.isTraceEnabled())
+        if (log != null && log.isTraceEnabled())
             log.trace("Sending message with ack to node [node=" + node + ", msg=" + msg + ']');
 
         if (stateProvider.isLocalNodeDisconnected()) {
@@ -1197,7 +1302,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      * @param msgC Closure to call when message processing finished.
      */
     protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
-        trace("Communication listeners notified");
+        MTC.span().addLog(() -> "Communication listeners notified");
 
         if (this.lsnr != null)
             // Notify listener of a new message.
@@ -1211,9 +1316,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      * Stops service threads to simulate node failure.
      *
      * FOR TEST PURPOSES ONLY!!!
+     *
+     * @deprecated you should you DI and get instances of [nioSrvWrapper, commWorker, clientPool] via it.
      */
     @TestOnly
-    @Deprecated // todo reason why
+    @Deprecated
     public void simulateNodeFailure() {
         if (nioSrvWrapper.nio() != null)
             nioSrvWrapper.nio().stop();

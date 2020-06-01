@@ -26,9 +26,9 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.spi.IgniteSpiTimeoutObject;
 
 /**
- * Call logic of this object after timeout on handshake.
+ * Callback that is intended to be executed after timeout on handshake.
  */
-public class HandshakeTimeoutObject <T> implements IgniteSpiTimeoutObject {
+public class HandshakeTimeoutObject<T> implements IgniteSpiTimeoutObject {
     /** Id. */
     private final IgniteUuid id = IgniteUuid.randomUuid();
 

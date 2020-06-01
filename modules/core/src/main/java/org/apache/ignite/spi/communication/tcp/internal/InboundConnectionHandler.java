@@ -29,11 +29,13 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
 import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
+import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
@@ -46,7 +48,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
@@ -56,9 +57,6 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
-import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
@@ -71,7 +69,7 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.UNKNOWN_NODE;
 
 /**
- * Process incoming messages.
+ * This class implement NioListener which process handshake stage, and transmit messages to session.
  */
 public class InboundConnectionHandler extends IncomingConnectionHandler {
     /**
@@ -207,9 +205,10 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
             "'socketWriteTimeout' " + "configuration property) [remoteAddr=" + ses.remoteAddress() +
             ", writeTimeout=" + cfg.socketWriteTimeout() + ']');
 
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()) {
             log.debug("Closing communication SPI session on write timeout [remoteAddr=" + ses.remoteAddress() +
                 ", writeTimeout=" + cfg.socketWriteTimeout() + ']');
+        }
 
         ses.close();
     }
@@ -217,9 +216,10 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
         if (ses.accepted()) {
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled()) {
                 log.info("Accepted incoming communication connection [locAddr=" + ses.localAddress() +
                     ", rmtAddr=" + ses.remoteAddress() + ']');
+            }
 
             try {
                 if (client || ctxInitLatch.getCount() == 0 || !stateProvider.isHandshakeWaitSupported()) {
@@ -256,10 +256,8 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
 
     /** {@inheritDoc} */
     @Override public void onMessage(final GridNioSession ses, Message msg) {
-        if (isTraceable()) {
-            trace("Communication received");
-            traceTag(SpanTags.MESSAGE, traceName(msg));
-        }
+        MTC.span().addLog(() -> "Communication received");
+        MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
         ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
@@ -406,9 +404,10 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
                 if (outDesc != null) {
                     if (outDesc.nodeAlive(nodeGetter.apply(id))) {
                         if (!outDesc.messagesRequests().isEmpty()) {
-                            if (log.isDebugEnabled())
+                            if (log.isDebugEnabled()) {
                                 log.debug("Session was closed but there are unacknowledged messages, " +
                                     "will try to reconnect [rmtNode=" + outDesc.node().id() + ']');
+                            }
 
                             DisconnectedSessionInfo disconnectData =
                                 new DisconnectedSessionInfo(outDesc, connId.connectionIndex());
@@ -429,9 +428,9 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
     }
 
     /**
-     * @param stopping New stopping flag (set to  when SPI gets stopping signal).
+     * Disable processing of incoming messages.
      */
-    @Override public void stop() {
+    public void stop() {
         this.stopping = true;
     }
 
@@ -508,9 +507,10 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
 
         HandshakeMessage msg0 = (HandshakeMessage)msg;
 
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()) {
             log.debug("Received handshake message [locNodeId=" + locNode.id() + ", rmtNodeId=" + sndId +
                 ", msg=" + msg0 + ']');
+        }
 
         if (cfg.usePairedConnections() && usePairedConnections(rmtNode, attributeNames.pairedConnection())) {
             final GridNioRecoveryDescriptor recoveryDesc = nioSrvWrapper.inRecoveryDescriptor(rmtNode, connKey);
@@ -600,10 +600,11 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
                 boolean reserved = recoveryDesc.tryReserve(msg0.connectCount(),
                     new ConnectClosure(ses, recoveryDesc, rmtNode, connKey, msg0, !hasShmemClient, fut));
 
-                if (log.isDebugEnabled())
+                if (log.isDebugEnabled()) {
                     log.debug("Received incoming connection from remote node " +
                         "[rmtNode=" + rmtNode.id() + ", reserved=" + reserved +
                         ", recovery=" + recoveryDesc + ']');
+                }
 
                 if (reserved) {
                     try {
@@ -781,9 +782,10 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
                             connectedNew(recoveryDesc, ses, false);
                         }
                         catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled())
+                            if (log.isDebugEnabled()) {
                                 log.debug("Failed to send recovery handshake " +
                                     "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
+                            }
 
                             recoveryDesc.release();
                         }
@@ -851,7 +853,7 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
          * @param rmtNode Remote node.
          * @param connKey Connection key.
          * @param msg Handshake message.
-         * @param createClient If {@code true} creates NIO communication client..
+         * @param createClient If {@code true} creates NIO communication client.
          * @param fut Connect future.
          */
         ConnectClosure(GridNioSession ses,
@@ -884,9 +886,10 @@ public class InboundConnectionHandler extends IncomingConnectionHandler {
                             fut.onDone(client);
                         }
                         catch (IgniteCheckedException e) {
-                            if (log.isDebugEnabled())
+                            if (log.isDebugEnabled()) {
                                 log.debug("Failed to send recovery handshake " +
                                     "[rmtNode=" + rmtNode.id() + ", err=" + e + ']');
+                            }
 
                             recoveryDesc.release();
 

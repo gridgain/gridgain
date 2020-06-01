@@ -17,7 +17,6 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
 
 /**
  * Round robin connection policy.

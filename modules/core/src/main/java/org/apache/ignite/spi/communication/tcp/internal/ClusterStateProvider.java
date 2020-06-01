@@ -27,7 +27,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
@@ -37,9 +36,10 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE;
 
 /**
- * This class must be removed after refactoring. The role of this is concentrate login of cluster states.
+ * The role of this is aggregate logic of cluster states.
+ *
+ * @deprecated This class must be removed.
  */
-@IgniteExperimental
 public class ClusterStateProvider {
     /** Ignite. */
     private final Ignite ignite;

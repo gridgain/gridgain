@@ -44,6 +44,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.timeout.GridSpiTimeoutObject;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
@@ -70,7 +72,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgniteBiInClosure;
-import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -83,7 +84,6 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.TimeoutStrategy;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationConfiguration;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
@@ -108,9 +108,10 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.UNKNOWN_NODE;
 
 /**
- * Container for nio server with required dependencies. Should be removed after refactoring of nio server.
+ * Container for nio server with required dependencies.
+ *
+ * @deprecated Should be removed.
  */
-@IgniteExperimental
 public class GridNioServerWrapper {
     /** Default initial connect/handshake timeout in case of failure detection enabled. */
     private static final int DFLT_INITIAL_TIMEOUT = 500;
@@ -128,7 +129,7 @@ public class GridNioServerWrapper {
     private final TcpCommunicationConfiguration cfg;
 
     /** Time object processor. */
-    private final TimeObjectProcessorWrapper timeObjProcessor;
+    private final GridTimeoutProcessor timeObjProcessor;
 
     /** Attribute names. */
     private final AttributeNames attrs;
@@ -201,7 +202,6 @@ public class GridNioServerWrapper {
     private ConnectionClientPool clientPool;
 
     /**
-     * @param metricMgrSupplier Metric manager supplier.
      * @param log Logger.
      * @param cfg Config.
      * @param timeObjProcessor Time object processor.
@@ -217,12 +217,11 @@ public class GridNioServerWrapper {
      * @param srvLsnr Server listener.
      * @param igniteInstanceName Ignite instance name.
      * @param workersRegistry Workers registry.
-     * @param createTcpClientFun
      */
     public GridNioServerWrapper(
         IgniteLogger log,
         TcpCommunicationConfiguration cfg,
-        TimeObjectProcessorWrapper timeObjProcessor,
+        GridTimeoutProcessor timeObjProcessor,
         AttributeNames attributeNames,
         Tracing tracing,
         Function<UUID, ClusterNode> nodeGetter,
@@ -1030,7 +1029,10 @@ public class GridNioServerWrapper {
     ) throws IgniteCheckedException {
         HandshakeTimeoutObject obj = new HandshakeTimeoutObject<>(ch, U.currentTimeMillis() + timeout);
 
-        timeObjProcessor.addTimeoutObject(obj);
+        if (timeObjProcessor != null)
+            timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
+        else
+            stateProvider.getSpiContext().addTimeoutObject(obj);
 
         long rcvCnt;
 
@@ -1217,7 +1219,10 @@ public class GridNioServerWrapper {
         }
         finally {
             if (obj.cancel())
-                timeObjProcessor.removeTimeoutObject(obj);
+                if (timeObjProcessor != null)
+                    timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
+                else
+                    stateProvider.getSpiContext().removeTimeoutObject(obj);
             else
                 throw handshakeTimeoutException();
         }

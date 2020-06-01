@@ -31,26 +31,22 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 
 /**
- * Class for refactoring contains common communication spi logic.
+ * Common communication spi logic.
  */
-@IgniteExperimental
 public class CommunicationTcpUtils {
     /** No-op runnable. */
-    public static final IgniteRunnable NOOP = () -> {
-    };
+    public static final IgniteRunnable NOOP = () -> {};
 
     /**
      * @param node Node.
      * @return {@code True} if can use in/out connection pair for communication.
      */
-    public static boolean usePairedConnections(ClusterNode node,
-        String attributeName) { //TODO rename and add check from if awry ware
+    public static boolean usePairedConnections(ClusterNode node, String attributeName) {
         Boolean attr = node.attribute(attributeName);
 
         return attr != null && attr;
@@ -98,7 +94,7 @@ public class CommunicationTcpUtils {
 
         // Try to connect first on bound addresses.
         if (isRmtAddrsExist) {
-            List<InetSocketAddress> addrs0 = new ArrayList<>(U.toSocketAddresses(rmtAddrs0, rmtHostNames0, boundPort));
+            List<InetSocketAddress> addrs0 = new ArrayList<>(U.toSocketAddresses(rmtAddrs0, rmtHostNames0, boundPort, true));
 
             boolean sameHost = U.sameMacs(localNode.get(), node);
 

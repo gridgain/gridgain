@@ -17,11 +17,12 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 /**
- * Connection policy.
+ * Connection policy. Implementations of this interface define an algorithm of selection processing workers like
+ * round-robin or first id.
  */
 public interface ConnectionPolicy {
     /**
-     * @return Thread connection index.
+     * @return Index from 0 to max int. Usually thread connection index.
      */
     int connectionIndex();
 }

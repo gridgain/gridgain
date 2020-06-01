@@ -45,7 +45,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
@@ -2398,7 +2398,7 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets fully configured instance of {@link TracingSpi}.
+     * Set fully configured instance of {@link TracingSpi}.
      *
      * @param tracingSpi Fully configured instance of {@link TracingSpi}.
      * @return {@code this} for chaining.
@@ -3064,10 +3064,7 @@ public class IgniteConfiguration {
      * @param pluginCfgs Plugin configurations.
      * @return {@code this} for chaining.
      * @see PluginProvider
-     * @deprecated Since {@link PluginProvider}s can be set explicitly via {@link #setPluginProviders(PluginProvider[])}
-     * it's preferable to store {@link PluginConfiguration} as a part of {@link PluginProvider}.
      */
-    @Deprecated
     public IgniteConfiguration setPluginConfigurations(PluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 

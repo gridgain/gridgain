@@ -117,7 +117,6 @@ import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchang
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
-import org.apache.ignite.internal.processors.tracing.Traces;
 import org.apache.ignite.internal.util.GridListSet;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.GridStringBuilder;
@@ -175,6 +174,7 @@ import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION_HISTOGRAM;
+import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FUTURE;
 
 /**
  * Partition exchange manager.
@@ -190,6 +190,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** */
     private final int DIAGNOSTIC_WARN_LIMIT = IgniteSystemProperties.getInteger(IGNITE_DIAGNOSTIC_WARN_LIMIT, 10);
+
+    /** */
+    private final int IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT =
+        IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT, 10);
 
     /** */
     private static final IgniteProductVersion EXCHANGE_PROTOCOL_2_SINCE = IgniteProductVersion.fromString("2.1.4");
@@ -680,22 +684,24 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             // Event callback - without this callback future will never complete.
             exchFut.onEvent(exchId, evt, cache);
 
-            Span span = cctx.kernalContext().tracing().create(Traces.Exchange.EXCHANGE_FUTURE, evt.span());
+            Span span = cctx.kernalContext().tracing().create(EXCHANGE_FUTURE, evt.span());
 
             if (exchId != null) {
-                span.addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), evt.eventNode().id().toString());
+                GridDhtPartitionExchangeId exchIdf = exchId;
+
+                span.addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), () -> evt.eventNode().id().toString());
                 span.addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
-                    evt.eventNode().consistentId().toString());
-                span.addTag(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE), evt.type());
-                span.addTag(SpanTags.tag(SpanTags.EXCHANGE, SpanTags.ID), exchId.toString());
+                    () -> evt.eventNode().consistentId().toString());
+                span.addTag(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE), () -> String.valueOf(evt.type()));
+                span.addTag(SpanTags.tag(SpanTags.EXCHANGE, SpanTags.ID), () -> String.valueOf(exchIdf.toString()));
                 span.addTag(SpanTags.tag(SpanTags.INITIAL, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR),
-                    exchId.topologyVersion().topologyVersion());
+                    () -> String.valueOf(exchIdf.topologyVersion().topologyVersion()));
                 span.addTag(SpanTags.tag(SpanTags.INITIAL, SpanTags.TOPOLOGY_VERSION, SpanTags.MINOR),
-                    exchId.topologyVersion().minorTopologyVersion());
+                    () -> String.valueOf(exchIdf.topologyVersion().minorTopologyVersion()));
             }
 
-            span.addTag(SpanTags.NODE_ID, cctx.localNodeId().toString());
-            span.addLog("Created");
+            span.addTag(SpanTags.NODE_ID, () -> cctx.localNodeId().toString());
+            span.addLog(() -> "Created");
 
             exchFut.span(span);
 
@@ -1822,7 +1828,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 skipped++;
 
-                if (skipped > 10)
+                if (skipped > IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT)
                     fut.cleanUp();
             }
         }

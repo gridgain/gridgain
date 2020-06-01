@@ -389,8 +389,8 @@ public class GridCacheContext<K, V> implements Externalizable {
         this.contQryMgr = add(contQryMgr);
         this.dataStructuresMgr = add(dataStructuresMgr);
         this.ttlMgr = add(ttlMgr);
-        this.drMgr = add(drMgr);
         this.rslvrMgr = add(rslvrMgr);
+        this.drMgr = add(drMgr);
         this.pluginMgr = add(pluginMgr);
         this.affMgr = add(affMgr);
         add(platformMgr);

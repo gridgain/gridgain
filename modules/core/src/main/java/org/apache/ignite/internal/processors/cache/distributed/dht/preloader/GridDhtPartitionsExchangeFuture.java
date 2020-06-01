@@ -26,8 +26,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -560,15 +562,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param grpId Cache group ID.
      * @param partId Partition ID.
      * @param cntrSince Partition update counter since history supplying is requested.
-     * @return ID of history supplier node or null if it doesn't exist.
+     * @return List of IDs of history supplier nodes or empty list if these doesn't exist.
      */
-    @Nullable public UUID partitionHistorySupplier(int grpId, int partId, long cntrSince) {
-        UUID histSupplier = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
+    public List<UUID> partitionHistorySupplier(int grpId, int partId, long cntrSince) {
+        List<UUID> histSuppliers = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
 
-        if (histSupplier != null && exclusionsFromHistoricalRebalance.contains(histSupplier))
-            return null;
-
-        return histSupplier;
+        return histSuppliers.stream().filter((supplier) -> !exclusionsFromHistoricalRebalance.contains(supplier))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -883,7 +883,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @throws IgniteInterruptedCheckedException If interrupted.
      */
     public void init(boolean newCrd) throws IgniteInterruptedCheckedException {
-
         if (isDone())
             return;
 
@@ -935,7 +934,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     ", exchangeFreeSwitch=" + exchCtx.exchangeFreeSwitch() + ']');
             }
 
-            span.addLog("Exchange parameters initialization");
+            span.addLog(() -> "Exchange parameters initialization");
 
             timeBag.finishGlobalStage("Exchange parameters initialization");
 
@@ -2410,13 +2409,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         if (res != null) {
             span.addTag(SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR),
-                res.topologyVersion());
+                () -> String.valueOf(res.topologyVersion()));
             span.addTag(SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MINOR),
-                res.minorTopologyVersion());
+                () -> String.valueOf(res.minorTopologyVersion()));
         }
 
-        if (err != null)
-            span.addTag(SpanTags.ERROR, err.toString());
+        if (err != null) {
+            Throwable errf = err;
+
+            span.addTag(SpanTags.ERROR, errf::toString);
+        }
+
 
         try {
             waitUntilNewCachesAreRegistered();
@@ -2562,7 +2565,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (super.onDone(res, err)) {
             afterLsnrCompleteFut.onDone();
 
-            span.addLog("Completed partition exchange");
+            span.addLog(() -> "Completed partition exchange");
 
             span.end();
 
@@ -3343,11 +3346,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Collects and determines new owners of partitions for all nodes for given {@code top}.
      *
      * @param top Topology to assign.
+     * @param resetOwners True if need to reset partition state considering of counter, false otherwise.
      * @return Partitions supply info list.
      */
-    private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top) {
+    private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top, boolean resetOwners) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
-        Map<Integer, T2<UUID, Long>> minCntrs = new HashMap<>();
+        Map<Integer, TreeSet<Long>> varCntrs = new HashMap<>();
 
         for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e : msgs.entrySet()) {
             CachePartitionPartialCountersMap nodeCntrs = e.getValue().partitionUpdateCounters(top.groupId(),
@@ -3369,10 +3373,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     nodeCntrs.initialUpdateCounterAt(i) :
                     nodeCntrs.updateCounterAt(i);
 
-                T2<UUID, Long> minCntr = minCntrs.get(p);
-
-                if (minCntr == null || minCntr.get2() > cntr)
-                    minCntrs.put(p, new T2(remoteNodeId, cntr));
+                varCntrs.computeIfAbsent(p, key -> new TreeSet<>()).add(cntr);
 
                 if (state != GridDhtPartitionState.OWNING)
                     continue;
@@ -3393,12 +3394,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (state != GridDhtPartitionState.OWNING && state != GridDhtPartitionState.MOVING)
                 continue;
 
-            final long cntr = state == GridDhtPartitionState.MOVING ? part.initialUpdateCounter() : part.updateCounter();
+            final long cntr = state == GridDhtPartitionState.MOVING ?
+                part.initialUpdateCounter() :
+                part.updateCounter();
 
-            T2<UUID, Long> minCntr = minCntrs.get(part.id());
-
-            if (minCntr == null || minCntr.get2() > cntr)
-                minCntrs.put(part.id(), new T2(cctx.localNodeId(), cntr));
+            varCntrs.computeIfAbsent(part.id(), key -> new TreeSet<>()).add(cntr);
 
             if (state != GridDhtPartitionState.OWNING)
                 continue;
@@ -3421,74 +3421,26 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 maxCntr.nodes.add(cctx.localNodeId());
         }
 
-        Map<Integer, Map<Integer, Long>> partHistReserved0 = partHistReserved;
-
-        Map<Integer, Long> localReserved = partHistReserved0 != null ? partHistReserved0.get(top.groupId()) : null;
-
         Set<Integer> haveHistory = new HashSet<>();
 
-        List<SupplyPartitionInfo> list = new ArrayList<>();
+        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHistory);
 
-        for (Map.Entry<Integer, T2<UUID, Long>> e : minCntrs.entrySet()) {
-            int p = e.getKey();
-            long minCntr = e.getValue().get2();
+        if (resetOwners)
+            resetOwnersByCounter(top, maxCntrs, haveHistory);
 
-            CounterWithNodes maxCntrObj = maxCntrs.get(p);
+        return list;
+    }
 
-            long maxCntr = maxCntrObj != null ? maxCntrObj.cnt : 0;
-
-            // If minimal counter is zero, do clean preloading.
-            if (minCntr == 0 || minCntr == maxCntr)
-                continue;
-
-            T2<UUID, Long> deepestReserved = new T2<>(null, Long.MAX_VALUE);
-
-            if (localReserved != null) {
-                Long localHistCntr = localReserved.get(p);
-
-                if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
-                    if (localHistCntr <= minCntr) {
-
-                        partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, localHistCntr);
-
-                        haveHistory.add(p);
-
-                        continue;
-                    }
-
-                    if (deepestReserved.get2() > localHistCntr)
-                        deepestReserved.set(cctx.localNodeId(), localHistCntr);
-                }
-            }
-
-            for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e0 : msgs.entrySet()) {
-                Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
-
-                if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
-                    if (histCntr <= minCntr) {
-                        partHistSuppliers.put(e0.getKey(), top.groupId(), p, histCntr);
-
-                        haveHistory.add(p);
-
-                        break;
-                    }
-
-                    if (deepestReserved.get2() > histCntr)
-                        deepestReserved.set(e0.getKey(), histCntr);
-                }
-            }
-
-            if (!haveHistory.contains(p)) {
-                list.add(new SupplyPartitionInfo(
-                    p,
-                    minCntr,
-                    e.getValue().get1(),
-                    deepestReserved.get2(),
-                    deepestReserved.get1()
-                ));
-            }
-        }
-
+    /**
+     * Determine new owners for partitions.
+     * If anyone of OWNING partitions have a counter less than maximum this partition changes state to MOVING forcibly.
+     *
+     * @param top Topology.
+     * @param maxCntrs Max counter partiton map.
+     * @param haveHistory Set of partitions witch have historical supplier.
+     */
+    private void resetOwnersByCounter(GridDhtPartitionTopology top,
+        Map<Integer, CounterWithNodes> maxCntrs, Set<Integer> haveHistory) {
         Map<Integer, Set<UUID>> ownersByUpdCounters = U.newHashMap(maxCntrs.size());
         Map<Integer, Long> partSizes = U.newHashMap(maxCntrs.size());
 
@@ -3509,6 +3461,88 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             for (int part : parts)
                 partsToReload.put(nodeId, top.groupId(), part);
+        }
+    }
+
+    /**
+     * Find and assign suppliers for history rebalance.
+     *
+     * @param top Topology.
+     * @param maxCntrs Max counter partiton map.
+     * @param varCntrs Various counters for each partition.
+     * @param haveHistory Set of partitions witch have historical supplier.
+     * @return List of partitions which does not have historical supplier.
+     */
+    private List<SupplyPartitionInfo> assignHistoricalSuppliers(
+        GridDhtPartitionTopology top,
+        Map<Integer, CounterWithNodes> maxCntrs,
+        Map<Integer, TreeSet<Long>> varCntrs,
+        Set<Integer> haveHistory
+    ) {
+        Map<Integer, Map<Integer, Long>> partHistReserved0 = partHistReserved;
+
+        Map<Integer, Long> localReserved = partHistReserved0 != null ? partHistReserved0.get(top.groupId()) : null;
+
+        List<SupplyPartitionInfo> list = new ArrayList<>();
+
+        for (Map.Entry<Integer, TreeSet<Long>> e : varCntrs.entrySet()) {
+            int p = e.getKey();
+
+            CounterWithNodes maxCntrObj = maxCntrs.get(p);
+
+            long maxCntr = maxCntrObj != null ? maxCntrObj.cnt : 0;
+
+            NavigableSet<Long> nonMaxCntrs = e.getValue().headSet(maxCntr, false);
+
+            // If minimal counter equals maximum then historical supplier does not necessary.
+            if (nonMaxCntrs.isEmpty())
+                continue;
+
+            T2<UUID, Long> deepestReserved = new T2<>(null, Long.MAX_VALUE);
+
+            if (localReserved != null) {
+                Long localHistCntr = localReserved.get(p);
+
+                if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                    Long ceilingMinReserved = nonMaxCntrs.ceiling(localHistCntr);
+
+                    if (ceilingMinReserved != null) {
+                        partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, ceilingMinReserved);
+
+                        haveHistory.add(p);
+                    }
+
+                    if (deepestReserved.get2() > localHistCntr)
+                        deepestReserved.set(cctx.localNodeId(), localHistCntr);
+                }
+            }
+
+            for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e0 : msgs.entrySet()) {
+                Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
+
+                if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
+                    Long ceilingMinReserved = nonMaxCntrs.ceiling(histCntr);
+
+                    if (ceilingMinReserved != null) {
+                        partHistSuppliers.put(e0.getKey(), top.groupId(), p, ceilingMinReserved);
+
+                        haveHistory.add(p);
+                    }
+
+                    if (deepestReserved.get2() > histCntr)
+                        deepestReserved.set(e0.getKey(), histCntr);
+                }
+            }
+
+            //No one reservation matched for this partition.
+            if (!haveHistory.contains(p)) {
+                list.add(new SupplyPartitionInfo(
+                    p,
+                    nonMaxCntrs.last(),
+                    deepestReserved.get2(),
+                    deepestReserved.get1()
+                ));
+            }
         }
 
         return list;
@@ -3650,7 +3684,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             initFut.get();
 
-            span.addLog("Waiting for all single messages");
+            span.addLog(() -> "Waiting for all single messages");
 
             timeBag.finishGlobalStage("Waiting for all single messages");
 
@@ -3772,7 +3806,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             boolean skipResetOwners = txDrProc != null && txDrProc.shouldIgnoreAssignPartitionStates(this);
 
-            span.addLog("Affinity recalculation (crd)");
+            span.addLog(() -> "Affinity recalculation (crd)");
 
             timeBag.finishGlobalStage("Affinity recalculation (crd)");
 
@@ -3797,7 +3831,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 assert firstDiscoEvt instanceof DiscoveryCustomEvent;
 
                 if (activateCluster() || changedBaseline())
-                    assignPartitionsStates();
+                    assignPartitionsStates(true);
 
                 DiscoveryCustomMessage discoveryCustomMessage = ((DiscoveryCustomEvent) firstDiscoEvt).customMessage();
 
@@ -3808,18 +3842,20 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (!F.isEmpty(caches))
                             resetLostPartitions(caches);
 
-                        assignPartitionsStates();
+                        assignPartitionsStates(true);
                     }
                 }
                 else if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage
                         && ((SnapshotDiscoveryMessage)discoveryCustomMessage).needAssignPartitions()) {
                     markAffinityReassign();
 
-                    assignPartitionsStates();
+                    assignPartitionsStates(true);
                 }
             }
             else if (exchCtx.events().hasServerJoin())
-                assignPartitionsStates();
+                assignPartitionsStates(true);
+            else if (exchCtx.events().hasServerLeft())
+                assignPartitionsStates(false);
 
             // Recalculate new affinity based on partitions availability.
             if (!exchCtx.mergeExchanges() && forceAffReassignment) {
@@ -3985,12 +4021,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     onDone(exchCtx.events().topologyVersion(), null);
             }
 
-            // Check if a late affinity can be switched right now.
-            if (!centralizedAff && error() == null) {
-                assert isDone() : this;
-
+            // Try switch late affinity right now if an exchange has been completed normally.
+            if (!centralizedAff && isDone() && error() == null && !cctx.kernalContext().isStopping())
                 cctx.exchange().checkRebalanceState();
-            }
         }
         catch (IgniteCheckedException e) {
             if (reconnectOnError(e))
@@ -4116,9 +4149,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
-     *
+     * @param resetOwners True if reset partitions state needed, false otherwise.
      */
-    private void assignPartitionsStates() {
+    private void assignPartitionsStates(boolean resetOwners) {
         Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
             new ConcurrentHashMap<>() : null;
 
@@ -4133,14 +4166,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         ? grpCtx.topology()
                         : cctx.exchange().clientTopology(grpDesc.groupId(), events().discoveryCache());
 
-                    if (!CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration()))
-                        assignPartitionSizes(top);
-                    else {
-                        List<SupplyPartitionInfo> list = assignPartitionStates(top);
+                    if (CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
+                        List<SupplyPartitionInfo> list = assignPartitionStates(top, resetOwners);
 
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
                     }
+                    else if (resetOwners)
+                        assignPartitionSizes(top);
 
                     return null;
                 }
@@ -4179,7 +4212,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
                             "[part=" + info.part() +
                                 ", minCntr=" + info.minCntr() +
-                                ", minNodeId=" + info.minNodeId() +
                                 ", maxReserved=" + info.maxReserved() +
                                 ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
                         ).collect(Collectors.joining(", ")) + ']'
