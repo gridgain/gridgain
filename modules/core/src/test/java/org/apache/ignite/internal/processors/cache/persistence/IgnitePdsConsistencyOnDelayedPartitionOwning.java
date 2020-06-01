@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -33,21 +34,34 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-/** */
+/**
+ * Суть проблемы в том что мы комплитим фьючу и откладываем оунинг, в этом случае когда
+ * начинается новый ребаланс он не может заканселить уже закомпличеную фьючу и забирает moving стейты,
+ * что приводит к очистке.
+ *
+ * Проблема2 - стейты поменялись между generate и addAssignment ?
+ *
+ * */
 public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
     /** Parts. */
     private static final int PARTS = 128;
@@ -150,23 +164,29 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         spi2.stopBlock();
 
         CountDownLatch topInitLatch = new CountDownLatch(1);
-        CountDownLatch newRebalancingScheduledLatch = new CountDownLatch(1);
+        CountDownLatch enableDurabilityCPStartLatch = new CountDownLatch(1);
+        CountDownLatch delayedOnwningLatch = new CountDownLatch(1);
 
-        AtomicBoolean delay = new AtomicBoolean(true);
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager) grid(1).context().cache().context().database();
+        dbMgr.addCheckpointListener(new DbCheckpointListener() {
+            @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                if (ctx.progress().reason().startsWith(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING)) {
+                    enableDurabilityCPStartLatch.countDown();
 
-        IgniteInternalFuture<Boolean> rebFut = grid(1).cachex(DEFAULT_CACHE_NAME).context().preloader().rebalanceFuture();
-        // Delay listener propagation until topology is changed to (7,0).
-        rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
-            @Override public void apply(IgniteInternalFuture<Boolean> fut) {
-                if (delay.get()) {
                     try {
-                        assertTrue(U.await(newRebalancingScheduledLatch, 10_000, TimeUnit.MILLISECONDS));
+                        assertTrue(U.await(delayedOnwningLatch, 10_000, TimeUnit.MILLISECONDS));
                     } catch (IgniteInterruptedCheckedException e) {
                         fail(X.getFullStackTrace(e));
                     }
-
-                    delay.set(false);
                 }
+            }
+
+            @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+
+            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
             }
         });
 
@@ -184,29 +204,36 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
 
         grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0)))
+                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
                     topInitLatch.countDown();
+
+                    try {
+                        assertTrue(U.await(enableDurabilityCPStartLatch, 10_000, TimeUnit.MILLISECONDS));
+                    } catch (IgniteInterruptedCheckedException e) {
+                        fail(X.getFullStackTrace(e));
+                    }
+                }
             }
         });
 
         // Trigger rebalancing remap because owner has left.
         IgniteInternalFuture stopFut = GridTestUtils.runAsync(new Runnable() {
             @Override public void run() {
-                stopGrid(2);
+                stopGrid(2); // TODO start cache.
             }
         });
 
         // Wait for topology (7,0) init on grid1 before finishing rebalancing on (6,0).
         assertTrue(U.await(topInitLatch, 10_000, TimeUnit.MILLISECONDS));
 
-        // Release last supply message, causing rebalancing finish on (6,0).
+        // Release last supply message, causing triggering a cp for enablidng durability.
         spi3.stopBlock();
 
         // Wait for new rebalancing assignments ready on grid1.
         TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked();
 
         // Triggers spurious ideal switching before rebalancing has finished for (7,0).
-        newRebalancingScheduledLatch.countDown();
+        delayedOnwningLatch.countDown();
 
         stopFut.get();
 

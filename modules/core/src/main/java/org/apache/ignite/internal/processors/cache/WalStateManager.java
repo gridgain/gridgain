@@ -502,12 +502,6 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
         if (F.isEmpty(groupsToEnable))
             return;
 
-        grpId = F.first(groupsToEnable);
-
-        CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
-
-        assert grp != null: "Can not find group with id: " + grpId;
-
         // Pending updates in groups with disabled WAL are not protected from crash.
         // Need to trigger checkpoint for attempt to persist them.
         CheckpointProgress cpFut = triggerCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING + topVer);

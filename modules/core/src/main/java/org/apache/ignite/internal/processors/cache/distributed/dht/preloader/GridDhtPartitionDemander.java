@@ -1469,7 +1469,7 @@ public class GridDhtPartitionDemander {
          * @return true in case future created for specified {@code rebalanceId}, false in other case.
          */
         private boolean isActual(long rebalanceId) {
-            // TOODO need compare topver!???
+            // TODO need compare topver!???
             return this.rebalanceId == rebalanceId;
         }
 
