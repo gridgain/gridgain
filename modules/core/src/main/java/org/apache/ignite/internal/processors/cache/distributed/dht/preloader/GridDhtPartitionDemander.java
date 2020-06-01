@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -56,18 +57,19 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUpdateVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.IgniteInClosureX;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -321,15 +323,6 @@ public class GridDhtPartitionDemander {
             }
 
             final RebalanceFuture fut = new RebalanceFuture(grp, lastExchangeFut, assignments, log, rebalanceId, next, oldFut);
-
-            if (!grp.localWalEnabled()) {
-                fut.listen(new IgniteInClosureX<IgniteInternalFuture<Boolean>>() {
-                    @Override public void applyx(IgniteInternalFuture<Boolean> future) throws IgniteCheckedException {
-                        if (future.get())
-                            ctx.walState().onGroupRebalanceFinished(grp.groupId(), assignments.topologyVersion());
-                    }
-                });
-            }
 
             if (!oldFut.isDone()) {
                 if (!oldFut.isInitial())
@@ -1445,8 +1438,12 @@ public class GridDhtPartitionDemander {
             }
 
             if (super.onDone(res, err)) {
-                if (!isInitial() && log.isInfoEnabled())
-                    log.info("Completed rebalance future: " + this);
+                if (!isInitial()) {
+                    sendRebalanceFinishedEvent();
+
+                    if (log.isInfoEnabled())
+                        log.info("Completed rebalance future: " + this);
+                }
 
                 if (next != null)
                     next.requestPartitions(); // Go to next item in chain everything if it exists.
@@ -1455,6 +1452,24 @@ public class GridDhtPartitionDemander {
             }
 
             return false;
+        }
+
+        public void ownPartitionsAndFinishFuture() {
+            if (onDone(true, null)) {
+                grp.localWalEnabled(true, true);
+
+                grp.topology().ownMoving(topVer);
+
+                if (log.isDebugEnabled())
+                    log.debug("Partitions have been scheduled to resend [reason=" +
+                        "Durability checkpoint finished, grp=" + grp.cacheOrGroupName() + "]");
+
+                ctx.exchange().refreshPartitions(Collections.singleton(grp));
+                //ctx.exchange().scheduleResendPartitions();
+            }
+            else {
+                log.info("DBG: do not own");
+            }
         }
 
         /**
@@ -1671,15 +1686,6 @@ public class GridDhtPartitionDemander {
          */
         private void checkIsDone(boolean cancelled) {
             if (remaining.isEmpty()) {
-                sendRebalanceFinishedEvent();
-
-                if (log.isDebugEnabled())
-                    log.debug("Partitions have been scheduled to resend [reason=" +
-                        "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
-
-                // TODO do not send state if not owned.
-                ctx.exchange().scheduleResendPartitions();
-
                 Collection<Integer> m = new HashSet<>();
 
                 for (Map.Entry<UUID, Collection<Integer>> e : missed.entrySet()) {
@@ -1700,10 +1706,30 @@ public class GridDhtPartitionDemander {
                     return;
                 }
 
+                // TODO releasing sync future before checkpoint.
                 if (!cancelled && !grp.preloader().syncFuture().isDone())
                     ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
 
-                onDone(!cancelled);
+                // Delay owning until checkpoint is finished.
+                if (!grp.localWalEnabled() && !cancelled) {
+                    ctx.database().forceCheckpoint(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING + grp.groupId()).
+                        futureFor(CheckpointState.FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
+                        @Override public void apply(IgniteInternalFuture fut) {
+                            if (fut.error() == null)
+                                grp.preloader().finishFuture();
+                        }
+                    });
+                }
+                else {
+                    onDone(!cancelled);
+
+                    if (log.isDebugEnabled())
+                        log.debug("Partitions have been scheduled to resend [reason=" +
+                            "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
+
+                    ctx.exchange().refreshPartitions(Collections.singleton(grp));
+                    //ctx.exchange().scheduleResendPartitions();
+                }
             }
         }
 
@@ -1894,5 +1920,13 @@ public class GridDhtPartitionDemander {
      */
     @Nullable public RebalanceStatistics totalStatistics() {
         return totalRebStat;
+    }
+
+    /**
+     *
+     */
+    public void continueChain() {
+        if (!rebalanceFut.isInitial())
+            rebalanceFut.ownPartitionsAndFinishFuture();
     }
 }

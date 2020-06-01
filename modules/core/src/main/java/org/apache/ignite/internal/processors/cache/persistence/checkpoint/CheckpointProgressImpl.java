@@ -177,10 +177,8 @@ public class CheckpointProgressImpl implements CheckpointProgress {
         this.nextCpNanos = nextCpNanos;
     }
 
-    /**
-     * @return Wakeup reason.
-     */
-    public String reason() {
+    /** {@inheritDoc} */
+    @Override public String reason() {
         return reason;
     }
 

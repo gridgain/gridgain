@@ -27,7 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * allows to obtain future to wait for a particular checkpoint state.
  */
 public interface CheckpointProgress {
-    /** */
+    /**
+     * @return Wakeup reason.
+     */
     public String reason();
 
     /** */

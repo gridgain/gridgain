@@ -1227,6 +1227,8 @@ public class CacheGroupContext {
 
     /**
      * Local WAL enabled flag.
+     *
+     * @return {@code True} if a durability (WAL logging) is disabled for a group until rebalancing has finished.
      */
     public boolean localWalEnabled() {
         return localWalEnabled;
@@ -1244,9 +1246,10 @@ public class CacheGroupContext {
      */
     public void globalWalEnabled(boolean enabled) {
         if (globalWalEnabled != enabled) {
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled()) {
                 log.info("Global WAL state for group=" + cacheOrGroupName() +
                     " changed from " + globalWalEnabled + " to " + enabled);
+            }
 
             persistGlobalWalState(enabled);
 

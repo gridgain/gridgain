@@ -592,6 +592,18 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         busyLock.writeLock().unlock();
     }
 
+    @Override public void finishFuture() {
+        if (!enterBusy())
+            return;
+
+        try {
+            demander.continueChain();
+        }
+        finally {
+            leaveBusy();
+        }
+    }
+
     /**
      * Return supplier.
      *

@@ -36,6 +36,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
@@ -44,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -114,12 +116,29 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         cleanPersistenceDir();
     }
 
-    /**
-     * Tests a scenario with delayed (until a checkpoint is triggered to enable WAL) partition owning and concurrent
-     * topology change due to node left.
-     */
+    /** */
     @Test
-    public void testConsistencyOnSupplierHasLeft() throws Exception {
+    public void checkConsistencyNodeLeft() throws Exception {
+        checkConsistency();
+    }
+
+    /** */
+    @Test
+    public void checkConsistencyCacheStarted() throws Exception {
+        checkConsistency();
+    }
+
+    /** */
+    @Test
+    public void checkConsistencyCacheDestroyed() throws Exception {
+        checkConsistency();
+    }
+
+    /**
+     * Tests a scenario with delayed partition owning after non durable rebalancing and concurrent
+     * concurrent topology change event.
+     */
+    private void checkConsistency() throws Exception {
         IgniteEx crd = (IgniteEx) startGridsMultiThreaded(4);
         crd.cluster().active(true);
 
@@ -167,7 +186,9 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         CountDownLatch enableDurabilityCPStartLatch = new CountDownLatch(1);
         CountDownLatch delayedOnwningLatch = new CountDownLatch(1);
 
-        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager) grid(1).context().cache().context().database();
+        GridCacheDatabaseSharedManager dbMgr =
+            (GridCacheDatabaseSharedManager) grid(1).context().cache().context().database();
+
         dbMgr.addCheckpointListener(new DbCheckpointListener() {
             @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
                 if (ctx.progress().reason().startsWith(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING)) {
@@ -203,16 +224,28 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         });
 
         grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-            @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+            @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
                 if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
                     topInitLatch.countDown();
 
                     try {
-                        assertTrue(U.await(enableDurabilityCPStartLatch, 10_000, TimeUnit.MILLISECONDS));
+                        assertTrue(U.await(enableDurabilityCPStartLatch, 20_000, TimeUnit.MILLISECONDS));
                     } catch (IgniteInterruptedCheckedException e) {
                         fail(X.getFullStackTrace(e));
                     }
                 }
+            }
+
+            @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+//                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
+//                    topInitLatch.countDown();
+//
+//                    try {
+//                        assertTrue(U.await(enableDurabilityCPStartLatch, 10_000, TimeUnit.MILLISECONDS));
+//                    } catch (IgniteInterruptedCheckedException e) {
+//                        fail(X.getFullStackTrace(e));
+//                    }
+//                }
             }
         });
 
@@ -224,7 +257,7 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         });
 
         // Wait for topology (7,0) init on grid1 before finishing rebalancing on (6,0).
-        assertTrue(U.await(topInitLatch, 10_000, TimeUnit.MILLISECONDS));
+        assertTrue(U.await(topInitLatch, 20_000, TimeUnit.MILLISECONDS));
 
         // Release last supply message, causing triggering a cp for enablidng durability.
         spi3.stopBlock();
@@ -245,5 +278,12 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
 
         for (GridDhtPartitionsExchangeFuture fut : grid(0).context().cache().context().exchange().exchangeFutures())
             assertTrue(fut.toString(), fut.invalidPartitions().isEmpty());
+
+        CacheGroupContext grpCtx = grid(1).context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
+
+        if (grpCtx != null)
+            assertTrue(grpCtx.localWalEnabled());
+
+        // TODO improve test for assertions on timeout.
     }
 }

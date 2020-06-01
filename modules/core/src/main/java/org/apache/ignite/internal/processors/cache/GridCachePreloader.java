@@ -244,4 +244,6 @@ public interface GridCachePreloader {
      * @return Rebalance message size in bytes.
      */
     public int batchSize();
+
+    public void finishFuture();
 }

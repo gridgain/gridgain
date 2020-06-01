@@ -2799,44 +2799,30 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public void ownMoving(AffinityTopologyVersion rebFinishedTopVer) {
-        lock.writeLock().lock();
+        ctx.database().checkpointReadLock();
 
         try {
-            AffinityTopologyVersion lastAffChangeVer = ctx.exchange().lastAffinityChangedTopologyVersion(lastTopChangeVer);
+            lock.writeLock().lock();
 
-            if (lastAffChangeVer.compareTo(rebFinishedTopVer) > 0) {
-                if (log.isInfoEnabled()) {
-                    log.info("Affinity topology changed, no MOVING partitions will be owned " +
-                        "[rebFinishedTopVer=" + rebFinishedTopVer +
-                        ", lastAffChangeVer=" + lastAffChangeVer +
-                        ", grp=" + grp.cacheOrGroupName() + "]");
-                }
+            try {
+                for (GridDhtLocalPartition locPart : currentLocalPartitions()) {
+                    if (locPart.state() == MOVING) {
+                        boolean reserved = locPart.reserve();
 
-                if (!((GridDhtPreloader)grp.preloader()).disableRebalancingCancellationOptimization())
-                    grp.preloader().forceRebalance();
-
-                return;
-            }
-
-            for (GridDhtLocalPartition locPart : currentLocalPartitions()) {
-                if (locPart.state() == MOVING) {
-                    boolean reserved = locPart.reserve();
-
-                    try {
-                        if (reserved && locPart.state() == MOVING &&
-                            lastAffChangeVer.compareTo(rebFinishedTopVer) <= 0 &&
-                            rebFinishedTopVer.compareTo(lastTopChangeVer) <= 0)
+                        try {
+                            if (reserved && locPart.state() == MOVING)
                                 own(locPart);
-                    }
-                    finally {
-                        if (reserved)
-                            locPart.release();
+                        } finally {
+                            if (reserved)
+                                locPart.release();
+                        }
                     }
                 }
+            } finally {
+                lock.writeLock().unlock();
             }
-        }
-        finally {
-            lock.writeLock().unlock();
+        } finally {
+            ctx.database().checkpointReadUnlock();
         }
     }
 
