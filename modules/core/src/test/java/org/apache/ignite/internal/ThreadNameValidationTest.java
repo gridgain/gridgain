@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -37,6 +38,8 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY;
 
 /**
  * Check threads for default names in single and thread pool instances.
@@ -72,7 +75,29 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
     private final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
 
     /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setDataStorageConfiguration(
+            new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration()
+                        .setPersistenceEnabled(true)
+                )
+        );
+
+        return cfg;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        cleanPersistenceDir();
+
+        System.setProperty(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, "false");
+
+        super.beforeTest();
+
         anonymousThreadCountBeforeTest = getAnonymousThreadCount();
 
         // MBean used LogManager with anonymous shutdown hook Thread.
@@ -84,13 +109,22 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
-            defaultThreadFactoryCountBeforeTest, getDefaultPoolCount());
+        try {
+            assertEquals("Executors.DefaultThreadFactory usage detected, IgniteThreadPoolExecutor is preferred",
+                defaultThreadFactoryCountBeforeTest, getDefaultPoolCount());
 
-        assertEquals("Thread without specific name detected",
-            anonymousThreadCountBeforeTest, getAnonymousThreadCount());
+            assertEquals("Thread without specific name detected",
+                anonymousThreadCountBeforeTest, getAnonymousThreadCount());
 
-        super.afterTest();
+        } finally {
+            System.clearProperty(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY);
+
+            super.afterTest();
+
+            stopAllGrids();
+
+            cleanPersistenceDir();
+        }
     }
 
     /**
@@ -101,6 +135,7 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
         validateThreadNames();
 
         IgniteEx ignite = startGrids(1);
+        ignite.active(true);
 
         IgniteCache<Object, Object> cache = ignite.createCache(DEFAULT_CACHE_NAME);
 
