@@ -17,12 +17,13 @@
 package org.apache.ignite.internal.commandline.cache;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
@@ -48,19 +49,22 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
  * Cache subcommand that allows to show indexes.
  */
 public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
+    /** Command parsed arguments. */
+    private Arguments args;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         String desc = "List all indexes that match specified filters.";
 
         Map<String, String> map = U.newLinkedHashMap(16);
 
-        map.put(NODE_ID.argName() + "nodeId",
+        map.put(NODE_ID.argName() + " nodeId",
             "Specify node for job execution. If not specified explicitly, node will be chosen by grid");
-        map.put(GRP_NAME.argName() + "regExp",
+        map.put(GRP_NAME.argName() + " regExp",
             "Regular expression allowing filtering by cache group name");
-        map.put(CACHE_NAME.argName() + "regExp",
+        map.put(CACHE_NAME.argName() + " regExp",
             "Regular expression allowing filtering by cache name");
-        map.put(IDX_NAME.argName() + "regExp",
+        map.put(IDX_NAME.argName() + " regExp",
             "Regular expression allowing filtering by index name");
 
         usageCache(
@@ -75,9 +79,6 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         );
     }
 
-    /** Command parsed arguments. */
-    private Arguments args;
-
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         Set<IndexListInfoContainer> taskRes;
@@ -87,13 +88,7 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         IndexListTaskArg taskArg = new IndexListTaskArg(args.groupsRegEx, args.cachesRegEx, args.indexesRegEx);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            boolean allNodesSupport = client.compute()
-                .nodes()
-                .stream()
-                .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
-
-
-            if ((id == null && allNodesSupport) ||
+            if ((id == null && U.allNodesSupport(client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) ||
                 id != null && client.compute().node(id).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
             {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client,
@@ -144,22 +139,31 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
                     if (nodeId != null)
                         throw new IllegalArgumentException(arg.argName() + " arg specified twice.");
 
-                    nodeId = UUID.fromString(argIterator.nextArg("Failed to read node id"));
+                    nodeId = UUID.fromString(argIterator.nextArg("Failed to read node id."));
 
                     break;
 
                 case GRP_NAME:
-                    groupsRegEx = argIterator.nextArg("Failed to read group name regex");
+                    groupsRegEx = argIterator.nextArg("Failed to read group name regex.");
+
+                    if (!validateRegEx(groupsRegEx))
+                        throw new IllegalArgumentException("Invalid group name regex: " + groupsRegEx);
 
                     break;
 
                 case CACHE_NAME:
-                    cachesRegEx = argIterator.nextArg("Failed to read cache name regex");
+                    cachesRegEx = argIterator.nextArg("Failed to read cache name regex.");
+
+                    if (!validateRegEx(cachesRegEx))
+                        throw new IllegalArgumentException("Invalid cache name regex: " + cachesRegEx);
 
                     break;
 
                 case IDX_NAME:
-                    indexesRegEx = argIterator.nextArg("Failed to read index name regex");
+                    indexesRegEx = argIterator.nextArg("Failed to read index name regex.");
+
+                    if (!validateRegEx(indexesRegEx))
+                        throw new IllegalArgumentException("Invalid index name regex: " + indexesRegEx);
 
                     break;
 
@@ -203,21 +207,21 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         }
 
         /**
-         * @return Cache group to scan for, null means scanning all groups.
+         * @return Cache groups regex filter.
          */
         public String groups() {
             return groupsRegEx;
         }
 
         /**
-         * @return List of caches names.
+         * @return Cache names regex filter.
          */
         public String cachesRegEx() {
             return cachesRegEx;
         }
 
         /**
-         * @return List of indexes names.
+         * @return Index names regex filter.
          */
         public String indexesRegEx() {
             return indexesRegEx;
@@ -238,10 +242,7 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
     private void printIndexes(Set<IndexListInfoContainer> res, Logger logger) {
         List<IndexListInfoContainer> sorted = new ArrayList<>(res);
 
-        sorted.sort(Comparator.comparing(IndexListInfoContainer::groupName)
-            .thenComparing(IndexListInfoContainer::cacheName)
-            .thenComparing(IndexListInfoContainer::indexName)
-        );
+        sorted.sort(IndexListInfoContainer.comparator());
 
         String prevGrpName = "";
 
@@ -252,13 +253,24 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
                 logger.info("");
             }
 
-            String containerStr = container.toString();
-            String noClsString = containerStr.substring(IndexListInfoContainer.class.getSimpleName().length() + 2,
-                                                        containerStr.length() - 1);
-
-            logger.info(noClsString);
+            logger.info(container.toString());
         }
 
         logger.info("");
+    }
+
+    /**
+     * @param regex Regex to validate
+     * @return {@code True} if {@code regex} syntax is valid. {@code False} otherwise.
+     */
+    private boolean validateRegEx(String regex) {
+        try {
+            Pattern.compile(regex);
+
+            return true;
+        }
+        catch (PatternSyntaxException e) {
+            return false;
+        }
     }
 }

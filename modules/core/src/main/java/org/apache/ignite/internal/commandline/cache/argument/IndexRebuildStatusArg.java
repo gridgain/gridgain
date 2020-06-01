@@ -17,9 +17,10 @@
 package org.apache.ignite.internal.commandline.cache.argument;
 
 import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.cache.CacheIndexesRebuildStatus;
 
 /**
- * Container for command arguments.
+ * Arguments for {@link CacheIndexesRebuildStatus} command.
  */
 public enum IndexRebuildStatusArg implements CommandArg {
     /** */

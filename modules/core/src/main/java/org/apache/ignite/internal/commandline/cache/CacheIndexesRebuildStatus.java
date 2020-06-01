@@ -16,13 +16,13 @@
 
 package org.apache.ignite.internal.commandline.cache;
 
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
@@ -44,13 +44,16 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
  * Cache subcommand that allows to show caches that have
  */
 public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildStatus.Arguments> {
+    /** Command parsed arguments. */
+    private Arguments args;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         String desc = "List all indexes that have index rebuild in progress.";
 
         Map<String, String> map = U.newLinkedHashMap(8);
 
-        map.put(NODE_ID.argName() + "nodeId",
+        map.put(NODE_ID.argName() + " nodeId",
             "Specify node for job execution. If not specified explicitly, info will be gathered from all nodes");
 
         usageCache(
@@ -62,9 +65,6 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         );
     }
 
-    /** Command parsed arguments. */
-    private Arguments args;
-
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         Map<UUID, Set<IndexRebuildStatusInfoContainer>> taskRes;
@@ -74,12 +74,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         IndexRebuildStatusTaskArg taskArg = new IndexRebuildStatusTaskArg(nodeId);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            boolean allNodesSupport = client.compute()
-                .nodes()
-                .stream()
-                .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
-
-            if ((nodeId == null && allNodesSupport) ||
+            if ((nodeId == null && allNodesSupport(client)) ||
                 nodeId != null && client.compute().node(nodeId).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
             {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
@@ -134,6 +129,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
 
     /**
      * Prints caches infos grouped by node id.
+     *
      * @param res Task result.
      * @param logger Logger to use.
      */
@@ -148,15 +144,10 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         }
 
         for(Map.Entry<UUID, Set<IndexRebuildStatusInfoContainer>> entry: res.entrySet()) {
-
             logger.info("");
 
-            final Comparator<IndexRebuildStatusInfoContainer> comp =
-                Comparator.comparing(IndexRebuildStatusInfoContainer::groupName)
-                    .thenComparing(IndexRebuildStatusInfoContainer::cacheName);
-
             entry.getValue().stream()
-                .sorted(comp)
+                .sorted(IndexRebuildStatusInfoContainer.comparator())
                 .forEach(container -> logger.info(constructCacheOuptutString(entry.getKey(), container)));
         }
 
@@ -165,12 +156,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
 
     /** */
     private String constructCacheOuptutString(UUID nodeId, IndexRebuildStatusInfoContainer container) {
-        final String containerStr = container.toString();
-
-        String cacheInfo = containerStr.substring(IndexRebuildStatusInfoContainer.class.getSimpleName().length() + 2,
-            containerStr.length() - 1);
-
-        return "node_id=" + nodeId + ", " + cacheInfo;
+        return "node_id=" + nodeId + ", " + container.toString();
     }
 
     /**
@@ -196,5 +182,18 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         @Override public String toString() {
             return S.toString(CacheIndexesRebuildStatus.Arguments.class, this);
         }
+    }
+
+    /**
+     * @param client Client
+     * @return {@code True} if all cluster nodes support indexes manipulations
+     * from control script.
+     * @throws GridClientException if failed to connect.
+     */
+    private boolean allNodesSupport(GridClient client) throws GridClientException {
+        return client.compute()
+            .nodes()
+            .stream()
+            .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
     }
 }

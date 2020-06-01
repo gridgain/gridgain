@@ -18,7 +18,6 @@ package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -30,6 +29,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.cache.index.IndexForceRebuildTask;
@@ -52,31 +52,21 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
  * Cache subcommand that triggers indexes force rebuild.
  */
 public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuild.Arguments> {
+    /** Command parsed arguments. */
+    private Arguments args;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         String desc = "Triggers rebuild of all indexes for specified caches or cache groups.";
 
         Map<String, String> map = U.newLinkedHashMap(16);
 
-        map.put(NODE_ID.argName(),
-            "Specify node for indexes rebuild.");
-        map.put(CACHE_NAMES.argName(),
-            "Comma-separated list of cache names for which indexes should be rebuilt.");
-        map.put(GROUP_NAMES.argName(),
-            "Comma-separated list of cache group names for which indexes should be rebuilt.");;
+        map.put(NODE_ID.argName(), "Specify node for indexes rebuild.");
+        map.put(CACHE_NAMES.argName(), "Comma-separated list of cache names for which indexes should be rebuilt.");
+        map.put(GROUP_NAMES.argName(), "Comma-separated list of cache group names for which indexes should be rebuilt.");
 
-        usageCache(
-            logger,
-            INDEX_FORCE_REBUILD,
-            desc,
-            map,
-            NODE_ID.argName(),
-            or(CACHE_NAME, GRP_NAME)
-        );
+        usageCache(logger, INDEX_FORCE_REBUILD, desc, map, NODE_ID.argName(), or(CACHE_NAME, GRP_NAME));
     }
-
-    /** Command parsed arguments. */
-    private Arguments args;
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
@@ -85,12 +75,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
         IndexForceRebuildTaskArg taskArg = new IndexForceRebuildTaskArg(args.cacheGrps, args.cacheNames);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            boolean allNodesSupport = client.compute()
-                .nodes()
-                .stream()
-                .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
-
-            if (allNodesSupport) {
+            if (U.allNodesSupport(client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg,
                     args.nodeId, clientCfg);
             }
@@ -111,7 +96,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
      * @param logger Logger to print to.
      */
     private void printResult(IndexForceRebuildTaskRes res, Logger logger) {
-        if (!res.notFoundCacheNames().isEmpty()) {
+        if (!F.isEmpty(res.notFoundCacheNames())) {
             String warning = args.cacheGrps == null ?
                 "WARNING: These caches were not found:" : "WARNING: These cache groups were not found:";
 
@@ -125,7 +110,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
             logger.info("");
         }
 
-        if (!res.cachesWithRebuildInProgress().isEmpty()) {
+        if (!F.isEmpty(res.cachesWithRebuildInProgress())) {
             logger.info("WARNING: These caches have indexes rebuilding in progress:");
 
             printInfos(res.cachesWithRebuildInProgress(), logger);
@@ -133,7 +118,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
             logger.info("");
         }
 
-        if (!res.cachesWithStartedRebuild().isEmpty()) {
+        if (!F.isEmpty(res.cachesWithStartedRebuild())) {
             logger.info("Indexes rebuild was started for these caches:");
 
             printInfos(res.cachesWithStartedRebuild(), logger);
@@ -147,9 +132,8 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
     /** */
     private void printInfos(Collection<IndexRebuildStatusInfoContainer> infos, Logger logger) {
         infos.stream()
-             .sorted(Comparator.comparing(IndexRebuildStatusInfoContainer::groupName)
-                               .thenComparing(IndexRebuildStatusInfoContainer::cacheName))
-             .forEach(rebuildStatusInfo -> logger.info(INDENT + rebuildStatusInfo.toString()));
+            .sorted(IndexRebuildStatusInfoContainer.comparator())
+            .forEach(rebuildStatusInfo -> logger.info(INDENT + rebuildStatusInfo.toString()));
     }
 
     /** {@inheritDoc} */

@@ -2291,7 +2291,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param grpName Group name.
      * @return Found group or null.
      */
-    public CacheGroupContext findCacheGroup(String grpName) {
+    private CacheGroupContext findCacheGroup(String grpName) {
         return cacheGrps.values().stream()
             .filter(grp -> grp.sharedGroup() && grpName.equals(grp.name()))
             .findAny()

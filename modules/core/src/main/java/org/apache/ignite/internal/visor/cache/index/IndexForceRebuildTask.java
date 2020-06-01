@@ -28,8 +28,10 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -65,73 +67,106 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
             throws IgniteException
         {
             //Either cacheNames or cacheGrps must be specified
-            assert (arg.cacheNames() == null) != (arg.cacheGrps() == null);
-
-            final GridCacheProcessor cacheProcessor = ignite.context().cache();
+            assert (arg.cacheNames() == null) != (arg.cacheGrps() == null) :
+                "Either cacheNames or cacheGroups must be specified";
 
             // Collect info about indexes being rebuilt.
             Set<IndexRebuildStatusInfoContainer> rebuildIdxCaches =
-                cacheProcessor.publicCaches()
+                ignite.context().cache().publicCaches()
                     .stream()
                     .filter(c -> !c.indexReadyFuture().isDone())
                     .map(this::fromIgniteCache)
                     .collect(Collectors.toSet());
 
             Set<String> rebuildIdxCachesNames = rebuildIdxCaches.stream()
-                                                                .map(IndexRebuildStatusInfoContainer::cacheName)
-                                                                .collect(Collectors.toSet());
+                .map(IndexRebuildStatusInfoContainer::cacheName)
+                .collect(Collectors.toSet());
 
-            if (arg.cacheNames() != null) {
-                // Collect info about not found caches.
-                Set<String> notFoundCaches = new HashSet<>(arg.cacheNames());
-                notFoundCaches.removeIf(name -> cacheProcessor.cache(name) != null);
-
-                Set<GridCacheContext> cacheContexts =
-                    cacheProcessor.publicCaches()
-                        .stream()
-                        .filter(c -> !rebuildIdxCachesNames.contains(c.getName()))
-                        .filter(c -> arg.cacheNames().contains(c.getName()))
-                        .map(IgniteCacheProxy::context)
-                        .collect(Collectors.toSet());
-
-                // Collect info about started index rebuild.
-                Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild =
-                    cacheContexts.stream()
-                        .map(c -> new IndexRebuildStatusInfoContainer(c.config()))
-                        .collect(Collectors.toSet());
-
-                cacheProcessor.context().database().forceRebuildIndexes(cacheContexts);
-
-                return new IndexForceRebuildTaskRes(cachesWithStartedRebuild, rebuildIdxCaches, notFoundCaches);
-            }
-            else if (arg.cacheGrps() != null) {
-                // Collect info about not found groups.
-                Set<String> notFoundGroups = new HashSet<>(arg.cacheGrps());
-                notFoundGroups.removeIf(grpName -> cacheProcessor.findCacheGroup(grpName) != null);
-
-                Set<GridCacheContext> cacheContexts =
-                    cacheProcessor.cacheGroups()
-                        .stream()
-                        .filter(grpContext -> arg.cacheGrps().contains(grpContext.name()))
-                        .map(CacheGroupContext::caches)
-                        .flatMap(List::stream)
-                        .filter(c -> !rebuildIdxCachesNames.contains(c.name()))
-                        .collect(Collectors.toSet());
-
-                Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild =
-                    cacheContexts.stream()
-                        .map(c -> new IndexRebuildStatusInfoContainer(c.config()))
-                        .collect(Collectors.toSet());
-
-                cacheProcessor.context().database().forceRebuildIndexes(cacheContexts);
-
-                return new IndexForceRebuildTaskRes(cachesWithStartedRebuild, rebuildIdxCaches, notFoundGroups);
-            }
+            if (arg.cacheNames() != null)
+                return rebuildByCacheNames(arg.cacheNames(), rebuildIdxCaches, rebuildIdxCachesNames);
+            else if (arg.cacheGrps() != null)
+                return rebuildByGroupNames(arg.cacheGrps(), rebuildIdxCaches, rebuildIdxCachesNames);
             else {
                 assert false : "Neither cache names nor cache groups specified";
 
                 return null;
             }
+        }
+
+        /**
+         * Triggers force rebuild of indexes in caches from {@code cacheNames}.
+         *
+         * @param cacheNames Set of cache names.
+         * @param rebuildIdxCaches Set of infos about cached which have indexes being rebuilt at the moment.
+         * @param rebuildIdxCachesNames Set of names of cached which have indexes being rebuilt at the moment.         *
+         * @return {@code IndexForceRebuildTaskRes} object.
+         */
+        @NotNull private IndexForceRebuildTaskRes rebuildByCacheNames(
+            Set<String> cacheNames,
+            Set<IndexRebuildStatusInfoContainer> rebuildIdxCaches,
+            Set<String> rebuildIdxCachesNames)
+        {
+            final GridCacheProcessor cacheProcessor = ignite.context().cache();
+
+            // Collect info about not found caches.
+            Set<String> notFoundCaches = new HashSet<>(cacheNames);
+            notFoundCaches.removeIf(name -> cacheProcessor.cache(name) != null);
+
+            Set<GridCacheContext> cacheContexts =
+                cacheProcessor.publicCaches()
+                    .stream()
+                    .filter(c -> !rebuildIdxCachesNames.contains(c.getName()))
+                    .filter(c -> cacheNames.contains(c.getName()))
+                    .map(IgniteCacheProxy::context)
+                    .collect(Collectors.toSet());
+
+            // Collect info about started index rebuild.
+            Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild =
+                cacheContexts.stream()
+                    .map(c -> new IndexRebuildStatusInfoContainer(c.config()))
+                    .collect(Collectors.toSet());
+
+            cacheProcessor.context().database().forceRebuildIndexes(cacheContexts);
+
+            return new IndexForceRebuildTaskRes(cachesWithStartedRebuild, rebuildIdxCaches, notFoundCaches);
+        }
+        /**
+         *
+         * Triggers force rebuild of indexes in all caches from {@code grpNames}.
+         *
+         * @param grpNames Set of cache groups names.
+         * @param rebuildIdxCaches Set of infos about cached which have indexes being rebuilt at the moment.
+         * @param rebuildIdxCachesNames Set of names of cached which have indexes being rebuilt at the moment.         *
+         * @return {@code IndexForceRebuildTaskRes} object.
+         */
+        @NotNull private IndexForceRebuildTaskRes rebuildByGroupNames(
+            Set<String> grpNames,
+            Set<IndexRebuildStatusInfoContainer> rebuildIdxCaches,
+            Set<String> rebuildIdxCachesNames)
+        {
+            final GridCacheProcessor cacheProcessor = ignite.context().cache();
+
+            // Collect info about not found groups.
+            Set<String> notFoundGroups = new HashSet<>(grpNames);
+            notFoundGroups.removeIf(grpName -> cacheProcessor.cacheGroup(CU.cacheId(grpName)) != null);
+
+            Set<GridCacheContext> cacheContexts =
+                cacheProcessor.cacheGroups()
+                    .stream()
+                    .filter(grpContext -> grpNames.contains(grpContext.name()))
+                    .map(CacheGroupContext::caches)
+                    .flatMap(List::stream)
+                    .filter(c -> !rebuildIdxCachesNames.contains(c.name()))
+                    .collect(Collectors.toSet());
+
+            Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild =
+                cacheContexts.stream()
+                    .map(c -> new IndexRebuildStatusInfoContainer(c.config()))
+                    .collect(Collectors.toSet());
+
+            cacheProcessor.context().database().forceRebuildIndexes(cacheContexts);
+
+            return new IndexForceRebuildTaskRes(cachesWithStartedRebuild, rebuildIdxCaches, notFoundGroups);
         }
 
         /** */

@@ -40,10 +40,11 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.deleteIndexBin;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillThreeFieldsEntryCache;
-import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.simpleIndexEntry;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.simpleIndexEntity;
 
 /**
  * Test for --cache index_status command. Uses single cluster per suite.
@@ -114,7 +115,7 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
 
         createAndFillCache(ignite, "cache1", "group2");
         createAndFillCache(ignite, "cache2", "group1");
-        createAndFillThreeFieldsEntryCache(ignite, "cache_no_group", null, asList(simpleIndexEntry()));
+        createAndFillThreeFieldsEntryCache(ignite, "cache_no_group", null, asList(simpleIndexEntity()));
     }
 
     /** */
@@ -159,7 +160,9 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
         checkResult(handler, id1, id2);
     }
 
-    /** */
+    /**
+     * Check --node-id option.
+     */
     @Test
     public void testNodeIdOption() throws Exception {
         injectTestSystemOut();
@@ -202,8 +205,7 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
 
         String output = testOut.toString();
 
-        assertTrue("Expected message not found in output",
-            output.contains("There are no caches that have index rebuilding in progress."));
+        assertContains(log, output, "There are no caches that have index rebuilding in progress.");
     }
 
     /**
@@ -229,7 +231,7 @@ public class GridCommandHandlerIndexRebuildStatusTest extends GridCommandHandler
                 "node_id=" + nodeId + ", groupName=group2, cacheName=cache1\n" +
                 "node_id=" + nodeId + ", groupName=no_group, cacheName=cache_no_group";
 
-            assertTrue("Unexpected output", output.contains(nodeStr));
+            assertContains(log, output, nodeStr);
         }
     }
 

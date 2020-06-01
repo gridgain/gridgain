@@ -70,9 +70,9 @@ public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexL
             if (arg == null)
                 throw new IgniteException("IndexListTaskArg is null");
 
-            String indexesRegEx = arg.indexesRegEx();
-            String groupsRegEx = arg.groupsRegEx();
-            String cachesRegEx = arg.cachesRegEx();
+            Pattern indexesPtrn = getPattern(arg.indexesRegEx());
+            Pattern groupsPtrn = getPattern(arg.groupsRegEx());
+            Pattern cachesPtrn = getPattern(arg.cachesRegEx());
 
             Set<IndexListInfoContainer> idxInfos = new HashSet<>();
 
@@ -86,10 +86,10 @@ public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexL
                 final String grpName = ctx.config().getGroupName();
                 final String grpNameToValidate = grpName == null ? EMPTY_GROUP_NAME : grpName;
 
-                if (!isNameValid(groupsRegEx, grpNameToValidate))
+                if (!isNameValid(groupsPtrn, grpNameToValidate))
                     continue;
 
-                if (!isNameValid(cachesRegEx, cacheName))
+                if (!isNameValid(cachesPtrn, cacheName))
                     continue;
 
                 for (GridQueryTypeDescriptor type : qry.types(cacheName)) {
@@ -99,7 +99,7 @@ public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexL
                         continue;
 
                     for (Index idx : gridH2Tbl.getIndexes()) {
-                        if (!isNameValid(indexesRegEx, idx.getName()))
+                        if (!isNameValid(indexesPtrn, idx.getName()))
                             continue;
 
                         if (idx instanceof H2TreeIndexBase)
@@ -109,6 +109,11 @@ public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexL
             }
 
             return idxInfos;
+        }
+
+        /** */
+        @Nullable private Pattern getPattern(String regex) {
+            return regex == null ? null : Pattern.compile(regex.toLowerCase());
         }
 
         /** */
@@ -122,11 +127,11 @@ public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexL
         }
 
         /** */
-        private static boolean isNameValid(String regEx, String name) {
-            if (regEx == null || regEx.equalsIgnoreCase(name))
+        private static boolean isNameValid(Pattern pattern, String name) {
+            if (pattern == null)
                 return true;
 
-            return Pattern.compile(regEx.toLowerCase()).matcher(name.toLowerCase()).find();
+            return pattern.matcher(name.toLowerCase()).find();
         }
     }
 }

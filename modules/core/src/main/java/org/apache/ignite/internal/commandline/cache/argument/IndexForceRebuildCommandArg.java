@@ -17,8 +17,11 @@
 package org.apache.ignite.internal.commandline.cache.argument;
 
 import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.cache.CacheIndexesForceRebuild;
 
-/** */
+/**
+ * Arguments for {@link CacheIndexesForceRebuild} command.
+ */
 public enum IndexForceRebuildCommandArg implements CommandArg {
     /** */
     NODE_ID("--node-id"),

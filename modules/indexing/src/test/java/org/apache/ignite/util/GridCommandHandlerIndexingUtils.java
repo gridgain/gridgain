@@ -78,16 +78,16 @@ public class GridCommandHandlerIndexingUtils {
     public static final String CACHE_NAME = "persons-cache-vi";
 
     /** Cache name second. */
-    public static final String CACHE_NAME_SECOND = CACHE_NAME + "-second";
+    static final String CACHE_NAME_SECOND = CACHE_NAME + "-second";
 
     /** Test group name. */
-    public static final String GROUP_NAME = "group1";
+    static final String GROUP_NAME = "group1";
 
     /** Test group name. */
-    public static final String GROUP_NAME_SECOND = GROUP_NAME + "_second";
+    static final String GROUP_NAME_SECOND = GROUP_NAME + "_second";
 
     /** Three entries cache name common partition. */
-    public static final String THREE_ENTRIES_CACHE_NAME_COMMON_PART = "three_entries";
+    static final String THREE_ENTRIES_CACHE_NAME_COMMON_PART = "three_entries";
 
     /** Private constructor */
     private GridCommandHandlerIndexingUtils() {
@@ -256,7 +256,7 @@ public class GridCommandHandlerIndexingUtils {
      * @param grpName Cache group.
      * @param entities Collection of {@link QueryEntity}.
      */
-    public static void createAndFillThreeFieldsEntryCache(
+    static void createAndFillThreeFieldsEntryCache(
         final Ignite ignite,
         final String cacheName,
         final String grpName,
@@ -355,9 +355,14 @@ public class GridCommandHandlerIndexingUtils {
             .setIndexes(asList(new QueryIndex(nameField), new QueryIndex(idField)));
     }
 
-    /** */
-    public static QueryEntity complexIndexEntry() {
-        QueryEntity entity = prepareQueryEntiry();
+    /**
+     * Adds three indexes one of which is built on two fields
+     * to {@code QueryEntity} provided by {@code prepareQueryEntity()}.
+     *
+     * @return {@code QueryEntity} with indexes.
+     */
+    static QueryEntity complexIndexEntity() {
+        QueryEntity entity = prepareQueryEntity();
 
         entity.setIndexes(asList(
             new QueryIndex(ID_NAME),
@@ -368,9 +373,14 @@ public class GridCommandHandlerIndexingUtils {
         return entity;
     }
 
-    /** */
-    public static QueryEntity simpleIndexEntry() {
-        QueryEntity entity = prepareQueryEntiry();
+    /**
+     * Adds three indexes built on single fields
+     * to {@code QueryEntity} provided by {@code prepareQueryEntity()}.
+     *
+     * @return {@code QueryEntity} with indexes.
+     */
+    static QueryEntity simpleIndexEntity() {
+        QueryEntity entity = prepareQueryEntity();
 
         entity.setIndexes(asList(
             new QueryIndex(ID_NAME),
@@ -381,8 +391,12 @@ public class GridCommandHandlerIndexingUtils {
         return entity;
     }
 
-    /** */
-    private static QueryEntity prepareQueryEntiry() {
+    /**
+     * Creates test three field entity.
+     *
+     * @return new {@code QueryEntity}.
+     */
+    private static QueryEntity prepareQueryEntity() {
         QueryEntity entity = new QueryEntity();
 
         entity.setKeyType(Integer.class.getName());
@@ -490,7 +504,7 @@ public class GridCommandHandlerIndexingUtils {
         double doubleField;
 
         /** */
-        public CacheEntityThreeFields(int id, String strField, double doubleField) {
+        CacheEntityThreeFields(int id, String strField, double doubleField) {
             this.id = id;
             this.strField = strField;
             this.doubleField = doubleField;
@@ -502,16 +516,16 @@ public class GridCommandHandlerIndexingUtils {
      *
      * @param ignite Ignite instance.
      */
-    public static void createAndFillSeveralCaches(final Ignite ignite) {
+    static void createAndFillSeveralCaches(final Ignite ignite) {
         createAndFillCache(ignite, CACHE_NAME, GROUP_NAME);
 
         createAndFillThreeFieldsEntryCache(ignite, "test_" + THREE_ENTRIES_CACHE_NAME_COMMON_PART + "_complex_index",
-            GROUP_NAME, asList(complexIndexEntry()));
+            GROUP_NAME, asList(complexIndexEntity()));
 
         createAndFillCache(ignite, CACHE_NAME_SECOND, GROUP_NAME_SECOND);
 
         createAndFillThreeFieldsEntryCache(ignite, THREE_ENTRIES_CACHE_NAME_COMMON_PART + "_simple_indexes",
-            null, asList(simpleIndexEntry()));
+            null, asList(simpleIndexEntity()));
 
         createAndFillThreeFieldsEntryCache(ignite, THREE_ENTRIES_CACHE_NAME_COMMON_PART + "_no_indexes",
             null, Collections.emptyList());

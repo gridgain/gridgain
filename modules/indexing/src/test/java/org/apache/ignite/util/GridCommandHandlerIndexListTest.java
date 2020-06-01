@@ -25,6 +25,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_NAME;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME_SECOND;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
@@ -77,7 +78,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
 
         final CommandHandler handler = new CommandHandler(createTestLogger());
 
-        execute(handler, "--cache", "indexes_list", "--index-name", idxName);
+        assertEquals(EXIT_CODE_OK, execute(handler, "--cache", "indexes_list", "--index-name", idxName));
 
         String outStr = testOut.toString();
 
@@ -114,19 +115,30 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         assertTrue("Unexpected result set", isResSetCorrect);
     }
 
-    /** */
+    /**
+     * Checks --group-name filter.
+     * Expect to see all indexes for caches in groups "group1".
+     * 7 indexes in total.
+     */
     @Test
     public void testGroupNameFilter1() {
         checkGroup("^" + GROUP_NAME + "$", GROUP_NAME, 7);
     }
 
-    /** */
+    /**
+     * Checks --group-name filter.
+     * Expect to see all indexes for caches in groups "group1" and "group1_second".
+     * 10 indexes in total.
+     */
     @Test
     public void testGroupNameFilter2() {
         checkGroup("^" + GROUP_NAME, (name) -> name.equals(GROUP_NAME) || name.equals(GROUP_NAME_SECOND), 10);
     }
 
-    /** */
+    /**
+     * Checks --group-name filter for caches without explicitly specified group.
+     * Expect to see 4(3 custom and 1 PK) indexes of three_entries_simple_indexes cache.
+     */
     @Test
     public void testEmptyGroupFilter() {
         checkGroup(EMPTY_GROUP_NAME, EMPTY_GROUP_NAME, 4);
@@ -141,7 +153,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
     private void checkGroup(String grpRegEx, Predicate<String> predicate, int expectedResNum) {
         final CommandHandler handler = new CommandHandler(createTestLogger());
 
-        execute(handler, "--cache", "indexes_list", "--group-name", grpRegEx);
+        assertEquals(EXIT_CODE_OK, execute(handler, "--cache", "indexes_list", "--group-name", grpRegEx));
 
         Set<IndexListInfoContainer> cmdResult = handler.getLastOperationResult();
         assertNotNull(cmdResult);
@@ -157,7 +169,11 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         assertEquals("Unexpected number of indexes: " + indexesNum, indexesNum, expectedResNum);
     }
 
-    /** */
+    /**
+     * Checks --cache-name filter.
+     * Expect to see 4(3 custom and 1 PK) indexes of three_entries_simple_indexes cache and
+     * 4(3 custom and 1 PK) indexes of test_three_entries_complex_indexes cache
+     * */
     @Test
     public void testCacheNameFilter1() {
         checkCacheNameFilter(
@@ -167,7 +183,10 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         );
     }
 
-    /** */
+    /**
+     * Checks --cache-name filter.
+     * Expect to see 4(3 custom and 1 PK) indexes of three_entries_simple_indexes cache.
+     * */
     @Test
     public void testCacheNameFilter2() {
         checkCacheNameFilter(
@@ -181,7 +200,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
     private void checkCacheNameFilter(String cacheRegEx, Predicate<String> predicate, int expectedResNum) {
         final CommandHandler handler = new CommandHandler(createTestLogger());
 
-        execute(handler, "--cache", "indexes_list", "--cache-name", cacheRegEx);
+        assertEquals(EXIT_CODE_OK, execute(handler, "--cache", "indexes_list", "--cache-name", cacheRegEx));
 
         Set<IndexListInfoContainer> cmdResult = handler.getLastOperationResult();
         assertNotNull(cmdResult);

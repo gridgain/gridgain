@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.Comparator;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -102,9 +102,14 @@ public class IndexListInfoContainer extends IgniteDataTransferObject {
         this.tblName = tblName;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @return default string object representation without {@code IndexListInfoContainer} and brackets.
+     */
     @Override public String toString() {
-        return S.toString(IndexListInfoContainer.class, this);
+        String dfltImpl = S.toString(IndexListInfoContainer.class, this);
+
+        return dfltImpl.substring(IndexListInfoContainer.class.getSimpleName().length() + 2,
+            dfltImpl.length() - 1);
     }
 
     /** {@inheritDoc} */
@@ -144,16 +149,18 @@ public class IndexListInfoContainer extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Columns names.
-     */
-    public Collection<String> columnsNames() {
-        return Collections.unmodifiableCollection(colsNames);
-    }
-
-    /**
      * @return Table name.
      */
     public String tableName() {
         return tblName;
+    }
+
+    /**
+     * @return Custom comparator.
+     */
+    public static Comparator<IndexListInfoContainer> comparator() {
+        return Comparator.comparing(IndexListInfoContainer::groupName)
+            .thenComparing(IndexListInfoContainer::cacheName)
+            .thenComparing(IndexListInfoContainer::indexName);
     }
 }

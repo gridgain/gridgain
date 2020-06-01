@@ -71,16 +71,16 @@ Arguments: --cache help --yes
     List all indexes that match specified filters.
 
     Parameters:
-      --node-idnodeId     - Specify node for job execution. If not specified explicitly, node will be chosen by grid
-      --group-nameregExp  - Regular expression allowing filtering by cache group name
-      --cache-nameregExp  - Regular expression allowing filtering by cache name
-      --index-nameregExp  - Regular expression allowing filtering by index name
+      --node-id nodeId     - Specify node for job execution. If not specified explicitly, node will be chosen by grid
+      --group-name regExp  - Regular expression allowing filtering by cache group name
+      --cache-name regExp  - Regular expression allowing filtering by cache name
+      --index-name regExp  - Regular expression allowing filtering by index name
 
   --cache indexes_rebuild_status [--node-id]
     List all indexes that have index rebuild in progress.
 
     Parameters:
-      --node-idnodeId  - Specify node for job execution. If not specified explicitly, info will be gathered from all nodes
+      --node-id nodeId  - Specify node for job execution. If not specified explicitly, info will be gathered from all nodes
 
   --cache indexes_force_rebuild --node-id --cache-name|--group-name
     Triggers rebuild of all indexes for specified caches or cache groups.

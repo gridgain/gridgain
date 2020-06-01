@@ -89,7 +89,6 @@ public class CacheCommands implements Command<CacheSubcommands> {
         if (cmd == null)
             cmd = CacheSubcommands.HELP;
 
-
         if (cmd != HELP)
             cmd.subcommand().parseArguments(argIter);
 

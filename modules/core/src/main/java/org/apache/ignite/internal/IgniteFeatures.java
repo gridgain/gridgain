@@ -149,7 +149,7 @@ public enum IgniteFeatures {
     CHECK_INDEX_INLINE_SIZES(36),
 
     /** Force rebuild, list or request indexes rebuild status from control script. */
-    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(37);
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(41);
 
     /**
      * Unique feature identifier.

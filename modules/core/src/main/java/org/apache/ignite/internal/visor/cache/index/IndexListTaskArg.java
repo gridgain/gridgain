@@ -64,8 +64,7 @@ public class IndexListTaskArg extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         groupsRegEx = U.readString(in);
         cachesRegEx = U.readString(in);
         indexesRegEx = U.readString(in);

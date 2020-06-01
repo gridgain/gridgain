@@ -78,6 +78,9 @@ public class CommandHandlerParsingTest {
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
 
     /** */
+    private static final String INVALID_REGEX = "[]";
+
+    /** */
     @Rule public final TestRule methodRule = new SystemPropertiesRule();
 
     /**
@@ -587,6 +590,74 @@ public class CommandHandlerParsingTest {
             () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "--some-other-arg")),
             IllegalArgumentException.class,
             "--cache-names not specified."
+        );
+    }
+
+    /** */
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void testIndexListWrongArgs() {
+        String nodeId = UUID.randomUUID().toString();
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id")),
+            IllegalArgumentException.class,
+            "Failed to read node id."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--group-name")),
+            IllegalArgumentException.class,
+            "Failed to read group name regex."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--group-name", INVALID_REGEX)),
+            IllegalArgumentException.class,
+            "Invalid group name regex: " + INVALID_REGEX
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--cache-name")),
+            IllegalArgumentException.class,
+            "Failed to read cache name regex."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--cache-name", INVALID_REGEX)),
+            IllegalArgumentException.class,
+            "Invalid cache name regex: " + INVALID_REGEX
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--index-name")),
+            IllegalArgumentException.class,
+            "Failed to read index name regex."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--index-name", INVALID_REGEX)),
+            IllegalArgumentException.class,
+            "Invalid index name regex: " + INVALID_REGEX
+        );
+    }
+
+    /** */
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void testIndexRebuildStatusWrongArgs() {
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id")),
+            IllegalArgumentException.class,
+            "Failed to read node id."
         );
     }
 

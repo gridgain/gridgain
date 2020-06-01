@@ -65,8 +65,7 @@ public class IndexForceRebuildTaskRes extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         cachesWithStartedRebuild = U.readSet(in);
         cachesWithRebuildInProgress = U.readSet(in);
         notFoundCacheNames = U.readSet(in);

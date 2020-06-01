@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.complexIndexEntry;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.complexIndexEntity;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillThreeFieldsEntryCache;
 
@@ -77,7 +77,7 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        ListeningTestLogger testLog = new ListeningTestLogger(false, super.getConfiguration(igniteInstanceName).getGridLogger());
+        ListeningTestLogger testLog = new ListeningTestLogger(log);
 
         return super.getConfiguration(igniteInstanceName)
             .setGridLogger(testLog);
@@ -94,7 +94,7 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
-        shutdownTestCluster();
+        stopAllGrids();
 
         cleanPersistenceDir();
 
@@ -123,17 +123,13 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
         createAndFillCache(ignite, CACHE_NAME_1_2, GRP_NAME_1);
         createAndFillCache(ignite, CACHE_NAME_2_1, GRP_NAME_2);
 
-        createAndFillThreeFieldsEntryCache(ignite, CACHE_NAME_NO_GRP, null, Collections.singletonList(complexIndexEntry()));
+        createAndFillThreeFieldsEntryCache(ignite, CACHE_NAME_NO_GRP, null, Collections.singletonList(complexIndexEntity()));
     }
 
-    /** */
-    private void shutdownTestCluster() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-    }
-
-    /** */
+    /**
+     * Checks error messages when trying to rebuild indexes for
+     * non-existent cache of group.
+     */
     @Test
     public void testEmptyResult() {
         injectTestSystemOut();
@@ -157,7 +153,9 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
         assertTrue(grpNamesOutputStr.contains("WARNING: Indexes rebuild was not started for any cache. Check command input."));
     }
 
-    /** */
+    /**
+     * Checks that index on 2 fields is rebuilt correctly.
+     */
     @Test
     public void testComplexIndexRebuild() throws IgniteInterruptedCheckedException {
         injectTestSystemOut();
@@ -286,10 +284,10 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
             "  " + CACHE_NAME_NON_EXISTING));
 
         assertTrue(outputStr.contains("WARNING: These caches have indexes rebuilding in progress:\n" +
-            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_2 + ", cacheName=" + CACHE_NAME_2_1 + "]"));
+            "  groupName=" + GRP_NAME_2 + ", cacheName=" + CACHE_NAME_2_1));
 
         assertTrue(outputStr.contains("Indexes rebuild was started for these caches:\n" +
-            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_1 + "]"));
+            "  groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_1));
 
         assertEquals("Unexpected number of lines in output.", 19, outputStr.split("\n").length);
     }
@@ -304,11 +302,11 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
             "  " + GRP_NAME_NON_EXISTING));
 
         assertTrue(outputStr.contains("WARNING: These caches have indexes rebuilding in progress:\n" +
-            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_2 + "]"));
+            "  groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_2));
 
         assertTrue(outputStr.contains("Indexes rebuild was started for these caches:\n" +
-            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_1 + "]\n" +
-            "  IndexRebuildStatusInfoContainer [groupName=" + GRP_NAME_2 + ", cacheName=" + CACHE_NAME_2_1 + "]"));
+            "  groupName=" + GRP_NAME_1 + ", cacheName=" + CACHE_NAME_1_1 + "\n" +
+            "  groupName=" + GRP_NAME_2 + ", cacheName=" + CACHE_NAME_2_1));
 
         assertEquals("Unexpected number of lines in output.", 20, outputStr.split("\n").length);
     }
@@ -416,10 +414,11 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
         /** {@inheritDoc} */
         @Override public boolean onDone(@Nullable Void res, @Nullable Throwable err) {
             try {
-                GridTestUtils.waitForCondition(() -> !cacheNamesBlockedIdxRebuild.contains(cctx.name()), 60_000);
+                assertTrue("Failed to wait for indexes rebuild unblocking",
+                    GridTestUtils.waitForCondition(() -> !cacheNamesBlockedIdxRebuild.contains(cctx.name()), 60_000));
             }
             catch (IgniteInterruptedCheckedException e) {
-                e.printStackTrace();
+                fail("Waiting for indexes rebuild unblocking was interrupted");
             }
 
             return original.onDone(res, err);

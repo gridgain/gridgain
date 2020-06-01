@@ -19,6 +19,7 @@ package org.apache.ignite.internal.visor.cache.index;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Comparator;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -27,7 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_NAME;
 
 /**
- * Container for index rebuild statu info.
+ * Container for index rebuild status info.
  */
 public class IndexRebuildStatusInfoContainer extends IgniteDataTransferObject {
     /** */
@@ -61,8 +62,7 @@ public class IndexRebuildStatusInfoContainer extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         groupName = U.readString(in);
         cacheName = U.readString(in);
     }
@@ -96,8 +96,21 @@ public class IndexRebuildStatusInfoContainer extends IgniteDataTransferObject {
         return cacheName;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @return default string object representation without {@code IndexRebuildStatusInfoContainer} and brackets.
+     */
     @Override public String toString() {
-        return S.toString(IndexRebuildStatusInfoContainer.class, this);
+        String dfltImpl = S.toString(IndexRebuildStatusInfoContainer.class, this);
+
+        return dfltImpl.substring(IndexRebuildStatusInfoContainer.class.getSimpleName().length() + 2,
+            dfltImpl.length() - 1);
+    }
+
+    /**
+     * @return Custom comparator.
+     */
+    public static Comparator<IndexRebuildStatusInfoContainer> comparator() {
+        return Comparator.comparing(IndexRebuildStatusInfoContainer::groupName)
+            .thenComparing(IndexRebuildStatusInfoContainer::cacheName);
     }
 }

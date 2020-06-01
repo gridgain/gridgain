@@ -17,8 +17,11 @@
 package org.apache.ignite.internal.commandline.cache.argument;
 
 import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.cache.CacheIndexesList;
 
-/** */
+/**
+ * Arguments for {@link CacheIndexesList} command.
+ */
 public enum IndexListCommandArg implements CommandArg {
     /** */
     NODE_ID("--node-id"),
