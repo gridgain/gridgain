@@ -194,7 +194,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (maxQryMemory < 0)
             maxQryMemory = 0;
 
-        QueryMemoryTracker tracker = new QueryMemoryTracker(this, maxQryMemory, blockSize, offloadingEnabled);
+        QueryMemoryTracker tracker = new QueryMemoryTracker(null, maxQryMemory, blockSize, offloadingEnabled);
 
         if (log.isDebugEnabled())
             log.debug("Memory tracker created: " + tracker);
