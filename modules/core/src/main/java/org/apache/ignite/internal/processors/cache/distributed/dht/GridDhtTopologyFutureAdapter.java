@@ -33,7 +33,6 @@ import static java.lang.String.format;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
-import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  *
@@ -98,13 +97,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         CacheGroupContext grp = cctx.group();
 
         if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name())) {
-            String regionName = grp.dataRegion() == null ? null : grp.dataRegion().config().getName();
-
-            if (!VOLATILE_DATA_REGION_NAME.equals(regionName)) {
-                return new CacheInvalidStateException(new IgniteClusterReadOnlyException(
-                    format(CLUSTER_READ_ONLY_ERROR_MSG, grp.name(), cctx.name())
-                ));
-            }
+            return new CacheInvalidStateException(new IgniteClusterReadOnlyException(
+                format(CLUSTER_READ_ONLY_ERROR_MSG, grp.name(), cctx.name())
+            ));
         }
 
         CacheGroupValidation validation = grpValidRes.get(grp.groupId());

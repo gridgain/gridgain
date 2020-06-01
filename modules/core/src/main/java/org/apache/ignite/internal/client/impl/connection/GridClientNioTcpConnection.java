@@ -74,6 +74,7 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskR
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTopologyRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridRouterRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridRouterResponse;
+import org.apache.ignite.internal.util.GridArgumentCheck;
 import org.apache.ignite.internal.util.nio.GridNioFuture;
 import org.apache.ignite.internal.util.nio.GridNioFutureImpl;
 import org.apache.ignite.internal.util.nio.GridNioServer;
@@ -847,7 +848,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         ClusterState state,
         UUID destNodeId
     ) throws GridClientClosedException, GridClientConnectionResetException {
-        assert state != null;
+        GridArgumentCheck.notNull(state, "state");
 
         return makeRequest(GridClientClusterStateRequest.state(state), destNodeId);
     }

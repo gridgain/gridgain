@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.ChangeT
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.GridArgumentCheck;
 import org.apache.ignite.internal.util.TransientSerializable;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -2011,8 +2012,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return {@code True} if activation process is happening now, and {@code False} otherwise.
      */
     private boolean activate(ClusterState state, ClusterState newState) {
-        assert state != null;
-        assert newState != null;
+        GridArgumentCheck.notNull(state, "state");
+        GridArgumentCheck.notNull(newState, "newState");
 
         return state == INACTIVE && ClusterState.active(newState);
     }
