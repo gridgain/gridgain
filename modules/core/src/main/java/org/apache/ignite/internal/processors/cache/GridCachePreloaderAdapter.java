@@ -217,8 +217,9 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
             grp.config().getRebalanceBatchSize() : grp.shared().gridConfig().getRebalanceBatchSize();
     }
 
-    /** {@inheritDoc} */
-    @Override public void finishFuture() {
+    /** {@inheritDoc}
+     * @param topVer*/
+    @Override public void finishFuture(AffinityTopologyVersion topVer) {
         // No-op.
     }
 }

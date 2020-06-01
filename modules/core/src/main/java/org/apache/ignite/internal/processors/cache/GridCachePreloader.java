@@ -245,5 +245,8 @@ public interface GridCachePreloader {
      */
     public int batchSize();
 
-    public void finishFuture();
+    /**
+     * @param topVer Topology version.
+     */
+    public void finishFuture(AffinityTopologyVersion topVer);
 }

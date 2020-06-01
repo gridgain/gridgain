@@ -1454,11 +1454,22 @@ public class GridDhtPartitionDemander {
             return false;
         }
 
-        public void ownPartitionsAndFinishFuture() {
+        /**
+         * @param topVer Topology version.
+         */
+        public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer) {
+            AffinityTopologyVersion v0 = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
+
+            if (!topVer.equals(v0)) {
+                log.info("DBG: do not own: version changed grp=" + grp.cacheOrGroupName() + ", old=" + topVer + ", new=" + v0);
+
+                return;
+            }
+
             if (onDone(true, null)) {
                 grp.localWalEnabled(true, true);
 
-                grp.topology().ownMoving(topVer);
+                grp.topology().ownMoving(this.topVer);
 
                 if (log.isDebugEnabled())
                     log.debug("Partitions have been scheduled to resend [reason=" +
@@ -1468,7 +1479,8 @@ public class GridDhtPartitionDemander {
                 //ctx.exchange().scheduleResendPartitions();
             }
             else {
-                log.info("DBG: do not own " + topVer);
+                log.info("DBG: do not own, already finished grp=" + grp.cacheOrGroupName() +
+                    ", ver=" + this.topVer + ", result=" + result());
             }
         }
 
@@ -1712,13 +1724,13 @@ public class GridDhtPartitionDemander {
 
                 // Delay owning until checkpoint is finished.
                 if (!grp.localWalEnabled() && !cancelled) {
-                    log.info("DBG: ZZZ " + topVer);
+                    log.info("DBG: Delay owning grp=" + grp.cacheOrGroupName() + ", ver=" + topVer);
 
                     ctx.database().forceCheckpoint(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING + grp.groupId() + "-" + topVer).
                         futureFor(CheckpointState.FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
                         @Override public void apply(IgniteInternalFuture fut) {
                             if (fut.error() == null)
-                                grp.preloader().finishFuture();
+                                grp.preloader().finishFuture(topVer);
                         }
                     });
                 }
@@ -1926,9 +1938,10 @@ public class GridDhtPartitionDemander {
 
     /**
      *
+     * @param topVer Topopolog verion.
      */
-    public void continueChain() {
+    public void continueChain(AffinityTopologyVersion topVer) {
         if (!rebalanceFut.isInitial())
-            rebalanceFut.ownPartitionsAndFinishFuture();
+            rebalanceFut.ownPartitionsAndFinishFuture(topVer);
     }
 }

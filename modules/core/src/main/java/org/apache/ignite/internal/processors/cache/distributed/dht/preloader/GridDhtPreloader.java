@@ -592,12 +592,13 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         busyLock.writeLock().unlock();
     }
 
-    @Override public void finishFuture() {
+    /** {@inheritDoc} */
+    @Override public void finishFuture(AffinityTopologyVersion topVer) {
         if (!enterBusy())
             return;
 
         try {
-            demander.continueChain();
+            demander.continueChain(topVer);
         }
         finally {
             leaveBusy();
