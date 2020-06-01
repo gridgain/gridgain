@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
+import org.apache.ignite.internal.processors.resource.WrappableResource;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.GridTestClockTimer;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -874,6 +875,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * @param node Target node for getting the dependency.
+     * @param clazz Type of required dependency.
+     *
+     * @return Class delegated to the resource manager control or null.
+     */
+    protected <T> T getInstance(IgniteEx node, Class<? extends T> clazz) {
+        return node.context().resource().getInstance(clazz);
+    }
+
+    /**
      * @param cnt Grid count
      * @throws Exception If an error occurs.
      */
@@ -916,6 +927,21 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If anything failed.
      */
     protected IgniteEx startGrid(int idx) throws Exception {
+        return startGrid(getTestIgniteInstanceName(idx));
+    }
+
+    /**
+     * Starts new grid with given index and overriding dependencies.
+     *
+     * @param idx Index of the grid to start.
+     * @param resources List of classes for overriding.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(int idx, WrappableResource... resources) throws Exception {
+        for (WrappableResource resource : resources)
+            IgnitionEx.addTestResource(resource);
+
         return startGrid(getTestIgniteInstanceName(idx));
     }
 

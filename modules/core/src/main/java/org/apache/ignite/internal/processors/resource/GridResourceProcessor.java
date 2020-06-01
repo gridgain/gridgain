@@ -19,7 +19,11 @@ package org.apache.ignite.internal.processors.resource;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.store.CacheStoreSession;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobContext;
@@ -31,10 +35,12 @@ import org.apache.ignite.internal.GridInternalWrapper;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.spi.IgniteSpi;
@@ -55,6 +61,12 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
     /** */
     private final GridResourceInjector[] injectorByAnnotation;
+
+    /** Overriding dependencies. */
+    private final ConcurrentMap<String, WrappableResource> wrappers = new ConcurrentHashMap<>();
+
+    /** Dependencies under control of resource processor. */
+    private final ConcurrentMap<Class, Object> delegates = new ConcurrentHashMap<>();
 
     /**
      * Creates resources processor.
@@ -78,6 +90,8 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+        wrappers.putAll(IgnitionEx.takeTestResources());
+
         if (log.isDebugEnabled())
             log.debug("Started resource processor.");
     }
@@ -85,6 +99,9 @@ public class GridResourceProcessor extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         ioc.undeployAll();
+
+        wrappers.clear();
+        delegates.clear();
 
         if (log.isDebugEnabled())
             log.debug("Stopped resource processor.");
@@ -549,5 +566,35 @@ public class GridResourceProcessor extends GridProcessorAdapter {
         X.println(">>> Resource processor memory stats [igniteInstanceName=" + ctx.igniteInstanceName() + ']');
 
         ioc.printMemoryStats();
+    }
+
+    /**
+     * Delegate the class to under control of resource manager.
+     *
+     * @param clazz type related with instance.
+     * @param instance Instance of delegated class.
+     * @return Original instance or wrapped if wrapper exist.
+     */
+    @IgniteExperimental
+    public <T> T delegate(Class<T> clazz, Object instance) {
+        String name = instance.getClass().getGenericSuperclass().getTypeName();
+
+        T delegate = (T)Optional.ofNullable(wrappers.get(name))
+            .map(o -> o.wrap(instance))
+            .orElse(instance);
+
+        if (delegates.putIfAbsent(clazz, delegate) != null)
+            throw new IgniteException("Instance [type=" + clazz + ", generic=" + name + ", instance=" + instance.getClass() + "] already delegated!");
+
+        return delegate;
+    }
+
+    /**
+     * @param clazz type related with instance.
+     * @return Instance under control of resource manager.
+     */
+    @IgniteExperimental
+    public <T> T getInstance(Class<T> clazz) {
+        return (T)delegates.get(clazz);
     }
 }
