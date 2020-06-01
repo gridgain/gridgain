@@ -436,12 +436,12 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             }
         }
 
-        if (!names.isEmpty() && log.isInfoEnabled()) {
-            log.info("WAL logging was disabled for some cache groups until rebalancing is finished " +
-                "for faster rebalancing. This will cause full rebalancing if a node crashes before rebalancing is " +
-                "completed. To switch off this behavior please use system property " +
-                "-DIGNITE_DISABLE_WAL_DURING_REBALANCING=false " + names);
-        }
+//        if (!names.isEmpty() && log.isInfoEnabled()) {
+//            log.info("WAL logging was disabled for some cache groups until rebalancing is finished " +
+//                "for faster rebalancing. This will cause full rebalancing if a node crashes before rebalancing is " +
+//                "completed. To switch off this behavior please use system property " +
+//                "-DIGNITE_DISABLE_WAL_DURING_REBALANCING=false " + names);
+//        }
     }
 
     /**

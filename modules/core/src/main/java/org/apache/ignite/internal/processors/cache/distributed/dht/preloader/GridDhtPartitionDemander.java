@@ -1468,7 +1468,7 @@ public class GridDhtPartitionDemander {
                 //ctx.exchange().scheduleResendPartitions();
             }
             else {
-                log.info("DBG: do not own");
+                log.info("DBG: do not own " + topVer);
             }
         }
 
@@ -1712,7 +1712,9 @@ public class GridDhtPartitionDemander {
 
                 // Delay owning until checkpoint is finished.
                 if (!grp.localWalEnabled() && !cancelled) {
-                    ctx.database().forceCheckpoint(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING + grp.groupId()).
+                    log.info("DBG: ZZZ " + topVer);
+
+                    ctx.database().forceCheckpoint(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING + grp.groupId() + "-" + topVer).
                         futureFor(CheckpointState.FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
                         @Override public void apply(IgniteInternalFuture fut) {
                             if (fut.error() == null)

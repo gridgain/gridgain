@@ -64,7 +64,7 @@ import org.junit.Test;
  * Проблема2 - стейты поменялись между generate и addAssignment ?
  *
  * */
-public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
+public class  IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
     /** Parts. */
     private static final int PARTS = 128;
 
@@ -191,7 +191,17 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
 
         dbMgr.addCheckpointListener(new DbCheckpointListener() {
             @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
-                if (ctx.progress().reason().startsWith(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING)) {
+                // No-op.
+            }
+
+            @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                // No-op.
+            }
+
+            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                String reason = ctx.progress().reason();
+
+                if (reason != null && reason.startsWith(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING)) {
                     enableDurabilityCPStartLatch.countDown();
 
                     try {
@@ -200,14 +210,6 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
                         fail(X.getFullStackTrace(e));
                     }
                 }
-            }
-
-            @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
-                // No-op.
-            }
-
-            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
-                // No-op.
             }
         });
 
@@ -225,6 +227,20 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
 
         grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+//                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
+//                    topInitLatch.countDown();
+//
+//                    try {
+//                        assertTrue(U.await(enableDurabilityCPStartLatch, 20_000, TimeUnit.MILLISECONDS));
+//                    } catch (IgniteInterruptedCheckedException e) {
+//                        fail(X.getFullStackTrace(e));
+//                    }
+//
+//                    System.out.println();
+//                }
+            }
+
+            @Override public void onDoneBeforeTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
                 if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
                     topInitLatch.countDown();
 
@@ -233,6 +249,8 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
                     } catch (IgniteInterruptedCheckedException e) {
                         fail(X.getFullStackTrace(e));
                     }
+
+                    System.out.println();
                 }
             }
 
