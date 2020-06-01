@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.concurrent.TimeUnit;
 import javax.cache.Cache;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -1166,6 +1167,17 @@ public interface GridCacheEntryEx {
      * Unlocks entry previously locked by {@link GridCacheEntryEx#lockEntry()}.
      */
     public void unlockEntry();
+
+    /**
+     * Locks entry to protect from concurrent access.
+     * Intended to be used instead of inherent java synchronization.
+     * This allows to separate locking from unlocking in time and/or code units.
+     *
+     * @see GridCacheEntryEx#unlockEntry().
+     *
+     * @param timeout period of waiting in millis;
+     */
+    public void tryLockEntry(long timeout) throws InterruptedException;
 
     /**
      * Tests whether the entry is locked currently.

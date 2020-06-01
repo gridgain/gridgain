@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -105,6 +106,7 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_EXPIRED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_LOCKED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
@@ -130,6 +132,15 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 @SuppressWarnings({"TooBroadScope"})
 public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter implements GridCacheEntryEx {
     /** */
+    public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
+
+    /** Entry lock time awaiting. */
+    public static final long ENTRY_LOCK_TIMEOUT = getLong("ENTRY_LOCK_TIMEOUT", 1000);
+
+    /** Empty string. */
+    protected static final String EMPTY_STRING = "";
+
+    /** */
     private static final byte IS_DELETED_MASK = 0x01;
 
     /** */
@@ -137,9 +148,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** */
     private static final byte IS_EVICT_DISABLED = 0x04;
-
-    /** */
-    public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
     /**
      * NOTE
@@ -5041,6 +5049,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
+    @Override public void tryLockEntry(long timeout) throws InterruptedException {
+        lock.tryLock(timeout, TimeUnit.MILLISECONDS);
+    }
+
+    /** {@inheritDoc} */
     @Override public void unlockEntry() {
         lock.unlock();
     }
@@ -5088,7 +5101,19 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheMapEntry.class, this);
+        try {
+            tryLockEntry(ENTRY_LOCK_TIMEOUT);
+
+            try {
+                return S.toString(GridCacheMapEntry.class, this);
+            }
+            finally {
+                unlockEntry();
+            }
+        }
+        catch (InterruptedException e) {
+            return EMPTY_STRING;
+        }
     }
 
     /** */
