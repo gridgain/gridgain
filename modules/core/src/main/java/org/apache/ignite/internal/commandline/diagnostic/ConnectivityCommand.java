@@ -64,7 +64,6 @@ public class ConnectivityCommand implements Command<Void> {
                 clientCfg
             );
         }
-        ;
 
         printResult(result);
 

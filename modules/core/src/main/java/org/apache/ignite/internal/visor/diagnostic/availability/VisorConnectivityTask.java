@@ -86,16 +86,16 @@ public class VisorConnectivityTask
                     if (node.nodes().isEmpty())
                         return ConnectivityStatus.MISSING;
 
-                    String res;
+                    boolean res;
 
                     try {
-                        res = ignite.compute(node).call(new CheckNodesCallable());
+                        res = ignite.configuration().getCommunicationSpi().ping(node.node());
                     }
                     catch (IgniteException e) {
                         return ConnectivityStatus.UNAVAILABLE;
                     }
 
-                    if (!"OK".equals(res))
+                    if (!res)
                         return ConnectivityStatus.UNAVAILABLE;
 
                     return ConnectivityStatus.OK;

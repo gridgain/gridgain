@@ -113,6 +113,11 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isOutgoingConnection() {
+        return true;
+    }
+
+    /** {@inheritDoc} */
     @Override public synchronized void sendMessage(byte[] data, int len) throws IgniteCheckedException {
         if (closed())
             throw new IgniteCheckedException("Communication client was closed: " + this);

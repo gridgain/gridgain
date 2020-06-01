@@ -41,13 +41,18 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     /** Logger. */
     private final IgniteLogger log;
 
+    /** Does client has outgoing connection. */
+    private final boolean isOutgoingConnection;
+
     /**
      * @param connIdx Connection index.
+     * @param isOutgoingConnection Does client has outgoing connection.
      * @param ses Session.
      * @param log Logger.
      */
     public GridTcpNioCommunicationClient(
         int connIdx,
+        boolean isOutgoingConnection,
         GridNioSession ses,
         IgniteLogger log
     ) {
@@ -56,6 +61,7 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
         assert ses != null;
         assert log != null;
 
+        this.isOutgoingConnection = isOutgoingConnection;
         this.ses = ses;
         this.log = log;
     }
@@ -133,6 +139,11 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     /** {@inheritDoc} */
     @Override public boolean async() {
         return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isOutgoingConnection() {
+        return isOutgoingConnection;
     }
 
     /** {@inheritDoc} */

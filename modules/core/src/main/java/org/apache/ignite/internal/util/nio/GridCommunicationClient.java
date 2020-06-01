@@ -106,4 +106,11 @@ public interface GridCommunicationClient {
      * @return Connection index.
      */
     public int connectionIndex();
+
+    /**
+     *
+     * @return {@code True} if this client has outgoing connection
+     */
+    public boolean isOutgoingConnection();
+
 }

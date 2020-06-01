@@ -18,6 +18,7 @@ package org.apache.ignite.spi.communication;
 
 import java.io.Serializable;
 import java.util.Collection;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -107,4 +108,10 @@ public interface CommunicationSpi<T extends Serializable> extends IgniteSpi {
      * @param lsnr Listener to set or {@code null} to unset the listener.
      */
     public void setListener(CommunicationListener<T> lsnr);
+
+    default boolean ping(ClusterNode node) {
+        // no-op
+        return true;
+    }
+
 }
