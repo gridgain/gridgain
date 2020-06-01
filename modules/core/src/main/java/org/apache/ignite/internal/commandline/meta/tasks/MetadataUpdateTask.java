@@ -16,35 +16,37 @@
 
 package org.apache.ignite.internal.commandline.meta.tasks;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
+import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes;
-import org.apache.ignite.internal.commandline.meta.subcommands.MetadataListCommand;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataUpdateCommand;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Task for {@link MetadataListCommand} command.
+ * Task for {@link MetadataUpdateCommand} command.
  */
 @GridInternal
-public class MetadataUpdateTask extends VisorMultiNodeTask<MetadataTypeArgs, MetadataListResult, MetadataListResult> {
+public class MetadataUpdateTask extends VisorMultiNodeTask<MetadataMarshalled, MetadataMarshalled, MetadataMarshalled> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<MetadataTypeArgs, MetadataListResult> job(MetadataTypeArgs arg) {
-        return new MetadataListJob(arg, debug);
+    @Override protected VisorJob<MetadataMarshalled, MetadataMarshalled> job(MetadataMarshalled arg) {
+        return new MetadataUpdateJob(arg, debug);
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override protected MetadataListResult reduce0(List<ComputeJobResult> results) {
+    @Nullable @Override protected MetadataMarshalled reduce0(List<ComputeJobResult> results) {
         if (results.isEmpty())
             throw new IgniteException("Empty job results");
 
@@ -60,7 +62,7 @@ public class MetadataUpdateTask extends VisorMultiNodeTask<MetadataTypeArgs, Met
     /**
      * Job for {@link CheckIndexInlineSizes} command.
      */
-    private static class MetadataListJob extends VisorJob<MetadataTypeArgs, MetadataListResult> {
+    private static class MetadataUpdateJob extends VisorJob<MetadataMarshalled, MetadataMarshalled> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -68,29 +70,32 @@ public class MetadataUpdateTask extends VisorMultiNodeTask<MetadataTypeArgs, Met
          * @param arg Argument.
          * @param debug Debug.
          */
-        protected MetadataListJob(@Nullable MetadataTypeArgs arg, boolean debug) {
+        protected MetadataUpdateJob(@Nullable MetadataMarshalled arg, boolean debug) {
             super(arg, debug);
         }
 
         /** {@inheritDoc} */
-        @Override protected MetadataListResult run(@Nullable MetadataTypeArgs arg) throws IgniteException {
-            ignite.context().security().authorize(null, SecurityPermission.ADMIN_OPS);
+        @Override protected MetadataMarshalled run(@Nullable MetadataMarshalled arg) throws IgniteException {
+            ignite.context().security().authorize(null, SecurityPermission.ADMIN_METADATA_OPS);
 
             assert Objects.nonNull(arg);
 
-            int typeId;
+            byte[] marshalled = arg.metadataMarshalled();
 
-            if (arg.typeId() != null)
-                typeId = arg.typeId();
-            else
-                typeId = ignite.context().cacheObjects().typeId(arg.typeName());
+            try {
+                BinaryMetadata meta = U.unmarshal(
+                    ignite.context(),
+                    marshalled,
+                    U.resolveClassLoader(ignite.context().config()));
 
-            MetadataListResult res = new MetadataListResult(Collections.singleton(
-                ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata(typeId)));
+                ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryContext()
+                    .updateMetadata(meta.typeId(), meta, false);
 
-            ignite.context().cacheObjects().removeType(typeId);
-
-            return res;
+                return new MetadataMarshalled(null, meta);
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
         }
     }
 }

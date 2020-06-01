@@ -84,7 +84,10 @@ public enum SecurityPermission {
     GET_QUERY_VIEWS,
 
     /** Permission to execute KILL QUERY command.*/
-    KILL_QUERY;
+    KILL_QUERY,
+
+    /** Administration operation with cluster metadata (REMOVE, UPDATE). */
+    ADMIN_METADATA_OPS;
 
     /** Enumerated values. */
     private static final SecurityPermission[] VALS = values();

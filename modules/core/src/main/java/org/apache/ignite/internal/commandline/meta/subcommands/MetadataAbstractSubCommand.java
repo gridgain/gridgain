@@ -19,6 +19,8 @@ package org.apache.ignite.internal.commandline.meta.subcommands;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
@@ -32,6 +34,9 @@ public abstract class MetadataAbstractSubCommand<
     MetadataArgsDto extends IgniteDataTransferObject,
     MetadataResultDto extends IgniteDataTransferObject
 > implements Command<MetadataArgsDto> {
+    /** Filesystem. */
+    protected static final FileSystem FS = FileSystems.getDefault();
+
     /** */
     private MetadataArgsDto args;
 

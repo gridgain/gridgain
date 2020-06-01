@@ -66,7 +66,13 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     }
 
     /**
-     *
+     * Check the command '--meta details'.
+     * Steps:
+     * - Creates binary two types for a test (by BinaryObjectBuilder) with several fields and shemas;
+     * - execute the command '--meta details' for the type Type0 by name
+     * - check metadata print.
+     * - execute the command '--meta details' for the type Type0 by type ID on different formats.
+     * - check metadata print.
      */
     @Test
     public void testMetadataDetails() {

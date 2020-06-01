@@ -16,45 +16,76 @@
 
 package org.apache.ignite.internal.commandline.meta.subcommands;
 
-import java.util.Arrays;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import org.apache.ignite.internal.binary.BinaryMetadata;
-import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList;
-import org.apache.ignite.internal.commandline.meta.tasks.MetadataListResult;
-import org.apache.ignite.internal.commandline.meta.tasks.MetadataInfoTask;
+import org.apache.ignite.internal.commandline.meta.tasks.MetadataMarshalled;
+import org.apache.ignite.internal.commandline.meta.tasks.MetadataRemoveTask;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
-import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+/**
+ *
+ */
+public class MetadataRemoveCommand
+    extends MetadataAbstractSubCommand<MetadataTypeArgs, MetadataMarshalled> {
+    /** Output file name. */
+    private static String OPT_OUT_FILE_NAME = "--out";
 
-/** */
-public class MetadataDetailsCommand
-    extends MetadataAbstractSubCommand<MetadataTypeArgs, MetadataListResult>
-{
+    /** Output file. */
+    private Path outFile;
+
     /** {@inheritDoc} */
     @Override protected String taskName() {
-        return MetadataInfoTask.class.getName();
+        return MetadataRemoveTask.class.getName();
     }
 
     /** {@inheritDoc} */
     @Override public MetadataTypeArgs parseArguments0(CommandArgIterator argIter) {
-        return MetadataTypeArgs.parseArguments(argIter);
+        outFile = null;
+
+        MetadataTypeArgs argType = MetadataTypeArgs.parseArguments(argIter);
+
+        while (argIter.hasNextSubArg() && outFile == null) {
+            String opt = argIter.nextArg("");
+
+            if (OPT_OUT_FILE_NAME.equalsIgnoreCase(opt)) {
+                String fileName = argIter.nextArg("output file name");
+
+                outFile = FS.getPath(fileName);
+            }
+        }
+
+        if (outFile != null) {
+            try (OutputStream os = Files.newOutputStream(outFile)) {
+                os.close();
+
+                Files.delete(outFile);
+            }
+            catch (IOException e) {
+                throw new IllegalArgumentException("Cannot write to output file " + outFile +
+                    ". Error: " + e.toString(), e);
+            }
+        }
+
+        return argType;
     }
 
     /** {@inheritDoc} */
-    @Override protected MetadataListResult execute0(
+    @Override protected MetadataMarshalled execute0(
         GridClientConfiguration clientCfg,
         GridClient client
     ) throws Exception {
@@ -78,51 +109,42 @@ public class MetadataDetailsCommand
     }
 
     /** {@inheritDoc} */
-    @Override protected void printResult(MetadataListResult res, Logger log) {
+    @Override protected void printResult(MetadataMarshalled res, Logger log) {
         if (res.metadata() == null) {
             log.info("Type not found");
 
             return;
         }
 
-        assert res.metadata().size() == 1 : "Unexpected  metadata results: " + res.metadata();
+        BinaryMetadata m = res.metadata();
 
-        BinaryMetadata m = F.first(res.metadata());
+        if (outFile == null)
+            outFile = FS.getPath(m.typeId() + ".bin");
 
-        log.info("typeId=" + printInt(m.typeId()));
-        log.info("typeName=" + m.typeName());
-        log.info("Fields:");
+        try {
+            storeMeta(res.metadataMarshalled(), outFile);
+        }
+        catch (IOException e) {
+            log.severe("Cannot store removed type'" + m.typeName() + "' to: " + outFile);
+            log.severe(CommandLogger.errorMessage(e));
 
-        final Map<Integer, String> fldMap = new HashMap<>();
-        m.fieldsMap().forEach((name, fldMeta) -> {
-            log.info(INDENT +
-                "name=" + name +
-                ", type=" + BinaryUtils.fieldTypeName(fldMeta.typeId()) +
-                ", fieldId=" + printInt(fldMeta.fieldId()));
+            return;
+        }
 
-            fldMap.put(fldMeta.fieldId(), name);
-        });
-
-        log.info("Schemas:");
-
-        m.schemas().forEach(s ->
-            log.info(INDENT +
-                "schemaId=" + printInt(s.schemaId()) +
-                ", fields=" + Arrays.stream(s.fieldIds())
-                    .mapToObj(fldMap::get)
-                    .collect(Collectors.toList())));
+        log.info("Type '" + m.typeName() + "' is removed. Metadata is stored at: " + outFile);
     }
 
     /**
-     * @param val Integer value.
-     * @return String.
+     *
      */
-    private String printInt(int val) {
-        return "0x" + Integer.toHexString(val).toUpperCase() + " (" + val + ')';
+    private void storeMeta(byte[] marshalledMeta, Path outFile) throws IOException {
+        try (OutputStream os = Files.newOutputStream(outFile)) {
+            os.write(marshalledMeta);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return MetadataSubCommandsList.LIST.text();
+        return MetadataSubCommandsList.REMOVE.text();
     }
 }

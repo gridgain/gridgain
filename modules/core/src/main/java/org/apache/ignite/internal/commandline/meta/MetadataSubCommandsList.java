@@ -20,6 +20,8 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataDetailsCommand;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataHelpCommand;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataListCommand;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataRemoveCommand;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataUpdateCommand;
 import org.jetbrains.annotations.NotNull;
 
 /** */
@@ -29,14 +31,11 @@ public enum MetadataSubCommandsList {
     /** */
     LIST("list", new MetadataListCommand()),
     /** */
-    DETAILS("DETAILS", new MetadataDetailsCommand())
-//    ,
-//    /** */
-//    DETAILS("details", new DrTopologyCommand()),
-//    /** */
-//    UPDATE("update", new DrNodeCommand()),
-//    /** */
-//    REMOVE("remove", new DrCacheCommand())
+    DETAILS("details", new MetadataDetailsCommand()),
+    /** */
+    REMOVE("remove", new MetadataRemoveCommand()),
+    /** */
+    UPDATE("update", new MetadataUpdateCommand())
     ;
 
     /** */

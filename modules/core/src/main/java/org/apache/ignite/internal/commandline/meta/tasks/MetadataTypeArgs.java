@@ -19,6 +19,8 @@ package org.apache.ignite.internal.commandline.meta.tasks;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -26,6 +28,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 public class MetadataTypeArgs extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+
+    /** Type name argument. */
+    private static final String OPT_TYPE_NAME = "--typeName";
+
+    /** Type ID argument. */
+    private static final String OPT_TYPE_ID = "--typeId";
 
     /** Config. */
     private String typeName;
@@ -54,8 +62,11 @@ public class MetadataTypeArgs extends IgniteDataTransferObject {
     }
 
     /** */
-    public Integer typeId() {
-        return typeId;
+    public int typeId(GridKernalContext ctx) {
+        if (typeId != null)
+            return typeId;
+        else
+            return ctx.cacheObjects().typeId(typeName);
     }
 
     /** {@inheritDoc} */
@@ -76,5 +87,37 @@ public class MetadataTypeArgs extends IgniteDataTransferObject {
             typeName = U.readString(in);
         else
             typeId = in.readInt();
+    }
+
+    /**
+     * @param argIter Command line arguments iterator.
+     * @return Metadata type argument.
+     */
+    public static MetadataTypeArgs parseArguments(CommandArgIterator argIter) {
+        String typeName = null;
+        Integer typeId = null;
+
+        while (argIter.hasNextSubArg() && typeName == null && typeId == null) {
+            String optName = argIter.nextArg("Expecting " + OPT_TYPE_NAME + " or " + OPT_TYPE_ID);
+
+            switch (optName) {
+                case OPT_TYPE_NAME:
+                    typeName = argIter.nextArg("type name");
+
+                    break;
+
+                case OPT_TYPE_ID:
+                    typeId = argIter.nextIntArg("typeId");
+
+                    break;
+            }
+        }
+
+        if (typeName == null && typeId == null) {
+            throw new IllegalArgumentException("Type to remove is not specified. " +
+                "Please add one of the options: --typeName <type_name> or --typeId <type_ID>");
+        }
+
+        return new MetadataTypeArgs(typeName, typeId);
     }
 }

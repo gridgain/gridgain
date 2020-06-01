@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataDetailsCommand;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataListCommand;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -29,7 +30,7 @@ import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Task for {@link MetadataListCommand} command.
+ * Task for {@link MetadataListCommand} and {@link MetadataDetailsCommand} commands.
  */
 @GridInternal
 public class MetadataInfoTask extends VisorMultiNodeTask<MetadataTypeArgs, MetadataListResult, MetadataListResult> {
@@ -79,12 +80,7 @@ public class MetadataInfoTask extends VisorMultiNodeTask<MetadataTypeArgs, Metad
             }
             else {
                 // returns specified metadata
-                int typeId;
-
-                if (arg.typeId() != null)
-                    typeId = arg.typeId();
-                else
-                    typeId = ignite.context().cacheObjects().typeId(arg.typeName());
+                int typeId = arg.typeId(ignite.context());
 
                 return new MetadataListResult(Collections.singleton(
                     ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata(typeId)));

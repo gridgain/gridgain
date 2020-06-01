@@ -16,41 +16,38 @@
 
 package org.apache.ignite.internal.commandline.meta.tasks;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
+import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes;
-import org.apache.ignite.internal.commandline.meta.subcommands.MetadataListCommand;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Task for {@link MetadataListCommand} command.
+ * Task for {@link MetadataRemoveTask} command.
  */
 @GridInternal
-public class MetadataRemoveTask extends VisorMultiNodeTask<MetadataTypeArgs, MetadataListResult, MetadataListResult> {
-    /** */
+public class MetadataRemoveTask extends VisorMultiNodeTask<MetadataTypeArgs, MetadataMarshalled, MetadataMarshalled> {
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<MetadataTypeArgs, MetadataListResult> job(MetadataTypeArgs arg) {
-        return new MetadataListJob(arg, debug);
+    @Override protected VisorJob<MetadataTypeArgs, MetadataMarshalled> job(MetadataTypeArgs arg) {
+        return new MetadataRemoveJob(arg, debug);
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override protected MetadataListResult reduce0(List<ComputeJobResult> results) {
-        if (results.isEmpty())
-            throw new IgniteException("Empty job results");
-
-        if (results.size() > 1)
-            throw new IgniteException("Invalid job results: " + results);
-
+    @Nullable @Override protected MetadataMarshalled reduce0(List<ComputeJobResult> results) {
         if (results.get(0).getException() != null)
             throw results.get(0).getException();
         else
@@ -60,37 +57,43 @@ public class MetadataRemoveTask extends VisorMultiNodeTask<MetadataTypeArgs, Met
     /**
      * Job for {@link CheckIndexInlineSizes} command.
      */
-    private static class MetadataListJob extends VisorJob<MetadataTypeArgs, MetadataListResult> {
-        /** */
+    private static class MetadataRemoveJob extends VisorJob<MetadataTypeArgs, MetadataMarshalled> {
+        /**
+         *
+         */
         private static final long serialVersionUID = 0L;
 
         /**
          * @param arg Argument.
          * @param debug Debug.
          */
-        protected MetadataListJob(@Nullable MetadataTypeArgs arg, boolean debug) {
+        protected MetadataRemoveJob(@Nullable MetadataTypeArgs arg, boolean debug) {
             super(arg, debug);
         }
 
         /** {@inheritDoc} */
-        @Override protected MetadataListResult run(@Nullable MetadataTypeArgs arg) throws IgniteException {
-            ignite.context().security().authorize(null, SecurityPermission.ADMIN_OPS);
+        @Override protected MetadataMarshalled run(@Nullable MetadataTypeArgs arg) throws IgniteException {
+            ignite.context().security().authorize(null, SecurityPermission.ADMIN_METADATA_OPS);
 
             assert Objects.nonNull(arg);
 
-            int typeId;
+            int typeId = arg.typeId(ignite.context());
 
-            if (arg.typeId() != null)
-                typeId = arg.typeId();
-            else
-                typeId = ignite.context().cacheObjects().typeId(arg.typeName());
+            BinaryMetadata meta = ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects())
+                .binaryMetadata(typeId);
 
-            MetadataListResult res = new MetadataListResult(Collections.singleton(
-                ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata(typeId)));
+            try {
+                byte[] marshalled = U.marshal(ignite.context(), meta);
 
-            ignite.context().cacheObjects().removeType(typeId);
+                MetadataMarshalled res = new MetadataMarshalled(marshalled, meta);
 
-            return res;
+                ignite.context().cacheObjects().removeType(typeId);
+
+                return res;
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
         }
     }
 }

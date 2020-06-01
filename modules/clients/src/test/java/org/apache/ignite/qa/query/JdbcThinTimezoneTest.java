@@ -246,6 +246,7 @@ public class JdbcThinTimezoneTest extends AbstractIndexingCommonTest {
      */
     private void insertLiteral(String url, final TimeZone tz) throws Exception {
         TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
+
             sql(url, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
                     "VALUES (?, 'literal', CAST(? AS DATE), CAST(? AS TIME), CAST(? AS TIMESTAMP))",
                 Arrays.asList(
