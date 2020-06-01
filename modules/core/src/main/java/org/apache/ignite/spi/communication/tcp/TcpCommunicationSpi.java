@@ -86,6 +86,7 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationDiscoveryEv
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
+import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.RoundRobinConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConfigInitializer;
@@ -638,16 +639,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
         cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
 
-        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
-        attributeNames = new AttributeNames(
-            createSpiAttributeName(ATTR_PAIRED_CONN),
-            createSpiAttributeName(ATTR_SHMEM_PORT),
-            createSpiAttributeName(ATTR_ADDRS),
-            createSpiAttributeName(ATTR_HOST_NAMES),
-            createSpiAttributeName(ATTR_EXT_ADDRS),
-            createSpiAttributeName(ATTR_PORT),
-            createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
-
         this.stateProvider = new ClusterStateProvider(
             ignite,
             locNodeSupplier,
@@ -657,22 +648,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             log,
             igniteExSupplier
         );
-        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
 
-        try {
-            cfg.localHost(U.resolveLocalHost(cfg.localAddress()));
-        }
-        catch (IOException e) {
-            throw new IgniteSpiException("Failed to initialize local address: " + cfg.localAddress(), e);
-        this.stateProvider = new ClusterStateProvider(
-            ignite,
-            locNodeSupplier,
-            this,
-            isStopped,
-            () -> super.getSpiContext(),
-            log,
-            igniteExSupplier
-        );
+        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
 
         try {
             cfg.localHost(U.resolveLocalHost(cfg.localAddress()));
@@ -686,79 +663,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
-        this.srvLsnr = new InboundConnectionHandler(
-            log,
-            cfg,
-            nodeGetter,
-            locNodeSupplier,
-            stateProvider,
-            clientPool,
-            commWorker,
-            connectGate,
-            failureProcessorSupplier,
-            attributeNames,
-            metricsLsnr,
-            nioSrvWrapper,
-            ctxInitLatch,
-            client,
-            igniteExSupplier,
-            new CommunicationListener<Message>() {
-                @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
-                    notifyListener(nodeId, msg, msgC);
-                }
-
-                @Override public void onDisconnected(UUID nodeId) {
-                    if (lsnr != null)
-                        lsnr.onDisconnected(nodeId);
-                }
-            }
-        );
-
-        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ?
-            ((IgniteKernal)ignite).context().timeout() : null;
-
-        this.nioSrvWrapper = new GridNioServerWrapper(
-            log,
-            cfg,
-            timeoutProcessor,
-            attributeNames,
-            tracing,
-            nodeGetter,
-            locNodeSupplier,
-            connectGate,
-            stateProvider,
-            this::getExceptionRegistry,
-            commWorker,
-            ignite.configuration(),
-            this.srvLsnr,
-            getName(),
-            getWorkersRegistry(ignite),
-            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
-            this::createTcpClient
-        );
-
-        this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
-
-        this.clientPool = new ConnectionClientPool(
-            cfg,
-            attributeNames,
-            log,
-            metricsLsnr,
-            locNodeSupplier,
-            nodeGetter,
-            null,
-            getWorkersRegistry(ignite),
-            this,
-            timeoutProcessor,
-            stateProvider,
-            nioSrvWrapper
-        );
-
-        srvLsnr.setClientPool(clientPool);
-        nioSrvWrapper.clientPool(clientPool);
-
-        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
-        final InboundConnectionHandler inboundHandler = new InboundConnectionHandler(
+        InboundConnectionHandler inboundHandler  = new InboundConnectionHandler(
             log,
             cfg,
             nodeGetter,
@@ -788,12 +693,12 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         this.srvLsnr = rp.delegate(IncomingConnectionHandler.class, inboundHandler);
 
-        TimeObjectProcessorWrapper timeObjProcessorWrapper = new TimeObjectProcessorWrapper(stateProvider);
+        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ? ((IgniteKernal)ignite).context().timeout() : null;
 
         this.nioSrvWrapper = rp.delegate(GridNioServerWrapper.class, new GridNioServerWrapper(
             log,
             cfg,
-            timeObjProcessorWrapper,
+            timeoutProcessor,
             attributeNames,
             tracing,
             nodeGetter,
@@ -822,7 +727,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             null,
             getWorkersRegistry(ignite),
             this,
-            timeObjProcessorWrapper,
+            timeoutProcessor,
             stateProvider,
             nioSrvWrapper
         ));
