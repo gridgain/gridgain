@@ -639,6 +639,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             createSpiAttributeName(ATTR_PORT),
             createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
 
+        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
+
         this.stateProvider = new ClusterStateProvider(
             ignite,
             locNodeSupplier,
@@ -648,8 +650,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             log,
             igniteExSupplier
         );
-
-        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
 
         try {
             cfg.localHost(U.resolveLocalHost(cfg.localAddress()));
