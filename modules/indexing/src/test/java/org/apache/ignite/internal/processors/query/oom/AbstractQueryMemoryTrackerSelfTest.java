@@ -157,8 +157,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         QueryMemoryManager memoryManager = memoryManager(grid);
 
         // Reset memory manager.
-        if (memoryManager.reserved() > 0)
-            memoryManager.release(memoryManager.reserved());
+//        if (memoryManager.reserved() > 0)
+//            memoryManager.release(memoryManager.reserved());
     }
 
     /**
