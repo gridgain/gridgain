@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-core</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.7.19</version>
     <url>http://ignite.apache.org</url>
 
     <repositories>
@@ -41,7 +41,7 @@
     </repositories>
 
     <properties>
-        <ignite.update.notifier.product>apache-ignite</ignite.update.notifier.product>
+        <ignite.update.notifier.product>gridgain-community</ignite.update.notifier.product>
         <ignite.control.center.uris>http://localhost:3000,https://control.gridgain.com</ignite.control.center.uris>
 
         <!-- Imports:
