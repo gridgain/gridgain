@@ -34,7 +34,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetricProvider {
     /** Tracker was closed exception. */
-    private static final TrackerWasClosedException TRACKER_WAS_CLOSED_EXCEPTION = new TrackerWasClosedException("Memory tracker has been closed concurrently.");
+    private static final String TRACKER_WAS_CLOSED_MESSAGE = "Memory tracker has been closed concurrently.";
 
     /** Tracker is not closed and not in the middle of the closing process. */
     private static final int STATE_INITIAL = 0;
@@ -121,7 +121,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         assert size >= 0;
 
         if (closed)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         final long reserved0 = reserved.addAndGet(size);
 
@@ -152,7 +152,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     private boolean reserveFromParent(long currentlyReserved) {
         synchronized (lock) {
             if (closed)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             long reservedFromParent0 = reservedFromParent.get();
 
@@ -194,7 +194,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         assert size >= 0;
 
         if (closed)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         if (size == 0 || state == STATE_CLOSED)
             return;
@@ -216,7 +216,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     private void releaseFromParent(long currentlyReserved) {
         synchronized (lock) {
             if (closed)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             long toReleaseFromParent = reservedFromParent.get() - currentlyReserved;
 
@@ -268,7 +268,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         assert size >= 0;
 
         if (closed)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         if (size == 0)
             return;
@@ -285,7 +285,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         assert size >= 0;
 
         if (closed)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         if (size == 0)
             return;
@@ -334,7 +334,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** {@inheritDoc} */
     @Override public void incrementFilesCreated() {
         if (closed)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         if (parent != null)
             parent.incrementFilesCreated();
@@ -345,14 +345,14 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** {@inheritDoc} */
     @Override public H2MemoryTracker createChildTracker() {
         if (state == STATE_CLOSED)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         H2MemoryTracker child = new ChildMemoryTracker(this);
 
         children.add(child);
 
         if (state == STATE_CLOSED)
-            throw TRACKER_WAS_CLOSED_EXCEPTION;
+            throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
         return child;
     }
@@ -400,7 +400,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public boolean reserve(long size) {
             if (state == STATE_CLOSED)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             boolean res;
             try {
@@ -416,7 +416,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public void release(long size) {
             if (state == STATE_CLOSED)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             reserved -= size;
 
@@ -441,7 +441,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public void spill(long size) {
             if (state == STATE_CLOSED)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             parent.spill(size);
 
@@ -452,7 +452,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public void unspill(long size) {
             if (state == STATE_CLOSED)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             parent.unspill(size);
 
@@ -462,7 +462,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public void incrementFilesCreated() {
             if (state == STATE_CLOSED)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             parent.incrementFilesCreated();
         }
@@ -470,7 +470,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public H2MemoryTracker createChildTracker() {
             if (state == STATE_CLOSED)
-                throw TRACKER_WAS_CLOSED_EXCEPTION;
+                throw new TrackerWasClosedException(TRACKER_WAS_CLOSED_MESSAGE);
 
             return parent.createChildTracker();
         }
@@ -485,8 +485,13 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
             if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
                 return;
 
-            parent.release(reserved);
-            parent.unspill(writtenOnDisk);
+            try {
+                parent.release(reserved);
+                parent.unspill(writtenOnDisk);
+            }
+            catch (TrackerWasClosedException ignored) {
+                // NO-OP
+            }
 
             reserved = 0;
             writtenOnDisk = 0;

@@ -60,6 +60,9 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Reserved memory. */
     private long memReserved;
 
+    /** Memory tracker. */
+    private H2MemoryTracker tracker;
+
     /**
      * Construct a local result object.
      */
@@ -81,6 +84,8 @@ public class H2ManagedLocalResult implements LocalResult {
         this.visibleColumnCount = visibleColCnt;
         rowId = -1;
         this.expressions = expressions;
+
+        tracker = ses.memoryTracker();
     }
 
     /**
@@ -94,9 +99,7 @@ public class H2ManagedLocalResult implements LocalResult {
     private boolean hasAvailableMemory(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
 
-        H2MemoryTracker memTracker = session.memoryTracker();
-
-        if (memTracker == null)
+        if (tracker == null)
             return true; // No memory management set.
 
         long memory = calculateMemoryDelta(distinctRowKey, oldRow, row);
@@ -104,9 +107,9 @@ public class H2ManagedLocalResult implements LocalResult {
         boolean hasMemory = true;
 
         if (memory < 0)
-            memTracker.release(-memory);
+            tracker.release(-memory);
         else
-            hasMemory = memTracker.reserve(memory);
+            hasMemory = tracker.reserve(memory);
 
         memReserved += memory;
 
@@ -377,7 +380,7 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
-        session.memoryTracker().release(memReserved);
+        tracker.release(memReserved);
 
         memReserved = 0;
     }
@@ -636,8 +639,6 @@ public class H2ManagedLocalResult implements LocalResult {
         rows = null;
 
         if (memReserved > 0) {
-            H2MemoryTracker tracker = session.memoryTracker();
-
             assert tracker != null;
 
             tracker.release(memReserved);

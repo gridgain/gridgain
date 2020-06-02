@@ -189,10 +189,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /**
      *
      */
-    private void populateData() {
+    protected void populateData() {
         for (int i = 0; i < SMALL_TABLE_SIZE; ++i)
-            // move integers out of H2's integer cache range to make row size more predictable
-            execSql("insert into T VALUES (?, ?, ?)", i + 512, i + 512, UUID.randomUUID().toString());
+            execSql("insert into T VALUES (?, ?, ?)", i, i, UUID.randomUUID().toString());
 
         for (int i = 0; i < BIG_TABLE_SIZE; ++i)
             execSql("insert into K VALUES (?, ?, ?, ?, ?)", i, i, i % 100, i % 100, UUID.randomUUID().toString());

@@ -42,12 +42,21 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void createSchema() {
+    @Override protected void createSchema() {
         execSql("create table T (id int primary key, ref_key int, name varchar) WITH \"PARALLELISM=4\"");
         execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar) WITH \"PARALLELISM=4\"");
         execSql("create index K_IDX on K(indexed)");
         execSql("create index K_GRP_IDX on K(grp_indexed)");
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void populateData() {
+        for (int i = 0; i < SMALL_TABLE_SIZE; ++i)
+            // move integers out of H2's integer cache range to make row size more predictable
+            execSql("insert into T VALUES (?, ?, ?)", i + 512, i + 512, UUID.randomUUID().toString());
+
+        for (int i = 0; i < BIG_TABLE_SIZE; ++i)
+            execSql("insert into K VALUES (?, ?, ?, ?, ?)", i, i, i % 100, i % 100, UUID.randomUUID().toString());
     }
 
     /** {@inheritDoc} */
@@ -120,9 +129,9 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testUnionOfSmallDataSetsWithLargeResult() {
-        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 2 " +
+        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 514 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id > 2 AND T2.id < 4", false);
+            "select * from T as T2, T as T3 where T2.id > 514 AND T2.id < 516", false);
 
         assertEquals(11, localResults.size());
 
@@ -147,9 +156,9 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     @Test
     @Override public void testUnionLargeDataSets() {
         // None of sub-selects fits to memory.
-        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 4 " +
+        checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 516 " +
             "UNION " +
-            "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 6", true);
+            "select * from T as T2, T as T3 where T2.id >= 514 AND T2.id < 518", true);
 
         assertEquals(3, localResults.size());
         // Reduce
