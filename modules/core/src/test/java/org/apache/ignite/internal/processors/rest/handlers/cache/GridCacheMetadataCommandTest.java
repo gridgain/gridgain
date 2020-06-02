@@ -42,6 +42,7 @@ public class GridCacheMetadataCommandTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+        cfg.setManagementThreadPoolSize(2);
 
         return cfg;
     }
@@ -54,6 +55,10 @@ public class GridCacheMetadataCommandTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test for requesting the cache's metadata from multiple threads
+     * in order to detect starvation or deadlock in the mngmt pool caused
+     * by calling other internal tasks within the metadata task.
+     *
      * @throws Exception If failed.
      */
     @Test
