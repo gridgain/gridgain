@@ -54,6 +54,12 @@ public class MetadataRemoveCommand
     }
 
     /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        return "Warning: the command will remove the binary metadata for a type \""
+            + arg().toString() + "\" from cluster.";
+    }
+
+    /** {@inheritDoc} */
     @Override public MetadataTypeArgs parseArguments0(CommandArgIterator argIter) {
         outFile = null;
 

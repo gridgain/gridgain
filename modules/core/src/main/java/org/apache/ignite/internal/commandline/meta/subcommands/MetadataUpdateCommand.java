@@ -49,6 +49,11 @@ public class MetadataUpdateCommand
     }
 
     /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        return "Warning: the command will update the binary metadata at the cluster.";
+    }
+
+    /** {@inheritDoc} */
     @Override public MetadataMarshalled parseArguments0(CommandArgIterator argIter) {
         String opt = argIter.nextArg("--in");
 
