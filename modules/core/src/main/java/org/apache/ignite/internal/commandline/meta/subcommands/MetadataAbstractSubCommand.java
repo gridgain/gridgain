@@ -100,6 +100,9 @@ public abstract class MetadataAbstractSubCommand<
      *
      */
     public static class VoidDto extends IgniteDataTransferObject {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** {@inheritDoc} */
         @Override protected void writeExternalData(ObjectOutput out) throws IOException {
             // No-op.
