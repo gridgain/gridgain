@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.client.GridClient;
@@ -31,6 +32,7 @@ import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList;
+import org.apache.ignite.internal.commandline.meta.tasks.MetadataDropAllThinConnectionsTask;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataMarshalled;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataRemoveTask;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs;
@@ -102,10 +104,19 @@ public class MetadataRemoveCommand
         if (node == null)
             node = compute.balancer().balancedNode(connectableNodes);
 
-        return compute.projection(node).execute(
+        MetadataMarshalled res = compute.projection(node).execute(
             taskName(),
             new VisorTaskArgument<>(node.nodeId(), arg(), false)
         );
+
+        Collection<UUID> allNodes = F.transform(client.compute().nodes(), GridClientNode::nodeId);
+
+        compute.execute(
+            MetadataDropAllThinConnectionsTask.class.getName(),
+            new VisorTaskArgument<VoidDto>(allNodes, false)
+        );
+
+        return res;
     }
 
     /** {@inheritDoc} */

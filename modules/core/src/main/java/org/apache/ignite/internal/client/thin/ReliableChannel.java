@@ -98,14 +98,16 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     /** Channel is closed. */
     private boolean closed;
 
+    /** Fail (disconnect) listeners. */
+    private ArrayList<Runnable> chFailLsnrs = new ArrayList<>();
+
     /**
      * Constructor.
      */
     ReliableChannel(
         Function<ClientChannelConfiguration, ClientChannel> chFactory,
         ClientConfiguration clientCfg,
-        IgniteBinary binary
-    ) throws ClientException {
+        IgniteBinary binary) throws ClientException {
         if (chFactory == null)
             throw new NullPointerException("chFactory");
 
@@ -395,6 +397,8 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
         // when current index was changed and no other wrong channel will be closed by current thread because
         // onChannelFailure checks channel binded to the holder before closing it.
         onChannelFailure(channels[curChIdx], ch);
+
+        chFailLsnrs.forEach(Runnable::run);
     }
 
     /**
@@ -444,6 +448,13 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
         if (affinityAwarenessEnabled && affinityCtx.updateLastTopologyVersion(ch.serverTopologyVersion(),
             ch.serverNodeId()))
             initAllChannelsAsync();
+    }
+
+    /**
+     * @param chFailLsnr Listener for the channel fail (disconnect).
+     */
+    public void addChannelFailListener(Runnable chFailLsnr) {
+        chFailLsnrs.add(chFailLsnr);
     }
 
     /**
