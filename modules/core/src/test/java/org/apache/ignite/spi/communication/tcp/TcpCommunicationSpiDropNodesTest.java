@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -124,7 +123,7 @@ public class TcpCommunicationSpiDropNodesTest extends GridCommonAbstractTest {
             }
         }, EVT_NODE_FAILED);
 
-        U.sleep(1000); // Wait for write timeout and closing idle connections.
+        U.sleep(2000); // Wait for write timeout and closing idle connections.
 
         block = true;
 
