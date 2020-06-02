@@ -91,6 +91,9 @@ public class VisorMemoryMetrics extends VisorDataTransferObject {
     /** */
     private long offHeapUsedSz;
 
+    /** */
+    private long totalUsedPages;
+
     /**
      * Default constructor.
      */
@@ -103,6 +106,7 @@ public class VisorMemoryMetrics extends VisorDataTransferObject {
      */
     public VisorMemoryMetrics(DataRegionMetrics m) {
         name = m.getName();
+        totalUsedPages = m.getTotalUsedPages();
         totalAllocatedPages = m.getTotalAllocatedPages();
         allocationRate = m.getAllocationRate();
         evictionRate = m.getEvictionRate();
@@ -278,9 +282,16 @@ public class VisorMemoryMetrics extends VisorDataTransferObject {
         return offHeapUsedSz;
     }
 
+    /**
+     * @return A total number of pages used for storing the data.
+     */
+    public long getTotalUsedPages() {
+        return totalUsedPages;
+    }
+
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** {@inheritDoc} */
@@ -311,6 +322,9 @@ public class VisorMemoryMetrics extends VisorDataTransferObject {
 
         out.writeLong(offHeapSz);
         out.writeLong(offHeapUsedSz);
+
+        // V4
+        out.writeLong(totalUsedPages);
     }
 
     /** {@inheritDoc} */
@@ -343,6 +357,9 @@ public class VisorMemoryMetrics extends VisorDataTransferObject {
             offHeapSz = in.readLong();
             offHeapUsedSz = in.readLong();
         }
+
+        if (protoVer > V3)
+            totalUsedPages = in.readLong();
     }
 
     /** {@inheritDoc} */
