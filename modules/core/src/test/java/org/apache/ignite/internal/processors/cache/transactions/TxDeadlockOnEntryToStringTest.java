@@ -22,10 +22,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
-import org.apache.ignite.internal.processors.resource.WrappableResource;
+import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.UUIDCollectionMessage;
@@ -36,9 +35,12 @@ import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
 import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.TestDependencyResolver;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import static org.mockito.Matchers.any;
 
 /**
  * GridDhtCacheEntry::toString leads to system "deadlock" on the timeoutWorker.
@@ -46,6 +48,11 @@ import org.junit.Test;
 public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
     /** Test key. */
     private static final int TEST_KEY = 1;
+
+    /**
+     * Mark that incoming connect must be rejected.
+     */
+    private static final AtomicBoolean rejectHandshake = new AtomicBoolean(false);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -64,13 +71,14 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
     @Test
     public void testDeadlockOnTimeoutWorkerAndToString() throws Exception {
         // Setup
-        IgniteEx nearNode = startGrid(0);
-        IgniteEx incomingNode = startGrid(1, new BlockingIncomingHandler());
+        TestDependencyResolver nearDepRslvr = new TestDependencyResolver();
+        IgniteEx nearNode = startGrid(0, nearDepRslvr);
+
+        TestDependencyResolver incomingDepRslvr = new TestDependencyResolver(this::resolve);
+        IgniteEx incomingNode = startGrid(1, incomingDepRslvr);
 
         GridTimeoutProcessor tp = nearNode.context().timeout();
-        ConnectionClientPool pool = getInstance(nearNode, ConnectionClientPool.class);
-
-        BlockingIncomingHandler incomingHandler = (BlockingIncomingHandler)getInstance(incomingNode, IncomingConnectionHandler.class);
+        ConnectionClientPool pool = nearDepRslvr.getDependency(ConnectionClientPool.class);
 
         GridCacheEntryEx ex = getEntry(nearNode, DEFAULT_CACHE_NAME, TEST_KEY);
 
@@ -87,7 +95,7 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
         // Try to do first handshake with hangs, after reconnect handshake should be passed.
         pool.forceClose();
 
-        incomingHandler.rejectHandshake();
+        rejectHandshake.set(true);
 
         nearNode.configuration().getCommunicationSpi().sendMessage(incomingNode.localNode(), UUIDCollectionMessage.of(UUID.randomUUID()));
 
@@ -154,78 +162,35 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Handler makes reject on handshake and delegate logic of work.
+     * The method reference implementation of {@link DependencyResolver}. It adds an additional behavior to {@link
+     * IncomingConnectionHandler}.
+     *
+     * @param instance Delegated instance.
      */
-    private class BlockingIncomingHandler extends IncomingConnectionHandler implements WrappableResource<IncomingConnectionHandler> {
-        /**
-         * Mark that incoming connect must be rejected.
-         */
-        private final AtomicBoolean rejectHandshake = new AtomicBoolean(false);
-        /**
-         * Delegate of original class.
-         */
-        private volatile IncomingConnectionHandler delegate;
+    private <T> T resolve(T instance) {
+        if (instance instanceof IncomingConnectionHandler) {
+            IncomingConnectionHandler hnd = Mockito.spy((IncomingConnectionHandler)instance);
 
-        /** {@inheritDoc} */
-        @Override public void onSessionWriteTimeout(GridNioSession ses) {
-            delegate.onSessionWriteTimeout(ses);
+            Mockito.doAnswer(inv -> {
+                GridNioSession ses = (GridNioSession)inv.getArguments()[0];
+                Message msg = (Message)inv.getArguments()[1];
+
+                if (rejectHandshake.get() && msg instanceof HandshakeMessage2) {
+                    rejectHandshake.set(false);
+
+                    ses.close();
+
+                    return null;
+                }
+
+                hnd.onMessage(ses, msg);
+
+                return null;
+            }).when(hnd).onMessageSent(any(), any());
+
+            return (T)hnd;
         }
 
-        /** {@inheritDoc} */
-        @Override public void onSessionIdleTimeout(GridNioSession ses) {
-            delegate.onSessionIdleTimeout(ses);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onMessageSent(GridNioSession ses, Message msg) {
-            delegate.onMessageSent(ses, msg);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onFailure(FailureType failureType, Throwable failure) {
-            delegate.onFailure(failureType, failure);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onConnected(GridNioSession ses) {
-            delegate.onConnected(ses);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
-            delegate.onDisconnected(ses, e);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onMessage(GridNioSession ses, Message msg) {
-            if (rejectHandshake.get() && msg instanceof HandshakeMessage2) {
-                rejectHandshake.set(false);
-
-                ses.close();
-
-                return;
-            }
-
-            delegate.onMessage(ses, msg);
-        }
-
-        /** {@inheritDoc} */
-        @Override public IncomingConnectionHandler wrap(IncomingConnectionHandler rsrc) {
-            delegate = rsrc;
-
-            return this;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void stop() {
-            delegate.stop();
-        }
-
-        /**
-         * Mark that handshake must be rejected.
-         */
-        void rejectHandshake() {
-            rejectHandshake.set(true);
-        }
+        return instance;
     }
 }

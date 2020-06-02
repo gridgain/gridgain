@@ -691,11 +691,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             }
         );
 
-        this.srvLsnr = rp.delegate(IncomingConnectionHandler.class, inboundHandler);
+        this.srvLsnr = rp.resolve(inboundHandler);
 
         GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ? ((IgniteKernal)ignite).context().timeout() : null;
 
-        this.nioSrvWrapper = rp.delegate(GridNioServerWrapper.class, new GridNioServerWrapper(
+        this.nioSrvWrapper = rp.resolve(new GridNioServerWrapper(
             log,
             cfg,
             timeoutProcessor,
@@ -717,7 +717,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         inboundHandler.setNioSrvWrapper(nioSrvWrapper);
 
-        this.clientPool = rp.delegate(ConnectionClientPool.class, new ConnectionClientPool(
+        this.clientPool = rp.resolve(new ConnectionClientPool(
             cfg,
             attributeNames,
             log,
@@ -732,7 +732,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             nioSrvWrapper
         ));
 
-        inboundHandler.setClientPool(clientPool);
+        ((InboundConnectionHandler)this.srvLsnr).setClientPool(clientPool);
+
         nioSrvWrapper.clientPool(clientPool);
 
         discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);

@@ -33,7 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,8 +84,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
-import org.apache.ignite.internal.processors.resource.WrappableResource;
 import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -221,8 +220,8 @@ public class IgnitionEx {
     /** */
     private static ThreadLocal<Boolean> clientMode = new ThreadLocal<>();
 
-    /** Dependency transfer object. */
-    private static ThreadLocal<Map<String, WrappableResource>> testResources = new ThreadLocal<>();
+    /** Dependency container. */
+    private static ThreadLocal<DependencyResolver> dependencyResolver = new ThreadLocal<>();
 
     /**
      * Enforces singleton.
@@ -1478,29 +1477,21 @@ public class IgnitionEx {
     }
 
     /**
-     * @return map of resources for overriding and clear the map after it.
+     * Sets custom dependency resolver which provide override dependencies.
+     *
+     * @param rslvr Dependency resolver.
      */
-    public static Map<String, WrappableResource> takeTestResources() {
-        Map<String, WrappableResource> resources = Optional.ofNullable(testResources.get()).orElse(Collections.EMPTY_MAP);
-
-        testResources.remove();
-
-        return resources;
+    public static void dependencyResolver(DependencyResolver rslvr) {
+        dependencyResolver.set(rslvr);
     }
 
     /**
-     * @param rsrc Resource.
+     * Custom dependency resolver.
+     *
+     * @return Returens {@code null} if resolver wasn't added.
      */
-    public static void addTestResource(WrappableResource rsrc) {
-        Map<String, WrappableResource> resources = IgnitionEx.testResources.get();
-
-        if(resources == null) {
-            resources = new HashMap<>();
-
-            IgnitionEx.testResources.set(resources);
-        }
-
-        resources.put(rsrc.getClass().getGenericSuperclass().getTypeName(), rsrc);
+    public static DependencyResolver dependencyResolve() {
+        return dependencyResolver.get();
     }
 
     /**

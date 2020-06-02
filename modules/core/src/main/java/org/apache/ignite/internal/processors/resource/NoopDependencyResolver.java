@@ -17,15 +17,11 @@
 package org.apache.ignite.internal.processors.resource;
 
 /**
- * Declare particular wrapper an instance class for {@link GridResourceProcessor}
- * @param <T> Type of wrappable instance.
+ * Noop implementation of dependency resolver. It uses by default.
  */
-public interface WrappableResource<T> {
-    /**
-     * Set delegate of original class.
-     *
-     * @param rsrc wrapped class.
-     * @return return itself.
-     */
-    T wrap(T rsrc);
+public class NoopDependencyResolver implements DependencyResolver {
+    /** {@inheritDoc} */
+    @Override public <T> T resolve(T instance) {
+        return instance;
+    }
 }

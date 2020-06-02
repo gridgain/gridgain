@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp.internal;
-
-import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
-import org.apache.ignite.plugin.extensions.communication.Message;
+package org.apache.ignite.internal.processors.resource;
 
 /**
- * Added stop method to {@link GridNioServerListenerAdapter}
+ * The interface specifies a container of dependencies.
  */
-public abstract class IncomingConnectionHandler extends GridNioServerListenerAdapter<Message> {
+public interface DependencyResolver {
     /**
-     * Stops process of incoming messages.
+     * The method doing resolve input dependency and return original or override class.
+     *
+     * @param instance Input dependency.
+     *
+     * @return Original instance or override.
      */
-    public void stop() {
-        // No-op
-    }
+    <T> T resolve(T instance);
 }

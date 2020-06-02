@@ -955,6 +955,11 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
+    @Override public void tryLockEntry(long timeout) {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean lockedByCurrentThread() {
         return false;
     }

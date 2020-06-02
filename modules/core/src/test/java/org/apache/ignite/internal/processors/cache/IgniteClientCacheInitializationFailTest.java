@@ -31,10 +31,12 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.query.ColumnInformation;
 import org.apache.ignite.internal.processors.query.DummyQueryIndexing;
-import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.TableInformation;
+import org.apache.ignite.testframework.AbstractTestDependencyResolver;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
@@ -113,11 +115,6 @@ public class IgniteClientCacheInitializationFailTest extends GridCommonAbstractT
 
             cfg.setCacheConfiguration(ccfg1, ccfg2, ccfg3);
         }
-        else {
-            GridQueryProcessor.idxCls = FailedIndexing.class;
-
-            cfg.setClientMode(true);
-        }
 
         return cfg;
     }
@@ -176,7 +173,16 @@ public class IgniteClientCacheInitializationFailTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     private void checkCacheInitialization(final String cacheName) throws Exception {
-        Ignite client = grid("client");
+        IgnitionEx.dependencyResolver(new AbstractTestDependencyResolver() {
+            @Override protected <T> T doResolve(T instance) {
+                if(instance instanceof GridQueryIndexing)
+                    return (T) new FailedIndexing();
+
+                return instance;
+            }
+        });
+
+        Ignite client = startClientGrid("client");
 
         checkFailedCache(client, cacheName);
 

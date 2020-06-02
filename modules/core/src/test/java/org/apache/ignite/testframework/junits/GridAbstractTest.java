@@ -81,8 +81,8 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
+import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
-import org.apache.ignite.internal.processors.resource.WrappableResource;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.GridTestClockTimer;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -875,16 +875,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * @param node Target node for getting the dependency.
-     * @param clazz Type of required dependency.
-     *
-     * @return Class delegated to the resource manager control or null.
-     */
-    protected <T> T getInstance(IgniteEx node, Class<? extends T> clazz) {
-        return node.context().resource().getInstance(clazz);
-    }
-
-    /**
      * @param cnt Grid count
      * @throws Exception If an error occurs.
      */
@@ -931,18 +921,22 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * Starts new grid with given index and overriding dependencies.
+     * Starts new grid with given index and overriding {@link DependencyResolver}.
      *
      * @param idx Index of the grid to start.
-     * @param resources List of classes for overriding.
+     * @param rslvr Dependency provider.
      * @return Started grid.
      * @throws Exception If anything failed.
      */
-    protected IgniteEx startGrid(int idx, WrappableResource... resources) throws Exception {
-        for (WrappableResource resource : resources)
-            IgnitionEx.addTestResource(resource);
+    protected IgniteEx startGrid(int idx, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
 
-        return startGrid(getTestIgniteInstanceName(idx));
+        try {
+            return startGrid(getTestIgniteInstanceName(idx));
+        }
+        finally {
+            IgnitionEx.dependencyResolver(rslvr);
+        }
     }
 
     /**
