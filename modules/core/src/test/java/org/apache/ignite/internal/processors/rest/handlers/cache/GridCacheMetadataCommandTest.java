@@ -61,8 +61,8 @@ public class GridCacheMetadataCommandTest extends GridCommonAbstractTest {
      *
      * <p>Steps to reproduce:</p>
      * <ul>
-     *  <li>Start a few server nodes with the small size of the mngmt pool;</li>
-     *  <li>Call the metadata task by requesting REST API from multiple threads;</li>
+     *  <li>Start a few server nodes with the small size of the mngmt pool.</li>
+     *  <li>Call the metadata task by requesting REST API from multiple threads.</li>
      *  <li>Check all requests have finished successfully.</li>
      * </ul>
      *
