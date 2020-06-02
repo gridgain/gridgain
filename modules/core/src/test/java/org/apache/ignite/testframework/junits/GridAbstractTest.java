@@ -935,7 +935,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return startGrid(getTestIgniteInstanceName(idx));
         }
         finally {
-            IgnitionEx.dependencyResolver(rslvr);
+            IgnitionEx.dependencyResolver(null);
         }
     }
 
