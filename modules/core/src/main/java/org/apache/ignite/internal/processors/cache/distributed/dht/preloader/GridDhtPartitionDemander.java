@@ -70,6 +70,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -1739,8 +1740,14 @@ public class GridDhtPartitionDemander {
                     ctx.database().forceCheckpoint(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING + grp.groupId() + "-" + topVer).
                         futureFor(CheckpointState.FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
                         @Override public void apply(IgniteInternalFuture fut) {
-                            if (fut.error() == null)
-                                grp.preloader().finishFuture(topVer); // Safe, captured under cancel lock.
+                            if (fut.error() == null) {
+                                // Avoid possible deadlocks.
+                                ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                                    @Override public void run() {
+                                        grp.preloader().finishFuture(topVer); // Safe, captured under cancel lock.
+                                    }
+                                }, true);
+                            }
                         }
                     });
                 }

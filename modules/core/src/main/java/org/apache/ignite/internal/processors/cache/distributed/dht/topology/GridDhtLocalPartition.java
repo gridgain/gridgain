@@ -732,25 +732,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
         }
 
-        // Try fast eviction.
-        if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
-            if (partState == RENTING && casState(state, EVICTED) || clearingRequested) {
-                clearFuture.finish();
-
-                if (state() == EVICTED && markForDestroy()) {
-                    updateSeqOnDestroy = updateSeq;
-
-                    destroy();
-                }
-
-                if (log.isDebugEnabled() && evictionRequested)
-                    log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
-                        + ", p=" + id + ", state=" + state() + "]");
-
-                return;
-            }
-        }
-
         ctx.evict().evictPartitionAsync(grp, this, EVICTION);
     }
 
@@ -839,6 +820,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Destroys partition data store and invokes appropriate callbacks.
+     * <p>
+     * Should be called by partition eviction manager to avoid deadlocks.
      */
     public void destroy() {
         assert state() == EVICTED : this;
