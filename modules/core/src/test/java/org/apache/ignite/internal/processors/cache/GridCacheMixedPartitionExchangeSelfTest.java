@@ -140,13 +140,13 @@ public class GridCacheMixedPartitionExchangeSelfTest extends GridCommonAbstractT
 
             startGrid(4);
 
-            U.sleep(500);
+            awaitPartitionMapExchange();
 
             finished.set(true);
 
             fut.get();
 
-            AffinityTopologyVersion topVer = new AffinityTopologyVersion(grid(0).cluster().topologyVersion());
+            AffinityTopologyVersion topVer = new AffinityTopologyVersion(grid(0).cluster().topologyVersion(), 1);
 
             assertEquals(29, topVer.topologyVersion());
 
