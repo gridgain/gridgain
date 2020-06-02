@@ -26,12 +26,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.AffinityFunction;
@@ -55,8 +58,10 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
+import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -70,6 +75,9 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
 public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Serializable {
     /** */
     protected boolean pds;
+
+    /** */
+    private final ListeningTestLogger testLog = new ListeningTestLogger(log);
 
     /** */
     private static class RoundRobinVariableSizeAffinityFunction implements AffinityFunction {
@@ -165,6 +173,8 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
             .setAtomicityMode(atomicityMode());
 
         cfg.setCacheConfiguration(cCfg1, cCfg2, cCfg3, cCfg4);
+
+        cfg.setGridLogger(testLog);
 
         if (pds) {
             cfg.setDataStorageConfiguration(new DataStorageConfiguration()
@@ -415,6 +425,61 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
             mxBean0Grp1.get2().<LongMetric>findMetric("TotalAllocatedPages").value() +
             mxBean0Grp2.get2().<LongMetric>findMetric("TotalAllocatedPages").value() +
             mxBean0Grp3.get2().<LongMetric>findMetric("TotalAllocatedPages").value());
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testClientNodePds() throws Exception {
+        checkClientNode(true);
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testClientNodeNoPds() throws Exception {
+        checkClientNode(false);
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    public void checkClientNode(boolean pds) throws Exception {
+        this.pds = pds;
+
+        startGrid(0);
+
+        IgniteEx client = startClientGrid(1);
+
+        if (pds)
+            client.cluster().active(true);
+
+        AtomicReference<Exception> err = new AtomicReference<>();
+
+        Consumer<String> lsnr = new Consumer<String>() {
+            @Override public void accept(String s) {
+                if (s.contains("Exception"))
+                    err.set(new IgniteException("Error was logged: " + s));
+            }
+        };
+
+        testLog.registerListener(lsnr);
+
+        String[] names = new String[] {"group1", "group2", "cache4"};
+
+        for (String name : names) {
+            T2<CacheGroupMetricsMXBean, MetricRegistry> grp1 = cacheGroupMetrics(1, name);
+
+            for (Metric metric : grp1.get2())
+                metric.getAsString();
+        }
+
+        testLog.unregisterListener(lsnr);
+
+        if (err.get() != null)
+            throw err.get();
     }
 
     /**
