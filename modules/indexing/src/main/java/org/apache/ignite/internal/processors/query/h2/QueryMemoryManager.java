@@ -196,12 +196,12 @@ public class QueryMemoryManager implements ManagedGroupByDataFactory {
 
         globalQuota = globalQuota0;
 
-        H2MemoryTracker oldTracker = globalTracker.get();
-
-        if (globalQuota0 > 0 && !(oldTracker instanceof GlobalTrackerWithOomProtection))
-            globalTracker.set(new GlobalTrackerWithOomProtection());
-        else if (globalQuota0 == 0 && !(oldTracker instanceof GlobalTracker))
-            globalTracker.set(new GlobalTracker());
+//        H2MemoryTracker oldTracker = globalTracker.get();
+//
+//        if (globalQuota0 > 0 && !(oldTracker instanceof GlobalTrackerWithOomProtection) && false)
+//            globalTracker.set(new GlobalTrackerWithOomProtection());
+//        else if (globalQuota0 == 0 && !(oldTracker instanceof GlobalTracker) && true)
+        globalTracker.set(new GlobalTracker());
 
         if (log.isInfoEnabled()) {
             log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
