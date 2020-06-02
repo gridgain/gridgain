@@ -5049,8 +5049,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void tryLockEntry(long timeout) throws InterruptedException {
-        lock.tryLock(timeout, TimeUnit.MILLISECONDS);
+    @Override public boolean tryLockEntry(long timeout) {
+        try {
+            return lock.tryLock(timeout, TimeUnit.MILLISECONDS);
+        }
+        catch (InterruptedException ignite) {
+            return false;
+        }
     }
 
     /** {@inheritDoc} */
@@ -5101,9 +5106,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        try {
-            tryLockEntry(ENTRY_LOCK_TIMEOUT);
-
+        if (tryLockEntry(ENTRY_LOCK_TIMEOUT)) {
             try {
                 return S.toString(GridCacheMapEntry.class, this);
             }
@@ -5111,9 +5114,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 unlockEntry();
             }
         }
-        catch (InterruptedException e) {
+        else
             return EMPTY_STRING;
-        }
     }
 
     /** */

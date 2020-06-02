@@ -787,9 +787,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        try {
-            tryLockEntry(ENTRY_LOCK_TIMEOUT);
-
+        if (tryLockEntry(ENTRY_LOCK_TIMEOUT)) {
             try {
                 return S.toString(GridDistributedCacheEntry.class, this, super.toString());
             }
@@ -797,8 +795,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 unlockEntry();
             }
         }
-        catch (InterruptedException e) {
+        else
             return EMPTY_STRING;
-        }
     }
 }

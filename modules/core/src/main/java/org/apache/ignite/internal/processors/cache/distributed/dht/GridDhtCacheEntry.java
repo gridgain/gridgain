@@ -840,9 +840,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        try {
-            tryLockEntry(ENTRY_LOCK_TIMEOUT);
-
+        if (tryLockEntry(ENTRY_LOCK_TIMEOUT)) {
             try {
                 return S.toString(GridDhtCacheEntry.class, this,
                     "part", locPart.id(),
@@ -852,9 +850,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
                 unlockEntry();
             }
         }
-        catch (InterruptedException e) {
+        else
             return EMPTY_STRING;
-        }
     }
 
     /** {@inheritDoc} */
