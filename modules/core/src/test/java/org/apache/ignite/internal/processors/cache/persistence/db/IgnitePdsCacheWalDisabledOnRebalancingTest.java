@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
@@ -41,6 +42,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -48,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -371,11 +374,37 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
         // Blocking fileIO and blockMessagePredicate to block checkpointer and rebalancing for node idx=1.
         useBlockingFileIO = true;
 
+        // Wait for rebalance (all partitions will be in MOVING state until cp is finished).
+        IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+        TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+        spi1.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage) {
+                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
+
+                    return msg0.groupId() == CU.cacheId(CACHE3_NAME);
+                }
+
+                return false;
+            }
+        });
+
+        IgniteInternalFuture<Void> startFut = GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(cfg1);
+
+                return null;
+            }
+        });
+
+        spi1.waitForBlocked();
+
+        startFut.get();
+
         // Enable blocking checkpointer on node idx=1 (see BlockingCheckpointFileIOFactory).
         fileIoBlockingSemaphore.drainPermits();
 
-        // Wait for rebalance (all partitions will be in MOVING state until cp is finished).
-        startGrid(1).cachex(CACHE3_NAME).context().group().preloader().rebalanceFuture().get();
+        spi1.stopBlock(); // Will block before owning partitions for CACHE3_NAME.
 
         startGrid("client");
 

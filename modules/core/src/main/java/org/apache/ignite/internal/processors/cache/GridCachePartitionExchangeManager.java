@@ -3227,26 +3227,26 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             "Reassignment request started for exchange future which didn't change affinity " +
                                 "[exchId=" + exchId + ", fut=" + exchFut + ']';
 
-                        if (fut.hasInapplicableNodesForRebalance() ) {
-                              GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
+                        if (fut.hasInapplicableNodesForRebalance()) {
+                            GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
 
-                              AffinityTopologyVersion lastAffChangedVer = cctx.exchange().
-                                  lastAffinityChangedTopologyVersion(lastFut.topologyVersion());
+                            AffinityTopologyVersion lastAffChangedVer = cctx.exchange().
+                                lastAffinityChangedTopologyVersion(lastFut.topologyVersion());
 
-                             if (fut.topologyVersion().equals(lastAffChangedVer))
-                                  exchFut = fut;
-                             else if (lastAffChangedVer.after(exchId.topologyVersion())) {
+                            if (fut.topologyVersion().equals(lastAffChangedVer))
+                                exchFut = fut;
+                            else if (lastAffChangedVer.after(exchId.topologyVersion())) {
                                 // There is a new exchange which should trigger rebalancing.
                                 // This reassignment request can be skipped.
                                 if (log.isInfoEnabled()) {
                                     log.info("Partitions reassignment request skipped due to affinity was already changed" +
                                         " [reassignTopVer=" + exchId.topologyVersion() +
-                                        ", lastAffChangedTopVer=" + lastAffChangedVer +']');
+                                        ", lastAffChangedTopVer=" + lastAffChangedVer + ']');
                                 }
 
                                 continue;
-                             }
-                         }
+                            }
+                        }
                     }
                     else if (task instanceof ForceRebalanceExchangeTask) {
                         forcePreload = true;

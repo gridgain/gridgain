@@ -21,6 +21,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents information of a progress of a given checkpoint and
@@ -30,7 +31,7 @@ public interface CheckpointProgress {
     /**
      * @return Wakeup reason.
      */
-    public String reason();
+    public @Nullable String reason();
 
     /** */
     public boolean inProgress();

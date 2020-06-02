@@ -2530,6 +2530,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         grp.topology().onExchangeDone(this, grp.affinity().readyAffinity(res), false);
                 }
 
+                // TODO use heuristics to disable.
                 if (changedAffinity())
                     cctx.walState().disableGroupDurabilityForPreloading(res, this);
             }

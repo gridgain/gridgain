@@ -56,6 +56,8 @@ import org.junit.Test;
  *
  * Проблема2 - стейты поменялись между generate и addAssignment ?
  *
+ * TODO add test cancelled sync future, should not preliminary cancel.
+ *
  * */
 public class  IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
     /** Parts. */

@@ -430,7 +430,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             }
 
             if (!hasOwning && !locParts.isEmpty()) {
-                grp.localWalEnabled(false, true);
+                grp.localWalEnabled(false, true); // TODO always persist, no need in flag.
 
                 names.add(grp.cacheOrGroupName());
             }
