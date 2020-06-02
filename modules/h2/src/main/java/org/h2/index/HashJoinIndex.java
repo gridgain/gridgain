@@ -513,6 +513,8 @@ public class HashJoinIndex extends BaseIndex {
             assert session.memoryTracker() != null;
 
             session.memoryTracker().release(memReserved);
+
+            memReserved = 0;
         }
     }
 

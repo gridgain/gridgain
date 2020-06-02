@@ -132,32 +132,41 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
             onQuotaExceeded();
 
             if (reserved0 > reservedFromParent.get() && parent != null)
-                reserveFromParent();
+                reserveFromParent(reserved0);
 
             return false;
         }
 
         if (reserved0 > reservedFromParent.get() && parent != null)
-            return reserveFromParent();
+            return reserveFromParent(reserved0);
 
         return true;
     }
 
     /**
      * Reserves memory from parent tracker.
+     *
+     * @param currentlyReserved Amount of memory currently reserved.
      * @return {@code false} if offloading is needed.
      */
-    private boolean reserveFromParent() {
+    private boolean reserveFromParent(long currentlyReserved) {
         synchronized (lock) {
             if (closed)
                 throw TRACKER_WAS_CLOSED_EXCEPTION;
 
+            long reservedFromParent0 = reservedFromParent.get();
+
+            long diff = currentlyReserved - reservedFromParent0;
+
+            if (diff <= 0) // someone already reserved memory from parent
+                return true;
+
             // If single block size is too small.
-            long reservationSize = Math.max(reserved.get() - reservedFromParent.get(), blockSize);
+            long reservationSize = Math.max(diff, blockSize);
 
             // If we are too close to limit.
             if (quota > 0)
-                reservationSize = Math.min(reservationSize, quota - reservedFromParent.get());
+                reservationSize = Math.min(reservationSize, quota - reservedFromParent0);
 
             if (parent.reserve(reservationSize))
                 reservedFromParent.addAndGet(reservationSize);
@@ -198,18 +207,18 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
             ", toFree=" + size + ']';
 
         if (reservedFromParent.get() - reserved0 > blockSize && parent != null)
-            releaseFromParent();
+            releaseFromParent(reserved0);
     }
 
     /**
      * Releases memory from parent.
      */
-    private void releaseFromParent() {
+    private void releaseFromParent(long currentlyReserved) {
         synchronized (lock) {
             if (closed)
                 throw TRACKER_WAS_CLOSED_EXCEPTION;
 
-            long toReleaseFromParent = reservedFromParent.get() - reserved.get();
+            long toReleaseFromParent = reservedFromParent.get() - currentlyReserved;
 
             if (toReleaseFromParent < blockSize)
                 return;
