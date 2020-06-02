@@ -86,7 +86,6 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationDiscoveryEv
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
-import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.RoundRobinConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConfigInitializer;
@@ -371,7 +370,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     private volatile CommunicationWorker commWorker;
 
     /** Server listener. */
-    private volatile IncomingConnectionHandler srvLsnr;
+    private volatile InboundConnectionHandler srvLsnr;
 
     /** Disco listener. */
     private volatile GridLocalEventListener discoLsnr;
@@ -629,6 +628,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
         final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
 
+        cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
+
         attributeNames = new AttributeNames(
             createSpiAttributeName(ATTR_PAIRED_CONN),
             createSpiAttributeName(ATTR_SHMEM_PORT),
@@ -637,7 +638,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             createSpiAttributeName(ATTR_EXT_ADDRS),
             createSpiAttributeName(ATTR_PORT),
             createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
-        cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
 
         this.stateProvider = new ClusterStateProvider(
             ignite,
@@ -663,7 +663,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
-        InboundConnectionHandler inboundHandler  = new InboundConnectionHandler(
+        InboundConnectionHandler inboundHnd = new InboundConnectionHandler(
             log,
             cfg,
             nodeGetter,
@@ -691,7 +691,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             }
         );
 
-        this.srvLsnr = rp.resolve(inboundHandler);
+        this.srvLsnr = rp.resolve(inboundHnd);
 
         GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ? ((IgniteKernal)ignite).context().timeout() : null;
 
@@ -715,7 +715,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             this::createTcpClient
         ));
 
-        inboundHandler.setNioSrvWrapper(nioSrvWrapper);
+        inboundHnd.setNioSrvWrapper(nioSrvWrapper);
 
         this.clientPool = rp.resolve(new ConnectionClientPool(
             cfg,
@@ -732,7 +732,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             nioSrvWrapper
         ));
 
-        ((InboundConnectionHandler)this.srvLsnr).setClientPool(clientPool);
+        this.srvLsnr.setClientPool(clientPool);
 
         nioSrvWrapper.clientPool(clientPool);
 
@@ -882,7 +882,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             getName()
         );
 
-        inboundHandler.communicationWorker(commWorker);
+        inboundHnd.communicationWorker(commWorker);
         this.nioSrvWrapper.communicationWorker(commWorker);
 
         new IgniteSpiThread(igniteInstanceName, commWorker.name(), log) {

@@ -16,14 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import javax.cache.Cache;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.eviction.EvictableEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;

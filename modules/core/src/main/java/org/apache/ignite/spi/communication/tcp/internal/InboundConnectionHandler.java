@@ -71,7 +71,7 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 /**
  * This class implement NioListener which process handshake stage, and transmit messages to session.
  */
-public class InboundConnectionHandler extends IncomingConnectionHandler {
+public class InboundConnectionHandler extends GridNioServerListenerAdapter<Message> {
     /**
      * Version when client is ready to wait to connect to server (could be needed when client tries to open connection
      * before it starts being visible for server)
