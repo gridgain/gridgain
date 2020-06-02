@@ -30,10 +30,10 @@ public class MetadataTypeArgs extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Type name argument. */
-    private static final String OPT_TYPE_NAME = "--typeName";
+    public static final String OPT_TYPE_NAME = "--typeName";
 
     /** Type ID argument. */
-    private static final String OPT_TYPE_ID = "--typeId";
+    public static final String OPT_TYPE_ID = "--typeId";
 
     /** Config. */
     private String typeName;

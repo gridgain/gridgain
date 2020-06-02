@@ -43,7 +43,7 @@ import org.apache.ignite.internal.visor.VisorTaskArgument;
 public class MetadataRemoveCommand
     extends MetadataAbstractSubCommand<MetadataTypeArgs, MetadataMarshalled> {
     /** Output file name. */
-    private static String OPT_OUT_FILE_NAME = "--out";
+    public static String OPT_OUT_FILE_NAME = "--out";
 
     /** Output file. */
     private Path outFile;

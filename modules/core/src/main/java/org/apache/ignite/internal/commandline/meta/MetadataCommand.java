@@ -20,13 +20,20 @@ import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataRemoveCommand;
+import org.apache.ignite.internal.commandline.meta.subcommands.MetadataUpdateCommand;
+import org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.METADATA;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
+import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.DETAILS;
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.LIST;
+import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.REMOVE;
+import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.UPDATE;
 
 /**
  *
@@ -42,14 +49,38 @@ public class MetadataCommand implements Command<Object> {
         if (!experimentalEnabled())
             return;
 
-        usage(log, "Print metadata command help:",
+        usage(log, "Prints metadata command help:",
             METADATA,
             HELP.toString()
         );
 
-        usage(log, "Print list of binary metadata types:",
+        usage(log, "Prints list of binary metadata types:",
             METADATA,
             LIST.toString()
+        );
+
+        usage(log, "Prints detailed info about specified binary type " +
+                "(the type must be specified by type name or by type ID):",
+            METADATA,
+            DETAILS.toString(),
+            optional(MetadataTypeArgs.OPT_TYPE_ID, "<typeId>"),
+            optional(MetadataTypeArgs.OPT_TYPE_NAME, "<typeName>")
+        );
+
+        usage(log, "Removes the metadata of the specified type from cluster and saves the removed " +
+                "metadata to the specified file. \n" +
+                "If the file name isn't specified the output file name is: '<typeId>.bin'",
+            METADATA,
+            REMOVE.toString(),
+            optional(MetadataTypeArgs.OPT_TYPE_ID, "<typeId>"),
+            optional(MetadataTypeArgs.OPT_TYPE_NAME, "<typeName>"),
+            optional(MetadataRemoveCommand.OPT_OUT_FILE_NAME, "<fileName>")
+        );
+
+        usage(log, "Updates cluster metadata from specified file (file name is required)",
+            METADATA,
+            UPDATE.toString(),
+            MetadataUpdateCommand.OPT_IN_FILE_NAME, "<fileName>"
         );
     }
 
