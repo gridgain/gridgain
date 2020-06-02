@@ -20,6 +20,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -51,7 +53,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.KB;
 /**
  * Query memory manager.
  */
-public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFactory {
+public class QueryMemoryManager implements ManagedGroupByDataFactory {
     /**
      *  Spill directory path. Spill directory is used for the disk offloading
      *  of intermediate results of the heavy queries.
@@ -108,11 +110,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     private volatile boolean offloadingEnabled;
 
-    /** Memory reserved by running queries. */
-    private final AtomicLong reserved = new AtomicLong();
-
     /** Factory to provide I/O interface for data storage files */
     private final TrackableFileIoFactory fileIOFactory;
+
+    /** Tracker. */
+    private final AtomicReference<H2MemoryTracker> globalTracker = new AtomicReference<>();
 
     /**
      * Constructor.
@@ -141,33 +143,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         A.ensure(blockSize > 0, "Block size must be > 0: blockSize=" + blockSize);
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean reserve(long size) {
-        if (size == 0)
-            return true; // Nothing to do.
-
-        long reserved0 = reserved.addAndGet(size);
-
-        if (globalQuota > 0 && reserved0 >= globalQuota)
-            return onQuotaExceeded(size);
-
-        metrics.trackReserve();
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void release(long size) {
-        assert size >= 0;
-
-        if (size == 0)
-            return; // Nothing to do.
-
-        assert size > 0;
-
-        reserved.accumulateAndGet(size, RELEASE_OP);
-    }
-
     /**
      * Query memory tracker factory method.
      *
@@ -194,27 +169,12 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (maxQryMemory < 0)
             maxQryMemory = 0;
 
-        QueryMemoryTracker tracker = new QueryMemoryTracker(this, maxQryMemory, blockSize, offloadingEnabled);
+        QueryMemoryTracker tracker = new QueryMemoryTracker(globalTracker.get(), maxQryMemory, blockSize, offloadingEnabled);
 
         if (log.isDebugEnabled())
             log.debug("Memory tracker created: " + tracker);
 
         return tracker;
-    }
-
-    /**
-     * Action when quota is exceeded.
-     * @return {@code false} if it is needed to offload data.
-     */
-    public boolean onQuotaExceeded(long size) {
-        reserved.addAndGet(-size);
-
-        if (offloadingEnabled)
-            return false;
-        else {
-            throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
-                IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
-        }
     }
 
     /**
@@ -235,6 +195,13 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         A.ensure(globalQuota0 >= 0, "Sql global memory quota must be >= 0: quotaSize=" + globalQuota0);
 
         globalQuota = globalQuota0;
+
+        H2MemoryTracker oldTracker = globalTracker.get();
+
+        if (globalQuota0 > 0 && !(oldTracker instanceof GlobalTrackerWithOomProtection))
+            globalTracker.set(new GlobalTrackerWithOomProtection());
+        else if (globalQuota0 == 0 && !(oldTracker instanceof GlobalTracker))
+            globalTracker.set(new GlobalTracker());
 
         if (log.isInfoEnabled()) {
             log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
@@ -303,64 +270,9 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         return offloadingEnabled;
     }
 
-    /**
-     * @return Bytes reserved by all queries.
-     */
-    @Override public long reserved() {
-        return reserved.get();
-    }
-
     /** */
     public long memoryLimit() {
         return globalQuota;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void spill(long size) {
-        // NO-OP
-    }
-
-    /** {@inheritDoc} */
-    @Override public void unspill(long size) {
-        // NO-OP
-    }
-
-    /** {@inheritDoc} */
-    @Override public void close() {
-        // Cursors are not tracked and can't be forcibly closed to release resources.
-        // For now, it is ok as neither extra memory is actually hold with MemoryManager nor file descriptors are used.
-        if (log.isDebugEnabled() && reserved.get() != 0)
-            log.debug("Potential memory leak in SQL processor. Some query cursors were not closed or forget to free memory.");
-    }
-
-    /** {@inheritDoc} */
-    @Override public void incrementFilesCreated() {
-        // NO-OP
-    }
-
-    /** {@inheritDoc} */
-    @Override public H2MemoryTracker createChildTracker() {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    @Override public long writtenOnDisk() {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    @Override public long totalWrittenOnDisk() {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onChildClosed(H2MemoryTracker child) {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean closed() {
-        throw new UnsupportedOperationException();
     }
 
     /**
@@ -487,5 +399,194 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
             ses.getDatabase().getCompareMode(),
             ses.getDatabase(),
             ses.memoryTracker());
+    }
+
+    /**
+     * @return Amount of memory reserved by global tracker.
+     */
+    public long reserved() {
+        H2MemoryTracker tracker = globalTracker.get();
+
+        return tracker == null ? 0 : tracker.reserved();
+    }
+
+    private class GlobalTracker implements H2MemoryTracker {
+        /** Memory reserved by running queries. */
+        private final LongAdder reserved = new LongAdder();
+
+        /** {@inheritDoc} */
+        @Override public boolean reserve(long size) {
+            if (size == 0)
+                return true; // Nothing to do.
+
+            reserved.add(size);
+
+            metrics.trackReserve();
+
+            return true;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void release(long size) {
+            assert size >= 0;
+
+            if (size == 0)
+                return; // Nothing to do.
+
+            assert size > 0;
+
+            reserved.add(-size);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void spill(long size) {
+            // NO-OP
+        }
+
+        /** {@inheritDoc} */
+        @Override public void unspill(long size) {
+            // NO-OP
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+            // NO-OP
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+            // NO-OP
+        }
+
+        /**
+         * @return Bytes reserved by all queries.
+         */
+        @Override public long reserved() {
+            return reserved.sum();
+        }
+
+        /** {@inheritDoc} */
+        @Override public H2MemoryTracker createChildTracker() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public long writtenOnDisk() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public long totalWrittenOnDisk() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean closed() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onChildClosed(H2MemoryTracker child) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private class GlobalTrackerWithOomProtection implements H2MemoryTracker {
+        /** Memory reserved by running queries. */
+        private final AtomicLong reserved = new AtomicLong();
+
+        /** {@inheritDoc} */
+        @Override public boolean reserve(long size) {
+            if (size == 0)
+                return true; // Nothing to do.
+
+            long reserved0 = reserved.addAndGet(size);
+
+            if (globalQuota > 0 && reserved0 >= globalQuota)
+                return onQuotaExceeded(size);
+
+            metrics.trackReserve();
+
+            return true;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void release(long size) {
+            assert size >= 0;
+
+            if (size == 0)
+                return; // Nothing to do.
+
+            assert size > 0;
+
+            reserved.accumulateAndGet(size, RELEASE_OP);
+        }
+
+        /**
+         * Action when quota is exceeded.
+         * @return {@code false} if it is needed to offload data.
+         */
+        public boolean onQuotaExceeded(long size) {
+            reserved.addAndGet(-size);
+
+            if (offloadingEnabled)
+                return false;
+            else {
+                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
+                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void spill(long size) {
+            // NO-OP
+        }
+
+        /** {@inheritDoc} */
+        @Override public void unspill(long size) {
+            // NO-OP
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+            // NO-OP
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+            // NO-OP
+        }
+
+        /**
+         * @return Bytes reserved by all queries.
+         */
+        @Override public long reserved() {
+            return reserved.get();
+        }
+
+        /** {@inheritDoc} */
+        @Override public H2MemoryTracker createChildTracker() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onChildClosed(H2MemoryTracker child) {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public long writtenOnDisk() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public long totalWrittenOnDisk() {
+            throw new UnsupportedOperationException();
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean closed() {
+            throw new UnsupportedOperationException();
+        }
     }
 }

@@ -250,7 +250,7 @@ public class IgniteConfiguration {
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
     /** Default SQL query global memory quota. */
-    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%";
+    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "0";
 
     /** Default SQL per query memory quota. */
     public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = "0";
