@@ -20,7 +20,7 @@ FROM java:8
 ENV IGNITE_VERSION 2.0.0-SNAPSHOT
 
 # Set IGNITE_HOME variable.
-ENV IGNITE_HOME /opt/ignite/apache-ignite-${IGNITE_VERSION}-bin
+ENV IGNITE_HOME /opt/ignite/gridgain-community-${IGNITE_VERSION}-bin
 
 # Setting a path to an Apache Ignite configuration file. Used by run.sh script below.
 ENV CONFIG_URI ${IGNITE_HOME}/config/example-kube.xml
