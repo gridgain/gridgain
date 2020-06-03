@@ -72,7 +72,7 @@ public class ClusterStateChangeEvent extends EventAdapter {
     private final ClusterState state;
 
     /** Baseline nodes of current baseline topology. */
-    private final Collection<? extends BaselineNode> baselineNodes;
+    private final Collection<BaselineNode> baselineNodes;
 
     /**
      * @param prevState Previous cluster state.
@@ -84,7 +84,7 @@ public class ClusterStateChangeEvent extends EventAdapter {
     public ClusterStateChangeEvent(
         ClusterState prevState,
         ClusterState state,
-        @Nullable Collection<? extends BaselineNode> baselineNodes,
+        @Nullable Collection<BaselineNode> baselineNodes,
         ClusterNode node,
         String msg
     ) {
@@ -117,7 +117,7 @@ public class ClusterStateChangeEvent extends EventAdapter {
      *
      * @return Baseline nodes.
      */
-    public @Nullable Collection<? extends BaselineNode> baselineNodes() {
+    public @Nullable Collection<BaselineNode> baselineNodes() {
         return baselineNodes;
     }
 }

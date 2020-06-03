@@ -109,7 +109,7 @@ public class DiscoveryDataClusterState implements Serializable {
         @Nullable BaselineTopology baselineTopology,
         long activationTime
     ) {
-        return new DiscoveryDataClusterState(null, state, baselineTopology, null, null, activationTime, null, null);
+        return new DiscoveryDataClusterState(null, state, baselineTopology, null, null, activationTime, null);
     }
 
     /**
@@ -143,8 +143,7 @@ public class DiscoveryDataClusterState implements Serializable {
             transitionReqId,
             transitionTopVer,
             activationTime,
-            transitionNodes,
-            prevState.state
+            transitionNodes
         );
     }
 
@@ -156,17 +155,15 @@ public class DiscoveryDataClusterState implements Serializable {
      * @param transitionTopVer State change topology version.
      * @param activationTime Cluster activation time.
      * @param transitionNodes Nodes participating in state change exchange.
-     * @param prevClusterState Nodes participating in state change exchange.
      */
     private DiscoveryDataClusterState(
-        DiscoveryDataClusterState prevState,
+        @Nullable DiscoveryDataClusterState prevState,
         ClusterState state,
         @Nullable BaselineTopology baselineTopology,
         @Nullable UUID transitionReqId,
         @Nullable AffinityTopologyVersion transitionTopVer,
         long activationTime,
-        @Nullable Set<UUID> transitionNodes,
-        @Nullable ClusterState prevClusterState
+        @Nullable Set<UUID> transitionNodes
     ) {
         assert state != null;
 
@@ -180,7 +177,7 @@ public class DiscoveryDataClusterState implements Serializable {
         this.transitionReqId = transitionReqId;
         this.transitionTopVer = transitionTopVer;
         this.transitionNodes = transitionNodes;
-        this.prevClusterState = prevClusterState;
+        this.prevClusterState = prevState == null ? null : prevState.state;
     }
 
     /**

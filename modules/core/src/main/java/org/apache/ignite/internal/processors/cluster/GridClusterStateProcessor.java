@@ -109,7 +109,6 @@ import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
-import static org.apache.ignite.cluster.ClusterState.lesserOf;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_STATE_ON_START;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
@@ -341,7 +340,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                         }));
                     }
                     else
-                        return new IgniteFinishedFutureImpl<>(lesserOf(globalState.lastState(), globalState.state()));
+                        return new IgniteFinishedFutureImpl<>(clusterStateWithLessFeatures(globalState.lastState(), globalState.state()));
                 }
 
                 transitionRes = globalState.transitionResult();
@@ -657,7 +656,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             U.log(
                 log,
-                "Received " + prettyStr(msg.state()) +
+                "Received " + prettyString(msg.state()) +
                     " request with BaselineTopology" + baseline +
                     " initiator node ID: " + msg.initiatorNodeId()
             );
@@ -722,7 +721,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     fut.setRemaining(nodeIds, topVer.nextMinorVersion());
 
                 if (log.isInfoEnabled())
-                    log.info("Started state transition: " + prettyStr(msg.state()));
+                    log.info("Started state transition: " + prettyString(msg.state()));
 
                 BaselineTopologyHistoryItem bltHistItem = BaselineTopologyHistoryItem.fromBaseline(
                     state.baselineTopology());
@@ -876,8 +875,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return State change error.
      */
     protected IgniteCheckedException concurrentStateChangeError(ClusterState state, ClusterState transitionState) {
-        return new IgniteCheckedException("Failed to " + prettyStr(state) +
-            ", because another state change operation is currently in progress: " + prettyStr(transitionState));
+        return new IgniteCheckedException("Failed to " + prettyString(state) +
+            ", because another state change operation is currently in progress: " + prettyString(transitionState));
     }
 
     /** {@inheritDoc} */
@@ -1166,7 +1165,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (cacheProc.transactions().tx() != null || sharedCtx.lockedTopologyVersion(null) != null) {
             return new GridFinishedFuture<>(
-                new IgniteCheckedException("Failed to " + prettyStr(state) +
+                new IgniteCheckedException("Failed to " + prettyString(state) +
                     " (must invoke the method outside of an active transaction).")
             );
         }
@@ -1198,8 +1197,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (fut.state != state) {
                 return new GridFinishedFuture<>(
                     new IgniteCheckedException(
-                        "Failed to " + prettyStr(state) +
-                        ", because another state change operation is currently in progress: " + prettyStr(fut.state)
+                        "Failed to " + prettyString(state) +
+                        ", because another state change operation is currently in progress: " + prettyString(fut.state)
                     )
                 );
             }
@@ -1252,18 +1251,18 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         IgniteInternalFuture<?> resFut = wrapStateChangeFuture(startedFut, msg);
 
         try {
-            U.log(log, "Sending " + prettyStr(state) + " request with BaselineTopology " + blt);
+            U.log(log, "Sending " + prettyString(state) + " request with BaselineTopology " + blt);
 
             ctx.discovery().sendCustomEvent(msg);
 
             if (ctx.isStopping()) {
                 startedFut.onDone(
-                    new IgniteCheckedException("Failed to execute " + prettyStr(state) + " request , node is stopping.")
+                    new IgniteCheckedException("Failed to execute " + prettyString(state) + " request , node is stopping.")
                 );
             }
         }
         catch (IgniteCheckedException e) {
-            U.error(log, "Failed to send global state change request: " + prettyStr(state), e);
+            U.error(log, "Failed to send global state change request: " + prettyString(state), e);
 
             startedFut.onDone(e);
         }
@@ -1426,7 +1425,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         U.log(
             log,
-            "Sending " + prettyStr(state) +
+            "Sending " + prettyString(state) +
                 " request from node [id=" + ctx.localNodeId() +
                 ", topVer=" + topVer +
                 ", client=" + ctx.clientNode() +
@@ -1506,7 +1505,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         GridChangeGlobalStateFuture fut = changeStateFuture(req.initiatorNodeId(), req.requestId());
 
         if (fut != null) {
-            IgniteCheckedException e = new IgniteCheckedException("Failed to " + prettyStr(req.state()), null, false);
+            IgniteCheckedException e = new IgniteCheckedException("Failed to " + prettyString(req.state()), null, false);
 
             for (Map.Entry<UUID, Exception> entry : errs.entrySet())
                 e.addSuppressed(entry.getValue());
@@ -1988,7 +1987,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param state Cluster state.
      * @return Cluster state string representation.
      */
-    private static String prettyStr(ClusterState state) {
+    private static String prettyString(ClusterState state) {
         switch (state) {
             case ACTIVE:
                 return "activate cluster";
@@ -2062,6 +2061,36 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      */
     private boolean allNodesSupportsReadOnlyMode() {
         return allNodesSupport(ctx, CLUSTER_READ_ONLY_MODE, SRV_NODES);
+    }
+
+    /**
+     * Gets cluster state with less features of {@code state1} and {@code state2}.
+     * <br/>
+     * Cache operations denied if cluster has state {@link ClusterState#INACTIVE}. In this state cluster has the lesser
+     * number of available features.
+     * <br/>
+     * Cache read operations allowed, but cache updates not if cluster has state
+     * {@link ClusterState#ACTIVE_READ_ONLY}. In this state cluster has more available features than in
+     * {@link ClusterState#INACTIVE} state.
+     * <br/>
+     * In {@link ClusterState#ACTIVE} cluster state the cluster has the biggest number of available features (cache
+     * read, cache update and etc.)
+     *
+     * @param state1 First given state.
+     * @param state2 Second given state.
+     * @return Cluster state with less features of given two states.
+     */
+    public static ClusterState clusterStateWithLessFeatures(ClusterState state1, ClusterState state2) {
+        if (state1 == state2)
+            return state1;
+
+        if (state1 == INACTIVE || state2 == INACTIVE)
+            return INACTIVE;
+
+        if (state1 == ACTIVE_READ_ONLY || state2 == ACTIVE_READ_ONLY)
+            return ACTIVE_READ_ONLY;
+
+        throw new IllegalArgumentException("Unknown cluster states. state1: " + state1 + ", state2: " + state2);
     }
 
     /** {@inheritDoc} */

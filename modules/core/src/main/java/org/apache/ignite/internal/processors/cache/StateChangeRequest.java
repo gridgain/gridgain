@@ -110,7 +110,7 @@ public class StateChangeRequest {
      * @return {@code True} if active state was changed.
      */
     public boolean activeChanged() {
-        return active(prevState) && !active(msg.state()) || !active(prevState) && active(msg.state());
+        return active(prevState) ^ active(msg.state());
     }
 
     /**
