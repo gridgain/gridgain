@@ -219,10 +219,11 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
             if (portStr.contains("..")) {
                 port1 = Integer.parseInt(portStr.substring(0, portStr.indexOf("..")));
                 port2 = Integer.parseInt(portStr.substring(portStr.indexOf("..") + 2, portStr.length()));
-            } else
+            }
+            else
                 port1 = port2 = Integer.parseInt(portStr);
 
-            if (port1 != port2 && port2 < port1 || port1 <= 0 || port2 <= 0)
+            if ((port1 != port2 && port2 < port1) || port1 <= 0 || port2 <= 0)
                 throw new IgniteSpiException(errMsg);
 
             try {
