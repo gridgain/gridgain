@@ -18,19 +18,32 @@ package org.apache.ignite.internal.visor.rebalance;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.compute.ComputeJobContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.apache.ignite.internal.visor.baseline.VisorBaselineNode;
+import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.resources.JobContextResource;
+import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,6 +59,13 @@ public class VisorRebalanceStatusTask extends VisorOneNodeTask<VisorRebalanceSta
     }
 
     private static class VisorRebalanceStatusJob extends VisorJob<VisorRebalanceStatusTaskArg, VisorRebalanceStatusTaskResult> {
+        /** Logger. */
+        @LoggerResource
+        private IgniteLogger log;
+
+        /** Auto-inject job context. */
+        @JobContextResource
+        private ComputeJobContext jobCtx;
 
         /**
          * @param arg Argumants.
@@ -69,6 +89,8 @@ public class VisorRebalanceStatusTask extends VisorOneNodeTask<VisorRebalanceSta
             Map<VisorRebalanceStatusGroupView, Integer> grpViews = new HashMap<>();
 
             int coutOfServers = ignite.cluster().forServers().nodes().size();
+
+            Map<ClusterNode, List<Integer>> checkedCaches = new HashMap<>();
 
             for (CacheGroupContext grp : ignite.context().cache().cacheGroups()) {
                 if (grp.isLocal())
@@ -101,6 +123,48 @@ public class VisorRebalanceStatusTask extends VisorOneNodeTask<VisorRebalanceSta
             res.setRebNodes(rebNodes.stream().map(VisorBaselineNode::new).collect(Collectors.toSet()));
             res.setReplicatedNodeCount(Math.min(minBackups, coutOfServers - rebNodes.size() - 1));
             res.setGroups(grpViews);
+
+            System.out.println("Job context: " + jobCtx);
+
+            return res;
+        }
+    }
+
+    /**
+     * Closure checks, that last checkpoint on applicable for particular groups.
+     */
+    public static class CheckCpHistClosure implements IgniteClosure<List<Integer>, Map<Integer, Boolean>> {
+        /** Logger. */
+        @LoggerResource
+        private IgniteLogger log;
+
+        /** Auto-inject ignite instance. */
+        @IgniteInstanceResource
+        private Ignite ignite;
+
+        /** {@inheritDoc} */
+        @Override public Map<Integer, Boolean> apply(List<Integer> grpIds) {
+            IgniteEx igniteEx = (IgniteEx)ignite;
+
+            Map<Integer, Boolean> res = new HashMap<>();
+
+            if (igniteEx.context().cache().context().database() instanceof GridCacheDatabaseSharedManager) {
+                CheckpointHistory cpHist = ((GridCacheDatabaseSharedManager)igniteEx.context().cache().context().database()).checkpointHistory();
+
+                CheckpointEntry lastCp = cpHist.lastCheckpoint();
+
+                for (Integer grpId: grpIds) {
+                    try {
+                        res.put(grpId, cpHist.isCheckpointApplicableForGroup(grpId, lastCp));
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.warning("Can not check checkpoint for a group [grp=" + grpId + ", " +
+                            " cp=" + lastCp.checkpointId() + ']', e);
+
+                        res.put(grpId, false);
+                    }
+                }
+            }
 
             return res;
         }
