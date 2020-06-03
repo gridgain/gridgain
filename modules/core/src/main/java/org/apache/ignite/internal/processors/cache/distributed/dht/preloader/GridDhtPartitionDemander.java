@@ -1483,9 +1483,11 @@ public class GridDhtPartitionDemander {
         public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer) {
             assert state == RebalanceFutureState.STARTED : this;
 
-            AffinityTopologyVersion v0 = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
+            // Ignore all client exchanges.
+            AffinityTopologyVersion v0 = ctx.exchange().lastAffinityChangedTopologyVersion(topVer);
+            AffinityTopologyVersion v1 = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
 
-            if (!topVer.equals(v0)) {
+            if (!v0.equals(v1)) {
                 log.info("DBG: do not own: version changed grp=" + grp.cacheOrGroupName() + ", old=" + topVer + ", new=" + v0);
 
                 return;

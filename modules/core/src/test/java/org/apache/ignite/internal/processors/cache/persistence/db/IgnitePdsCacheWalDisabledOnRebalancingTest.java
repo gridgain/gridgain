@@ -57,6 +57,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockDemandMessageForGroup;
+
 /**
  * Test scenarios with rebalancing, IGNITE_DISABLE_WAL_DURING_REBALANCING optimization and topology changes
  * such as client nodes join/leave, server nodes from BLT leave/join, server nodes out of BLT join/leave.
@@ -299,23 +301,32 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
 
         // Blocking fileIO and blockMessagePredicate to block checkpointer and rebalancing for node idx=1.
         useBlockingFileIO = true;
-        int groupId = ((IgniteEx) ig0).cachex(CACHE3_NAME).context().groupId();
-        blockMessagePredicate = (node, msg) -> {
-            if (blockRebalanceEnabled.get() && msg instanceof GridDhtPartitionDemandMessage)
-                return ((GridDhtPartitionDemandMessage) msg).groupId() == groupId;
-
-            return false;
-        };
 
         IgniteEx ig1;
         CacheGroupMetricsImpl metrics;
         int locMovingPartsNum;
 
-        // Enable blocking checkpointer on node idx=1 (see BlockingCheckpointFileIOFactory).
-        fileIoBlockingSemaphore.drainPermits();
-
         try {
-            ig1 = startGrid(1);
+            IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+            TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+            spi1.blockMessages(blockDemandMessageForGroup(CU.cacheId(CACHE3_NAME)));
+
+            IgniteInternalFuture<IgniteEx> startFut = GridTestUtils.runAsync(new Callable<IgniteEx>() {
+                @Override public IgniteEx call() throws Exception {
+                    return startGrid(cfg1);
+                }
+            });
+
+            spi1.waitForBlocked();
+
+            ig1 = startFut.get();
+
+            // Enable blocking checkpointer on node idx=1 (see BlockingCheckpointFileIOFactory).
+            fileIoBlockingSemaphore.drainPermits();
+
+            spi1.stopBlock(true, null, false, true);
+
+            doSleep(500);
 
             metrics = ig1.cachex(CACHE3_NAME).context().group().metrics();
             locMovingPartsNum = metrics.getLocalNodeMovingPartitionsCount();
@@ -324,11 +335,12 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
             assertTrue("Expected non-zero value for local moving partitions count on node idx = 1: " +
                     locMovingPartsNum, 0 < locMovingPartsNum && locMovingPartsNum < CACHE3_PARTS_NUM);
 
-            blockRebalanceEnabled.set(true);
 
             // Change baseline topology and release checkpointer to verify
             // that no partitions will be owned after affinity change.
             ig0.cluster().setBaselineTopology(ig1.context().discovery().topologyVersion());
+
+            spi1.waitForBlocked();
         }
         finally {
             fileIoBlockingSemaphore.release(Integer.MAX_VALUE);

@@ -3493,10 +3493,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             // Start rebalancing cache groups chain. Each group will be rebalanced
                             // sequentially one by one e.g.:
                             // ignite-sys-cache -> cacheGroupR1 -> cacheGroupP2 -> cacheGroupR3
+                            long rebId = cnt;
+
                             rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
                                 @Override public void apply(IgniteInternalFuture<Boolean> f) {
                                     U.log(log, "Rebalancing scheduled [order=" + rebList +
                                         ", top=" + finalR.topologyVersion() +
+                                        ", rebalanceId=" + rebId +
                                         ", evt=" + exchId.discoveryEventName() +
                                         ", node=" + exchId.nodeId() + ']');
 
