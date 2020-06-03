@@ -47,6 +47,12 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     /** Incorrect fqnd */
     private static String BAD_FQDN = "bad.domain";
 
+    /** Incorrect ip */
+    private static String BAD_IP = "555.0.0.0";
+
+    /** Incorrect ipv6 */
+    private static String BAD_IP_6 = "[oo00::0000:ooo:ooo:ooo]";
+
     /** local host address */
     private static String LOCAL_HOST = "localhost";
 
@@ -89,34 +95,55 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
         Set<String> addrs = new HashSet<>();
 
         addrs.add(BAD_FQDN);
+        addrs.add(BAD_FQDN + ":47500");
+        addrs.add(BAD_FQDN + ":47501..47502");
+
+        addrs.add(BAD_IP);
+        addrs.add(BAD_IP + ":47500");
+        addrs.add(BAD_IP + ":47501..47502");
+
+        addrs.add(BAD_IP_6);
+        addrs.add(BAD_IP_6 + ":47500");
+        addrs.add(BAD_IP_6 + ":47501..47502");
 
         ipFinder.setAddresses(addrs);
 
-        Collection<InetSocketAddress> resolved1 = ipFinder.getRegisteredAddresses();
+        Collection<InetSocketAddress> resolved = ipFinder.getRegisteredAddresses();
 
-        assertNotNull(resolved1);
+        assertNotNull(resolved);
 
-        InetSocketAddress addr1 = resolved1.iterator().next();
+        //for every host 4 entries (for 0, 47500, 47501, 47502)
+        assertEquals(resolved.size(), 12);
 
-        assertNull(addr1.getAddress());
+        Iterator<InetSocketAddress> it = resolved.iterator();
+
+        System.out.println("Resolved addresses " + resolved);
+
+        while (it.hasNext()) {
+            InetSocketAddress addr = it.next();
+
+            assertNull(addr.getAddress());
+        }
     }
 
     /**
-     * Current test checks that TcpDiscoveryVmIpFinder will return new IP if DNS service will change the FQDn resolution.
+     * Current test checks that TcpDiscoveryVmIpFinder will return new IP if DNS service will change the FQDN resolution.
      *
-     * @throws Exception if failed.
+     * @param fqdn - A fully qualified domain name.
+     * @throws Exception
      */
-    @Test
-    public void testFqdnResolveAfterDnsHostChange() throws Exception {
+    public void fqdnResolveAfterDnsHostChange(String fqdn, int expectedCount) throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Set<String> addrs = new HashSet<>();
 
-        addrs.add(FQDN);
+        addrs.add(fqdn);
 
         ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> resolved1 = ipFinder.getRegisteredAddresses();
+        
+        assertEquals(expectedCount, resolved1.size());
 
         InetSocketAddress addr1 = resolved1.iterator().next();
 
@@ -127,13 +154,48 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         Collection<InetSocketAddress> resolved2 = ipFinder.getRegisteredAddresses();
 
+        assertEquals(expectedCount, resolved2.size());
+
         InetSocketAddress addr2 = resolved2.iterator().next();
 
         log.info("Adrrs1 - " + addr1.getAddress() + " Adrrs2 - " + addr2.getAddress());
 
         assertFalse("Addresses weren't resolved second time. Probably DNS cache has TTL more then 1 min, if yes " +
-            "then please mute this test. Adrrs1 - " + addr1.getAddress() + " Adrrs2 - " + addr2.getAddress(),
+                "then please mute this test. Adrrs1 - " + addr1.getAddress() + " Adrrs2 - " + addr2.getAddress(),
             addr1.equals(addr2));
+    }
+
+    /**
+     * Current test checks that TcpDiscoveryVmIpFinder will return new IP if DNS service will change the FQDN resolution.
+     * There are no ports set, only hostname.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testFqdnResolveAfterDnsHostChange() throws Exception {
+        fqdnResolveAfterDnsHostChange(FQDN, 1);
+    }
+
+    /**
+     * Current test checks that TcpDiscoveryVmIpFinder will return new IP if DNS service will change the FQDN resolution.
+     * Port will be used.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testFqdnWithPortResolveAfterDnsHostChange() throws Exception {
+        fqdnResolveAfterDnsHostChange(FQDN + ":47500", 1);
+    }
+
+    /**
+     * Current test checks that TcpDiscoveryVmIpFinder will return new IP if DNS service will change the FQDN resolution.
+     * Port range will be used,
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testFqdnWithPortRangeResolveAfterDnsHostChange() throws Exception {
+        fqdnResolveAfterDnsHostChange(FQDN + ":47500..47501", 2);
     }
 
     /**
@@ -176,16 +238,15 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
-     * Current test checks that in case if TcpDiscoveryVmIpFinder has FQDN name and additional "registeredAddresses"
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has FQDN name and additional one "registeredAddress"
      * then both of them can be resolved.
      */
-    @Test
-    public void testFqdnResolveAfterDnsHostChangeWithRegisteredAddrs() {
+    public void fqdnResolveWithRegisteredAddrs(String fgdn, int expectedSize, String expectedDomainName) {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Set<String> addrs = new HashSet<>();
 
-        addrs.add(FQDN);
+        addrs.add(fgdn);
 
         ipFinder.setAddresses(addrs);
 
@@ -197,26 +258,85 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         Collection<InetSocketAddress> resolved = ipFinder.getRegisteredAddresses();
 
-        assertTrue(resolved.size() == 2);
+        assertTrue(resolved.size() == expectedSize);
 
         log.info("Resolved addresses are " + resolved);
 
         Iterator<InetSocketAddress> it = resolved.iterator();
 
-        InetSocketAddress addr1 = it.next();
+        while (it.hasNext()) {
+            InetSocketAddress addr = it.next();
 
-        InetSocketAddress addr2 = it.next();
+            assertNotNull(addr);
 
-        assertNotNull(addr1);
+            assertTrue(expectedDomainName.equals(addr.getHostName()) || LOCAL_HOST.equals(addr.getHostName()));
+        }
+    }
 
-        assertNotNull(addr2);
+    /**
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has FQDN name and additional one "registeredAddress"
+     * then both of them can be resolved. There are no ports will be used, only hostname.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testFqdnResolveWithRegisteredAddrs() throws Exception {
+        fqdnResolveWithRegisteredAddrs(FQDN, 2, FQDN);
+    }
 
-        assertTrue(FQDN.equals(addr1.getHostName()) || LOCAL_HOST.equals(addr1.getHostName()));
+    /**
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has MULTI_FQDN (resolved to two ip) name and additional one "registeredAddress"
+     * then both of them can be resolved. There are no ports will be used, only hostname.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testMultiFqdnResolveWithRegisteredAddrs() throws Exception {
+        fqdnResolveWithRegisteredAddrs(MULTI_FQDN, 3, MULTI_FQDN);
+    }
 
-        assertTrue(FQDN.equals(addr2.getHostName()) || LOCAL_HOST.equals(addr2.getHostName()));
+    /**
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has FQDN name and additional one "registeredAddress"
+     * then both of them can be resolved. Port will be used.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testFqdnWithPortResolveWithRegisteredAddrs() throws Exception {
+        fqdnResolveWithRegisteredAddrs(FQDN + ":47500", 2, FQDN);
+    }
 
-        assertFalse("Addresses are the same. Adrrs1 - " + addr1.getAddress() +
-            " Adrrs2 - " + addr2.getAddress(), addr1.equals(addr2));
+    /**
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has MULTI_FQDN (resolved to two ip) name and additional one "registeredAddress"
+     * then both of them can be resolved. Port will be used.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testMultiFqdnWithPortResolveWithRegisteredAddrs() throws Exception {
+        fqdnResolveWithRegisteredAddrs(MULTI_FQDN + ":47500", 3, MULTI_FQDN);
+    }
+
+    /**
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has FQDN name and additional one "registeredAddress"
+     * then both of them can be resolved. Port range will be used.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testFqdnWithPortRangeResolveWithRegisteredAddrs() throws Exception {
+        fqdnResolveWithRegisteredAddrs(FQDN + ":47500..47501", 3, FQDN);
+    }
+
+    /**
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has MULTI_FQDN (resolved to two ip) name and additional one "registeredAddress"
+     * then both of them can be resolved. Port range will be used.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testMultiFqdnWithPortRangeResolveWithRegisteredAddrs() throws Exception {
+        fqdnResolveWithRegisteredAddrs(MULTI_FQDN + ":47500..47501", 5, MULTI_FQDN);
     }
 
     /**
@@ -265,13 +385,12 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
      * Current test checks that if FQDN name can be resolved in several IP addresses at the same time
      * then all of them should be returned.
      */
-    @Test
-    public void testMultiFqdnResolve() {
+    public void multiFqdnResolve(String fqdn) {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Collection<String> addrs = new ArrayList<>();
 
-        addrs.add(MULTI_FQDN);
+        addrs.add(fqdn);
 
         ipFinder.setAddresses(addrs);
 
@@ -295,6 +414,24 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         assertFalse("Addresses are the same. Adrrs1 - " + addr1.getAddress() +
             " Adrrs2 - " + addr2.getAddress(), addr1.equals(addr2));
+    }
+
+    /**
+     * Current test checks that if FQDN name can be resolved in several IP addresses at the same time
+     * then all of them should be returned. There are no ports, only host name
+     */
+    @Test
+    public void testMultiFqdnResolve() {
+        multiFqdnResolve(MULTI_FQDN);
+    }
+
+    /**
+     * Current test checks that if FQDN name can be resolved in several IP addresses at the same time
+     * then all of them should be returned. Only one port will be set.
+     */
+    @Test
+    public void testMultiFqdnWithPortResolve() {
+        multiFqdnResolve(MULTI_FQDN + ":47500");
     }
 
     /**

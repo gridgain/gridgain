@@ -225,7 +225,18 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
 
                     Collection<InetSocketAddress> res = new ArrayList<>();
 
-                    InetAddress[] inetAddresses = InetAddress.getAllByName(addrStr);
+                    InetAddress[] inetAddresses;
+
+                    try{
+                        inetAddresses = InetAddress.getAllByName(addrStr);
+                    }
+                    catch (UnknownHostException e) {
+                        //ignoring
+                        for (int i = port1; i <= port2; i++)
+                            res.add(new InetSocketAddress(addrStr, i));
+
+                        return res;
+                    }
 
                     for (InetAddress curAddr : inetAddresses) {
                         // Upper bound included.
@@ -235,7 +246,7 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
 
                     return res;
                 }
-                catch (IllegalArgumentException | UnknownHostException e) {
+                catch (IllegalArgumentException e) {
                     throw new IgniteSpiException(errMsg, e);
                 }
             }
@@ -243,7 +254,20 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
                 try {
                     int port = Integer.parseInt(portStr);
 
-                    return Collections.singleton(new InetSocketAddress(addrStr, port));
+                    Collection<InetSocketAddress> col = new LinkedHashSet<>();
+
+                    try {
+                        InetAddress[] inetAddresses = InetAddress.getAllByName(addrStr);
+
+                        for (InetAddress addrs : inetAddresses)
+                            col.add(new InetSocketAddress(addrs, port));
+                    }
+                    catch (UnknownHostException ignored) {
+                        //save previous behavior on UnknownHostException
+                        col = Collections.singleton(new InetSocketAddress(addrStr, port));
+                    }
+
+                    return col;
                 }
                 catch (IllegalArgumentException e) {
                     throw new IgniteSpiException(errMsg, e);
