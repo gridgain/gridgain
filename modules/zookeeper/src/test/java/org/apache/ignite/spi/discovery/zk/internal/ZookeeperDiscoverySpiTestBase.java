@@ -720,6 +720,11 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
             @Override public int connectionIndex() {
                 return delegate.connectionIndex();
             }
+
+            /** {@inheritDoc} */
+            @Override public boolean isOutgoingConnection() {
+                return delegate.isOutgoingConnection();
+            }
         }
     }
 

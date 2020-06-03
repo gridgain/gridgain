@@ -673,7 +673,7 @@ public class GridNioServerWrapper {
             GridNioSession ses = createNioSession(node, connIdx);
 
             return ses == null ?
-                null : new GridTcpNioCommunicationClient(connIdx, ses, log);
+                null : new GridTcpNioCommunicationClient(connIdx, true, ses, log);
         }
     }
 

@@ -697,7 +697,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         GridTcpNioCommunicationClient client = null;
 
         if (createClient) {
-            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log);
+            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), false, ses, log);
 
             clientPool.addNodeClient(node, connKey.connectionIndex(), client);
         }

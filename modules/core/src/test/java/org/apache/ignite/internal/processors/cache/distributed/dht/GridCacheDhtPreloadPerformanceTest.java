@@ -34,7 +34,7 @@ import org.junit.Test;
 /**
  * Test cases for partitioned cache {@link GridDhtPreloader preloader}.
  */
-public class GridCacheDhtPreloadPerformanceTest extends GridCommonAbstractTest {
+public class    GridCacheDhtPreloadPerformanceTest extends GridCommonAbstractTest {
     /** */
     private static final int THREAD_CNT = 30;
 

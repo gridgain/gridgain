@@ -32,7 +32,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.lang.IgniteCallable;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -108,18 +107,6 @@ public class VisorConnectivityTask
         @Override public String toString() {
             return S.toString(VisorConnectivityJob.class, this);
         }
-    }
-
-    /**
-     * Simple compute task that just returns string "OK"
-     */
-    private static class CheckNodesCallable implements IgniteCallable<String> {
-
-        /** {@inheritDoc} */
-        @Override public String call() throws Exception {
-            return "OK";
-        }
-
     }
 
 }

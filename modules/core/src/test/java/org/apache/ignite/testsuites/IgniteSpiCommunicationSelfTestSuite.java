@@ -23,6 +23,7 @@ import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConfigSelf
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiLogTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiMultithreadedSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiMultithreadedShmemTest;
+import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiPingTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiRecoveryAckSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiRecoveryFailureDetectionSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiRecoveryNoPairedConnectionsTest;
@@ -71,6 +72,7 @@ import org.junit.runners.Suite;
     GridTcpCommunicationSpiSkipWaitHandshakeOnClientTest.class,
 
     GridTcpCommunicationSpiTcpSelfTest.class,
+    GridTcpCommunicationSpiPingTest.class,
     GridTcpCommunicationSpiTcpNoDelayOffSelfTest.class,
     GridTcpCommunicationSpiShmemSelfTest.class,
 

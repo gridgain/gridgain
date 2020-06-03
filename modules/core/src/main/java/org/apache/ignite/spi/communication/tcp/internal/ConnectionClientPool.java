@@ -165,6 +165,7 @@ public class ConnectionClientPool {
         this.stopping = true;
     }
 
+
     /**
      * Returns existing or just created client to node.
      *
@@ -174,6 +175,19 @@ public class ConnectionClientPool {
      * @throws IgniteCheckedException Thrown if any exception occurs.
      */
     public GridCommunicationClient reserveClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
+        return reserveClient(node, connIdx, false);
+    }
+
+    /**
+     * Returns existing or just created client to node.
+     *
+     * @param node Node to which client should be open.
+     * @param connIdx Connection index.
+     * @param onlyOutgoing {@code True} if we need client with outgoing connection.
+     * @return The existing or just created client.
+     * @throws IgniteCheckedException Thrown if any exception occurs.
+     */
+    public GridCommunicationClient reserveClient(ClusterNode node, int connIdx, boolean onlyOutgoing) throws IgniteCheckedException {
         assert node != null;
         assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
 
@@ -187,6 +201,10 @@ public class ConnectionClientPool {
 
             GridCommunicationClient client = curClients != null && connIdx < curClients.length ?
                 curClients[connIdx] : null;
+
+            if (client != null && !client.isOutgoingConnection() && onlyOutgoing)
+                // The callee requested client with outgoing connection, but client with incoming connection was found
+                client = null;
 
             if (client == null) {
                 if (stopping)

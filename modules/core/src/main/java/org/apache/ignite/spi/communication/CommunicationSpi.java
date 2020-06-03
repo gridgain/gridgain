@@ -109,8 +109,13 @@ public interface CommunicationSpi<T extends Serializable> extends IgniteSpi {
      */
     public void setListener(CommunicationListener<T> lsnr);
 
+    /**
+     * Ping another node
+     * @param node node to ping
+     * @return {@code True} if successfully pinged
+     */
     default boolean ping(ClusterNode node) {
-        // no-op
+        // no-op.
         return true;
     }
 
