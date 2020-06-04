@@ -26,6 +26,7 @@ import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList;
+import org.apache.ignite.internal.commandline.meta.tasks.MetadataInfoTask;
 import org.apache.ignite.internal.commandline.meta.tasks.MetadataListResult;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
@@ -36,7 +37,7 @@ public class MetadataListCommand
 {
     /** {@inheritDoc} */
     @Override protected String taskName() {
-        return MetadataRemoveCommand.class.getName();
+        return MetadataInfoTask.class.getName();
     }
 
     /** {@inheritDoc} */
