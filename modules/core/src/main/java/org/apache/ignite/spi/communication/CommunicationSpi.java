@@ -18,7 +18,6 @@ package org.apache.ignite.spi.communication;
 
 import java.io.Serializable;
 import java.util.Collection;
-import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -114,7 +113,7 @@ public interface CommunicationSpi<T extends Serializable> extends IgniteSpi {
      * @param node node to ping
      * @return {@code True} if successfully pinged
      */
-    default boolean ping(ClusterNode node) {
+    public default boolean ping(ClusterNode node) {
         // no-op.
         return true;
     }
