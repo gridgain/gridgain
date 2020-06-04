@@ -575,17 +575,11 @@ public class IgniteConfiguration {
 
     /** Active on start flag. */
     @Deprecated
-    private boolean activeOnStart = DFLT_ACTIVE_ON_START;
-
-    /** Indicates that activeOnStart property was set explicitly. */
-    private boolean activeOnStartPropSetFlag;
+    private Boolean activeOnStart;
 
     /** Auto-activation flag. */
     @Deprecated
-    private boolean autoActivation = DFLT_AUTO_ACTIVATION;
-
-    /** Indicates that autoActivation property was set explicitly. */
-    private boolean autoActivationPropSetFlag;
+    private Boolean autoActivation;
 
     /** Cluster state on start. */
     private ClusterState clusterStateOnStart;
@@ -657,14 +651,12 @@ public class IgniteConfiguration {
         /*
          * Order alphabetically for maintenance purposes.
          */
-        activeOnStart = cfg.isActiveOnStart();
-        activeOnStartPropSetFlag = cfg.activeOnStartPropSetFlag;
+        activeOnStart = cfg.activeOnStart;
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
-        autoActivation = cfg.isAutoActivationEnabled();
-        autoActivationPropSetFlag = cfg.autoActivationPropSetFlag;
+        autoActivation = cfg.autoActivation;
         binaryCfg = cfg.getBinaryConfiguration();
         clusterStateOnStart = cfg.getClusterStateOnStart();
         dsCfg = cfg.getDataStorageConfiguration();
@@ -2691,7 +2683,7 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public boolean isActiveOnStart() {
-        return activeOnStart;
+        return activeOnStart == null ? DFLT_ACTIVE_ON_START : activeOnStart;
     }
 
     /**
@@ -2712,8 +2704,6 @@ public class IgniteConfiguration {
 
         this.activeOnStart = activeOnStart;
 
-        activeOnStartPropSetFlag = true;
-
         return this;
     }
 
@@ -2732,7 +2722,7 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public boolean isAutoActivationEnabled() {
-        return autoActivation;
+        return autoActivation == null ? DFLT_AUTO_ACTIVATION : autoActivation;
     }
 
     /**
@@ -2749,8 +2739,6 @@ public class IgniteConfiguration {
         U.warn(log, "Property autoActivation deprecated. Use clusterStateOnStart instead.");
 
         this.autoActivation = autoActivation;
-
-        autoActivationPropSetFlag = true;
 
         return this;
     }

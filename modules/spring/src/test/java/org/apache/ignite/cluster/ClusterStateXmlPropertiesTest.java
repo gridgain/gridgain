@@ -38,8 +38,8 @@ public class ClusterStateXmlPropertiesTest extends GridCommonAbstractTest {
     public void testXmlConfigurationWithSettedProperties() throws Exception {
         IgniteConfiguration defaultCfg = new IgniteConfiguration();
 
-        assertFalse(getBooleanFieldFromConfig(defaultCfg, "activeOnStartPropSetFlag"));
-        assertFalse(getBooleanFieldFromConfig(defaultCfg, "autoActivationPropSetFlag"));
+        assertNull(getBooleanFieldFromConfig(defaultCfg, "activeOnStart"));
+        assertNull(getBooleanFieldFromConfig(defaultCfg, "autoActivation"));
         assertTrue(defaultCfg.isActiveOnStart());
         assertTrue(defaultCfg.isAutoActivationEnabled());
 
@@ -47,8 +47,8 @@ public class ClusterStateXmlPropertiesTest extends GridCommonAbstractTest {
             U.resolveIgniteUrl("modules/spring/src/test/config/state/cluster-state.xml")
         ).get1();
 
-        assertTrue(getBooleanFieldFromConfig(cfg, "activeOnStartPropSetFlag"));
-        assertTrue(getBooleanFieldFromConfig(cfg, "autoActivationPropSetFlag"));
+        assertNotNull(getBooleanFieldFromConfig(cfg, "activeOnStart"));
+        assertNotNull(getBooleanFieldFromConfig(cfg, "autoActivation"));
         assertFalse(cfg.isActiveOnStart());
         assertFalse(cfg.isAutoActivationEnabled());
     }
@@ -64,8 +64,8 @@ public class ClusterStateXmlPropertiesTest extends GridCommonAbstractTest {
             U.resolveIgniteUrl("modules/spring/src/test/config/node.xml")
         ).get1();
 
-        assertFalse(getBooleanFieldFromConfig(cfg, "activeOnStartPropSetFlag"));
-        assertFalse(getBooleanFieldFromConfig(cfg, "autoActivationPropSetFlag"));
+        assertNull(getBooleanFieldFromConfig(cfg, "activeOnStart"));
+        assertNull(getBooleanFieldFromConfig(cfg, "autoActivation"));
         assertTrue(cfg.isActiveOnStart());
         assertTrue(cfg.isAutoActivationEnabled());
     }
@@ -77,13 +77,13 @@ public class ClusterStateXmlPropertiesTest extends GridCommonAbstractTest {
      * @param fieldName Name of field.
      * @return Value of field.
      */
-    private boolean getBooleanFieldFromConfig(IgniteConfiguration cfg, String fieldName) throws IllegalAccessException {
+    private Boolean getBooleanFieldFromConfig(IgniteConfiguration cfg, String fieldName) throws IllegalAccessException {
         A.notNull(cfg, "cfg");
         A.notNull(fieldName, "fieldName");
 
         Field field = U.findField(IgniteConfiguration.class, fieldName);
         field.setAccessible(true);
 
-        return field.getBoolean(cfg);
+        return (Boolean)field.get(cfg);
     }
 }

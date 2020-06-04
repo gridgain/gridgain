@@ -471,7 +471,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (inMemoryMode) {
             stateOnStart = cfg.getClusterStateOnStart();
 
-            boolean activeOnStartSet = getBooleanFieldFromConfig(cfg, "activeOnStartPropSetFlag", false);
+            boolean activeOnStartSet = getBooleanFieldFromConfig(cfg, "activeOnStart") != null;
 
             if (activeOnStartSet) {
                 if (stateOnStart != null)
@@ -486,7 +486,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             // Start first node as inactive if persistence is enabled.
             stateOnStart = INACTIVE;
 
-            if (cfg.getClusterStateOnStart() != null && getBooleanFieldFromConfig(cfg, "autoActivationPropSetFlag", false))
+            if (cfg.getClusterStateOnStart() != null && getBooleanFieldFromConfig(cfg, "autoActivation") != null)
                 log.warning("Property `autoActivation` will be ignored due to the property `clusterStateOnStart` is presented.");
         }
 
@@ -2018,40 +2018,37 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * Gets from given config {@code cfg} field with name {@code fieldName} and type boolean.
+     * Gets from given config {@code cfg} field with name {@code fieldName} and type {@link Boolean}.
      *
      * @param cfg Config.
      * @param fieldName Name of field.
-     * @param defaultValue Default value of field, if field is not presented or empty.
-     * @return Value of field, or {@code defaultValue} in case of any errors.
+     * @return Value of field, or {@code null} in case of any errors.
      */
-    private boolean getBooleanFieldFromConfig(IgniteConfiguration cfg, String fieldName, boolean defaultValue) {
+    private Boolean getBooleanFieldFromConfig(IgniteConfiguration cfg, String fieldName) {
         A.notNull(cfg, "cfg");
         A.notNull(fieldName, "fieldName");
 
         Field field = U.findField(IgniteConfiguration.class, fieldName);
 
+        Boolean val = null;
+
         try {
             if (field != null) {
                 field.setAccessible(true);
 
-                boolean val = defaultValue;
-
                 try {
-                    val = field.getBoolean(cfg);
+                    val = (Boolean)field.get(cfg);
                 }
-                catch (IllegalAccessException | IllegalArgumentException | NullPointerException  e) {
+                catch (IllegalAccessException | IllegalArgumentException | NullPointerException | ClassCastException  e) {
                     log.error("Can't get value of field with name " + fieldName + " from config: " + cfg, e);
                 }
-
-                return val;
             }
         }
         catch (SecurityException e) {
             log.error("Can't get field with name " + fieldName + " from config: " + cfg + " due to security reasons", e);
         }
 
-        return defaultValue;
+        return val;
     }
 
     /**
