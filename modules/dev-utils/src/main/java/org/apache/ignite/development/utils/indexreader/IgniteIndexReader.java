@@ -48,20 +48,15 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.development.utils.ProgressPrinter;
 import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.development.utils.arguments.CLIArgument;
 import org.apache.ignite.development.utils.arguments.CLIArgumentParser;
-import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
-import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
@@ -79,7 +74,6 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDat
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
 import org.apache.ignite.internal.processors.cache.tree.RowLinkIO;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
@@ -91,27 +85,19 @@ import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.internal.util.lang.IgnitePair;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.gridgain.grid.internal.processors.cache.database.snapshot.CacheSnapshotMetadata;
-import org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotInputStream;
-import org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotMetadataV2;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Integer.parseInt;
-import static java.lang.Math.log;
-import static java.lang.Math.max;
-import static java.lang.Math.pow;
 import static java.lang.String.format;
-import static java.lang.String.valueOf;
 import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
@@ -134,10 +120,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.itemId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.FILE_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_PREFIX;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getCrc;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getPageId;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
@@ -147,10 +130,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.crc.Fa
 import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
-import static org.gridgain.grid.internal.processors.cache.database.snapshot.GridCacheSnapshotManager.SNAPSHOT_META_FILE_NAME;
-import static org.gridgain.grid.internal.processors.cache.database.snapshot.SnapshotUtils.readSnapshotMetadata;
-import static org.gridgain.grid.persistentstore.snapshot.file.FileDatabaseSnapshotSpi.generateSnapshotDirName;
-import static org.gridgain.grid.persistentstore.snapshot.file.FileSnapshotInputStream.of;
 
 /**
  * Offline reader for index files.
@@ -199,18 +178,6 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Partition count. */
     private final int partCnt;
 
-    /** Directory with data(partitions and index). */
-    private final File dir;
-
-    /** Data storage configuration for {@link FilePageStore}. */
-    private final DataStorageConfiguration dsCfg;
-
-    /** {@link FilePageStore} factory, not used in case of snapshot. */
-    @Nullable private final FileVersionCheckingFactory storeFactory;
-
-    /** Metrics updater. */
-    private final LongAdderMetric allocationTracker = new LongAdderMetric("n", "d");
-
     /** Names of index trees to process. If {@code null}, all are used. */
     @Nullable private final Set<String> indexes;
 
@@ -241,86 +208,60 @@ public class IgniteIndexReader implements AutoCloseable {
     /** */
     private final PageIOProcessor metaPageIOProcessor = new MetaPageIOProcessor();
 
-    /** Simple grid configuration. */
-    @Nullable private final IgniteConfiguration cfg;
-
     /**
      * Constructor.
      *
-     * @param dir Directory with data(partitions and index).
-     * @param snapshot Directory contains snapshot files or not.
      * @param pageSize Page size.
      * @param partCnt Partition count.
-     * @param filePageStoreVer Page store version. If {@code snaphot == true} it is not used.
      * @param indexes Names of index trees to process. If {@code null}, all are used.
      * @param checkParts Check cache data tree in partition files and it's consistency with indexes.
      * @param outputStream Stream for print report.
      * @throws IgniteCheckedException If failed.
      */
     public IgniteIndexReader(
-        File dir,
-        boolean snapshot,
         int pageSize,
         int partCnt,
-        int filePageStoreVer,
         @Nullable String[] indexes,
         boolean checkParts,
-        @Nullable OutputStream outputStream
+        @Nullable OutputStream outputStream,
+        FilePageStoreFactory filePageStoreFactory
     ) throws IgniteCheckedException {
         this.pageSize = pageSize;
         this.partCnt = partCnt;
-        this.dsCfg = new DataStorageConfiguration().setPageSize(pageSize);
-        this.dir = dir;
         this.checkParts = checkParts;
         this.indexes = isNull(indexes) ? null : new HashSet<>(asList(indexes));
-        this.storeFactory = snapshot ? null : storeFactory(filePageStoreVer);
-        this.outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
-        this.outErrStream = outStream;
-        this.cfg = new IgniteConfiguration();
 
-        File idxFile = getFile(dir, INDEX_PARTITION, null);
+        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
+        outErrStream = outStream;
 
-        if (!idxFile.exists())
-            throw new IgniteCheckedException(idxFile.getName() + " file not found");
+        idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX);
+
+        if (isNull(idxStore))
+            throw new IgniteCheckedException(INDEX_FILE_NAME + " file not found");
         else
-            print("Analyzing file: " + idxFile.getPath());
-
-        List<File> snapshotChain = snapshot ? buildSnapshotChain(dir) : null;
-
-        if (snapshot) {
-            List<File> partFiles = partitionFiles(snapshotChain);
-
-            long sizePagePositions = sizePagePositions(partFiles);
-            long freeMemory = freeMemory();
-
-            if (freeMemory < sizePagePositions) {
-                throw new IgniteCheckedException("To analyze need to add more memory no less than " +
-                    humanReadableByteCount(sizePagePositions));
-            }
-        }
-
-        idxStore = createFilePageStore(INDEX_PARTITION, FLAG_IDX, snapshot ? null : idxFile, snapshotChain);
+            print("Analyzing file: " + INDEX_FILE_NAME);
 
         partStores = new FilePageStore[partCnt];
 
         for (int i = 0; i < partCnt; i++)
-            partStores[i] = createFilePageStore(i, FLAG_DATA, snapshot ? null : getFile(dir, i, null), snapshotChain);
+            partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA);
     }
 
-    /** */
-    public IgniteIndexReader(File dir, int pageSize, int filePageStoreVer, OutputStream outputStream) {
+    /**
+     * Constructor.
+     *
+     * @param pageSize Page size.
+     * @param outputStream Stream for print report.
+     */
+    public IgniteIndexReader(int pageSize, OutputStream outputStream) {
         this.pageSize = pageSize;
-        this.partCnt = 0;
-        this.dsCfg = new DataStorageConfiguration().setPageSize(pageSize);
-        this.dir = dir;
-        this.checkParts = false;
-        this.indexes = null;
-        this.storeFactory = storeFactory(filePageStoreVer);
-        this.outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
-        this.outErrStream = outStream;
-        this.idxStore = null;
-        this.partStores = null;
-        this.cfg = null;
+        partCnt = 0;
+        checkParts = false;
+        indexes = null;
+        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
+        outErrStream = outStream;
+        idxStore = null;
+        partStores = null;
     }
 
     /** */
@@ -386,33 +327,12 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     * Getting a partition or index file that may not exist.
+     * Reading pages into buffer.
      *
-     * @param dir Directory to get partition or index file.
-     * @param partId ID of partition or index.
-     * @param fileExt File extension if it differs from {@link FilePageStoreManager#FILE_SUFFIX}.
-     * @return Partition or index file that may not exist.
+     * @param store Source for reading pages.
+     * @param pageId Page ID.
+     * @param buf Buffer.
      */
-    private File getFile(File dir, int partId, @Nullable String fileExt) {
-        String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
-
-        if (nonNull(fileExt) && !FILE_SUFFIX.equals(fileExt))
-            fileName = fileName.replace(FILE_SUFFIX, fileExt);
-
-        return new File(dir, fileName);
-    }
-
-    /** */
-    private FileVersionCheckingFactory storeFactory(int filePageStoreVer) {
-        return new FileVersionCheckingFactory(new AsyncFileIOFactory(), new AsyncFileIOFactory(), dsCfg) {
-            /** {@inheritDoc} */
-            @Override public int latestVersion() {
-                return filePageStoreVer;
-            }
-        };
-    }
-
-    /** */
     private void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
         try {
             store.read(pageId, buf, false);
@@ -1306,15 +1226,14 @@ public class IgniteIndexReader implements AutoCloseable {
             return null;
     }
 
-
     /** {@inheritDoc} */
     @Override public void close() throws StorageException {
-        if (idxStore != null)
+        if (nonNull(idxStore))
             idxStore.stop(false);
 
-        if (partStores != null) {
+        if (nonNull(partStores)) {
             for (FilePageStore store : partStores) {
-                if (store != null)
+                if (nonNull(store))
                     store.stop(false);
             }
         }
@@ -1323,17 +1242,23 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Transforms snapshot files to regular PDS files.
      *
+     * @param src Source directory.
      * @param dest Destination directory.
      * @param fileMask File mask.
+     * @param filePageStoreFactory Factory of {@link FilePageStore}.
      */
-    public void transform(String dest, String fileMask) {
+    public void transform(String src, String dest, String fileMask, FilePageStoreFactory filePageStoreFactory) {
+        File srcDir = new File(src);
+
+        assert srcDir.exists();
+
         File destDir = new File(dest);
 
         if (!destDir.exists())
             destDir.mkdirs();
 
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(dir.toPath(), "*" + fileMask)) {
-            List<Path> filesList = new LinkedList<>();
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(srcDir.toPath(), "*" + fileMask)) {
+            List<Path> filesList = new ArrayList<>();
 
             for (Path f : files) {
                 if (f.toString().toLowerCase().endsWith(fileMask))
@@ -1345,19 +1270,14 @@ public class IgniteIndexReader implements AutoCloseable {
             for (Path f : filesList) {
                 progressPrinter.printProgress();
 
+                String fileName = f.getFileName().toString();
+
+                boolean idxFileName = fileName.equals(INDEX_FILE_NAME);
+
+                ByteBuffer hdrBuff = filePageStoreFactory.headerBuffer(idxFileName ? FLAG_IDX : FLAG_DATA);
+
                 try {
-                    String fileName = f.getFileName().toString();
-                    boolean idxFileName = fileName.equals(INDEX_FILE_NAME);
-
-                    int partId = idxFileName ? INDEX_PARTITION :
-                        parseInt(fileName.replace(PART_FILE_PREFIX, "").replace(fileMask, ""));
-
-                    copyFromStreamToFile(
-                        f.toFile(),
-                        new File(destDir.getPath(), fileName),
-                        idxFileName ? FLAG_IDX : FLAG_DATA,
-                        partId
-                    );
+                    copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), fileName), hdrBuff);
                 }
                 catch (Exception e) {
                     File destF = new File(destDir.getPath(), f.getFileName().toString());
@@ -1369,6 +1289,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     printStackTrace(e);
                 }
+                finally {
+                    freeBuffer(hdrBuff);
+                }
             }
         }
         catch (IOException e) {
@@ -1376,371 +1299,130 @@ public class IgniteIndexReader implements AutoCloseable {
         }
     }
 
-    /** */
-    private int copyFromStreamToFile(File fileInPath, File fileOutPath, byte flag, int partId) throws Exception {
+    /**
+     * Convert snapshot file to the correct format.
+     * Header + pages in the correct order (in ascending order of pageIdx).
+     *
+     * @param fileInPath File for reading pages.
+     * @param fileOutPath File for writing pages.
+     * @param hdrBuf Buffer with a header for writing to {@code fileOutPath}.
+     * @return Count of read pages.
+     * @throws Exception If failed.
+     */
+    private int copyFromStreamToFile(File fileInPath, File fileOutPath, ByteBuffer hdrBuf) throws Exception {
         ByteBuffer readBuf = allocateBuffer(pageSize);
 
-        String consistentId = fileInPath.getParentFile().getName();
+        readBuf.order(ByteOrder.nativeOrder());
 
-        try (SnapshotInputStream snapshotInputStream = of(fileInPath, partId, pageSize, consistentId)) {
-            readBuf.order(ByteOrder.nativeOrder());
+        long readAddr = bufferAddress(readBuf);
 
-            long readAddr = bufferAddress(readBuf);
+        try (FileChannel inCh = FileChannel.open(fileInPath.toPath(), READ);
+             FileChannel outCh = FileChannel.open(fileOutPath.toPath(), WRITE, CREATE)) {
+            int hdrSize = hdrBuf.limit();
 
-            ByteBuffer hdrBuf = headerBuffer(flag, pageSize);
+            outCh.write(hdrBuf, 0);
 
-            try (FileChannel ch = FileChannel.open(fileOutPath.toPath(), WRITE, CREATE)) {
-                int hdrSize = hdrBuf.limit();
+            int pageCnt = 0;
 
-                ch.write(hdrBuf, 0);
+            while (readNextPage(readBuf, inCh, pageSize)) {
+                pageCnt++;
 
-                int pageCnt = 0;
+                readBuf.rewind();
 
-                while (snapshotInputStream.readNextPage(readBuf)) {
-                    pageCnt++;
+                long pageId = getPageId(readAddr);
 
-                    readBuf.rewind();
+                assert pageId != 0;
 
-                    long pageId = getPageId(readAddr);
+                int pageIdx = pageIndex(pageId);
 
-                    assert pageId != 0;
+                int crcSaved = getCrc(readAddr);
 
-                    int pageIdx = pageIndex(pageId);
+                setCrc(readAddr, 0);
 
-                    int crcSaved = getCrc(readAddr);
+                int calced = calcCrc(readBuf, pageSize);
 
+                if (calced != crcSaved)
+                    throw new IgniteCheckedException("Snapshot corrupted");
+
+                setCrc(readAddr, crcSaved);
+
+                readBuf.rewind();
+
+                boolean changed = false;
+
+                int pageType = PageIO.getType(readAddr);
+
+                switch (pageType) {
+                    case PageIO.T_PAGE_UPDATE_TRACKING:
+                        PageHandler.zeroMemory(readAddr, TrackingPageIO.COMMON_HEADER_END,
+                            readBuf.capacity() - TrackingPageIO.COMMON_HEADER_END);
+
+                        changed = true;
+
+                        break;
+                    case PageIO.T_META:
+                    case PageIO.T_PART_META:
+                        PageMetaIO io = PageIO.getPageIO(pageType, PageIO.getVersion(readAddr));
+
+                        io.setLastAllocatedPageCount(readAddr, 0);
+                        io.setLastSuccessfulFullSnapshotId(readAddr, 0);
+                        io.setLastSuccessfulSnapshotId(readAddr, 0);
+                        io.setLastSuccessfulSnapshotTag(readAddr, 0);
+                        io.setNextSnapshotTag(readAddr, 1);
+                        io.setCandidatePageCount(readAddr, 0);
+
+                        changed = true;
+
+                        break;
+                }
+                if (changed) {
                     setCrc(readAddr, 0);
 
-                    int calced = calcCrc(readBuf, pageSize);
+                    int crc32 = calcCrc(readBuf, pageSize);
 
-                    if (calced != crcSaved)
-                        throw new IgniteCheckedException("Snapshot corrupted");
-
-                    setCrc(readAddr, crcSaved);
-
-                    readBuf.rewind();
-
-                    boolean changed = false;
-
-                    int pageType = PageIO.getType(readAddr);
-
-                    switch (pageType) {
-                        case PageIO.T_PAGE_UPDATE_TRACKING:
-                            PageHandler.zeroMemory(readAddr, TrackingPageIO.COMMON_HEADER_END,
-                                readBuf.capacity() - TrackingPageIO.COMMON_HEADER_END);
-
-                            changed = true;
-
-                            break;
-                        case PageIO.T_META:
-                        case PageIO.T_PART_META:
-                            PageMetaIO io = PageIO.getPageIO(pageType, PageIO.getVersion(readAddr));
-
-                            io.setLastAllocatedPageCount(readAddr, 0);
-                            io.setLastSuccessfulFullSnapshotId(readAddr, 0);
-                            io.setLastSuccessfulSnapshotId(readAddr, 0);
-                            io.setLastSuccessfulSnapshotTag(readAddr, 0);
-                            io.setNextSnapshotTag(readAddr, 1);
-                            io.setCandidatePageCount(readAddr, 0);
-
-                            changed = true;
-
-                            break;
-                    }
-                    if (changed) {
-                        setCrc(readAddr, 0);
-
-                        int crc32 = calcCrc(readBuf, pageSize);
-
-                        setCrc(readAddr, crc32);
-
-                        readBuf.rewind();
-                    }
-                    ch.write(readBuf, hdrSize + ((long)pageIdx) * pageSize);
+                    setCrc(readAddr, crc32);
 
                     readBuf.rewind();
                 }
 
-                ch.force(true);
+                outCh.write(readBuf, hdrSize + ((long)pageIdx) * pageSize);
 
-                return pageCnt;
+                readBuf.rewind();
             }
+
+            outCh.force(true);
+
+            return pageCnt;
         }
         finally {
             freeBuffer(readBuf);
         }
     }
 
-    /** */
-    private ByteBuffer headerBuffer(byte type, int pageSize) {
-        FilePageStore store = storeFactory.createPageStore(type, null, storeFactory.latestVersion(), allocationTracker);
-
-        return store.header(type, pageSize);
-    }
-
     /**
-     * Creating {@link FilePageStore} for snapshot or regular pds and initializing it.
-     * It can return {@code null} if partition file were not found, for example: node should not contain it by affinity.
+     * Reading a page from channel into buffer.
      *
-     * @param partId Partition ID.
-     * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
-     * @param file Page store file for regular pds.
-     * @param snapshotChain Snapshot directory chain.
-     * @return New instance of {@link FilePageStore} or {@code null}.
-     * @throws IgniteCheckedException If there are errors when creating or initializing {@link FilePageStore}.
+     * @param buf Buffer.
+     * @param ch Source for reading pages.
+     * @param pageSize Size of page to read into buffer.
      */
-    @Nullable private FilePageStore createFilePageStore(
-        int partId,
-        byte type,
-        @Nullable File file,
-        @Nullable List<File> snapshotChain
-    ) throws IgniteCheckedException {
-        assert isNull(snapshotChain) && nonNull(file) || isNull(file) && nonNull(snapshotChain);
+    private boolean readNextPage(ByteBuffer buf, FileChannel ch, int pageSize) throws IOException {
+        assert buf.remaining() == pageSize;
 
-        FilePageStore store;
-
-        if (nonNull(file))
-            store = !file.exists() ? null : (FilePageStore)storeFactory.createPageStore(type, file, allocationTracker);
-        else {
-            List<FilePosition> positions = pagePositions(partId, snapshotChain);
-
-            store = positions.isEmpty() ? null : new SnapshotFilePageStore(type, dsCfg, positions, allocationTracker);
+        do {
+            if (ch.read(buf) == -1)
+                break;
         }
+        while (buf.hasRemaining());
 
-        if (nonNull(store))
-            store.ensure();
-
-        return store;
-    }
-
-    /**
-     * For full snapshot returns {@code dir} for incremental will build a chain of directories until first full snapshot.
-     * Chain: current incremental snapshot {@code dir} -> previous incremental snapshot -> ... -> full snapshot
-     *
-     * @param dir Directory of snapshot for cache group.
-     * @return Chain of directories.
-     * @throws IgniteCheckedException If failed.
-     */
-    private List<File> buildSnapshotChain(File dir) throws IgniteCheckedException {
-        File consistentIdDir = dir.getParentFile();
-
-        SnapshotMetadataV2 snapshotMetadata = snapshotMetadata(consistentIdDir);
-
-        if (isNull(snapshotMetadata))
-            throw new IgniteCheckedException(SNAPSHOT_META_FILE_NAME + " file not found in " + consistentIdDir);
-
-        if (snapshotMetadata.fullSnapshot())
-            return singletonList(dir);
-
-        String snapshotDirName = generateSnapshotDirName(snapshotMetadata.id());
-
-        File baseSnapshotDir = dir;
-
-        while (nonNull(baseSnapshotDir) && !new File(baseSnapshotDir, snapshotDirName).exists())
-            baseSnapshotDir = baseSnapshotDir.getParentFile();
-
-        if (isNull(baseSnapshotDir))
-            throw new IgniteCheckedException("Base directory of snapshots was not found.");
-
-        int grpId = parseInt(dir.getName());
-        String consistentId = consistentIdDir.getName();
-
-        List<File> snapshotDirChain = new ArrayList<>();
-        snapshotDirChain.add(dir);
-
-        while (nonNull(snapshotMetadata) && !snapshotMetadata.fullSnapshot()) {
-            CacheSnapshotMetadata cacheSnapshotMetadata = snapshotMetadata.cacheGroupsMetadata().get(grpId);
-
-            if (isNull(cacheSnapshotMetadata) || isNull(cacheSnapshotMetadata.previousSnapshotId()))
-                snapshotMetadata = null;
-            else {
-                snapshotDirName = generateSnapshotDirName(cacheSnapshotMetadata.previousSnapshotId());
-
-                File previousSnapshotDir = new File(
-                    baseSnapshotDir,
-                    String.join(File.separator, snapshotDirName, consistentId, valueOf(grpId))
-                );
-
-                if (!previousSnapshotDir.exists())
-                    throw new IgniteCheckedException("Previous snapshot directory not found " + previousSnapshotDir);
-
-                snapshotDirChain.add(previousSnapshotDir);
-                snapshotMetadata = snapshotMetadata(previousSnapshotDir.getParentFile());
-            }
-        }
-
-        if (isNull(snapshotMetadata) || !snapshotMetadata.fullSnapshot())
-            throw new IgniteCheckedException("Failed to build a chain for incremental snapshot " + snapshotDirChain);
-
-        return snapshotDirChain;
-    }
-
-    /**
-     * Read snapshot metadata file in directory.
-     *
-     * @param consistentIdDir Directory to read snapshot metadata file.
-     * @return Metadata object or null if file is missing or corrupted.
-     */
-    private SnapshotMetadataV2 snapshotMetadata(File consistentIdDir) {
-        return readSnapshotMetadata(consistentIdDir.toPath(), true, cfg, null, null);
-    }
-
-    /**
-     * Creating mapping pageIdx(list index) -> position(offset) in file, value can be {@code null} if page is corrupted.
-     *
-     * @param partId Partition ID.
-     * @param snapshotChain Snapshot directory chain.
-     * @return Mapping pageIdx(list index) -> position(offset) in file.
-     * @throws IgniteCheckedException if failed.
-     */
-    private List<FilePosition> pagePositions(int partId, List<File> snapshotChain) throws IgniteCheckedException {
-        assert !snapshotChain.isEmpty();
-
-        ByteBuffer buf = allocateBuffer(pageSize);
-
-        long bufAddr = bufferAddress(buf);
-
-        try {
-            ArrayWrapper<FilePosition> positions = new ArrayWrapper<>();
-
-            for (File snapshotDir : snapshotChain) {
-                File partFile = getFile(snapshotDir, partId, null);
-
-                if (!partFile.exists())
-                    continue;
-
-                int readPageNum = 0;
-
-                try (SnapshotInputStream is = of(partFile, partId, pageSize, partFile.getParentFile().getName())) {
-                    while (is.readNextPage(buf)) {
-                        readPageNum++;
-
-                        buf.rewind();
-
-                        int crcSaved = getCrc(bufAddr);
-
-                        setCrc(bufAddr, 0);
-
-                        int calced = calcCrc(buf, pageSize);
-
-                        long pageId = getPageId(buf);
-                        int pageIdx = pageIndex(pageId);
-
-                        buf.rewind();
-
-                        if (calced != crcSaved) {
-                            printErr("Corrupted page [file=" + partFile.getAbsolutePath() + ", pageId=" + pageId +
-                                ", pageIdx=" + pageIdx + ", readpPageNum=" + (readPageNum - 1) + "]");
-
-                            continue;
-                        }
-
-                        //it's new page? yes - add it
-                        if (pageIdx + 1 > positions.size() || isNull(positions.get(pageIdx)))
-                            positions.set(pageIdx, new FilePosition((readPageNum - 1) * pageSize, partFile));
-                    }
-                }
-                catch (Exception e) {
-                    throw new IgniteCheckedException("Error while build page positions [partId=" + partId +
-                        ", file=" + partFile.getAbsolutePath() + ", readPageNum=" + readPageNum +
-                        ", snapshotChain=" + snapshotChain + "]");
-                }
-            }
-
-            return positions.trimToSize();
-        }
-        finally {
-            freeBuffer(buf);
-        }
-    }
-
-    /**
-     * Search for all partition and index files.
-     *
-     * @param partDirs Directories containing partition and index files.
-     * @return All partition and index files.
-     */
-    private List<File> partitionFiles(List<File> partDirs) {
-        assert !partDirs.isEmpty();
-
-        List<File> partFiles = new ArrayList<>();
-
-        for (File partDir : partDirs) {
-            File idxFile = getFile(partDir, INDEX_PARTITION, null);
-
-            if (idxFile.exists())
-                partFiles.add(idxFile);
-
-            for (int i = 0; i < partCnt; i++) {
-                File partFile = getFile(partDir, i, null);
-
-                if (partFile.exists())
-                    partFiles.add(partFile);
-            }
-        }
-
-        return partFiles;
-    }
-
-    /**
-     * Approximate estimate of memory size for storing and building
-     * {@link ArrayWrapper} of {@link FilePosition} used in {@link SnapshotFilePageStore}.
-     *
-     * @param partFiles Partiton and index files.
-     * @return Estimated size of memory in bytes.
-     */
-    private long sizePagePositions(List<File> partFiles) {
-        assert !partFiles.isEmpty();
-
-        long sizeEstimated = 0;
-
-        Map<String, List<File>> byFileName = partFiles.stream().collect(groupingBy(File::getName));
-
-        long filePosSize = FilePosition.instanceSize();
-        long arrWrapSize = ArrayWrapper.instanceSize();
-
-        for (Map.Entry<String, List<File>> entry : byFileName.entrySet()) {
-            int maxPageCnt = 0;
-
-            for (File partFile : entry.getValue()) {
-                int pageCnt = (int)(partFile.length() / pageSize);
-                maxPageCnt = max(maxPageCnt, pageCnt);
-
-                sizeEstimated += filePosSize * pageCnt;
-            }
-
-            sizeEstimated += arrWrapSize;
-
-            //Size of array in {@link ArrayWrapper} for {@link SnapshotFilePageStore}, taking into account its increase during filling
-            sizeEstimated += IndexReaderUtils.objectArraySize(maxPageCnt) * 1.5;
-        }
-
-        return sizeEstimated;
-    }
-
-    /**
-     * Converts count of bytes to a human-readable format.
-     * Examples: 10 -> 10,0 B, 2048 -> 2,0 KB, etc.
-     *
-     * @param bytes Byte count.
-     * @return Human readable format for count of bytes.
-     */
-    private String humanReadableByteCount(long bytes) {
-        long base = U.KB;
-
-        int exponent = max((int)(log(bytes) / log(base)), 0);
-        String unit = valueOf(" KMGTPE".charAt(exponent)).trim();
-
-        return format("%.1f %sB", bytes / pow(base, exponent), unit);
-    }
-
-    /**
-     * Return approximation to total amount of memory currently available for future allocated objects.
-     *
-     * @return Approximation to total amount of memory currently available for future allocated objects in bytes.
-     */
-    protected long freeMemory() {
-        return Runtime.getRuntime().freeMemory();
+        if (!buf.hasRemaining() && PageIO.getPageId(buf) != 0)
+            return true; //pageSize bytes read && pageId != 0
+        else if (buf.remaining() == pageSize)
+            return false; //0 bytes read
+        else
+            // 1 <= readBytes < pageSize || readBytes == pagesIze && pageId != 0
+            throw new IgniteException("Corrupted page in partitionId " +
+                ", readByte=" + buf.position() + ", pageSize=" + pageSize);
     }
 
     /**
@@ -1800,28 +1482,31 @@ public class IgniteIndexReader implements AutoCloseable {
 
         String destFile = p.get(DEST_FILE.arg());
 
-        OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
+        OutputStream destStream = isNull(destFile) ? null : new FileOutputStream(destFile);
+
+        String dir = p.get(DIR.arg());
+
+        int pageSize = p.get(PAGE_SIZE.arg());
+
+        FilePageStoreFactory filePageStoreFactory = new FilePageStoreFactoryImpl(
+            new File(dir),
+            pageSize,
+            p.get(PAGE_STORE_VER.arg())
+        );
 
         if (p.get(TRANSFORM.arg())) {
-            try (IgniteIndexReader reader = new IgniteIndexReader(
-                p.get(DIR.arg()),
-                p.get(PAGE_SIZE.arg()),
-                p.get(PAGE_STORE_VER.arg()),
-                destStream
-            )) {
-                reader.transform(p.get(DEST.arg()), p.get(FILE_MASK.arg()));
+            try (IgniteIndexReader reader = new IgniteIndexReader(pageSize, destStream)) {
+                reader.transform(dir, p.get(DEST.arg()), p.get(FILE_MASK.arg()), filePageStoreFactory);
             }
         }
         else {
             try (IgniteIndexReader reader = new IgniteIndexReader(
-                p.get(DIR.arg()),
-                false,
-                p.get(PAGE_SIZE.arg()),
+                pageSize,
                 p.get(PART_CNT.arg()),
-                p.get(PAGE_STORE_VER.arg()),
                 p.get(INDEXES.arg()),
                 p.get(CHECK_PARTS.arg()),
-                destStream
+                destStream,
+                filePageStoreFactory
             )) {
                 reader.readIdx();
             }
