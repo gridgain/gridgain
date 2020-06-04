@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
@@ -745,7 +746,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             ClusterNode locNode = cctx.kernalContext().discovery().localNode();
 
             Collection<BaselineNode> bltNodes =
-                F.transform(cctx.kernalContext().cluster().get().topology(topVer), n -> (BaselineNode) n);
+                cctx.kernalContext().cluster().get().topology(topVer).stream()
+                .filter(n -> !n.isClient() && !n.isDaemon())
+                .collect(Collectors.toList());
 
             boolean collectionUsed = false;
 
