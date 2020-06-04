@@ -28,16 +28,14 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.query.DummyQueryIndexing;
-import org.apache.ignite.internal.processors.query.GridQueryIndexing;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
-import org.apache.ignite.testframework.AbstractTestDependencyResolver;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -82,8 +80,11 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
             discoSpi.setForceServerMode(gridName.contains("server"));
         }
 
-        if (gridName.contains("failingNode"))
+        if (gridName.contains("failingNode")) {
+            GridQueryProcessor.idxCls = FailingIndexing.class;
+
             cfg.setLocalHost("127.0.0.1");
+        }
 
         return cfg;
     }
@@ -92,6 +93,7 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
+        GridQueryProcessor.idxCls = null;
     }
 
     /**
@@ -100,15 +102,6 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
     @Test
     public void testPortReleasedAfterFailure() throws Exception {
         try {
-            IgnitionEx.dependencyResolver(new AbstractTestDependencyResolver() {
-                @Override protected <T> T doResolve(T instance) {
-                    if(instance instanceof GridQueryIndexing)
-                        return (T) new FailingIndexing();
-
-                    return instance;
-                }
-            });
-
             startGrid("failingNode-" + BIND_PORT);
 
             fail("Node start should fail");

@@ -147,6 +147,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** */
     private static final ThreadLocal<AffinityTopologyVersion> requestTopVer = new ThreadLocal<>();
 
+    /** For tests. */
+    public static Class<? extends GridQueryIndexing> idxCls;
+
     /** JDK marshaller to serialize errors. */
     private final JdkMarshaller marsh = new JdkMarshaller();
 
@@ -224,20 +227,28 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     public GridQueryProcessor(GridKernalContext ctx) throws IgniteCheckedException {
         super(ctx);
 
-        idx = INDEXING.inClassPath() ? ctx.resource().resolve(U.newInstance(INDEXING.className())) : null;
+        if (idxCls != null) {
+            idx = U.newInstance(idxCls);
+
+            idxCls = null;
+        }
+        else
+            idx = INDEXING.inClassPath() ? U.<GridQueryIndexing>newInstance(INDEXING.className()) : null;
 
         valCtx = new CacheQueryObjectValueContext(ctx);
 
-        ioLsnr = (nodeId, msg, plc) -> {
-            if (msg instanceof SchemaOperationStatusMessage) {
-                SchemaOperationStatusMessage msg0 = (SchemaOperationStatusMessage)msg;
+        ioLsnr = new GridMessageListener() {
+            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
+                if (msg instanceof SchemaOperationStatusMessage) {
+                    SchemaOperationStatusMessage msg0 = (SchemaOperationStatusMessage)msg;
 
-                msg0.senderNodeId(nodeId);
+                    msg0.senderNodeId(nodeId);
 
-                processStatusMessage(msg0);
+                    processStatusMessage(msg0);
+                }
+                else
+                    U.warn(log, "Unsupported IO message: " + msg);
             }
-            else
-                U.warn(log, "Unsupported IO message: " + msg);
         };
     }
 
