@@ -326,7 +326,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
-                map.put("offHeapCnt", getCacheSize());
+                map.put("casheSize", getCacheSize());
                 break;
 
             default:
@@ -342,7 +342,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
-                map.put("offHeapCnt", getCacheSize());
+                map.put("casheSize", getCacheSize());
         }
 
         return map;
