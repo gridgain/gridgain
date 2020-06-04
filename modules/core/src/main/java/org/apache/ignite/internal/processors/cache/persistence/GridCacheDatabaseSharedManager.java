@@ -5275,7 +5275,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         checkpointReadLock();
 
         try {
-            CheckpointEntry lastCp = cpHist.lastCheckpoint();
+            CheckpointEntry lastCp = cpHist.lastCheckpointMarkingAsInapplicable(grpId);
             long lastCpTs = lastCp != null ? lastCp.timestamp() : 0;
 
             if (lastCpTs != 0)

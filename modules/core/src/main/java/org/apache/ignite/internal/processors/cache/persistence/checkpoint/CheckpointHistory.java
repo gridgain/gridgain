@@ -193,7 +193,7 @@ public class CheckpointHistory {
      * @param entry Entry to add.
      */
     public void addCheckpoint(CheckpointEntry entry) {
-        updateEarliestCpMap(entry);
+        addCpToEarliestCpMap(entry);
 
         histMap.put(entry.timestamp(), entry);
     }
@@ -207,8 +207,6 @@ public class CheckpointHistory {
         try {
             Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
 
-            HashMap<Integer, Boolean> applicableGrps = new HashMap<>();
-
             Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
 
             while (iter.hasNext()) {
@@ -216,10 +214,7 @@ public class CheckpointHistory {
 
                 Integer grpId = grpPartCp.getKey().getGroupId();
 
-                if (!applicableGrps.containsKey(grpId))
-                    applicableGrps.put(grpId, isCheckpointApplicableForGroup(grpId, entry));
-
-                if (!applicableGrps.get(grpId)) {
+                if (!isCheckpointApplicableForGroup(grpId, entry)) {
                     iter.remove();
 
                     continue;
@@ -232,6 +227,47 @@ public class CheckpointHistory {
                 if (pIdx < 0)
                     iter.remove();
             }
+
+            addCpToEarliestCpMap(entry);
+        }
+        catch (IgniteCheckedException ex) {
+            U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
+
+            earliestCp.clear();
+        }
+    }
+
+    /**
+     * Prepare last checkpoint in history that will marked as inapplicable.
+     *
+     * @param grpId Group id.
+     * @return Checkpoint witch it'd be marked as inapplicable.
+     */
+    public CheckpointEntry lastCheckpointMarkingAsInapplicable(Integer grpId) {
+        synchronized (earliestCp) {
+            CheckpointEntry lastCp = lastCheckpoint();
+
+            Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
+
+            while (iter.hasNext()) {
+                Map.Entry<GroupPartitionId, CheckpointEntry> grpPartCp = iter.next();
+
+                if (grpId.equals(grpPartCp.getKey().getGroupId()))
+                    iter.remove();
+            }
+
+            return lastCp;
+        }
+    }
+
+    /**
+     * Add last checkpoint to map of the earliest checkpoints.
+     *
+     * @param entry Checkpoint entry.
+     */
+    private void addCpToEarliestCpMap(CheckpointEntry entry) {
+        try {
+            Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
 
             for (Integer grpId : states.keySet()) {
                 CheckpointEntry.GroupState grpState = states.get(grpId);
@@ -324,19 +360,19 @@ public class CheckpointHistory {
             return false;
         }
 
-        CheckpointEntry deletedCpEntry = histMap.remove(checkpoint.timestamp());
+        synchronized (earliestCp) {
+            CheckpointEntry deletedCpEntry = histMap.remove(checkpoint.timestamp());
 
-        CheckpointEntry oldestCpInHistory = firstCheckpoint();
+            CheckpointEntry oldestCpInHistory = firstCheckpoint();
 
-        Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
+            Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
 
-        log.info("Remove cp " + deletedCpEntry.checkpointId());
+            while (iter.hasNext()) {
+                Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp = iter.next();
 
-        while (iter.hasNext()) {
-            Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp = iter.next();
-
-            if (grpPartPerCp.getValue() == deletedCpEntry)
-                grpPartPerCp.setValue(oldestCpInHistory);
+                if (grpPartPerCp.getValue() == deletedCpEntry)
+                    grpPartPerCp.setValue(oldestCpInHistory);
+            }
         }
 
         return true;
@@ -584,32 +620,35 @@ public class CheckpointHistory {
         final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
 
         CheckpointEntry oldestCpForReservation = null;
-        CheckpointEntry oldestHistoryCpEntry = firstCheckpoint();
 
-        for (Integer grpId : groupsAndPartitions.keySet()) {
-            CheckpointEntry oldestGrpCpEntry = null;
+        synchronized (earliestCp) {
+            CheckpointEntry oldestHistoryCpEntry = firstCheckpoint();
 
-            for (Integer part : groupsAndPartitions.get(grpId)) {
-                CheckpointEntry cpEntry = earliestCp.get(new GroupPartitionId(grpId, part));
+            for (Integer grpId : groupsAndPartitions.keySet()) {
+                CheckpointEntry oldestGrpCpEntry = null;
 
-                if (cpEntry == null)
-                    continue;
+                for (Integer part : groupsAndPartitions.get(grpId)) {
+                    CheckpointEntry cpEntry = earliestCp.get(new GroupPartitionId(grpId, part));
 
-                if (oldestCpForReservation == null || oldestCpForReservation.timestamp() > cpEntry.timestamp())
-                    oldestCpForReservation = cpEntry;
+                    if (cpEntry == null)
+                        continue;
 
-                if (oldestGrpCpEntry == null || oldestGrpCpEntry.timestamp() > cpEntry.timestamp())
-                    oldestGrpCpEntry = cpEntry;
+                    if (oldestCpForReservation == null || oldestCpForReservation.timestamp() > cpEntry.timestamp())
+                        oldestCpForReservation = cpEntry;
 
-                res.computeIfAbsent(grpId, partCpMap ->
-                    new T2<>(ReservationReason.NO_MORE_HISTORY, new HashMap<>()))
-                    .get2().put(part, cpEntry);
+                    if (oldestGrpCpEntry == null || oldestGrpCpEntry.timestamp() > cpEntry.timestamp())
+                        oldestGrpCpEntry = cpEntry;
+
+                    res.computeIfAbsent(grpId, partCpMap ->
+                        new T2<>(ReservationReason.NO_MORE_HISTORY, new HashMap<>()))
+                        .get2().put(part, cpEntry);
+                }
+
+                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistoryCpEntry)
+                    res.computeIfAbsent(grpId, (partCpMap) ->
+                        new T2<>(ReservationReason.CHECKPOINT_NOT_APPLICABLE, null))
+                        .set1(ReservationReason.CHECKPOINT_NOT_APPLICABLE);
             }
-
-            if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistoryCpEntry)
-                res.computeIfAbsent(grpId, (partCpMap) ->
-                    new T2<>(ReservationReason.CHECKPOINT_NOT_APPLICABLE, null))
-                    .set1(ReservationReason.CHECKPOINT_NOT_APPLICABLE);
         }
 
         if (oldestCpForReservation != null) {

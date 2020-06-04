@@ -222,5 +222,4 @@ public class HistoricalReservationTest extends GridCommonAbstractTest {
                 streamer.addData(i, "Val " + i);
         }
     }
-
 }
