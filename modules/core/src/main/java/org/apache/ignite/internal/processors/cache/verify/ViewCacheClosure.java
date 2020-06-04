@@ -26,7 +26,6 @@ import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -114,7 +113,7 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                         long cacheSize = getCacheSize(cacheProcessor, nameInGrp);
                         sizeSummary += cacheSize;
                     }
-                    ci.setOffHeapPrimaryEntriesCnt(sizeSummary);
+                    ci.setCacheSize(sizeSummary);
 
                     cacheInfo.add(ci);
                 }
@@ -144,7 +143,7 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     ci.setMapped(mapped(desc.cacheName()));
 
                     GridCacheProcessor cacheProcessor = k.context().cache();
-                    ci.setOffHeapPrimaryEntriesCnt(getCacheSize(cacheProcessor, ci.getCacheName()));
+                    ci.setCacheSize(getCacheSize(cacheProcessor, ci.getCacheName()));
 
                     cacheInfo.add(ci);
                 }

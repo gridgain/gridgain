@@ -81,7 +81,7 @@ public class CacheInfo extends VisorDataTransferObject {
 
     /** Off-Heap entries count. */
     @Nullable
-    private Long offHeapPrimaryEntriesCnt;
+    private Long cacheSize;
 
     /** */
     public String getSeqName() {
@@ -326,7 +326,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
-                map.put("offHeapCnt", getOffHeapPrimaryEntriesCnt());
+                map.put("offHeapCnt", getCacheSize());
                 break;
 
             default:
@@ -342,7 +342,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 map.put("atomicity", getAtomicityMode());
                 map.put("backups", getBackupsCnt());
                 map.put("affCls", getAffinityClsName());
-                map.put("offHeapCnt", getOffHeapPrimaryEntriesCnt());
+                map.put("offHeapCnt", getCacheSize());
         }
 
         return map;
@@ -369,7 +369,7 @@ public class CacheInfo extends VisorDataTransferObject {
         U.writeString(out, affinityClsName);
         out.writeInt(cachesCnt);
         U.writeEnum(out, atomicityMode);
-        out.writeObject(offHeapPrimaryEntriesCnt);
+        out.writeObject(cacheSize);
     }
 
     /** {@inheritDoc} */
@@ -388,7 +388,7 @@ public class CacheInfo extends VisorDataTransferObject {
         affinityClsName = U.readString(in);
         cachesCnt = in.readInt();
         atomicityMode = protoVer >= V2 ? CacheAtomicityMode.fromOrdinal(in.readByte()) : null;
-        offHeapPrimaryEntriesCnt = protoVer >= V3 ? (Long)in.readObject() : null;
+        cacheSize = protoVer >= V3 ? (Long)in.readObject() : null;
     }
 
     /** {@inheritDoc} */
@@ -398,16 +398,16 @@ public class CacheInfo extends VisorDataTransferObject {
 
     /**
      * Set off-heap size for Cache
-     * @param offHeapPrimaryEntriesCnt Set off-heapcount.
+     * @param cacheSize Set off-heapcount.
      */
-    public void setOffHeapPrimaryEntriesCnt(@Nullable Long offHeapPrimaryEntriesCnt) {
-        this.offHeapPrimaryEntriesCnt = offHeapPrimaryEntriesCnt;
+    public void setCacheSize(@Nullable Long cacheSize) {
+        this.cacheSize = cacheSize;
     }
 
     /**
      * Get off-heap entries count
      */
-    public @Nullable Long getOffHeapPrimaryEntriesCnt() {
-        return offHeapPrimaryEntriesCnt;
+    public @Nullable Long getCacheSize() {
+        return cacheSize;
     }
 }
