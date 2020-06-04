@@ -56,7 +56,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
  * Tests to check correctness of OpenCensus Transactions Tracing implementation.
  */
 public class OpenCensusTxTracingTest extends AbstractTracingTest {
-
     /** {@inheritDoc} */
     @Override protected TracingSpi getTracingSpi() {
         return new OpenCensusTracingSpi();
