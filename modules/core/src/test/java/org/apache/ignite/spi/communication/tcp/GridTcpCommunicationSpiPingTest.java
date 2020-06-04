@@ -51,17 +51,17 @@ import org.junit.Test;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 
 /**
- * Class for multithreaded {@link TcpCommunicationSpi} test.
+ * Class for {@link TestCommunicationSpi} ping test.
  */
 public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpCommunicationSpi> {
     /** Connection idle timeout. */
     public static final int IDLE_CONN_TIMEOUT = 2000;
 
     /** SPI for sender. */
-    private TcpCommunicationSpi spi;
+    private TestCommunicationSpi spi;
 
     /** Spis. */
-    private final List<org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi> spis = new ArrayList<>();
+    private final List<TcpCommunicationSpi> spis = new ArrayList<>();
 
     /** Local node. */
     private GridTestNode locNode;
@@ -81,9 +81,7 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
      * @throws Exception If failed.
      */
     @Test
-    public void testRunSender() throws Exception {
-        info(">>> Starting send to remote node multithreaded test. <<<");
-
+    public void testRunPing() throws Exception {
         IgniteInternalFuture<Boolean> ping = GridTestUtils.runAsync(() -> spi.ping(remoteNode));
 
         IgniteInternalFuture<Boolean> sendMessage = GridTestUtils.runAsync(() -> {
@@ -106,8 +104,8 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
     /**
      * @return Spi.
      */
-    private TcpCommunicationSpi createSpi() {
-        TcpCommunicationSpi spi = new TcpCommunicationSpi();
+    private TestCommunicationSpi createSpi() {
+        TestCommunicationSpi spi = new TestCommunicationSpi();
 
         try {
             spi.getConfiguration().localHost(U.resolveLocalHost("127.0.0.1"));
@@ -124,23 +122,10 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
     }
 
     /**
-     * @return Spi.
-     */
-    private org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi createRemoteSpi() {
-        org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi spi = new org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi();
-
-        spi.setLocalPort(GridTestUtils.getNextCommPort(getClass()));
-        spi.setIdleConnectionTimeout(IDLE_CONN_TIMEOUT);
-        spi.setConnectTimeout(10000);
-
-        return spi;
-    }
-
-    /**
      * SPI that creates either client that awaits closing before sending a message or a normal client,
      * depending on whether ping command was executed.
      */
-    private static class TcpCommunicationSpi extends org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi {
+    private static class TestCommunicationSpi extends TcpCommunicationSpi {
 
         /** Already pinged. */
         private volatile boolean alreadyPinged;
@@ -274,7 +259,7 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
 
         GridSpiTestContext locNodeCtx = startNode(spi, 0);
 
-        org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi remoteNodeSpi = new org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi();
+        TestCommunicationSpi remoteNodeSpi = new TestCommunicationSpi();
         spis.add(remoteNodeSpi);
 
         GridSpiTestContext remoteNodeCtx = startNode(remoteNodeSpi, 1);
@@ -290,7 +275,7 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
      * @param spi Communication Spi.
      * @param i node order.
      */
-    GridSpiTestContext startNode(org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi spi, int i) throws Exception {
+    GridSpiTestContext startNode(TcpCommunicationSpi spi, int i) throws Exception {
         GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
         IgniteTestResources rsrcs = new IgniteTestResources();
@@ -321,7 +306,7 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        for (org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi communicationSpi : spis) {
+        for (TcpCommunicationSpi communicationSpi : spis) {
             communicationSpi.onContextDestroyed();
             communicationSpi.spiStop();
         }
