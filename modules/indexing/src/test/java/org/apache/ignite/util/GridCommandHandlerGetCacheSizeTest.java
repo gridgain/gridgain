@@ -69,13 +69,13 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
 
         String out = testOut.toString();
 
-        assertContains(log, out, "offHeapCnt=" + testSize);
+        assertContains(log, out, "cacheSize=" + testSize);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", ".", "--groups"));
 
         out = testOut.toString();
 
-        assertContains(log, out, "offHeapCnt=" + (testSize + DEFAULT_CACHE_SIZE));
+        assertContains(log, out, "cacheSize=" + (testSize + DEFAULT_CACHE_SIZE));
     }
 
     /**
