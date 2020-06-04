@@ -67,6 +67,7 @@ import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContex
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
@@ -1566,6 +1567,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
     public void testDelayAssignmentAffinityChanged() throws Exception {
         Ignite ignite0 = startServer(0, 1);
 
+        for (int i = 0; i < 1024; i++)
+            ignite0.cache(CACHE_NAME1).put(i, i);
+
         DiscoverySpiTestListener lsnr = new DiscoverySpiTestListener();
 
         ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi()).setInternalListener(lsnr);
@@ -1598,6 +1602,10 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         commSpi0.stopBlock();
 
         checkAffinity(4, topVer(4, 1), true);
+
+        awaitPartitionMapExchange(true, true, null, false);
+
+        assertPartitionsSame(idleVerify(grid(0), CACHE_NAME1));
     }
 
     /**
@@ -2712,14 +2720,18 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             if (node0.configuration().isClientMode())
                 continue;
 
-            IgniteInternalFuture<?> fut = node0.context().cache().context().exchange().affinityReadyFuture(topVer);
+            // Order is set after affinity is ready, should wait for exchange future.
+            GridCachePartitionExchangeManager<Object, Object> exchange = node0.context().cache().context().exchange();
+
+            IgniteInternalFuture<?> fut = exchange.affinityReadyFuture(topVer);
 
             if (fut != null)
                 fut.get();
 
             AtomicLong orderCntr = GridTestUtils.getFieldValue(node0.context().cache().context().versions(), "order");
 
-            log.info("Order [node=" + node0.name() + ", order=" + orderCntr.get() + ']');
+            log.info("Order [node=" + node0.name() + ", order=" + orderCntr.get() +
+                ", topVer=" + exchange.readyAffinityVersion() + ']');
 
             if (order == null)
                 order = orderCntr.get();

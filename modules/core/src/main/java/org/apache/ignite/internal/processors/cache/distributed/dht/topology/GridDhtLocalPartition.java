@@ -1099,9 +1099,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @throws NodeStoppingException If node stopping.
      */
     private long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        GridCacheVersion clearVer = group().caches().get(0).cache().nextVersion();
+        if (dataStore().isEmpty())
+            return 0;
 
-        GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(clearVer);
+        // Version should be incremented only on a primary node for a partition.
+        GridCacheVersion lastVer = ctx.versions().last();
+
+        GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(lastVer);
 
         boolean rec = grp.eventRecordable(EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
 
@@ -1129,7 +1133,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // This is required because normal updates are possible to moving partition which is currently cleared.
                     // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
-                    if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING || state() == OWNING))
+                    if (row.version().compareTo(lastVer) > 0 && (state() == MOVING || state() == OWNING))
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
@@ -1145,7 +1149,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         true,
                         false);
 
-                    if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry)cached).clearInternal(clearVer, extras)) {
+                    if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry)cached).clearInternal(lastVer, extras)) {
                         removeEntry(cached);
 
                         if (rec && !hld.cctx.config().isEventsDisabled()) {
