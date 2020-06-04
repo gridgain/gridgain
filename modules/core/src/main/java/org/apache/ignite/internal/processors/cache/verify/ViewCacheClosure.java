@@ -111,9 +111,8 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
 
                     for (GridCacheContext cacheContext : context.caches()) {
                         String nameInGrp = cacheContext.cache().name();
-                        Long cacheSize = getOffHeapCountFromCache(cacheProcessor, nameInGrp);
-                        if(cacheSize != null)
-                            sizeSummary += cacheSize;
+                        long cacheSize = getOffHeapCountFromCache(cacheProcessor, nameInGrp);
+                        sizeSummary += cacheSize;
                     }
                     ci.setOffHeapPrimaryEntriesCnt(sizeSummary);
 
