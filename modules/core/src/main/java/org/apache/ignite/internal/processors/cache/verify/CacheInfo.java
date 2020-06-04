@@ -315,7 +315,7 @@ public class CacheInfo extends VisorDataTransferObject {
                 break;
 
             case GROUPS:
-                map = new LinkedHashMap<>(11);
+                map = new LinkedHashMap<>(10);
 
                 map.put("grpName", getGrpName());
                 map.put("grpId", getGrpId());
