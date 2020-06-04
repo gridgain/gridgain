@@ -21,11 +21,11 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 
 /**
- * The abstract implementation with registry inside, which provide a dependency on demand by {@link #getDependency(Class)}.
+ * The abstract implementation with registry inside, which provides a dependency on demand by {@link #getDependency(Class)}.
  */
 public abstract class AbstractTestDependencyResolver implements DependencyResolver {
     /** Dependency registry. */
-    public final ConcurrentMap<Class, Object> registry = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Class, Object> registry = new ConcurrentHashMap<>();
 
     /** {@inheritDoc} */
     @Override public <T> T resolve(T instance) {
@@ -50,5 +50,5 @@ public abstract class AbstractTestDependencyResolver implements DependencyResolv
     /**
      * Custom resolver logic.
      */
-    protected abstract  <T> T doResolve(T instance);
+    protected abstract <T> T doResolve(T instance);
 }

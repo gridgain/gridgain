@@ -376,13 +376,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        lockEntry();
-
-        try {
-            return S.toString(GridLocalCacheEntry.class, this, super.toString());
-        }
-        finally {
-            unlockEntry();
-        }
+        return S.toString(GridLocalCacheEntry.class, this, super.toString());
     }
 }

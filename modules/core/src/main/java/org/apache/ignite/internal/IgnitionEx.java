@@ -1477,7 +1477,7 @@ public class IgnitionEx {
     }
 
     /**
-     * Sets custom dependency resolver which provide override dependencies.
+     * Sets custom dependency resolver which provides overridden dependencies
      *
      * @param rslvr Dependency resolver.
      */
@@ -1488,9 +1488,9 @@ public class IgnitionEx {
     /**
      * Custom dependency resolver.
      *
-     * @return Returens {@code null} if resolver wasn't added.
+     * @return Returns {@code null} if resolver wasn't added.
      */
-    public static DependencyResolver dependencyResolve() {
+    public static DependencyResolver dependencyResolver() {
         return dependencyResolver.get();
     }
 

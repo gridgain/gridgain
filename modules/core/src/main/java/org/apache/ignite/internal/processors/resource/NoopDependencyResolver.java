@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.resource;
 
 /**
- * Noop implementation of dependency resolver. It uses by default.
+ * Noop implementation of dependency resolver. It's used by default.
  */
 public class NoopDependencyResolver implements DependencyResolver {
     /** {@inheritDoc} */

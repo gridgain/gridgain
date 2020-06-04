@@ -30,7 +30,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.F;
@@ -787,15 +786,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        if (tryLockEntry(ENTRY_LOCK_TIMEOUT)) {
-            try {
-                return S.toString(GridDistributedCacheEntry.class, this, super.toString());
-            }
-            finally {
-                unlockEntry();
-            }
-        }
-        else
-            return EMPTY_STRING;
+        return S.toString(GridDistributedCacheEntry.class, this, super.toString());
     }
 }

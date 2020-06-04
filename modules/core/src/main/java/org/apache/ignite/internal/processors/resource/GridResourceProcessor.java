@@ -82,9 +82,9 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
-        final DependencyResolver extRslvr = IgnitionEx.dependencyResolve();
+        final DependencyResolver extRslvr = IgnitionEx.dependencyResolver();
 
-        if(extRslvr != null)
+        if (extRslvr != null)
             this.dependencyResolver = extRslvr;
 
         if (log.isDebugEnabled())
@@ -561,10 +561,10 @@ public class GridResourceProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Delegate the class to under control of resource manager.
+     * Delegates resource resolving to the provided dependency resolver, which wraps passed instance if necessary.
      *
      * @param instance Instance of delegated class.
-     * @return Original instance or wrapped if wrapper exist.
+     * @return Original instance or wrapped if wrapper exists.
      */
     public <T> T resolve(T instance) {
         return dependencyResolver.resolve(instance);

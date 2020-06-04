@@ -134,11 +134,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /** */
     public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
-    /** Entry lock time awaiting. */
-    public static final long ENTRY_LOCK_TIMEOUT = getLong("ENTRY_LOCK_TIMEOUT", 1000);
+    /** Property name for entry lock timeout. */
+    public static final String ENTRY_LOCK_TIMEOUT_ENV = "ENTRY_LOCK_TIMEOUT";
 
-    /** Empty string. */
-    protected static final String EMPTY_STRING = "";
+    /** Entry lock time awaiting. */
+    private static final long ENTRY_LOCK_TIMEOUT = getLong(ENTRY_LOCK_TIMEOUT_ENV, 1000);
 
     /** */
     private static final byte IS_DELETED_MASK = 0x01;
@@ -5054,6 +5054,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             return lock.tryLock(timeout, TimeUnit.MILLISECONDS);
         }
         catch (InterruptedException ignite) {
+            Thread.currentThread().interrupt();
+
             return false;
         }
     }
@@ -5114,8 +5116,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 unlockEntry();
             }
         }
-        else
-            return EMPTY_STRING;
+        else {
+            return "GridCacheMapEntry [err='Partial result represented because entry lock wasn't acquired."
+                +" Waiting time elapsed.'"
+                + ", key=" + key
+                + ", val=" + val
+                + ", ver=" + ver
+                + ", hash=" + hash
+                + ", flags=" + flags
+                + "]";
+        }
     }
 
     /** */
