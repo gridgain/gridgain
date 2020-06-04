@@ -32,7 +32,7 @@ import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
-import org.apache.ignite.spi.communication.tcp.internal.IncomingConnectionHandler;
+import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.TestDependencyResolver;
@@ -163,13 +163,13 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
 
     /**
      * The method reference implementation of {@link DependencyResolver}. It adds an additional behavior to {@link
-     * IncomingConnectionHandler}.
+     * InboundConnectionHandler}.
      *
      * @param instance Delegated instance.
      */
     private <T> T resolve(T instance) {
-        if (instance instanceof IncomingConnectionHandler) {
-            IncomingConnectionHandler hnd = Mockito.spy((IncomingConnectionHandler)instance);
+        if (instance instanceof InboundConnectionHandler) {
+            InboundConnectionHandler hnd = Mockito.spy((InboundConnectionHandler)instance);
 
             Mockito.doAnswer(inv -> {
                 GridNioSession ses = (GridNioSession)inv.getArguments()[0];
