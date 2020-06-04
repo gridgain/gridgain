@@ -153,19 +153,12 @@
             <artifactId>commons-math3</artifactId>
             <version>${commons.math.version}</version>
         </dependency>
-    </dependencies>
 
-    <profiles>
-        <profile>
-            <id>lgpl</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.github.fommil.netlib</groupId>
-                    <artifactId>all</artifactId>
-                    <version>${netlibjava.version}</version>
-                    <type>pom</type>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
+        <dependency>
+            <groupId>com.github.fommil.netlib</groupId>
+            <artifactId>all</artifactId>
+            <version>${netlibjava.version}</version>
+            <type>pom</type>
+        </dependency>
+    </dependencies>
 </project>
