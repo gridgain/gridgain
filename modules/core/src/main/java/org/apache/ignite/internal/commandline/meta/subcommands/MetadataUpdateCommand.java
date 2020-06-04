@@ -87,16 +87,21 @@ public class MetadataUpdateCommand
     ) throws Exception {
         GridClientCompute compute = client.compute();
 
-        Collection<GridClientNode> connectableNodes = compute.nodes(GridClientNode::connectable);
+        // Try to find connectable server nodes.
+        Collection<GridClientNode> nodes = compute.nodes((n) -> n.connectable() && !n.isClient());
 
-        if (F.isEmpty(connectableNodes))
-            throw new GridClientDisconnectedException("Connectable nodes not found", null);
+        if (F.isEmpty(nodes)) {
+            nodes = compute.nodes(GridClientNode::connectable);
 
-        GridClientNode node = connectableNodes.stream()
+            if (F.isEmpty(nodes))
+                throw new GridClientDisconnectedException("Connectable nodes not found", null);
+        }
+
+        GridClientNode node = nodes.stream()
             .findAny().orElse(null);
 
         if (node == null)
-            node = compute.balancer().balancedNode(connectableNodes);
+            node = compute.balancer().balancedNode(nodes);
 
         return compute.projection(node).execute(
             taskName(),
@@ -114,7 +119,7 @@ public class MetadataUpdateCommand
 
         BinaryMetadata m = res.metadata();
 
-
+        log.info("Metadata updated for the type: '" + m.typeName() + '\'');
     }
 
     /** {@inheritDoc} */

@@ -97,16 +97,21 @@ public class MetadataRemoveCommand
     ) throws Exception {
         GridClientCompute compute = client.compute();
 
-        Collection<GridClientNode> connectableNodes = compute.nodes(GridClientNode::connectable);
+        // Try to find connectable server nodes.
+        Collection<GridClientNode> nodes = compute.nodes((n) -> n.connectable() && !n.isClient());
 
-        if (F.isEmpty(connectableNodes))
-            throw new GridClientDisconnectedException("Connectable nodes not found", null);
+        if (F.isEmpty(nodes)) {
+            nodes = compute.nodes(GridClientNode::connectable);
 
-        GridClientNode node = connectableNodes.stream()
+            if (F.isEmpty(nodes))
+                throw new GridClientDisconnectedException("Connectable nodes not found", null);
+        }
+
+        GridClientNode node = nodes.stream()
             .findAny().orElse(null);
 
         if (node == null)
-            node = compute.balancer().balancedNode(connectableNodes);
+            node = compute.balancer().balancedNode(nodes);
 
         return compute.projection(node).execute(
             taskName(),
@@ -127,26 +132,17 @@ public class MetadataRemoveCommand
         if (outFile == null)
             outFile = FS.getPath(m.typeId() + ".bin");
 
-        try {
-            storeMeta(res.metadataMarshalled(), outFile);
+        try (OutputStream os = Files.newOutputStream(outFile)) {
+            os.write(res.metadataMarshalled());
         }
         catch (IOException e) {
-            log.severe("Cannot store removed type'" + m.typeName() + "' to: " + outFile);
+            log.severe("Cannot store removed type '" + m.typeName() + "' to: " + outFile);
             log.severe(CommandLogger.errorMessage(e));
 
             return;
         }
 
         log.info("Type '" + m.typeName() + "' is removed. Metadata is stored at: " + outFile);
-    }
-
-    /**
-     *
-     */
-    private void storeMeta(byte[] marshalledMeta, Path outFile) throws IOException {
-        try (OutputStream os = Files.newOutputStream(outFile)) {
-            os.write(marshalledMeta);
-        }
     }
 
     /** {@inheritDoc} */
