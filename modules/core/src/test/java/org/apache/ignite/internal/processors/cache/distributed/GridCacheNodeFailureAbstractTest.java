@@ -90,6 +90,8 @@ public abstract class GridCacheNodeFailureAbstractTest extends GridCommonAbstrac
     @Override protected void beforeTestsStarted() throws Exception {
         for (int i = 0; i < GRID_CNT; i++)
             IGNITEs.add(startGrid(i));
+
+        awaitPartitionMapExchange();
     }
 
     /**
