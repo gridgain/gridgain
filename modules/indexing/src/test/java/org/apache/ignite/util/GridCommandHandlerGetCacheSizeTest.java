@@ -24,7 +24,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
@@ -88,11 +87,11 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
 
         IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> cache = ignite.cache(CACHE_NAME);
 
-        AtomicInteger maxCacheSizeCntr = new AtomicInteger();
+        int maxCacheSizeCntr = 0;
 
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-        while(maxCacheSizeCntr.getAndIncrement() < MAX_CACHE_SIZE) {
+        while(maxCacheSizeCntr++ < MAX_CACHE_SIZE) {
             int id = rnd.nextInt(MAX_CACHE_SIZE);
             cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
         }

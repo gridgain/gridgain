@@ -111,7 +111,7 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
 
                     for (GridCacheContext cacheContext : context.caches()) {
                         String nameInGrp = cacheContext.cache().name();
-                        long cacheSize = getOffHeapCountFromCache(cacheProcessor, nameInGrp);
+                        long cacheSize = getCacheSize(cacheProcessor, nameInGrp);
                         sizeSummary += cacheSize;
                     }
                     ci.setOffHeapPrimaryEntriesCnt(sizeSummary);
@@ -144,7 +144,7 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     ci.setMapped(mapped(desc.cacheName()));
 
                     GridCacheProcessor cacheProcessor = k.context().cache();
-                    ci.setOffHeapPrimaryEntriesCnt(getOffHeapCountFromCache(cacheProcessor, ci.getCacheName()));
+                    ci.setOffHeapPrimaryEntriesCnt(getCacheSize(cacheProcessor, ci.getCacheName()));
 
                     cacheInfo.add(ci);
                 }
@@ -159,9 +159,9 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
      * @param cacheName - name
      * @return off-heap cache size
      */
-    private Long getOffHeapCountFromCache(GridCacheProcessor cacheProcessor, String cacheName) throws Exception {
+    private long getCacheSize(GridCacheProcessor cacheProcessor, String cacheName) throws Exception {
         IgniteCache<Object, Object> cache = cacheProcessor.jcache(cacheName);
-        return cache.sizeLong(CachePeekMode.OFFHEAP);
+        return cache.sizeLong();
     }
 
     /**
