@@ -36,8 +36,8 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
  */
 public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /**
-     * Grid count from test
-     * */
+     *
+     */
     public static final int GRID_CNT = 2;
 
     /**
