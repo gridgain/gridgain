@@ -1078,8 +1078,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             client.release();
             client.close();
             return true;
-        } catch (IgniteCheckedException e) {
-            e.printStackTrace();
+        }
+        catch (IgniteCheckedException e) {
+            log.warning("Failed to ping node " + node.id() + ": " + e.getMessage(), e);
         }
         return false;
     }

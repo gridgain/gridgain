@@ -111,7 +111,8 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
 
         try {
             spi.getConfiguration().localHost(U.resolveLocalHost("127.0.0.1"));
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException(e);
         }
 
@@ -215,8 +216,9 @@ public class GridTcpCommunicationSpiPingTest extends GridSpiAbstractTest<TcpComm
             @Override public boolean sendMessage(@Nullable UUID nodeId, Message msg, IgniteInClosure<IgniteException> c) throws IgniteCheckedException {
                 try {
                     latch.await();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                }
+                catch (InterruptedException ignored) {
+                    fail();
                 }
                 return client.sendMessage(nodeId, msg, c);
             }
