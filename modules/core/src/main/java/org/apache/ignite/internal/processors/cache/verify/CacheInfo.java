@@ -350,7 +350,7 @@ public class CacheInfo extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V5;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -388,7 +388,7 @@ public class CacheInfo extends VisorDataTransferObject {
         affinityClsName = U.readString(in);
         cachesCnt = in.readInt();
         atomicityMode = protoVer >= V2 ? CacheAtomicityMode.fromOrdinal(in.readByte()) : null;
-        offHeapPrimaryEntriesCnt = protoVer >= V5 ? (Long)in.readObject() : null;
+        offHeapPrimaryEntriesCnt = protoVer >= V3 ? (Long)in.readObject() : null;
     }
 
     /** {@inheritDoc} */
