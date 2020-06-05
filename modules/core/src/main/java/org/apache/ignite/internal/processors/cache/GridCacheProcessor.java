@@ -36,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.cache.CacheException;
 import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -49,6 +51,7 @@ import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
@@ -77,6 +80,7 @@ import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProce
 import org.apache.ignite.internal.processors.cache.datastructures.CacheDataStructuresManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.FinishPreloadingTask;
@@ -152,6 +156,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
@@ -168,6 +173,7 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.String.format;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -194,7 +200,11 @@ import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 @SuppressWarnings({"unchecked", "TypeMayBeWeakened", "deprecation"})
 public class GridCacheProcessor extends GridProcessorAdapter {
     /** */
-    static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
+    public static final String CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT =
+        "Failed to perform %s operation (cluster is in read-only mode) [cacheGrp=%s, cache=%s]";
+
+    /** */
+    private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
         "Cannot start/stop cache within lock or transaction [cacheNames=%s, operation=%s]";
 
     /** Enables start caches in parallel. */
@@ -3379,7 +3389,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
-                () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicStartCache"));
+                () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicStartCache"));
         }
 
         GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> startCacheClsr = (grpKeys) -> {
@@ -3419,6 +3429,93 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
         catch (Exception e) {
             return new GridFinishedFuture<>(e);
+        }
+    }
+
+    /**
+     * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     *
+     * @param opName Operation name.
+     * @param cfgs Stored cache configurations.
+     * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     */
+    private void checkReadOnlyState(String opName, Collection<StoredCacheData> cfgs) {
+        IgniteOutClosure<String> cacheNameClo = null;
+        IgniteOutClosure<String> cacheGrpNameClo = null;
+
+        if (!F.isEmpty(cfgs)) {
+            if (cfgs.size() == 1) {
+                CacheConfiguration cfg = cfgs.iterator().next().config();
+
+                cacheNameClo = cfg::getName;
+                cacheGrpNameClo = cfg::getGroupName;
+            }
+            else {
+                cacheNameClo = () -> cfgs.stream()
+                    .map(StoredCacheData::config)
+                    .map(CacheConfiguration::getName)
+                    .collect(Collectors.toList()).toString();
+
+                cacheGrpNameClo = () -> cfgs.stream()
+                    .map(StoredCacheData::config)
+                    .map(CacheConfiguration::getGroupName)
+                    .collect(Collectors.toList()).toString();
+            }
+        }
+
+        checkReadOnlyState(opName, cacheGrpNameClo, cacheNameClo);
+    }
+
+    /**
+     * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     *
+     * @param opName Operation name.
+     * @param cfgs Cache configurations.
+     * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     */
+    public void checkReadOnlyState(String opName, CacheConfiguration... cfgs) {
+        IgniteOutClosure<String> cacheNameClo = null;
+        IgniteOutClosure<String> cacheGrpNameClo = null;
+
+        if (!F.isEmpty(cfgs)) {
+            if (cfgs.length == 1) {
+                cacheNameClo = () -> cfgs[0] == null ? null : cfgs[0].getName();
+                cacheGrpNameClo = () -> cfgs[0] == null ? null : cfgs[0].getGroupName();
+            }
+            else {
+                cacheNameClo = () -> Stream.of(cfgs)
+                    .map(CacheConfiguration::getName)
+                    .collect(Collectors.toList()).toString();
+
+                cacheGrpNameClo = () -> Stream.of(cfgs)
+                    .map(CacheConfiguration::getGroupName)
+                    .collect(Collectors.toList()).toString();
+            }
+        }
+
+        checkReadOnlyState(opName, cacheGrpNameClo, cacheNameClo);
+    }
+
+    /**
+     * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     *
+     * @param opName Operation name.
+     * @param cacheGrpNameClo Closure for getting cache group name, if it needed (optional).
+     * @param cacheNameClo Closure for getting cache name, if it needed (optional).
+     * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     */
+    private void checkReadOnlyState(
+        String opName,
+        @Nullable IgniteOutClosure<String> cacheGrpNameClo,
+        @Nullable IgniteOutClosure<String> cacheNameClo
+    ) {
+        if (sharedCtx.readOnlyMode()) {
+            String cacheName = cacheNameClo == null ? null : cacheNameClo.apply();
+            String cacheGrpName = cacheGrpNameClo == null ? null : cacheGrpNameClo.apply();
+
+            String errorMsg = format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT, opName, cacheGrpName, cacheName);
+
+            throw new CacheException(new IgniteClusterReadOnlyException(errorMsg));
         }
     }
 
@@ -3536,7 +3633,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     .map(CacheConfiguration::getName)
                     .collect(Collectors.toList());
 
-                return String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicStartCachesByStoredConf");
+                return format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicStartCachesByStoredConf");
             });
         }
 
@@ -3630,8 +3727,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
-                () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicDestroyCache"));
+                () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicDestroyCache"));
         }
+
+        checkReadOnlyState("dynamic destroy cache", null, cacheName::toString);
 
         DynamicCacheChangeRequest req = DynamicCacheChangeRequest.stopRequest(ctx, cacheName, sql, true);
 
@@ -3665,8 +3764,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     ) {
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
-                () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicDestroyCaches"));
+                () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicDestroyCaches"));
         }
+
+        if (!F.isEmpty(cacheNames))
+            checkReadOnlyState("dynamic destroy caches", null, cacheNames::toString);
 
         return dynamicChangeCaches(
             cacheNames.stream().map(cacheName -> createStopRequest(cacheName, false, null, destroy))
@@ -3717,7 +3819,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return new GridFinishedFuture<>(); // No-op.
 
         sharedCtx.tm().checkEmptyTransactions(
-            () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicCloseCache"));
+            () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicCloseCache"));
 
         if (proxy.context().isLocal())
             return dynamicDestroyCache(cacheName, false, true, false, null);
@@ -3733,7 +3835,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     public IgniteInternalFuture<?> resetCacheState(Collection<String> cacheNames) throws ClusterTopologyCheckedException {
         sharedCtx.tm().checkEmptyTransactions(
-            () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "resetCacheState"));
+            () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "resetCacheState"));
 
         Collection<DynamicCacheChangeRequest> reqs = new ArrayList<>(cacheNames.size());
 

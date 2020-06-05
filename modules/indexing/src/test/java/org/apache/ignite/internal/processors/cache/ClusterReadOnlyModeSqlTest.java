@@ -25,7 +25,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.util.typedef.G;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.checkThatRootCauseIsReadOnly;
+import static org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTestUtils.checkRootCause;
 
 /**
  * Tests SQL queries in read-only cluster mode.
@@ -76,7 +76,7 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                 if ((failed == null) == readOnly)
                     fail("SQL delete from " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
 
-                checkThatRootCauseIsReadOnly(failed);
+                checkRootCause(failed, "assertSqlReadOnlyMode");
 
                 failed = null;
 
@@ -94,7 +94,7 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                 if ((failed == null) == readOnly)
                     fail("SQL insert into " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
 
-                checkThatRootCauseIsReadOnly(failed);
+                checkRootCause(failed, "assertSqlReadOnlyMode");
             }
         }
     }
