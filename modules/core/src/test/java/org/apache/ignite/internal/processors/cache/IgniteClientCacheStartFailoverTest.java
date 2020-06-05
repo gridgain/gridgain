@@ -35,6 +35,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
@@ -67,6 +68,9 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setFailureDetectionTimeout(100000L);
+        cfg.setClientFailureDetectionTimeout(100000L);
 
         cfg.setClientMode(client);
 
@@ -300,25 +304,25 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
         for (String cacheName : cacheNames)
             c.cache(cacheName);
 
-        U.sleep(1000);
-
+        // Will switch to ideal topology but some partitions are not evicted yet.
         for (int i = 0; i < SRVS + 1; i++) {
-            AffinityTopologyVersion topVer = new AffinityTopologyVersion(SRVS + 2);
+            AffinityTopologyVersion topVer = new AffinityTopologyVersion(SRVS + 2, 1);
 
             IgniteKernal node = (IgniteKernal)ignite(i);
 
             for (String cacheName : cacheNames) {
-                GridDhtPartitionTopology top = node.context().cache().internalCache(cacheName).context().topology();
+                GridDhtPartitionTopology top = node.cachex(cacheName).context().topology();
 
                 waitForReadyTopology(top, topVer);
 
                 assertEquals(topVer, top.readyTopologyVersion());
-
-                assertFalse(top.rebalanceFinished(topVer));
             }
         }
 
         TestRecordingCommunicationSpi.spi(ignite(0)).stopBlock();
+
+        // Trigger eviction.
+        awaitPartitionMapExchange(true, true, null, false);
 
         for (int i = 0; i < SRVS + 1; i++) {
             final AffinityTopologyVersion topVer = new AffinityTopologyVersion(SRVS + 2, 1);
@@ -326,7 +330,7 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
             final IgniteKernal node = (IgniteKernal)ignite(i);
 
             for (String cacheName : cacheNames) {
-                final GridDhtPartitionTopology top = node.context().cache().internalCache(cacheName).context().topology();
+                final GridDhtPartitionTopology top = node.cachex(cacheName).context().topology();
 
                 GridTestUtils.waitForCondition(new GridAbsPredicate() {
                     @Override public boolean apply() {
