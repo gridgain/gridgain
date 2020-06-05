@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import javax.cache.Cache;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -90,6 +91,7 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridMetadataAwareAdapter;
 import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.lang.GridTuple3;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -5108,22 +5110,31 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public String toString() {
+        return toStringWithTryLock(() -> S.toString(GridCacheMapEntry.class, this));
+    }
+
+    /**
+     * Does thread safe {@link #toString} for {@link GridCacheMapEntry} classes.
+     *
+     * @param dfltToStr {@link #toString()} supplier.
+     * @return Result of dfltToStr call If lock acquired or a short representation of {@link GridCacheMapEntry}.
+     */
+    protected String toStringWithTryLock(Supplier<String> dfltToStr) {
         if (tryLockEntry(ENTRY_LOCK_TIMEOUT)) {
             try {
-                return S.toString(GridCacheMapEntry.class, this);
+                return dfltToStr.get();
             }
             finally {
                 unlockEntry();
             }
         }
         else {
+            String keySens = GridToStringBuilder.includeSensitive() ? ", key=" + key : "";
+
             return "GridCacheMapEntry [err='Partial result represented because entry lock wasn't acquired."
-                +" Waiting time elapsed.'"
-                + ", key=" + key
-                + ", val=" + val
-                + ", ver=" + ver
+                + " Waiting time elapsed.'"
+                + keySens
                 + ", hash=" + hash
-                + ", flags=" + flags
                 + "]";
         }
     }

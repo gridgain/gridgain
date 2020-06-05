@@ -789,6 +789,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridNearCacheEntry.class, this, "super", super.toString());
+        return toStringWithTryLock(() -> S.toString(GridNearCacheEntry.class, this, "super", super.toString()));
     }
 }
