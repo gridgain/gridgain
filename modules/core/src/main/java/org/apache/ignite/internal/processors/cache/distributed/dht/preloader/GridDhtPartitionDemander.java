@@ -1463,7 +1463,7 @@ public class GridDhtPartitionDemander {
                     if (log.isInfoEnabled())
                         log.info("Completed rebalance future: " + this);
 
-                    // Complete sync future if rebalancing was not cancelled.
+                    // Complete sync future only if rebalancing was not cancelled.
                     if (res && !grp.preloader().syncFuture().isDone())
                         ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
                 }
