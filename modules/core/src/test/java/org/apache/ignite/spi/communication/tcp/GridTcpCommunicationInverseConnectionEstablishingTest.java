@@ -262,6 +262,38 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         assertTrue(lsnr.check());
     }
 
+    @Test
+    public void testClientToClient() throws Exception {
+        this.envType = EnvironmentType.VIRTUALIZED;
+        UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
+
+        LogListener lsnr = LogListener.matches("Failed to send message to remote node").atMost(0).build();
+
+        for (int i = 0; i < SRVS_NUM; i++) {
+            ccfg = cacheConfiguration(CACHE_NAME, ATOMIC);
+
+            startGrid(i, cfg -> {
+                ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
+
+                log.registerListener(lsnr);
+
+                return cfg.setGridLogger(log);
+            });
+        }
+
+        clientMode = true;
+
+        IgniteEx client1 = startGrid(SRVS_NUM);
+        IgniteEx client2 = startGrid(SRVS_NUM + 1);
+
+        ClusterNode node = client2.localNode();
+        node.attributes();
+
+        client1.context().io().sendIoTest(client2.localNode(), new byte[10], false).get();
+
+        assertTrue(lsnr.check());
+    }
+
     /**
      * No server threads hang even if client doesn't respond to inverse connection request.
      *

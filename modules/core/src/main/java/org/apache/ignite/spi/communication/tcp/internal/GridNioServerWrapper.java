@@ -311,7 +311,7 @@ public class GridNioServerWrapper {
      * @throws IgniteCheckedException If establish connection fails.
      */
     public GridNioSession createNioSession(ClusterNode node, int connIdx) throws IgniteCheckedException {
-        boolean locNodeIsSrv = !locNodeSupplier.get().isClient() && !locNodeSupplier.get().isDaemon();
+        boolean locNodeIsSrv = !locNodeSupplier.get().isDaemon();
 
         if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
             if (node.isClient() && startedInVirtualizedEnvironment(node)) {
