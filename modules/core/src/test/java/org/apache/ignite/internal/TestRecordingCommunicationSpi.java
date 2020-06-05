@@ -30,6 +30,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -387,6 +388,21 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
                     GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
 
                     return msg0.groupId() == grpId;
+                }
+
+                return false;
+            }
+        };
+    }
+
+    /** */
+    public static IgniteBiPredicate<ClusterNode, Message> blockSingleExhangeMessage() {
+        return new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() != null;
                 }
 
                 return false;
