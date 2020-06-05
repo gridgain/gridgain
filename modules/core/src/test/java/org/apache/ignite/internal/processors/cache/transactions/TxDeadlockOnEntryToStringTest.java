@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
@@ -31,16 +32,16 @@ import org.apache.ignite.internal.util.UUIDCollectionMessage;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
+import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.TestDependencyResolver;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
-import org.mockito.Mockito;
-
-import static org.mockito.Matchers.any;
 
 /**
  * GridDhtCacheEntry::toString leads to system "deadlock" on the timeoutWorker.
@@ -93,9 +94,9 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
         entryReadyToPrint.await();
 
         // Try to do first handshake with hangs, after reconnect handshake should be passed.
-        pool.forceClose();
-
         rejectHandshake.set(true);
+
+        pool.forceCloseConnection(incomingNode.localNode().id());
 
         nearNode.configuration().getCommunicationSpi().sendMessage(incomingNode.localNode(), UUIDCollectionMessage.of(UUID.randomUUID()));
 
@@ -155,7 +156,7 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
         @Override public void onTimeout() {
             entryReadyToPrint.countDown();
 
-            entry.toString();
+            log.info(entry.toString());
 
             entryPrinted.countDown();
         }
@@ -169,26 +170,61 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
      */
     private <T> T resolve(T instance) {
         if (instance instanceof InboundConnectionHandler) {
-            InboundConnectionHandler hnd = Mockito.spy((InboundConnectionHandler)instance);
+            InboundConnectionHandler hnd = (InboundConnectionHandler)instance;
 
-            Mockito.doAnswer(inv -> {
-                GridNioSession ses = (GridNioSession)inv.getArguments()[0];
-                Message msg = (Message)inv.getArguments()[1];
-
-                if (rejectHandshake.get() && msg instanceof HandshakeMessage2) {
-                    rejectHandshake.set(false);
-
-                    ses.close();
-
-                    return null;
+            return (T)(new InboundConnectionHandler(null, null, null, null, null, null, null, null, null, null, null, null, null, false, null, null) {
+                @Override public void setNioSrvWrapper(GridNioServerWrapper nioSrvWrapper) {
+                    hnd.setNioSrvWrapper(nioSrvWrapper);
                 }
 
-                hnd.onMessage(ses, msg);
+                @Override public void setClientPool(ConnectionClientPool pool) {
+                    hnd.setClientPool(pool);
+                }
 
-                return null;
-            }).when(hnd).onMessageSent(any(), any());
+                @Override public void onSessionWriteTimeout(GridNioSession ses) {
+                    hnd.onSessionWriteTimeout(ses);
+                }
 
-            return (T)hnd;
+                @Override public void onConnected(GridNioSession ses) {
+                    hnd.onConnected(ses);
+                }
+
+                @Override public void onMessageSent(GridNioSession ses, Message msg) {
+                    hnd.onMessageSent(ses, msg);
+                }
+
+                @Override public void onMessage(GridNioSession ses, Message msg) {
+                    if (rejectHandshake.get() && msg instanceof HandshakeMessage2) {
+                        rejectHandshake.set(false);
+
+                        ses.close();
+
+                        return;
+                    }
+
+                    hnd.onMessage(ses, msg);
+                }
+
+                @Override public void onFailure(FailureType failureType, Throwable failure) {
+                    hnd.onFailure(failureType, failure);
+                }
+
+                @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+                    hnd.onDisconnected(ses, e);
+                }
+
+                @Override public void stop() {
+                    hnd.stop();
+                }
+
+                @Override public void communicationWorker(CommunicationWorker commWorker) {
+                    hnd.communicationWorker(commWorker);
+                }
+
+                @Override public void onSessionIdleTimeout(GridNioSession ses) {
+                    hnd.onSessionIdleTimeout(ses);
+                }
+            });
         }
 
         return instance;
