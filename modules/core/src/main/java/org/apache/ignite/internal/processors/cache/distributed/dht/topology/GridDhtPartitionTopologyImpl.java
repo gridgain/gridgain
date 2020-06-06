@@ -1694,6 +1694,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         else if (state == MOVING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
+                            // TODO if local partition is moving no need in changed=true.
+                            // TOODO clear MOVING on node start in the same place as RENTING continued clearing.
                             rebalancePartition(p, partsToReload.contains(p) ||
                                 locPart != null && locPart.state() == MOVING && exchFut.localJoinExchange(), exchFut);
 
@@ -1707,6 +1709,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (readyTopVer.initialized() && readyTopVer.equals(lastTopChangeVer)) {
                     AffinityAssignment aff = grp.affinity().readyAffinity(readyTopVer);
 
+                    // Evictions on exchange are checked in exchange worker thread before rebalancing.
                     if (exchangeVer == null)
                         changed |= checkEvictions(updateSeq, aff);
 

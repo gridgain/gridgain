@@ -460,10 +460,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Resends partitions on partition evict within configured timeout.
+     * Update topology on partition eviction and optionallly refresh partition map.
      *
      * @param part Evicted partition.
-     * @param updateSeq Update sequence.
+     * @param updateSeq {@code True} to refresh partition maps.
      */
     public void onPartitionEvicted(GridDhtLocalPartition part, boolean updateSeq) {
         if (!enterBusy())

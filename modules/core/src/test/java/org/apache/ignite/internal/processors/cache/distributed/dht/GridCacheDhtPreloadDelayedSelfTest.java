@@ -124,7 +124,7 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
      * @return {@code True} if a persistent grid is required.
      */
     protected boolean persistenceEnabled() {
-        return false;
+        return true;
     }
 
     /**
@@ -147,6 +147,10 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
             c0.put(Integer.toString(i), i);
 
         Ignite g1 = startGrid(1);
+
+        if (persistenceEnabled())
+            resetBaselineTopology();
+
         Ignite g2 = startGrid(2);
 
         if (persistenceEnabled())
@@ -187,8 +191,6 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
         GridDhtCacheAdapter<String, Integer> d2 = dht(2);
 
         doSleep(1000);
-
-        checkMaps(false, d0, d1, d2);
 
         // Force preload.
         c1.rebalance();
@@ -235,6 +237,10 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
             c0.put(Integer.toString(i), i);
 
         Ignite g1 = startGrid(1);
+
+        if (persistenceEnabled())
+            resetBaselineTopology();
+
         Ignite g2 = startGrid(2);
 
         if (persistenceEnabled())
@@ -274,9 +280,9 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
         GridDhtCacheAdapter<String, Integer> d1 = dht(1);
         GridDhtCacheAdapter<String, Integer> d2 = dht(2);
 
-        info("Beginning to wait for caches repartition.");
+        // Partitions maps are not always equal because state is not send after moving to EVICTED state.
 
-        checkMaps(false, d0, d1, d2);
+        info("Beginning to wait for caches repartition.");
 
         assert l1.await(PRELOAD_DELAY * 3 / 2, MILLISECONDS);
 
@@ -314,6 +320,10 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
             c0.put(Integer.toString(i), i);
 
         Ignite g1 = startGrid(1);
+
+        if (persistenceEnabled())
+            resetBaselineTopology();
+
         Ignite g2 = startGrid(2);
 
         if (persistenceEnabled())
@@ -355,7 +365,7 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
                         resetBaselineTopology();
                 }
 
-                awaitPartitionMapExchange();
+                awaitPartitionMapExchange(true, true, null, false);
 
                 for (Ignite g : ignites) {
                     info(">>> Checking affinity for grid: " + g.name());

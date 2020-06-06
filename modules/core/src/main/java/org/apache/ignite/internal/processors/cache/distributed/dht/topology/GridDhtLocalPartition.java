@@ -683,7 +683,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Starts clearing process asynchronously if it's requested and not running at the moment.
      * Method may finish clearing process ahead of time if partition is empty and doesn't have reservations.
      *
-     * @param updateSeq Update sequence.
+     * @param updateSeq {@code True} will cause partition map state refresh after eviction in
+     * {@link GridDhtPreloader#onPartitionEvicted(GridDhtLocalPartition, boolean) onPartitionEvicted}.
      */
     private void clearAsync0(boolean updateSeq) {
         // Method expected to be called  from exchange worker or rebalancing thread when rebalancing is done.
@@ -1141,6 +1142,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     assert hld != null;
 
+                    // TODO Does reservation, not needed for RENTING clearing.
                     GridCacheMapEntry cached = putEntryIfObsoleteOrAbsent(
                         hld,
                         hld.cctx,
