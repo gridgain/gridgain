@@ -618,7 +618,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         TestStringContainerToBePrinted val = new TestStringContainerToBePrinted(search2);
 
-        ctrlStringsToSearch.add("v = [" + val.getClass().getSimpleName() + " [data=" + search2 + "]]"); //will validate original toString() was called
+        ctrlStringsToSearch.add("v = [ " + val.getClass().getSimpleName() + "{data='" + search2 + "'}]"); //will validate original toString() was called
         ctrlStringsForBinaryObjSearch.add(search2);
 
         addlCache.put("SearchValue", val);
@@ -627,7 +627,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         TestStringContainerToBePrinted key = new TestStringContainerToBePrinted(search3);
 
-        ctrlStringsToSearch.add("k = " + key.getClass().getSimpleName() + " [data=" + search3 + "]"); //will validate original toString() was called
+        ctrlStringsToSearch.add("k = " + key.getClass().getSimpleName() + "{data='" + search3 + "'}"); //will validate original toString() was called
         ctrlStringsForBinaryObjSearch.add(search3); //validate only string itself
 
         addlCache.put(key, "SearchKey");
@@ -674,7 +674,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         IgniteInClosure<DataRecord> toStrChecker = record -> {
             String strRepresentation = record.toString();
-
+            System.out.println("!!!!! "+strRepresentation);
             for (Iterator<String> iter = ctrlStringsToSearch.iterator(); iter.hasNext(); ) {
                 final String next = iter.next();
                 if (strRepresentation.contains(next)) {
