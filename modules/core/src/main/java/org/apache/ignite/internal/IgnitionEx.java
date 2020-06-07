@@ -48,7 +48,6 @@ import java.util.logging.Handler;
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -58,8 +57,8 @@ import org.apache.ignite.IgniteState;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -80,13 +79,13 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
-import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -99,6 +98,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -129,6 +129,7 @@ import org.apache.ignite.spi.indexing.noop.NoopIndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
+import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -315,15 +316,13 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
-     *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
+     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
+     *       If this parameter is {@code null} common cluster policy will use.
      * @return {@code true} if default grid instance was indeed stopped,
      *      {@code false} otherwise (if it was not started).
      */
-    public static boolean stop(boolean cancel, @Nullable Boolean waitForBackups) {
-        return stop(null, cancel, waitForBackups, false);
+    public static boolean stop(boolean cancel, @Nullable ShutdownPolicy shutdown) {
+        return stop(null, cancel, shutdown, false);
     }
 
     /**
@@ -341,17 +340,15 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
-     *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
+     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
+     *      If this parameter is {@code null} common cluster policy will use.
      * @param stopNotStarted If {@code true} and node start did not finish then interrupts starting thread.
      * @return {@code true} if named Ignite instance was indeed found and stopped,
      *      {@code false} otherwise (the instance with given {@code name} was
      *      not found).
      */
     public static boolean stop(@Nullable String name, boolean cancel,
-        @Nullable Boolean waitForBackups, boolean stopNotStarted) {
+        @Nullable ShutdownPolicy shutdown, boolean stopNotStarted) {
         IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
 
         if (grid != null && stopNotStarted && grid.startLatch.getCount() != 0) {
@@ -360,12 +357,9 @@ public class IgnitionEx {
             grid.starterThread.interrupt();
         }
 
-        if (waitForBackups == null)
-            waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
-
         if (grid != null) {
             if (grid.state() == STARTED)
-                grid.stop(cancel, waitForBackups);
+                grid.stop(cancel, shutdown);
 
             boolean fireEvt;
 
@@ -440,19 +434,14 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
-     *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
+     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
+     *      If this parameter is {@code null} common cluster policy will use.
      */
-    public static void stopAll(boolean cancel, @Nullable Boolean waitForBackups) {
+    public static void stopAll(boolean cancel, @Nullable ShutdownPolicy shutdown) {
         IgniteNamedInstance grid0 = dfltGrid;
 
-        if (waitForBackups == null)
-            waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
-
         if (grid0 != null) {
-            grid0.stop(cancel, waitForBackups);
+            grid0.stop(cancel, shutdown);
 
             boolean fireEvt;
 
@@ -469,7 +458,7 @@ public class IgnitionEx {
 
         // Stop the rest and clear grids map.
         for (IgniteNamedInstance grid : grids.values()) {
-            grid.stop(cancel, waitForBackups);
+            grid.stop(cancel, shutdown);
 
             boolean fireEvt = grids.remove(grid.getName(), grid);
 
@@ -1085,7 +1074,7 @@ public class IgnitionEx {
             // Stop all instances started so far.
             for (IgniteNamedInstance grid : grids) {
                 try {
-                    grid.stop(true, false);
+                    grid.stop(true, ShutdownPolicy.IMMEDIATE);
                 }
                 catch (Exception e1) {
                     U.error(grid.log, "Error when stopping grid: " + grid, e1);
@@ -1655,8 +1644,15 @@ public class IgnitionEx {
         /** Start latch. */
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
-        /** Raised if node is waiting for backups before shutdown. Set to false to end wait. */
-        private volatile boolean waitingForBackups = false;
+        /**
+         * This property determine dafult policy for shutdown: true for {@link ShutdownPolicy.GRACEFUL},
+         * false or not set for {@link ShutdownPolicy.IMMEDIATE}
+         */
+        private final boolean waitForBackups =
+            IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
+
+        /** Raised if node is waiting graceful shutdown. Set to false to end wait. */
+        private volatile boolean delayedShutdown = false;
 
         /**
          * Thread that starts this named instance. This field can be non-volatile since
@@ -2155,8 +2151,7 @@ public class IgnitionEx {
 
                             IgniteNamedInstance ignite = IgniteNamedInstance.this;
 
-                            ignite.stop(true, IgniteSystemProperties.getBoolean(
-                                IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN));
+                            ignite.stop(true, null);
                         }
                     });
 
@@ -2164,7 +2159,7 @@ public class IgnitionEx {
                         log.debug("Shutdown hook is installed.");
                 }
                 catch (IllegalStateException e) {
-                    stop(true, false);
+                    stop(true, ShutdownPolicy.IMMEDIATE);
 
                     throw new IgniteCheckedException("Failed to install shutdown hook.", e);
                 }
@@ -2623,28 +2618,44 @@ public class IgnitionEx {
          *
          * @param cancel Flag indicating whether all currently running jobs
          *      should be cancelled.
-         * @param waitForBackups Flag indicating whether sufficient backups on caches
-         *      should be waited for.
+         * @param shutdown This is a policy of shutdown which applied forcibly.
+         * If this property is null policy will apply policy of whole cluster.
          */
-        void stop(boolean cancel, boolean waitForBackups) {
+        void stop(boolean cancel, ShutdownPolicy shutdown) {
             // Stop cannot be called prior to start from public API,
             // since it checks for STARTED state. So, we can assert here.
             assert startGuard.get();
 
-            // If waiting for backups due to earlier invocation of stop(), stop wait and proceed shutting down.
-            if (!waitForBackups && waitingForBackups)
-                waitingForBackups = false;
+            if (shutdown == null)
+                shutdown = determineShutdownPolicy();
 
-            stop0(cancel, waitForBackups);
+            // If waiting for backups due to earlier invocation of stop(), stop wait and proceed shutting down.
+            if (shutdown == ShutdownPolicy.IMMEDIATE)
+                delayedShutdown = false;
+
+            stop0(cancel, shutdown);
         }
 
         /**
-         * @param cancel Flag indicating whether all currently running jobs
-         *      should be cancelled.
-         * @param waitForBackups Flag indicating whether sufficient backups on caches
-         *      should be waited for.
+         * Read policy from meta storage or return a default value if it didn't find.
+         *
+         * @return Shutdown policy.
          */
-        private synchronized void stop0(boolean cancel, boolean waitForBackups) {
+        private ShutdownPolicy determineShutdownPolicy() {
+            if (waitForBackups)
+                return ShutdownPolicy.GRACEFUL;
+
+            return grid.cluster().shutdownPolicy();
+        }
+
+        /**
+         * Stop instance synchronously according to parameters.
+         *
+         * @param cancel Flag indicating whether all currently running jobsCorruptedCheckpointReservationTest
+         *      should be cancelled.
+         * @param shutdown Policy of according which shutdown will be produced.
+         */
+        private synchronized void stop0(boolean cancel, ShutdownPolicy shutdown) {
             IgniteKernal grid0 = grid;
 
             // Double check.
@@ -2671,17 +2682,15 @@ public class IgnitionEx {
                 }
             }
 
-            if (waitForBackups && !grid.context().clientNode() && grid.cluster().active()) {
-                waitingForBackups = true;
+            if (shutdown == ShutdownPolicy.GRACEFUL && !grid.context().clientNode() && grid.cluster().active()) {
+                delayedShutdown = true;
 
                 if (log.isInfoEnabled())
-                    log.info("Ensuring that caches have sufficient backups...");
-
-                boolean readyToStop = false;
+                    log.info("Ensuring that caches have sufficient backups and local rebalance completion...");
 
                 DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
 
-                while (!readyToStop && waitingForBackups) {
+                while (delayedShutdown) {
                     boolean safeToStop = true;
 
                     long topVer = grid.cluster().topologyVersion();
@@ -2703,15 +2712,14 @@ public class IgnitionEx {
                         continue;
                     }
 
-                    for (CacheGroupContext grpCtx : grid.context().cache().cacheGroups()) {
-                        if (grpCtx.systemCache())
-                            continue;
+                    Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers = new HashMap<>();
 
-                        if (grpCtx.isLocal())
+                    for (CacheGroupContext grpCtx : grid.context().cache().cacheGroups()) {
+                        if (grpCtx.isLocal() || grpCtx.systemCache())
                             continue;
 
                         if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0) {
-                            U.warn(log, "Ignoring potential data loss on cache without backups [name="
+                            LT.warn(log, "Ignoring potential data loss on cache without backups [name="
                                 + grpCtx.cacheOrGroupName() + "]");
 
                             continue;
@@ -2726,54 +2734,58 @@ public class IgnitionEx {
 
                         GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
 
-                        int cacheSpecificAmountOfOwners = -1;
+                        if (fullMap == null) {
+                            safeToStop = false;
 
-                        if (fullMap != null) {
-                            nodesToExclude.retainAll(fullMap.keySet());
-
-                            int parts = grpCtx.topology().partitions();
-
-                            for (int part = 0; part < parts; part++) {
-                                Set<UUID> partIdealAssignment = grpCtx.affinity().idealAssignmentRaw().get(part).
-                                    stream().map(ClusterNode::id).collect(Collectors.toSet());
-
-                                int cnt = 0;
-
-                                for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
-                                    if (nodesToExclude.contains(entry.getKey()))
-                                        continue;
-
-                                    // Skip all non-ideal assignments.
-                                    if (!partIdealAssignment.contains(entry.getKey()))
-                                        continue;
-
-                                    if (entry.getValue().get(part) == GridDhtPartitionState.OWNING)
-                                        cnt++;
-                                }
-
-                                if (cacheSpecificAmountOfOwners == -1)
-                                    cacheSpecificAmountOfOwners = cnt;
-
-                                cacheSpecificAmountOfOwners = Math.min(cacheSpecificAmountOfOwners, cnt);
-                            }
+                            break;
                         }
 
-                        if (cacheSpecificAmountOfOwners <= 1) {
+                        nodesToExclude.retainAll(fullMap.keySet());
+
+                        if (!haveCopyLoclaPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
                             safeToStop = false;
+
+                            if (log.isInfoEnabled())
+                                LT.info(log, "This node is waiting for backups of all local partitions.");
+
+                            break;
+                        }
+
+                        if (!isRebalanceCompleted(grpCtx)) {
+                            safeToStop = false;
+
+                            if (log.isInfoEnabled())
+                                LT.info(log, "This node is waiting for completion of rebalance.");
 
                             break;
                         }
                     }
 
-                    safeToStop = safeToStop && topVer == grid.cluster().topologyVersion();
+                    if (topVer != grid.cluster().topologyVersion())
+                        safeToStop = false;
+
+                    if (safeToStop && !proposedSuppliers.isEmpty()) {
+                        Set<UUID> supportedPolicyNodes = new HashSet<>();
+
+                        for (UUID nodeId : proposedSuppliers.keySet()) {
+                            if (IgniteFeatures.nodeSupports(grid0.context(), grid0.cluster().node(nodeId), IgniteFeatures.SHUTDOWN_POLICY))
+                                supportedPolicyNodes.add(nodeId);
+                        }
+
+                        if (!supportedPolicyNodes.isEmpty()) {
+                            safeToStop = grid0.compute(grid0.cluster().forNodeIds(supportedPolicyNodes))
+                                .execute(CheckCpHistTask.class, proposedSuppliers);
+                        }
+                    }
 
                     if (safeToStop) {
                         try {
                             HashSet<UUID> newNodesToExclude = new HashSet<>(nodesToExclude);
                             newNodesToExclude.add(grid.getLocalNodeId());
 
-                            readyToStop = metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY,
-                                originalNodesToExclude, newNodesToExclude);
+                            if (metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY, originalNodesToExclude,
+                                newNodesToExclude))
+                                break;
                         }
                         catch (IgniteCheckedException e) {
                             U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
@@ -2781,23 +2793,13 @@ public class IgnitionEx {
 
                             continue;
                         }
-
-                        if (!readyToStop) {
-                            try {
-                                IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
-                            }
-                            catch (IgniteInterruptedCheckedException e) {
-                                Thread.currentThread().interrupt();
-                            }
-                        }
                     }
-                    else {
-                        try {
-                            IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
-                        }
-                        catch (IgniteInterruptedCheckedException e) {
-                            Thread.currentThread().interrupt();
-                        }
+
+                    try {
+                        IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
+                    }
+                    catch (IgniteInterruptedCheckedException e) {
+                        Thread.currentThread().interrupt();
                     }
                 }
             }
@@ -2831,6 +2833,79 @@ public class IgnitionEx {
                     stopExecutors(log);
 
                 log = null;
+            }
+        }
+
+        /**
+         * @param grpCtx Cahce group.
+         * @param nodesToExclude Nodes to exclude from check.
+         * @param proposedSuppliers Map of proposed suppliers for groups.
+         * @return True if all local partition of group specified have a copy in cluster, false otherwise.
+         */
+        private boolean haveCopyLoclaPartitions(
+            CacheGroupContext grpCtx,
+            Set<UUID> nodesToExclude,
+            Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers
+        ) {
+            GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
+
+            if (fullMap == null)
+                return false;
+
+            UUID localNodeId = grid.getLocalNodeId();
+
+            GridDhtPartitionMap localPartMap = fullMap.get(localNodeId);
+
+            int parts = grpCtx.topology().partitions();
+
+            for (int p = 0; p < parts; p++) {
+                if (localPartMap.get(p) != GridDhtPartitionState.OWNING)
+                    continue;
+
+                boolean foundCopy = false;
+
+                for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
+                    if (localNodeId.equals(entry.getKey()) || nodesToExclude.contains(entry.getKey()))
+                        continue;
+
+                    //Rebalance in this cache.
+                    if (entry.getValue().hasMovingPartitions())
+                        continue;
+
+                    if (entry.getValue().get(p) == GridDhtPartitionState.OWNING) {
+                        proposedSuppliers.computeIfAbsent(entry.getKey(), (nodeId) -> new HashMap<>())
+                            .computeIfAbsent(grpCtx.groupId(), grpId -> new HashSet<>())
+                            .add(p);
+
+                        foundCopy = true;
+                    }
+                }
+
+                if (!foundCopy)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * Check is rebalance completed for specific group on this node or not.
+         * It checks Demander and Supplier contexts.
+         *
+         * @param grpCtx Group context.
+         * @return True if rebalance completed, false otherwise.
+         */
+        private boolean isRebalanceCompleted(CacheGroupContext grpCtx) {
+            if (!grpCtx.preloader().rebalanceFuture().isDone())
+                return false;
+
+            grpCtx.preloader().pause();
+
+            try {
+                return !((GridDhtPreloader)grpCtx.preloader()).supplier().isSupply();
+            }
+            finally {
+                grpCtx.preloader().resume();
             }
         }
 

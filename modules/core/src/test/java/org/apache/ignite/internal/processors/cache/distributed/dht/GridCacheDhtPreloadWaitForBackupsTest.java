@@ -16,14 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -35,6 +36,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -53,8 +55,11 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
     private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
-    /** */
-    public static final int STOP_TIMEOUT_LIMIT = 3_000;
+    /** Timeout to check stop node or not. */
+    public static final int STOP_CHECK_TIMEOUT_LIMIT = 3_000;
+
+    /** Hard timeout during that a node would to stopped. */
+    public static final int STOP_TIMEOUT_LIMIT = 30_000;
 
     /** */
     private CacheMode cacheMode;
@@ -98,7 +103,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
     /** */
     @Override protected void afterTest() throws Exception {
-        IgnitionEx.stopAll(false, false);
+        IgnitionEx.stopAll(true, ShutdownPolicy.IMMEDIATE);
     }
 
     /**
@@ -176,9 +181,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         stopper.start();
 
-        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_CHECK_TIMEOUT_LIMIT));
 
-        IgnitionEx.stop(grid(1).configuration().getIgniteInstanceName(), true, false, false);
+        IgnitionEx.stop(grid(1).configuration().getIgniteInstanceName(), true, ShutdownPolicy.IMMEDIATE, false);
 
         assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
     }
@@ -225,7 +230,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
                 assertEquals(i, val.length);
             }
 
-            IgnitionEx.stopAll(false, false);
+            IgnitionEx.stopAll(true, ShutdownPolicy.IMMEDIATE);
 
             if (persistenceEnabled())
                 cleanPersistenceDir();
@@ -301,7 +306,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         stopper.start();
 
-        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_CHECK_TIMEOUT_LIMIT));
 
         grid(0).context().distributedMetastorage().write(
             GRACEFUL_SHUTDOWN_METASTORE_KEY,
@@ -432,13 +437,13 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         final CountDownLatch latch = new CountDownLatch(1);
 
         Thread stopper = new Thread(() -> {
-            grid(1).close();
+            grid(0).close();
             latch.countDown();
         }, "Stopper");
 
         stopper.start();
 
-        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_CHECK_TIMEOUT_LIMIT));
 
         grid(0).cluster().setBaselineTopology(Arrays.asList(grid(0).localNode(), grid(1).localNode()));
 
@@ -446,7 +451,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         // Data shouldn't be lost.
         for (int i = 0; i < cacheSize(); i++)
-            assertEquals(i, grid(0).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+            assertEquals(i, grid(1).cache("cache" + (1 + (i >> 3) % 3)).get(i));
     }
 
 
@@ -693,7 +698,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         }
 
         for (int i = 0; i < cacheSize(); i++) {
-            byte[] val = (byte[])grid((i >> 2) % 4).cache("cache" + (1 + (i >> 3) % 3)).get(i);
+            byte[] val = (byte[])G.allGrids().get((i >> 2) % 4).cache("cache" + (1 + (i >> 3) % 3)).get(i);
 
             assertNotNull(Integer.toString(i), val);
             assertEquals(i, val.length);
@@ -722,7 +727,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         if (persistenceEnabled()) {
             cfg.setDataStorageConfiguration(new DataStorageConfiguration().setWalMode(LOG_ONLY)
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                    .setMaxSize(200L * 1024 * 1024)
+                    .setPersistenceEnabled(true)));
         }
 
         if (clientNodes && (igniteInstanceName.endsWith("2") || igniteInstanceName.endsWith("3")))
