@@ -60,7 +60,6 @@ public class VacuumMetrics {
         return cleanupNanoTime;
     }
 
-
     /**
      * @param delta Delta.
      */

@@ -16,10 +16,9 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.jetbrains.annotations.Nullable;
-
-import java.nio.ByteBuffer;
 
 /**
  * Client NIO server buffer.
@@ -69,7 +68,7 @@ public class ClientListenerNioServerBuffer {
     @Nullable public byte[] read(ByteBuffer buf, int msgLenLimit) throws IgniteCheckedException {
         if (cnt < 0) {
             for (; cnt < 0 && buf.hasRemaining(); cnt++)
-                msgSize |= (buf.get() & 0xFF) << (8*(4 + cnt));
+                msgSize |= (buf.get() & 0xFF) << (8 * (4 + cnt));
 
             if (cnt < 0)
                 return null;

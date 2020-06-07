@@ -280,7 +280,7 @@ public class JdbcStatementSelfTest extends GridCommonAbstractTest {
             "drop table if exists test; create table test(ID int primary key, NAME varchar(20)); ");
 
         for (int i = 0; i < stmtCnt; ++i)
-            sql.append("insert into test (ID, NAME) values (" + i + ", 'name_" + i +"'); ");
+            sql.append("insert into test (ID, NAME) values (" + i + ", 'name_" + i + "'); ");
 
         assert !stmt.execute(sql.toString());
 
@@ -351,7 +351,7 @@ public class JdbcStatementSelfTest extends GridCommonAbstractTest {
 
                 int rowsCnt = 0;
 
-                while(rs.next())
+                while (rs.next())
                     rowsCnt++;
 
                 assert rowsCnt <= (i + 1) / 2;

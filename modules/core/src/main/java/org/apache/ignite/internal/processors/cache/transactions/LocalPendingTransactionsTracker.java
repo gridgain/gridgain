@@ -275,7 +275,7 @@ public class LocalPendingTransactionsTracker {
      */
     public void startTrackingPrepared() {
         assert stateLock.writeLock().isHeldByCurrentThread();
-        assert !trackPrepared.get(): "Tracking prepared transactions is already initialized.";
+        assert !trackPrepared.get() : "Tracking prepared transactions is already initialized.";
 
         trackPrepared.set(true);
     }
@@ -285,7 +285,7 @@ public class LocalPendingTransactionsTracker {
      */
     public Set<GridCacheVersion> stopTrackingPrepared() {
         assert stateLock.writeLock().isHeldByCurrentThread();
-        assert trackPrepared.get(): "Tracking prepared transactions is not initialized yet.";
+        assert trackPrepared.get() : "Tracking prepared transactions is not initialized yet.";
 
         trackPrepared.set(false);
 

@@ -1526,8 +1526,8 @@ public abstract class GridUnsafe {
         }
         catch (SecurityException ignored) {
             try {
-                return AccessController.doPrivileged
-                    (new PrivilegedExceptionAction<Unsafe>() {
+                return AccessController.doPrivileged(
+                    new PrivilegedExceptionAction<Unsafe>() {
                         @Override public Unsafe run() throws Exception {
                             Field f = Unsafe.class.getDeclaredField("theUnsafe");
 
@@ -1667,7 +1667,6 @@ public abstract class GridUnsafe {
             throw new RuntimeException("Unable to set up byte buffer creation using reflections :" + e.getMessage(), e);
         }
     }
-
 
     /**
      * @param obj Object.

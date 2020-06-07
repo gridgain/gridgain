@@ -75,7 +75,7 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
             { true, true },
             { false, true },
             { true, false },
-            { false,  false },
+            { false, false },
         });
     }
 

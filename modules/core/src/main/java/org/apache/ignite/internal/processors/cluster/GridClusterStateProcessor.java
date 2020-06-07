@@ -548,6 +548,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
+            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
+
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
             if (joinFut != null)
@@ -667,6 +669,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
                     nodeIds
                 );
+
+                ctx.durableBackgroundTasksProcessor().onStateChange(msg);
 
                 if (msg.forceChangeBaselineTopology())
                     newState.setTransitionResult(msg.requestId(), msg.activate());
@@ -1183,7 +1187,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             return new IgniteNodeValidationResult(node.id(), msg);
         }
 
-        if(allNodesSupport(ctx, IgniteFeatures.BASELINE_AUTO_ADJUSTMENT) &&
+        if (allNodesSupport(ctx, IgniteFeatures.BASELINE_AUTO_ADJUSTMENT) &&
             !nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.BASELINE_AUTO_ADJUSTMENT)) {
             String msg = "Node not supporting baseline auto-adjustment" +
                 " is not allowed to join the cluster with baseline auto-adjustment enabled";
@@ -1858,7 +1862,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * @return Status of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(){
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return changeTopologyWatcher.getStatus();
     }
 

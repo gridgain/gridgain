@@ -28,7 +28,7 @@ public abstract class CacheMvccAbstractSqlContinuousQuerySelfTest extends CacheM
     }
 
     /** {@inheritDoc} */
-    @Override protected void cacheRemove(IgniteCache  cache, Integer key) {
+    @Override protected void cacheRemove(IgniteCache cache, Integer key) {
         cache.query(new SqlFieldsQuery("DELETE FROM Integer WHERE _key=" + key)).getAll();
     }
 }

@@ -60,7 +60,6 @@ public final class GridAnnotationsCache {
         return ann.get();
     }
 
-
     /**
      * @param ldr Undeployed class loader.
      */

@@ -30,11 +30,13 @@ public class ViewMatrixStorage implements MatrixStorage {
 
     /** Row offset in the parent matrix. */
     private int rowOff;
+
     /** Column offset in the parent matrix. */
     private int colOff;
 
     /** Amount of rows in the matrix. */
     private int rows;
+
     /** Amount of columns in the matrix. */
     private int cols;
 

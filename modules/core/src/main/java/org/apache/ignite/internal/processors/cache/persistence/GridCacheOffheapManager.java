@@ -867,6 +867,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         saveStoreMetadata(store, null, true, false);
 
+        store.markDestroyed();
+
         ((GridCacheDatabaseSharedManager)ctx.database()).schedulePartitionDestroy(grp.groupId(), partId);
     }
 
@@ -1046,7 +1048,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             return iterator;
         }
-        catch(Exception ex) {
+        catch (Exception ex) {
             if (!X.hasCause(ex, IgniteHistoricalIteratorException.class))
                 throw new IgniteHistoricalIteratorException(ex);
 
@@ -1697,7 +1699,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @return Name of pending entires tree.
          */
         private String pendingEntriesTreeName() {
-            return grp.cacheOrGroupName() + "-" +"PendingEntries-" + partId;
+            return grp.cacheOrGroupName() + "-" + "PendingEntries-" + partId;
         }
 
         /**
@@ -2408,7 +2410,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             boolean retVal) throws IgniteCheckedException {
             CacheDataStore delegate = init0(false);
 
-            return delegate.mvccRemove(cctx, key, mvccVer,filter,  primary, needHistory, needOldVal, retVal);
+            return delegate.mvccRemove(cctx, key, mvccVer,filter, primary, needHistory, needOldVal, retVal);
         }
 
         /** {@inheritDoc} */
@@ -2606,6 +2608,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** {@inheritDoc} */
         @Override public void destroy() throws IgniteCheckedException {
             // No need to destroy delegate.
+        }
+
+        /** {@inheritDoc} */
+        @Override public void markDestroyed() throws IgniteCheckedException {
+            CacheDataStore delegate = init0(true);
+
+            if (delegate != null)
+                delegate.markDestroyed();
         }
 
         /** {@inheritDoc} */

@@ -77,7 +77,7 @@ public class OptimizeMakeChangeGAExample {
         else
             sAmountChange = System.getProperty("AMOUNTCHANGE");
 
-        try(Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             // Create GAConfiguration.
             GAConfiguration gaCfg = new GAConfiguration();
 

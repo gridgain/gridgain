@@ -98,6 +98,11 @@
         <module>modules/tensorflow</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
+        <module>modules/hibernate-4.2</module>
+        <module>modules/hibernate-5.1</module>
+        <module>modules/hibernate-5.3</module>
+        <module>modules/geospatial</module>
+        <module>modules/schedule</module>
     </modules>
 
     <profiles>
@@ -317,17 +322,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-
-        <profile>
-            <id>lgpl</id>
-            <modules>
-                <module>modules/hibernate-4.2</module>
-                <module>modules/hibernate-5.1</module>
-                <module>modules/hibernate-5.3</module>
-                <module>modules/geospatial</module>
-                <module>modules/schedule</module>
-            </modules>
         </profile>
 
         <profile>
@@ -751,6 +745,26 @@
                                             <substitution expression="\1${new.client.version}\2" />
                                             <fileset dir="${basedir}/">
                                                 <include name="**/Resource.rc" />
+                                            </fileset>
+                                        </replaceregexp>
+
+                                        <replaceregexp byline="true" encoding="UTF-8">
+                                            <regexp pattern="(Version:.+)\d+\.\d+\.\d+(.*)" />
+                                            <substitution expression="\1${new.ignite.version.fixed}\2" />
+                                            <fileset dir="${basedir}/">
+                                                <include name="**/gridgain-odbc.spec" />
+                                            </fileset>
+                                        </replaceregexp>
+
+                                        <tstamp>
+                                            <format property="odbc.timestamp" pattern="EEE MMMMM d yyyy" locale="en" />
+                                        </tstamp>
+
+                                        <replaceregexp byline="true" encoding="UTF-8">
+                                            <regexp pattern="(^\%changelog.*$)" />
+                                            <substitution expression="\1${line.separator}* ${odbc.timestamp} GridGain Systems &lt;support@gridgain.com&gt; - ${new.ignite.version.fixed}-1" />
+                                            <fileset dir="${basedir}/">
+                                                <include name="**/gridgain-odbc.spec" />
                                             </fileset>
                                         </replaceregexp>
 

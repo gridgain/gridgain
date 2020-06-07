@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
-
 import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;

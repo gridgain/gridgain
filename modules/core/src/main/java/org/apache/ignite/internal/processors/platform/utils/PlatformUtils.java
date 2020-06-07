@@ -85,7 +85,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PREFIX;
  */
 public class PlatformUtils {
     /** Node attribute: platform. */
-    public static final String ATTR_PLATFORM = ATTR_PREFIX  + ".platform";
+    public static final String ATTR_PLATFORM = ATTR_PREFIX + ".platform";
 
     /** Platform: CPP. */
     public static final String PLATFORM_CPP = "cpp";
@@ -622,7 +622,7 @@ public class PlatformUtils {
      * @param evtType Type of event.
      */
     private static void writeEventType(BinaryRawWriterEx writer, EventType evtType) {
-        switch (evtType){
+        switch (evtType) {
             case CREATED: writer.writeByte((byte) 0); break;
             case UPDATED: writer.writeByte((byte) 1); break;
             case REMOVED: writer.writeByte((byte) 2); break;
@@ -997,6 +997,7 @@ public class PlatformUtils {
 
         return map0;
     }
+
     /**
      * Create Java object.
      *
@@ -1198,8 +1199,7 @@ public class PlatformUtils {
 
         Map<String, BinaryFieldMetadata> fields = readLinkedMap(reader,
                 new PlatformReaderBiClosure<String, BinaryFieldMetadata>() {
-                    @Override
-                    public IgniteBiTuple<String, BinaryFieldMetadata> read(BinaryRawReaderEx reader) {
+                    @Override public IgniteBiTuple<String, BinaryFieldMetadata> read(BinaryRawReaderEx reader) {
                         String name = reader.readString();
                         int typeId = reader.readInt();
                         int fieldId = reader.readInt();
@@ -1300,7 +1300,6 @@ public class PlatformUtils {
         out.writeLong(productVersion.revisionTimestamp());
         out.writeByteArray(productVersion.revisionHash());
     }
-
 
     /**
      * Reads collection of strings.

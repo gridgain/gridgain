@@ -169,7 +169,6 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
             return idleCheckCrc;
         }
 
-
         /**
          * @return Skip zeros partitions(size == 0) in result.
          */
@@ -332,7 +331,6 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
 
         logger.info("VisorIdleVerifyDumpTask successfully written output to '" + path + "'");
     }
-
 
     /**
      * @param client Client.

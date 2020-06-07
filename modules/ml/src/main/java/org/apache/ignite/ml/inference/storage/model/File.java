@@ -29,7 +29,6 @@ class File implements FileOrDirectory {
     /** Time since last modification. */
     private final long modificationTs;
 
-
     /**
      * Constructs a new instance of file.
      *

@@ -260,7 +260,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
                         stmt.execute("SET STREAMING ON");
 
-                        for(int i = 0; !end.get(); ++i)
+                        for (int i = 0; !end.get(); ++i)
                             stmt.execute("INSERT INTO T VALUES(" + i + " , 0)");
                     }
                 }

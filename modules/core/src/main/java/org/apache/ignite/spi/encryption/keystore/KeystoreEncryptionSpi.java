@@ -352,7 +352,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
                 throw new IllegalStateException("Unknown algorithm: " + algo);
         }
 
-        return (dataSize/BLOCK_SZ + cntBlocks)*BLOCK_SZ;
+        return (dataSize / BLOCK_SZ + cntBlocks) * BLOCK_SZ;
     }
 
     /**

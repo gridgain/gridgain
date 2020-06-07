@@ -312,7 +312,7 @@ public class CommandHandler {
 
                     String pwd = new String(requestPasswordFromConsole("password: "));
 
-                    clientCfg = getClientConfiguration(user, pwd,  args);
+                    clientCfg = getClientConfiguration(user, pwd, args);
 
                     credentialsRequested = true;
                 }
@@ -634,7 +634,6 @@ public class CommandHandler {
 
         return in.nextLine();
     }
-
 
     /**
      * Requests interactive user confirmation if forthcoming operation is dangerous.

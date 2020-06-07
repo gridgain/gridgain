@@ -124,9 +124,6 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /** */
-    MANAGEMENT_CONSOLE(28),
-
     /** Cluster has task to clear sender store. */
     WC_DR_CLEAR_SENDER_STORE(29),
 
@@ -152,8 +149,10 @@ public enum IgniteFeatures {
     CHECK_INDEX_INLINE_SIZES(36),
 
     /** Distributed propagation of tx collisions dump interval. */
-    DISTRIBUTED_TX_COLLISIONS_DUMP(37);
+    DISTRIBUTED_TX_COLLISIONS_DUMP(37),
 
+    /** Remove metadata from cluster for specified type. */
+    REMOVE_METADATA(39);
     /**
      * Unique feature identifier.
      */
@@ -308,7 +307,7 @@ public enum IgniteFeatures {
                 continue;
 
             //Disable new rolling upgrade
-            if(DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
+            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
                 continue;
 
             // Add only when indexing is enabled.
