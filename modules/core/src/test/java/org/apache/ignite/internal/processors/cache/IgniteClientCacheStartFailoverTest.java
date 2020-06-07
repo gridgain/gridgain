@@ -322,7 +322,7 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
         TestRecordingCommunicationSpi.spi(ignite(0)).stopBlock();
 
         // Trigger eviction.
-        awaitPartitionMapExchange(true, true, null, false);
+        awaitPartitionMapExchange();
 
         for (int i = 0; i < SRVS + 1; i++) {
             final AffinityTopologyVersion topVer = new AffinityTopologyVersion(SRVS + 2, 1);

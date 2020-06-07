@@ -410,4 +410,19 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
         };
     }
 
+    /** */
+    public static IgniteBiPredicate<ClusterNode, Message> blockSinglePartitionStateMessage() {
+        return new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() == null;
+                }
+
+                return false;
+            }
+        };
+    }
+
 }

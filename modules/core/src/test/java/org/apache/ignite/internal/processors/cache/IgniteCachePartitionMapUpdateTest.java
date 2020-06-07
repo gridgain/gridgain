@@ -203,6 +203,92 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testRandom22() throws Exception {
+//        Random rnd = new Random();
+//        log.info("Seed " + U.field(rnd, "seed"));
+
+        final int NODE_CNT = 5; // GridTestUtils.SF.applyLB(10, 5);
+
+        for (int iter = 0; iter < 1; iter++) {
+            log.info("Iteration: " + iter);
+
+//            for (int i = 0; i < NODE_CNT; i++) {
+//                cache1 = rnd.nextBoolean();
+//                cache2 = rnd.nextBoolean();
+//
+//                log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+//
+//                startGrid(i);
+//
+//                awaitPartitionMapExchange();
+//            }
+
+            int i;
+
+            i = 0;
+            cache1 = true;
+            cache2 = true;
+            log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+            startGrid(i);
+            awaitPartitionMapExchange();
+
+            i = 1;
+            cache1 = true;
+            cache2 = false;
+            log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+            startGrid(i);
+            awaitPartitionMapExchange();
+
+
+            i = 2;
+            cache1 = false;
+            cache2 = true;
+            log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+            startGrid(i);
+            awaitPartitionMapExchange();
+
+            i = 3;
+            cache1 = false;
+            cache2 = true;
+            log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+            startGrid(i);
+            awaitPartitionMapExchange();
+
+            i = 4;
+            cache1 = true;
+            cache2 = true;
+            log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+            startGrid(i);
+            awaitPartitionMapExchange();
+
+
+            LinkedHashSet<Integer> stopSeq = new LinkedHashSet<>();
+
+//            while (stopSeq.size() != NODE_CNT)
+//                stopSeq.add(rnd.nextInt(NODE_CNT));
+
+            stopSeq.add(2);
+//            stopSeq.add(0);
+//            stopSeq.add(4);
+//            stopSeq.add(1);
+//            stopSeq.add(3);
+
+            log.info("Stop sequence: " + stopSeq);
+
+            for (Integer idx : stopSeq) {
+                log.info("Stop node: " + idx);
+
+                stopGrid(idx);
+
+                awaitPartitionMapExchange();
+            }
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testRandom2() throws Exception {
         startClientCache = true;
 
@@ -276,4 +362,12 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
             return F.eq(node.attribute(attrName), "true");
         }
     }
+
+//    @Override protected long getTestTimeout() {
+//        return super.getTestTimeout() * 100000;
+//    }
+//
+//    @Override protected long getPartitionMapExchangeTimeout() {
+//        return super.getPartitionMapExchangeTimeout() * 100000;
+//    }
 }
