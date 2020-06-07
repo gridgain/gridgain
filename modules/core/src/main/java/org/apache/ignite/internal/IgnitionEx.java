@@ -48,7 +48,6 @@ import java.util.logging.Handler;
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -58,8 +57,8 @@ import org.apache.ignite.IgniteState;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
+import org.apache.ignite.Shutdownn;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -80,12 +79,12 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
-import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -128,6 +127,7 @@ import org.apache.ignite.spi.indexing.noop.NoopIndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
+import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -1636,7 +1636,7 @@ public class IgnitionEx {
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
         /** Raised if node is waiting for backups before shutdown. Set to false to end wait. */
-        private volatile boolean waitingForBackups = false;
+        private volatile boolean delayedShutdown = false;
 
         /**
          * Thread that starts this named instance. This field can be non-volatile since
@@ -2612,10 +2612,16 @@ public class IgnitionEx {
             assert startGuard.get();
 
             // If waiting for backups due to earlier invocation of stop(), stop wait and proceed shutting down.
-            if (!waitForBackups && waitingForBackups)
-                waitingForBackups = false;
+            if (!waitForBackups)
+                delayedShutdown = false;
 
             stop0(cancel, waitForBackups);
+        }
+
+        private synchronized void stop0(boolean cancel, boolean waitForBackups) {
+            Shutdownn shutdownn = waitForBackups ? cancel ? Shutdownn.GRACEFUL : Shutdownn.ALL : Shutdownn.IMMEDIATE;
+
+            stop0(shutdownn);
         }
 
         /**
@@ -2624,7 +2630,7 @@ public class IgnitionEx {
          * @param waitForBackups Flag indicating whether sufficient backups on caches
          *      should be waited for.
          */
-        private synchronized void stop0(boolean cancel, boolean waitForBackups) {
+        private synchronized void stop0(Shutdownn shutdownn) {
             IgniteKernal grid0 = grid;
 
             // Double check.
@@ -2651,17 +2657,17 @@ public class IgnitionEx {
                 }
             }
 
-            if (waitForBackups && !grid.context().clientNode() && grid.cluster().active()) {
-                waitingForBackups = true;
+            if (isShutdownDelayed(shutdownn) && !grid.context().clientNode() && grid.cluster().active()) {
+                delayedShutdown = true;
 
                 if (log.isInfoEnabled())
                     log.info("Ensuring that caches have sufficient backups...");
 
-                boolean readyToStop = false;
-
                 DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
 
-                while (!readyToStop && waitingForBackups) {
+                boolean waitForRebalance = false;
+
+                while (delayedShutdown) {
                     boolean safeToStop = true;
 
                     long topVer = grid.cluster().topologyVersion();
@@ -2684,10 +2690,7 @@ public class IgnitionEx {
                     }
 
                     for (CacheGroupContext grpCtx : grid.context().cache().cacheGroups()) {
-                        if (grpCtx.systemCache())
-                            continue;
-
-                        if (grpCtx.isLocal())
+                        if (grpCtx.isLocal() || grpCtx.systemCache())
                             continue;
 
                         if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0) {
@@ -2706,54 +2709,38 @@ public class IgnitionEx {
 
                         GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
 
-                        int cacheSpecificAmountOfOwners = -1;
+                        if (fullMap == null) {
+                            safeToStop = false;
 
-                        if (fullMap != null) {
-                            nodesToExclude.retainAll(fullMap.keySet());
-
-                            int parts = grpCtx.topology().partitions();
-
-                            for (int part = 0; part < parts; part++) {
-                                Set<UUID> partIdealAssignment = grpCtx.affinity().idealAssignmentRaw().get(part).
-                                    stream().map(ClusterNode::id).collect(Collectors.toSet());
-
-                                int cnt = 0;
-
-                                for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
-                                    if (nodesToExclude.contains(entry.getKey()))
-                                        continue;
-
-                                    // Skip all non-ideal assignments.
-                                    if (!partIdealAssignment.contains(entry.getKey()))
-                                        continue;
-
-                                    if (entry.getValue().get(part) == GridDhtPartitionState.OWNING)
-                                        cnt++;
-                                }
-
-                                if (cacheSpecificAmountOfOwners == -1)
-                                    cacheSpecificAmountOfOwners = cnt;
-
-                                cacheSpecificAmountOfOwners = Math.min(cacheSpecificAmountOfOwners, cnt);
-                            }
+                            break;
                         }
 
-                        if (cacheSpecificAmountOfOwners <= 1) {
+                        nodesToExclude.retainAll(fullMap.keySet());
+
+                        if (waitBackups(shutdownn) && !haveCopyLoclaPartitions(grpCtx, nodesToExclude)) {
+                            safeToStop = false;
+
+                            break;
+                        }
+
+                        if (waitForRebalance && !isRebalanceCompleted(grpCtx)) {
                             safeToStop = false;
 
                             break;
                         }
                     }
 
-                    safeToStop = safeToStop && topVer == grid.cluster().topologyVersion();
+                    if (topVer != grid.cluster().topologyVersion())
+                        safeToStop = false;
 
                     if (safeToStop) {
                         try {
                             HashSet<UUID> newNodesToExclude = new HashSet<>(nodesToExclude);
                             newNodesToExclude.add(grid.getLocalNodeId());
 
-                            readyToStop = metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY,
-                                originalNodesToExclude, newNodesToExclude);
+                            if (metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY, originalNodesToExclude,
+                                newNodesToExclude))
+                                break;
                         }
                         catch (IgniteCheckedException e) {
                             U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
@@ -2761,23 +2748,13 @@ public class IgnitionEx {
 
                             continue;
                         }
-
-                        if (!readyToStop) {
-                            try {
-                                IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
-                            }
-                            catch (IgniteInterruptedCheckedException e) {
-                                Thread.currentThread().interrupt();
-                            }
-                        }
                     }
-                    else {
-                        try {
-                            IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
-                        }
-                        catch (IgniteInterruptedCheckedException e) {
-                            Thread.currentThread().interrupt();
-                        }
+
+                    try {
+                        IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
+                    }
+                    catch (IgniteInterruptedCheckedException e) {
+                        Thread.currentThread().interrupt();
                     }
                 }
             }
@@ -2786,7 +2763,7 @@ public class IgnitionEx {
             unregisterFactoryMBean();
 
             try {
-                grid0.stop(cancel);
+                grid0.stop(shutdownn != Shutdownn.ALL);
 
                 if (log != null && log.isDebugEnabled())
                     log.debug("Ignite instance stopped ok: " + name);
@@ -2811,6 +2788,81 @@ public class IgnitionEx {
                     stopExecutors(log);
 
                 log = null;
+            }
+        }
+
+        /**
+         * @param shutdownn Shutdown kind.
+         * @return True if need to wait of backups of partitions, false otherwise.
+         */
+        private boolean waitBackups(Shutdownn shutdownn) {
+            return shutdownn == Shutdownn.GRACEFUL || shutdownn == Shutdownn.ALL;
+        }
+
+        /**
+         * @param shutdownn Shutdown kind.
+         * @return True if need a delay, false otherwise.
+         */
+        private boolean isShutdownDelayed(Shutdownn shutdownn) {
+            return shutdownn == Shutdownn.GRACEFUL || shutdownn == Shutdownn.NORMAL || shutdownn == Shutdownn.ALL;
+        }
+
+        /**
+         * @param grpCtx Cahce group.
+         * @param nodesToExclude Nodes to exclude from check.
+         * @return True if all local partition of group specified have a copy in cluster, false otherwise.
+         */
+        private boolean haveCopyLoclaPartitions(CacheGroupContext grpCtx, Set<UUID> nodesToExclude) {
+            GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
+
+            if (fullMap == null)
+                return false;
+
+            UUID localNodeId = grid.getLocalNodeId();
+
+            GridDhtPartitionMap localPartMap = fullMap.get(localNodeId);
+
+            int parts = grpCtx.topology().partitions();
+
+            for (int p = 0; p < parts; p++) {
+                if (localPartMap.get(p) != GridDhtPartitionState.OWNING)
+                    continue;
+
+                boolean foundCopy = false;
+
+                for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
+                    if (localNodeId.equals(entry.getKey()) || nodesToExclude.contains(entry.getKey()))
+                        continue;
+
+                    if (entry.getValue().get(p) == GridDhtPartitionState.OWNING)
+                        foundCopy = true;
+                }
+
+                if (!foundCopy)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /**
+         * Check is rebalance completed for specific group on this node or not.
+         * It checks Demander and Supplier contexts.
+         *
+         * @param grpCtx Group context.
+         * @return True if rebalance completed, false otherwise.
+         */
+        private boolean isRebalanceCompleted(CacheGroupContext grpCtx) {
+            if (!grpCtx.preloader().rebalanceFuture().isDone())
+                return false;
+
+            grpCtx.preloader().pause();
+
+            try {
+                return !((GridDhtPreloader)grpCtx.preloader()).supplier().isSupply();
+            }
+            finally {
+                grpCtx.preloader().resume();
             }
         }
 

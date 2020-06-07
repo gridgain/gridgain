@@ -432,7 +432,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         final CountDownLatch latch = new CountDownLatch(1);
 
         Thread stopper = new Thread(() -> {
-            grid(1).close();
+            grid(0).close();
             latch.countDown();
         }, "Stopper");
 
@@ -446,7 +446,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         // Data shouldn't be lost.
         for (int i = 0; i < cacheSize(); i++)
-            assertEquals(i, grid(0).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+            assertEquals(i, grid(1).cache("cache" + (1 + (i >> 3) % 3)).get(i));
     }
 
 
