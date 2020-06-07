@@ -51,24 +51,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT
  * This directory holds files for checkpoint start and end.
  */
 public class CheckpointHistory {
-    /** The message appears when no one checkpoint was not reserved for cache. */
-    private static final String NOT_RESERVED_WAL_REASON = "Failed to perform reservation of historical WAL segment file";
-
-    /** The message puts down to log when an exception happened during reading reserved WAL. */
-    private static final String WAL_SEG_CORRUPTED_REASON = "Segment corrupted";
-
-    /** Reason means no more history reserved for the cache. */
-    private static final String NO_MORE_HISTORY_REASON = "Reserved checkpoint is the oldest in history";
-
-    /** Node does not have owning partitions. */
-    private static final String NO_PARTITIONS_OWNED_REASON = "Node didn't own any partitions for this group at the time of checkpoint";
-
-    /** Reason means a checkpoint in history reserved can not be applied for cache. */
-    private static final String CHECKPOINT_NOT_APPLICABLE_REASON = "Checkpoint was marked as inapplicable for historical rebalancing";
-
-    /** That means all history reserved for cache. */
-    private static final String FULL_HISTORY_REASON = "Full history were reserved";
-
     /** Logger. */
     private final IgniteLogger log;
 
@@ -91,7 +73,7 @@ public class CheckpointHistory {
     private final long maxWalArchiveSize;
 
     /** Map stores the earliest checkpoint for each partition from particular group. */
-    private Map<GroupPartitionId, CheckpointEntry> earliestCp = new HashMap<>();
+    private final Map<GroupPartitionId, CheckpointEntry> earliestCp = new HashMap<>();
 
     /**
      * Constructor.
@@ -212,7 +194,7 @@ public class CheckpointHistory {
             while (iter.hasNext()) {
                 Map.Entry<GroupPartitionId, CheckpointEntry> grpPartCp = iter.next();
 
-                Integer grpId = grpPartCp.getKey().getGroupId();
+                int grpId = grpPartCp.getKey().getGroupId();
 
                 if (!isCheckpointApplicableForGroup(grpId, entry)) {
                     iter.remove();
@@ -220,7 +202,7 @@ public class CheckpointHistory {
                     continue;
                 }
 
-                Integer part = grpPartCp.getKey().getPartitionId();
+                int part = grpPartCp.getKey().getPartitionId();
 
                 int pIdx = states.get(grpId).indexByPartition(part);
 
@@ -247,14 +229,7 @@ public class CheckpointHistory {
         synchronized (earliestCp) {
             CheckpointEntry lastCp = lastCheckpoint();
 
-            Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
-
-            while (iter.hasNext()) {
-                Map.Entry<GroupPartitionId, CheckpointEntry> grpPartCp = iter.next();
-
-                if (grpId.equals(grpPartCp.getKey().getGroupId()))
-                    iter.remove();
-            }
+            earliestCp.keySet().removeIf(grpPart -> grpId.equals(grpPart.getGroupId()));
 
             return lastCp;
         }
@@ -608,7 +583,7 @@ public class CheckpointHistory {
      *
      * @param groupsAndPartitions Groups and partitions to find and reserve earliest valid checkpoint.
      *
-     * @return Map (groupId, Reason (the reason why reservation cannot be make deeper): Map
+     * @return Map (groupId, Reason (the reason why reservation cannot be made deeper): Map
      * (partitionId, earliest valid checkpoint to history search)).
      */
     public Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
