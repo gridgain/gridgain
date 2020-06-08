@@ -52,7 +52,7 @@ public class JdbcUtils {
                 writer.writeInt(row.size());
 
                 for (Object obj : row)
-                    writeObject(writer, obj, false, protoCtx);
+                    writeObject(writer, obj, protoCtx);
             }
         }
     }
@@ -62,8 +62,7 @@ public class JdbcUtils {
      * @param protoCtx Protocol context.
      * @return Query results items.
      */
-    public static List<List<Object>> readItems(BinaryReaderExImpl reader,
-        JdbcProtocolContext protoCtx) {
+    public static List<List<Object>> readItems(BinaryReaderExImpl reader, JdbcProtocolContext protoCtx) {
         int rowsSize = reader.readInt();
 
         if (rowsSize > 0) {
@@ -75,7 +74,7 @@ public class JdbcUtils {
                 List<Object> col = new ArrayList<>(colsSize);
 
                 for (int colCnt = 0; colCnt < colsSize; ++colCnt)
-                    col.add(readObject(reader, false, protoCtx));
+                    col.add(readObject(reader, protoCtx));
 
                 items.add(col);
             }
@@ -157,13 +156,11 @@ public class JdbcUtils {
 
     /**
      * @param reader Reader.
-     * @param binObjAllow Allow to read non plaint objects.
      * @param protoCtx Protocol context.
      * @return Read object.
      * @throws BinaryObjectException On error.
      */
-    @Nullable public static Object readObject(BinaryReaderExImpl reader, boolean binObjAllow,
-        JdbcProtocolContext protoCtx)
+    @Nullable public static Object readObject(BinaryReaderExImpl reader, JdbcProtocolContext protoCtx)
         throws BinaryObjectException {
         byte type = reader.readByte();
 
@@ -196,19 +193,18 @@ public class JdbcUtils {
             }
 
             default:
-                return SqlListenerUtils.readObject(type, reader, binObjAllow);
+                return SqlListenerUtils.readObject(type, reader,
+                    protoCtx.isFeatureSupported(JdbcThinFeature.CUSTOM_OBJECT), protoCtx.keepBinary());
         }
     }
 
     /**
      * @param writer Writer.
      * @param obj Object to write.
-     * @param binObjAllow Allow to write non plain objects.
      * @param protoCtx Protocol context.
      * @throws BinaryObjectException On error.
      */
-    public static void writeObject(BinaryWriterExImpl writer, @Nullable Object obj, boolean binObjAllow,
-        JdbcProtocolContext protoCtx)
+    public static void writeObject(BinaryWriterExImpl writer, @Nullable Object obj, JdbcProtocolContext protoCtx)
         throws BinaryObjectException {
         if (obj == null) {
             writer.writeByte(GridBinaryMarshaller.NULL);
@@ -242,7 +238,7 @@ public class JdbcUtils {
                 writer.writeTimestamp((Timestamp)obj);
         }
         else
-            SqlListenerUtils.writeObject(writer, obj, binObjAllow);
+            SqlListenerUtils.writeObject(writer, obj, protoCtx.isFeatureSupported(JdbcThinFeature.CUSTOM_OBJECT));
     }
 
     /**

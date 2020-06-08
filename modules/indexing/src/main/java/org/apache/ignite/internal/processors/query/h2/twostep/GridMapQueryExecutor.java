@@ -465,7 +465,7 @@ public class GridMapQueryExecutor {
                             dataPageScanEnabled
                         );
 
-                        if(msg != null)
+                        if (msg != null)
                             sendNextPage(node, msg);
                     }
                     else {
@@ -494,6 +494,10 @@ public class GridMapQueryExecutor {
                 nodeRess.remove(reqId, segmentId, qryResults);
 
                 qryResults.close();
+
+                // If a query is cancelled before execution is started partitions have to be released.
+                if (!lazy || !qryResults.isAllClosed())
+                    qryResults.releaseQueryContext();
             }
             else
                 releaseReservations(qctx);
@@ -783,7 +787,7 @@ public class GridMapQueryExecutor {
                         req.pageSize(),
                         dataPageScanEnabled);
 
-                    if(msg != null)
+                    if (msg != null)
                         sendNextPage(node, msg);
                 }
                 finally {

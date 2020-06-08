@@ -102,7 +102,7 @@ public abstract class IgniteDataTransferObject implements Externalizable {
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        int hdr = MAGIC  + getProtocolVersion();
+        int hdr = MAGIC + getProtocolVersion();
 
         out.writeInt(hdr);
 

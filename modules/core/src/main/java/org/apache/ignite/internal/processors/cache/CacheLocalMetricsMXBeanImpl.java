@@ -510,4 +510,9 @@ class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return cache.metrics0().getTxKeyCollisions();
+    }
 }

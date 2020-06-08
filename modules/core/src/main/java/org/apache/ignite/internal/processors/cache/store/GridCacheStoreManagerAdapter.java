@@ -787,7 +787,7 @@ public abstract class GridCacheStoreManagerAdapter extends GridCacheManagerAdapt
         boolean storeSessionEnded) throws IgniteCheckedException {
         assert store != null;
 
-        sessionInit0(tx, commit? StoreOperation.COMMIT: StoreOperation.ROLLBACK, false);
+        sessionInit0(tx, commit ? StoreOperation.COMMIT : StoreOperation.ROLLBACK, false);
 
         try {
             if (sesLsnrs != null && sesHolder.get().contains(store)) {
@@ -833,7 +833,7 @@ public abstract class GridCacheStoreManagerAdapter extends GridCacheManagerAdapt
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBehindCacheStoreSessionListenerStart()  throws IgniteCheckedException {
+    @Override public void writeBehindCacheStoreSessionListenerStart() throws IgniteCheckedException {
         assert sesHolder.get() != null;
 
         notifyCacheStoreSessionListeners(sesHolder.get(), null, true);

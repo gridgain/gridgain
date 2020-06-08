@@ -298,10 +298,9 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         cache3.query(new SqlFieldsQuery(addColSql)).getAll();
 
-        for (long id = 100_000; id<200_000; id++){
-
+        for (long id = 100_000; id < 200_000; id++) {
             BinaryObjectBuilder o2 = ignite.binary().builder(OBJECT_NAME3)
-                .setField(KEY_NAME, id*3)
+                .setField(KEY_NAME, id * 3)
                 .setField(COLUMN1_NAME, (int)(id / 2))
                 .setField(COLUMN2_NAME, "str" + Long.toHexString(id))
                 .setField(COLUMN3_NAME, id * 10);

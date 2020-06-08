@@ -98,7 +98,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
         // Daemon node should not open client port
         if (cfg.isDaemon()) {
-            log.debug("Client connection configuration ignored for daemon node.");
+            if (log.isDebugEnabled())
+                log.debug("Client connection configuration ignored for daemon node.");
 
             return;
         }
@@ -575,7 +576,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
             StringBuilder sb = new StringBuilder();
 
-            if(ctx instanceof JdbcConnectionContext)
+            if (ctx instanceof JdbcConnectionContext)
                 sb.append("JdbcClient [");
             else if (ctx instanceof OdbcConnectionContext)
                 sb.append("OdbcClient [");

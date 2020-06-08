@@ -61,7 +61,7 @@ public class OneHotEncoderPreprocessorTest {
                     put("A", 0);
                     put("B", 1);
                 }
-            }},
+            } },
             vectorizer,
             new HashSet() {
                 {
@@ -94,12 +94,14 @@ public class OneHotEncoderPreprocessorTest {
         Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<>(0);
 
         OneHotEncoderPreprocessor<Integer, Vector> preprocessor = new OneHotEncoderPreprocessor<Integer, Vector>(
-            new HashMap[]{new HashMap() {
-                {
-                    put("42", 0);
-                    put("43", 1);
+            new HashMap[] {
+                new HashMap() {
+                    {
+                        put("42", 0);
+                        put("43", 1);
+                    }
                 }
-            }},
+            },
             vectorizer,
             new HashSet() {
                 {
@@ -121,10 +123,10 @@ public class OneHotEncoderPreprocessorTest {
     @Test
     public void testTwoCategorialFeatureAndTwoDoubleFeatures() {
         Vector[] data = new Vector[]{
-            new DenseVector(new Serializable[]  {"42", 1.0, "M", 2.0}),
-            new DenseVector(new Serializable[]  {"43", 2.0, "F", 3.0}),
+            new DenseVector(new Serializable[] {"42", 1.0, "M", 2.0}),
+            new DenseVector(new Serializable[] {"43", 2.0, "F", 3.0}),
             new DenseVector(new Serializable[] {"42", 3.0, Double.NaN, 4.0}),
-            new DenseVector(new Serializable[]  {"42", 4.0, "F", 5.0})
+            new DenseVector(new Serializable[] {"42", 4.0, "F", 5.0})
         };
 
         Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<>(0, 1, 2, 3);
@@ -183,7 +185,6 @@ public class OneHotEncoderPreprocessorTest {
 
         Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<>(0, 1, 2);
 
-
         OneHotEncoderPreprocessor<Integer, Vector> preprocessor = new OneHotEncoderPreprocessor<Integer, Vector>(
             new HashMap[]{new HashMap() {
                 {
@@ -198,7 +199,7 @@ public class OneHotEncoderPreprocessorTest {
                     put("A", 0);
                     put("B", 1);
                 }
-            }},
+            } },
             vectorizer,
             new HashSet() {
                 {

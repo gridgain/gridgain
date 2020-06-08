@@ -21,11 +21,16 @@ package org.apache.ignite.internal.processors.rest;
  */
 public class JettyRestProcessorAuthenticationWithCredsSelfTest extends JettyRestProcessorAuthenticationAbstractTest {
     /** {@inheritDoc} */
-    @Override protected String restUrl() {
-        String url = super.restUrl();
+    @Override protected TestRestClient createRestClient() {
+        return new TestRestClient(this::signature) {
+            /** {@inheritDoc} */
+            @Override public String restUrl() {
+                String url = super.restUrl();
 
-        url += "ignite.login=" + DFLT_USER + "&ignite.password=" + DFLT_PWD + "&";
+                url += "ignite.login=" + DFLT_USER + "&ignite.password=" + DFLT_PWD + "&";
 
-        return url;
+                return url;
+            }
+        };
     }
 }

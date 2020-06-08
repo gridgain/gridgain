@@ -114,7 +114,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override  protected long nextPartitionCounter(IgniteInternalTx tx, @Nullable Long primaryCntr) {
+    @Override protected long nextPartitionCounter(IgniteInternalTx tx, @Nullable Long primaryCntr) {
         try {
             return locPart.nextUpdateCounter(cctx.cacheId(), tx, primaryCntr);
         }
@@ -840,16 +840,9 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        lockEntry();
-
-        try {
-            return S.toString(GridDhtCacheEntry.class, this,
-                "part", locPart.id(),
-                "super", super.toString());
-        }
-        finally {
-            unlockEntry();
-        }
+        return toStringWithTryLock(() -> S.toString(GridDhtCacheEntry.class, this,
+            "part", locPart.id(),
+            "super", super.toString()));
     }
 
     /** {@inheritDoc} */

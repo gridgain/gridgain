@@ -1017,7 +1017,8 @@ public abstract class Value extends VersionedValue {
         case LONG:
             return ValueFloat.get(getLong());
         case DECIMAL:
-            return ValueFloat.get(getBigDecimal().floatValue());
+            ValueDecimal valDecimal = (ValueDecimal) this;
+            return ValueFloat.get(valDecimal.getFloatValue());
         case DOUBLE:
             return ValueFloat.get((float) getDouble());
         case ENUM:

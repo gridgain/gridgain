@@ -20,9 +20,11 @@ import java.net.InetSocketAddress;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
+import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Authentication context.
@@ -133,7 +135,7 @@ public class AuthenticationContext {
      * @return Node attributes or empty map for {@link SecuritySubjectType#REMOTE_CLIENT}.
      */
     public Map<String, Object> nodeAttributes() {
-        return nodeAttrs != null ? nodeAttrs : Collections.<String, Object>emptyMap();
+        return nodeAttrs != null ? nodeAttrs : Collections.emptyMap();
     }
 
     /**
@@ -141,15 +143,15 @@ public class AuthenticationContext {
      *
      * @param nodeAttrs Node attributes.
      */
-    public void nodeAttributes(Map<String, Object> nodeAttrs) {
-        this.nodeAttrs = nodeAttrs;
+    public void nodeAttributes(Map<String, ?> nodeAttrs) {
+        this.nodeAttrs = F.isEmpty(nodeAttrs) ? null : new HashMap<>(nodeAttrs);
     }
 
     /**
      * @return Native Apache Ignite authorization context acquired after authentication or {@code null} if native
      * Ignite authentication is not used.
      */
-    public AuthorizationContext authorizationContext(){
+    public AuthorizationContext authorizationContext() {
         return athrCtx;
     }
 
@@ -164,7 +166,6 @@ public class AuthenticationContext {
 
     /**
      * @return Client SSL certificates.
-     * @param certificates
      */
     public Certificate[] certificates() {
         return certs;

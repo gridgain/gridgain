@@ -101,6 +101,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteClosure;
@@ -504,8 +505,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             }
 
             /** {@inheritDoc} */
-            @Override
-            public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
+            @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
                 Collection<ClusterNode> topSnapshot,
                 Map<Long, Collection<ClusterNode>> topHist, DiscoverySpiCustomMessage data) {
                 return onDiscovery(new DiscoveryNotification(type, topVer, node, topSnapshot, topHist, data, null));
@@ -683,7 +683,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     discoCacheHist.put(nextTopVer, discoCache);
 
-                    assert snapshot.topVer.compareTo(nextTopVer) < 0: "Topology version out of order [this.topVer=" +
+                    assert snapshot.topVer.compareTo(nextTopVer) < 0 : "Topology version out of order [this.topVer=" +
                         topSnap + ", topVer=" + topVer + ", node=" + node + ", nextTopVer=" + nextTopVer +
                         ", evt=" + U.gridEventName(type) + ']';
 
@@ -1165,7 +1165,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         Boolean locMarshStrSerVer2 = locNode.attribute(ATTR_MARSHALLER_USE_BINARY_STRING_SER_VER_2);
         boolean locMarshStrSerVer2Bool = locMarshStrSerVer2 == null ?
-            false /* turned on and added to the attributes list by default only when BinaryMarshaller is used. */:
+            false /* turned on and added to the attributes list by default only when BinaryMarshaller is used. */ :
             locMarshStrSerVer2;
 
         boolean locDelayAssign = locNode.attribute(ATTR_LATE_AFFINITY_ASSIGNMENT);
@@ -1249,7 +1249,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
             if (locDelayAssign != rmtLateAssign) {
                 throw new IgniteCheckedException("Remote node has cache affinity assignment mode different from local " +
-                    "[locId8=" +  U.id8(locNode.id()) +
+                    "[locId8=" + U.id8(locNode.id()) +
                     ", locDelayAssign=" + locDelayAssign +
                     ", rmtId8=" + U.id8(n.id()) +
                     ", rmtLateAssign=" + rmtLateAssign +
@@ -1398,7 +1398,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     return null;
                 }
-            }, topVer, discoCache, evtType, evtNode, srvNodes.size(), clientNodes.size(), totalCpus, heap, offheap);
+            }, topVer, discoCache, evtType, evtNode, srvNodes.size(), clientNodes.size(), totalCpus, heap, offheap, false);
 
         if (log.isDebugEnabled()) {
             String dbg = "";
@@ -1449,14 +1449,14 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     return null;
                 }
-            }, topVer, discoCache, evtType, evtNode, srvNodes.size(), clientNodes.size(), totalCpus, heap, offheap);
+            }, topVer, discoCache, evtType, evtNode, srvNodes.size(), clientNodes.size(), totalCpus, heap, offheap, true);
     }
 
     /**
      * @return Required offheap memory in bytes.
      */
     private long requiredOffheap() {
-        if(ctx.config().isClientMode())
+        if (ctx.config().isClientMode())
             return 0;
 
         DataStorageConfiguration memCfg = ctx.config().getDataStorageConfiguration();
@@ -1515,23 +1515,53 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      * @param totalCpus Total cpu number.
      * @param heap Heap size.
      * @param offheap Offheap size.
+     * @param needNodesDetails Flag for additional alive nodes logging.
      */
-    private void topologySnapshotMessage(IgniteClosure<String, Void> clo, long topVer, DiscoCache discoCache,
-        int evtType, ClusterNode evtNode, int srvNodesNum, int clientNodesNum, int totalCpus, double heap,
-        double offheap) {
+    private void topologySnapshotMessage(
+        IgniteClosure<String, Void> clo,
+        long topVer,
+        DiscoCache discoCache,
+        int evtType,
+        ClusterNode evtNode,
+        int srvNodesNum,
+        int clientNodesNum,
+        int totalCpus,
+        double heap,
+        double offheap,
+        boolean needNodesDetails
+    ) {
         DiscoveryDataClusterState state = discoCache.state();
 
-        String summary = PREFIX + " [" +
-            (discoOrdered ? "ver=" + topVer + ", " : "") +
-            "locNode=" + U.id8(discoCache.localNode().id()) +
-            ", servers=" + srvNodesNum +
-            ", clients=" + clientNodesNum +
-            ", state=" + (state.active() ? "ACTIVE" : "INACTIVE") +
-            ", CPUs=" + totalCpus +
-            ", offheap=" + offheap + "GB" +
-            ", heap=" + heap + "GB]";
+        SB summary = new SB(PREFIX);
 
-        clo.apply(summary);
+        summary.a(" [");
+        summary.a(discoOrdered ? "ver=" + topVer + ", " : "");
+        summary.a("locNode=").a(U.id8(discoCache.localNode().id()));
+        summary.a(", servers=").a(srvNodesNum);
+        summary.a(", clients=").a(clientNodesNum);
+        summary.a(", state=").a(state.active() ? "ACTIVE" : "INACTIVE");
+        summary.a(", CPUs=").a(totalCpus);
+        summary.a(", offheap=").a(offheap).a("GB");
+        summary.a(", heap=").a(heap).a("GB");
+
+        if ((evtType == EVT_NODE_JOINED
+            || evtType == EVT_NODE_LEFT
+            || evtType == EVT_NODE_FAILED)
+            && needNodesDetails) {
+            summary.a(", aliveNodes=[");
+
+            for (ClusterNode clusterNode : discoCache.allNodes())
+                if (discoCache.alive(clusterNode.id()))
+                    summary.a(clusterNode.toString()).a(", ");
+
+            summary.setLength(summary.length() - 2);
+
+            summary.a("]");
+        }
+
+        summary.a("]");
+
+        clo.apply(summary.toString());
 
         ClusterNode currCrd = discoCache.coordinator();
 
@@ -1782,7 +1812,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         return discoCache().allNodes();
     }
 
-    /** @return all alive server nodes is topology */
+    /** @return all alive server nodes in topology */
     public Collection<ClusterNode> aliveServerNodes() {
         return discoCache().aliveServerNodes();
     }
@@ -1856,7 +1886,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      * @param topVer Topology version.
      * @return Compacted consistent id map.
      */
-    public  Map<Short, UUID> nodeIdMap(AffinityTopologyVersion topVer) {
+    public Map<Short, UUID> nodeIdMap(AffinityTopologyVersion topVer) {
         return resolveDiscoCache(CU.cacheId(null), topVer).nodeIdMap();
     }
 
@@ -2108,7 +2138,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     public void consistentId(final Serializable consistentId) {
         this.consistentId = consistentId;
     }
-
 
     /** @return Topology version. */
     public long topologyVersion() {
@@ -2394,7 +2423,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 aliveNodesByConsId.put(node.consistentId(), node);
             }
 
-            List<BaselineNode >baselineNodes0 = new ArrayList<>(blt.size());
+            List<BaselineNode> baselineNodes0 = new ArrayList<>(blt.size());
 
             for (Object consId : blt.consistentIds()) {
                 ClusterNode srvNode = aliveNodesByConsId.get(consId);
@@ -2750,16 +2779,22 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     private static class NotificationEvent {
         /** Type. */
         int type;
+
         /** Topology version. */
         AffinityTopologyVersion topVer;
+
         /** Node. */
         ClusterNode node;
+
         /** Disco cache. */
         DiscoCache discoCache;
+
         /** Topology snapshot. */
         Collection<ClusterNode> topSnapshot;
+
         /** Data. */
         @Nullable DiscoveryCustomMessage data;
+
         /** Span container. */
         SpanContainer spanContainer;
 

@@ -55,7 +55,7 @@ public class GridClientZipOptimizedMarshaller extends GridClientOptimizedMarshal
     public GridClientZipOptimizedMarshaller(GridClientMarshaller dfltMarsh, @Nullable List<PluginProvider> plugins) {
         super(plugins);
 
-        assert dfltMarsh!= null;
+        assert dfltMarsh != null;
 
         this.dfltMarsh = dfltMarsh;
     }
@@ -107,7 +107,7 @@ public class GridClientZipOptimizedMarshaller extends GridClientOptimizedMarshal
         ByteArrayInputStream bais = new ByteArrayInputStream(input);
         ByteArrayOutputStream baos = new ByteArrayOutputStream(DFLT_BUFFER_SIZE);
 
-        try(ZipInputStream zis = new ZipInputStream(bais)) {
+        try (ZipInputStream zis = new ZipInputStream(bais)) {
             zis.getNextEntry();
 
             byte[] buf = new byte[DFLT_BUFFER_SIZE];
@@ -123,6 +123,7 @@ public class GridClientZipOptimizedMarshaller extends GridClientOptimizedMarshal
 
         return baos.toByteArray();
     }
+
     /** {@inheritDoc} */
     @Override public ByteBuffer marshal(Object obj, int off) throws IOException {
         try {

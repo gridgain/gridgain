@@ -156,11 +156,6 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return 15 * 60 * 1000L;
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         stop.set(false);
 
@@ -177,6 +172,11 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         lockTrackerManager = new PageLockTrackerManager(log, "testTreeManager");
 
         lockTrackerManager.start();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return 10 * 60 * 1000L;
     }
 
     /**
@@ -816,7 +816,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
 
         int loops = reuseList == null ? 20_000 : 60_000;
 
-        for (int i = 0 ; i < loops; i++) {
+        for (int i = 0; i < loops; i++) {
             final Long x = (long)BPlusTree.randomInt(CNT);
             final int rnd = BPlusTree.randomInt(11);
 
@@ -1017,7 +1017,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
                 @Override public Object call() throws Exception {
                     Random rnd = new GridRandom();
 
-                    for(;;) {
+                    for (;;) {
                         int idx = 0;
                         boolean found = false;
 
@@ -1178,7 +1178,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
 
         int loops = reuseList == null ? 100_000 : 300_000;
 
-        for (int i = 0 ; i < loops; i++) {
+        for (int i = 0; i < loops; i++) {
             Long x = (long)BPlusTree.randomInt(CNT);
 
             boolean put = BPlusTree.randomInt(2) == 0;
@@ -1683,7 +1683,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
                             + "]; contents=" + treeContents);
 
                     if (treeSize < minBound || treeSize > maxBound) {
-                        fail("Tree size is not in bounds ["  + minBound + ".." + maxBound + "]: " + treeSize
+                        fail("Tree size is not in bounds [" + minBound + ".." + maxBound + "]: " + treeSize
                             + "; Tree contents: " + treeContents);
                     }
                 }
@@ -1913,7 +1913,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         IgniteInternalFuture<?> rmvFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
                 int iter = 0;
-                while(!stop.get()) {
+                while (!stop.get()) {
                     Long rmvVal = rowsToRemove.poll(200, TimeUnit.MILLISECONDS);
                     if (rmvVal != null)
                         assertEquals(rmvVal, tree.remove(rmvVal));
@@ -2036,7 +2036,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         IgniteInternalFuture<?> rmvFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
                 int iter = 0;
-                while(!stop.get()) {
+                while (!stop.get()) {
                     Long rmvVal = rowsToRemove.poll(200, TimeUnit.MILLISECONDS);
                     if (rmvVal != null)
                         assertEquals(rmvVal, tree.remove(rmvVal));
@@ -2052,7 +2052,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         IgniteInternalFuture<?> findFut = multithreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
                 int iter = 0;
-                while(!stop.get()) {
+                while (!stop.get()) {
                     Long findVal = curPutKey.get()
                         + SLIDING_WINDOW_SIZE / 2
                         - rnd.nextInt(SLIDING_WINDOW_SIZE * 2);
@@ -2299,7 +2299,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         // is impossible if we already have a key in a back page, thus we will have lots of empty routing pages.
         // This way the tree grows faster than shrinks and gets out of height limit of 26 (for this page size) quickly.
         // Since the tree height can not be larger than the key count for this case, we can use 26 as a safe number.
-        final int KEYS = MAX_PER_PAGE == 1 ? 26 : 10_000;
+        final int KEYS = MAX_PER_PAGE == 1 ? 26 : GridTestUtils.SF.applyLB(10_000, 2_500);
 
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
@@ -2655,7 +2655,6 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
             }
         }, 4, "find");
 
-
         asyncRunFut = new GridCompoundFuture<>();
 
         asyncRunFut.add((IgniteInternalFuture)fut);
@@ -2700,7 +2699,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
     private static int size(GridCursor<?> c) throws IgniteCheckedException {
         int cnt = 0;
 
-        while(c.next())
+        while (c.next())
             cnt++;
 
         return cnt;
@@ -2861,8 +2860,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        protected int getLockRetries() {
+        @Override protected int getLockRetries() {
             return numRetries;
         }
     }

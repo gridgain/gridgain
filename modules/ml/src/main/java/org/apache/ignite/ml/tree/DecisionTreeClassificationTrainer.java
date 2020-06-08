@@ -69,7 +69,7 @@ public class DecisionTreeClassificationTrainer extends DecisionTree<GiniImpurity
      * @param maxDeep The parameter value.
      * @return Trainer with new maxDeep parameter value.
      */
-    public DecisionTreeClassificationTrainer withMaxDeep(Double maxDeep){
+    public DecisionTreeClassificationTrainer withMaxDeep(Double maxDeep) {
         this.maxDeep = maxDeep.intValue();
         return this;
     }
@@ -79,7 +79,7 @@ public class DecisionTreeClassificationTrainer extends DecisionTree<GiniImpurity
      * @param minImpurityDecrease The parameter value.
      * @return Trainer with new minImpurityDecrease parameter value.
      */
-    public DecisionTreeClassificationTrainer withMinImpurityDecrease(Double minImpurityDecrease){
+    public DecisionTreeClassificationTrainer withMinImpurityDecrease(Double minImpurityDecrease) {
         this.minImpurityDecrease = minImpurityDecrease;
         return this;
     }

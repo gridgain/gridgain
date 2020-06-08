@@ -164,7 +164,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Override public int putValue(long addr) throws IgniteCheckedException {
-        return CacheObjectAdapter.putValue(addr, cacheObjectType(), arr, start);
+        return CacheObjectAdapter.putValue(addr, cacheObjectType(), arr, start, length());
     }
 
     /** {@inheritDoc} */
@@ -696,6 +696,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
         start = in.readInt();
     }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);

@@ -79,6 +79,7 @@ class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
 
     /** Factory to provide I/O interfaces for read primitives with files. */
     private static final SegmentFileInputFactory FILE_INPUT_FACTORY = new SimpleSegmentFileInputFactory();
+
     /**
      * File descriptors remained to scan.
      * <code>null</code> value means directory scan mode
@@ -332,7 +333,7 @@ class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
         SegmentHeader segmentHeader;
         while (true) {
             try {
-                fileIO = fd.toIO(ioFactory);
+                fileIO = fd.toReadOnlyIO(ioFactory);
 
                 segmentHeader = readSegmentHeader(fileIO, FILE_INPUT_FACTORY);
 
@@ -516,6 +517,8 @@ class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
         closeCurrentWalSegment();
 
         curWalSegmIdx = Integer.MAX_VALUE;
+
+        sharedCtx.kernalContext().cacheObjects().stop(true);
     }
 
     /** {@inheritDoc} */

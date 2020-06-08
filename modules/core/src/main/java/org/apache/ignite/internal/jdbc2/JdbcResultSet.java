@@ -260,7 +260,7 @@ public class JdbcResultSet implements ResultSet {
      * If this result set is associated with locally executed query then query cursor will also closed.
      * @throws SQLException On error.
      */
-    void closeInternal() throws SQLException  {
+    void closeInternal() throws SQLException {
         if (uuid != null) {
             if (((JdbcConnection)stmt.getConnection()).nodeId() == null)
                 JdbcQueryTask.remove(uuid);
@@ -1827,7 +1827,7 @@ public class JdbcResultSet implements ResultSet {
 
             Class<?> cls = val.getClass();
 
-            if (targetCls == cls)
+            if (targetCls.isAssignableFrom(cls))
                 return val;
             else
                 throw new SQLException("Cannot convert to " + targetCls.getName() + ": " + val,

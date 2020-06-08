@@ -61,6 +61,6 @@ public class TestSuiteAwareTestsetReporter extends SurefireStatelessTestsetInfoR
         String pkg = testCls.substring(0, 1 + delim);
         String cls = testCls.substring(1 + delim);
 
-        return builder.a(pkg).strong(cls).toString();
+        return builder.a(pkg).a(cls).toString();
     }
 }

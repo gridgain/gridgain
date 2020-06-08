@@ -2519,7 +2519,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         }
 
         /** {@inheritDoc} */
-        @Override public  IgniteUuid id() {
+        @Override public IgniteUuid id() {
             return id;
         }
 

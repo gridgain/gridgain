@@ -31,7 +31,7 @@ public class MetastorageDataRow extends SimpleDataRow implements MetastorageSear
     /** */
     public MetastorageDataRow(long link, String key, byte[] val) {
         super(link, MetaStorage.PRESERVE_LEGACY_METASTORAGE_PARTITION_ID ?
-            PageIdAllocator.OLD_METASTORE_PARTITION: PageIdAllocator.METASTORE_PARTITION, val);
+            PageIdAllocator.OLD_METASTORE_PARTITION : PageIdAllocator.METASTORE_PARTITION, val);
         this.key = key;
     }
 

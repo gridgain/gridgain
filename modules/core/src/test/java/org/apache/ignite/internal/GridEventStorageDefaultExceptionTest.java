@@ -30,7 +30,7 @@ import org.junit.Test;
  * Event storage tests with default no-op spi.
  */
 @GridCommonTest(group = "Kernal Self")
-public class GridEventStorageDefaultExceptionTest  extends GridCommonAbstractTest {
+public class GridEventStorageDefaultExceptionTest extends GridCommonAbstractTest {
     /** */
     public GridEventStorageDefaultExceptionTest() {
         super(/*start grid*/true);

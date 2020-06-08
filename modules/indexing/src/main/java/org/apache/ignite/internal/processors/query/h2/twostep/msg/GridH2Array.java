@@ -28,6 +28,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.h2.value.Value;
 import org.h2.value.ValueArray;
+import org.h2.value.ValueCollectionBase;
 
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory.fillArray;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory.toMessage;
@@ -52,13 +53,14 @@ public class GridH2Array extends GridH2ValueMessage {
      * @throws IgniteCheckedException If failed.
      */
     public GridH2Array(Value val) throws IgniteCheckedException {
-        assert val.getType().getValueType() == Value.ARRAY : val.getType();
+        // Intentionally converts Value.ROW to GridH2Array to preserve compatibility
+        assert val.getValueType() == Value.ARRAY || val.getValueType() == Value.ROW : val.getType();
 
-        ValueArray arr = (ValueArray)val;
+        ValueCollectionBase col = (ValueCollectionBase)val;
 
-        x = new ArrayList<>(arr.getList().length);
+        x = new ArrayList<>(col.getList().length);
 
-        for (Value v : arr.getList())
+        for (Value v : col.getList())
             x.add(toMessage(v));
     }
 

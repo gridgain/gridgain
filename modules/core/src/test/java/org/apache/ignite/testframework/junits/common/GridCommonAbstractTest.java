@@ -71,6 +71,7 @@ import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
@@ -670,7 +671,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param node Cluster node.
      * @return {@code True} If node is a server. {@False} if not.
      */
-    private static boolean isServer(ClusterNode node){
+    private static boolean isServer(ClusterNode node) {
         return !node.isClient() && !node.isDaemon();
     }
 
@@ -1379,7 +1380,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         List<Integer> keys = new ArrayList<>(cnt);
 
-        while(c < cnt) {
+        while (c < cnt) {
             if (cctx.affinity().partition(k) == part) {
                 if (skip0 < skipCnt) {
                     k++;
@@ -1417,7 +1418,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             }
 
             private void advance() {
-                while(cctx.affinity().partition(cur = next++) != part);
+                while (cctx.affinity().partition(cur = next++) != part);
             }
 
             @Override public boolean hasNext() {
@@ -1592,7 +1593,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         BitSet before = m1.get(ign.cluster().localNode());
         BitSet after = m2.get(ign.cluster().localNode());
 
-        for (int p = before.nextSetBit(0); p >= 0; p = before.nextSetBit(p+1)) {
+        for (int p = before.nextSetBit(0); p >= 0; p = before.nextSetBit(p + 1)) {
             if (!after.get(p)) {
                 partsToRet.add(p);
 
@@ -2012,7 +2013,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
                     topEx.retryReadyFuture().get();
                 }
-                else
+                else if (!(e.getCause() instanceof TransactionRollbackException))
                     throw e;
             }
             catch (ClusterTopologyException e) {
@@ -2034,8 +2035,9 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "binary_meta", false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false));
+        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
+            false));
     }
 
     /**
@@ -2370,12 +2372,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 break;
 
             default:
-                try(IgniteDataStreamer<Integer, Integer> ds = grid(gridName).dataStreamer(cacheName)) {
+                try (IgniteDataStreamer<Integer, Integer> ds = grid(gridName).dataStreamer(cacheName)) {
                     ds.allowOverwrite(mode == 2);
 
                     ds.addData(map);
                 }
-
 
                 break;
         }
@@ -2672,7 +2673,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         return true;
     }
-
 
     /**
      * Enable checkpoints on a specific nodes.

@@ -17,6 +17,7 @@ ACLOCAL_AMFLAGS =-I m4
 
 nobase_include_HEADERS = \
 	ignite/cache/cache.h \
+	ignite/cache/cache_affinity.h \
 	ignite/cache/cache_entry.h \
 	ignite/cache/cache_entry_processor.h \
 	ignite/cache/cache_peek_mode.h \
@@ -34,6 +35,9 @@ nobase_include_HEADERS = \
 	ignite/cache/query/query_sql.h \
 	ignite/cache/query/query_sql_fields.h \
 	ignite/cache/query/query_text.h \
+	ignite/cluster/cluster_group.h \
+	ignite/cluster/cluster_node.h \
+	ignite/cluster/ignite_cluster.h \
 	ignite/compute/compute.h \
 	ignite/compute/compute_func.h \
 	ignite/ignite.h \
@@ -43,6 +47,7 @@ nobase_include_HEADERS = \
 	ignite/ignition.h \
 	ignite/impl/binary/binary_type_updater_impl.h \
 	ignite/impl/bindings.h \
+	ignite/impl/cache/cache_affinity_impl.h \
 	ignite/impl/cache/cache_entry_processor_holder.h \
 	ignite/impl/cache/cache_impl.h \
 	ignite/impl/cache/event/cache_entry_event_filter_base.h \
@@ -54,6 +59,8 @@ nobase_include_HEADERS = \
 	ignite/impl/cache/query/query_fields_row_impl.h \
 	ignite/impl/cache/query/query_impl.h \
 	ignite/impl/cluster/cluster_group_impl.h \
+	ignite/impl/cluster/cluster_node_impl.h \
+	ignite/impl/cluster/ignite_cluster_impl.h \
 	ignite/impl/compute/cancelable_impl.h \
 	ignite/impl/compute/compute_impl.h \
 	ignite/impl/compute/compute_job_holder.h \
@@ -62,6 +69,7 @@ nobase_include_HEADERS = \
 	ignite/impl/compute/single_job_compute_task_holder.h \
 	ignite/impl/compute/multiple_job_compute_task_holder.h \
 	ignite/impl/handle_registry.h \
+	ignite/impl/helpers.h \
 	ignite/impl/ignite_binding_impl.h \
 	ignite/impl/ignite_environment.h \
 	ignite/impl/ignite_impl.h \

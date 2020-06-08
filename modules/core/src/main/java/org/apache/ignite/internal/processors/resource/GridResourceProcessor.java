@@ -31,6 +31,7 @@ import org.apache.ignite.internal.GridInternalWrapper;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.X;
@@ -56,6 +57,9 @@ public class GridResourceProcessor extends GridProcessorAdapter {
     /** */
     private final GridResourceInjector[] injectorByAnnotation;
 
+    /** Dependency container. */
+    private volatile DependencyResolver dependencyResolver = new NoopDependencyResolver();
+
     /**
      * Creates resources processor.
      *
@@ -78,6 +82,11 @@ public class GridResourceProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+        final DependencyResolver extRslvr = IgnitionEx.dependencyResolver();
+
+        if (extRslvr != null)
+            this.dependencyResolver = extRslvr;
+
         if (log.isDebugEnabled())
             log.debug("Started resource processor.");
     }
@@ -549,5 +558,15 @@ public class GridResourceProcessor extends GridProcessorAdapter {
         X.println(">>> Resource processor memory stats [igniteInstanceName=" + ctx.igniteInstanceName() + ']');
 
         ioc.printMemoryStats();
+    }
+
+    /**
+     * Delegates resource resolving to the provided dependency resolver, which wraps passed instance if necessary.
+     *
+     * @param instance Instance of delegated class.
+     * @return Original instance or wrapped if wrapper exists.
+     */
+    public <T> T resolve(T instance) {
+        return dependencyResolver.resolve(instance);
     }
 }

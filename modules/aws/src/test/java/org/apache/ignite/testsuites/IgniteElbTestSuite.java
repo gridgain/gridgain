@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.spi.discovery.tcp.ipfinder.elb.TcpDiscoveryAlbIpFinderSelfTest;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.elb.TcpDiscoveryElbIpFinderSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -24,6 +25,7 @@ import org.junit.runners.Suite;
  * ELB IP finder test suite.
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({TcpDiscoveryElbIpFinderSelfTest.class})
+@Suite.SuiteClasses({TcpDiscoveryElbIpFinderSelfTest.class,
+                     TcpDiscoveryAlbIpFinderSelfTest.class})
 public class IgniteElbTestSuite {
 }

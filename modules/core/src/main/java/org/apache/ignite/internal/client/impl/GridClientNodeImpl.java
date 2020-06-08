@@ -186,7 +186,7 @@ public class GridClientNodeImpl implements GridClientNode {
         if (addrs0 != null)
             return filterIfNecessary(addrs0, filterResolved);
 
-        addrs0 = U.toSocketAddresses(addrs, hostNames, port);
+        addrs0 = U.toSocketAddresses(addrs, hostNames, port, true);
 
         if (!addrsCache.compareAndSet(null, addrs0))
             return filterIfNecessary(addrsCache.get(), filterResolved);

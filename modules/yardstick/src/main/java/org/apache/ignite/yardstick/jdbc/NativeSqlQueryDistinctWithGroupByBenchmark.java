@@ -23,7 +23,6 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.yardstickframework.BenchmarkConfiguration;
 
-
 /**
  * Native sql benchmark that performs select operations with DISTINCT and GROUP BY.
  */

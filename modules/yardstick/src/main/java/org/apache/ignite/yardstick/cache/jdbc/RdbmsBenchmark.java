@@ -195,7 +195,7 @@ public class RdbmsBenchmark extends JdbcAbstractBenchmark {
 
                 stmt.execute();
 
-                if(i % 1000 == 0)
+                if (i % 1000 == 0)
                     BenchmarkUtils.println("Inserting " + i + "th value into " + tblName);
             }
         }

@@ -51,7 +51,6 @@ import org.junit.Test;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
-
 /**
  * Checks basic multi-node transactional operations.
  */
@@ -176,7 +175,7 @@ public abstract class IgniteTxMultiNodeAbstractTest extends GridCommonAbstractTe
             if (DEBUG)
                 info("Before " + kind + " put item [retry=" + retry + ", key=" + itemKey + ", cur=" + cntr +
                     ", new=" + newVal + ", nearEntry=" + nearEntry(locId, itemKey) +
-                    ", dhtEntry=" +  dhtEntry(itemPrimaryId, itemKey) + ']');
+                    ", dhtEntry=" + dhtEntry(itemPrimaryId, itemKey) + ']');
 
             cache.put(itemKey, newVal);
 

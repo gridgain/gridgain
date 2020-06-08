@@ -53,6 +53,7 @@ import org.jetbrains.annotations.NotNull;
  */
 class ProgressWatchdog {
     public static final int CHECK_PERIOD_MSEC = 1000;
+
     /** Progress counter, Overall records processed. */
     private final LongAdder overallRecordsProcessed = new LongAdder();
 
@@ -159,7 +160,7 @@ class ProgressWatchdog {
                 || name.contains("db-checkpoint-thread")
                 || name.contains("wal-file-archiver")
                 || name.contains("data-streamer")
-                || (clientThreadsName!=null && name.contains(clientThreadsName))) {
+                || (clientThreadsName != null && name.contains(clientThreadsName))) {
                 String str = threadInfo.toString();
 
                 if (name.contains("db-checkpoint-thread")) {
@@ -358,8 +359,8 @@ class ProgressWatchdog {
             "cpWriteSpeed=" + cpWriteSpeed + " " +
             "cpSyncSpeed=" + cpSyncSpeed + " " +
             "walSpeed= " + walSpeed + " " +
-            "walWorkSeg.="+walWorkSegments + " " +
-            "markDirtySpeed=" + markDirtySpeed +" " +
+            "walWorkSeg.=" + walWorkSegments + " " +
+            "markDirtySpeed=" + markDirtySpeed + " " +
             "Avg. " + operation + " " + averagePutPerSec + " recs/sec, " +
             "dirtyP=" + dirtyPages + ", " +
             "cpWrittenP.=" + cpWrittenPages + ", " +

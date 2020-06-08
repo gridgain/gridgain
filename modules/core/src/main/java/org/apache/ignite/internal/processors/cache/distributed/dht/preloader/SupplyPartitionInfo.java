@@ -34,11 +34,6 @@ public class SupplyPartitionInfo {
     private long minCntr;
 
     /**
-     * Demand node id.
-     */
-    private UUID minNodeId;
-
-    /**
      * Reservation.
      */
     private long maxReserved;
@@ -51,14 +46,12 @@ public class SupplyPartitionInfo {
     /**
      * @param part Partiiotn.
      * @param minCntr Minimal counter.
-     * @param minNodeId Node id with minamal counter.
      * @param maxReserved Max reservation.
      * @param maxReservedNodeId Node with maximum reservation.
      */
-    public SupplyPartitionInfo(int part, long minCntr, UUID minNodeId, long maxReserved, UUID maxReservedNodeId) {
+    public SupplyPartitionInfo(int part, long minCntr, long maxReserved, UUID maxReservedNodeId) {
         this.part = part;
         this.minCntr = minCntr;
-        this.minNodeId = minNodeId;
         this.maxReserved = maxReserved;
         this.maxReservedNodeId = maxReservedNodeId;
     }
@@ -75,13 +68,6 @@ public class SupplyPartitionInfo {
      */
     public long minCntr() {
         return minCntr;
-    }
-
-    /**
-     * @return Node id.
-     */
-    public UUID minNodeId() {
-        return minNodeId;
     }
 
     /**

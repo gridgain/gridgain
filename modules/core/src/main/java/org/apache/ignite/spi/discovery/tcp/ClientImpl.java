@@ -505,11 +505,11 @@ class ClientImpl extends TcpDiscoveryImpl {
     @Override public void sendCustomEvent(DiscoverySpiCustomMessage evt) {
         State state = this.state;
 
-        if (state == SEGMENTED)
-            throw new IgniteException("Failed to send custom message: client is segmented.");
-
         if (state == DISCONNECTED)
             throw new IgniteClientDisconnectedException(null, "Failed to send custom message: client is disconnected.");
+
+        if (state == STOPPED || state == SEGMENTED || state == STARTING)
+            throw new IgniteException("Failed to send custom message: client is " + state.name().toLowerCase() + ".");
 
         try {
             TcpDiscoveryAbstractMessage msg;
@@ -756,12 +756,14 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                     TcpDiscoveryJoinRequestMessage joinReqMsg = new TcpDiscoveryJoinRequestMessage(node, discoveryData);
 
+                    TcpDiscoveryNode nodef = node;
+
                     joinReqMsg.spanContainer().span(
                         tracing.create(TraceableMessagesTable.traceName(joinReqMsg.getClass()))
-                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), node.id().toString())
+                            .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), () -> nodef.id().toString())
                             .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
-                                node.consistentId().toString())
-                            .addLog("Created")
+                                () -> nodef.consistentId().toString())
+                            .addLog(() -> "Created")
                             .end()
                     );
 
@@ -1815,7 +1817,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                             U.quietAndWarn(log, "Local node will try to reconnect to cluster with new id due " +
                                 "to network problems [newId=" + newId +
                                 ", prevId=" + locNode.id() +
-                                ", locNode=" + locNode+ ']');
+                                ", locNode=" + locNode + ']');
 
                             locNode.onClientDisconnected(newId);
 

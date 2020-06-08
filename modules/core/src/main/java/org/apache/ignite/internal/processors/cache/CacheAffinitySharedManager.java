@@ -87,6 +87,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.tracing.SpanType.AFFINITY_CALCULATION;
 
 /**
  *
@@ -2200,8 +2201,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (grpHolder.affinity().lastVersion().equals(evts.topologyVersion()))
                     return;
 
-                Span affCalcSpan = cctx.kernalContext().tracing().create("affinity.calculation", fut.span())
-                    .addTag("cache.group", desc.cacheOrGroupName());
+                Span affCalcSpan = cctx.kernalContext().tracing().create(AFFINITY_CALCULATION, fut.span())
+                    .addTag("cache.group", desc::cacheOrGroupName);
 
                 boolean latePrimary = grpHolder.rebalanceEnabled;
 
@@ -3024,7 +3025,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             int partsNum
             ) {
             String res = "Cache group '%s'" +
-                " brings high overhead for its metainformation in data region '%s'."  +
+                " brings high overhead for its metainformation in data region '%s'." +
                 " Metainformation required for its partitions (%d partitions, %d bytes per partition, %d MBs total)" +
                 " will consume more than 15%% of data region memory (%d MBs)." +
                 " It may lead to critical errors on the node and cluster instability." +

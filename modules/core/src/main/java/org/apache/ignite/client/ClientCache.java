@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
@@ -336,11 +338,30 @@ public interface ClientCache<K, V> {
     public <K1, V1> ClientCache<K1, V1> withKeepBinary();
 
     /**
+     * Returns cache with the specified expiry policy set. This policy will be used for each operation invoked on
+     * the returned cache.
+     *
+     * @param expiryPlc Expiry policy to use.
+     * @return Cache instance with the specified expiry policy set.
+     *
+     * @deprecated Please use {@link #withExpiryPolicy} instead.
+     */
+    public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expiryPlc);
+
+    /**
+     * Returns cache with the specified expiry policy set. This policy will be used for each operation invoked on
+     * the returned cache.
+     *
+     * @param expiryPlc Expiry policy to use.
+     * @return Cache instance with the specified expiry policy set.
+     */
+    public <K1, V1> ClientCache<K1, V1> withExpiryPolicy(ExpiryPolicy expiryPlc);
+
+    /**
      * Queries cache. Supports {@link ScanQuery} and {@link SqlFieldsQuery}.
      *
      * @param qry Query.
      * @return Cursor.
-     *
      */
     public <R> QueryCursor<R> query(Query<R> qry);
 

@@ -109,6 +109,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -122,6 +124,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /**
@@ -133,6 +137,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     @Test
     public void testNodeJoinIsNotBlockedByAsyncMetaWriting() throws Exception {
         final CountDownLatch fileWriteLatch = initSlowFileIOFactory();
+
+        setRootLoggerDebugLevel();
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener submitMsgLsnr = LogListener.matches("Submitting task for async write for").build();
@@ -266,6 +272,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         LogListener cancelFutureLsnr = LogListener.matches("Cancelling future for write operation").build();
         listeningLog.registerListener(cancelFutureLsnr);
 
+        setRootLoggerDebugLevel();
+
         IgniteEx ig1 = startGrid(1);
 
         ig0.cluster().active(true);
@@ -351,6 +359,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
             MetadataUpdateAcceptedMessage.class,
             (topVer, snd, msg) -> suppressException(fileWriteLatch::await)
         );
+
+        setRootLoggerDebugLevel();
 
         listeningLog = new ListeningTestLogger(true, log);
         LogListener waitingForWriteLsnr = LogListener.matches("Waiting for write completion of").build();
@@ -490,7 +500,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         //internal map in BinaryMetadataFileStore with futures awaiting write operations
         Map map = GridTestUtils.getFieldValue(
-            (CacheObjectBinaryProcessorImpl)ig1.context().cacheObjects(),  "metadataFileStore", "writer", "preparedWriteTasks");
+            ig1.context().cacheObjects(), "metadataFileStore", "writer", "preparedTasks");
 
         assertTrue(!map.isEmpty());
 
@@ -577,7 +587,7 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
      */
     private void cleanBinaryMetaFolderForNode(String consId) throws IgniteCheckedException {
         String dfltWorkDir = U.defaultWorkDirectory();
-        File metaDir = U.resolveWorkDirectory(dfltWorkDir, "binary_meta", false);
+        File metaDir = U.resolveWorkDirectory(dfltWorkDir, DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false);
 
         for (File subDir : metaDir.listFiles()) {
             if (subDir.getName().contains(consId)) {
@@ -617,10 +627,13 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     static final class TestPerson {
         /** */
         private final int id;
+
         /** */
         private final String firstName;
+
         /** */
         private final String surname;
+
         /** */
         private TestAddress addr;
 
@@ -641,10 +654,13 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     static final class TestAddress {
         /** */
         private final int id;
+
         /** */
         private final String country;
+
         /** */
         private final String city;
+
         /** */
         private final String address;
 
@@ -669,10 +685,13 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
     static final class TestAccount {
         /** */
         private final TestPerson person;
+
         /** */
         private final int accountId;
+
         /** */
         private final long accountBalance;
+
         /** */
         TestAccount(
             TestPerson person, int id, long balance) {

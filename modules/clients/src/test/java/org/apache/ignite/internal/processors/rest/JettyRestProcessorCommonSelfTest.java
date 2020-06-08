@@ -16,20 +16,10 @@
 
 package org.apache.ignite.internal.processors.rest;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.io.IOException;
+import java.util.Map;
 import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JETTY_PORT;
 
@@ -40,11 +30,11 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
     /** Grid count. */
     private static final int GRID_CNT = 3;
 
-    /** REST port. */
-    private static final int DFLT_REST_PORT = 8091;
-
     /** JSON to java mapper. */
     protected static final ObjectMapper JSON_MAPPER = new GridJettyObjectMapper();
+
+    /** Rest client. */
+    private final TestRestClient restClient = createRestClient();
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -66,17 +56,17 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
     }
 
     /**
-     * @return Port to use for rest. Needs to be changed over time because Jetty has some delay before port unbind.
+     * @return Rest client, you may override some function of it.
      */
-    protected int restPort() {
-        return DFLT_REST_PORT;
+    protected TestRestClient createRestClient() {
+        return new TestRestClient(this::signature);
     }
 
     /**
-     * @return Test URL
+     * @return Port to use for rest. Needs to be changed over time because Jetty has some delay before port unbind.
      */
-    protected String restUrl() {
-        return "http://" + LOC_HOST + ":" + restPort() + "/ignite?";
+    protected int restPort() {
+        return restClient.restPort();
     }
 
     /**
@@ -100,43 +90,7 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
      * @throws Exception If failed.
      */
     protected String content(Map<String, String> params) throws Exception {
-        SB sb = new SB(restUrl());
-
-        for (Map.Entry<String, String> e : params.entrySet())
-            sb.a(e.getKey()).a('=').a(e.getValue()).a('&');
-
-        URL url = new URL(sb.toString());
-
-        URLConnection conn = openConnection(url);
-
-        InputStream in = conn.getInputStream();
-
-        StringBuilder buf = new StringBuilder(256);
-
-        try (LineNumberReader rdr = new LineNumberReader(new InputStreamReader(in, "UTF-8"))) {
-            for (String line = rdr.readLine(); line != null; line = rdr.readLine())
-                buf.append(line);
-        }
-
-        return buf.toString();
-    }
-
-    /**
-     * Open REST connection, set signature header if needed.
-     *
-     * @param url URL to open.
-     * @return URL connection.
-     * @throws Exception If failed.
-     */
-    protected URLConnection openConnection(URL url) throws Exception {
-        URLConnection conn = url.openConnection();
-
-        String signature = signature();
-
-        if (signature != null)
-            conn.setRequestProperty("X-Signature", signature);
-
-        return conn;
+        return restClient.content(params);
     }
 
     /**
@@ -147,21 +101,7 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
      * @throws Exception If failed.
      */
     protected String content(String cacheName, GridRestCommand cmd, String... params) throws Exception {
-        Map<String, String> paramsMap = new LinkedHashMap<>();
-
-        if (cacheName != null)
-            paramsMap.put("cacheName", cacheName);
-
-        paramsMap.put("cmd", cmd.key());
-
-        if (params != null) {
-            assertEquals(0, params.length % 2);
-
-            for (int i = 0; i < params.length; i += 2)
-                paramsMap.put(params[i], params[i + 1]);
-        }
-
-        return content(paramsMap);
+        return restClient.content(cacheName, cmd, params);
     }
 
     /**
@@ -171,15 +111,6 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
      * @throws IOException If failed.
      */
     protected String jsonField(String json, String field) throws IOException {
-        assertNotNull(json);
-        assertFalse(json.isEmpty());
-
-        JsonNode node = JSON_MAPPER.readTree(json);
-
-        JsonNode fld = node.get(field);
-
-        assertNotNull(fld);
-
-        return fld.asText();
+       return restClient.jsonField(json, field);
     }
 }

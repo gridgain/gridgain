@@ -750,6 +750,7 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
 
         return (float) offHeapMisses / offHeapGets * 100.0f;
     }
+
     /** {@inheritDoc} */
     @Override public long getOffHeapEntriesCount() {
         return offHeapEntriesCnt;
@@ -1016,6 +1017,11 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** {@inheritDoc} */
     @Override public boolean isValidForWriting() {
         return isValidForWriting;
+    }
+
+    /** No need in snapshoting this metric, only local metric would be acceptable. */
+    @Override public String getTxKeyCollisions() {
+        return "";
     }
 
     /** {@inheritDoc} */

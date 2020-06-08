@@ -404,7 +404,6 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
         return this;
     }
 
-
     /**
      * @param preprocessor Preprocessor.
      */

@@ -45,7 +45,7 @@ public class TransactionIntegrityWithSystemWorkerDeathTest extends AbstractTrans
 
     /** */
     @Test
-    @WithSystemProperty(key=IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED, value="true")
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED, value = "true")
     public void testFailoverWithDiscoWorkerTermination() throws Exception {
         doTestTransferAmount(new FailoverScenario() {
             static final int failedNodeIdx = 1;

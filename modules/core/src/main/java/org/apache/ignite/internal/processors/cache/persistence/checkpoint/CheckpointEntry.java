@@ -208,7 +208,7 @@ public class CheckpointEntry {
         /**
          *
          */
-        public long size(){
+        public long size() {
             return idx;
         }
 

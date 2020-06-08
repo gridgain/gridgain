@@ -1171,7 +1171,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         FileDescriptor ds = new FileDescriptor(file);
 
         try (
-            SegmentIO fileIO = ds.toIO(ioFactory);
+            SegmentIO fileIO = ds.toReadOnlyIO(ioFactory);
             ByteBufferExpander buf = new ByteBufferExpander(HEADER_RECORD_SIZE, ByteOrder.nativeOrder())
         ) {
             final DataInput in = segmentFileInputFactory.createFileInput(fileIO, buf);
@@ -1404,7 +1404,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     if (lsnr != null)
                         lsnr.apply(fileIO);
 
-
                     hnd = fileHandleManager.nextHandle(fileIO, serializer);
 
                     if (interrupted)
@@ -1601,8 +1600,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public long maxArchivedSegmentToDelete() {
-        //When maxWalArchiveSize==MAX_VALUE deleting files is not permit.
-        if (dsCfg.getMaxWalArchiveSize() == Long.MAX_VALUE)
+        //When maxWalArchiveSize==-1 deleting files is not permit.
+        if (dsCfg.getMaxWalArchiveSize() == DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE)
             return -1;
 
         FileDescriptor[] archivedFiles = walArchiveFiles();
@@ -2127,7 +2126,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
 
         /** {@inheritDoc} */
-        @Override public void body() throws InterruptedException, IgniteInterruptedCheckedException{
+        @Override public void body() throws InterruptedException, IgniteInterruptedCheckedException {
             init();
 
             super.body0();
@@ -2159,7 +2158,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private volatile Throwable lastCompressionError;
 
         /** */
-        FileCompressorWorker(int idx,  IgniteLogger log) {
+        FileCompressorWorker(int idx, IgniteLogger log) {
             super(cctx.igniteInstanceName(), "wal-file-compressor-%" + cctx.igniteInstanceName() + "%-" + idx, log);
         }
 
@@ -2176,7 +2175,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * Pessimistically tries to reserve segment for compression in order to avoid concurrent truncation.
          * Waits if there's no segment to archive right now.
          */
-        private long tryReserveNextSegmentOrWait() throws IgniteInterruptedCheckedException{
+        private long tryReserveNextSegmentOrWait() throws IgniteInterruptedCheckedException {
             long segmentToCompress = segmentAware.waitNextSegmentToCompress();
 
             boolean reserved = reserve(new FileWALPointer(segmentToCompress, 0, 0));

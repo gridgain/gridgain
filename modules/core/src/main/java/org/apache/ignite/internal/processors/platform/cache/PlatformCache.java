@@ -79,8 +79,6 @@ import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.platform.client.ClientConnectionContext.DEFAULT_VER;
-
 /**
  * Native cache wrapper implementation.
  */
@@ -1065,7 +1063,7 @@ public class PlatformCache extends PlatformAbstractTarget {
                 CacheConfiguration ccfg = ((IgniteCache<Object, Object>)cache).
                         getConfiguration(CacheConfiguration.class);
 
-                PlatformConfigurationUtils.writeCacheConfiguration(writer, ccfg, DEFAULT_VER);
+                PlatformConfigurationUtils.writeCacheConfiguration(writer, ccfg);
 
                 break;
 
@@ -1351,7 +1349,7 @@ public class PlatformCache extends PlatformAbstractTarget {
             QueryCursorEx cursor = (QueryCursorEx) cache.query(qry);
 
             return new PlatformQueryCursor(platformCtx, cursor,
-                qry.getPageSize() > 0 ? qry.getPageSize(): Query.DFLT_PAGE_SIZE);
+                qry.getPageSize() > 0 ? qry.getPageSize() : Query.DFLT_PAGE_SIZE);
         }
         catch (Exception err) {
             throw PlatformUtils.unwrapQueryException(err);

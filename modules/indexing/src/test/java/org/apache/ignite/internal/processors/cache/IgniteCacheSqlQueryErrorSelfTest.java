@@ -25,7 +25,7 @@ import org.junit.Test;
 /**
  * Java API query error messages test.
  */
-public class IgniteCacheSqlQueryErrorSelfTest  extends GridCacheAbstractSelfTest {
+public class IgniteCacheSqlQueryErrorSelfTest extends GridCacheAbstractSelfTest {
     /** {@inheritDoc} */
     @Override protected int gridCount() {
         return 1;
@@ -159,6 +159,15 @@ public class IgniteCacheSqlQueryErrorSelfTest  extends GridCacheAbstractSelfTest
 
         checkSqlErrorMessage("alter table test drop column wrong",
             "Failed to parse query. Column \"WRONG\" not found");
+
+        checkSqlErrorMessage("create table test(id integer primary key, AgE integer, AGe integer)",
+            "Duplicate column name: AGE");
+
+        checkSqlErrorMessage("create table test(\"id\" integer primary key, \"age\" integer, \"age\" integer)",
+            "Duplicate column name: age");
+
+        checkSqlErrorMessage("create table test(id integer primary key, age integer, age varchar)",
+            "Duplicate column name: AGE");
     }
 
     /**

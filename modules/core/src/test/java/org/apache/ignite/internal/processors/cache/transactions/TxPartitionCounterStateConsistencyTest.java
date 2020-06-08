@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,13 +54,16 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -371,15 +375,17 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         prim.cache(DEFAULT_CACHE_NAME).put(keys.get(0), keys.get(0));
 
-        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(prim);
+        TestRecordingCommunicationSpi spiPrim = TestRecordingCommunicationSpi.spi(prim);
+        TestRecordingCommunicationSpi spiBack = TestRecordingCommunicationSpi.spi(backups.get(1));
 
-        spi.blockMessages((node, msg) -> msg instanceof GridDhtPartitionSupplyMessage);
+        spiPrim.blockMessages((node, msg) -> msg instanceof GridDhtPartitionSupplyMessage);
+        spiBack.blockMessages((node, msg) -> msg instanceof GridDhtPartitionSupplyMessage);
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
-                spi.waitForBlocked();
+                GridTestUtils.waitForCondition(() -> spiPrim.hasBlockedMessages() || spiBack.hasBlockedMessages(), 10_000);
             }
-            catch (InterruptedException e) {
+            catch (Exception e) {
                 fail(X.getFullStackTrace(e));
             }
 
@@ -388,7 +394,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             doSleep(2000);
 
             // Ensure queue cleanup is triggered before releasing supply message.
-            spi.stopBlock();
+            spiPrim.stopBlock();
+            spiBack.stopBlock();
         });
 
         startGrid(backups.get(0).name());
@@ -435,33 +442,19 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         cache.put(p1Keys.get(1), 2);
         cache.put(p2Keys.get(1), 1); // Will be fully rebalanced.
 
-        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+        List<TestRecordingCommunicationSpi> spis = new ArrayList<>();
 
-        // Prevent rebalance completion.
-        spi.blockMessages((node, msg) -> {
-            String name = (String)node.attributes().get(ATTR_IGNITE_INSTANCE_NAME);
-
-            if (name.equals(backupName) && msg instanceof GridDhtPartitionSupplyMessage) {
-                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
-
-                if (msg0.groupId() != CU.cacheId(DEFAULT_CACHE_NAME))
-                    return false;
-
-                Map<Integer, CacheEntryInfoCollection> infos = U.field(msg0, "infos");
-
-                return infos.keySet().contains(primaryParts[0]); // Delay historical rebalance.
-            }
-
-            return false;
-        });
+        for (Ignite ignite: G.allGrids())
+            spis.add(blockSupplyFromNode(ignite, primaryParts, backupName));
 
         backup = startGrid(backupName);
 
-        spi.waitForBlocked();
+        GridTestUtils.waitForCondition(() -> spis.stream().anyMatch(TestRecordingCommunicationSpi::hasBlockedMessages),
+            10_000);
 
         forceCheckpoint(backup);
 
-        spi.stopBlock();
+        spis.stream().forEach(TestRecordingCommunicationSpi::stopBlock);
 
         // While message is delayed topology version shouldn't change to ideal.
         awaitPartitionMapExchange();
@@ -519,30 +512,24 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         stopAllGrids();
 
-        crd = startGrid(0);
+        crd = startNodeWithBlockingSupplying(0);
         startGrid(1);
-        startGrid(2);
+        startNodeWithBlockingSupplying(2);
 
-        TestRecordingCommunicationSpi crdSpi = TestRecordingCommunicationSpi.spi(crd);
-
-        // Block all rebalance from crd.
-        crdSpi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode node, Message msg) {
-                return msg instanceof GridDhtPartitionSupplyMessage;
-            }
-        });
-
-        crd.cluster().active(true); // Rebalancing is triggered on activation.
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(crd);
+        TestRecordingCommunicationSpi spi2 = TestRecordingCommunicationSpi.spi(ignite(2));
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
-                crdSpi.waitForBlocked();
+                GridTestUtils.waitForCondition(() -> spi0.hasBlockedMessages() || spi2.hasBlockedMessages(), 10_000);
 
                 // Stop before supplying rebalance. New rebalance must start with second backup as supplier
                 // doing full rebalance.
                 stopGrid(primName);
+
+                spi2.stopBlock();
             }
-            catch (InterruptedException e) {
+            catch (Exception e) {
                 fail();
             }
         });
@@ -564,6 +551,21 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(grid(demanderName), DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @param idx Starting node index.
+     * @return Ignite.
+     * @throws Exception If failed.
+     */
+    private Ignite startNodeWithBlockingSupplying(int idx) throws Exception {
+        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(idx));
+
+        TestRecordingCommunicationSpi spi = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
+
+        spi.blockMessages(GridDhtPartitionSupplyMessage.class, getTestIgniteInstanceName(1));
+
+        return startGrid(optimize(cfg));
     }
 
     /**
@@ -656,11 +658,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             U.awaitQuiet(sync);
 
-            while(!done.get()) {
+            while (!done.get()) {
                 int batch0 = 1 + r.nextInt(batch - 1);
                 int start = r.nextInt(keys - batch0);
 
-                try(Transaction tx = client.transactions().txStart()) {
+                try (Transaction tx = client.transactions().txStart()) {
                     Map<Integer, Integer> map = new TreeMap<>();
 
                     IntStream.range(start, start + batch0).forEach(value -> map.put(value, value));
@@ -677,7 +679,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteInternalFuture fut2 = GridTestUtils.runAsync(() -> {
             U.awaitQuiet(sync);
 
-            while(!done.get()) {
+            while (!done.get()) {
                 try {
                     IgniteCache cache1 = client.createCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2"));
 
@@ -723,7 +725,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         // Put one key per partition.
-        try(IgniteDataStreamer<Object, Object> streamer = client.dataStreamer(DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Object, Object> streamer = client.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int k = 0; k < partitions(); k++)
                 streamer.addData(k, 0);
         }
@@ -989,6 +991,96 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
+     * Tests a scenario when stale partition state message can trigger spurious late affinity switching cause
+     * mapping to moving partitions.
+     */
+    @Test
+    public void testLateAffinityChangeDuringExchange() throws Exception {
+        backups = 2;
+        Ignite crd = startGridsMultiThreaded(3);
+        crd.cluster().active(true);
+
+        awaitPartitionMapExchange();
+
+        for (int p = 0; p < PARTS_CNT; p++)
+            crd.cache(DEFAULT_CACHE_NAME).put(p, p);
+
+        forceCheckpoint();
+
+        int key = primaryKey(grid(2).cache(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() == null && msg0.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).
+                        topologyVersion().equals(new AffinityTopologyVersion(4, 0));
+                }
+
+                return false;
+            }
+        });
+
+        stopGrid(2);
+
+        // Fill a queue with a lot of messages.
+        for (int i = 0; i < 1000; i++)
+            grid(1).context().cache().context().exchange().refreshPartitions();
+
+        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked(1000);
+
+        // Create counter delta for triggering counter rebalance.
+        for (int p = 0; p < PARTS_CNT; p++)
+            crd.cache(DEFAULT_CACHE_NAME).put(p, p + 1);
+
+        IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(2));
+        TestRecordingCommunicationSpi spi2 = (TestRecordingCommunicationSpi) cfg2.getCommunicationSpi();
+        spi2.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage)
+                    return true; // Prevent any rebalancing to avoid switching partitions to owning.
+
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() != null &&
+                        msg0.exchangeId().topologyVersion().equals(new AffinityTopologyVersion(5, 0));
+                }
+
+                return false;
+            }
+        });
+
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(cfg2);
+
+                return null;
+            }
+        });
+
+        // Delay last single message. It should trigger PME for version 5,0
+        spi2.waitForBlocked();
+
+        // Start processing single messages.
+        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
+
+        // Allow PME to finish.
+        spi2.stopBlock();
+
+        grid(0).context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(5, 1)).get();
+
+        // Primary node for a key will be stopped by FH without a fix.
+        grid(0).cache(DEFAULT_CACHE_NAME).put(key, -1);
+
+        for (int i = 0; i < 1000; i++)
+            assertEquals(-1, grid(2).cache(DEFAULT_CACHE_NAME).get(key));
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
      * The scenario:
      * <p>
      * 1. Start updates only to primary partitions what will be switched when this node has left.
@@ -1251,7 +1343,35 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         cache.remove(keys.get(1));
 
-        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(crd);
+        List<TestRecordingCommunicationSpi> spis = new ArrayList<>();
+
+        for (Ignite ignite: G.allGrids())
+            spis.add(blockSupplyFromNode(ignite, primaryParts, backupName));
+
+        startGrid(backupName);
+
+        GridTestUtils.waitForCondition(() -> spis.stream().anyMatch(TestRecordingCommunicationSpi::hasBlockedMessages),
+            10_000);
+
+        rebBlockClo.accept(backupName);
+
+        spis.stream().forEach(TestRecordingCommunicationSpi::stopBlock);
+
+        rebUnblockClo.accept(backupName);
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @param ingine Ignite.
+     * @param primaryParts Array of partitions.
+     * @param backupName Name of node for which supply messages will be blocked.
+     * @return Test communication SPI.
+     */
+    private TestRecordingCommunicationSpi blockSupplyFromNode(Ignite ingine, int[] primaryParts, String backupName) {
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ingine);
 
         // Prevent rebalance completion.
         spi.blockMessages((node, msg) -> {
@@ -1270,20 +1390,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             return false;
         });
-
-        startGrid(backupName);
-
-        spi.waitForBlocked();
-
-        rebBlockClo.accept(backupName);
-
-        spi.stopBlock();
-
-        rebUnblockClo.accept(backupName);
-
-        awaitPartitionMapExchange();
-
-        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+        return spi;
     }
 
     /** */

@@ -59,7 +59,7 @@ public class TxOnCachesStartTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTransactionCloseOnCachesStartAndStop() throws Exception {
-        Ignite srv =  startGrids(5);
+        Ignite srv = startGrids(5);
 
         IgniteEx client1 = startGrid(getConfiguration("client-1").setClientMode(true));
 
@@ -87,7 +87,7 @@ public class TxOnCachesStartTest extends GridCommonAbstractTest {
         }, 1, "tx-thread");
 
         GridTestUtils.runMultiThreadedAsync(new Runnable() {
-            @Override public void run()  {
+            @Override public void run() {
                 while (true) {
                     try (Transaction tx = client1.transactions().txStart()) {
                         /** Empty transaction, just testing {@link TransactionProxyImpl#leave} */

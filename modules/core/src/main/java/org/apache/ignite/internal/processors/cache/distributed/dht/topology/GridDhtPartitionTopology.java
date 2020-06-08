@@ -61,6 +61,7 @@ public interface GridDhtPartitionTopology {
      * @return {@code True} if locked by current thread.
      */
     public boolean holdsLock();
+
     /**
      * Updates topology version.
      *
@@ -115,7 +116,7 @@ public interface GridDhtPartitionTopology {
      *
      * @param exchFut Exchange future.
      * @param affReady Affinity ready flag.
-     * @param updateMoving
+     * @param updateMoving {@code True} to initialize partition maps with moving partitions.
      * @throws IgniteCheckedException If failed.
      */
     public void beforeExchange(GridDhtPartitionsExchangeFuture exchFut,
