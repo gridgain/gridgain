@@ -118,7 +118,7 @@ public class GridUnsafeDataOutputArraySizingSelfTest extends GridCommonAbstractT
         final GridUnsafeDataOutput out;
 
         /** */
-        final byte [] bytes;
+        final byte[] bytes;
 
         /** */
         final int len;

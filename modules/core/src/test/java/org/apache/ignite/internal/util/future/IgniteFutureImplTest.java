@@ -753,7 +753,6 @@ public class IgniteFutureImplTest extends GridCommonAbstractTest {
             }
         }, customExec);
 
-
         assertExceptionThrown(err, chained1);
         assertExceptionThrown(err, fut);
 

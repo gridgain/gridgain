@@ -69,7 +69,6 @@ public class CacheGroupLocalConfigurationSelfTest extends GridCommonAbstractTest
             cfg.setCacheConfiguration(ccfg);
         }
 
-
         return cfg;
     }
 

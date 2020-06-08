@@ -1388,7 +1388,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         stopGrid0(igniteInstanceName, cancel, awaitTop, true);
     }
 
-
     /**
      * @param igniteInstanceName Ignite instance name.
      * @param cancel Cancel flag.
@@ -1989,7 +1988,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         BinaryEnumCache.clear();
         serializedObj.clear();
 
-        if (err!= null)
+        if (err != null)
             throw err;
     }
 
@@ -2212,7 +2211,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     /**
      * @return Test resources.
      */
-    private synchronized IgniteTestResources getIgniteTestResources()  {
+    private synchronized IgniteTestResources getIgniteTestResources() {
         IgniteTestResources rsrcs = tests.get(getClass());
 
         if (rsrcs == null)

@@ -195,7 +195,6 @@ public class VisorMemoryMetrics extends VisorDataTransferObject {
         return physicalMemoryPages;
     }
 
-
     /**
      * @return Total size of memory allocated, in bytes.
      */

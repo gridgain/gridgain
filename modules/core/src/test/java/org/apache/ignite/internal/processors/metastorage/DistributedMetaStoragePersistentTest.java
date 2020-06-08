@@ -288,7 +288,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(3);
 
-
         for (int i = 0; i < cnt; i++)
             startGrid(i);
 
@@ -409,7 +408,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(4);
 
-
         startGrid(1);
 
         startGrid(0);
@@ -458,7 +456,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         metastorage(5).write("key5", "value5");
 
         stopGrid(5);
-
 
         startGrid(2);
 

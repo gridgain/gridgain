@@ -43,6 +43,7 @@ import org.junit.Test;
 public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
     /** Client instance name. */
     public static final String CLIENT_INSTANCE_NAME = "client";
+
     /** Client metrics update count. */
     private static volatile int clientMetricsUpdateCnt;
 

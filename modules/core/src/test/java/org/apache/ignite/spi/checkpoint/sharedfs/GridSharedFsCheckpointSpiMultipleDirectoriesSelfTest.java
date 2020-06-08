@@ -46,7 +46,7 @@ public class GridSharedFsCheckpointSpiMultipleDirectoriesSelfTest extends
     /**
      * @return Paths.
      */
-    @GridSpiTestConfig(setterName="setDirectoryPaths")
+    @GridSpiTestConfig(setterName = "setDirectoryPaths")
     public Collection<String> getDirectoryPaths() {
         Collection<String> dirs = new ArrayList<>();
 

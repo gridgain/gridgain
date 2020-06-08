@@ -35,6 +35,7 @@ public class ModelsComposition implements IgniteModel<Vector, Double>, Exportabl
      * Predictions aggregator.
      */
     private final PredictionsAggregator predictionsAggregator;
+
     /**
      * Models.
      */

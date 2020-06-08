@@ -776,6 +776,7 @@ public class IgniteProjectionStartStopRestartSelfTest extends GridCommonAbstract
 
         return maps;
     }
+
     /**
      * @throws InterruptedException If failed.
      */

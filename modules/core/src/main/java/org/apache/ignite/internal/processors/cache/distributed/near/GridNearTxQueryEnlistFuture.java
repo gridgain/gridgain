@@ -381,6 +381,7 @@ public class GridNearTxQueryEnlistFuture extends GridNearTxQueryAbstractEnlistFu
     private static class IntArrayHolder {
         /** */
         private int[] array;
+
         /** */
         private int size;
 

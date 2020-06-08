@@ -123,7 +123,6 @@ public class MLDeployingTest extends GridCommonAbstractTest {
             Preprocessor<Integer, Vector> customPreprocessor3 = createPreprocessor(knownPreprocessor2, EXT_PREPROCESSOR_1);
             Preprocessor<Integer, Vector> customPreprocessor4 = createPreprocessor(customPreprocessor3, EXT_PREPROCESSOR_2);
 
-
             fitAndTestModel(cache, customPreprocessor1);
             fitAndTestModel(cache, customPreprocessor2);
             fitAndTestModel(cache, knownPreprocessor1);
@@ -162,7 +161,7 @@ public class MLDeployingTest extends GridCommonAbstractTest {
             body.accept(new CacheBasedDatasetBuilder<>(ignite1, cache)
                 .withRetriesNumber(NUMBER_OF_COMPUTE_RETTRIES));
         } finally {
-            if(cache != null)
+            if (cache != null)
                 cache.destroy();
         }
     }
@@ -202,8 +201,7 @@ public class MLDeployingTest extends GridCommonAbstractTest {
     /** */
     @NotNull private PreprocessingTrainer makePreprocessorTrainer(String preprocessorClassName) throws Exception {
         return new PreprocessingTrainer() {
-            @Override
-            public Preprocessor fit(LearningEnvironmentBuilder envBuilder, DatasetBuilder datasetBuilder,
+            @Override public Preprocessor fit(LearningEnvironmentBuilder envBuilder, DatasetBuilder datasetBuilder,
                 Preprocessor basePreprocessor) {
                 try {
                     return createPreprocessor(basePreprocessor, preprocessorClassName);

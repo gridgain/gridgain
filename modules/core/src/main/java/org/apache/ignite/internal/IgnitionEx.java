@@ -406,8 +406,7 @@ public class IgnitionEx {
 
         // Schedule delayed node killing if graceful stopping will be not finished within timeout.
         executor.schedule(new Runnable() {
-            @Override
-            public void run() {
+            @Override public void run() {
                 if (state(name) == IgniteState.STARTED) {
                     U.error(null, "Unable to gracefully stop node within timeout " + timeoutMs +
                             " milliseconds. Killing node...");
@@ -636,7 +635,6 @@ public class IgnitionEx {
             throw U.convertException(e);
         }
     }
-
 
     /**
      * Starts grid with given configuration. Note that this method will throw and exception if grid with the name
@@ -1420,7 +1418,7 @@ public class IgnitionEx {
      * @param name Grid name.
      * @return Grid instance.
      */
-    public  static IgniteKernal gridx(@Nullable String name) {
+    public static IgniteKernal gridx(@Nullable String name) {
         IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
 
         IgniteKernal res;
@@ -1517,7 +1515,7 @@ public class IgnitionEx {
          * @param springCtx Optional Spring application context.
          */
         GridStartContext(IgniteConfiguration cfg, @Nullable URL cfgUrl, @Nullable GridSpringResourceContext springCtx) {
-            assert(cfg != null);
+            assert (cfg != null);
 
             this.cfg = cfg;
             this.cfgUrl = cfgUrl;
@@ -2063,7 +2061,7 @@ public class IgnitionEx {
 
                 customExecSvcs = new HashMap<>();
 
-                for(ExecutorConfiguration execCfg : cfg.getExecutorConfiguration()) {
+                for (ExecutorConfiguration execCfg : cfg.getExecutorConfiguration()) {
                     ThreadPoolExecutor exec = new IgniteThreadPoolExecutor(
                         execCfg.getName(),
                         cfg.getIgniteInstanceName(),
@@ -2265,7 +2263,7 @@ public class IgnitionEx {
 
             myCfg.setGridLogger(cfgLog);
 
-            if(F.isEmpty(userProvidedWorkDir) && F.isEmpty(U.IGNITE_WORK_DIR))
+            if (F.isEmpty(userProvidedWorkDir) && F.isEmpty(U.IGNITE_WORK_DIR))
                 log.warning("Ignite work directory is not provided, automatically resolved to: " + workDir);
 
             // Check Ignite home folder (after log is available).
@@ -2941,7 +2939,7 @@ public class IgnitionEx {
          * @throws IgniteCheckedException If registration failed.
          */
         private void registerFactoryMbean(MBeanServer srv) throws IgniteCheckedException {
-            if(U.IGNITE_MBEANS_DISABLED)
+            if (U.IGNITE_MBEANS_DISABLED)
                 return;
 
             assert srv != null;
@@ -2996,7 +2994,7 @@ public class IgnitionEx {
          * Unregister delegate Mbean instance for {@link Ignition}.
          */
         private void unregisterFactoryMBean() {
-            if(U.IGNITE_MBEANS_DISABLED)
+            if (U.IGNITE_MBEANS_DISABLED)
                 return;
 
             synchronized (mbeans) {

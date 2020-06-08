@@ -242,7 +242,6 @@ public class GridNioServer<T> {
     /** Outbound messages queue size. */
     @Nullable private final LongAdderMetric outboundMessagesQueueSizeMetric;
 
-
     /** Sessions. */
     private final GridConcurrentHashSet<GridSelectorNioSessionImpl> sessions = new GridConcurrentHashSet<>();
 
@@ -3802,6 +3801,7 @@ public class GridNioServer<T> {
 
         /** Tracing processor */
         private Tracing tracing;
+
         /**
          * Finishes building the instance.
          *

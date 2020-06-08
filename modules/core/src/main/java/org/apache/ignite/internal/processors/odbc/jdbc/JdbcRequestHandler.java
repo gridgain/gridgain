@@ -323,7 +323,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     break;
 
                 case QRY_FETCH:
-                    resp =  fetchQuery((JdbcQueryFetchRequest)req);
+                    resp = fetchQuery((JdbcQueryFetchRequest)req);
                     break;
 
                 case QRY_CLOSE:
@@ -1092,7 +1092,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     if (e instanceof IgniteSQLException)
                         code = ((IgniteSQLException)e).statusCode();
                     else
-                        code =  ((SqlCacheException)e).statusCode();
+                        code = ((SqlCacheException)e).statusCode();
                 }
             }
             else {

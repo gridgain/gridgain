@@ -119,14 +119,14 @@ public class JdbcThinNoDefaultSchemaTest extends JdbcThinAbstractSelfTest {
 
         ResultSet rs = stmt.getResultSet();
 
-        while(rs.next())
+        while (rs.next())
             assertEquals(rs.getInt(2), rs.getInt(1) * 2);
 
         stmt.execute("select t._key, t._val from \"cache2\".Integer t");
 
         rs = stmt.getResultSet();
 
-        while(rs.next())
+        while (rs.next())
             assertEquals(rs.getInt(2), rs.getInt(1) * 3);
 
         stmt.execute("select t._key, t._val, v._val " +
@@ -134,7 +134,7 @@ public class JdbcThinNoDefaultSchemaTest extends JdbcThinAbstractSelfTest {
 
         rs = stmt.getResultSet();
 
-        while(rs.next()) {
+        while (rs.next()) {
             assertEquals(rs.getInt(2), rs.getInt(1) * 2);
             assertEquals(rs.getInt(3), rs.getInt(1) * 3);
         }
@@ -147,7 +147,7 @@ public class JdbcThinNoDefaultSchemaTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testSchemaInUrl() throws Exception {
-        try(Connection conn = DriverManager.getConnection(URL + "/\"cache1\"")) {
+        try (Connection conn = DriverManager.getConnection(URL + "/\"cache1\"")) {
             Statement stmt = conn.createStatement();
 
             stmt.execute("select t._key, t._val from Integer t");
@@ -158,7 +158,7 @@ public class JdbcThinNoDefaultSchemaTest extends JdbcThinAbstractSelfTest {
                 assertEquals(rs.getInt(2), rs.getInt(1) * 2);
         }
 
-        try(Connection conn = DriverManager.getConnection(URL + "/\"cache2\"")) {
+        try (Connection conn = DriverManager.getConnection(URL + "/\"cache2\"")) {
             Statement stmt = conn.createStatement();
 
             stmt.execute("select t._key, t._val from Integer t");
@@ -175,7 +175,7 @@ public class JdbcThinNoDefaultSchemaTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testSchemaInUrlAndInQuery() throws Exception {
-        try(Connection conn = DriverManager.getConnection(URL + "/\"cache2\"")) {
+        try (Connection conn = DriverManager.getConnection(URL + "/\"cache2\"")) {
             Statement stmt = conn.createStatement();
 
             stmt.execute("select t._key, t._val, v._val " +
@@ -195,7 +195,7 @@ public class JdbcThinNoDefaultSchemaTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testSetSchema() throws Exception {
-        try(Connection conn = DriverManager.getConnection(URL)) {
+        try (Connection conn = DriverManager.getConnection(URL)) {
             // Try to execute query without set schema
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {

@@ -28,7 +28,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 public class GridCommandHandlerPartitionReconciliationAtomicTest extends
     GridCommandHandlerPartitionReconciliationAbstractTest {
     /** {@inheritDoc} */
-    @Override  protected void prepareCache() {
+    @Override protected void prepareCache() {
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)

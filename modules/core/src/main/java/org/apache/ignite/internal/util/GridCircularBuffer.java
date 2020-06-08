@@ -154,7 +154,7 @@ public class GridCircularBuffer<T> implements Iterable<T> {
                 rest = tail + 1;
 
                 i = rest <= sizeMask ? 0 : idxGen.intValue() & (int)sizeMask;
-            };
+            }
 
             @Override public boolean hasNext() {
                 return rest > 0;

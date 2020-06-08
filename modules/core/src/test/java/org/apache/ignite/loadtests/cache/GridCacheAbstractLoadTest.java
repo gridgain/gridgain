@@ -179,7 +179,7 @@ abstract class GridCacheAbstractLoadTest {
                 @Nullable @Override public Object call() throws Exception {
                     long start = System.currentTimeMillis();
 
-                    while(!done.get()) {
+                    while (!done.get()) {
                         if (tx) {
                             try (Transaction tx = ignite.transactions().txStart()) {
                                 readClos.apply(cache);
@@ -264,7 +264,7 @@ abstract class GridCacheAbstractLoadTest {
 
         impl.removeAllAppenders();
 
-        String fileName =  U.getIgniteHome() + "/work/log/" + log;
+        String fileName = U.getIgniteHome() + "/work/log/" + log;
 
         // Configure output that should go to System.out
         RollingFileAppender fileApp;

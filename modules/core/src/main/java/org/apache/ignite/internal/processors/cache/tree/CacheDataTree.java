@@ -288,7 +288,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                             pageMem.readUnlock(grpId, pageId, page);
                         }
                     }
-                    finally{
+                    finally {
                         pageMem.releasePage(grpId, pageId, page);
                     }
                 }

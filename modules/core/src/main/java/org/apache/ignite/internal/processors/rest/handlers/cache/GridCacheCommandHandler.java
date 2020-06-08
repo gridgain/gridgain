@@ -34,7 +34,6 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import javax.cache.processor.MutableEntry;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -591,7 +590,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
                             boolean success = true;
 
                             for (IgniteInternalFuture<GridCacheRestResponse> f : cf.futures())
-                                if ((Boolean)f.get().getResponse() != true)
+                                if (!((Boolean)f.get().getResponse()))
                                     success = false;
 
                             GridCacheRestResponse resp = new GridCacheRestResponse();
@@ -887,16 +886,22 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
     private static class FlaggedCacheOperationCallable implements Callable<GridRestResponse>, Serializable {
         /** */
         private static final long serialVersionUID = 0L;
+
         /** */
         private final String cacheName;
+
         /** */
         private final Set<GridClientCacheFlag> cacheFlags;
+
         /** */
         private final CacheProjectionCommand op;
+
         /** */
         private final Object key;
+
         /** Client ID. */
         private UUID clientId;
+
         /** */
         @IgniteInstanceResource
         private Ignite g;
@@ -945,14 +950,19 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
     private static class CacheOperationCallable implements Callable<GridRestResponse>, Serializable {
         /** */
         private static final long serialVersionUID = 0L;
+
         /** */
         private final String cacheName;
+
         /** */
         private final CacheCommand op;
+
         /** */
         private final Object key;
+
         /** Client ID. */
         private UUID clientId;
+
         /** */
         @IgniteInstanceResource
         private Ignite g;
@@ -1108,7 +1118,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
 
         /** {@inheritDoc} */
         @Override public Collection<GridCacheSqlMetadata> execute() {
-            try{
+            try {
                if (future == null) {
                     if (!ignite.cluster().active())
                         return Collections.emptyList();

@@ -681,7 +681,7 @@ class ClusterCachesInfo {
 
             if (restartingCaches.containsKey(cacheName) &&
                 ((req.restartId() == null && restartingCaches.get(cacheName) != NULL_OBJECT)
-                    || (req.restartId() != null &&!req.restartId().equals(restartingCaches.get(cacheName))))) {
+                    || (req.restartId() != null && !req.restartId().equals(restartingCaches.get(cacheName))))) {
 
                 if (req.failIfExists()) {
                     ctx.cache().completeCacheStartFuture(req, false,
@@ -1867,7 +1867,7 @@ class ClusterCachesInfo {
             }
         }
 
-        return  null;
+        return null;
     }
 
     /**
@@ -2551,8 +2551,7 @@ class ClusterCachesInfo {
          * REVERSE comparator for cache descriptors (first user caches).
          */
         static Comparator<DynamicCacheDescriptor> REVERSE = new Comparator<DynamicCacheDescriptor>() {
-            @Override
-            public int compare(DynamicCacheDescriptor o1, DynamicCacheDescriptor o2) {
+            @Override public int compare(DynamicCacheDescriptor o1, DynamicCacheDescriptor o2) {
                 return -DIRECT.compare(o1, o2);
             }
         };

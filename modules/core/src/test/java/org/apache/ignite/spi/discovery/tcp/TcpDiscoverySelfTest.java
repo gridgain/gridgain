@@ -1047,7 +1047,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
                     }
                 }
 
-                assertTrue("TcpDiscoveryMulticastIpFinder should register port." , found);
+                assertTrue("TcpDiscoveryMulticastIpFinder should register port.", found);
             }
         }
         finally {
@@ -1268,7 +1268,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
 
             Collection<IgniteKernal> grids = new ArrayList<>();
 
-            for (int i = 0; i < 5 ; i++) {
+            for (int i = 0; i < 5; i++) {
                 IgniteKernal grid = (IgniteKernal)grid(i);
 
                 assertTrue(grid.context().discovery().gridStartTime() > 0);
@@ -1519,11 +1519,9 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
 
             Ignite ignite1 = startGrid("testNoRingMessageWorkerAbnormalFailureNormalNode");
 
-
             nodeSpi.set(new TcpDiscoverySpi());
 
             final Ignite ignite2 = startGrid("testNoRingMessageWorkerAbnormalFailureSegmentedNode");
-
 
             final AtomicBoolean disconnected = new AtomicBoolean();
 
@@ -1562,13 +1560,11 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
                 }
             }, EventType.EVT_NODE_SEGMENTED);
 
-
             spi1.stop = true;
 
             disLatch.await(15, TimeUnit.SECONDS);
 
             assertTrue(disconnected.get());
-
 
             spi1.stop = false;
 
@@ -1576,9 +1572,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
 
             assertTrue(segmented.get());
 
-
             Thread.sleep(10_000);
-
 
             String result = strLog.toString();
 
@@ -1623,7 +1617,6 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
             stopAllGrids();
         }
     }
-
 
     /**
      * @param twoNodes If {@code true} starts two nodes, otherwise three.
@@ -2518,7 +2511,6 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
             }
         }
     }
-
 
     /**
      *

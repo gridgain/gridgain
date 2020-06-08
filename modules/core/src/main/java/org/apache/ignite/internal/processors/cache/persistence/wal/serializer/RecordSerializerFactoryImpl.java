@@ -51,6 +51,7 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
     public RecordSerializerFactoryImpl(GridCacheSharedContext cctx) {
         this(cctx, null);
     }
+
     /**
      * @param cctx Cctx.
      */

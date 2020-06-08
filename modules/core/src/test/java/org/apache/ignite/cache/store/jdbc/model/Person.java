@@ -142,7 +142,6 @@ public class Person implements Serializable {
         this.name = name;
     }
 
-
     /**
      * Gets salary.
      *

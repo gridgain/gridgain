@@ -97,7 +97,7 @@ public class GridActivateExtensionTest extends GridCacheAbstractFullApiSelfTest 
 
         log.info("start backup cluster");
 
-        for (String name: backUpCluster.keySet()){
+        for (String name: backUpCluster.keySet()) {
             String n = name + "backUp";
 
             IgniteConfiguration cfg = getConfiguration(n);
@@ -111,7 +111,7 @@ public class GridActivateExtensionTest extends GridCacheAbstractFullApiSelfTest 
 
         log.info("shutdown main cluster");
 
-        for (String name : backUpCluster.keySet()){
+        for (String name : backUpCluster.keySet()) {
             log.info(name + " stopping");
 
             stopGrid(name);
@@ -177,7 +177,7 @@ public class GridActivateExtensionTest extends GridCacheAbstractFullApiSelfTest 
     /**
      *
      */
-    public boolean onlyClient(){
+    public boolean onlyClient() {
         for (int i = 0; i < gridCount(); i++)
             if (!grid(i).configuration().isClientMode())
                 return false;
