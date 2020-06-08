@@ -44,7 +44,6 @@ import org.junit.Test;
  * Test checks correctness loading data during exchange through Data streamer which cannot override entries.
  */
 public class LoadDataWiaStreamerDuringExchnageTest extends GridCommonAbstractTest {
-
     /** Count of rows which will be load to cache. */
     public static final int LOAD_LOOP = 100;
 
