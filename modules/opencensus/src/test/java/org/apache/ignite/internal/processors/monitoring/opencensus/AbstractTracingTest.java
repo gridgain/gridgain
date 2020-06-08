@@ -128,7 +128,10 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         TestRecordingCommunicationSpi spi = new TestRecordingCommunicationSpi();
-        spi.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        if (blockRebalancing())
+            spi.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+
         cfg.setCommunicationSpi(spi);
 
         cfg.setConsistentId(igniteInstanceName);
@@ -366,5 +369,12 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
                 span.end();
             }
         }
+    }
+
+    /**
+     * @return [@code True} to prevent rebalancing before test start.
+     */
+    protected boolean blockRebalancing() {
+        return true;
     }
 }
