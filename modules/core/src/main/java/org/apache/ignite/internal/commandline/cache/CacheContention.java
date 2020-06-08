@@ -84,6 +84,7 @@ public class CacheContention implements Command<CacheContention.Arguments> {
         public int minQueueSize() {
             return minQueueSize;
         }
+
         /**
          * @return Max print.
          */

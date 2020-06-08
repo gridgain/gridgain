@@ -29,6 +29,7 @@ import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -66,7 +67,6 @@ public class IgniteConnectionConcurrentReserveAndRemoveTest extends GridCommonAb
         }
     }
 
-
     @Test
     public void test() throws Exception {
         IgniteEx svr = startGrid(0);
@@ -89,7 +89,7 @@ public class IgniteConnectionConcurrentReserveAndRemoveTest extends GridCommonAb
 
         TcpCommunicationSpi spi1 = (TcpCommunicationSpi)c1.configuration().getCommunicationSpi();
 
-        ConcurrentMap<UUID, GridCommunicationClient[]> clientsMap = U.field(spi1, "clients");
+        ConcurrentMap<UUID, GridCommunicationClient[]> clientsMap = U.field((ConnectionClientPool)U.field(spi1, "clientPool"), "clients");
 
         GridCommunicationClient[] arr = clientsMap.get(c2.cluster().localNode().id());
 
@@ -98,7 +98,7 @@ public class IgniteConnectionConcurrentReserveAndRemoveTest extends GridCommonAb
         for (GridCommunicationClient c : arr) {
             client = (GridTcpNioCommunicationClient)c;
 
-            if(client != null) {
+            if (client != null) {
                 assertTrue(client.session().outRecoveryDescriptor().reserved());
 
                 assertFalse(client.session().outRecoveryDescriptor().connected());

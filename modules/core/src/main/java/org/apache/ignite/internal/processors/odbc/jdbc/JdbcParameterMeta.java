@@ -51,7 +51,6 @@ public class JdbcParameterMeta implements JdbcRawBinarylizable {
     /** Mode. */
     private int mode;
 
-
     /**
      * Default constructor is used for binary serialization.
      */

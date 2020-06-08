@@ -43,7 +43,7 @@ public class Population {
      *
      * @param idx Index of chromosome.
      */
-    public Chromosome getChromosome(int idx){
+    public Chromosome getChromosome(int idx) {
         return chromosomes[idx];
     }
 
@@ -53,13 +53,12 @@ public class Population {
      * @param idx Index.
      * @param fitnessFunction Fitness function.
      */
-    public double calculateFitnessForChromosome(int idx, Function<Chromosome, Double> fitnessFunction){
+    public double calculateFitnessForChromosome(int idx, Function<Chromosome, Double> fitnessFunction) {
         double fitness = fitnessFunction.apply(chromosomes[idx]);
         chromosomes[idx].setFitness(fitness);
         fitnessCalculatedFlags.set(idx);
         return fitness;
     }
-
 
     /**
      * Calculates fintness for all chromosomes with custom fitness function.
@@ -82,7 +81,6 @@ public class Population {
         if (!Double.isNaN(chromosome.getFitness())) fitnessCalculatedFlags.set(idx);
 
     }
-
 
     /**
      * Returns the chromosome by given index.
@@ -139,14 +137,12 @@ public class Population {
         return Double.NaN;
     }
 
-
     /**
      * Returns the size of population.
      */
     public int size() {
         return chromosomes.length;
     }
-
 
     /**
      * Sets the fitness value for chromosome with the given index.

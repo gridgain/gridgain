@@ -53,6 +53,7 @@ import static java.sql.Types.TIME;
 import static java.sql.Types.TIMESTAMP;
 import static java.sql.Types.TINYINT;
 import static java.sql.Types.VARCHAR;
+
 /**
  * Utility methods for JDBC driver.
  */
@@ -168,7 +169,6 @@ public class JdbcUtils {
     static boolean isSqlType(Class<?> cls) {
         return QueryUtils.isSqlType(cls) || cls == URL.class;
     }
-
 
     /**
      * Convert exception to {@link SQLException}.
@@ -327,7 +327,6 @@ public class JdbcUtils {
 
         return row;
     }
-
 
     /**
      * Normalize schema name. If it is quoted - unquote and leave as is, otherwise - convert to upper case.

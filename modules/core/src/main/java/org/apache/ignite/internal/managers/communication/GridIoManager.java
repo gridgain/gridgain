@@ -2787,7 +2787,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                 if (msgBody != null) {
                     if (predLsnr != null) {
-                        try(OperationSecurityContext s = ctx.security().withContext(initNodeId)) {
+                        try (OperationSecurityContext s = ctx.security().withContext(initNodeId)) {
                             if (!predLsnr.apply(nodeId, msgBody))
                                 removeMessageListener(TOPIC_COMM_USER, this);
                         }
@@ -3016,7 +3016,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             assert reserved.get();
 
             for (OrderedMessageContainer mc = msgs.poll(); mc != null; mc = msgs.poll()) {
-                try(TraceSurroundings ignore = support(ctx.tracing().create(
+                try (TraceSurroundings ignore = support(ctx.tracing().create(
                     COMMUNICATION_ORDERED_PROCESS, mc.parentSpan))) {
                     try {
                         OrderedMessageContainer fmc = mc;
@@ -3079,10 +3079,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private static class OrderedMessageContainer {
         /** */
         GridIoMessage message;
+
         /** */
         long addedTime;
+
         /** */
         IgniteRunnable closure;
+
         /** */
         Span parentSpan;
 

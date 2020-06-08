@@ -182,7 +182,6 @@ public class JdbcThinPartitionAwarenessTransactionsSelfTest extends JdbcThinAbst
         stmt.execute("COMMIT");
     }
 
-
     /**
      * Utility method that:
      *   1. warms up an affinity cache;
@@ -251,8 +250,8 @@ public class JdbcThinPartitionAwarenessTransactionsSelfTest extends JdbcThinAbst
             }
         }
 
-        assertTrue("Unexpected amount of used nodes: expected [0 < nodesCnt <= 1"  +
-                "], got [" +  nonEmptyMetricsCntr + "]",
+        assertTrue("Unexpected amount of used nodes: expected [0 < nodesCnt <= 1" +
+                "], got [" + nonEmptyMetricsCntr + "]",
             nonEmptyMetricsCntr == 1);
 
         assertEquals("Executions count doesn't match expeted value: expected [" +

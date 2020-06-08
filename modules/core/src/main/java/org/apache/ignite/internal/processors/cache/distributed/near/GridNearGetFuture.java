@@ -113,7 +113,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
 
         this.tx = tx;
 
-        ver = tx == null ? cctx.cache().nextVersion(): tx.xidVersion();
+        ver = tx == null ? cctx.cache().nextVersion() : tx.xidVersion();
 
         initLogger(GridNearGetFuture.class);
     }
@@ -381,7 +381,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
 
                 if (v == null) {
                     // Allow to get cached value from the local node.
-                    boolean allowLocRead = (!forcePrimary && cctx.config().isReadFromBackup())|| cctx.localNode().equals(affNodes.get(0));
+                    boolean allowLocRead = (!forcePrimary && cctx.config().isReadFromBackup()) || cctx.localNode().equals(affNodes.get(0));
 
                     boolean fastLocGet = allowLocRead && cctx.reserveForFastLocalGet(part, topVer);
 

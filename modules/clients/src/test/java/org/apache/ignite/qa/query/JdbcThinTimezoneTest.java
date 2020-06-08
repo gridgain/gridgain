@@ -261,7 +261,7 @@ public class JdbcThinTimezoneTest extends AbstractIndexingCommonTest {
 
     /**
      */
-    private List<String> select(final String sql,  final TimeZone tz, boolean fetchDateObjs) throws Exception {
+    private List<String> select(final String sql, final TimeZone tz, boolean fetchDateObjs) throws Exception {
         return TestJavaProcess.exec((IgniteCallable<List<String>>)() -> {
             List<String> res = new ArrayList<>();
 
@@ -337,7 +337,6 @@ public class JdbcThinTimezoneTest extends AbstractIndexingCommonTest {
             }
         }, "-Duser.timezone=" + tz.getID());
     }
-
 
     /**
      */

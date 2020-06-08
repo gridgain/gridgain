@@ -34,7 +34,6 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import javax.cache.processor.MutableEntry;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -44,6 +43,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
+import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.GridKernalContext;
@@ -76,7 +76,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.resources.JobContextResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -588,7 +590,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
                             boolean success = true;
 
                             for (IgniteInternalFuture<GridCacheRestResponse> f : cf.futures())
-                                if ((Boolean)f.get().getResponse() != true)
+                                if (!((Boolean)f.get().getResponse()))
                                     success = false;
 
                             GridCacheRestResponse resp = new GridCacheRestResponse();
@@ -884,16 +886,22 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
     private static class FlaggedCacheOperationCallable implements Callable<GridRestResponse>, Serializable {
         /** */
         private static final long serialVersionUID = 0L;
+
         /** */
         private final String cacheName;
+
         /** */
         private final Set<GridClientCacheFlag> cacheFlags;
+
         /** */
         private final CacheProjectionCommand op;
+
         /** */
         private final Object key;
+
         /** Client ID. */
         private UUID clientId;
+
         /** */
         @IgniteInstanceResource
         private Ignite g;
@@ -942,14 +950,19 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
     private static class CacheOperationCallable implements Callable<GridRestResponse>, Serializable {
         /** */
         private static final long serialVersionUID = 0L;
+
         /** */
         private final String cacheName;
+
         /** */
         private final CacheCommand op;
+
         /** */
         private final Object key;
+
         /** Client ID. */
         private UUID clientId;
+
         /** */
         @IgniteInstanceResource
         private Ignite g;
@@ -1093,34 +1106,57 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
         @IgniteInstanceResource
         private transient IgniteEx ignite;
 
+        /** Auto-inject job context. */
+        @JobContextResource
+        private transient ComputeJobContext jobCtx;
+
+        /** Metadata future. */
+        private transient IgniteInternalFuture<Collection<GridCacheSqlMetadata>> future;
+
+        /** Cache name. */
+        private transient String cacheName;
+
         /** {@inheritDoc} */
         @Override public Collection<GridCacheSqlMetadata> execute() {
-            String cacheName = null;
-
-            if (!ignite.cluster().active())
-                return Collections.emptyList();
-
-            IgniteInternalCache<?, ?> cache = null;
-
-            if (!F.isEmpty(arguments())) {
-                cacheName = argument(0);
-
-                cache = ignite.context().cache().publicCache(cacheName);
-
-                assert cache != null;
-            }
-            else {
-                IgniteCacheProxy<?, ?> pubCache = F.first(ignite.context().cache().publicCaches());
-
-                if (pubCache != null)
-                    cache = pubCache.internalProxy();
-
-                if (cache == null)
-                    return Collections.emptyList();
-            }
-
             try {
-                Collection<GridCacheSqlMetadata> metas = cache.context().queries().sqlMetadata();
+               if (future == null) {
+                    if (!ignite.cluster().active())
+                        return Collections.emptyList();
+
+                    IgniteInternalCache<?, ?> cache = null;
+
+                    if (!F.isEmpty(arguments())) {
+                        cacheName = argument(0);
+
+                        cache = ignite.context().cache().publicCache(cacheName);
+
+                        assert cache != null;
+                    }
+                    else {
+                        IgniteCacheProxy<?, ?> pubCache = F.first(ignite.context().cache().publicCaches());
+
+                        if (pubCache != null)
+                            cache = pubCache.internalProxy();
+
+                        if (cache == null)
+                            return Collections.emptyList();
+                    }
+
+                    future = cache.context().queries().sqlMetadataAsync();
+
+                    jobCtx.holdcc();
+
+                    future.listen(new IgniteInClosure<IgniteInternalFuture<Collection<GridCacheSqlMetadata>>>() {
+                        @Override public void apply(IgniteInternalFuture<Collection<GridCacheSqlMetadata>> future) {
+                            if (future.isDone())
+                                jobCtx.callcc();
+                        }
+                    });
+
+                    return null;
+                }
+
+                Collection<GridCacheSqlMetadata> metas = future.get();
 
                 if (cacheName != null) {
                     for (GridCacheSqlMetadata meta : metas)

@@ -537,7 +537,7 @@ public abstract class GridCacheLockAbstractTest extends GridCommonAbstractTest {
             try {
                 final AtomicReference<Throwable> err = new AtomicReference<>();
 
-                Thread t =  new Thread(new Runnable() {
+                Thread t = new Thread(new Runnable() {
                     @Override public void run() {
                         try {
                             assert !lock.tryLock();
@@ -561,7 +561,7 @@ public abstract class GridCacheLockAbstractTest extends GridCommonAbstractTest {
                 lock.lock();
                 lock.unlock();
 
-                t =  new Thread(new Runnable() {
+                t = new Thread(new Runnable() {
                     @Override public void run() {
                         try {
                             assert !lock.tryLock();

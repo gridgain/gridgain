@@ -106,9 +106,10 @@ public class H2TableDescriptor {
     /**
      * @return {@code true} In case table was created from SQL.
      */
-    public boolean sql(){
+    public boolean sql() {
         return isSql;
     }
+
     /**
      * @return Indexing.
      */
@@ -161,7 +162,7 @@ public class H2TableDescriptor {
     /**
      * @return Cache name.
      */
-    public String cacheName(){
+    public String cacheName() {
         return cacheInfo.name();
     }
 
@@ -322,7 +323,7 @@ public class H2TableDescriptor {
             keyCols = new ArrayList<>(type.fields().size() + 1);
 
             // Check if key is simple type.
-            if(QueryUtils.isSqlType(type.keyClass()))
+            if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
                 for (String propName : type.fields().keySet()) {

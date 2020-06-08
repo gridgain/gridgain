@@ -108,7 +108,6 @@ public class GridAffinityAssignmentV2 extends IgniteDataTransferObject implement
         this.idealAssignment =
             idealAssignment.equals(assignment) ? this.assignment : Collections.unmodifiableList(idealAssignment);
 
-
         // Temporary mirrors with modifiable partition's collections.
         Map<UUID, Set<Integer>> tmpPrimary = new HashMap<>();
         Map<UUID, Set<Integer>> tmpBackup = new HashMap<>();
@@ -134,7 +133,7 @@ public class GridAffinityAssignmentV2 extends IgniteDataTransferObject implement
                     !IGNITE_DISABLE_AFFINITY_MEMORY_OPTIMIZATION ? new BitSetIntSet() : new HashSet<>()
                 ).add(p);
 
-                isPrimary =  false;
+                isPrimary = false;
             }
 
             List<ClusterNode> idealOwners = p < idealAssignment.size() ? idealAssignment.get(p) : Collections.emptyList();
@@ -276,7 +275,7 @@ public class GridAffinityAssignmentV2 extends IgniteDataTransferObject implement
                     res.add(nodes.get(0));
             }
 
-            res =  Collections.unmodifiableSet(res);
+            res = Collections.unmodifiableSet(res);
 
             primaryPartsNodes = res;
         }

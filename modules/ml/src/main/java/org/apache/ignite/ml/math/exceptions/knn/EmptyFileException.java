@@ -31,6 +31,6 @@ public class EmptyFileException extends IgniteException {
      * @param filename Name of the file without content.
      */
     public EmptyFileException(String filename) {
-        super("Empty file with filename " +  filename);
+        super("Empty file with filename " + filename);
     }
 }

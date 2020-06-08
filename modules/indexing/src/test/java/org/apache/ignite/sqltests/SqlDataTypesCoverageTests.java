@@ -47,8 +47,7 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
 
     /** {@inheritDoc} */
     @Before
-    @Override
-    public void init() throws Exception {
+    @Override public void init() throws Exception {
         super.init();
     }
 
@@ -307,9 +306,9 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
 
         IgniteEx ignite = grid(new Random().nextInt(NODES_CNT));
 
-        final String tblName = "table" + UUID.randomUUID().toString(). replaceAll("-", "_");
+        final String tblName = "table" + UUID.randomUUID().toString().replaceAll("-", "_");
 
-        final String templateName = "template" + UUID.randomUUID().toString(). replaceAll("-", "_");
+        final String templateName = "template" + UUID.randomUUID().toString().replaceAll("-", "_");
 
         CacheConfiguration cfg = new CacheConfiguration<>(templateName)
             .setAtomicityMode(atomicityMode)

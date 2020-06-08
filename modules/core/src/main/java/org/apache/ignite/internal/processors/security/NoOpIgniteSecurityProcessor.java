@@ -50,14 +50,14 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
      */
     public NoOpIgniteSecurityProcessor(GridKernalContext ctx, @Nullable GridSecurityProcessor processor) {
         super(ctx);
-        this.processor =processor;
+        this.processor = processor;
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
         super.onKernalStart(active);
 
-        if(processor != null)
+        if (processor != null)
             processor.onKernalStart(active);
     }
 
@@ -65,7 +65,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
     @Override public void onKernalStop(boolean cancel) {
         super.onKernalStop(cancel);
 
-        if(processor != null)
+        if (processor != null)
             processor.onKernalStop(cancel);
     }
 
@@ -86,7 +86,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         super.stop(cancel);
 
-        if(processor != null)
+        if (processor != null)
             processor.stop(cancel);
     }
 
@@ -142,7 +142,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
 
     /** {@inheritDoc} */
     @Override public boolean enabled() {
-        if(processor != null)
+        if (processor != null)
             return processor.enabled();
 
         return false;
@@ -169,7 +169,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
      * @param node Joining node.
      * @return Validation result or {@code null} in case of success.
      */
-    private IgniteNodeValidationResult validateSecProcClass(ClusterNode node){
+    private IgniteNodeValidationResult validateSecProcClass(ClusterNode node) {
         String rmtCls = node.attribute(ATTR_GRID_SEC_PROC_CLASS);
 
         boolean securityMsgSupported = IgniteFeatures.allNodesSupports(
@@ -178,7 +178,7 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
             IgniteFeatures.IGNITE_SECURITY_PROCESSOR
         );
 
-        if(securityMsgSupported && processor != null) {
+        if (securityMsgSupported && processor != null) {
             String locCls = processor.getClass().getName();
 
             // Compatibility. It allows connect an old node to a new cluster.

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -190,7 +191,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         startGrid(0).cluster().active(true);
 
-        startGrid(1, cfg -> {
+        startGrid(1, (UnaryOperator<IgniteConfiguration>) cfg -> {
             cfg.setEnvironmentType(EnvironmentType.STANDALONE);
 
             cfg.setClientMode(true);
@@ -243,7 +244,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         for (int i = 0; i < SRVS_NUM; i++) {
             ccfg = cacheConfiguration(CACHE_NAME, ATOMIC);
 
-            startGrid(i, cfg -> {
+            startGrid(i, (UnaryOperator<IgniteConfiguration>) cfg -> {
                 ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
 
                 log.registerListener(lsnr);
@@ -278,7 +279,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             "Failed to wait for establishing inverse communication connection"
         ).build();
 
-        startGrid(SRVS_NUM - 1, cfg -> {
+        startGrid(SRVS_NUM - 1, (UnaryOperator<IgniteConfiguration>) cfg -> {
             ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
 
             log.registerListener(lsnr);
