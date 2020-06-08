@@ -16,7 +16,6 @@
 package org.apache.ignite.spark
 
 import javax.cache.Cache
-
 import org.apache.ignite.cache.query._
 import org.apache.ignite.cluster.ClusterNode
 import org.apache.ignite.configuration.CacheConfiguration
@@ -227,8 +226,9 @@ class IgniteRDD[K, V] (
      * @param rdd RDD instance to save values from.
      * @param overwrite Boolean flag indicating whether the call on this method should overwrite existing
      *      values in Ignite cache.
+     * @param skipStore Sets flag indicating that write-through behavior should be disabled for data streaming.
      */
-    def savePairs(rdd: RDD[(K, V)], overwrite: Boolean = false) = {
+    def savePairs(rdd: RDD[(K, V)], overwrite: Boolean = false, skipStore: Boolean = false) = {
         rdd.foreachPartition(it ⇒ {
             val ig = ic.ignite()
 
@@ -239,6 +239,7 @@ class IgniteRDD[K, V] (
 
             try {
                 streamer.allowOverwrite(overwrite)
+                streamer.skipStore(skipStore)
 
                 it.foreach(tup ⇒ {
                     streamer.addData(tup._1, tup._2)
@@ -257,8 +258,9 @@ class IgniteRDD[K, V] (
      * @param f Transformation function.
      * @param overwrite Boolean flag indicating whether the call on this method should overwrite existing
      *      values in Ignite cache.
+     * @param skipStore Sets flag indicating that write-through behavior should be disabled for data streaming.
      */
-    def savePairs[T](rdd: RDD[T], f: (T, IgniteContext) ⇒ (K, V), overwrite: Boolean) = {
+    def savePairs[T](rdd: RDD[T], f: (T, IgniteContext) ⇒ (K, V), overwrite: Boolean, skipStore: Boolean) = {
         rdd.foreachPartition(it ⇒ {
             val ig = ic.ignite()
 
@@ -269,6 +271,7 @@ class IgniteRDD[K, V] (
 
             try {
                 streamer.allowOverwrite(overwrite)
+                streamer.skipStore(skipStore)
 
                 it.foreach(t ⇒ {
                     val tup = f(t, ic)
@@ -289,7 +292,7 @@ class IgniteRDD[K, V] (
      * @param f Transformation function.
      */
     def savePairs[T](rdd: RDD[T], f: (T, IgniteContext) ⇒ (K, V)): Unit = {
-        savePairs(rdd, f, overwrite = false)
+        savePairs(rdd, f, overwrite = false, skipStore = false)
     }
 
     /**

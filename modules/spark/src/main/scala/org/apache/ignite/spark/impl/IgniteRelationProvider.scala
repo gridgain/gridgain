@@ -124,6 +124,7 @@ class IgniteRelationProvider extends RelationProvider
                         params.get(OPTION_SCHEMA),
                         ctx,
                         params.get(OPTION_STREAMER_ALLOW_OVERWRITE).map(_.toBoolean),
+                        params.get(OPTION_STREAMER_SKIP_STORE).map(_.toBoolean),
                         params.get(OPTION_STREAMER_FLUSH_FREQUENCY).map(_.toLong),
                         params.get(OPTION_STREAMER_PER_NODE_BUFFER_SIZE).map(_.toInt),
                         params.get(OPTION_STREAMER_PER_NODE_PARALLEL_OPERATIONS).map(_.toInt))
@@ -134,6 +135,7 @@ class IgniteRelationProvider extends RelationProvider
                         params.get(OPTION_SCHEMA),
                         ctx,
                         params.get(OPTION_STREAMER_ALLOW_OVERWRITE).map(_.toBoolean),
+                        params.get(OPTION_STREAMER_SKIP_STORE).map(_.toBoolean),
                         params.get(OPTION_STREAMER_FLUSH_FREQUENCY).map(_.toLong),
                         params.get(OPTION_STREAMER_PER_NODE_BUFFER_SIZE).map(_.toInt),
                         params.get(OPTION_STREAMER_PER_NODE_PARALLEL_OPERATIONS).map(_.toInt))
@@ -165,6 +167,7 @@ class IgniteRelationProvider extends RelationProvider
                 params.get(OPTION_SCHEMA),
                 ctx,
                 params.get(OPTION_STREAMER_ALLOW_OVERWRITE).map(_.toBoolean),
+                params.get(OPTION_STREAMER_SKIP_STORE).map(_.toBoolean),
                 params.get(OPTION_STREAMER_FLUSH_FREQUENCY).map(_.toLong),
                 params.get(OPTION_STREAMER_PER_NODE_BUFFER_SIZE).map(_.toInt),
                 params.get(OPTION_STREAMER_PER_NODE_PARALLEL_OPERATIONS).map(_.toInt))

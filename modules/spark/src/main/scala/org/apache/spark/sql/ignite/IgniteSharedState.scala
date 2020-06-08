@@ -18,7 +18,7 @@ package org.apache.spark.sql.ignite
 
 import org.apache.ignite.spark.IgniteContext
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.catalyst.catalog.{ExternalCatalog, ExternalCatalogEvent, ExternalCatalogEventListener, ExternalCatalogWithListener}
+import org.apache.spark.sql.catalyst.catalog.{ExternalCatalogEvent, ExternalCatalogEventListener, ExternalCatalogWithListener}
 import org.apache.spark.sql.internal.SharedState
 
 /**

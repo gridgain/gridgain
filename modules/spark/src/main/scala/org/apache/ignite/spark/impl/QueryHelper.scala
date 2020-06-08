@@ -17,12 +17,12 @@
 package org.apache.ignite.spark.impl
 
 import org.apache.ignite.cache.query.SqlFieldsQuery
-import org.apache.ignite.spark.IgniteDataFrameSettings._
-import QueryUtils.{compileCreateTable, compileDropTable, compileInsert}
 import org.apache.ignite.internal.IgniteEx
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl
 import org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA
 import org.apache.ignite.spark.IgniteContext
+import org.apache.ignite.spark.IgniteDataFrameSettings._
+import org.apache.ignite.spark.impl.QueryUtils.{compileCreateTable, compileDropTable, compileInsert}
 import org.apache.ignite.{Ignite, IgniteException}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row}
@@ -115,6 +115,7 @@ private[apache] object QueryHelper {
         schemaName: Option[String],
         ctx: IgniteContext,
         streamerAllowOverwrite: Option[Boolean],
+        streamerSkipStore: Option[Boolean],
         streamerFlushFrequency: Option[Long],
         streamerPerNodeBufferSize: Option[Int],
         streamerPerNodeParallelOperations: Option[Int]
@@ -128,6 +129,7 @@ private[apache] object QueryHelper {
                 schemaName,
                 ctx,
                 streamerAllowOverwrite,
+                streamerSkipStore,
                 streamerFlushFrequency,
                 streamerPerNodeBufferSize,
                 streamerPerNodeParallelOperations
@@ -159,6 +161,7 @@ private[apache] object QueryHelper {
         schemaName: Option[String],
         ctx: IgniteContext,
         streamerAllowOverwrite: Option[Boolean],
+        streamerSkipStore: Option[Boolean],
         streamerFlushFrequency: Option[Long],
         streamerPerNodeBufferSize: Option[Int],
         streamerPerNodeParallelOperations: Option[Int]
@@ -168,6 +171,8 @@ private[apache] object QueryHelper {
         val streamer = ctx.ignite().dataStreamer(tblInfo.cacheName)
 
         streamerAllowOverwrite.foreach(v ⇒ streamer.allowOverwrite(v))
+
+        streamerSkipStore.foreach(v ⇒ streamer.skipStore(v))
 
         streamerFlushFrequency.foreach(v ⇒ streamer.autoFlushFrequency(v))
 
@@ -186,7 +191,7 @@ private[apache] object QueryHelper {
                 }
 
                 qryProcessor.streamUpdateQuery(tblInfo.cacheName,
-                    tblInfo.schemaName, streamer, insertQry, args.toArray, "spark")
+                    tblInfo.schemaName, streamer, insertQry, args.toArray)
             }
         }
         finally {

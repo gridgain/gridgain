@@ -21,17 +21,18 @@ import org.apache.ignite.spark.AbstractDataFrameSpec.{TEST_CONFIG_FILE, enclose}
 import org.apache.ignite.spark.IgniteDataFrameSettings._
 import org.apache.ignite.testframework.GridTestUtils.resolveIgnitePath
 import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.ignite.IgniteSparkSession
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.apache.spark.sql.functions._
 
 /**
   */
 @RunWith(classOf[JUnitRunner])
 class IgniteSQLDataFrameIgniteSessionWriteSpec extends IgniteSQLDataFrameWriteSpec {
     describe("Additional features for IgniteSparkSession") {
-        it("Save data frame as a existing table with saveAsTable('table_name') - Overwrite") {
+        // TODO: fix it IGNITE-12435
+        ignore("Save data frame as a existing table with saveAsTable('table_name') - Overwrite") {
             val citiesDataFrame = spark.read.json(
                 resolveIgnitePath("modules/spark/src/test/resources/cities.json").getAbsolutePath)
 
@@ -47,7 +48,8 @@ class IgniteSQLDataFrameIgniteSessionWriteSpec extends IgniteSQLDataFrameWriteSp
                 s"Table json_city should contain data from json file.")
         }
 
-        it("Save data frame as a existing table with saveAsTable('table_name') - Append") {
+        // TODO: fix it IGNITE-12435
+        ignore("Save data frame as a existing table with saveAsTable('table_name') - Append") {
             val citiesDataFrame = spark.read.json(
                 resolveIgnitePath("modules/spark/src/test/resources/cities.json").getAbsolutePath)
 
@@ -68,7 +70,8 @@ class IgniteSQLDataFrameIgniteSessionWriteSpec extends IgniteSQLDataFrameWriteSp
                 s"Table json_city should contain data from json file.")
         }
 
-        it("Save data frame as a new table with saveAsTable('table_name')") {
+        // TODO: fix it IGNITE-12435
+        ignore("Save data frame as a new table with saveAsTable('table_name')") {
             val citiesDataFrame = spark.read.json(
                 resolveIgnitePath("modules/spark/src/test/resources/cities.json").getAbsolutePath)
 

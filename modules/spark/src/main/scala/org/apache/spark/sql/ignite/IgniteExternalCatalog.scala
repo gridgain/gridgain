@@ -231,13 +231,13 @@ private[ignite] class IgniteExternalCatalog(igniteContext: IgniteContext)
     override def alterTableStats(db: String, table: String, stats: Option[CatalogStatistics]): Unit =
         throw new UnsupportedOperationException("unsupported")
 
-    /** @inheritdoc */
-    override def alterTable(tableDefinition: CatalogTable): Unit =
-        throw new UnsupportedOperationException("unsupported")
+	/** @inheritdoc */
+	override def alterTable(tableDefinition: CatalogTable): Unit =
+		throw new UnsupportedOperationException("unsupported")
 
-    /** @inheritdoc */
-    override def alterTableDataSchema(db: String, table: String, schema: StructType): Unit =
-        throw new UnsupportedOperationException("unsupported")
+	/** @inheritdoc */
+	override def alterTableDataSchema(db: String, table: String, schema: StructType): Unit =
+		throw new UnsupportedOperationException("unsupported")
 
     /** @inheritdoc */
     override def createFunction(db: String, funcDefinition: CatalogFunction): Unit = { /* no-op */ }
@@ -260,7 +260,7 @@ private[ignite] class IgniteExternalCatalog(igniteContext: IgniteContext)
     override def createTable(tableDefinition: CatalogTable, ignoreIfExists: Boolean): Unit = {
         sqlTableInfo(ignite, tableDefinition.identifier.table, tableDefinition.identifier.database) match {
             case Some(_) ⇒
-            /* no-op */
+                /* no-op */
 
             case None ⇒
                 val schema = tableDefinition.identifier.database
