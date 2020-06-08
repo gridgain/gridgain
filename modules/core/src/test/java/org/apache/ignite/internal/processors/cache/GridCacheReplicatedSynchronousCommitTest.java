@@ -101,7 +101,12 @@ public class GridCacheReplicatedSynchronousCommitTest extends GridCommonAbstract
             for (int i = 0; i < ADDITION_CACHE_NUMBER; i++)
                 startGrid(String.valueOf(i + 2));
 
-            firstCache.put(1, "val1");
+            // Avoid remaps.
+            awaitPartitionMapExchange();
+
+            Integer pk = primaryKey(firstCache);
+
+            firstCache.put(pk, "val1");
 
             int cnt = 0;
 
@@ -184,6 +189,8 @@ public class GridCacheReplicatedSynchronousCommitTest extends GridCommonAbstract
 
             if (obj instanceof GridDistributedTxFinishResponse) {
                 msgCnt.incrementAndGet();
+
+                log.warning("DBG " + getSpiContext().localNode().order(), new Exception());
 
                 if (noCommit)
                     return;
