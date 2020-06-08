@@ -1055,7 +1055,7 @@ public class JdbcThinConnection implements Connection {
     private String getTimeoutDescription(int timeout, JdbcThinTcpIo cliIo) {
         String cliIoInfo = "";
 
-        if(cliIo != null){
+        if (cliIo != null) {
             cliIoInfo = " [";
 
             if (cliIo.nodeId() != null)
