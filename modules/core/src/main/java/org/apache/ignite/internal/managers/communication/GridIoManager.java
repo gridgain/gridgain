@@ -1820,7 +1820,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
     }
 
-    /** */
+    /**
+     * Send message trying to open inverse conection on fail.
+     */
     private void sendMessageWithInverseConnectionHandling(
         ClusterNode node,
         GridIoMessage ioMsg,
@@ -1832,16 +1834,14 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             tcpCommSpi.sendMessage(node, ioMsg, ackC);
         }
         catch (NodeUnreachableException e) {
-            if (!ctx.clientNode()) {
-                invConnHandler.handleInverseConnection(node, e);
-
-                tcpCommSpi.sendMessage(node, ioMsg, ackC);
-            }
-            else {
+            if (ioMsg.message() instanceof TcpInverseConnectionResponseMessage) {
+                // Unable to open inverse connection, don't request it.
                 e.fut.onDone(e);
-
                 throw e;
             }
+            invConnHandler.handleInverseConnection(node, e);
+
+            tcpCommSpi.sendMessage(node, ioMsg, ackC);
         }
     }
 

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
@@ -41,6 +42,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
@@ -61,7 +63,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
  * Tests for communication over discovery feature (inverse communication request).
  */
 public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridCommonAbstractTest {
-
     /** */
     private static final String UNREACHABLE_IP = "172.31.30.132";
 
@@ -262,36 +263,58 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         assertTrue(lsnr.check());
     }
 
+    /**
+     * Test that inverse communcation request between two clients won't create a cycle.
+     *
+     * Description:
+     * Two clients both have unreachable ips and virtualized environment type.
+     * Thus, they can't open communcation channel to each other and will request inverse connection.
+     * This test unsuccessfully sends a message from client1 to client2 and requests inverse connection.
+     * Second client tries to open this connection and fails. But it must not send inverse connection request.
+     */
     @Test
     public void testClientToClient() throws Exception {
         this.envType = EnvironmentType.VIRTUALIZED;
         UNREACHABLE_DESTINATION.set(UNREACHABLE_IP);
 
-        LogListener lsnr = LogListener.matches("Failed to send message to remote node").atMost(0).build();
-
         for (int i = 0; i < SRVS_NUM; i++) {
             ccfg = cacheConfiguration(CACHE_NAME, ATOMIC);
 
             startGrid(i, cfg -> {
-                ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
-
-                log.registerListener(lsnr);
-
-                return cfg.setGridLogger(log);
+                cfg.setCommunicationSpi(new CountingInverseConnectiosTestCommunicationSpi());
+                return cfg;
             });
         }
 
         clientMode = true;
 
-        IgniteEx client1 = startGrid(SRVS_NUM);
-        IgniteEx client2 = startGrid(SRVS_NUM + 1);
+        IgniteEx client1 = startGrid(SRVS_NUM, cfg -> {
+            cfg.setCommunicationSpi(new CountingInverseConnectiosTestCommunicationSpi());
+            return cfg;
+        });
+
+        IgniteEx client2 = startGrid(SRVS_NUM + 1, cfg -> {
+            cfg.setCommunicationSpi(new CountingInverseConnectiosTestCommunicationSpi());
+            return cfg;
+        });
 
         ClusterNode node = client2.localNode();
         node.attributes();
 
-        client1.context().io().sendIoTest(client2.localNode(), new byte[10], false).get();
+        try {
+            client1.context().io().sendIoTest(client2.localNode(), new byte[10], false).get();
+            fail();
+        }
+        catch (IgniteCheckedException ignored) {
+        }
 
-        assertTrue(lsnr.check());
+        CountingInverseConnectiosTestCommunicationSpi spi1 = (CountingInverseConnectiosTestCommunicationSpi)
+                client1.configuration().getCommunicationSpi();
+        CountingInverseConnectiosTestCommunicationSpi spi2 = (CountingInverseConnectiosTestCommunicationSpi)
+                client2.configuration().getCommunicationSpi();
+
+        assertEquals(0, spi1.getResCount());
+        assertEquals(1, spi2.getResCount());
     }
 
     /**
@@ -432,6 +455,33 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             }
 
             super.sendMessage(node, msg, ackC);
+        }
+    }
+
+    /**
+     * Communcation SPI that tracks count of inverse communication responses
+     */
+    private static class CountingInverseConnectiosTestCommunicationSpi extends TestCommunicationSpi {
+
+        /** Inverse communication response count. */
+        private final AtomicInteger resCount = new AtomicInteger();
+
+        /** {@inheritDoc} */
+        @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
+            if (msg instanceof GridIoMessage) {
+                GridIoMessage msg0 = (GridIoMessage)msg;
+
+                if (msg0.message() instanceof TcpInverseConnectionResponseMessage )
+                    resCount.getAndIncrement();
+            }
+            super.sendMessage(node, msg, ackC);
+        }
+
+        /**
+         * Returns quantity of inverse communication responses.
+         */
+        public int getResCount() {
+            return resCount.get();
         }
     }
 }
