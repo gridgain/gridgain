@@ -151,7 +151,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
             var ctx = Contexts.Where(x => x.GetPreviousAssignment(1) != null)
                 .OrderBy(x => x.DiscoveryEvent.Timestamp).Last();
 
-            Assert.AreEqual(new AffinityTopologyVersion(2, 1), ctx.CurrentTopologyVersion);
+            Assert.AreEqual(new AffinityTopologyVersion(2, 0), ctx.CurrentTopologyVersion);
             Assert.AreEqual(7, ctx.Backups);
             CollectionAssert.AreEquivalent(_ignite.GetCluster().GetNodes(), ctx.CurrentTopologySnapshot);
 
