@@ -191,7 +191,7 @@ private[apache] object QueryHelper {
                 }
 
                 qryProcessor.streamUpdateQuery(tblInfo.cacheName,
-                    tblInfo.schemaName, streamer, insertQry, args.toArray)
+                    tblInfo.schemaName, streamer, insertQry, args.toArray, ctx.ignite().name())
             }
         }
         finally {

@@ -17,7 +17,6 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.spark.JavaEmbeddedIgniteRDDSelfTest;
-import org.apache.ignite.spark.JavaEmbeddedIgniteRDDWithLocalStoreSelfTest;
 import org.apache.ignite.spark.JavaStandaloneIgniteRDDSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -28,8 +27,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     JavaEmbeddedIgniteRDDSelfTest.class,
-    JavaStandaloneIgniteRDDSelfTest.class,
-    JavaEmbeddedIgniteRDDWithLocalStoreSelfTest.class
+    JavaStandaloneIgniteRDDSelfTest.class
 })
 public class IgniteRDDTestSuite {
 }
