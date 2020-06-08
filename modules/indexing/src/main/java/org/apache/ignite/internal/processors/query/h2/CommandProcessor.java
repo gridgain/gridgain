@@ -312,10 +312,11 @@ public class CommandProcessor {
         if (err == null) {
             try {
                 runningQryInfo.cancel();
-            } catch (Exception e){
+            }
+            catch (Exception e) {
                 U.warn(log, "Cancellation of query failed: [qryId=" + qryId + "]", e);
 
-                if(!msg.asyncResponse())
+                if (!msg.asyncResponse())
                     sendKillResponse(msg, node, e.getMessage());
 
                 return;
@@ -410,7 +411,7 @@ public class CommandProcessor {
             }
             else if (cmdNative instanceof SqlSetStreamingCommand)
                 processSetStreamingCommand((SqlSetStreamingCommand)cmdNative, cliCtx);
-            else if(cmdNative instanceof SqlKillQueryCommand)
+            else if (cmdNative instanceof SqlKillQueryCommand)
                 processKillQueryCommand((SqlKillQueryCommand) cmdNative);
             else
                 processTxCommand(cmdNative, params);

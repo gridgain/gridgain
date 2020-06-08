@@ -320,7 +320,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
 
     /** Reserved max available history for calculation of history supplier on coordinator. */
-    private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
+    private volatile Map<Integer/** Group. */, Map<Integer/** Partition */, Long/** Counter. */>> partHistReserved;
 
     /** */
     @GridToStringExclude
@@ -940,7 +940,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             ExchangeType exchange;
 
-            if (exchCtx.exchangeFreeSwitch()){
+            if (exchCtx.exchangeFreeSwitch()) {
                 exchange = onExchangeFreeSwitch();
 
                 initCoordinatorCaches(newCrd);
@@ -2420,7 +2420,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             span.addTag(SpanTags.ERROR, errf::toString);
         }
 
-
         try {
             waitUntilNewCachesAreRegistered();
 
@@ -2878,7 +2877,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         synchronized (mux) {
             assert (!isDone() && !initFut.isDone()) || cctx.kernalContext().isStopping() : this;
-            assert (mergedWith == null && state == null) || cctx.kernalContext().isStopping()  : this;
+            assert (mergedWith == null && state == null) || cctx.kernalContext().isStopping() : this;
 
             state = ExchangeLocalState.MERGED;
 
@@ -4610,7 +4609,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         return; // Node is stopping, no need to further process exchange.
                     }
 
-                    assert resTopVer.equals(exchCtx.events().topologyVersion()) :  "Unexpected result version [" +
+                    assert resTopVer.equals(exchCtx.events().topologyVersion()) : "Unexpected result version [" +
                         "msgVer=" + resTopVer +
                         ", locVer=" + exchCtx.events().topologyVersion() + ']';
                 }
@@ -4795,7 +4794,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             return;
 
                         try {
-                            assert msg.error() != null: msg;
+                            assert msg.error() != null : msg;
 
                             // Try to revert all the changes that were done during initialization phase
                             cctx.affinity().forceCloseCaches(

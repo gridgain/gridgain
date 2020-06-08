@@ -1161,7 +1161,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
                     // Need to call it after gathering start time because
                     // actual row extracting may happen inside this method.
-                    if(!iter.hasNext())
+                    if (!iter.hasNext())
                         break;
 
                     Object row0 = iter.next();
@@ -2961,7 +2961,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             readEvt = cctx.events().isRecordable(EVT_CACHE_QUERY_OBJECT_READ) &&
                 cctx.gridEvents().hasListener(EVT_CACHE_QUERY_OBJECT_READ);
 
-            if (readEvt){
+            if (readEvt) {
                 taskName = cctx.kernalContext().task().resolveTaskName(qry.taskHash());
                 subjId = qry.subjectId();
             }
@@ -3136,7 +3136,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             }
                         }
                         else
-                            next0 = !locNode ? new T2<>(key0, val0):
+                            next0 = !locNode ? new T2<>(key0, val0) :
                                 new CacheQueryEntry<>(key0, val0);
 
                         break;
@@ -3170,7 +3170,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         }
 
         /** {@inheritDoc} */
-        @Override public boolean apply(K k, V v){
+        @Override public boolean apply(K k, V v) {
             try {
                 return scanFilter == null || scanFilter.apply(k, v);
             }

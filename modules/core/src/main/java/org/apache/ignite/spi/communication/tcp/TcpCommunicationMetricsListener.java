@@ -426,7 +426,6 @@ public class TcpCommunicationMetricsListener {
          */
         public volatile Map<Object, LongAdderMetric> rcvdMsgsMetricsByConsistentId = new HashMap<>();
 
-
         /**
          * Collects statistics for message sent by SPI.
          * @param msg Sent message.

@@ -151,7 +151,7 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     private void doTest(List<CacheConfiguration<Integer, Integer>> cfgs, boolean msgExp) throws Exception {
-        String name = (cfgs.size() == 1)? cfgs.get(0).getName() : cfgs.get(0).getGroupName();
+        String name = (cfgs.size() == 1) ? cfgs.get(0).getName() : cfgs.get(0).getGroupName();
 
         LogListener lsnr = LogListener
             .matches(s -> s.startsWith(String.format(PARTITION_STATE_FAILED_MSG, name, ANY_MSG)))
@@ -165,7 +165,6 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
         IgniteEx node2 = startGrid(1);
 
         node1.cluster().active(true);
-
 
         List<IgniteCache<Integer, Integer>> caches = cfgs.stream()
             .map(cfg -> node1.getOrCreateCache(cfg)).collect(Collectors.toList());

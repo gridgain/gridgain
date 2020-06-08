@@ -124,7 +124,6 @@ public abstract class GridRollingRestartAbstractTest extends GridCommonAbstractT
         rollingRestartThread.shutdown();
     }
 
-
     /**
      * Thread that performs a "rolling restart" of a set of Ignite grid processes.
      * */

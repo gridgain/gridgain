@@ -32,7 +32,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 /**
  * Command handler tests for rolling-upgrade.
  */
-@WithSystemProperty(key  = "DISTRIBUTED_ROLLING_UPGRADE_MODE", value = "true")
+@WithSystemProperty(key = "DISTRIBUTED_ROLLING_UPGRADE_MODE", value = "true")
 public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
     /** */
     private boolean addExtraArguments;

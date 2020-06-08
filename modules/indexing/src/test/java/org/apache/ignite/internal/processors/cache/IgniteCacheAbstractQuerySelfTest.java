@@ -263,7 +263,7 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        for(String cacheName : ignite().cacheNames())
+        for (String cacheName : ignite().cacheNames())
             ignite().cache(cacheName).destroy();
     }
 
@@ -463,7 +463,7 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
 
         U.sleep(300); // Less than minimal amount of time that must pass before a cache entry is considered expired.
 
-        qry =  cache.query(new SqlQuery<Integer, Integer>(Integer.class, "1=1")).getAll();
+        qry = cache.query(new SqlQuery<Integer, Integer>(Integer.class, "1=1")).getAll();
 
         res = F.first(qry);
 
@@ -837,7 +837,6 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
         for (long i = 0; i < 50; i++)
             cache.put(i, new EnumObject(i, i % 2 == 0 ? EnumType.TYPE_A : EnumType.TYPE_B));
 
-
         assertEnumQry("type = ?", EnumType.TYPE_A, EnumType.TYPE_A, cache, 25);
         assertEnumQry("type > ?", EnumType.TYPE_A, EnumType.TYPE_B, cache, 25);
         assertEnumQry("type < ?", EnumType.TYPE_B, EnumType.TYPE_A, cache, 25);
@@ -997,7 +996,6 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
             }
         }
 
-
         QueryCursor<Cache.Entry<Integer, ObjectValue>> qry =
             cache.query(new SqlQuery<Integer, ObjectValue>(ObjectValue.class, "intVal >= ? order by intVal").
                 setArgs(0));
@@ -1113,7 +1111,7 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
     public void testScanQuery() throws Exception {
         IgniteCache<Integer, String> c1 = jcache(Integer.class, String.class);
 
-        Map<Integer, String> map = new HashMap<Integer, String>(){{
+        Map<Integer, String> map = new HashMap<Integer, String>() {{
             for (int i = 0; i < 5000; i++)
                 put(i, "str" + i);
         }};

@@ -285,7 +285,7 @@ public class SegmentedRingByteBuffer {
             if (currTail < 0)
                 return;
 
-            if(TAIL_UPD.compareAndSet(this, currTail, currTail | CLOSE_MASK))
+            if (TAIL_UPD.compareAndSet(this, currTail, currTail | CLOSE_MASK))
                 return;
         }
     }
@@ -346,7 +346,7 @@ public class SegmentedRingByteBuffer {
         waitForConsumer = false;
 
         // There are no data for reading or all data up to given position were read.
-        if (tail <= head || (pos >=0 && head > pos))
+        if (tail <= head || (pos >= 0 && head > pos))
             return null;
 
         int headIdx = (int)toIndex(head);

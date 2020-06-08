@@ -101,7 +101,6 @@ public class Step_8_CV {
                         imputingPreprocessor
                     );
 
-
                 // Tune hyperparams with K-fold Cross-Validation on the split training set.
                 int[] pSet = new int[]{1, 2};
                 int[] maxDeepSet = new int[]{1, 2, 3, 4, 5, 10, 20};
@@ -109,9 +108,8 @@ public class Step_8_CV {
                 int bestMaxDeep = 1;
                 double avg = Double.MIN_VALUE;
 
-                for(int p: pSet){
-                    for(int maxDeep: maxDeepSet){
-
+                for (int p : pSet) {
+                    for (int maxDeep : maxDeepSet) {
                         Preprocessor<Integer, Vector> normalizationPreprocessor = new NormalizationTrainer<Integer, Vector>()
                             .withP(p)
                             .fit(
@@ -141,7 +139,7 @@ public class Step_8_CV {
 
                         final double currAvg = Arrays.stream(scores).average().orElse(Double.MIN_VALUE);
 
-                        if(currAvg > avg) {
+                        if (currAvg > avg) {
                             avg = currAvg;
                             bestP = p;
                             bestMaxDeep = maxDeep;
@@ -160,7 +158,6 @@ public class Step_8_CV {
                         dataCache,
                         minMaxScalerPreprocessor
                     );
-
 
                 DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(bestMaxDeep, 0);
 

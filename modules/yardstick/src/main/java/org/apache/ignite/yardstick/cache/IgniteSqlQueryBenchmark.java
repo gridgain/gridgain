@@ -77,7 +77,7 @@ public class IgniteSqlQueryBenchmark extends IgniteCacheAbstractBenchmark<Intege
                         ", salary=" + salary + ']');
         }
 
-        double newMinSalary =  maxSalary - SALARY_RANGE * 1.0 / 2;
+        double newMinSalary = maxSalary - SALARY_RANGE * 1.0 / 2;
 
         if (newMinSalary + SALARY_RANGE > args.range() * SALARY_STEP)
             newMinSalary = 0.0;

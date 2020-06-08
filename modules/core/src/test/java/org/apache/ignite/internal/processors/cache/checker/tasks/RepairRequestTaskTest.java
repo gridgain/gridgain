@@ -277,8 +277,7 @@ public class RepairRequestTaskTest {
                 return owners;
             }
 
-            @Override
-            protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
+            @Override protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
                 return KEY;
             }
         };

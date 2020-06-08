@@ -605,6 +605,7 @@ public class GridAffinityAssignmentCache {
 
         return aff.assignment();
     }
+
     /**
      * @param topVer Topology version.
      * @return Affinity assignment.

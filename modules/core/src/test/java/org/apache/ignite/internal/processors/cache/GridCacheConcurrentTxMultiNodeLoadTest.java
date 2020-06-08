@@ -189,7 +189,7 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
 
             int srvrMaxNoTerminals = threadCnt / srvrNodes.size();
 
-            if (srvrMaxNoTerminals *  srvrNodes.size() != threadCnt) {
+            if (srvrMaxNoTerminals * srvrNodes.size() != threadCnt) {
                 threadCnt = srvrMaxNoTerminals * srvrNodes.size();
 
                 info("Using " + threadCnt + " threads instead to ensure equal distribution of terminals");
@@ -300,7 +300,6 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
         /** */
         private static GridAtomicLong submitTime = new GridAtomicLong();
 
-
         /** */
         private Ignite g;
 
@@ -358,7 +357,6 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
             }
         }
     }
-
 
     /**
      *
@@ -600,7 +598,7 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
                                 GridNearCacheEntry nearEntry = (GridNearCacheEntry)near.peekEx(k);
                                 GridDhtCacheEntry dhtEntry = (GridDhtCacheEntry)dht.peekEx(k);
 
-                                X.println("Near entry [igniteInstanceName="+ g.name() + ", key=" + k + ", entry=" +
+                                X.println("Near entry [igniteInstanceName=" + g.name() + ", key=" + k + ", entry=" +
                                     nearEntry);
                                 X.println("DHT entry [igniteInstanceName=" + g.name() + ", key=" + k + ", entry=" +
                                     dhtEntry);
@@ -619,7 +617,7 @@ public class GridCacheConcurrentTxMultiNodeLoadTest extends GridCommonAbstractTe
         /**
          *
          */
-        private void doWork()  {
+        private void doWork() {
             Session ses = new Session(terminalId());
 
             try {

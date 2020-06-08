@@ -117,7 +117,6 @@ public class CacheCommands implements Command<CacheSubcommands> {
         this.subcommand = cmd;
     }
 
-
     /** */
     private void printCacheHelp(Logger logger) {
         logger.info(INDENT + "The '" + CACHE + " subcommand' is used to get information about and perform actions" +
@@ -127,7 +126,7 @@ public class CacheCommands implements Command<CacheSubcommands> {
             CACHE + " [subcommand] <subcommand_parameters>");
         logger.info("");
         logger.info(INDENT + "The subcommands that take " + OP_NODE_ID + " as an argument ('" + LIST + "', '"
-            + FIND_AND_DELETE_GARBAGE+ "', '" + CONTENTION + "' and '" + VALIDATE_INDEXES +
+            + FIND_AND_DELETE_GARBAGE + "', '" + CONTENTION + "' and '" + VALIDATE_INDEXES +
             "') will be executed on the given node or on all server nodes" +
             " if the option is not specified. Other commands will run on a random server node.");
         logger.info("");
@@ -140,7 +139,6 @@ public class CacheCommands implements Command<CacheSubcommands> {
 
         logger.info("");
     }
-
 
     /**
      * Print cache command usage with default indention.

@@ -118,7 +118,7 @@ public class CacheLockChangingTopologyTest extends GridCommonAbstractTest {
             lock.lock();
 
             try {
-                Thread t =  new Thread(new Runnable() {
+                Thread t = new Thread(new Runnable() {
                     @Override public void run() {
                         try {
                             lock.lock();

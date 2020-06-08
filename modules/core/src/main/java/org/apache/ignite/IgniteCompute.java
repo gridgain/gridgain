@@ -686,7 +686,6 @@ public interface IgniteCompute extends IgniteAsyncSupport {
      */
     public IgniteCompute withNoFailover();
 
-
     /**
      * Disables caching for the next executed task in the <b>current thread</b>.
      * Has the same behaviour as annotation {@link org.apache.ignite.compute.ComputeTaskNoResultCache}.

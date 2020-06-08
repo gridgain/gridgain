@@ -138,8 +138,8 @@ public abstract class GridCacheAbstractQueueFailoverDataConsistencySelfTest exte
                 testNodeIdx = i;
         }
 
-        log.info("Test node: " + testNodeIdx) ;
-        log.info("Header primary node: " + primaryNode) ;
+        log.info("Test node: " + testNodeIdx);
+        log.info("Header primary node: " + primaryNode);
 
         queue = grid(testNodeIdx).queue(QUEUE_NAME, 0, null);
 
@@ -235,8 +235,8 @@ public abstract class GridCacheAbstractQueueFailoverDataConsistencySelfTest exte
                 testNodeIdx = i;
         }
 
-        log.info("Test node: " + testNodeIdx) ;
-        log.info("Primary node: " + primaryNode) ;
+        log.info("Test node: " + testNodeIdx);
+        log.info("Primary node: " + primaryNode);
 
         queue = grid(testNodeIdx).queue(QUEUE_NAME, 0, null);
 

@@ -361,7 +361,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
         });
 
         assertTrue(
-            "The partition reconciliation task is not started in " + (recheckDelay * recheckAttempts) +" sec.",
+            "The partition reconciliation task is not started in " + (recheckDelay * recheckAttempts) + " sec.",
             evtLatch.await(recheckDelay * recheckAttempts, TimeUnit.SECONDS));
 
         try {
