@@ -31,7 +31,6 @@ import org.junit.Test;
  * Test node validation on join by plugin.
  */
 public class PluginNodeValidationTest extends GridCommonAbstractTest {
-
     /** */
     private volatile String token;
 

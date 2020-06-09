@@ -52,6 +52,7 @@ public class SysPropWalDeltaConsistencyTest extends AbstractWalDeltaConsistencyT
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setPluginConfigurations();
+        cfg.setPluginProviders();
 
         return cfg;
     }

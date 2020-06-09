@@ -3065,6 +3065,7 @@ public class IgniteConfiguration {
      * @return {@code this} for chaining.
      * @see PluginProvider
      */
+    @Deprecated
     public IgniteConfiguration setPluginConfigurations(PluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 
