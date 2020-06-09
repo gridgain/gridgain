@@ -595,13 +595,15 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Create new {@link FilePageStoreFactory}.
+     * Create new {@link IgniteIndexReaderFilePageStoreFactory}.
      *
      * @param dir Data rirectory.
      * @throws IgniteCheckedException If failed.
      */
-    protected FilePageStoreFactory createFilePageStoreFactory(File dir) throws IgniteCheckedException {
-        return new FilePageStoreFactoryImpl(dir, PAGE_SIZE, PAGE_STORE_VER);
+    protected IgniteIndexReaderFilePageStoreFactory createFilePageStoreFactory(
+        File dir
+    ) throws IgniteCheckedException {
+        return new IgniteIndexReaderFilePageStoreFactoryImpl(dir, PAGE_SIZE, PAGE_STORE_VER);
     }
 
     /**
