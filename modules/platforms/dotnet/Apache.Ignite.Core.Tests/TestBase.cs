@@ -21,8 +21,19 @@ namespace Apache.Ignite.Core.Tests
     /// <summary>
     /// Code configuration test base.
     /// </summary>
-    public class TestBase
+    public abstract class TestBase
     {
+        /** */
+        private readonly int _gridCount;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="TestBase"/> class.
+        /// </summary>
+        protected TestBase(int gridCount = 1)
+        {
+            _gridCount = gridCount;
+        }
+
         /// <summary>
         /// Sets up the fixture.
         /// </summary>
@@ -30,6 +41,16 @@ namespace Apache.Ignite.Core.Tests
         public void TestFixtureSetUp()
         {
             Ignition.Start(GetConfig());
+
+            for (var i = 1; i < _gridCount; i++)
+            {
+                var cfg = new IgniteConfiguration(GetConfig())
+                {
+                    IgniteInstanceName = i.ToString()
+                };
+
+                Ignition.Start(cfg);
+            }
         }
 
         /// <summary>
@@ -55,6 +76,14 @@ namespace Apache.Ignite.Core.Tests
         protected IIgnite Ignite
         {
             get { return Ignition.GetIgnite(); }
+        }
+
+        /// <summary>
+        /// Gets the second Ignite instance, if present.
+        /// </summary>
+        protected IIgnite Ignite2
+        {
+            get { return Ignition.GetIgnite("1"); }
         }
     }
 }
