@@ -1470,7 +1470,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             return new IgniteFinishedFutureImpl<>(INACTIVE);
 
         if (allNodesSupportsReadOnlyMode())
-            return serverNodesAdapter.compute().callAsync(new GetClusterStateComputeRequest());
+            return serverNodesAdapter.compute().callAsync(new ClientGetClusterStateComputeRequest());
         else {
             // Backward compatibility.
             return serverNodesAdapter.compute().callAsync(new CheckGlobalStateComputeRequest())
@@ -2248,57 +2248,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     *
-     */
-    @GridInternal
-    private static class ClientSetGlobalStateComputeRequest implements IgniteRunnable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        private final ClusterState state;
-
-        /** */
-        private final BaselineTopology baselineTopology;
-
-        /** */
-        private final boolean forceChangeBaselineTopology;
-
-        /** Ignite. */
-        @IgniteInstanceResource
-        private IgniteEx ig;
-
-        /**
-         * @param state New cluster state.
-         * @param blt New baseline topology.
-         * @param forceBlt Force change cluster state.
-         */
-        private ClientSetGlobalStateComputeRequest(
-            ClusterState state,
-            BaselineTopology blt,
-            boolean forceBlt
-        ) {
-            this.state = state;
-            this.baselineTopology = blt;
-            this.forceChangeBaselineTopology = forceBlt;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void run() {
-            try {
-                ig.context().state().changeGlobalState(
-                    state,
-                    baselineTopology != null ? baselineTopology.currentBaseline() : null,
-                    forceChangeBaselineTopology
-                ).get();
-            }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex);
-            }
-        }
-    }
-
-    /**
      * @deprecated Use {@link ClientSetGlobalStateComputeRequest} instead.
      */
     @Deprecated
@@ -2375,25 +2324,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     *
-     */
-    @GridInternal
-    private static class GetClusterStateComputeRequest implements IgniteCallable<ClusterState> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Ignite. */
-        @IgniteInstanceResource
-        private Ignite ig;
-
-        /** {@inheritDoc} */
-        @Override public ClusterState call() throws Exception {
-            return ig.cluster().state();
-        }
-    }
-
-    /**
-     * @deprecated Use {@link GetClusterStateComputeRequest} instead.
+     * @deprecated Use {@link ClientGetClusterStateComputeRequest} instead.
      */
     @Deprecated
     @GridInternal
