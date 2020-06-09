@@ -730,7 +730,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
                 BaselineTopology blt;
 
-                if (activate(state.state(), msg.state()) || msg.forceChangeBaselineTopology() || ClusterState.active(msg.state()) && isInMemoryCluster())
+                // We must use BLT from the message if it's activation request, or flag force change BLT is set, or
+                // clusterin-memory and new cluster state is active.
+                if (activateTransition(state.state(), msg.state()) || msg.forceChangeBaselineTopology() || ClusterState.active(msg.state()) && isInMemoryCluster())
                     blt = msg.baselineTopology();
                 else
                     blt = state.baselineTopology();
@@ -1208,7 +1210,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         List<StoredCacheData> storedCfgs = null;
 
-        if (activate(curState.state(), state) && !inMemoryMode) {
+        if (activateTransition(curState.state(), state) && !inMemoryMode) {
             try {
                 Map<String, StoredCacheData> cfgs = ctx.cache().context().pageStore().readCacheConfigurations();
 
@@ -2010,7 +2012,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param newState Cluster state after finish transition.
      * @return {@code True} if activation process is happening now, and {@code False} otherwise.
      */
-    private boolean activate(ClusterState state, ClusterState newState) {
+    private boolean activateTransition(ClusterState state, ClusterState newState) {
         GridArgumentCheck.notNull(state, "state");
         GridArgumentCheck.notNull(newState, "newState");
 
