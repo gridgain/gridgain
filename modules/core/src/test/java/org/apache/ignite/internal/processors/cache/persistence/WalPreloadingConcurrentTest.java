@@ -116,7 +116,7 @@ public class WalPreloadingConcurrentTest extends GridCommonAbstractTest {
 
                 while (!stop.get()) {
                     db.reserveHistoryForPreloading(Collections.singletonMap(
-                        new T2 <Integer, Integer>(cache.context().groupId(),randomPart),
+                        new T2<>(cache.context().groupId(), randomPart),
                         0L
                     ));
                 }
