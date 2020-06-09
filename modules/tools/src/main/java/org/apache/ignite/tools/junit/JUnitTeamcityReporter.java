@@ -76,7 +76,10 @@ public class JUnitTeamcityReporter extends RunListener {
 
         try {
             curXmlStream.writeStartElement("skipped");
-            curXmlStream.writeAttribute("message", failure.getMessage());
+
+            if (failure.getMessage() != null)
+                curXmlStream.writeAttribute("message", failure.getMessage());
+
             curXmlStream.writeEndElement();
         }
         catch (XMLStreamException ex) {
@@ -102,7 +105,7 @@ public class JUnitTeamcityReporter extends RunListener {
                 curXmlStream.writeStartDocument();
                 curXmlStream.writeStartElement("testsuite");
                 curXmlStream.writeAttribute("version", "3.0");
-                curXmlStream.writeAttribute("name", suite);
+                curXmlStream.writeAttribute("name", suite != null ? suite : desc.getClassName());
             }
 
             prevTestCls = desc.getClassName();
@@ -139,8 +142,10 @@ public class JUnitTeamcityReporter extends RunListener {
 
         try {
             curXmlStream.writeStartElement("failure");
-            curXmlStream.writeAttribute("type",
-                failure.getException() != null ? failure.getException().getMessage() : "null");
+
+            if (failure.getException() != null && failure.getException().getMessage() != null)
+                curXmlStream.writeAttribute("type", failure.getException().getMessage());
+
             curXmlStream.writeCData(failure.getMessage());
             curXmlStream.writeEndElement();
 
@@ -163,8 +168,10 @@ public class JUnitTeamcityReporter extends RunListener {
 
         try {
             curXmlStream.writeStartElement("skipped");
-            if (annotation != null)
+
+            if (annotation != null && annotation.value() != null)
                 curXmlStream.writeAttribute("message", annotation.value());
+
             curXmlStream.writeEndElement();
         }
         catch (XMLStreamException ex) {
