@@ -487,7 +487,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
 
         IgniteCache<Integer, Integer> cache = ignite.cache("TEST");
 
-        query(cache, "create table TEST (id integer primary key, p integer, f integer, p integer) with " +
+        query(cache, "create table TEST (id integer primary key, p integer, f integer) with " +
             "\"DATA_REGION=dr1\"");
 
         query(cache, "create index TEST_IDX on TEST (p)");
