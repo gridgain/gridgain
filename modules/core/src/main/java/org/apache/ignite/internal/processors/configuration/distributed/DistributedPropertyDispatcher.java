@@ -31,6 +31,7 @@ public interface DistributedPropertyDispatcher {
      * @param <T> Type of property value.
      */
     <T extends DistributedChangeableProperty> void registerProperties(T... props);
+
     /**
      * Attach already created property.
      *

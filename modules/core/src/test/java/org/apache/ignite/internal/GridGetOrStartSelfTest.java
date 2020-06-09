@@ -40,7 +40,7 @@ public class GridGetOrStartSelfTest extends GridCommonAbstractTest {
     @Test
     public void testDefaultIgniteInstanceGetOrStart() throws Exception {
         IgniteConfiguration cfg = getConfiguration(null);
-        try(Ignite ignite = Ignition.getOrStart(cfg)) {
+        try (Ignite ignite = Ignition.getOrStart(cfg)) {
             try {
                 Ignition.start(cfg);
                 fail("Expected exception after grid started");
@@ -58,7 +58,7 @@ public class GridGetOrStartSelfTest extends GridCommonAbstractTest {
     @Test
     public void testNamedIgniteInstanceGetOrStart() throws Exception {
         IgniteConfiguration cfg = getConfiguration("test");
-        try(Ignite ignite = Ignition.getOrStart(cfg)) {
+        try (Ignite ignite = Ignition.getOrStart(cfg)) {
             try {
                 Ignition.start(cfg);
                 fail("Expected exception after grid started");

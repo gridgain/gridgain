@@ -55,7 +55,7 @@ public class GridVersionCommandHandler extends GridRestCommandHandlerAdapter {
 
         assert SUPPORTED_COMMANDS.contains(req.command());
 
-        switch (req.command()){
+        switch (req.command()) {
             case VERSION:
                 return new GridFinishedFuture<>(new GridRestResponse(VER_STR));
 

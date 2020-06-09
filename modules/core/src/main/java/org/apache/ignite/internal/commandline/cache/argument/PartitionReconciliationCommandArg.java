@@ -66,7 +66,6 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** Default value. */
     private final Object dfltVal;
 
-
     /**
      * Creates a new instance of partition reconciliation argument.
      *

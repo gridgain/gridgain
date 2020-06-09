@@ -81,6 +81,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
+import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.GridTestClockTimer;
@@ -920,6 +921,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Starts new grid with given index and overriding {@link DependencyResolver}.
+     *
+     * @param idx Index of the grid to start.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(int idx, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return startGrid(getTestIgniteInstanceName(idx));
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
+    }
+
+    /**
      * Starts new grid with given index.
      *
      * @param idx Index of the grid to start.
@@ -940,6 +960,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     protected IgniteEx startClientGrid(int idx) throws Exception {
         return startClientGrid(getTestIgniteInstanceName(idx));
+    }
+
+    /**
+     * Starts new client grid with given index.
+     *
+     * @param idx Index of the grid to start.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startClientGrid(int idx, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return startClientGrid(getTestIgniteInstanceName(idx));
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
     }
 
     /**
@@ -1348,7 +1387,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected void stopGridx(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
         stopGrid0(igniteInstanceName, cancel, awaitTop, true);
     }
-
 
     /**
      * @param igniteInstanceName Ignite instance name.
@@ -1950,7 +1988,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         BinaryEnumCache.clear();
         serializedObj.clear();
 
-        if (err!= null)
+        if (err != null)
             throw err;
     }
 
@@ -2173,7 +2211,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     /**
      * @return Test resources.
      */
-    private synchronized IgniteTestResources getIgniteTestResources()  {
+    private synchronized IgniteTestResources getIgniteTestResources() {
         IgniteTestResources rsrcs = tests.get(getClass());
 
         if (rsrcs == null)

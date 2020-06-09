@@ -331,7 +331,7 @@ public class CommandHandlerParsingTest {
 
         String rnd = UUID.randomUUID().toString();
 
-        assertParseArgsThrows("Unexpected action "  + rnd + " for " + WAL.text(), WAL.text(), rnd);
+        assertParseArgsThrows("Unexpected action " + rnd + " for " + WAL.text(), WAL.text(), rnd);
     }
 
     /**
@@ -788,7 +788,6 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get_all", "--scope", "aaa");
-
 
         // set
         assertParseArgsThrows("The scope should be specified. The following values can be used: "

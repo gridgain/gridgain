@@ -287,7 +287,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (hld != null)
             return hld;
 
-        CacheMapHolder  old = cacheMaps.putIfAbsent(cctx.cacheIdBoxed(), hld = new CacheMapHolder(cctx, createEntriesMap()));
+        CacheMapHolder old = cacheMaps.putIfAbsent(cctx.cacheIdBoxed(), hld = new CacheMapHolder(cctx, createEntriesMap()));
 
         if (old != null)
             hld = old;

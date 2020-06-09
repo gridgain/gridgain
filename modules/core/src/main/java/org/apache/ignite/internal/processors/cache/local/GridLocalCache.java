@@ -331,7 +331,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             needVer); // TODO IGNITE-7371
     }
 
-
     /**
      * @param keys Keys.
      * @param readThrough Read-through flag.

@@ -145,6 +145,7 @@ public class CacheAsyncOperationsTest extends GridCommonAbstractTest {
         assertNull(cache.get(0));
         assertEquals((Integer)3, cache.get(1));
     }
+
     /**
      *
      * @param cache Cache.

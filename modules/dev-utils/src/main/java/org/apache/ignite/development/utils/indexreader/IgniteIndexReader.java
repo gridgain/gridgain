@@ -996,7 +996,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 totalErr.incrementAndGet();
 
-                printErr("Index size inconsistency: cacheId=" +cacheTypeId.get1() + ", typeId=" + cacheTypeId.get2());
+                printErr("Index size inconsistency: cacheId=" + cacheTypeId.get1() + ", typeId=" + cacheTypeId.get2());
 
                 idxSizes.forEach((name, size) -> printErr("     Index name: " + name + ", size=" + size));
             }

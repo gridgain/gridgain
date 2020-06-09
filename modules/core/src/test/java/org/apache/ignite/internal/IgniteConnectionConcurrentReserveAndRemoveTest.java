@@ -67,7 +67,6 @@ public class IgniteConnectionConcurrentReserveAndRemoveTest extends GridCommonAb
         }
     }
 
-
     @Test
     public void test() throws Exception {
         IgniteEx svr = startGrid(0);
@@ -99,7 +98,7 @@ public class IgniteConnectionConcurrentReserveAndRemoveTest extends GridCommonAb
         for (GridCommunicationClient c : arr) {
             client = (GridTcpNioCommunicationClient)c;
 
-            if(client != null) {
+            if (client != null) {
                 assertTrue(client.session().outRecoveryDescriptor().reserved());
 
                 assertFalse(client.session().outRecoveryDescriptor().connected());

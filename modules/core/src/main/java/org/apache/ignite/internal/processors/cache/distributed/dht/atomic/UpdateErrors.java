@@ -73,7 +73,7 @@ public class UpdateErrors implements Message {
     /**
      * @param err Error.
      */
-    public void onError(IgniteCheckedException err){
+    public void onError(IgniteCheckedException err) {
         this.err = err;
     }
 

@@ -42,6 +42,7 @@ public class VisorQueryScanRegexFilter implements IgniteBiPredicate<Object, Obje
 
         this.ptrn = Pattern.compile(regex ? ptrn : ".*?" + Pattern.quote(ptrn) + ".*?", flags);
     }
+
     /**
      * Check that key or value contains specified string.
      *

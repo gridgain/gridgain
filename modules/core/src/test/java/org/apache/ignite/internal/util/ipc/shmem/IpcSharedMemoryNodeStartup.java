@@ -38,7 +38,7 @@ public class IpcSharedMemoryNodeStartup {
      * @param args Args.
      * @throws Exception If failed.
      */
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         IgniteConfiguration cfg = new IgniteConfiguration();
 
         TcpDiscoverySpi discoSpi = new TcpDiscoverySpi();

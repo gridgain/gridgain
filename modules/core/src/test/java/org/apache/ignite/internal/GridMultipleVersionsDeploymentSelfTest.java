@@ -249,7 +249,7 @@ public class GridMultipleVersionsDeploymentSelfTest extends GridCommonAbstractTe
      * or on remote nodes if there are any. Never on both.
      */
     @SuppressWarnings({"PublicInnerClass"})
-    @ComputeTaskName(value="GridDeploymentTestTask")
+    @ComputeTaskName(value = "GridDeploymentTestTask")
     public static class GridDeploymentTestTask extends ComputeTaskAdapter<Object, Object> {
         /** Ignite instance. */
         @IgniteInstanceResource

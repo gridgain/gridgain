@@ -39,7 +39,7 @@ public class IgnitePureJavaCrcCompatibility {
 
         ThreadLocalRandom curr = ThreadLocalRandom.current();
 
-        for (int i = 0; i < 1024; i+=16) {
+        for (int i = 0; i < 1024; i += 16) {
             buf.putInt(curr.nextInt());
             buf.putInt(curr.nextInt());
             buf.putInt(curr.nextInt());

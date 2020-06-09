@@ -204,7 +204,7 @@ public class GridHttpDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      */
     @GridSpiTestConfig
     public List<String> getUriList() {
-        return Collections.singletonList("http://freq="+FREQ+"@localhost:8080/");
+        return Collections.singletonList("http://freq=" + FREQ + "@localhost:8080/");
     }
 
     /**

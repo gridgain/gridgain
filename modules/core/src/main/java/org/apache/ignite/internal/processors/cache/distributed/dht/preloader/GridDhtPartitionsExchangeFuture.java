@@ -322,7 +322,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
 
     /** Reserved max available history for calculation of history supplier on coordinator. */
-    private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
+    private volatile Map<Integer/** Group. */, Map<Integer/** Partition */, Long/** Counter. */>> partHistReserved;
 
     /** */
     @GridToStringExclude
@@ -942,7 +942,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             ExchangeType exchange;
 
-            if (exchCtx.exchangeFreeSwitch()){
+            if (exchCtx.exchangeFreeSwitch()) {
                 exchange = onExchangeFreeSwitch();
 
                 initCoordinatorCaches(newCrd);
@@ -1639,22 +1639,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         timeBag.finishGlobalStage("Preloading notification");
 
-        cctx.exchange().exchangerBlockingSectionBegin();
-
-        try {
-            cctx.database().releaseHistoryForPreloading();
-
-            // To correctly rebalance when persistence is enabled, it is necessary to reserve history within exchange.
-            partHistReserved = cctx.database().reserveHistoryForExchange();
-        }
-        finally {
-            cctx.exchange().exchangerBlockingSectionEnd();
-        }
-
-        clearingPartitions = new HashMap();
-
-        timeBag.finishGlobalStage("WAL history reservation");
-
         // Skipping wait on local join is available when all cluster nodes have the same protocol.
         boolean skipWaitOnLocalJoin = cctx.exchange().latch().canSkipJoiningNodes(initialVersion())
             && localJoinExchange();
@@ -1747,6 +1731,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         timeBag.finishGlobalStage("After states restored callback");
+
+        cctx.exchange().exchangerBlockingSectionBegin();
+
+        try {
+            cctx.database().releaseHistoryForPreloading();
+
+            // To correctly rebalance when persistence is enabled, it is necessary to reserve history within exchange.
+            partHistReserved = cctx.database().reserveHistoryForExchange();
+        }
+        finally {
+            cctx.exchange().exchangerBlockingSectionEnd();
+        }
+
+        clearingPartitions = new HashMap();
+
+        timeBag.finishGlobalStage("WAL history reservation");
 
         changeWalModeIfNeeded();
 
@@ -2422,7 +2422,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             span.addTag(SpanTags.ERROR, errf::toString);
         }
 
-
         try {
             waitUntilNewCachesAreRegistered();
 
@@ -2511,15 +2510,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             Map<T2<Integer, Integer>, Long> localReserved = partHistSuppliers.getReservations(cctx.localNodeId());
 
             if (localReserved != null) {
-                for (Map.Entry<T2<Integer, Integer>, Long> e : localReserved.entrySet()) {
-                    boolean success = cctx.database().reserveHistoryForPreloading(
-                        e.getKey().get1(), e.getKey().get2(), e.getValue());
+                boolean success = cctx.database().reserveHistoryForPreloading(localReserved);
 
-                    if (!success) {
-                        // TODO: how to handle?
-                        err = new IgniteCheckedException("Could not reserve history");
-                    }
-                }
+                // TODO: how to handle?
+                if (!success)
+                    err = new IgniteCheckedException("Could not reserve history");
             }
 
             cctx.database().releaseHistoryForExchange();
@@ -2880,7 +2875,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         synchronized (mux) {
             assert (!isDone() && !initFut.isDone()) || cctx.kernalContext().isStopping() : this;
-            assert (mergedWith == null && state == null) || cctx.kernalContext().isStopping()  : this;
+            assert (mergedWith == null && state == null) || cctx.kernalContext().isStopping() : this;
 
             state = ExchangeLocalState.MERGED;
 
@@ -4612,7 +4607,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         return; // Node is stopping, no need to further process exchange.
                     }
 
-                    assert resTopVer.equals(exchCtx.events().topologyVersion()) :  "Unexpected result version [" +
+                    assert resTopVer.equals(exchCtx.events().topologyVersion()) : "Unexpected result version [" +
                         "msgVer=" + resTopVer +
                         ", locVer=" + exchCtx.events().topologyVersion() + ']';
                 }
@@ -4797,7 +4792,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             return;
 
                         try {
-                            assert msg.error() != null: msg;
+                            assert msg.error() != null : msg;
 
                             // Try to revert all the changes that were done during initialization phase
                             cctx.affinity().forceCloseCaches(

@@ -501,6 +501,8 @@
                                         </exec>
 
                                         <exec executable="autoreconf" dir="${release.dir}/platforms/cpp"/>
+
+                                        <delete dir="${release.dir}/platforms/cpp/autom4te.cache" quiet="true"/>
                                     </target>
                                 </configuration>
                             </execution>

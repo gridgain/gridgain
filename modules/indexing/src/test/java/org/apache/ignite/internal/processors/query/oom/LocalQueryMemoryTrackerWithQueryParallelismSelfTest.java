@@ -46,8 +46,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void createSchema() {
+    @Override protected void createSchema() {
         execSql("create table T (id int primary key, ref_key int, name varchar) WITH \"PARALLELISM=4\"");
         execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar) WITH \"PARALLELISM=4\"");
         execSql("create index K_IDX on K(indexed)");
@@ -235,7 +234,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         // Local result is quite small.
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(BIG_TABLE_SIZE >  localResults.stream().mapToLong(r -> r.getRowCount()).sum());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(r -> r.getRowCount()).sum());
     }
 
     /** {@inheritDoc} */

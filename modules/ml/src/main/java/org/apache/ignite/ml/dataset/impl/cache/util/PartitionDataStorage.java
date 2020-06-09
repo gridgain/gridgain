@@ -95,7 +95,7 @@ class PartitionDataStorage implements AutoCloseable {
     /**
      * Cleaner that removes partition data.
      */
-    private class Cleaner implements Runnable  {
+    private class Cleaner implements Runnable {
         /** Partition number. */
         private final int part;
 

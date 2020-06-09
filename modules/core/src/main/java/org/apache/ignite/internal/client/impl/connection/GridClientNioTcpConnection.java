@@ -299,7 +299,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
                 if (ses != null)
                     srv.close(ses);
 
-                if (sock!= null)
+                if (sock != null)
                     sock.close();
 
                 if (ch != null)
@@ -579,7 +579,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
                     if (credentials() == null) {
                         fut.onDone(new GridClientAuthenticationException("Authentication failed on server " +
                             "(client has no credentials) [clientId=" + clientId +
-                            ", srvAddr=" + serverAddress() + ", errMsg=" + resp.errorMessage() +']'));
+                            ", srvAddr=" + serverAddress() + ", errMsg=" + resp.errorMessage() + ']'));
 
                         removePending(resp.requestId());
 
@@ -619,7 +619,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
 
         if (resp.successStatus() == GridClientResponse.STATUS_AUTH_FAILURE)
             fut.onDone(new GridClientAuthenticationException("Client authentication failed [clientId=" + clientId +
-                ", srvAddr=" + serverAddress() + ", errMsg=" + resp.errorMessage() +']'));
+                ", srvAddr=" + serverAddress() + ", errMsg=" + resp.errorMessage() + ']'));
         else if (resp.successStatus() == GridClientResponse.STATUS_ILLEGAL_STATE)
             fut.onDone(new VisorIllegalStateException(resp.errorMessage()));
         else if (resp.errorMessage() != null)

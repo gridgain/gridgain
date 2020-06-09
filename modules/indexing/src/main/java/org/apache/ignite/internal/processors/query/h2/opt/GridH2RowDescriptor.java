@@ -92,7 +92,7 @@ public class GridH2RowDescriptor {
      *
      * @return Table descriptor.
      */
-    public H2TableDescriptor tableDescriptor(){
+    public H2TableDescriptor tableDescriptor() {
         return tbl;
     }
 
@@ -149,7 +149,6 @@ public class GridH2RowDescriptor {
     public GridQueryTypeDescriptor type() {
         return type;
     }
-
 
     /**
      * Gets cache context info for this row descriptor.

@@ -94,6 +94,7 @@ public abstract class GridCachePreloadLifecycleAbstractTest extends GridCommonAb
 
         stopAllGrids();
     }
+
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
         return 4 * 60 * 1000; // 4 min.

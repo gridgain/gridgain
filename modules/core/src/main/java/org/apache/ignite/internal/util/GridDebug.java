@@ -124,7 +124,7 @@ public class GridDebug {
      *
      * @param x Data to log.
      */
-    public static synchronized void write(Object ... x) {
+    public static synchronized void write(Object... x) {
         if (!allowLog)
             return;
 
@@ -144,7 +144,7 @@ public class GridDebug {
      *
      * @param x Debugging data.
      */
-    public static void debug(Object ... x) {
+    public static void debug(Object... x) {
         ConcurrentLinkedQueue<Item> q = que.get();
 
         if (q != null)

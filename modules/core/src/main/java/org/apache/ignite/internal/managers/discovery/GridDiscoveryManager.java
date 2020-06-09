@@ -509,8 +509,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             }
 
             /** {@inheritDoc} */
-            @Override
-            public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
+            @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
                 Collection<ClusterNode> topSnapshot,
                 Map<Long, Collection<ClusterNode>> topHist, DiscoverySpiCustomMessage data) {
                 return onDiscovery(new DiscoveryNotification(type, topVer, node, topSnapshot, topHist, data, null));
@@ -688,7 +687,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                     discoCacheHist.put(nextTopVer, discoCache);
 
-                    assert snapshot.topVer.compareTo(nextTopVer) < 0: "Topology version out of order [this.topVer=" +
+                    assert snapshot.topVer.compareTo(nextTopVer) < 0 : "Topology version out of order [this.topVer=" +
                         topSnap + ", topVer=" + topVer + ", node=" + node + ", nextTopVer=" + nextTopVer +
                         ", evt=" + U.gridEventName(type) + ']';
 
@@ -1170,7 +1169,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         Boolean locMarshStrSerVer2 = locNode.attribute(ATTR_MARSHALLER_USE_BINARY_STRING_SER_VER_2);
         boolean locMarshStrSerVer2Bool = locMarshStrSerVer2 == null ?
-            false /* turned on and added to the attributes list by default only when BinaryMarshaller is used. */:
+            false /* turned on and added to the attributes list by default only when BinaryMarshaller is used. */ :
             locMarshStrSerVer2;
 
         boolean locDelayAssign = locNode.attribute(ATTR_LATE_AFFINITY_ASSIGNMENT);
@@ -1254,7 +1253,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
             if (locDelayAssign != rmtLateAssign) {
                 throw new IgniteCheckedException("Remote node has cache affinity assignment mode different from local " +
-                    "[locId8=" +  U.id8(locNode.id()) +
+                    "[locId8=" + U.id8(locNode.id()) +
                     ", locDelayAssign=" + locDelayAssign +
                     ", rmtId8=" + U.id8(n.id()) +
                     ", rmtLateAssign=" + rmtLateAssign +
@@ -1461,7 +1460,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      * @return Required offheap memory in bytes.
      */
     private long requiredOffheap() {
-        if(ctx.config().isClientMode())
+        if (ctx.config().isClientMode())
             return 0;
 
         DataStorageConfiguration memCfg = ctx.config().getDataStorageConfiguration();
@@ -1896,7 +1895,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      * @param topVer Topology version.
      * @return Compacted consistent id map.
      */
-    public  Map<Short, UUID> nodeIdMap(AffinityTopologyVersion topVer) {
+    public Map<Short, UUID> nodeIdMap(AffinityTopologyVersion topVer) {
         return resolveDiscoCache(CU.cacheId(null), topVer).nodeIdMap();
     }
 
@@ -2148,7 +2147,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     public void consistentId(final Serializable consistentId) {
         this.consistentId = consistentId;
     }
-
 
     /** @return Topology version. */
     public long topologyVersion() {
@@ -2434,7 +2432,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 aliveNodesByConsId.put(node.consistentId(), node);
             }
 
-            List<BaselineNode >baselineNodes0 = new ArrayList<>(blt.size());
+            List<BaselineNode> baselineNodes0 = new ArrayList<>(blt.size());
 
             for (Object consId : blt.consistentIds()) {
                 ClusterNode srvNode = aliveNodesByConsId.get(consId);
@@ -2790,16 +2788,22 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     private static class NotificationEvent {
         /** Type. */
         int type;
+
         /** Topology version. */
         AffinityTopologyVersion topVer;
+
         /** Node. */
         ClusterNode node;
+
         /** Disco cache. */
         DiscoCache discoCache;
+
         /** Topology snapshot. */
         Collection<ClusterNode> topSnapshot;
+
         /** Data. */
         @Nullable DiscoveryCustomMessage data;
+
         /** Span container. */
         SpanContainer spanContainer;
 

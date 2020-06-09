@@ -45,7 +45,7 @@ public class FailureProcessorLoggingTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg =  super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         TestFailureHandler hnd = new TestFailureHandler(false);
 
@@ -236,6 +236,7 @@ public class FailureProcessorLoggingTest extends GridCommonAbstractTest {
         public void expectedThreadDumpMessage(String expThreadDumpMsg) {
             this.expThreadDumpMsg = expThreadDumpMsg;
         }
+
         /**
          * @return Warn flag.
          */

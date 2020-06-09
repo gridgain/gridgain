@@ -57,7 +57,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_
  * during PME.
  */
 @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-@WithSystemProperty(key = IGNITE_DISABLE_GRP_STATE_LAZY_STORE, value =  "true")
+@WithSystemProperty(key = IGNITE_DISABLE_GRP_STATE_LAZY_STORE, value = "true")
 public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";

@@ -1189,7 +1189,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                     provider.start(ctx.plugins().pluginContextForProvider(provider));
 
-                    startTimer.finishGlobalStage("Start '"+ provider.name() + "' plugin");
+                    startTimer.finishGlobalStage("Start '" + provider.name() + "' plugin");
                 }
 
                 // Start platform plugins.
@@ -2560,7 +2560,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             U.clearClassCache();
             MarshallerExclusions.clearCache();
             BinaryEnumCache.clear();
-
 
             gw.writeLock();
 

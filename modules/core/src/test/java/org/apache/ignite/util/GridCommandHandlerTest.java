@@ -849,7 +849,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             log.registerListener(lsnrs[g] = bldr.build());
         }
 
-
         ignite.cluster().active(true);
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));

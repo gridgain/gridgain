@@ -111,6 +111,7 @@ public class JmhIdeBenchmarkRunner {
 
         return this;
     }
+
     /**
      * @param outputTimeUnit Output time unit.
      * @return This instance.

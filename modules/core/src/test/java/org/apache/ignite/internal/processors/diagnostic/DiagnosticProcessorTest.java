@@ -57,11 +57,13 @@ import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcess
 public class DiagnosticProcessorTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache0";
+
     /** Test directory for dump. */
     private static final String TEST_DUMP_PAGE_FILE = "testDumpPage";
 
     /** One time configured diagnosticProcessor. */
     private static DiagnosticProcessor diagnosticProcessor;
+
     /** One time configured page id for searching. */
     private static T2<Integer, Long> expectedPageId;
 
@@ -256,7 +258,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             while (it.hasNext()) {
                 WALRecord record = it.next().get2();
 
-                if (record instanceof PageSnapshot){
+                if (record instanceof PageSnapshot) {
                     PageSnapshot rec = (PageSnapshot)record;
 
                     return new T2<>(rec.groupId(), rec.fullPageId().pageId());
