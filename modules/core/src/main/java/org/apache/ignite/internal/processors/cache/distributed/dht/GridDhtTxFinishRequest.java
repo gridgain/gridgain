@@ -275,7 +275,7 @@ public class GridDhtTxFinishRequest extends GridDistributedTxFinishRequest {
     /**
      * @return Partition update counters.
      */
-    public GridLongList partUpdateCounters(){
+    public GridLongList partUpdateCounters() {
         return partUpdateCnt;
     }
 

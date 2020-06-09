@@ -243,10 +243,10 @@ public class IgniteThrottlingUnitTest {
         AtomicBoolean stopLoad = new AtomicBoolean();
         List<Thread> loadThreads = new ArrayList<>();
 
-        for (int i=0; i<3; i++) {
+        for (int i = 0; i < 3; i++) {
             loadThreads.add(new Thread(
-                ()->{
-                    while(!stopLoad.get())
+                () -> {
+                    while (!stopLoad.get())
                         plc.onMarkDirty(true);
                 },
                 "load-" + i

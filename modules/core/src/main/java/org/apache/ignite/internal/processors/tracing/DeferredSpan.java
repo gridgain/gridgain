@@ -26,7 +26,7 @@ import org.apache.ignite.spi.tracing.SpanStatus;
  * Encapsulates concept of a deferred-initialized span. It's used to overcome OpenCensus span implementation, that starts
  * span immediately after deserialization.
  */
-public class DeferredSpan implements Span{
+public class DeferredSpan implements Span {
     /** */
     private byte[] serializedSpan;
 

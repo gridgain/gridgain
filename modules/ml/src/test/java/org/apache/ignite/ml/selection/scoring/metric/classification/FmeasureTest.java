@@ -40,6 +40,6 @@ public class FmeasureTest {
 
         double score = scoreCalculator.score(cursor.iterator());
 
-        assertEquals((double)2/3, score, 1e-12);
+        assertEquals((double)2 / 3, score, 1e-12);
     }
 }

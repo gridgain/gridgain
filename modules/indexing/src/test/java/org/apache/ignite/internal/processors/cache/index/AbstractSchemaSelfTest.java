@@ -155,7 +155,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
             fail("Unexpected exception: " + e);
         }
 
-        fail(IgniteSQLException.class.getSimpleName() +  " is not thrown.");
+        fail(IgniteSQLException.class.getSimpleName() + " is not thrown.");
     }
 
     /**

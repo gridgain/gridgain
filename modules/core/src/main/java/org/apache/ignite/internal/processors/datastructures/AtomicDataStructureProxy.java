@@ -148,7 +148,7 @@ public abstract class AtomicDataStructureProxy<V extends AtomicDataStructureValu
      * @return Ignite runtime exception that corresponds the original {@code cause}.
      */
     protected IgniteException checkRemovedAfterFail(Exception cause) {
-        assert cause != null: "The original cause must not be null.";
+        assert cause != null : "The original cause must not be null.";
 
         needCheckNotRemoved();
 

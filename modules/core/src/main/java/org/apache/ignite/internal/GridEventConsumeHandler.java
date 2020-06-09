@@ -305,7 +305,7 @@ class GridEventConsumeHandler implements GridContinuousHandler {
             if (filter instanceof PlatformEventFilterListener)
                 ((PlatformEventFilterListener)filter).onClose();
         }
-        catch(RuntimeException ex) {
+        catch (RuntimeException ex) {
             err = ex;
         }
 

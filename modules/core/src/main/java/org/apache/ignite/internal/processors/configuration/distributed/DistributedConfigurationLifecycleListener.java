@@ -29,5 +29,5 @@ public interface DistributedConfigurationLifecycleListener {
     /**
      * Notify about processor ready to write.
      */
-    default void onReadyToWrite(){};
+    default void onReadyToWrite(){}
 }

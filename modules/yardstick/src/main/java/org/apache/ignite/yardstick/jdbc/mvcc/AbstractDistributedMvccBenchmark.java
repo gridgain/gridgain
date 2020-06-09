@@ -40,6 +40,7 @@ public abstract class AbstractDistributedMvccBenchmark extends IgniteAbstractBen
 
     /** Member id of the host driver is running */
     protected int memberId;
+
     /**
      * Number of nodes handled by driver.
      */

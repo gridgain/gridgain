@@ -307,7 +307,7 @@ public enum IgniteFeatures {
                 continue;
 
             //Disable new rolling upgrade
-            if(DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
+            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
                 continue;
 
             // Add only when indexing is enabled.

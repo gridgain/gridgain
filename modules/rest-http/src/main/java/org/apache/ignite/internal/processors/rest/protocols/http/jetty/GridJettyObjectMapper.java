@@ -222,7 +222,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
                 VisorDataType type = null;
                 Object val = null;
 
-                while(!p.isClosed() && jsonToken != JsonToken.END_OBJECT) {
+                while (!p.isClosed() && jsonToken != JsonToken.END_OBJECT) {
                     jsonToken = p.nextToken();
 
                     if (JsonToken.FIELD_NAME == jsonToken) {
@@ -276,7 +276,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
 
             JsonToken jsonToken = null;
 
-            while(!p.isClosed() && JsonToken.END_OBJECT != jsonToken) {
+            while (!p.isClosed() && JsonToken.END_OBJECT != jsonToken) {
                 jsonToken = p.nextToken();
 
                 if (JsonToken.FIELD_NAME == jsonToken) {
@@ -326,7 +326,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
             VisorDataType type = null;
             Object value = null;
 
-            while(!p.isClosed() && JsonToken.END_OBJECT != jsonToken) {
+            while (!p.isClosed() && JsonToken.END_OBJECT != jsonToken) {
                 jsonToken = p.nextToken();
 
                 if (JsonToken.FIELD_NAME == jsonToken) {

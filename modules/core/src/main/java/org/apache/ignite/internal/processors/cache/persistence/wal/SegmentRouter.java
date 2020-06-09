@@ -29,6 +29,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.FileDe
 public class SegmentRouter {
     /** */
     public static final String ZIP_SUFFIX = ".zip";
+
     /** */
     private File walWorkDir;
 

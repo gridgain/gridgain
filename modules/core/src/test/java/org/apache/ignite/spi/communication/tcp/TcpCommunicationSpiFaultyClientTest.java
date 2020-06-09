@@ -115,7 +115,7 @@ public class TcpCommunicationSpiFaultyClientTest extends GridCommonAbstractTest 
     private static int takeFreePort() throws IOException {
         int freePort = serverPort;
 
-        while(true) {
+        while (true) {
             try {
                 U.closeQuiet(startServerSocket(freePort));
 

@@ -38,7 +38,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /** */
-public class MvccDeadlockDetectionConfigTest extends GridCommonAbstractTest  {
+public class MvccDeadlockDetectionConfigTest extends GridCommonAbstractTest {
     /** */
     private boolean deadlockDetectionEnabled;
 

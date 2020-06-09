@@ -53,10 +53,15 @@ public class GridAffinityAssignmentV2Test {
     protected IgniteProductVersion ver = new IgniteProductVersion();
 
     private ClusterNode clusterNode1 = node(metrics, ver, "1");
+
     private ClusterNode clusterNode2 = node(metrics, ver, "2");
+
     private ClusterNode clusterNode3 = node(metrics, ver, "3");
+
     private ClusterNode clusterNode4 = node(metrics, ver, "4");
+
     private ClusterNode clusterNode5 = node(metrics, ver, "5");
+
     private ClusterNode clusterNode6 = node(metrics, ver, "6");
 
     private List<ClusterNode> clusterNodes = new ArrayList<ClusterNode>() {{
@@ -197,7 +202,7 @@ public class GridAffinityAssignmentV2Test {
     public void testBackupsMoreThanThreshold() {
         List<ClusterNode> nodes = new ArrayList<>();
 
-        for(int i = 0; i < 10; i++)
+        for (int i = 0; i < 10; i++)
             nodes.add(node(metrics, ver, "1" + i));
 
         GridAffinityAssignment gridAffinityAssignment = new GridAffinityAssignment(
@@ -219,7 +224,7 @@ public class GridAffinityAssignmentV2Test {
     public void testSerialization() throws IOException, ClassNotFoundException {
         List<ClusterNode> nodes = new ArrayList<>();
 
-        for(int i = 0; i < 10; i++)
+        for (int i = 0; i < 10; i++)
             nodes.add(node(metrics, ver, "1" + i));
 
         GridAffinityAssignmentV2 gridAffinityAssignment2 = new GridAffinityAssignmentV2(
@@ -242,7 +247,6 @@ public class GridAffinityAssignmentV2Test {
 
         assertEquals(deserialized.topologyVersion(), gridAffinityAssignment2.topologyVersion());
     }
-
 
     /**
      *

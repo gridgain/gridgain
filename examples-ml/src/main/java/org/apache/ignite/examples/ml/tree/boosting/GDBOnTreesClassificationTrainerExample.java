@@ -83,10 +83,12 @@ public class GDBOnTreesClassificationTrainerExample {
                 System.out.println(">>> ---------------------------------");
 
                 System.out.println(">>> GDB classification trainer example completed.");
-            } finally {
+            }
+            finally {
                 trainingSet.destroy();
             }
-        } finally {
+        }
+        finally {
             System.out.flush();
         }
     }
@@ -110,7 +112,7 @@ public class GDBOnTreesClassificationTrainerExample {
     @NotNull private static IgniteCache<Integer, double[]> fillTrainingData(Ignite ignite,
         CacheConfiguration<Integer, double[]> trainingSetCfg) {
         IgniteCache<Integer, double[]> trainingSet = ignite.getOrCreateCache(trainingSetCfg);
-        for(int i = -50; i <= 50; i++) {
+        for (int i = -50; i <= 50; i++) {
             double x = ((double)i) / 10.0;
             double y = Math.sin(x) < 0 ? 0.0 : 1.0;
             trainingSet.put(i, new double[] {x, y});

@@ -43,10 +43,13 @@ public class DrNodeCommand
 {
     /** Config parameter. */
     public static final String CONFIG_PARAM = "--config";
+
     /** Metrics parameter. */
     public static final String METRICS_PARAM = "--metrics";
+
     /** Clear store parameter. */
     public static final String CLEAR_STORE_PARAM = "--clear-store";
+
     /** Node Id. */
     private UUID nodeId;
 
@@ -201,8 +204,10 @@ public class DrNodeCommand
     public static class DrNodeArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrNodeTaskArgs> {
         /** Config. */
         private final boolean config;
+
         /** Metrics. */
         private final boolean metrics;
+
         /** Clear store. */
         private final boolean clearStore;
 

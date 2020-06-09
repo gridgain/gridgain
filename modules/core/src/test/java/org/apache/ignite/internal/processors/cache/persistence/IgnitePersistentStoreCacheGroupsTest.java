@@ -433,7 +433,7 @@ public class IgnitePersistentStoreCacheGroupsTest extends GridCommonAbstractTest
         for (String cacheName : caches) {
             IgniteCache<Object, Object> cache = node.cache(cacheName);
 
-            for (int i = 0; i < entriesCount(); i++)  {
+            for (int i = 0; i < entriesCount(); i++) {
                 cache.put(i, cacheName + i);
 
                 assertEquals(cacheName + i, cache.get(i));

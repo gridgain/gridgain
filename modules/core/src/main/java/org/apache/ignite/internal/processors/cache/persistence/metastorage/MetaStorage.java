@@ -399,6 +399,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
         if (!readOnly)
             writeRaw(key, marshaller.marshal(val));
     }
+
     /** {@inheritDoc} */
     @Override public void remove(@NotNull String key) throws IgniteCheckedException {
         removeData(key);

@@ -210,7 +210,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         execSql("create index K_GRP_IDX on K(grp_indexed)");
     }
 
-
     /**
      * @param sql SQL query
      * @return Results set.

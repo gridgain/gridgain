@@ -59,7 +59,6 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
     /** */
     private Logger logger;
 
-
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         this.logger = logger;
@@ -181,10 +180,13 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
     public static class Arguments {
         /** */
         private final Operation operation;
+
         /** */
         private final String filePath;
+
         /** */
         private final boolean allNodes;
+
         /** */
         private final Set<String> nodeIds;
 

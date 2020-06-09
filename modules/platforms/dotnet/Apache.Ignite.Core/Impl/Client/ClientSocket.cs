@@ -335,6 +335,8 @@ namespace Apache.Ignite.Core.Impl.Client
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void WaitForMessages()
         {
+            _logger.Trace("Receiver thread #{0} started.", Thread.CurrentThread.ManagedThreadId);
+
             try
             {
                 // Null exception means active socket.
@@ -376,6 +378,10 @@ namespace Apache.Ignite.Core.Impl.Client
                 // Note that this does not include request decoding exceptions (failed request, invalid data, etc).
                 _exception = ex;
                 Dispose();
+            }
+            finally
+            {
+                _logger.Trace("Receiver thread #{0} stopped.", Thread.CurrentThread.ManagedThreadId);
             }
         }
 

@@ -126,7 +126,6 @@ public class VisorFindAndDeleteGarbageInPersistenceClosure implements IgniteCall
                 }
             }));
 
-
         Map<Integer, Map<Integer, Long>> grpIdToPartIdToGarbageCount = new HashMap<>();
 
         int curPart = 0;
@@ -288,7 +287,7 @@ public class VisorFindAndDeleteGarbageInPersistenceClosure implements IgniteCall
                 if (cacheCtx == null)
                     stoppedCachesForGrpId
                         .computeIfAbsent(grpCtx.groupId(), (x) -> new HashMap<>())
-                        .compute(cacheId, (x, y) -> y == null? 1 : y + 1);
+                        .compute(cacheId, (x, y) -> y == null ? 1 : y + 1);
             }
         }
         catch (IgniteCheckedException e) {
@@ -331,7 +330,7 @@ public class VisorFindAndDeleteGarbageInPersistenceClosure implements IgniteCall
         if (e instanceof InterruptedException)
             return new IgniteInterruptedException((InterruptedException)e);
         else if (e.getCause() instanceof IgniteException)
-            return  (IgniteException)e.getCause();
+            return (IgniteException)e.getCause();
         else
             return new IgniteException(e.getCause());
     }

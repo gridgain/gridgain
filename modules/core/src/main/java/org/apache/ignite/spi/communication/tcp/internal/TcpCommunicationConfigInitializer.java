@@ -221,7 +221,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
 
         cfg.localPortRange(locPortRange);
 
-        return  (TcpCommunicationSpi)this;
+        return (TcpCommunicationSpi)this;
     }
 
     /**

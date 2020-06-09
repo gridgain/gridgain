@@ -52,8 +52,7 @@ public class IgniteCacheExpireWhileRebalanceTest extends GridCommonAbstractTest 
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         ((TcpDiscoverySpi) cfg.getDiscoverySpi()).setIpFinder(IP_FINDER);
@@ -113,8 +112,7 @@ public class IgniteCacheExpireWhileRebalanceTest extends GridCommonAbstractTest 
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
     }
 }

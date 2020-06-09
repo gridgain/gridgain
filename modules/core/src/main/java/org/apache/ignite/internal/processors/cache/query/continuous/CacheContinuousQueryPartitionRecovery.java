@@ -39,7 +39,7 @@ class CacheContinuousQueryPartitionRecovery {
     /** Event which means hole in sequence. */
     private static final CacheContinuousQueryEntry HOLE;
 
-    static  {
+    static {
         HOLE = new CacheContinuousQueryEntry();
 
         HOLE.markFiltered();

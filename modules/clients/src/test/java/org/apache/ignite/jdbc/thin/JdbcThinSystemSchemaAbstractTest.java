@@ -83,7 +83,7 @@ public abstract class JdbcThinSystemSchemaAbstractTest extends JdbcThinAbstractS
             verifyNodesView(schemaName);
         else
             GridTestUtils.assertThrows(log, () -> verifyNodesView(schemaName),
-                IgniteException.class, "Failed to parse query. Schema \"" + schemaName +"\" not found;");
+                IgniteException.class, "Failed to parse query. Schema \"" + schemaName + "\" not found;");
     }
 
     /** */
@@ -96,7 +96,7 @@ public abstract class JdbcThinSystemSchemaAbstractTest extends JdbcThinAbstractS
             verifyNodesView(schemaName);
         else
             GridTestUtils.assertThrows(log, () -> verifyNodesView(schemaName),
-                IgniteException.class, "Failed to parse query. Schema \"" + schemaName +"\" not found;");
+                IgniteException.class, "Failed to parse query. Schema \"" + schemaName + "\" not found;");
     }
 
     /** Verifies that nodes from nodes view and actual set of running nodes are equal. */
