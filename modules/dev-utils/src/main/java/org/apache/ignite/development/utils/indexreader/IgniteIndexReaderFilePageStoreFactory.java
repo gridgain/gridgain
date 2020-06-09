@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 /**
  * Factory {@link FilePageStore} for analyzing partition and index files.
  */
-public interface FilePageStoreFactory {
+public interface IgniteIndexReaderFilePageStoreFactory {
     /**
      * Creating new {@link FilePageStore}. It can return {@code null} if partition file were not found,
      * for example: node should not contain it by affinity.

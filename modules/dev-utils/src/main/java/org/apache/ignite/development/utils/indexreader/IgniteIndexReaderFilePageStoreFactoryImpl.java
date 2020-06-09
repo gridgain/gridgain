@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Factory {@link FilePageStore} for case of regular pds.
  */
-public class FilePageStoreFactoryImpl implements FilePageStoreFactory {
+public class IgniteIndexReaderFilePageStoreFactoryImpl implements IgniteIndexReaderFilePageStoreFactory {
     /** Directory with data(partitions and index). */
     private final File dir;
 
@@ -46,7 +46,7 @@ public class FilePageStoreFactoryImpl implements FilePageStoreFactory {
      * @param pageSize Page size.
      * @param filePageStoreVer Page store version.
      */
-    public FilePageStoreFactoryImpl(File dir, int pageSize, int filePageStoreVer) {
+    public IgniteIndexReaderFilePageStoreFactoryImpl(File dir, int pageSize, int filePageStoreVer) {
         this.dir = dir;
 
         storeFactory = new FileVersionCheckingFactory(

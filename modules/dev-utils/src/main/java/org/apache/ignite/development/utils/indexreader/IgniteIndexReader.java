@@ -224,7 +224,7 @@ public class IgniteIndexReader implements AutoCloseable {
         @Nullable String[] indexes,
         boolean checkParts,
         @Nullable OutputStream outputStream,
-        FilePageStoreFactory filePageStoreFactory
+        IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
     ) throws IgniteCheckedException {
         this.pageSize = pageSize;
         this.partCnt = partCnt;
@@ -339,6 +339,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
         catch (IgniteDataIntegrityViolationException | IllegalArgumentException e) {
             // Replacing exception due to security reasons, as IgniteDataIntegrityViolationException prints page content.
+            // Catch IllegalArgumentException for output page information.
             throw new IgniteException("Failed to read page, id=" + pageId + ", idx=" + pageIndex(pageId) +
                 ", file=" + store.getFileAbsolutePath());
         }
@@ -1247,7 +1248,12 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param fileMask File mask.
      * @param filePageStoreFactory Factory of {@link FilePageStore}.
      */
-    public void transform(String src, String dest, String fileMask, FilePageStoreFactory filePageStoreFactory) {
+    public void transform(
+        String src,
+        String dest,
+        String fileMask,
+        IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
+    ) {
         File srcDir = new File(src);
 
         assert srcDir.exists();
@@ -1488,7 +1494,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         int pageSize = p.get(PAGE_SIZE.arg());
 
-        FilePageStoreFactory filePageStoreFactory = new FilePageStoreFactoryImpl(
+        IgniteIndexReaderFilePageStoreFactory filePageStoreFactory = new IgniteIndexReaderFilePageStoreFactoryImpl(
             new File(dir),
             pageSize,
             p.get(PAGE_STORE_VER.arg())
