@@ -239,9 +239,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** */
     private boolean init;
 
-    /** Last committed cache version before next topology version use. */
-    private AtomicReference<GridCacheVersion> lastVer = new AtomicReference<>();
-
     /**
      * Message received from node joining cluster (if this is 'node join' exchange),
      * needed if this exchange is merged with another one.
@@ -2202,14 +2199,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     private GridDhtPartitionsFullMessage createPartitionsMessage(boolean compress,
         boolean newCntrMap) {
-        GridCacheVersion last = lastVer.get();
-
         GridDhtPartitionsFullMessage m = cctx.exchange().createPartitionsFullMessage(
             compress,
             newCntrMap,
             exchangeId(),
             null,
-            last != null ? last : cctx.versions().last(),
+            cctx.versions().last(),
             partHistSuppliers,
             partsToReload);
 
@@ -2788,24 +2783,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
-     * @param ver Version.
-     */
-    private void updateLastVersion(GridCacheVersion ver) {
-        assert ver != null;
-
-        while (true) {
-            GridCacheVersion old = lastVer.get();
-
-            if (old == null || Long.compare(old.order(), ver.order()) < 0) {
-                if (lastVer.compareAndSet(old, ver))
-                    break;
-            }
-            else
-                break;
-        }
-    }
-
-    /**
      * Records that this exchange if merged with another 'node join' exchange.
      *
      * @param node Joined node.
@@ -3024,12 +3001,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             newCrdFut0.onMessage(node, msg);
 
             return;
-        }
-
-        if (!msg.client()) {
-            assert msg.lastVersion() != null : msg;
-
-            updateLastVersion(msg.lastVersion());
         }
 
         GridDhtPartitionsExchangeFuture mergedWith0 = null;
@@ -3873,10 +3844,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             }
 
             timeBag.finishGlobalStage("Apply update counters");
-
-            updateLastVersion(cctx.versions().last());
-
-            cctx.versions().onExchange(lastVer.get().order());
 
             IgniteProductVersion minVer = exchCtx.events().discoveryCache().minimumNodeVersion();
 

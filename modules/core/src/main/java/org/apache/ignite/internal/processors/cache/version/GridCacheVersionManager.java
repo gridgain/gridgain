@@ -321,7 +321,10 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * Gets last generated version without generating a new one.
      *
      * @return Last generated version.
+     *
+     * @deprecated Not used anywhere, kept for compatibility.
      */
+    @Deprecated
     public GridCacheVersion last() {
         return last;
     }
