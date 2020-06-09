@@ -111,7 +111,7 @@ public class JUnitTeamcityReporter extends RunListener {
             prevTestCls = desc.getClassName();
 
             curXmlStream.writeStartElement("testcase");
-            curXmlStream.writeAttribute("name", desc.getMethodName());
+            curXmlStream.writeAttribute("name", desc.getMethodName() != null ? desc.getMethodName() : "");
             curXmlStream.writeAttribute("classname", desc.getClassName());
 
             // Avoid doubling of run time after the surefire-generated full report is ingested:
