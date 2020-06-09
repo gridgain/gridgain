@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,12 @@
 
 package org.apache.ignite.springdata.misc;
 
-import java.util.List;
-import javax.cache.Cache;
 import org.apache.ignite.springdata20.repository.IgniteRepository;
-import org.apache.ignite.springdata20.repository.config.Query;
 import org.apache.ignite.springdata20.repository.config.RepositoryConfig;
-import org.springframework.data.domain.AbstractPageRequest;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 
 /**
  * Test repository.
  */
-@RepositoryConfig(cacheName = "PersonCache")
-public interface PersonSecondRepository extends IgniteRepository<Person, Integer> {
-    /** */
-    public Slice<Cache.Entry<Integer, Person>> findBySecondNameIsNot(String val, PageRequest pageReq);
-
-    /** */
-    @Query("SELECT _key, secondName FROM Person WHERE firstName REGEXP ?")
-    public Slice<List> querySliceOfList(String val, AbstractPageRequest pageReq);
+@RepositoryConfig(cacheName = "PersonWithKeyCache")
+public interface PersonRepositoryWithCompoundKey extends IgniteRepository<Person, PersonKey> {
 }
