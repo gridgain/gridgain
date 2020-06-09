@@ -338,7 +338,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return Cluster state that finished transition.
      */
     public DiscoveryDataClusterState finish(boolean success) {
-        if(success) {
+        if (success) {
             // Backward compatibility.
             ClusterState newState = state != null ? state : (active ? ACTIVE : INACTIVE);
 

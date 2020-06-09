@@ -2041,7 +2041,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 try {
                     val = (Boolean)field.get(cfg);
                 }
-                catch (IllegalAccessException | IllegalArgumentException | NullPointerException | ClassCastException  e) {
+                catch (IllegalAccessException | IllegalArgumentException | NullPointerException | ClassCastException e) {
                     log.error("Can't get value of field with name " + fieldName + " from config: " + cfg, e);
                 }
             }
@@ -2268,8 +2268,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         /** */
         private final BaselineTopology baselineTopology;
+
         /** */
         private final boolean forceChangeBaselineTopology;
+
         /** Ignite. */
         @IgniteInstanceResource
         private IgniteEx ig;

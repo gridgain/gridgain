@@ -349,7 +349,6 @@ public abstract class GridClientConnection {
     public abstract GridClientFuture<Boolean> currentState(UUID destNodeId)
         throws GridClientClosedException, GridClientConnectionResetException;
 
-
     /**
      * Gets current grid global state.
      *

@@ -402,7 +402,6 @@ abstract class GridClientAbstractProjection<T extends GridClientAbstractProjecti
         };
     }
 
-
     /**
      * Creates a sub-projection for current projection.
      *
