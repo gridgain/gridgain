@@ -33,6 +33,10 @@
     <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <netty.version>4.1.44.Final</netty.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.gridgain</groupId>
@@ -86,6 +90,18 @@
             <groupId>org.apache.zookeeper</groupId>
             <artifactId>zookeeper</artifactId>
             <version>${zookeeper.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
         </dependency>
 
         <dependency>
