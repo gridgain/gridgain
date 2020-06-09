@@ -298,7 +298,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                 return;
             }
 
-            throw new IgniteCheckedException("Don't find pageIdx=" + pageIdxCorrupt);
+            throw new IgniteCheckedException("Didn't find pageIdx=" + pageIdxCorrupt);
         }
         finally {
             GridUnsafe.freeBuffer(buf);
@@ -370,7 +370,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /**
      * Creates an sql table, indexes and fill it with some data.
      *
-     * @param cache Ignite cache
+     * @param cache Ignite cache.
      * @param insert {@code True} if only insert data, {@code false} if delete and {@code null} all at once.
      * @param info Table info.
      */
