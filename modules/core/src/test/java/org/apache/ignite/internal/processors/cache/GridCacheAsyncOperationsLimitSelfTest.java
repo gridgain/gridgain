@@ -68,7 +68,7 @@ public class GridCacheAsyncOperationsLimitSelfTest extends GridCacheAbstractSelf
                 }
             });
 
-            assertTrue("Maximum number of permits exceeded: " + max.get(),  max.get() <= 51);
+            assertTrue("Maximum number of permits exceeded: " + max.get(), max.get() <= 51);
         }
     }
 }

@@ -175,20 +175,25 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
     private static class SizeCounterLogListener extends LogListener {
         /** Pattern for Counters inconsistent message.*/
         final Pattern patCnt = Pattern.compile("(\\d)=(\\d{1,2})");
+
         /** Pattern for Size inconsistent message.*/
         final Pattern patSz = Pattern.compile("(\\d)=(\\d{1,2})");
+
         /** Pattern for Both counters and sizes message*/
         final Pattern patCntSz = Pattern.compile("consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest" +
             "\\d meta=\\[updCnt=(\\d{2}), size=(\\d{1,2})");
 
         /** if finded substring in log for inconsistent counters.*/
         boolean cn;
+
         /** if finded substring in log for inconsistent partition size.*/
         boolean sz;
+
         /** return true if inconsistent counters.*/
         public boolean checkCnt() {
                 return cn;
         }
+
         /** return true if inconsistent partition size.*/
         public boolean checkSize() {
                 return sz;
@@ -215,13 +220,11 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 while (m.find())
                     setCnt.add(Long.parseLong(m.group(2)));
             }
-
             else if (s.contains("Partitions cache sizes are inconsistent for Part 0: ")) {
                 Matcher m = patSz.matcher(s);
                 while (m.find())
                     setSize.add(Long.parseLong(m.group(2)));
             }
-
             else if (s.contains("Partitions cache size and update counters are inconsistent for Part 0:")) {
                 Matcher m = patCntSz.matcher(s);
                 while (m.find()) {
@@ -230,9 +233,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 }
             }
 
-            if (setCnt.size()==2 && setCnt.contains(32L) && setCnt.contains(99L))
+            if (setCnt.size() == 2 && setCnt.contains(32L) && setCnt.contains(99L))
                 cn = true;
-            if (setSize.size()==2 && setSize.contains(0L) && setSize.contains(32L))
+            if (setSize.size() == 2 && setSize.contains(0L) && setSize.contains(32L))
                 sz = true;
         }
     }

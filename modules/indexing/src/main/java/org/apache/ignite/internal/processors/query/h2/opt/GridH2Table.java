@@ -702,7 +702,7 @@ public class GridH2Table extends TableBase {
      *
      * @param rmIndex Flag indicate remove index on destroy or not.
      */
-    public void setRemoveIndexOnDestroy(boolean rmIndex){
+    public void setRemoveIndexOnDestroy(boolean rmIndex) {
         this.rmIndex = rmIndex;
     }
 
@@ -866,7 +866,7 @@ public class GridH2Table extends TableBase {
     public void markRebuildFromHashInProgress(boolean value) {
         assert !value || (idxs.size() >= 2 && index(1).getIndexType().isHash()) : "Table has no hash index.";
 
-        if (rebuildFromHashInProgressFiledUpdater.compareAndSet(this, value? FALSE: TRUE, value ? TRUE: FALSE)) {
+        if (rebuildFromHashInProgressFiledUpdater.compareAndSet(this, value ? FALSE : TRUE, value ? TRUE : FALSE)) {
             lock.writeLock().lock();
 
             try {
@@ -1262,7 +1262,7 @@ public class GridH2Table extends TableBase {
      *
      * @return Rows count.
      */
-    private long cacheSize(CachePeekMode ... modes) {
+    private long cacheSize(CachePeekMode... modes) {
         try {
             return cacheInfo.cacheContext().cache().localSize(modes);
         }
@@ -1435,7 +1435,7 @@ public class GridH2Table extends TableBase {
                             ", colName=" + name + ']');
                 }
 
-                size --;
+                size--;
             }
 
             assert size > QueryUtils.DEFAULT_COLUMNS_COUNT;

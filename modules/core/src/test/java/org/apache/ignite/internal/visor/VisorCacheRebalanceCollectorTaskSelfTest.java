@@ -71,7 +71,6 @@ public class VisorCacheRebalanceCollectorTaskSelfTest extends GridCommonAbstract
 
         cfg.setDataStorageConfiguration(storageCfg);
 
-
         return cfg;
     }
 

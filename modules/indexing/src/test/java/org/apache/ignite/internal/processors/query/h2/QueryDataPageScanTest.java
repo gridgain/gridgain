@@ -572,6 +572,7 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
      */
     static class Person implements Externalizable {
         String name;
+
         int age;
 
         public Person() {

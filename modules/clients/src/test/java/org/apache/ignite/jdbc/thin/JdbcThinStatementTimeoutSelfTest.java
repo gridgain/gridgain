@@ -179,7 +179,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testZeroQueryTimeout() throws Exception {
-        try(final Connection conn = DriverManager.getConnection(URL+"?queryTimeout=0")) {
+        try (final Connection conn = DriverManager.getConnection(URL + "?queryTimeout=0")) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
             try (final Statement stmt = conn.createStatement()) {
@@ -209,7 +209,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testQueryTimeoutRetrival() throws Exception {
-        try(final Connection conn = DriverManager.getConnection(URL+"?queryTimeout=5")) {
+        try (final Connection conn = DriverManager.getConnection(URL + "?queryTimeout=5")) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
             try (final Statement stmt = conn.createStatement()) {

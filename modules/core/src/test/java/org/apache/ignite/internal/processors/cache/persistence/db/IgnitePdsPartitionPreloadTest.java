@@ -668,7 +668,7 @@ public class IgnitePdsPartitionPreloadTest extends GridCommonAbstractTest {
 
         int realSize = 0;
 
-        while(cursor.hasNext()) {
+        while (cursor.hasNext()) {
             realSize++;
 
             cursor.next();

@@ -56,8 +56,7 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
     /** @inheritDoc */
     @SuppressWarnings("RedundantMethodOverride")
     @Before
-    @Override
-    public void init() throws Exception {
+    @Override public void init() throws Exception {
         super.init();
 
         conn = DriverManager.getConnection(url);

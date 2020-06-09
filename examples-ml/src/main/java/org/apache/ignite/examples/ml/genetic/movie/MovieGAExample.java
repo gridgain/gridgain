@@ -103,7 +103,7 @@ public class MovieGAExample {
         // Set fitness function.
         gaCfg.setFitnessFunction(function);
 
-        try(Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             MovieTerminateCriteria termCriteria = new MovieTerminateCriteria(ignite, System.out::println);
 
             gaCfg.setTerminateCriteria(termCriteria);

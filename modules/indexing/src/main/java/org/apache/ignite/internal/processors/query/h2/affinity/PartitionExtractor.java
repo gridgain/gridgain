@@ -173,7 +173,6 @@ public class PartitionExtractor {
             else
                 tree = new PartitionCompositeNode(tree, qryRes.tree(), PartitionCompositeNodeOperator.OR);
 
-
             if (affinityTopVer == null)
                 affinityTopVer = qryRes.topologyVersion();
             else
@@ -777,7 +776,7 @@ public class PartitionExtractor {
         GridH2Table tbl = (GridH2Table)leftCol.column().getTable();
 
         // Check that columns might be used for partition pruning.
-        if(!tbl.isColumnForPartitionPruning(leftCol.column()))
+        if (!tbl.isColumnForPartitionPruning(leftCol.column()))
             return null;
 
         // Check that both left and right AST use same column.
@@ -837,7 +836,7 @@ public class PartitionExtractor {
             return null;
 
         for (long i = leftLongVal; i <= rightLongVal; i++) {
-            int part = partResolver.partition(i , leftColValueType, tbl0.cacheName());
+            int part = partResolver.partition(i, leftColValueType, tbl0.cacheName());
 
             parts.add(new PartitionConstantNode(tbl0, part));
 

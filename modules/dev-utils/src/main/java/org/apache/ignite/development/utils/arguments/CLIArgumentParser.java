@@ -151,7 +151,7 @@ public class CLIArgumentParser {
 
             sb.a("\n\n").a(arg.name()).a(": ").a(arg.usage());
 
-            if(arg.optional())
+            if (arg.optional())
                 sb.a(" Default value: ").a(dfltVal);
         }
 

@@ -41,7 +41,6 @@ public class RPropParameterUpdate implements Serializable {
     /** Sums updates during one training. */
     public static final IgniteFunction<List<RPropParameterUpdate>, RPropParameterUpdate> SUM_LOCAL = RPropParameterUpdate::sumLocal;
 
-
     /** */
     private static final long serialVersionUID = -165584242642323332L;
 
@@ -54,6 +53,7 @@ public class RPropParameterUpdate implements Serializable {
      * Previous iteration model partial derivatives by parameters.
      */
     protected Vector prevIterationGradient;
+
     /**
      * Previous iteration parameters deltas. In original paper they are labeled with "delta".
      */

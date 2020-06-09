@@ -90,7 +90,7 @@ public abstract class IgniteCacheStoreNodeRestartAbstractTest extends IgniteCach
     /**
      * Custom object.
      */
-    private static class UserObject implements Serializable{
+    private static class UserObject implements Serializable {
         /** */
         private String field;
 

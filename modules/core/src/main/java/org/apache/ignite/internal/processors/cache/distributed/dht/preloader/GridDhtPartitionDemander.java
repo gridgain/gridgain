@@ -1120,7 +1120,7 @@ public class GridDhtPartitionDemander {
         @Nullable final RebalanceStatistics stat;
 
         /** Entries batches queued. */
-        private final Map<Integer /* Partition id. */, LongAdder /* Batch count. */ > queued = new HashMap<>();
+        private final Map<Integer/* Partition id. */, LongAdder/* Batch count. */> queued = new HashMap<>();
 
         /** Entries batches processed. */
         private final Map<Integer, LongAdder> processed = new HashMap<>();

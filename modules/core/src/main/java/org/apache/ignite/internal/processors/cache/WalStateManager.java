@@ -499,7 +499,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
 
         CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
 
-        assert grp != null: "Can not find group with id: " + grpId;
+        assert grp != null : "Can not find group with id: " + grpId;
 
         AffinityTopologyVersion lastGroupTop = grp.topology().readyTopologyVersion();
 
@@ -1115,7 +1115,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
     /**
      * @return WAL disable context.
      */
-    public WALDisableContext walDisableContext(){
+    public WALDisableContext walDisableContext() {
         return walDisableContext;
     }
 
@@ -1230,7 +1230,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
     /**
      *
      */
-    public static class WALDisableContext implements MetastorageLifecycleListener{
+    public static class WALDisableContext implements MetastorageLifecycleListener {
         /** */
         public static final String WAL_DISABLED = "wal-disabled";
 
@@ -1350,7 +1350,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             Boolean disabled = (Boolean)ms.read(WAL_DISABLED);
 
             // Node crash when WAL was disabled.
-            if (disabled != null && disabled){
+            if (disabled != null && disabled) {
                 resetWalFlag = true;
 
                 pageStoreMgr.cleanupPersistentSpace();

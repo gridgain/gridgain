@@ -92,7 +92,9 @@ public class TcpDiscoveryKubernetesIpFinder extends TcpDiscoveryIpFinderAdapter 
     private TrustManager[] trustAll = new TrustManager[] {
         new X509TrustManager() {
             @Override public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+
             @Override public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+
             @Override public X509Certificate[] getAcceptedIssuers() { return null; }
         }
     };
@@ -298,7 +300,7 @@ public class TcpDiscoveryKubernetesIpFinder extends TcpDiscoveryIpFinderAdapter 
      * @param file The path to the service account token.
      * @return Service account token.
      */
-    private String serviceAccountToken(String file)  {
+    private String serviceAccountToken(String file) {
         try {
             return new String(Files.readAllBytes(Paths.get(file)));
         } catch (IOException e) {

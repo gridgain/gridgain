@@ -41,15 +41,18 @@ import org.apache.ignite.ml.genetic.parameter.GAGridConstants;
 public class GAGrid {
     /** Ignite logger */
     private IgniteLogger igniteLog;
+
     /** GAConfiguraton */
     private GAConfiguration cfg;
+
     /** Ignite instance */
     private Ignite ignite;
+
     /** Population cache */
     private IgniteCache<Long, Chromosome> populationCache;
+
     /** Gene cache */
     private IgniteCache<Long, Gene> geneCache;
-
 
     /**
      * @param cfg GAConfiguration
@@ -278,8 +281,6 @@ public class GAGrid {
         }
 
     }
-
-
 
     /**
      * Perform mutation

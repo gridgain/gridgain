@@ -68,7 +68,7 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         IgniteProductVersion updateVer,
         Set<IgniteFeatures> supportedFeatures
     ) {
-        assert enabled || !forcedModeEnabled: "Forced mode cannot be enabled if Rolling Upgrade is disabled.";
+        assert enabled || !forcedModeEnabled : "Forced mode cannot be enabled if Rolling Upgrade is disabled.";
 
         this.enabled = enabled;
         this.forcedModeEnabled = forcedModeEnabled;

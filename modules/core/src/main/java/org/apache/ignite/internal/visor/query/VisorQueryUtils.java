@@ -372,7 +372,7 @@ public class VisorQueryUtils {
         ignite.context().closure().runLocalSafe(() -> {
             IgniteLogger log = ignite.log();
 
-            try(OperationSecurityContext ignored = security.withContext(initCtx)) {
+            try (OperationSecurityContext ignored = security.withContext(initCtx)) {
                 if (log.isDebugEnabled() && security.enabled())
                     log.debug("Operation started with subject: " + security.securityContext().subject());
 
@@ -529,7 +529,7 @@ public class VisorQueryUtils {
         @Override public List<T> getAll() {
             List<T> all = new ArrayList<>();
 
-            while(it.hasNext())
+            while (it.hasNext())
                 all.add(it.next());
 
             return all;

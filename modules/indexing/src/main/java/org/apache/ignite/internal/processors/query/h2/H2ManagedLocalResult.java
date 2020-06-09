@@ -35,23 +35,61 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.calculateMe
 
 /** */
 public class H2ManagedLocalResult implements LocalResult {
+    /** */
     private Session session;
+
+    /** */
     private int visibleColumnCount;
+
+    /** */
     private Expression[] expressions;
-    private int rowId, rowCount;
+
+    /** */
+    private int rowId;
+
+    /** */
+    private int rowCount;
+
+    /** */
     private ArrayList<Value[]> rows;
+
+    /** */
     private SortOrder sort;
+
+    /** */
     private TreeMap<Value, Value[]> distinctRows;
+
+    /** */
     private Value[] currentRow;
+
+    /** */
     private int offset;
+
+    /** */
     private int limit = -1;
+
+    /** */
     private boolean fetchPercent;
+
+    /** */
     private SortOrder withTiesSortOrder;
+
+    /** */
     private boolean limitsWereApplied;
+
+    /** */
     private boolean distinct;
+
+    /** */
     private int[] distinctIndexes;
+
+    /** */
     private boolean closed;
+
+    /** */
     private boolean containsLobs;
+
+    /** */
     private Boolean containsNull;
 
     /** Disk spilling (offloading) manager. */
@@ -245,8 +283,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void reset() {
+    @Override public void reset() {
         rowId = -1;
         currentRow = null;
         if (external != null)
@@ -263,11 +300,11 @@ public class H2ManagedLocalResult implements LocalResult {
         if (!closed && rowId < rowCount) {
             rowId++;
             if (rowId < rowCount) {
-                if (external != null) {
+                if (external != null)
                     currentRow = external.next();
-                } else {
+                else
                     currentRow = rows.get(rowId);
-                }
+
                 return true;
             }
             currentRow = null;
@@ -630,7 +667,6 @@ public class H2ManagedLocalResult implements LocalResult {
     public H2MemoryTracker memoryTracker() {
         return memTracker;
     }
-
 
     /** Close event handler. */
     protected void onClose() {

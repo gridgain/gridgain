@@ -46,7 +46,7 @@ public class VectorGeneratorFamilyExample {
             .build();
 
         // Family that constructed by 45 degree rotation from previous family.
-        VectorGenerator family2 = family1.rotate(Math.PI/ 4).map(v -> v.times(1.5));
+        VectorGenerator family2 = family1.rotate(Math.PI / 4).map(v -> v.times(1.5));
 
         Tracer.showClassificationDatasetHtml("Family of ring sectors [first family]", family1.asDataStream(),
             2000, 0, 1, true);

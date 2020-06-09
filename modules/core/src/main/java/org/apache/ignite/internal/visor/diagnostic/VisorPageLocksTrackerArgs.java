@@ -31,10 +31,13 @@ import org.jetbrains.annotations.Nullable;
 public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
+
     /** */
     private Operation op;
+
     /** */
     private String filePath;
+
     /** */
     @Nullable private Set<String> nodeIds;
 
@@ -83,7 +86,7 @@ public class VisorPageLocksTrackerArgs extends IgniteDataTransferObject {
     }
 
     /** */
-    public Set<String> nodeIds(){
+    public Set<String> nodeIds() {
         return Collections.unmodifiableSet(nodeIds);
     }
 }

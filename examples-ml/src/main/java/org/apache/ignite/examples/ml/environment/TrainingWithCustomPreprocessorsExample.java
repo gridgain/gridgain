@@ -140,7 +140,7 @@ public class TrainingWithCustomPreprocessorsExample {
         @Override public LabeledVector<Double> apply(Integer key, Vector value) {
             LabeledVector<Double> baseVec = basePreprocessor.apply(key, value);
             double[] features = new double[baseVec.size() * 2];
-            for(int i = 0; i < baseVec.size(); i++) {
+            for (int i = 0; i < baseVec.size(); i++) {
                 features[i] = baseVec.get(i);
                 double logValue = Math.log(baseVec.get(i));
                 features[i + baseVec.size()] = Double.isInfinite(logValue) || Double.isNaN(logValue) ? -1. : logValue;

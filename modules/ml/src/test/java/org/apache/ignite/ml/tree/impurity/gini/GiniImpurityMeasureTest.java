@@ -79,7 +79,6 @@ public class GiniImpurityMeasureTest {
             new long[]{randCnt(rnd), randCnt(rnd), randCnt(rnd)}
         );
 
-
         GiniImpurityMeasure b = new GiniImpurityMeasure(
             new long[]{randCnt(rnd), randCnt(rnd), randCnt(rnd)},
             new long[]{randCnt(rnd), randCnt(rnd), randCnt(rnd)}
@@ -105,7 +104,6 @@ public class GiniImpurityMeasureTest {
             new long[]{randCnt(rnd), randCnt(rnd), randCnt(rnd)},
             new long[]{randCnt(rnd), randCnt(rnd), randCnt(rnd)}
         );
-
 
         GiniImpurityMeasure b = new GiniImpurityMeasure(
             new long[]{randCnt(rnd), randCnt(rnd), randCnt(rnd)},

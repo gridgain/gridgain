@@ -132,6 +132,4 @@ public class CacheIndexStreamerTest extends GridCommonAbstractTest {
 
         return ccfg;
     }
-
-
 }

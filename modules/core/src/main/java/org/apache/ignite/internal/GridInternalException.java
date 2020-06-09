@@ -53,7 +53,6 @@ public class GridInternalException extends IgniteCheckedException {
         super(cause.getMessage(), cause);
     }
 
-
     /**
      * Creates new internal exception with given error message and
      * optional nested exception.

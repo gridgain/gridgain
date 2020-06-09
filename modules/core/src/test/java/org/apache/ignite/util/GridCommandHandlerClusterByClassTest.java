@@ -133,6 +133,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** Special word for defining any char sequence from special word to the end of line in golden copy of help output */
     private static final String ANY = "<!any!>";
+
     /** Error stack trace prefix. */
     protected static final String ERROR_STACK_TRACE_PREFIX = "Error stack trace:";
 
@@ -1314,10 +1315,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         String out = testOut.toString();
 
         // Result include info by cache "default"
-        assertContains(log ,out, "[next group: id=1544803905, name=default]");
+        assertContains(log, out, "[next group: id=1544803905, name=default]");
 
         // Result include info by cache "ignite-sys-cache"
-        assertContains(log ,out, "[next group: id=-2100569601, name=ignite-sys-cache]");
+        assertContains(log, out, "[next group: id=-2100569601, name=ignite-sys-cache]");
 
         // Run distribution for all node and all cache and include additional user attribute
         assertEquals(EXIT_CODE_OK, execute("--cache", "distribution", "null", "--user-attributes", "ZONE,CELL,DC"));
@@ -1329,7 +1330,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                                 .collect(toList());
 
         int firstIndex = outLines.indexOf("[next group: id=1544803905, name=default]");
-        int lastIndex  = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
+        int lastIndex = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
 
         String dataLine = outLines.get(firstIndex + 1);
         String userArrtDataLine = outLines.get(lastIndex + 1);
