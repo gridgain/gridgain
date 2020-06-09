@@ -107,7 +107,8 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     ReliableChannel(
         Function<ClientChannelConfiguration, ClientChannel> chFactory,
         ClientConfiguration clientCfg,
-        IgniteBinary binary) throws ClientException {
+        IgniteBinary binary
+    ) throws ClientException {
         if (chFactory == null)
             throw new NullPointerException("chFactory");
 
