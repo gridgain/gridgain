@@ -564,8 +564,7 @@ public class TcpCommunicationConfiguration implements Serializable {
      * @param failureDetectionTimeout New failure detection timeout. Initialized with the value of .
      */
     public void failureDetectionTimeout(long failureDetectionTimeout) {
-        if (this.failureDetectionTimeoutEnabled) {
+        if (this.failureDetectionTimeoutEnabled)
             this.failureDetectionTimeout = failureDetectionTimeout;
-        }
     }
 }
