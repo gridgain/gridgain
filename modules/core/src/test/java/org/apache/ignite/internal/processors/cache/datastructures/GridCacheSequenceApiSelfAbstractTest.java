@@ -588,7 +588,6 @@ public abstract class GridCacheSequenceApiSelfAbstractTest extends IgniteAtomics
 
             resSet.add(val);
 
-
             if (i % 100 == 0)
                 info("Finished iteration 2: " + i);
         }

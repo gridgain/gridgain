@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -28,8 +29,11 @@ import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.h2.value.ValueInt;
+import org.h2.value.ValueString;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.rowSizeInBytes;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
 
 /**
@@ -42,8 +46,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void createSchema() {
+    @Override protected void createSchema() {
         execSql("create table T (id int primary key, ref_key int, name varchar) WITH \"PARALLELISM=4\"");
         execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar) WITH \"PARALLELISM=4\"");
         execSql("create index K_IDX on K(indexed)");
@@ -82,12 +85,23 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
         IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
-        assertEquals(10L * MB, h2.memoryManager().memoryLimit());
+        assertEquals(globalQuotaSize(), h2.memoryManager().memoryLimit());
 
         try {
+            long rowSize = rowSizeInBytes(new Object[]{ValueString.get(UUID.randomUUID().toString()),
+                ValueInt.get(512), ValueInt.get(512)});
+
+            long resSetSize = rowSize * SMALL_TABLE_SIZE;
+
+            // adjust to the size of the reservation block
+            if (resSetSize % RESERVATION_BLOCK_SIZE != 0)
+                resSetSize = (resSetSize / RESERVATION_BLOCK_SIZE + 1) * RESERVATION_BLOCK_SIZE;
+
+            int expCursorCnt = (int)(globalQuotaSize() / resSetSize);
+
             CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
-                for (int i = 0; i < 100; i++) {
-                    QueryCursor<List<?>> cur = query("select T.name, avg(T.id), sum(T.ref_key) from T GROUP BY T.name",
+                for (int i = 0; i < expCursorCnt * 2; i++) {
+                    QueryCursor<List<?>> cur = query("select T.name, 512, 512 from T ORDER BY T.name LIMIT 1000000",
                         true);
 
                     cursors.add(cur);
@@ -99,7 +113,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
                 return null;
             }, CacheException.class, "SQL query ran out of memory: Global quota was exceeded.");
 
-            assertEquals(9, cursors.size());
+            assertEquals(expCursorCnt, cursors.size());
 
             assertTrue(h2.memoryManager().memoryLimit() < h2.memoryManager().reserved() + MB);
         }
@@ -220,7 +234,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         // Local result is quite small.
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(BIG_TABLE_SIZE >  localResults.stream().mapToLong(r -> r.getRowCount()).sum());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(r -> r.getRowCount()).sum());
     }
 
     /** {@inheritDoc} */
@@ -292,7 +306,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
         assertEquals(4, localResults.size());
-        assertFalse(localResults.stream().anyMatch(r ->  + 1000 > maxMem));
+        assertFalse(localResults.stream().anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         assertTrue(8000 > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 

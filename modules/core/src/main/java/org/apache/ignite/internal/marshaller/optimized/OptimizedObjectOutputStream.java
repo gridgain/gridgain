@@ -240,7 +240,7 @@ public class OptimizedObjectOutputStream extends ObjectOutputStream {
                     else
                         desc.write(this, obj);
                 }
-                catch (IOException e){
+                catch (IOException e) {
                     throw new IOException("Failed to serialize object [typeName=" +
                         desc.describedClass().getName() + ']', e);
                 }
@@ -817,6 +817,7 @@ public class OptimizedObjectOutputStream extends ObjectOutputStream {
 
         /** Fields info. */
         private final OptimizedClassDescriptor.ClassFields curFields;
+
         /** Values. */
         private final IgniteBiTuple<OptimizedFieldType, Object>[] objs;
 

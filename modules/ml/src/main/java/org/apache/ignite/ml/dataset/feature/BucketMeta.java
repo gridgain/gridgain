@@ -50,7 +50,7 @@ public class BucketMeta implements Serializable {
      * @return Bucket id.
      */
     public int getBucketId(Double val) {
-        if(featureMeta.isCategoricalFeature())
+        if (featureMeta.isCategoricalFeature())
             return (int) Math.rint(val);
 
         return (int) Math.rint((val - minVal) / bucketSize);
@@ -63,7 +63,7 @@ public class BucketMeta implements Serializable {
      * @return Mean value of feature.
      */
     public double bucketIdToValue(int bucketId) {
-        if(featureMeta.isCategoricalFeature())
+        if (featureMeta.isCategoricalFeature())
             return (double) bucketId;
 
         return minVal + (bucketId + 0.5) * bucketSize;

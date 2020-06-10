@@ -37,7 +37,7 @@ public class GridSqlAlias extends GridSqlElement {
 
         addChild(expr);
 
-        assert !F.isEmpty(alias): alias;
+        assert !F.isEmpty(alias) : alias;
 
         this.alias = alias;
     }

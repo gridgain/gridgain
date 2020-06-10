@@ -90,7 +90,7 @@ public class ServiceThreadPoolSelfTest extends GridCommonAbstractTest {
 
     /**
      */
-    private interface MyService extends Service{
+    private interface MyService extends Service {
         /**
          * Hello!
          */

@@ -51,10 +51,10 @@ namespace Apache.Ignite.Core.Impl.Client
         /** */
         private static readonly Dictionary<ClientOp, ClientBitmaskFeature> OpFeature =
             new Dictionary<ClientOp, ClientBitmaskFeature>
-        {
-            {ClientOp.ClusterGroupGetNodesEndpoints, ClientBitmaskFeature.ClusterGroupGetNodesEndpoints}
-        };
-
+            {
+                {ClientOp.ClusterGroupGetNodesEndpoints, ClientBitmaskFeature.ClusterGroupGetNodesEndpoints},
+                {ClientOp.ComputeTaskExecute, ClientBitmaskFeature.ExecuteTaskByName}
+            };
         /** */
         private readonly ClientProtocolVersion _protocolVersion;
 
@@ -160,7 +160,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             var requiredFeature = GetFeature(operation);
 
-            if (_features != null && requiredFeature != null && !_features.Get((int) requiredFeature.Value))
+            if (requiredFeature != null && (_features == null || !_features.Get((int) requiredFeature.Value)))
             {
                 if (shouldThrow)
                 {

@@ -100,7 +100,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to support  compatibility with old version.
      */
-    private  long getCostRangeIndex_Last(int[] masks, long rowCount,
+    private long getCostRangeIndex_Last(int[] masks, long rowCount,
         TableFilter[] filters, int filter, SortOrder sortOrder,
         boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         rowCount += Constants.COST_ROW_OFFSET;

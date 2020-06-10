@@ -109,7 +109,7 @@ public class GDBOnTreesRegressionTrainerExample {
     @NotNull private static IgniteCache<Integer, double[]> fillTrainingData(Ignite ignite,
         CacheConfiguration<Integer, double[]> trainingSetCfg) {
         IgniteCache<Integer, double[]> trainingSet = ignite.getOrCreateCache(trainingSetCfg);
-        for(int i = -50; i <= 50; i++) {
+        for (int i = -50; i <= 50; i++) {
             double x = ((double)i) / 10.0;
             double y = Math.pow(x, 2);
             trainingSet.put(i, new double[] {x, y});

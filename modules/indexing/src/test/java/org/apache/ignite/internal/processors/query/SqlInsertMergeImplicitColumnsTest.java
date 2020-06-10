@@ -95,7 +95,7 @@ public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTes
      * @param sql SQL query.
      * @return Results.
      */
-    protected List<List<?>> sql(String sql)  {
+    protected List<List<?>> sql(String sql) {
         GridQueryProcessor qryProc = grid(0).context().query();
 
         SqlFieldsQuery qry = new SqlFieldsQuery(sql).setSchema("PUBLIC");

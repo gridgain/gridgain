@@ -74,7 +74,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             4, info.getAttributes().length);
 
         for (MBeanAttributeInfo attrInfo : info.getAttributes()) {
-            if (attrInfo.isWritable() == false) {
+            if (!attrInfo.isWritable()) {
                 assertTrue(attrInfo.getDescription().equals("MBeanReadonlyGetter.") ||
                     attrInfo.getDescription().equals("MBeanROGetter."));
             }

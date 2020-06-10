@@ -146,7 +146,7 @@ public class PlatformMessaging extends PlatformAbstractTarget {
     @Override public void processInStreamOutStream(int type, BinaryRawReaderEx reader, BinaryRawWriterEx writer)
         throws IgniteCheckedException {
         switch (type) {
-            case OP_REMOTE_LISTEN:{
+            case OP_REMOTE_LISTEN: {
                 writer.writeUuid(startRemoteListen(reader, messaging));
 
                 break;
@@ -200,7 +200,7 @@ public class PlatformMessaging extends PlatformAbstractTarget {
                 if (messaging.isAsync())
                     return this;
 
-                return new PlatformMessaging (platformCtx, messaging.withAsync());
+                return new PlatformMessaging(platformCtx, messaging.withAsync());
         }
 
         return super.processOutObject(type);

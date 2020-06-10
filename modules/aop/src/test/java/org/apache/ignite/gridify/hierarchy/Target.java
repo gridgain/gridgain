@@ -26,7 +26,7 @@ public class Target extends SuperTarget {
 
         String res = super.methodA();
 
-        assert "SuperTarget.methodA()".equals(res) == true :
+        assert "SuperTarget.methodA()".equals(res) :
             "Unexpected SuperTarget.methodA() apply result [res=" + res + ']';
 
         return "Target.MethodA()";
@@ -36,7 +36,7 @@ public class Target extends SuperTarget {
     @Override protected String methodB() {
         String res = super.methodB();
 
-        assert "SuperTarget.methodC()".equals(res) == true:
+        assert "SuperTarget.methodC()".equals(res) :
             "Unexpected SuperTarget.methodB() apply result [res=" + res + ']';
 
         return res;

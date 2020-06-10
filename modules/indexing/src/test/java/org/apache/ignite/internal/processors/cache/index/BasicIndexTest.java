@@ -788,7 +788,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         SqlDataType dataType,
         @Nullable String proj,
         @NotNull Object... values) {
-        assert values.length  >= 4;
+        assert values.length >= 4;
 
         if (proj == null)
             proj = "*";
@@ -883,7 +883,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
             }
 
-            {//Check OR -> IN optimization is applied.
+            { //Check OR -> IN optimization is applied.
                 final String sql = qry + "where (val = ?1 OR val = ?2) and fld = " +
                     toStringVal(val3);
 
@@ -998,7 +998,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS"));
 
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME,  "LAST_NAME", "ADDRESS"));
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
     }
 
     /**
@@ -1024,7 +1024,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS"));
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME,  "LAST_NAME", "ADDRESS"));
+        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
     }
 
     /** */
@@ -1772,7 +1772,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
      * @param args Query parameters.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
+    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
         return sql(grid(), sql, args);
     }
 
@@ -1782,7 +1782,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
      * @param args Query parameters.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
+    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setArgs(args), false);
     }
@@ -1909,9 +1909,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
     }
 
-
     /** User object converter. */
-    static class UserObject implements SqlStrConvertedValHolder{
+    static class UserObject implements SqlStrConvertedValHolder {
         /** User object. */
         private Object obj;
 

@@ -1045,7 +1045,7 @@ public abstract class GridCacheSetAbstractSelfTest extends IgniteCollectionAbstr
      * Test that non collocated sets are stored in a separated cache.
      */
     @Test
-    public void testCacheReuse()  {
+    public void testCacheReuse() {
         testCacheReuse(false);
     }
 

@@ -672,7 +672,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
                     boolean isInterrupted = Thread.interrupted();
 
                     try {
-                        while(true) {
+                        while (true) {
                             try {
                                 try (GridNearTxLocal tx = cache.txStartEx(PESSIMISTIC, REPEATABLE_READ)) {
                                     AtomicDataStructureValue val = cache.get(key);
@@ -731,7 +731,6 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
                 e.getValue().suspend();
         }
     }
-
 
     /**
      * Would return this cache to normal work if it was suspened (and if it is atomics cache).
@@ -1590,7 +1589,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         final boolean create = cfg != null;
         final boolean collocated = isCollocated(cfg);
         final boolean separated = !collocated &&
-            U.isOldestNodeVersionAtLeast(SEPARATE_CACHE_PER_NON_COLLOCATED_SET_SINCE,  ctx.grid().cluster().nodes());
+            U.isOldestNodeVersionAtLeast(SEPARATE_CACHE_PER_NON_COLLOCATED_SET_SINCE, ctx.grid().cluster().nodes());
 
         return getCollection(new CX1<GridCacheContext, IgniteSet<T>>() {
             @Override public IgniteSet<T> applyx(GridCacheContext cctx) throws IgniteCheckedException {

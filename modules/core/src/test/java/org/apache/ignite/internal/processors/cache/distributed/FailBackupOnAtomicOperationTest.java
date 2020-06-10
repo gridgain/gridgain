@@ -38,9 +38,9 @@ import org.junit.Test;
  * It shold to lead mapping issue on FULL_SYNC cache only, bacause in this case cliwnt try to map operation to nodes locally.
  */
 public class FailBackupOnAtomicOperationTest extends GridCommonAbstractTest {
-
     /** Persistence. */
     private boolean persistence = false;
+
     /** Client. */
     private static boolean client = false;
 
