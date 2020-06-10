@@ -31,15 +31,22 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.value.ValueInt;
 import org.h2.value.ValueString;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
 import org.junit.Test;
 
+import static java.util.stream.Collectors.summarizingLong;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.rowSizeInBytes;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
+import static org.junit.Assert.assertThat;
 
 /**
  * Query memory manager for local queries.
  */
 public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQueryMemoryTrackerSelfTest {
+    /** Parallelism. */
+    private static final int PARALLELISM = 4;
+
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return true;
@@ -47,8 +54,10 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
     /** {@inheritDoc} */
     @Override protected void createSchema() {
-        execSql("create table T (id int primary key, ref_key int, name varchar) WITH \"PARALLELISM=4\"");
-        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar) WITH \"PARALLELISM=4\"");
+        execSql("create table T (id int primary key, ref_key int, name varchar)" +
+            " WITH \"PARALLELISM=" + PARALLELISM +"\"");
+        execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar)" +
+            " WITH \"PARALLELISM=" + PARALLELISM + "\"");
         execSql("create index K_IDX on K(indexed)");
         execSql("create index K_GRP_IDX on K(grp_indexed)");
     }
@@ -301,13 +310,21 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithHighLimit() {
-        maxMem = 2 * MB;
+        long rowSize = rowSizeInBytes(new Object[]{ValueInt.get(1), ValueInt.get(1),
+            ValueInt.get(1), ValueString.get(UUID.randomUUID().toString())});
 
-        checkQueryExpectOOM("select * from K LIMIT 8000", false);
+        long rowCntPerSegment = BIG_TABLE_SIZE / PARALLELISM;
 
-        assertEquals(4, localResults.size());
-        assertFalse(localResults.stream().anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
-        assertTrue(8000 > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
+        // there should be enough memory for (PARALLELISM - 1) and a half segments
+        maxMem = (long)(rowSize * rowCntPerSegment * (1.0 * PARALLELISM - 0.5));
+
+        checkQueryExpectOOM("select 1, 1, 1, name from K LIMIT 8000", false);
+
+        assertEquals(PARALLELISM, localResults.size());
+
+        long rowsRetrieved = localResults.stream().collect(summarizingLong(H2ManagedLocalResult::getRowCount)).getSum();
+
+        assertThat(rowsRetrieved, inRange(rowCntPerSegment * (PARALLELISM - 1), rowCntPerSegment * PARALLELISM));
     }
 
     /** {@inheritDoc} */
@@ -383,5 +400,19 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         assertEquals(1, localResults.size());
         assertEquals(0, localResults.get(0).memoryReserved());
         assertEquals(0, localResults.get(0).getRowCount());
+    }
+
+    /**
+     * @param lowerBound Lower bound.
+     * @param upperBound Upper bound.
+     */
+    private static <T extends Comparable<? super T>> Matcher<T> inRange(T lowerBound, T upperBound) {
+        return new CustomMatcher<T>("should be in range [" + lowerBound + ", " + upperBound + "]") {
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            @Override public boolean matches(Object item) {
+                return lowerBound != null && upperBound != null && item instanceof Comparable
+                    && ((Comparable)item).compareTo(lowerBound) >= 0 && ((Comparable)item).compareTo(upperBound) <= 0;
+            }
+        };
     }
 }
