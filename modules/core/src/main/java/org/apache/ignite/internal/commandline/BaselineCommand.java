@@ -54,6 +54,8 @@ import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommand
 public class BaselineCommand implements Command<BaselineArguments> {
     /** Arguments. */
     private BaselineArguments baselineArgs;
+    /** Cluster name. */
+    private String clusterName;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
@@ -77,9 +79,16 @@ public class BaselineCommand implements Command<BaselineArguments> {
     }
 
     /** {@inheritDoc} */
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg)) {
+            clusterName = getClusterName(client.state());
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
         if (baselineArgs != null && BaselineSubcommands.COLLECT != baselineArgs.getCmd())
-            return "Warning: the command will perform changes in baseline.";
+            return "Warning: the command will perform changes in cluster \"" + clusterName + "\" baseline.";
 
         return null;
     }
