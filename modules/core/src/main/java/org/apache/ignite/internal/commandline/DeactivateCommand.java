@@ -62,6 +62,8 @@ public class DeactivateCommand implements Command<Void> {
             printClusterInfoBanner(state, logger);
 
             state.active(false);
+
+            logger.info("Cluster deactivated");
         }
         catch (Exception e) {
             logger.severe("Failed to deactivate cluster.");

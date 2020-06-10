@@ -66,7 +66,6 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
         Set<String> nodeIds = arguments.nodeIds;
 
-        String clusterInfo;
         Map<ClusterNode, VisorPageLocksResult> res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
