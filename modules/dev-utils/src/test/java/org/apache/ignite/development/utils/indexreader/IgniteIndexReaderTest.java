@@ -204,7 +204,9 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * Filling node with data.
      *
      * @param node Node.
-     * @param insert {@code True} if only insert data, {@code false} if delete from {@link #DEFAULT_CACHE_NAME} and {@code null} all at once.
+     * @param insert {@code True} for inserting some data and creating tables and indexes,
+     *      {@code false} for inserting, updating and deleting data and deleting indexes, {@code null} for all data processing.
+     * {@code True} if only insert data, {@code false} if delete from {@link #DEFAULT_CACHE_NAME} and {@code null} all at once.
      * @throws Exception If fails.
      */
     protected void populateData(IgniteEx node, @Nullable Boolean insert) throws Exception {
@@ -215,15 +217,19 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         if (!cluster.active())
             cluster.active(true);
 
-        if (isNull(insert) || insert) {
-            IgniteCache<Integer, Object> qryCache = node.cache(QUERY_CACHE_NAME);
+        IgniteCache<Integer, Object> qryCache = node.cache(QUERY_CACHE_NAME);
 
-            for (int i = 0; i < 100; i++)
-                qryCache.put(i, new TestClass1(i, valueOf(i)));
+        int s = isNull(insert) || insert ? 0 : 70;
+        int e = isNull(insert) || !insert ? 100 : 80;
 
-            for (int i = 0; i < 70; i++)
-                qryCache.put(i, new TestClass2(i, valueOf(i)));
-        }
+        for (int i = s; i < e; i++)
+            qryCache.put(i, new TestClass1(i, valueOf(i)));
+
+        s = isNull(insert) || insert ? 0 : 50;
+        e = isNull(insert) || !insert ? 70 : 60;
+
+        for (int i = s; i < e; i++)
+            qryCache.put(i, new TestClass2(i, valueOf(i)));
 
         IgniteCache<Integer, Integer> cache = node.cache(DEFAULT_CACHE_NAME);
 
@@ -371,18 +377,19 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * Creates an sql table, indexes and fill it with some data.
      *
      * @param cache Ignite cache.
-     * @param insert {@code True} if only insert data, {@code false} if delete and {@code null} all at once.
+     * @param insert {@code True} for inserting some data and creating tables and indexes,
+     *      {@code false} for inserting, updating and deleting data and deleting indexes, {@code null} for all data processing.
      * @param info Table info.
      */
     private static void createAndFillTable(IgniteCache cache, TableInfo info, @Nullable Boolean insert) {
         String idxToDelName = info.tblName + "_idx_to_delete";
 
+        List<IgnitePair<String>> fields = fields(info.fieldsCnt);
+        List<IgnitePair<String>> idxs = idxs(info.tblName, fields);
+
+        String strFields = fields.stream().map(f -> f.get1() + " " + f.get2()).collect(joining(", "));
+
         if (isNull(insert) || insert) {
-            List<IgnitePair<String>> fields = fields(info.fieldsCnt);
-            List<IgnitePair<String>> idxs = idxs(info.tblName, fields);
-
-            String strFields = fields.stream().map(f -> f.get1() + " " + f.get2()).collect(joining(", "));
-
             query(
                 cache,
                 "create table " + info.tblName + " (id integer primary key, " + strFields + ") with " +
@@ -393,17 +400,26 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                 query(cache, format("create index %s on %s (%s)", idx.get1(), info.tblName, idx.get2()));
 
             query(cache, format("create index %s on %s (%s)", idxToDelName, info.tblName, fields.get(0).get1()));
+        }
 
-            for (int i = 0; i < info.rec; i++)
-                insertQuery(cache, info.tblName, fields, i);
+        int s = isNull(insert) || insert ? 0 : info.rec - 10;
+        int e = isNull(insert) || !insert ? info.rec : info.rec - 10;
+
+        for (int i = s; i < e; i++)
+            insertQuery(cache, info.tblName, fields, i);
+
+        if (nonNull(insert) && !insert) {
+            for (int i = s - 10; i < s; i++)
+                updateQuery(cache, info.tblName, fields, i);
         }
 
         if (isNull(insert) || !insert) {
             for (int i = info.rec - info.del; i < info.rec; i++)
                 query(cache, "delete from " + info.tblName + " where id = " + i);
-
-            query(cache, "drop index " + idxToDelName);
         }
+
+        if (isNull(insert) || !insert)
+            query(cache, "drop index " + idxToDelName);
     }
 
     /**
@@ -425,6 +441,32 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < fields.size() + 1; i++)
             paramVals[i] = (i % 2 == 0) ? cntr : valueOf(cntr);
+
+        query(cache, q.toString(), paramVals);
+    }
+
+    /**
+     * Performs an update query.
+     *
+     * @param cache Ignite cache.
+     * @param tblName Table name.
+     * @param fields List of fields.
+     * @param cntr Counter which is used to generate data.
+     */
+    private static void updateQuery(IgniteCache cache, String tblName, List<IgnitePair<String>> fields, int cntr) {
+        GridStringBuilder q = new GridStringBuilder().a("update ").a(tblName).a(" set ")
+            .a(fields.stream().map(IgniteBiTuple::get1).collect(joining("=?, ", "", "=?")))
+            .a(" where id=?");
+
+        Object[] paramVals = new Object[fields.size() + 1];
+
+        for (int i = 0; i < fields.size() + 1; i++)
+            paramVals[i] = (i % 2 == 0) ? cntr : valueOf(cntr);
+
+        Object id = paramVals[0];
+
+        paramVals[0] = paramVals[paramVals.length - 1];
+        paramVals[paramVals.length - 1] = id;
 
         query(cache, q.toString(), paramVals);
     }
