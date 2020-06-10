@@ -60,14 +60,15 @@ public class MetadataCommand implements Command<Object> {
         );
 
         usage(log, "Prints detailed info about specified binary type " +
-                "(the type must be specified by type name or by type ID):",
+                "(the type must be specified by type name or by type identifier):",
             METADATA,
             DETAILS.toString(),
             optional(MetadataTypeArgs.OPT_TYPE_ID, "<typeId>"),
             optional(MetadataTypeArgs.OPT_TYPE_NAME, "<typeName>")
         );
 
-        usage(log, "Removes the metadata of the specified type from cluster and saves the removed " +
+        usage(log, "Removes the metadata of the specified type " +
+                "(the type must be specified by type name or by type identifier) from cluster and saves the removed " +
                 "metadata to the specified file. \n" +
                 "If the file name isn't specified the output file name is: '<typeId>.bin'",
             METADATA,

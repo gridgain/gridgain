@@ -384,20 +384,21 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
     /**
      * Compose connection description string.
-     * @param ses client NIO session.
-     * @param ctx client connection context.
-     * @return connection description
+     * @param ses Client's NIO session.
+     * @param ctx Client's connection context.
+     * @return connection description.
      */
     @SuppressWarnings("StringConcatenationInsideStringBufferAppend")
     private static String clientConnectionDescription(
         GridNioSession ses,
-        ClientListenerConnectionContext ctx)
+        ClientListenerConnectionContext ctx
+    )
     {
         AuthorizationContext authCtx = ctx.authorizationContext();
 
         StringBuilder sb = new StringBuilder();
 
-        if(ctx instanceof JdbcConnectionContext)
+        if (ctx instanceof JdbcConnectionContext)
             sb.append("JdbcClient [");
         else if (ctx instanceof OdbcConnectionContext)
             sb.append("OdbcClient [");
@@ -413,8 +414,17 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
         String rmtAddrStr = rmtAddr.getHostString() + ":" + rmtAddr.getPort();
         String locAddrStr = locAddr.getHostString() + ":" + locAddr.getPort();
 
+        String login;
+
+        if (authCtx != null)
+            login = authCtx.userName();
+        else if (ctx.securityContext() != null)
+            login = "@" + ctx.securityContext().subject().login();
+        else
+            login = "<anonymous>";
+
         sb.append("id=" + ctx.connectionId());
-        sb.append(", user=").append(authCtx == null ? "<anonymous>" : authCtx.userName());
+        sb.append(", user=").append(login);
         sb.append(", rmtAddr=" + rmtAddrStr);
         sb.append(", locAddr=" + locAddrStr);
 

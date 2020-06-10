@@ -282,7 +282,8 @@ public class TcpIgniteClient implements IgniteClient {
         private BinaryMetadataHandler cache = BinaryCachingMetadataHandler.create();
 
         /** {@inheritDoc} */
-        @Override public void addMeta(int typeId, BinaryType meta, boolean failIfUnregistered) throws BinaryObjectException {
+        @Override public synchronized void addMeta(int typeId, BinaryType meta, boolean failIfUnregistered)
+            throws BinaryObjectException {
             if (cache.metadata(typeId) == null) {
                 try {
                     ch.request(
@@ -299,7 +300,7 @@ public class TcpIgniteClient implements IgniteClient {
         }
 
         /** {@inheritDoc} */
-        @Override public BinaryType metadata(int typeId) throws BinaryObjectException {
+        @Override public synchronized BinaryType metadata(int typeId) throws BinaryObjectException {
             BinaryType meta = cache.metadata(typeId);
 
             if (meta == null) {
@@ -316,7 +317,7 @@ public class TcpIgniteClient implements IgniteClient {
         }
 
         /** {@inheritDoc} */
-        @Override public BinaryMetadata metadata0(int typeId) throws BinaryObjectException {
+        @Override public synchronized BinaryMetadata metadata0(int typeId) throws BinaryObjectException {
             BinaryMetadata meta = cache.metadata0(typeId);
 
             if (meta == null) {
@@ -343,21 +344,21 @@ public class TcpIgniteClient implements IgniteClient {
         }
 
         /** {@inheritDoc} */
-        @Override public BinaryType metadata(int typeId, int schemaId) throws BinaryObjectException {
+        @Override public synchronized BinaryType metadata(int typeId, int schemaId) throws BinaryObjectException {
             BinaryType meta = metadata(typeId);
 
             return meta != null && ((BinaryTypeImpl)meta).metadata().hasSchema(schemaId) ? meta : null;
         }
 
         /** {@inheritDoc} */
-        @Override public Collection<BinaryType> metadata() throws BinaryObjectException {
+        @Override public synchronized Collection<BinaryType> metadata() throws BinaryObjectException {
             return cache.metadata();
         }
 
         /**
          * Clear local cache on reconnect.
          */
-        void onReconnect() {
+        synchronized void onReconnect() {
             cache = BinaryCachingMetadataHandler.create();
         }
     }

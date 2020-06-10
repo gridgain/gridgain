@@ -894,7 +894,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /**
-     * @return Custer binary metadata.
+     * @return Cluster binary metadata.
      * @throws BinaryObjectException on error.
      */
     public Collection<BinaryMetadata> binaryMetadata() throws BinaryObjectException {
