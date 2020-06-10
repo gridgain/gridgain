@@ -58,6 +58,7 @@ public interface Command<T> {
      */
     default void printClusterInfoBanner(GridClientClusterState clientCfg, Logger logger){
         String clusterName = getClusterName(clientCfg);
+
         if (clusterName != null) {
             logger.info(CommandHandler.DELIM);
             logger.info("Cluster \"" + clusterName + "\"");
