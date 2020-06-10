@@ -172,7 +172,6 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
     /**
      * @param res Result.
-     * @param clusterInfo
      */
     private void printResult(Map<ClusterNode, VisorPageLocksResult> res) {
         res.forEach((n, res0) -> {
