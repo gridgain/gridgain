@@ -57,10 +57,11 @@ public class ResetLostPartitions implements Command<Set<String>> {
         CacheResetLostPartitionsTaskArg taskArg = new CacheResetLostPartitionsTaskArg(caches);
 
         try (GridClient client = Command.startClient(clientCfg)) {
+            printClusterInfoBanner(client.state(), logger);
+
             CacheResetLostPartitionsTaskResult res =
                 executeTaskByNameOnNode(client, CacheResetLostPartitionsTask.class.getName(), taskArg, null, clientCfg);
 
-            printClusterInfoBanner(client.state(), logger);
             res.print(System.out);
 
             return res;

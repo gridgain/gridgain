@@ -214,10 +214,11 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         );
 
         try (GridClient client = Command.startClient(clientCfg)) {
+            printClusterInfoBanner(client.state(), logger);
+
             VisorValidateIndexesTaskResult taskRes = executeTaskByNameOnNode(
                 client, "org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask", taskArg, null, clientCfg);
 
-            printClusterInfoBanner(client.state(), logger);
 
             boolean errors = CommandLogger.printErrors(taskRes.exceptions(), "Index validation failed on nodes:", logger);
 

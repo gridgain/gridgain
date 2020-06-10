@@ -123,8 +123,9 @@ public class CacheDistribution implements Command<CacheDistribution.Arguments> {
         CacheDistributionTaskResult res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            res = executeTaskByNameOnNode(client, CacheDistributionTask.class.getName(), taskArg, nodeId, clientCfg);
             printClusterInfoBanner(client.state(), logger);
+
+            res = executeTaskByNameOnNode(client, CacheDistributionTask.class.getName(), taskArg, nodeId, clientCfg);
         }
 
         CommandLogger.printErrors(res.exceptions(), "Cache distrubution task failed on nodes:", logger);

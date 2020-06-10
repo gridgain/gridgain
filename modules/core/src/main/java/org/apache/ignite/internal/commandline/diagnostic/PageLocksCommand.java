@@ -70,6 +70,8 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
         Map<ClusterNode, VisorPageLocksResult> res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
+            printClusterInfoBanner(client.state(), logger);
+
             if (arguments.allNodes) {
                 client.compute().nodes().forEach(n -> {
                     nodeIds.add(String.valueOf(n.consistentId()));
@@ -85,8 +87,6 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
                 taskArg,
                 clientCfg
             );
-
-            printClusterInfoBanner(client.state(), logger);
         }
 
         printResult(res);

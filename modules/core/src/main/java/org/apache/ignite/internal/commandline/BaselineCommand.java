@@ -92,6 +92,8 @@ public class BaselineCommand implements Command<BaselineArguments> {
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
+            printClusterInfoBanner(client.state(), logger);
+
             UUID coordinatorId = client.compute()
                 //Only non client node can be coordinator.
                 .nodes(node -> !node.isClient())
@@ -108,7 +110,6 @@ public class BaselineCommand implements Command<BaselineArguments> {
                 clientCfg
             );
 
-            printClusterInfoBanner(client.state(), logger);
             baselinePrint0(res, logger);
         }
         catch (Throwable e) {

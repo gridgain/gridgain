@@ -168,6 +168,8 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
         VisorViewCacheTaskResult res;
 
         try (GridClient client = Command.startClient(clientCfg)) {
+            printClusterInfoBanner(client.state(), logger);
+
             res = TaskExecutor.executeTaskByNameOnNode(
                 client,
                 VisorViewCacheTask.class.getName(),
@@ -175,8 +177,6 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
                 args.nodeId(),
                 clientCfg
             );
-
-            printClusterInfoBanner(client.state(), logger);
 
             if (args.fullConfig() && args.cacheCommand() == CACHES)
                 cachesConfig(client, args, res, clientCfg, logger);

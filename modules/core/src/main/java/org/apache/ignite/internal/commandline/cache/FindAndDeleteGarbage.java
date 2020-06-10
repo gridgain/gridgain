@@ -121,10 +121,10 @@ public class FindAndDeleteGarbage implements Command<FindAndDeleteGarbage.Argume
         );
 
         try (GridClient client = Command.startClient(clientCfg)) {
+            printClusterInfoBanner(client.state(), logger);
+
             VisorFindAndDeleteGarbageInPersistenceTaskResult taskRes = executeTask(
                 client, VisorFindAndDeleteGarbageInPersistenceTask.class, taskArg, clientCfg);
-
-            printClusterInfoBanner(client.state(), logger);
 
             CommandLogger.printErrors(taskRes.exceptions(), "Scanning for garbage failed on nodes:", logger);
 
