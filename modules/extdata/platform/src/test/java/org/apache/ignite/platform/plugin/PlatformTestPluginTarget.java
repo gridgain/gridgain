@@ -224,9 +224,8 @@ class PlatformTestPluginTarget implements PlatformTarget {
     private PlatformTestPluginConfiguration configuration(IgniteConfiguration igniteCfg) {
         if (igniteCfg.getPluginConfigurations() != null) {
             for (PluginConfiguration pluginCfg : igniteCfg.getPluginConfigurations()) {
-                if (pluginCfg instanceof PlatformTestPluginConfiguration) {
+                if (pluginCfg instanceof PlatformTestPluginConfiguration)
                     return (PlatformTestPluginConfiguration) pluginCfg;
-                }
             }
         }
 
