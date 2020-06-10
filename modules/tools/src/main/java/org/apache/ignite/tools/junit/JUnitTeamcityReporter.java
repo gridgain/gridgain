@@ -146,7 +146,9 @@ public class JUnitTeamcityReporter extends RunListener {
             if (failure.getException() != null && failure.getException().getMessage() != null)
                 curXmlStream.writeAttribute("type", failure.getException().getMessage());
 
-            curXmlStream.writeCData(failure.getMessage());
+            if (failure.getMessage() != null)
+                curXmlStream.writeCData(failure.getMessage());
+
             curXmlStream.writeEndElement();
 
             if (failure.getException() != null) {
@@ -169,7 +171,7 @@ public class JUnitTeamcityReporter extends RunListener {
         try {
             curXmlStream.writeStartElement("skipped");
 
-            if (annotation != null && annotation.value() != null)
+            if (annotation != null)
                 curXmlStream.writeAttribute("message", annotation.value());
 
             curXmlStream.writeEndElement();
