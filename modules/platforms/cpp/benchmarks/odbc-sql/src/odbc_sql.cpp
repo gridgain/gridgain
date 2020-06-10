@@ -36,6 +36,16 @@ struct Person
     SQLDOUBLE salary;
 };
 
+std::ostream& operator<<(std::ostream& os, const Person& val)
+{
+    std::string firstName(reinterpret_cast<const char*>(val.firstName.buffer), static_cast<size_t>(val.firstName.reallen));
+    std::string lastName(reinterpret_cast<const char*>(val.firstName.buffer), static_cast<size_t>(val.firstName.reallen));
+
+    os << "[id=" << val.id << ",orgId=" << val.orgId << ",firstName=" << firstName << ",lastName=" << lastName << ",salary=" << val.salary << ']';
+
+    return os;
+}
+
 class OdbcSqlBenchmark : public odbc_benchmark
 {
 public:
@@ -90,13 +100,15 @@ public:
         {
             std::stringstream query;
             query << "INSERT INTO " << fullTableName << " "
-                     "(id, firstName, lastName, salary) "
-                     "VALUES (" << i << ", 'firstName" << i << "', 'lastName" << i << "', " << i * 1000 << ')';
+                     "(_key, id, firstName, lastName, salary) "
+                     "VALUES (" << i << ", " << i << ", 'firstName" << i << "', 'lastName" << i << "', " << i * 1000 << ')';
 
             odbc_utils::ExecuteNoFetch(dbc, query.str());
         }
 
-        std::string selectQuery0 = "SELECT id, ordIg, firstName, lastName, salary "
+        std::cout << "Done" << std::endl;
+
+        std::string selectQuery0 = "SELECT id, orgId, firstName, lastName, salary "
                                    "FROM " + fullTableName + " "
                                    "WHERE salary >= ? and salary <= ?";
 
@@ -118,7 +130,7 @@ public:
             if (it->salary < salary || it->salary > maxSalary)
             {
                 std::stringstream msg;
-                msg << "Invalid person retrieved [min=" << salary << ", max=" << maxSalary << ", persons=" << it->salary << ']';
+                msg << "Invalid person retrieved [min=" << salary << ", max=" << maxSalary << ", person=" << *it << ']';
 
                 throw std::runtime_error(msg.str());
             }
@@ -133,31 +145,38 @@ public:
         ret = SQLBindParameter(stmt, 2, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &maxSalary, 0, 0);
         odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 2nd param");
 
-        ret = SQLExecute(stmt);
+        ret = SQLExecDirect(stmt, &selectQuery[0], selectQuery.size());
         odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to execute query");
 
         persons.clear();
-        while (ret != SQL_NO_DATA)
+        while (true)
         {
             persons.resize(persons.size() + 1);
             Person& current = persons.back();
 
-            ret = SQLBindCol(stmt, 1, SQL_C_SLONG, &current.id, 0, 0);
-            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 1st collumn");
+//            ret = SQLBindCol(stmt, 1, SQL_C_SLONG, &current.id, 0, 0);
+//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 1st collumn");
 
-            ret = SQLBindCol(stmt, 2, SQL_C_SLONG, &current.orgId, 0, 0);
-            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 2nd collumn");
+//            ret = SQLBindCol(stmt, 2, SQL_C_SLONG, &current.orgId, 0, 0);
+//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 2nd collumn");
 
-            ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &current.firstName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.firstName.reallen);
-            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 3rd collumn");
+//            ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &current.firstName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.firstName.reallen);
+//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 3rd collumn");
 
-            ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &current.lastName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.lastName.reallen);
-            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 4th collumn");
+//            ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &current.lastName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.lastName.reallen);
+//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 4th collumn");
 
             ret = SQLBindCol(stmt, 5, SQL_C_DOUBLE, &current.salary, 0, 0);
             odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 5th collumn");
 
             ret = SQLFetch(stmt);
+            if (ret == SQL_NO_DATA)
+            {
+                persons.pop_back();
+
+                break;
+            }
+
             odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to fetch row");
         }
 

@@ -49,6 +49,8 @@ OutType get_env_var(const std::string& name)
     if (!var)
         throw std::runtime_error("Environment variable '" + name + "' is not set");
 
+    std::cout << name << "=" << var << std::endl;
+
     return lexical_cast<OutType>(var);
 }
 
@@ -58,7 +60,13 @@ OutType get_env_var(const std::string& name, OutType dflt)
     char* var = std::getenv(name.c_str());
 
     if (!var)
+    {
+        std::cout << name << "=" << dflt << std::endl;
+
         return dflt;
+    }
+
+    std::cout << name << "=" << var << std::endl;
 
     return lexical_cast<OutType>(var);
 }
@@ -168,7 +176,6 @@ public:
 
             auto now = steady_clock::now();
             auto begin = now;
-
             while (now - begin < seconds(duration_secs))
             {
                 int32_t secsPassed = duration_cast<seconds>(now - begin).count();
