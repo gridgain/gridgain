@@ -252,7 +252,7 @@ public class JdbcThinConnection implements Connection {
     private final BinaryContext ctx;
 
     /** Binary metadata handler. */
-    private JdbcBinaryMetadataHandler metaHnd;
+    private volatile JdbcBinaryMetadataHandler metaHnd;
 
     /** Marshaller context. */
     private final JdbcMarshallerContext marshCtx;
