@@ -73,7 +73,7 @@ public class ClusterChangeTagCommand implements Command<String> {
                 logger.warning("Error has occurred during tag update: " + res.errorMessage());
         }
         catch (Throwable e) {
-            logger.severe("FDeactivateCommand.java ailed to execute Cluster ID and tag command: ");
+            logger.severe("Failed to execute Cluster ID and tag command: ");
             logger.severe(CommandLogger.errorMessage(e));
 
             throw e;
