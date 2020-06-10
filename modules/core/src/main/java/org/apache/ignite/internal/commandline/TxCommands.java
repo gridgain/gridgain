@@ -69,6 +69,9 @@ public class TxCommands implements Command<VisorTxTaskArg> {
     /** Logger. */
     private Logger logger;
 
+    /** Cluster name. */
+    private String clusterName;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         Command.usage(logger, "List or kill transactions:", TX, getTxOptions());
@@ -190,9 +193,16 @@ public class TxCommands implements Command<VisorTxTaskArg> {
     }
 
     /** {@inheritDoc} */
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg)) {
+            clusterName = getClusterName(client.state());
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
         if (args != null && args.getOperation() == VisorTxOperation.KILL)
-            return "Warning: the command will kill some transactions.";
+            return "Warning: the command will kill some transactions. Cluster : \"" + clusterName + "\"";
 
         return null;
     }

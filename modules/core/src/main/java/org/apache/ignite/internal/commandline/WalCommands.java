@@ -65,6 +65,9 @@ public class WalCommands implements Command<T2<String, String>> {
      */
     private String walArgs;
 
+    /** Cluster name. */
+    private String clusterName;
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
         if (!experimentalEnabled())
@@ -111,9 +114,16 @@ public class WalCommands implements Command<T2<String, String>> {
     }
 
     /** {@inheritDoc} */
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg)) {
+            clusterName = getClusterName(client.state());
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
         if (WAL_DELETE.equals(walAct))
-            return "Warning: the command will delete unused WAL segments.";
+            return "Warning: the command will delete unused WAL segments. Cluster \"" + clusterName + "\"";
 
         return null;
     }
