@@ -41,6 +41,12 @@ TO lexical_cast(const TI& in)
     return out;
 }
 
+template<>
+std::string lexical_cast(const std::string& in)
+{
+    return in;
+}
+
 template<typename OutType = std::string>
 OutType get_env_var(const std::string& name)
 {
@@ -49,9 +55,10 @@ OutType get_env_var(const std::string& name)
     if (!var)
         throw std::runtime_error("Environment variable '" + name + "' is not set");
 
-    std::cout << name << "=" << var << std::endl;
+    std::string varStr(var);
+    std::cout << name << "=" << varStr << std::endl;
 
-    return lexical_cast<OutType>(var);
+    return lexical_cast<OutType>(varStr);
 }
 
 template<typename OutType = std::string>
@@ -66,9 +73,10 @@ OutType get_env_var(const std::string& name, OutType dflt)
         return dflt;
     }
 
-    std::cout << name << "=" << var << std::endl;
+    std::string varStr(var);
+    std::cout << name << "=" << varStr << std::endl;
 
-    return lexical_cast<OutType>(var);
+    return lexical_cast<OutType>(varStr);
 }
 
 } // namespace utils

@@ -24,6 +24,10 @@ RUN libtoolize && \
     make -j8 && \
     make install
 
+WORKDIR /usr/src/ignite_cpp/odbc/install
+
+RUN odbcinst -i -d -f ./ignite-odbc-install.ini -v
+
 WORKDIR /usr/src/ignite_cpp/benchmarks
 
 RUN libtoolize && \
@@ -31,6 +35,17 @@ RUN libtoolize && \
     autoheader && \
     automake --add-missing && \
     autoreconf && \
-    ./configure --disable-core --disable-thin-client --disable-node --disable-tests --enable-odbc && \
+    ./configure && \
     make -j8
 
+ENV CONNECTION_STRING="DRIVER={Apache Ignite};ADDRESS=127.0.0.1"
+ENV WARMUP=0
+ENV DURATION=120
+ENV CACHE_NAME=PUBLIC
+ENV CACHE_RANGE=0-10000
+
+WORKDIR /usr/src/ignite_cpp/benchmarks/odbc-sql
+
+RUN ls -lha
+
+ENTRYPOINT ["./ignite-odbc-sql-benchmark"]

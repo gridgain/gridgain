@@ -154,17 +154,17 @@ public:
             persons.resize(persons.size() + 1);
             Person& current = persons.back();
 
-//            ret = SQLBindCol(stmt, 1, SQL_C_SLONG, &current.id, 0, 0);
-//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 1st collumn");
+            ret = SQLBindCol(stmt, 1, SQL_C_SLONG, &current.id, 0, 0);
+            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 1st collumn");
 
-//            ret = SQLBindCol(stmt, 2, SQL_C_SLONG, &current.orgId, 0, 0);
-//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 2nd collumn");
+            ret = SQLBindCol(stmt, 2, SQL_C_SLONG, &current.orgId, 0, 0);
+            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 2nd collumn");
 
-//            ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &current.firstName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.firstName.reallen);
-//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 3rd collumn");
+            ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &current.firstName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.firstName.reallen);
+            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 3rd collumn");
 
-//            ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &current.lastName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.lastName.reallen);
-//            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 4th collumn");
+            ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &current.lastName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.lastName.reallen);
+            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 4th collumn");
 
             ret = SQLBindCol(stmt, 5, SQL_C_DOUBLE, &current.salary, 0, 0);
             odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 5th collumn");
