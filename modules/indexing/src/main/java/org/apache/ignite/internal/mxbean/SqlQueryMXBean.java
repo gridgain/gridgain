@@ -127,7 +127,7 @@ public interface SqlQueryMXBean {
         "quota is an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
         "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
         "heavy analytics query.")
-    String getSqlGlobalMemoryQuota();
+    long getSqlGlobalMemoryQuota();
 
     /**
      * Sets global query quota.
@@ -142,7 +142,7 @@ public interface SqlQueryMXBean {
     @MXBeanParametersDescriptions("Size of global memory pool for SQL queries in bytes. Can be followed by the" +
         "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
         "For example:  '1000', '10M', '100k', '1G', '70%'")
-    void setSqlGlobalMemoryQuota(String size);
+    void setSqlGlobalMemoryQuota(long size);
 
     /**
      * Gets global query quota.
@@ -153,7 +153,7 @@ public interface SqlQueryMXBean {
         " an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
         "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
         "heavy analytics query.")
-    String getSqlQueryMemoryQuota();
+    long getSqlQueryMemoryQuota();
 
     /**
      * Sets per-query memory quota.
@@ -170,7 +170,7 @@ public interface SqlQueryMXBean {
     @MXBeanParametersDescriptions("Size of per-query memory pool for SQL queries in bytes. Can be followed by the" +
         "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
         "For example:  '1000', '10M', '100k', '1G', '70%'")
-    void setSqlQueryMemoryQuota(String size);
+    void setSqlQueryMemoryQuota(long size);
 
     /**
      * Gets offloading flag.

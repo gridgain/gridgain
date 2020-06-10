@@ -16,8 +16,10 @@
 
 package org.apache.ignite.internal.mxbean;
 
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.resources.LoggerResource;
 
 /**
  * QueryMXBean implementation.
@@ -25,6 +27,11 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     /** */
     private final IgniteH2Indexing h2idx;
+
+    /** Logger. */
+    @LoggerResource
+    private IgniteLogger log;
+
 
     /**
      * @param ctx Context.
@@ -73,24 +80,41 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
         h2idx.longRunningQueries().setResultSetSizeThresholdMultiplier(rsSizeThresholdMultiplier);
     }
 
-    /** {@inheritDoc} */
-    @Override public String getSqlGlobalMemoryQuota() {
-        return h2idx.memoryManager().getGlobalQuota();
+    /** {@inheritDoc}
+     * @return*/
+    @Override public long getSqlGlobalMemoryQuota() {
+         Long globalQuota = 0L;
+        try {
+            globalQuota = Long.parseLong(h2idx.memoryManager().getGlobalQuota());
+        } catch (NumberFormatException e) {
+            log.error("error parsing sqlGloalMemoryQuota", e);
+        }
+        return globalQuota;
     }
 
-    /** {@inheritDoc} */
-    @Override public void setSqlGlobalMemoryQuota(String size) {
-        h2idx.memoryManager().setGlobalQuota(size);
+    /** {@inheritDoc}
+     * @param size*/
+    @Override public void setSqlGlobalMemoryQuota(long size) {
+        h2idx.memoryManager().setGlobalQuota(Long.valueOf(size).toString());
     }
 
-    /** {@inheritDoc} */
-    @Override public String getSqlQueryMemoryQuota() {
-        return h2idx.memoryManager().getQueryQuotaString();
+    /** {@inheritDoc}
+     * @return*/
+    @Override public long getSqlQueryMemoryQuota() {
+        Long sqlMemoryQuota = 0L;
+        try {
+            sqlMemoryQuota = Long.parseLong(h2idx.memoryManager().getQueryQuotaString());
+        } catch (NumberFormatException e) {
+            log.error("error parsing SqlQueryMemoryQuota", e);
+        }
+
+        return sqlMemoryQuota;
     }
 
-    /** {@inheritDoc} */
-    @Override public void setSqlQueryMemoryQuota(String size) {
-        h2idx.memoryManager().setQueryQuota(size);
+    /** {@inheritDoc}
+     * @param size*/
+    @Override public void setSqlQueryMemoryQuota(long size) {
+        h2idx.memoryManager().setQueryQuota(Long.valueOf(size).toString());
     }
 
     /** {@inheritDoc} */
