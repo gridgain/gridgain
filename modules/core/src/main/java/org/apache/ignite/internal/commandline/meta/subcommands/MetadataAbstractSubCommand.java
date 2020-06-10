@@ -32,8 +32,8 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 /** */
 public abstract class MetadataAbstractSubCommand<
     MetadataArgsDto extends IgniteDataTransferObject,
-    MetadataResultDto extends IgniteDataTransferObject
-> implements Command<MetadataArgsDto> {
+    MetadataResultDto extends IgniteDataTransferObject>
+    implements Command<MetadataArgsDto> {
     /** Filesystem. */
     protected static final FileSystem FS = FileSystems.getDefault();
 

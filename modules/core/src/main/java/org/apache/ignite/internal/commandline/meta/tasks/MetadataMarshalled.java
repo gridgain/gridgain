@@ -33,7 +33,7 @@ public class MetadataMarshalled extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Marshaled metadata. */
-    private byte [] metaMarshalled;
+    private byte[] metaMarshalled;
 
     /** Metadata */
     private BinaryMetadata meta;
@@ -49,7 +49,7 @@ public class MetadataMarshalled extends IgniteDataTransferObject {
      * @param metaMarshalled Marshaled metadata.
      * @param meta Meta.
      */
-    public MetadataMarshalled(byte [] metaMarshalled, BinaryMetadata meta) {
+    public MetadataMarshalled(byte[] metaMarshalled, BinaryMetadata meta) {
         this.metaMarshalled = metaMarshalled;
         this.meta = meta;
     }

@@ -35,8 +35,7 @@ public enum MetadataSubCommandsList {
     /** */
     REMOVE("remove", new MetadataRemoveCommand()),
     /** */
-    UPDATE("update", new MetadataUpdateCommand())
-    ;
+    UPDATE("update", new MetadataUpdateCommand());
 
     /** */
     private final String name;

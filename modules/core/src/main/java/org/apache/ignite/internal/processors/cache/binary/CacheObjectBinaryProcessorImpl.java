@@ -912,7 +912,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     public BinaryMetadata binaryMetadata(int typeId) throws BinaryObjectException {
         BinaryMetadataHolder hld = metadataLocCache.get(typeId);
 
-        return  hld != null ? hld.metadata() : null;
+        return hld != null ? hld.metadata() : null;
     }
 
     /** {@inheritDoc} */
