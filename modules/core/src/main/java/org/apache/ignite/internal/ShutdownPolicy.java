@@ -14,26 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite;
+package org.apache.ignite.internal;
 
-public enum Shutdownn {
+public enum ShutdownPolicy {
     /**
      * Stop immediately as soon components are ready.
      */
     IMMEDIATE,
 
     /**
-     * Stop node when all partitions completed moving from/to this node to another.
-     */
-    NORMAL,
-
-    /**
      * Node will stop if and only if it does not store any unique partitions, that does not have copies on cluster.
      */
-    GRACEFUL,
-
-    /**
-     * Node stops graceful and wait all jobs before shutdown.
-     */
-    ALL
+    GRACEFUL
 }

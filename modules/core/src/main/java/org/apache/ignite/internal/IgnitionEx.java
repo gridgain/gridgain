@@ -57,7 +57,6 @@ import org.apache.ignite.IgniteState;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
-import org.apache.ignite.Shutdownn;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -191,6 +190,10 @@ public class IgnitionEx {
     private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
+    /** Key to store policy of shutdown. */
+    private static final String GRACEFUL_SHUTDOWN_POLICY_METASTORE_KEY =
+        DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown.policy";
+
     /** Map of named Ignite instances. */
     private static final ConcurrentMap<Object, IgniteNamedInstance> grids = new ConcurrentHashMap<>();
 
@@ -311,15 +314,13 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
-     *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
+     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
+     *       If this parameter is {@code null} common cluster policy will use.
      * @return {@code true} if default grid instance was indeed stopped,
      *      {@code false} otherwise (if it was not started).
      */
-    public static boolean stop(boolean cancel, @Nullable Boolean waitForBackups) {
-        return stop(null, cancel, waitForBackups, false);
+    public static boolean stop(boolean cancel, @Nullable ShutdownPolicy shutdown) {
+        return stop(null, cancel, shutdown, false);
     }
 
     /**
@@ -337,17 +338,15 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
-     *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
+     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
+     *      If this parameter is {@code null} common cluster policy will use.
      * @param stopNotStarted If {@code true} and node start did not finish then interrupts starting thread.
      * @return {@code true} if named Ignite instance was indeed found and stopped,
      *      {@code false} otherwise (the instance with given {@code name} was
      *      not found).
      */
     public static boolean stop(@Nullable String name, boolean cancel,
-        @Nullable Boolean waitForBackups, boolean stopNotStarted) {
+        @Nullable ShutdownPolicy shutdown, boolean stopNotStarted) {
         IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
 
         if (grid != null && stopNotStarted && grid.startLatch.getCount() != 0) {
@@ -356,12 +355,9 @@ public class IgnitionEx {
             grid.starterThread.interrupt();
         }
 
-        if (waitForBackups == null)
-            waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
-
         if (grid != null) {
             if (grid.state() == STARTED)
-                grid.stop(cancel, waitForBackups);
+                grid.stop(cancel, shutdown);
 
             boolean fireEvt;
 
@@ -437,19 +433,14 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
-     *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
+     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
+     *      If this parameter is {@code null} common cluster policy will use.
      */
-    public static void stopAll(boolean cancel, @Nullable Boolean waitForBackups) {
+    public static void stopAll(boolean cancel, @Nullable ShutdownPolicy shutdown) {
         IgniteNamedInstance grid0 = dfltGrid;
 
-        if (waitForBackups == null)
-            waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
-
         if (grid0 != null) {
-            grid0.stop(cancel, waitForBackups);
+            grid0.stop(cancel, shutdown);
 
             boolean fireEvt;
 
@@ -466,7 +457,7 @@ public class IgnitionEx {
 
         // Stop the rest and clear grids map.
         for (IgniteNamedInstance grid : grids.values()) {
-            grid.stop(cancel, waitForBackups);
+            grid.stop(cancel, shutdown);
 
             boolean fireEvt = grids.remove(grid.getName(), grid);
 
@@ -1083,7 +1074,7 @@ public class IgnitionEx {
             // Stop all instances started so far.
             for (IgniteNamedInstance grid : grids) {
                 try {
-                    grid.stop(true, false);
+                    grid.stop(true, ShutdownPolicy.IMMEDIATE);
                 }
                 catch (Exception e1) {
                     U.error(grid.log, "Error when stopping grid: " + grid, e1);
@@ -1635,7 +1626,7 @@ public class IgnitionEx {
         /** Start latch. */
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
-        /** Raised if node is waiting for backups before shutdown. Set to false to end wait. */
+        /** Raised if node is waiting graceful shutdown. Set to false to end wait. */
         private volatile boolean delayedShutdown = false;
 
         /**
@@ -2135,8 +2126,7 @@ public class IgnitionEx {
 
                             IgniteNamedInstance ignite = IgniteNamedInstance.this;
 
-                            ignite.stop(true, IgniteSystemProperties.getBoolean(
-                                IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN));
+                            ignite.stop(true, null);
                         }
                     });
 
@@ -2144,7 +2134,7 @@ public class IgnitionEx {
                         log.debug("Shutdown hook is installed.");
                 }
                 catch (IllegalStateException e) {
-                    stop(true, false);
+                    stop(true, ShutdownPolicy.IMMEDIATE);
 
                     throw new IgniteCheckedException("Failed to install shutdown hook.", e);
                 }
@@ -2603,34 +2593,59 @@ public class IgnitionEx {
          *
          * @param cancel Flag indicating whether all currently running jobs
          *      should be cancelled.
-         * @param waitForBackups Flag indicating whether sufficient backups on caches
-         *      should be waited for.
+         * @param shutdown This is a policy of shutdown which applied forcibly.
+         * If this property is null policy will apply policy of whole cluster.
          */
-        void stop(boolean cancel, boolean waitForBackups) {
+        void stop(boolean cancel, ShutdownPolicy shutdown) {
             // Stop cannot be called prior to start from public API,
             // since it checks for STARTED state. So, we can assert here.
             assert startGuard.get();
 
+            if (shutdown == null)
+                shutdown = determineShutdownPolicy();
+
             // If waiting for backups due to earlier invocation of stop(), stop wait and proceed shutting down.
-            if (!waitForBackups)
+            if (shutdown == ShutdownPolicy.IMMEDIATE)
                 delayedShutdown = false;
 
-            stop0(cancel, waitForBackups);
-        }
-
-        private synchronized void stop0(boolean cancel, boolean waitForBackups) {
-            Shutdownn shutdownn = waitForBackups ? cancel ? Shutdownn.GRACEFUL : Shutdownn.ALL : Shutdownn.IMMEDIATE;
-
-            stop0(shutdownn);
+            stop0(shutdown, cancel);
         }
 
         /**
-         * @param cancel Flag indicating whether all currently running jobs
-         *      should be cancelled.
-         * @param waitForBackups Flag indicating whether sufficient backups on caches
-         *      should be waited for.
+         * Read policy from meta storage or return a default value if it didn't find.
+         *
+         * @return Shutdown policy.
          */
-        private synchronized void stop0(Shutdownn shutdownn) {
+        private ShutdownPolicy determineShutdownPolicy() {
+            boolean waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
+
+            ShutdownPolicy shutdownPolicy = waitForBackups ? ShutdownPolicy.GRACEFUL : ShutdownPolicy.IMMEDIATE;
+
+            if (grid.cluster().active()) {
+                DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
+
+                try {
+                    ShutdownPolicy readShutdownPolicy = metaStorage.read(GRACEFUL_SHUTDOWN_POLICY_METASTORE_KEY);
+
+                    if (readShutdownPolicy != null)
+                        shutdownPolicy = readShutdownPolicy;
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_POLICY_METASTORE_KEY +
+                        " value from metastore.", e);
+                }
+            }
+            return shutdownPolicy;
+        }
+
+        /**
+         * Stop instance synchronously according to parameters.
+         *
+         * @param shutdown Policy of according which shutdown will be produced.
+         * @param cancel Flag indicating whether all currently running jobsCorruptedCheckpointReservationTest
+         *      should be cancelled.
+         */
+        private synchronized void stop0(ShutdownPolicy shutdown, boolean cancel) {
             IgniteKernal grid0 = grid;
 
             // Double check.
@@ -2657,15 +2672,13 @@ public class IgnitionEx {
                 }
             }
 
-            if (isShutdownDelayed(shutdownn) && !grid.context().clientNode() && grid.cluster().active()) {
+            if (shutdown == ShutdownPolicy.GRACEFUL && !grid.context().clientNode() && grid.cluster().active()) {
                 delayedShutdown = true;
 
                 if (log.isInfoEnabled())
                     log.info("Ensuring that caches have sufficient backups...");
 
                 DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
-
-                boolean waitForRebalance = false;
 
                 while (delayedShutdown) {
                     boolean safeToStop = true;
@@ -2717,13 +2730,13 @@ public class IgnitionEx {
 
                         nodesToExclude.retainAll(fullMap.keySet());
 
-                        if (waitBackups(shutdownn) && !haveCopyLoclaPartitions(grpCtx, nodesToExclude)) {
+                        if (!haveCopyLoclaPartitions(grpCtx, nodesToExclude)) {
                             safeToStop = false;
 
                             break;
                         }
 
-                        if (waitForRebalance && !isRebalanceCompleted(grpCtx)) {
+                        if (!isRebalanceCompleted(grpCtx)) {
                             safeToStop = false;
 
                             break;
@@ -2763,7 +2776,7 @@ public class IgnitionEx {
             unregisterFactoryMBean();
 
             try {
-                grid0.stop(shutdownn != Shutdownn.ALL);
+                grid0.stop(cancel);
 
                 if (log != null && log.isDebugEnabled())
                     log.debug("Ignite instance stopped ok: " + name);
@@ -2789,22 +2802,6 @@ public class IgnitionEx {
 
                 log = null;
             }
-        }
-
-        /**
-         * @param shutdownn Shutdown kind.
-         * @return True if need to wait of backups of partitions, false otherwise.
-         */
-        private boolean waitBackups(Shutdownn shutdownn) {
-            return shutdownn == Shutdownn.GRACEFUL || shutdownn == Shutdownn.ALL;
-        }
-
-        /**
-         * @param shutdownn Shutdown kind.
-         * @return True if need a delay, false otherwise.
-         */
-        private boolean isShutdownDelayed(Shutdownn shutdownn) {
-            return shutdownn == Shutdownn.GRACEFUL || shutdownn == Shutdownn.NORMAL || shutdownn == Shutdownn.ALL;
         }
 
         /**

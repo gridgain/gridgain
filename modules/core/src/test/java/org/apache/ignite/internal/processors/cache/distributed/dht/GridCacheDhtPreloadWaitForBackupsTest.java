@@ -16,13 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -34,6 +34,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.ShutdownPolicy;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -98,7 +99,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
     /** */
     @Override protected void afterTest() throws Exception {
-        IgnitionEx.stopAll(false, false);
+        IgnitionEx.stopAll(true, ShutdownPolicy.IMMEDIATE);
     }
 
     /**
@@ -178,7 +179,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
 
-        IgnitionEx.stop(grid(1).configuration().getIgniteInstanceName(), true, false, false);
+        IgnitionEx.stop(grid(1).configuration().getIgniteInstanceName(), true, ShutdownPolicy.IMMEDIATE, false);
 
         assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
     }
@@ -225,7 +226,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
                 assertEquals(i, val.length);
             }
 
-            IgnitionEx.stopAll(false, false);
+            IgnitionEx.stopAll(true, ShutdownPolicy.IMMEDIATE);
 
             if (persistenceEnabled())
                 cleanPersistenceDir();
