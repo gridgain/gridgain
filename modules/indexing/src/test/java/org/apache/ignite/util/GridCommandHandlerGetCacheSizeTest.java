@@ -18,9 +18,6 @@ package org.apache.ignite.util;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CachePeekMode;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -57,13 +54,11 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
     public void testValidateGridCommandHandlerGetCacheSizeTest() throws Exception {
         IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> filledCache = null;
 
-        IgniteInternalFuture<IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person>> c = GridTestUtils.runAsync(this::fillCache);
-
-        filledCache = c.get();
+        filledCache = fillCache();
 
         injectTestSystemOut();
 
-        final long testSize = filledCache.size(CachePeekMode.OFFHEAP);
+        final long testSize = filledCache.sizeLong();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", "."));
 
@@ -76,6 +71,7 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
         out = testOut.toString();
 
         assertContains(log, out, "cacheSize=" + (testSize + DEFAULT_CACHE_SIZE));
+        assertContains(log, out, "cacheSize=" + DEFAULT_CACHE_SIZE);
     }
 
     /**
@@ -113,6 +109,7 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
 
         createAndFillCache(client, CACHE_NAME, GROUP_NAME);
         createAndFillCache(client, CACHE_NAME + "0", GROUP_NAME);
+        createAndFillCache(client, CACHE_NAME + "1", GROUP_NAME + "0");
 
         return ignite;
     }

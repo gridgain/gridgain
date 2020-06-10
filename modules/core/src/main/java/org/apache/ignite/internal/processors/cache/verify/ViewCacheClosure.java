@@ -110,9 +110,10 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
 
                     for (GridCacheContext cacheContext : context.caches()) {
                         String nameInGrp = cacheContext.cache().name();
-                        long cacheSize = getCacheSize(cacheProcessor, nameInGrp);
-                        sizeSummary += cacheSize;
+                        IgniteCache<Object, Object> cache = cacheProcessor.jcache(nameInGrp);
+                        sizeSummary += cache.sizeLong();
                     }
+
                     ci.setCacheSize(sizeSummary);
 
                     cacheInfo.add(ci);
@@ -143,24 +144,15 @@ public class ViewCacheClosure implements IgniteCallable<List<CacheInfo>> {
                     ci.setMapped(mapped(desc.cacheName()));
 
                     GridCacheProcessor cacheProcessor = k.context().cache();
-                    ci.setCacheSize(getCacheSize(cacheProcessor, ci.getCacheName()));
+                    IgniteCache<Object, Object> cache = cacheProcessor.jcache(ci.getCacheName());
+
+                    ci.setCacheSize(cache.sizeLong());
 
                     cacheInfo.add(ci);
                 }
 
                 return cacheInfo;
         }
-    }
-
-    /**
-     * Method for getting cache size via GridCacheProcessor
-     * @param cacheProcessor - GridCacheProcessor
-     * @param cacheName - name
-     * @return off-heap cache size
-     */
-    private long getCacheSize(GridCacheProcessor cacheProcessor, String cacheName) throws Exception {
-        IgniteCache<Object, Object> cache = cacheProcessor.jcache(cacheName);
-        return cache.sizeLong();
     }
 
     /**
