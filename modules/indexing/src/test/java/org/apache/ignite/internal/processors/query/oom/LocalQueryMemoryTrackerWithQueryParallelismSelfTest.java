@@ -55,7 +55,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Override protected void createSchema() {
         execSql("create table T (id int primary key, ref_key int, name varchar)" +
-            " WITH \"PARALLELISM=" + PARALLELISM +"\"");
+            " WITH \"PARALLELISM=" + PARALLELISM + "\"");
         execSql("create table K (id int primary key, indexed int, grp int, grp_indexed int, name varchar)" +
             " WITH \"PARALLELISM=" + PARALLELISM + "\"");
         execSql("create index K_IDX on K(indexed)");
