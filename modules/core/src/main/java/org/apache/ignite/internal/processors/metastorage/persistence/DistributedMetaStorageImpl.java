@@ -71,10 +71,8 @@ import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
-import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
 import static org.apache.ignite.internal.IgniteFeatures.METASTORAGE_LONG_KEYS;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
-import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree.MAX_KEY_LEN;
 import static org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage.isSupported;
@@ -1020,14 +1018,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
     /** */
     private boolean longKeysSupported() {
-        if (!allNodesSupport(ctx, METASTORAGE_LONG_KEYS, IgniteDiscoverySpi.SRV_NODES))
-            return false;
-
-        return allNodesSupport(
-            ctx,
-            METASTORAGE_LONG_KEYS,
-            node -> node.isClient() && nodeSupports(ctx, node, DISTRIBUTED_METASTORAGE)
-        );
+        return allNodesSupport(ctx, METASTORAGE_LONG_KEYS, IgniteDiscoverySpi.SRV_NODES);
     }
 
     /**
