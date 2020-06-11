@@ -52,7 +52,7 @@ Build platform ("Any CPU", "x86", "x64").
 Build configuration ("Release", "Debug").
 
 .PARAMETER mavenOpts
-Custom Maven options, default is "-U -P-lgpl,-scala,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true".
+Custom Maven options, default is "-U -P-lgpl,-scala,-spark-2.4,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true".
 
 .PARAMETER jarDirs
 Java jar files source folders, default is "modules\indexing\target,modules\core\target,modules\spring\target"
@@ -87,7 +87,7 @@ param (
     [string]$platform="Any CPU",
     [ValidateSet("Release", "Debug")]
     [string]$configuration="Release",
-    [string]$mavenOpts="-U -P-lgpl,-scala,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true",
+    [string]$mavenOpts="-U -P-lgpl,-scala,-spark-2.4,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true",
 	[string]$jarDirs="modules\indexing\target,modules\core\target,modules\h2\target,modules\spring\target",
     [string]$asmDirs="",
     [string]$nugetPath="",

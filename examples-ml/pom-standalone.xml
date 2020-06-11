@@ -80,12 +80,6 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-spark</artifactId>
-            <version>to_be_replaced_by_ignite_version</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
             <artifactId>ignite-ml</artifactId>
             <version>to_be_replaced_by_ignite_version</version>
         </dependency>
@@ -162,6 +156,60 @@
             <version>2.3.0</version>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>spark-2.3</id>
+
+            <properties>
+                <spark.folder>src/main/spark</spark.folder>
+                <spark.test.folder>src/test/spark</spark.test.folder>
+            </properties>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-spark</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>net.alchim31.maven</groupId>
+                        <artifactId>scala-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>spark-2.4</id>
+
+            <properties>
+                <spark.folder>src/main/spark</spark.folder>
+                <spark.test.folder>src/test/spark</spark.test.folder>
+            </properties>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-spark-2.4</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>net.alchim31.maven</groupId>
+                        <artifactId>scala-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <build>
         <resources>

@@ -25,7 +25,7 @@ set -e
 # Build Java.
 pushd .
 cd ../../..
-mvn clean package -DskipTests -Dmaven.javadoc.skip=true -Plgpl,-examples,-clean-libs,-release,-scala,-clientDocs
+mvn clean package -DskipTests -Dmaven.javadoc.skip=true -Plgpl,-examples,-clean-libs,-release,-scala,-spark-2.4,-clientDocs
 popd
 
 # Build .NET.
