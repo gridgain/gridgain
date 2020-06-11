@@ -129,6 +129,16 @@ public interface SqlQueryMXBean {
         "heavy analytics query.")
     long getSqlGlobalMemoryQuota();
 
+
+    /**
+     * Gets global query memory usage.
+     *
+     * @return Global query query memory usage.
+     */
+    @MXBeanDescription("Gets the total amount of heap memory occupied by the SQL query execution engine. Can not exceed SqlGlobalMemoryQuota." +
+            "This memory is shared among all simultaneously running queries." )
+    long getSqlGloqbalMemoryUsage();
+
     /**
      * Sets global query quota.
      *

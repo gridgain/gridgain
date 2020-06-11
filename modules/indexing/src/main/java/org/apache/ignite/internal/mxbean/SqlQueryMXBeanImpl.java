@@ -92,6 +92,15 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
         return globalQuota;
     }
 
+
+    /** {@inheritDoc}
+     * @return*/
+    @Override
+    public long getSqlGloqbalMemoryUsage() {
+         return h2idx.memoryManager().reserved();
+    }
+
+
     /** {@inheritDoc}
      * @param size*/
     @Override public void setSqlGlobalMemoryQuota(long size) {
