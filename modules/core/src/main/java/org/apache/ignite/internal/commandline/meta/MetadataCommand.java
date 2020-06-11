@@ -49,17 +49,17 @@ public class MetadataCommand implements Command<Object> {
         if (!experimentalEnabled())
             return;
 
-        usage(log, "Prints metadata command help:",
+        usage(log, "Print metadata command help:",
             METADATA,
             HELP.toString()
         );
 
-        usage(log, "Prints list of binary metadata types:",
+        usage(log, "Print list of binary metadata types:",
             METADATA,
             LIST.toString()
         );
 
-        usage(log, "Prints detailed info about specified binary type " +
+        usage(log, "Print detailed info about specified binary type " +
                 "(the type must be specified by type name or by type identifier):",
             METADATA,
             DETAILS.toString(),
@@ -67,7 +67,7 @@ public class MetadataCommand implements Command<Object> {
             optional(MetadataTypeArgs.OPT_TYPE_NAME, "<typeName>")
         );
 
-        usage(log, "Removes the metadata of the specified type " +
+        usage(log, "Remove the metadata of the specified type " +
                 "(the type must be specified by type name or by type identifier) from cluster and saves the removed " +
                 "metadata to the specified file. \n" +
                 "If the file name isn't specified the output file name is: '<typeId>.bin'",
@@ -78,7 +78,7 @@ public class MetadataCommand implements Command<Object> {
             optional(MetadataRemoveCommand.OPT_OUT_FILE_NAME, "<fileName>")
         );
 
-        usage(log, "Updates cluster metadata from specified file (file name is required)",
+        usage(log, "Update cluster metadata from specified file (file name is required)",
             METADATA,
             UPDATE.toString(),
             MetadataUpdateCommand.OPT_IN_FILE_NAME, "<fileName>"
