@@ -195,6 +195,7 @@ import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaWithPdsEnabled;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultSchemaTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultValueTest;
+import org.apache.ignite.internal.processors.query.IgniteSqlDistributedJoin2SelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlDistributedJoinSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlEntryCacheModeAgnosticTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlGroupConcatCollocatedTest;
@@ -517,6 +518,7 @@ import org.junit.runners.Suite;
     IgniteCacheDistributedJoinQueryConditionsTest.class,
     IgniteCacheDistributedJoinTest.class,
     IgniteSqlDistributedJoinSelfTest.class,
+    IgniteSqlDistributedJoin2SelfTest.class,
     IgniteSqlQueryParallelismTest.class,
 
     // Other.

@@ -74,8 +74,7 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         fixed = in.readBoolean();
         val = (PartitionReconciliationValueMeta)in.readObject();
         repairAlg = RepairAlgorithm.fromOrdinal(in.readByte());

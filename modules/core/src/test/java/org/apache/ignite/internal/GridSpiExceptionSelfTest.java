@@ -86,7 +86,7 @@ public class GridSpiExceptionSelfTest extends GridCommonAbstractTest {
                 assert false : "Exception should be thrown";
             }
             catch (IgniteException e) {
-                assertTrue(e.getCause() instanceof  IgniteCheckedException);
+                assertTrue(e.getCause() instanceof IgniteCheckedException);
 
                 Throwable err = e.getCause().getCause();
 

@@ -235,7 +235,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         globalQuota = globalQuota0;
 
         if (log.isInfoEnabled()) {
-            log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
+            log.info("SQL query global quota was set to " + globalQuota + ". Current memory tracking parameters: " +
                 "[qryQuota=" + qryQuota + ", globalQuota=" + globalQuota +
                 ", offloadingEnabled=" + offloadingEnabled + ']');
         }
@@ -261,7 +261,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         qryQuota = U.parseBytes(newQryQuota);
 
         if (log.isInfoEnabled()) {
-            log.info("SQL query memory quota was set to " + qryQuota +  ". Current memory tracking parameters: " +
+            log.info("SQL query memory quota was set to " + qryQuota + ". Current memory tracking parameters: " +
                 "[qryQuota=" + qryQuota + ", globalQuota=" + globalQuota +
                 ", offloadingEnabled=" + offloadingEnabled + ']');
         }

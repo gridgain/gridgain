@@ -47,7 +47,7 @@ public class MapH2QueryInfo extends H2QueryInfo {
         super(QueryType.MAP, stmt, sql, runningQryId);
 
         this.node = node;
-        this.reqId= reqId;
+        this.reqId = reqId;
         this.segment = segment;
     }
 

@@ -28,30 +28,37 @@ public class HeapPageMetaInfoStore implements PageMetaInfoStore {
      *
      */
     private static final int OVERHEAD_SIZE = 8 + 16 + 8 + 8;
+
     /**
      *
      */
     private static final int PAGE_ID_OFFSET = 0;
+
     /**
      *
      */
     private static final int PAGE_HEADER_ADDRESS_OFFSET = 1;
+
     /**
      *
      */
     private static final int PAGE_ADDRESS_OFFSET = 2;
+
     /**
      *
      */
     private static final int PAGE_META_OFFSET = 3;
+
     /**
      *
      */
     private static final int ITEM_SIZE = 4;
+
     /**
      *
      */
     private long[] arr;
+
     /**
      *
      */

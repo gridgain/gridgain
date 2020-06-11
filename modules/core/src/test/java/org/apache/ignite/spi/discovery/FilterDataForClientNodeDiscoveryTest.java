@@ -76,7 +76,7 @@ public class FilterDataForClientNodeDiscoveryTest extends GridCommonAbstractTest
         startGrid(configuration(2, true));
         startGrid(configuration(3, true));
 
-        final boolean [] recvMsg = new boolean[4];
+        final boolean[] recvMsg = new boolean[4];
 
         for (int i = 0; i < 4; ++i) {
             final int idx0 = i;
@@ -104,7 +104,6 @@ public class FilterDataForClientNodeDiscoveryTest extends GridCommonAbstractTest
             assertEquals(false, recvMsg[3]);
         }
     }
-
 
     /**
      * @param nodeIdx Node index.

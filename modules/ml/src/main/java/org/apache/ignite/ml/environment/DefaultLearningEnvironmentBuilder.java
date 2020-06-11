@@ -128,7 +128,7 @@ public class DefaultLearningEnvironmentBuilder implements LearningEnvironmentBui
     @Override public LearningEnvironment buildForWorker(int part) {
         Random random = rngSupplier.apply(part);
         random.setSeed(seed.apply(part));
-        return new LearningEnvironmentImpl(part, dataTtl, random, parallelismStgy.apply(part),  loggingFactory.apply(part));
+        return new LearningEnvironmentImpl(part, dataTtl, random, parallelismStgy.apply(part), loggingFactory.apply(part));
     }
 
     /** Default LearningEnvironment implementation. */

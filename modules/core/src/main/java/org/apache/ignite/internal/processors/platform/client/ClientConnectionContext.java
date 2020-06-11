@@ -192,7 +192,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
         EnumSet<ClientBitmaskFeature> features = null;
 
         if (ClientProtocolContext.isFeatureSupported(ver, BITMAP_FEATURES)) {
-            byte [] cliFeatures = reader.readByteArray();
+            byte[] cliFeatures = reader.readByteArray();
 
             features = ClientBitmaskFeature.enumSet(cliFeatures);
         }

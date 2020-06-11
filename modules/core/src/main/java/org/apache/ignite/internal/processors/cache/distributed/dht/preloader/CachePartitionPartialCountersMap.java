@@ -187,7 +187,6 @@ public class CachePartitionPartialCountersMap implements Serializable {
         return updCntrs[idx];
     }
 
-
     /**
      * @param cntrsMap Partial local counters map.
      * @return Partition ID to partition counters map.

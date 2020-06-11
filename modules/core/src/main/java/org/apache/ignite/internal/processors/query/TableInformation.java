@@ -59,7 +59,6 @@ public class TableInformation {
     /** Table type. */
     private final String tblType;
 
-
     /**
      * @param schemaName Schema name.
      * @param tblName Table name.
@@ -101,7 +100,7 @@ public class TableInformation {
      * @param tblName Table name.
      * @param tblType Table type.
      */
-    public TableInformation(String schemaName, String tblName, String tblType){
+    public TableInformation(String schemaName, String tblName, String tblType) {
         assert schemaName != null;
         assert tblName != null;
         assert tblType != null;

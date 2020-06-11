@@ -61,6 +61,7 @@ public interface GridDhtPartitionTopology {
      * @return {@code True} if locked by current thread.
      */
     public boolean holdsLock();
+
     /**
      * Updates topology version.
      *

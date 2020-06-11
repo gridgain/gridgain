@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
-
 import java.io.Serializable;
 import java.util.Collection;
 

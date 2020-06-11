@@ -30,6 +30,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 public class GridIoSecurityAwareMessage extends GridIoMessage {
     /** */
     private static final long serialVersionUID = 0L;
+
     /** */
     public static final short TYPE_CODE = 174;
 

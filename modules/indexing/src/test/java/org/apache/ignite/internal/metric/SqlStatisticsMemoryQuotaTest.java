@@ -282,7 +282,6 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validator.validate(free, maxMem);
     }
 
-
     /**
      * Finds LongMetric from sql memory registry by specified metric name and returns it's value.
      *
@@ -296,7 +295,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         Assert.assertNotNull("Didn't find metric " + metricName, metric);
 
-        Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
+        Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
     }
@@ -311,8 +310,6 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     private boolean almostEquals(long l1, long l2, long error) {
         return Math.max(l1, l2) - Math.min(l1, l2) <= Math.abs(error);
     }
-
-
 
     /**
      * Functional interface to validate memory metrics values.

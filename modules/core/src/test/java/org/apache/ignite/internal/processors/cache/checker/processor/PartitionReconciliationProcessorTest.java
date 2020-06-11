@@ -432,8 +432,7 @@ public class PartitionReconciliationProcessorTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        protected <T extends CachePartitionRequest, R> void compute(
+        @Override protected <T extends CachePartitionRequest, R> void compute(
             Class<? extends ComputeTask<T, ExecutionResult<R>>> taskCls, T workload,
             IgniteInClosure<? super R> lsnr) throws InterruptedException {
 

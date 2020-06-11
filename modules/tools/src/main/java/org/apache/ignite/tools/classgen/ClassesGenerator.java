@@ -34,6 +34,7 @@ import java.util.Comparator;
 import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
+
 /**
  * Serialized classes generator.
  */
@@ -121,7 +122,6 @@ public class ClassesGenerator {
      */
     private void generate() throws Exception {
         System.out.println("Generating classnames.properties...");
-
 
         for (URL url : classLoaderUrls(getClass().getClassLoader()))
             processUrl(url);
@@ -238,7 +238,6 @@ public class ClassesGenerator {
             return null;
         }
     }
-
 
     /**
      * @param path File path.
