@@ -70,9 +70,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
         assert order >= 0 : order;
         assert nodeOrder >= 0 : nodeOrder;
         assert dataCenterId < 32 && dataCenterId >= 0 : dataCenterId;
-
-        if (nodeOrder > NODE_ORDER_MASK)
-            throw new IllegalArgumentException("Node order overflow: " + nodeOrder);
+        assert nodeOrder <= NODE_ORDER_MASK : "Node order overflow: " + nodeOrder;
 
         this.topVer = topVer;
         this.order = order;
@@ -225,12 +223,12 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
         if (res != 0)
             return res;
 
-        res = Long.compare(order, other.order);
+        res = Integer.compare(nodeOrder(), other.nodeOrder());
 
         if (res != 0)
             return res;
 
-        return Integer.compare(nodeOrder(), other.nodeOrder());
+        return Long.compare(order, other.order);
     }
 
     /** {@inheritDoc} */

@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.internal.processors.cache.transactions;
 
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.junit.Test;
 
-/**
- * Atomic cache version comparator.
- */
-public class GridCacheAtomicVersionComparator {
-    /**
-     * Compares two cache versions.
-     *
-     * @param one First version.
-     * @param other Second version.
-     * @return Comparison value.
-     */
-    public int compare(GridCacheVersion one, GridCacheVersion other) {
-        return one.compareTo(other);
+/** */
+public class AtomicVolatilePartitionCounterStateConsistencyTest extends AtomicPartitionCounterStateConsistencyTest {
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testPartitionConsistencyWithPrimaryRestart() throws Exception {
+        super.testPartitionConsistencyWithPrimaryRestart();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected boolean persistenceEnabled() {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected int partitions() {
+        return 1024;
     }
 }
