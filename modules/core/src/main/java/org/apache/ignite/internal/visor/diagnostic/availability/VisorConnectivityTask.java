@@ -42,6 +42,7 @@ public class VisorConnectivityTask
     extends VisorMultiNodeTask<VisorConnectivityArgs, Map<ClusterNode, VisorConnectivityResult>, VisorConnectivityResult> {
     /** */
     private static final long serialVersionUID = 0L;
+
     /** {@inheritDoc} */
     @Override protected VisorJob<VisorConnectivityArgs, VisorConnectivityResult> job(VisorConnectivityArgs arg) {
         return new VisorConnectivityJob(arg, debug);

@@ -165,7 +165,6 @@ public class ConnectionClientPool {
         this.stopping = true;
     }
 
-
     /**
      * Returns existing or just created client to node.
      *
