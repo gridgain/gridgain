@@ -43,9 +43,7 @@ public class PersonKey {
         return id;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override public boolean equals(Object obj) {
         if (!(obj instanceof PersonKey))
             return false;
@@ -53,5 +51,10 @@ public class PersonKey {
         PersonKey other = (PersonKey)obj;
 
         return Objects.equals(other.id, id);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(id);
     }
 }

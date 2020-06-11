@@ -674,11 +674,13 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         IgniteInClosure<DataRecord> toStrChecker = record -> {
             String strRepresentation = record.toString();
-            System.out.println("!!!!! "+strRepresentation);
+
             for (Iterator<String> iter = ctrlStringsToSearch.iterator(); iter.hasNext(); ) {
                 final String next = iter.next();
+
                 if (strRepresentation.contains(next)) {
                     iter.remove();
+
                     break;
                 }
             }
