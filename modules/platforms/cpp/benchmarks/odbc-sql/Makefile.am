@@ -29,7 +29,10 @@ AM_CXXFLAGS = \
 
 ignite_odbc_sql_benchmark_LDADD = \
     -lodbc \
-    -lpthread
+    -lpthread \
+    -lboost_thread \
+    -lboost_system \
+    -lboost_chrono
 
 ignite_odbc_sql_benchmark_LDFLAGS = \
     -static-libtool-libs

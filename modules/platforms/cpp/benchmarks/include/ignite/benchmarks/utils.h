@@ -30,68 +30,60 @@
 
 #include <string>
 #include <sstream>
+#include <iostream>
 
 namespace utils
 {
-
-#ifdef _WIN32
-
-    uint64_t GetMicros()
+    template<typename TO, typename TI>
+    TO LexicalCast(const TI& in)
     {
-        FILETIME ft;
-        GetSystemTimeAsFileTime(&ft);
-        uint64_t tt = ft.dwHighDateTime;
-        tt <<=32;
-        tt |= ft.dwLowDateTime;
+        TO out;
 
-        return tt / 10;
+        std::stringstream converter;
+        converter << in;
+        converter >> out;
+
+        return out;
     }
 
-#else // NOT _WIN32
-
-    uint64_t GetMicros()
+    template<>
+    std::string LexicalCast(const std::string& in)
     {
-        struct timeval now;
-
-        gettimeofday(&now, NULL);
-
-        return (now.tv_sec) * 1000000 + now.tv_usec;
+        return in;
     }
 
-    void Sleep(unsigned ms)
+    template<typename OutType = std::string>
+    OutType GetEnvVar(const std::string& name)
     {
-        usleep(ms * 1000);
+        char* var = std::getenv(name.c_str());
+
+        if (!var)
+            throw std::runtime_error("Environment variable '" + name + "' is not set");
+
+        std::string varStr(var);
+        std::cout << name << "=" << varStr << std::endl;
+
+        return LexicalCast<OutType>(varStr);
     }
 
-#endif // _WIN32
+    template<typename OutType = std::string>
+    OutType GetEnvVar(const std::string& name, OutType dflt)
+    {
+        char* var = std::getenv(name.c_str());
 
-    //inline unsigned GetRandomUnsigned(unsigned max)
-    //{
-    //    return static_cast<unsigned>(rand()) % max;
-    //}
+        if (!var)
+        {
+            std::cout << name << "=" << dflt << std::endl;
 
-    //inline char GetRandomChar()
-    //{
-    //    static std::string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            return dflt;
+        }
 
-    //    return alphabet[static_cast<size_t>(rand()) % alphabet.size()];
-    //}
+        std::string varStr(var);
+        std::cout << name << "=" << varStr << std::endl;
 
-    //std::string GetRandomString(size_t size)
-    //{
-    //    std::string res;
+        return LexicalCast<OutType>(varStr);
+    }
 
-    //    res.reserve(size + 2);
-
-    //    res.push_back('\'');
-
-    //    for (size_t i = 0; i < size; ++i)
-    //        res.push_back(GetRandomChar());
-
-    //    res.push_back('\'');
-
-    //    return res;
-    //}
-}
+} // namespace utils
 
 #endif // IGNITE_BENCHMARKS_UTILS_H

@@ -20,64 +20,113 @@
 #include <ignite/benchmarks/odbc_utils.h>
 #include <ignite/benchmarks/basic_benchmark.h>
 
-struct odbc_benchmark_config
+/**
+ * Configuration for the ODBC Benchmark.
+ */
+struct OdbcBenchmarkConfig
 {
-    std::string connection_string;
-    int warmup_secs;
-    int duration_secs;
-    std::string cache_name;
-    int32_t cache_range_begin;
-    int32_t cache_range_end;
+    /** Connection string. */
+    std::string connectionString;
 
-    static odbc_benchmark_config get_from_env()
+    /** How long should take a warmup phase. */
+    int warmupSecs;
+
+    /** How long should the whole measurement take. */
+    int durationSecs;
+
+    /** Name of the cache to use. */
+    std::string cacheName;
+
+    /** Begin of the cache key range to use. */
+    int32_t cacheRangeBegin;
+
+    /** End of the cache key range to use. */
+    int32_t cacheRangeEnd;
+
+    /** Number of threads to use in benchmark. */
+    int32_t threadCnt;
+
+    /**
+     * Initialize a benchmark config using environment variables.
+     *
+     * @return Instance of config.
+     */
+    static OdbcBenchmarkConfig GetFromEnv()
     {
-        odbc_benchmark_config self;
+        OdbcBenchmarkConfig self;
 
-        self.connection_string = utils::get_env_var("CONNECTION_STRING");
+        self.connectionString = utils::GetEnvVar("CONNECTION_STRING");
 
-        self.warmup_secs = utils::get_env_var<int>("WARMUP", 0);
-        self.duration_secs = utils::get_env_var<int>("DURATION");
-        self.cache_name = utils::get_env_var("CACHE_NAME", std::string("PUBLIC"));
+        self.warmupSecs = utils::GetEnvVar<int32_t>("WARMUP", 0);
+        self.durationSecs = utils::GetEnvVar<int32_t>("DURATION");
 
-        std::string range = utils::get_env_var("CACHE_RANGE");
+        self.threadCnt = utils::GetEnvVar<int32_t>("THREAD_CNT");
+
+        self.cacheName = utils::GetEnvVar("CACHE_NAME", std::string("PUBLIC"));
+
+        std::string range = utils::GetEnvVar("CACHE_RANGE");
 
         if (std::count(range.begin(), range.end(), '-') != 1)
             throw std::runtime_error("Invalid CACHE_RANGE: expected format is <number>-<number>");
 
-        auto dl_it = std::find(range.begin(), range.end(), '-');
-        auto dl_pos = dl_it - range.begin();
+        std::string::iterator dlIt = std::find(range.begin(), range.end(), '-');
+        size_t dlPos = dlIt - range.begin();
 
-        std::string range_begin = range.substr(0, dl_pos);
-        std::string range_end = range.substr(dl_pos + 1);
+        std::string range_begin = range.substr(0, dlPos);
+        std::string range_end = range.substr(dlPos + 1);
 
-        self.cache_range_begin = utils::lexical_cast<int32_t>(range_begin);
-        self.cache_range_end = utils::lexical_cast<int32_t>(range_end);
+        self.cacheRangeBegin = utils::LexicalCast<int32_t>(range_begin);
+        self.cacheRangeEnd = utils::LexicalCast<int32_t>(range_end);
 
         return self;
     }
 
 private:
-    odbc_benchmark_config() = default;
+    OdbcBenchmarkConfig()
+    {
+        // No-op.
+    }
 };
 
-class odbc_benchmark : public basic_benchmark
+/**
+ * Basic ODBC benchmark.
+ */
+class OdbcBenchmark : public BasicBenchmark
 {
 public:
-    odbc_benchmark() :
-        basic_benchmark(),
-        config(odbc_benchmark_config::get_from_env())
+    /** Config type for the benchmark. Should be set - used by runner. */
+    typedef OdbcBenchmarkConfig ConfigType;
+
+    /**
+     * Get a config for the benchmark.
+     */
+    static const ConfigType& GetConfig()
+    {
+        static ConfigType cfg = ConfigType::GetFromEnv();
+
+        return cfg;
+    }
+
+    /**
+     * Default constructor.
+     */
+    OdbcBenchmark() :
+        BasicBenchmark()
     {
         // No-op.
     }
 
-    virtual ~odbc_benchmark()
+    /**
+     * Destructor.
+     */
+    virtual ~OdbcBenchmark()
     {
         // No-op.
     }
 
-    virtual void set_up()
+    virtual void SetUp()
     {
-        basic_benchmark::set_up();
+        BasicBenchmark::SetUp();
 
         // Allocate an environment handle
         SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
@@ -89,14 +138,14 @@ public:
         SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
 
         // Combining connect string
-        std::vector<SQLCHAR> connectStr(config.connection_string.begin(), config.connection_string.end());
+        std::vector<SQLCHAR> connectStr(GetConfig().connectionString.begin(), GetConfig().connectionString.end());
 
-        SQLCHAR outstr[odbc_utils::ODBC_BUFFER_SIZE];
-        SQLSMALLINT outstrlen;
+        SQLCHAR outStr[odbc_utils::ODBC_BUFFER_SIZE];
+        SQLSMALLINT outStrLen;
 
         // Connecting to ODBC server.
         SQLRETURN ret = SQLDriverConnect(dbc, NULL, &connectStr[0], static_cast<SQLSMALLINT>(connectStr.size()),
-                outstr, sizeof(outstr), &outstrlen, SQL_DRIVER_COMPLETE);
+                outStr, sizeof(outStr), &outStrLen, SQL_DRIVER_COMPLETE);
 
         if (!SQL_SUCCEEDED(ret))
             odbc_utils::ThrowOdbcError(SQL_HANDLE_DBC, dbc, "Failed to connect");
@@ -105,7 +154,7 @@ public:
         SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
     }
 
-    virtual void tear_down()
+    virtual void CleanUp()
     {
         // Releasing statement handle.
         SQLFreeHandle(SQL_HANDLE_STMT, stmt);
@@ -117,21 +166,17 @@ public:
         SQLFreeHandle(SQL_HANDLE_DBC, dbc);
         SQLFreeHandle(SQL_HANDLE_ENV, env);
 
-        basic_benchmark::tear_down();
-    }
-
-    void run()
-    {
-        basic_benchmark::run(config.warmup_secs, config.duration_secs);
+        BasicBenchmark::CleanUp();
     }
 
 protected:
-    odbc_benchmark_config config;
-
+    /** Environment handle. */
     SQLHENV env;
 
+    /** Connection handle. */
     SQLHDBC dbc;
 
+    /** Statement handle. */
     SQLHSTMT stmt;
 };
 

@@ -16,6 +16,7 @@
 
 #include <ignite/benchmarks/odbc_utils.h>
 #include <ignite/benchmarks/odbc_benchmark.h>
+#include <ignite/benchmarks/replicate_thread_runner.h>
 
 #include <stdint.h>
 #include <cstdlib>
@@ -30,7 +31,6 @@
 struct Person
 {
     SQLINTEGER id;
-    SQLINTEGER orgId;
     odbc_utils::OdbcStringBuffer firstName;
     odbc_utils::OdbcStringBuffer lastName;
     SQLDOUBLE salary;
@@ -41,12 +41,12 @@ std::ostream& operator<<(std::ostream& os, const Person& val)
     std::string firstName(reinterpret_cast<const char*>(val.firstName.buffer), static_cast<size_t>(val.firstName.reallen));
     std::string lastName(reinterpret_cast<const char*>(val.firstName.buffer), static_cast<size_t>(val.firstName.reallen));
 
-    os << "[id=" << val.id << ",orgId=" << val.orgId << ",firstName=" << firstName << ",lastName=" << lastName << ",salary=" << val.salary << ']';
+    os << "[id=" << val.id << ",firstName=" << firstName << ",lastName=" << lastName << ",salary=" << val.salary << ']';
 
     return os;
 }
 
-class OdbcSqlBenchmark : public odbc_benchmark
+class OdbcSqlBenchmark : public OdbcBenchmark
 {
 public:
     OdbcSqlBenchmark()
@@ -59,16 +59,10 @@ public:
         // No-op.
     }
 
-    virtual void set_up()
+    virtual void LoadData()
     {
-        odbc_benchmark::set_up();
-
-        if (config.cache_name != "PUBLIC")
-            fullTableName = '"' + config.cache_name + '"' + ".Person";
-        else
+        if (GetConfig().cacheName == "PUBLIC")
         {
-            fullTableName = "PUBLIC.Person";
-
             odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE IF EXISTS PUBLIC.Person");
             odbc_utils::ExecuteNoFetch(dbc, "CREATE TABLE PUBLIC.Person ("
                                             "   id int PRIMARY KEY, "
@@ -96,7 +90,7 @@ public:
         odbc_utils::ExecuteNoFetch(dbc, "DELETE FROM " + fullTableName);
 
         std::cout << "Filling table..." << std::endl;
-        for (int32_t i = config.cache_range_begin; i < config.cache_range_end; ++i)
+        for (int32_t i = GetConfig().cacheRangeBegin; i < GetConfig().cacheRangeEnd; ++i)
         {
             std::stringstream query;
             query << "INSERT INTO " << fullTableName << " "
@@ -107,8 +101,18 @@ public:
         }
 
         std::cout << "Done" << std::endl;
+    }
 
-        std::string selectQuery0 = "SELECT id, orgId, firstName, lastName, salary "
+    virtual void SetUp()
+    {
+        OdbcBenchmark::SetUp();
+
+        if (GetConfig().cacheName != "PUBLIC")
+            fullTableName = '"' + GetConfig().cacheName + '"' + ".Person";
+        else
+            fullTableName = "PUBLIC.Person";
+
+        std::string selectQuery0 = "SELECT salary, id, firstName, lastName "
                                    "FROM " + fullTableName + " "
                                    "WHERE salary >= ? and salary <= ?";
 
@@ -117,9 +121,9 @@ public:
         persons.reserve(1024);
     }
 
-    virtual void do_action()
+    virtual void DoAction()
     {
-        double salary = next_random_double(config.cache_range_begin, config.cache_range_end) * 1000;
+        double salary = NextRandomDouble(GetConfig().cacheRangeBegin, GetConfig().cacheRangeEnd) * 1000;
 
         double maxSalary = salary + 1000.0;
 
@@ -154,10 +158,10 @@ public:
             persons.resize(persons.size() + 1);
             Person& current = persons.back();
 
-            ret = SQLBindCol(stmt, 1, SQL_C_SLONG, &current.id, 0, 0);
+            ret = SQLBindCol(stmt, 1, SQL_C_DOUBLE, &current.salary, 0, 0);
             odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 1st collumn");
 
-            ret = SQLBindCol(stmt, 2, SQL_C_SLONG, &current.orgId, 0, 0);
+            ret = SQLBindCol(stmt, 2, SQL_C_SLONG, &current.id, 0, 0);
             odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 2nd collumn");
 
             ret = SQLBindCol(stmt, 3, SQL_C_SLONG, &current.firstName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.firstName.reallen);
@@ -165,9 +169,6 @@ public:
 
             ret = SQLBindCol(stmt, 4, SQL_C_SLONG, &current.lastName.buffer, odbc_utils::ODBC_BUFFER_SIZE, &current.lastName.reallen);
             odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 4th collumn");
-
-            ret = SQLBindCol(stmt, 5, SQL_C_DOUBLE, &current.salary, 0, 0);
-            odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 5th collumn");
 
             ret = SQLFetch(stmt);
             if (ret == SQL_NO_DATA)
@@ -204,13 +205,11 @@ int main()
 {
     int exitCode = 0;
 
-    srand(static_cast<unsigned>(time(NULL)));
-
     try
     {
-        OdbcSqlBenchmark bench;
+        ReplicateThreadRunner<OdbcSqlBenchmark> runner;
 
-        bench.run();
+        runner.Run();
 
         std::cout << "Done" << std::endl;
     }
