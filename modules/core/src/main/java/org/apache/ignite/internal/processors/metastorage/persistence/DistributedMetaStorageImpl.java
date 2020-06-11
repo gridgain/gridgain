@@ -1026,9 +1026,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         return allNodesSupport(
             ctx,
             METASTORAGE_LONG_KEYS,
-            node -> node.isClient()
-                && (nodeSupports(ctx, node, METASTORAGE_LONG_KEYS) || !nodeSupports(ctx, node, DISTRIBUTED_METASTORAGE)
-            )
+            node -> node.isClient() && nodeSupports(ctx, node, DISTRIBUTED_METASTORAGE)
         );
     }
 
