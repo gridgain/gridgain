@@ -18,6 +18,7 @@ package org.apache.ignite.development.utils;
 
 import java.util.Base64;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.UnwrappedDataEntry;
@@ -135,12 +136,12 @@ class DataEntryWrapper extends DataEntry {
                     ctx = IgniteUtils.field(source, "cacheObjValCtx");
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    throw new IgniteException(e);
                 }
                 str = Base64.getEncoder().encodeToString(co.valueBytes(ctx));
             }
             catch (IgniteCheckedException e) {
-                e.printStackTrace();
+                throw new IgniteException(e);
             }
         }
 
