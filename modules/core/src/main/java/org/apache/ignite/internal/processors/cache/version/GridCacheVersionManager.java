@@ -25,10 +25,12 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
@@ -310,8 +312,9 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @deprecated Kept for compatibility.
      */
     @Deprecated
-    public GridCacheVersion last(AffinityTopologyVersion topVer) {
-        return new GridCacheVersion((int)topVer.topologyVersion(), order.get(), (int)cctx.localNode().order(), dataCenterId);
+    public GridCacheVersion last(@Nullable GridDhtPartitionsExchangeFuture fut) {
+        return fut == null ? new GridCacheVersion(0, order.get(), 0, dataCenterId) : // For backward compatibility.
+            new GridCacheVersion((int)fut.topologyVersion().topologyVersion(), order.get(), (int)cctx.localNode().order(), dataCenterId);
     }
 
     /**

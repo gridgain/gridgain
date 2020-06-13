@@ -1658,7 +1658,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     ) {
         GridDhtPartitionsSingleMessage m = new GridDhtPartitionsSingleMessage(exchangeId,
             clientOnlyExchange,
-            cctx.versions().last(cctx.exchange().lastFinishedFuture().topologyVersion()),
+            cctx.versions().last(cctx.exchange().lastFinishedFuture()),
             true);
 
         Map<Object, T2<Integer, GridPartitionStateMap>> dupData = new HashMap<>();

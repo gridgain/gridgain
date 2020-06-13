@@ -2142,7 +2142,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (cctx.kernalContext().clientNode() || (dynamicCacheStartExchange() && exchangeLocE != null)) {
             msg = new GridDhtPartitionsSingleMessage(exchangeId(),
                 cctx.kernalContext().clientNode(),
-                cctx.versions().last(cctx.exchange().lastFinishedFuture().topologyVersion()),
+                cctx.versions().last(cctx.exchange().lastFinishedFuture()),
                 true);
         }
         else {
@@ -2202,7 +2202,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             newCntrMap,
             exchangeId(),
             null,
-            cctx.versions().last(cctx.exchange().lastFinishedFuture().topologyVersion()),
+            cctx.versions().last(cctx.exchange().lastFinishedFuture()),
             partHistSuppliers,
             partsToReload);
 
@@ -4425,7 +4425,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 if (dynamicCacheStartExchange() && exchangeLocE != null) {
                     res = new GridDhtPartitionsSingleMessage(msg.restoreExchangeId(),
                         cctx.kernalContext().clientNode(),
-                        cctx.versions().last(cctx.exchange().lastFinishedFuture().topologyVersion()),
+                        cctx.versions().last(cctx.exchange().lastFinishedFuture()),
                         true);
 
                     res.setError(exchangeLocE);
@@ -4482,7 +4482,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private void processFullMessage(boolean checkCrd, ClusterNode node, GridDhtPartitionsFullMessage msg) {
         try {
             assert exchId.equals(msg.exchangeId()) : msg;
-            assert msg.lastVersion() != null : msg;
+            //assert msg.lastVersion() != null : msg;
 
             timeBag.finishGlobalStage("Waiting for Full message");
 

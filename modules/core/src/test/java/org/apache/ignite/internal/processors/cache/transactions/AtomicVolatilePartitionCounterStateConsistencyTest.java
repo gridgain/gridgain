@@ -16,16 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import org.junit.Test;
+import java.util.Collection;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
+import org.junit.Ignore;
 
 /** */
 public class AtomicVolatilePartitionCounterStateConsistencyTest extends AtomicPartitionCounterStateConsistencyTest {
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testPartitionConsistencyWithPrimaryRestart() throws Exception {
-        super.testPartitionConsistencyWithPrimaryRestart();
-    }
-
     /** {@inheritDoc} */
     @Override protected boolean persistenceEnabled() {
         return false;
@@ -34,5 +31,28 @@ public class AtomicVolatilePartitionCounterStateConsistencyTest extends AtomicPa
     /** {@inheritDoc} */
     @Override protected int partitions() {
         return 1024;
+    }
+
+    /** {@inheritDoc} */
+    @Ignore
+    @Override public void testSingleThreadedUpdateOrder() throws Exception {
+        // Not applicable for volatile mode.
+    }
+
+    /** {@inheritDoc} */
+    @Ignore
+    @Override public void testPartitionConsistencyCancelledRebalanceCoordinatorIsDemander() throws Exception {
+        // Not applicable for volatile mode.
+    }
+
+    /** {@inheritDoc} */
+    @Ignore
+    @Override public void testLateAffinityChangeDuringExchange() throws Exception {
+        // Not applicable for volatile mode.
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {
+        // No-op.
     }
 }
