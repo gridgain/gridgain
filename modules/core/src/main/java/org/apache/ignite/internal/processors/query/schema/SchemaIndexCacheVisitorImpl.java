@@ -16,9 +16,10 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -51,14 +52,14 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Cache context. */
     private final GridCacheContext cctx;
 
-    /** Cancellation token. */
-    private final SchemaIndexOperationCancellationToken cancel;
-
     /** Future for create/rebuild index. */
     protected final GridFutureAdapter<Void> buildIdxFut;
 
     /** Logger. */
     private IgniteLogger log;
+
+    /** Index processing workers. */
+    private List<GridWorker> idxWorkers;
 
     /**
      * Constructor.
@@ -81,9 +82,24 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         this.cctx = cctx;
         this.buildIdxFut = buildIdxFut;
 
-        this.cancel = cancel;
-
         this.log = cctx.logger(SchemaIndexCacheVisitorImpl.class);
+
+        if (cancel != null)
+            cancel.listenStartCancel(fut -> {
+                if (idxWorkers != null)
+                    idxWorkers.forEach(GridWorker::cancel);
+
+                try {
+                    buildIdxFut.get(2_000, TimeUnit.MILLISECONDS);
+                }
+                catch (IgniteCheckedException e) {
+                    log.error("Error occured while waiting all idx operations to be stopped.", e);
+                }
+                finally {
+                    if (cancel != null)
+                        cancel.finishCancel();
+                }
+            });
     }
 
     /** {@inheritDoc} */
@@ -98,18 +114,20 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             return;
         }
 
-        AtomicBoolean stop = new AtomicBoolean();
-
         GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> buildIdxCompoundFut =
             new GridCompoundFuture<>();
+
+        idxWorkers = new ArrayList<>(locParts.size());
 
         for (GridDhtLocalPartition locPart : locParts) {
             GridWorkerFuture<SchemaIndexCacheStat> workerFut = new GridWorkerFuture<>();
 
-            GridWorker worker = new SchemaIndexCachePartitionWorker(cctx, locPart, stop, cancel, clo, workerFut);
+            GridWorker worker = new SchemaIndexCachePartitionWorker(cctx, locPart, clo, workerFut);
 
             workerFut.setWorker(worker);
             buildIdxCompoundFut.add(workerFut);
+
+            idxWorkers.add(worker);
 
             cctx.kernalContext().buildIndexExecutorService().execute(worker);
         }
