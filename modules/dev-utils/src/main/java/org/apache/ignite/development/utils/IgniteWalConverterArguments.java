@@ -31,18 +31,31 @@ import org.apache.ignite.internal.util.typedef.F;
  * Parameters for IgniteWalConverter with parsed and validated.
  */
 public class IgniteWalConverterArguments {
+    /** */
     private static final String WAL_DIR = "walDir";
+    /** */
     private static final String WAL_ARCHIVE_DIR = "walArchiveDir";
+    /** */
     private static final String PAGE_SIZE = "pageSize";
+    /** */
     private static final String BINARY_METADATA_FILE_STORE_DIR = "binaryMetadataFileStoreDir";
+    /** */
     private static final String MARSHALLER_MAPPING_FILE_STORE_DIR = "marshallerMappingFileStoreDir";
+    /** */
     private static final String KEEP_BINARY = "keepBinary";
+    /** */
     private static final String RECORD_TYPES = "recordTypes";
+    /** */
     private static final String WAL_TIME_FROM_MILLIS = "walTimeFromMillis";
+    /** */
     private static final String WAL_TIME_TO_MILLIS = "walTimeToMillis";
+    /** */
     private static final String RECORD_CONTAINS_TEXT = "recordContainsText";
+    /** */
     private static final String PROCESS_SENSITIVE_DATA = "processSensitiveData";
+    /** */
     private static final String PRINT_STAT = "printStat";
+    /** */
     private static final String SKIP_CRC = "skipCrc";
 
     /**
