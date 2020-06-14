@@ -23,14 +23,10 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.DiscoverySpi;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
@@ -67,15 +63,11 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     /** Entry start version. */
     private GridCacheVersion startVer;
 
+    /** Last version. */
+    private volatile GridCacheVersion last;
+
     /** Data center ID. */
     private byte dataCenterId;
-
-    /**
-     * Oldest cluster node start timestamp, lazily initialized.
-     *
-     * @see DiscoverySpi#getGridStartTime().
-     */
-    //private volatile long gridStartTime;
 
     /**
      * Offset in seconds from {@link #TOP_VER_BASE_TIME}.
@@ -84,7 +76,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     private volatile int offset;
 
     /** */
-    private GridCacheVersion ISOLATED_STREAMER_VER;
+    private GridCacheVersion isolatedStreamerVer;
 
     /** */
     private final GridLocalEventListener discoLsnr = new GridLocalEventListener() {
@@ -106,8 +98,6 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
         lastDataVer = sysreg.longMetric(LAST_DATA_VER, "The latest data version on the node.");
 
-        lastDataVer.value(order.get());
-
         startVer = new GridCacheVersion(0, 0, 0, dataCenterId);
 
         cctx.gridEvents().addLocalEventListener(discoLsnr, EVT_NODE_METRICS_UPDATED);
@@ -127,7 +117,11 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         if (startTime != 0)
             offset = (int) ((startTime - TOP_VER_BASE_TIME) / 1000);
 
-        ISOLATED_STREAMER_VER = new GridCacheVersion(1, 0, 1, dataCenterId);
+        last = new GridCacheVersion(0, order.get(), 0, dataCenterId);
+
+        lastDataVer.value(last.order());
+
+        isolatedStreamerVer = new GridCacheVersion(1 + offset, 0, 1, dataCenterId);
     }
 
     /**
@@ -139,8 +133,6 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         this.dataCenterId = dataCenterId;
 
         startVer = new GridCacheVersion(0, 0, 0, dataCenterId);
-
-        ISOLATED_STREAMER_VER = new GridCacheVersion(1, 0, 1, dataCenterId);
     }
 
     /**
@@ -201,10 +193,10 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @param ver Received version.
      * @return Next version.
      */
-    public GridCacheVersion onReceivedAndNext(AffinityTopologyVersion topVer, UUID nodeId, GridCacheVersion ver) {
+    public GridCacheVersion onReceivedAndNext(UUID nodeId, GridCacheVersion ver) {
         onReceived(nodeId, ver);
 
-        return next(topVer);
+        return next(ver);
     }
 
     /**
@@ -214,15 +206,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @return Version for entries loaded with isolated streamer.
      */
     public GridCacheVersion isolatedStreamerVersion() {
-        return ISOLATED_STREAMER_VER;
-    }
-
-    public GridCacheVersion next(AffinityTopologyVersion topVer) {
-        return next(topVer.topologyVersion() + offset, topVer.minorTopologyVersion(), dataCenterId);
-    }
-
-    public GridCacheVersion next(AffinityTopologyVersion topVer, byte dataCenterId) {
-        return next(topVer.topologyVersion() + offset, topVer.minorTopologyVersion(), dataCenterId);
+        return isolatedStreamerVer;
     }
 
     /**
@@ -238,13 +222,26 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
+     * Gets next version based on given topology version. Given value should be
+     * real topology version calculated as number of grid topology changes and
+     * obtained from discovery manager.
+     *
+     * @param topVer Topology version for which new version should be obtained.
+     * @param dataCenterId Data center id.
+     * @return Next version based on given topology version.
+     */
+    public GridCacheVersion next(long topVer, byte dataCenterId) {
+        return next(topVer + offset, cctx.localNode().order(), dataCenterId);
+    }
+
+    /**
      * Gets next version based on given cache version.
      *
      * @param ver Cache version for which new version should be obtained.
      * @return Next version based on given cache version.
      */
     public GridCacheVersion next(GridCacheVersion ver) {
-        return next(ver.topologyVersion(), ver.nodeOrder(), dataCenterId);
+        return next(ver.topologyVersion(), cctx.localNode().order(), dataCenterId);
     }
 
     /**
@@ -252,9 +249,11 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      *
      * @return Next version for cache store operations.
      */
-//    public GridCacheVersion nextForLoad() {
-//        return nextForLoad(cctx.kernalContext().discovery().topologyVersion() + offset, cctx.localNode().order(), dataCenterId);
-//    }
+    public GridCacheVersion nextForLoad() {
+        return nextForLoad(cctx.kernalContext().discovery().topologyVersion() + offset,
+            cctx.localNode().order(),
+            dataCenterId);
+    }
 
     /**
      * Gets next version for cache store load and reload operations.
@@ -262,8 +261,8 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @param topVer Topology version for which new version should be obtained.
      * @return Next version for cache store operations.
      */
-    public GridCacheVersion nextForLoad(AffinityTopologyVersion topVer) {
-        return nextForLoad(topVer.topologyVersion() + offset, topVer.minorTopologyVersion(), dataCenterId);
+    public GridCacheVersion nextForLoad(long topVer) {
+        return next(topVer + offset, cctx.localNode().order(), dataCenterId);
     }
 
     /**
@@ -272,31 +271,45 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @return Next version for cache store operations.
      */
     public GridCacheVersion nextForLoad(GridCacheVersion ver) {
-        return nextForLoad(ver.topologyVersion(), ver.nodeOrder(), dataCenterId);
+        return nextForLoad(ver.topologyVersion(), cctx.localNode().order(), dataCenterId);
     }
 
-    private GridCacheVersion next(long topVer, long minorTopVer, byte dataCenterId) {
+    /**
+     * @param topVer Topology version.
+     * @param nodeOrder Node order.
+     * @param dataCenterId Data center id.
+     */
+    private GridCacheVersion next(long topVer, long nodeOrder, byte dataCenterId) {
         long ord = order.incrementAndGet();
 
         GridCacheVersion next = new GridCacheVersion(
             (int)topVer,
             ord,
-            (int) minorTopVer,
+            (int) nodeOrder,
             dataCenterId);
+
+        last = next;
 
         lastDataVer.value(ord);
 
         return next;
     }
 
-    private GridCacheVersion nextForLoad(long topVer, long minorTopVer, byte dataCenterId) {
+    /**
+     * @param topVer Topology version.
+     * @param nodeOrder Node order.
+     * @param dataCenterId Data center id.
+     */
+    private GridCacheVersion nextForLoad(long topVer, long nodeOrder, byte dataCenterId) {
         long ord = loadOrder.incrementAndGet();
 
         GridCacheVersion next = new GridCacheVersion(
             (int)topVer,
             ord,
-            (int) minorTopVer,
+            (int) nodeOrder,
             dataCenterId);
+
+        last = next;
 
         lastDataVer.value(ord);
 
@@ -305,16 +318,18 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
 
     /**
      * Gets last generated version without generating a new one.
-     * @param topVer Ready topology version.
      *
      * @return Last generated version.
-     *
-     * @deprecated Kept for compatibility.
      */
-    @Deprecated
-    public GridCacheVersion last(@Nullable GridDhtPartitionsExchangeFuture fut) {
-        return fut == null ? new GridCacheVersion(0, order.get(), 0, dataCenterId) : // For backward compatibility.
-            new GridCacheVersion((int)fut.topologyVersion().topologyVersion(), order.get(), (int)cctx.localNode().order(), dataCenterId);
+    public GridCacheVersion last() {
+        return last;
+    }
+
+    /**
+     * @return Local order.
+     */
+    public long localOrder() {
+        return order.get();
     }
 
     /**
@@ -339,9 +354,11 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * Invalidates first cluster node start timestamp, it can be reinitialized lazily in the future.
+     * Update grid start time.
      */
     public void gridStartTime(long startTime) {
         offset = (int) ((startTime - TOP_VER_BASE_TIME) / 1000);
+
+        isolatedStreamerVer = new GridCacheVersion(1 + offset, 0, 1, dataCenterId);
     }
 }

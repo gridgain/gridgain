@@ -178,15 +178,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
 
-        int duration = GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
-
-        long stop = U.currentTimeMillis() + duration;
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
         Random r = new Random();
 
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
-                doSleep(3000);
+                doSleep(GridTestUtils.SF.applyLB(30_000, 15_000));
 
                 stopGrid(true, prim.name());
 
@@ -197,7 +195,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     awaitPartitionMapExchange();
 
-                    doSleep(5000);
+                    doSleep(GridTestUtils.SF.applyLB(5_000, 2_000));
                 }
                 catch (Exception e) {
                     fail(X.getFullStackTrace(e));

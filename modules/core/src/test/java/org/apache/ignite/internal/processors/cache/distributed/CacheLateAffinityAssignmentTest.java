@@ -31,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
@@ -134,6 +135,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
     /** Expected ideal affinity assignments. */
     private Map<Long, Map<Integer, List<List<ClusterNode>>>> idealAff = new HashMap<>();
+
+    /** */
+    private boolean skipCheckOrder;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -478,7 +482,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         int nodes = 1;
 
-        for (int i = 0;  i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             log.info("Iteration [iter=" + i + ", topVer=" + topVer + ']');
 
             topVer++;
@@ -665,6 +669,8 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
             checkAffinity(3, topVer(3, 1), true);
 
+            checkOrderCounters(3, topVer(3, 1));
+
             startClient(3, 4);
 
             checkAffinity(4, topVer(4, 0), true);
@@ -687,6 +693,8 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             lsnr.stopBlockCustomEvents();
 
             checkAffinity(3, topVer(5, 0), false);
+
+            checkOrderCounters(3, topVer(5, 0));
         }
         finally {
             System.clearProperty(IGNITE_EXCHANGE_COMPATIBILITY_VER_1);
@@ -977,7 +985,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
             final int NODES = 5;
 
-            for (int i = 0 ; i < NODES; i++)
+            for (int i = 0; i < NODES; i++)
                 startServer(i, i + 1);
 
             int majorVer = NODES;
@@ -2161,7 +2169,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             }
 
             //Ensure exchanges merge.
-            spiC = igniteInstanceName ->  testSpis[getTestIgniteInstanceIndex(igniteInstanceName)];
+            spiC = igniteInstanceName -> testSpis[getTestIgniteInstanceIndex(igniteInstanceName)];
 
             GridTestUtils.runAsync(() -> {
                 try {
@@ -2181,8 +2189,11 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             for (int t = 0; t < NODES; t++)
                 calculateAffinity(t + 1, true, null);
 
-            if (withClients)
+            if (withClients) {
+                skipCheckOrder = true;
+
                 checkAffinity(NODES, topVer(NODES, 0), false);
+            }
             else
                 checkAffinity(NODES, topVer(NODES, 1), true);
 
@@ -2203,6 +2214,8 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      */
     @Test
     public void testServiceReassign() throws Exception {
+        skipCheckOrder = true;
+
         Ignite ignite0 = startServer(0, 1);
 
         IgniteServices svcs = ignite0.services();
@@ -2486,7 +2499,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         Ignite node = grid(name);
 
-        assert  node != null;
+        assert node != null;
 
         return node;
     }
@@ -2609,7 +2622,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      * @return Exchange future.
      */
     private IgniteInternalFuture<?> affinityReadyFuture(AffinityTopologyVersion topVer, Ignite node) {
-        IgniteInternalFuture<?> fut =  ((IgniteKernal)node).context().cache().context().exchange().
+        IgniteInternalFuture<?> fut = ((IgniteKernal)node).context().cache().context().exchange().
             affinityReadyFuture(topVer);
 
         return fut != null ? fut : new GridFinishedFuture<>();
@@ -2688,6 +2701,40 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         for (IgniteInternalFuture<?> fut : futs)
             assertFalse(fut.isDone());
+    }
+
+    /**
+     * @param expNodes Expected nodes number.
+     * @param topVer Topology version.
+     * @throws Exception If failed.
+     */
+    private void checkOrderCounters(int expNodes, AffinityTopologyVersion topVer) throws Exception {
+        List<Ignite> nodes = G.allGrids();
+
+        Long order = null;
+
+        for (Ignite node : nodes) {
+            IgniteKernal node0 = (IgniteKernal)node;
+
+            if (node0.configuration().isClientMode())
+                continue;
+
+            IgniteInternalFuture<?> fut = node0.context().cache().context().exchange().affinityReadyFuture(topVer);
+
+            if (fut != null)
+                fut.get();
+
+            AtomicLong orderCntr = GridTestUtils.getFieldValue(node0.context().cache().context().versions(), "order");
+
+            log.info("Order [node=" + node0.name() + ", order=" + orderCntr.get() + ']');
+
+            if (order == null)
+                order = orderCntr.get();
+            else
+                assertEquals(order, (Long)orderCntr.get());
+        }
+
+        assertEquals(expNodes, nodes.size());
     }
 
     /**
@@ -2814,6 +2861,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         }
 
         assertEquals(expNodes, nodes.size());
+
+        if (!skipCheckOrder)
+            checkOrderCounters(expNodes, topVer);
 
         return aff;
     }

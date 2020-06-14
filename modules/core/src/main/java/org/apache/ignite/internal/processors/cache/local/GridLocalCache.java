@@ -718,11 +718,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
     /** {@inheritDoc} */
     @Override public GridCacheVersion nextVersion() {
-        return ctx.versions().next(0);
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridCacheVersion nextVersion(byte dataCenterId) {
-        throw new IllegalStateException();
+        return ctx.versions().next(ctx.shared().kernalContext().discovery().topologyVersion());
     }
 }

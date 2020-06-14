@@ -49,6 +49,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -1100,7 +1101,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @throws NodeStoppingException If node stopping.
      */
     private long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        GridCacheVersion clearVer = group().caches().get(0).cache().nextVersion();
+        long order = ctx.versions().localOrder();
+
+        GridCacheVersion clearVer = ctx.versions().startVersion();
 
         GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(clearVer);
 
@@ -1130,7 +1133,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // This is required because normal updates are possible to moving partition which is currently cleared.
                     // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
-                    if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING || state() == OWNING))
+                    if ((state() == MOVING || state() == OWNING) && row.version().order() > order)
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))

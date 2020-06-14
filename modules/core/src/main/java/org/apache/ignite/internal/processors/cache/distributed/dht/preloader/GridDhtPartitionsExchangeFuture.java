@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
@@ -99,6 +100,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Part
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
@@ -236,6 +238,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
     /** */
     private boolean init;
+
+    /** Last committed cache version before next topology version use. */
+    private AtomicReference<GridCacheVersion> lastVer = new AtomicReference<>();
 
     /**
      * Message received from node joining cluster (if this is 'node join' exchange),
@@ -2142,7 +2147,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (cctx.kernalContext().clientNode() || (dynamicCacheStartExchange() && exchangeLocE != null)) {
             msg = new GridDhtPartitionsSingleMessage(exchangeId(),
                 cctx.kernalContext().clientNode(),
-                cctx.versions().last(cctx.exchange().lastFinishedFuture()),
+                cctx.versions().last(),
                 true);
         }
         else {
@@ -2197,12 +2202,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     private GridDhtPartitionsFullMessage createPartitionsMessage(boolean compress,
         boolean newCntrMap) {
+        GridCacheVersion last = lastVer.get();
+
         GridDhtPartitionsFullMessage m = cctx.exchange().createPartitionsFullMessage(
             compress,
             newCntrMap,
             exchangeId(),
             null,
-            cctx.versions().last(cctx.exchange().lastFinishedFuture()),
+            last != null ? last : cctx.versions().last(),
             partHistSuppliers,
             partsToReload);
 
@@ -2781,6 +2788,31 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * @param ver Version.
+     */
+    private void updateLastVersion(GridCacheVersion ver) {
+        assert ver != null;
+
+        while (true) {
+            GridCacheVersion old = lastVer.get();
+
+            if (old == null || Long.compare(old.order(), ver.order()) < 0) {
+                if (lastVer.compareAndSet(old, ver))
+                    break;
+            }
+            else
+                break;
+        }
+    }
+
+    /**
+     * @return Last cache update version before topology version change.
+     */
+    public @Nullable GridCacheVersion lastVerion() {
+        return lastVer.get();
+    }
+
+    /**
      * Records that this exchange if merged with another 'node join' exchange.
      *
      * @param node Joined node.
@@ -2999,6 +3031,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             newCrdFut0.onMessage(node, msg);
 
             return;
+        }
+
+        if (!msg.client()) {
+            assert msg.lastVersion() != null : msg;
+
+            updateLastVersion(msg.lastVersion());
         }
 
         GridDhtPartitionsExchangeFuture mergedWith0 = null;
@@ -3843,6 +3881,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             timeBag.finishGlobalStage("Apply update counters");
 
+            updateLastVersion(cctx.versions().last());
+
+            cctx.versions().onExchange(lastVer.get().order());
+
             IgniteProductVersion minVer = exchCtx.events().discoveryCache().minimumNodeVersion();
 
             GridDhtPartitionsFullMessage msg = createPartitionsMessage(true,
@@ -4425,7 +4467,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 if (dynamicCacheStartExchange() && exchangeLocE != null) {
                     res = new GridDhtPartitionsSingleMessage(msg.restoreExchangeId(),
                         cctx.kernalContext().clientNode(),
-                        cctx.versions().last(cctx.exchange().lastFinishedFuture()),
+                        cctx.versions().last(),
                         true);
 
                     res.setError(exchangeLocE);
@@ -4482,7 +4524,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private void processFullMessage(boolean checkCrd, ClusterNode node, GridDhtPartitionsFullMessage msg) {
         try {
             assert exchId.equals(msg.exchangeId()) : msg;
-            //assert msg.lastVersion() != null : msg;
+            assert msg.lastVersion() != null : msg;
 
             timeBag.finishGlobalStage("Waiting for Full message");
 
@@ -4576,7 +4618,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         return; // Node is stopping, no need to further process exchange.
                     }
 
-                    assert resTopVer.equals(exchCtx.events().topologyVersion()) :  "Unexpected result version [" +
+                    assert resTopVer.equals(exchCtx.events().topologyVersion()) : "Unexpected result version [" +
                         "msgVer=" + resTopVer +
                         ", locVer=" + exchCtx.events().topologyVersion() + ']';
                 }
@@ -4761,7 +4803,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             return;
 
                         try {
-                            assert msg.error() != null: msg;
+                            assert msg.error() != null : msg;
 
                             // Try to revert all the changes that were done during initialization phase
                             cctx.affinity().forceCloseCaches(

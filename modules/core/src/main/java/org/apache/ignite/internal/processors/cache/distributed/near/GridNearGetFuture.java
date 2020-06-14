@@ -201,7 +201,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
             finally {
                 // Exception has been thrown, must release reserved near entries.
                 if (!success) {
-                    GridCacheVersion obsolete = cctx.versions().next(topVer);
+                    GridCacheVersion obsolete = cctx.versions().next(topVer.topologyVersion());
 
                     if (savedEntries != null) {
                         for (GridNearCacheEntry reserved : savedEntries.values()) {

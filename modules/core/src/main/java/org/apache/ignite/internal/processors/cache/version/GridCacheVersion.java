@@ -225,12 +225,12 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
         if (res != 0)
             return res;
 
-        res = Integer.compare(nodeOrder(), other.nodeOrder());
+        res = Long.compare(order, other.order);
 
         if (res != 0)
             return res;
 
-        return Long.compare(order, other.order);
+        return Integer.compare(nodeOrder(), other.nodeOrder());
     }
 
     /** {@inheritDoc} */

@@ -3232,7 +3232,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             }
             else {
                 // Version for all loaded entries.
-                final GridCacheVersion ver0 = ctx.versions().nextForLoad(topVer);
+                final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
                 ctx.store().loadCache(new CIX3<KeyCacheObject, Object, GridCacheVersion>() {
                     @Override public void applyx(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver)
@@ -3434,7 +3434,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
         else {
             // Version for all loaded entries.
-            final GridCacheVersion ver0 = ctx.versions().nextForLoad(topVer);
+            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
 
             ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
                 @Override public void apply(KeyCacheObject key, Object val) {
@@ -3655,7 +3655,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @return Next version based on given topology version.
      */
     public GridCacheVersion nextVersion() {
-        return ctx.versions().next(ctx.topology().readyTopologyVersion());
+        return ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion());
     }
 
     /**
@@ -3665,7 +3665,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @return Next version based on given topology version.
      */
     public GridCacheVersion nextVersion(byte dataCenterId) {
-        return ctx.versions().next(ctx.topology().readyTopologyVersion(), dataCenterId);
+        return ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion(), dataCenterId);
     }
 
     /**
