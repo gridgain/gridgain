@@ -1065,8 +1065,8 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * The future is created for each topology version causing local moving partitions and completed when all partitions
-     * are preloaded.
+     * The future is created for each topology version if some partitions should present by affinity and completed when
+     * all partitions are transferred.
      * <p>
      * As soon as a partition was successfully preloaded it's state is switched to owning, making it consistent with
      * other copies.
@@ -1082,7 +1082,7 @@ public class GridDhtPartitionDemander {
      *     <li>{@code False} if a group rebalancing was cancelled because topology has changed and new assignment is
      *     incompatible with previous, see {@link RebalanceFuture#compatibleWith(GridDhtPreloaderAssignments)}.</li>
      * </ul>
-     *
+     * TODO refactor to separate class.
      */
     public static class RebalanceFuture extends GridFutureAdapter<Boolean> {
         /** State updater. */
@@ -1790,7 +1790,7 @@ public class GridDhtPartitionDemander {
         }
 
         /**
-         * @param newAssignments New assignmets.
+         * @param newAssignments New assignments.
          *
          * @return {@code True} when assignments are compatible and future should not be cancelled.
          */

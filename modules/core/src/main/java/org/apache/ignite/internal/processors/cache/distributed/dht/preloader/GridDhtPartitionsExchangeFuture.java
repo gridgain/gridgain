@@ -2801,13 +2801,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
-     * @return Last cache update version before topology version change.
-     */
-    public @Nullable GridCacheVersion lastVerion() {
-        return lastVer.get();
-    }
-
-    /**
      * Records that this exchange if merged with another 'node join' exchange.
      *
      * @param node Joined node.

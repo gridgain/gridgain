@@ -1678,6 +1678,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         int p = e.getKey();
                         GridDhtPartitionState state = e.getValue();
 
+                        // TODO can remove it ?
                         if (state == OWNING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
@@ -1709,6 +1710,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (readyTopVer.initialized() && readyTopVer.equals(lastTopChangeVer)) {
                     AffinityAssignment aff = grp.affinity().readyAffinity(readyTopVer);
 
+                    // Check evictions while preloading.
                     // Evictions on exchange are checked in exchange worker thread before rebalancing.
                     if (exchangeVer == null)
                         changed |= checkEvictions(updateSeq, aff);
