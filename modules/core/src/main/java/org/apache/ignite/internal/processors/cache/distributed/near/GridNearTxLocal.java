@@ -296,7 +296,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     ) {
         super(
             ctx,
-            ctx.versions().next(ctx.kernalContext().discovery().topologyVersion()),
+            ctx.versions().next(ctx.exchange().readyAffinityVersion()),
             implicit,
             implicitSingle,
             sys,

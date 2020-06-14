@@ -3232,7 +3232,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             }
             else {
                 // Version for all loaded entries.
-                final GridCacheVersion ver0 = ctx.versions().nextForLoad();
+                final GridCacheVersion ver0 = ctx.versions().nextForLoad(topVer);
 
                 ctx.store().loadCache(new CIX3<KeyCacheObject, Object, GridCacheVersion>() {
                     @Override public void applyx(KeyCacheObject key, Object val, @Nullable GridCacheVersion ver)
@@ -3434,7 +3434,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
         else {
             // Version for all loaded entries.
-            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
+            final GridCacheVersion ver0 = ctx.versions().nextForLoad(topVer);
 
             ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
                 @Override public void apply(KeyCacheObject key, Object val) {

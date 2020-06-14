@@ -152,7 +152,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
     ) {
         super(
             cctx,
-            cctx.versions().onReceivedAndNext(nearNodeId, nearXidVer),
+            cctx.versions().onReceivedAndNext(topVer, nearNodeId, nearXidVer),
             implicit,
             implicitSingle,
             sys,

@@ -201,10 +201,10 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @param ver Received version.
      * @return Next version.
      */
-    public GridCacheVersion onReceivedAndNext(UUID nodeId, GridCacheVersion ver) {
+    public GridCacheVersion onReceivedAndNext(AffinityTopologyVersion topVer, UUID nodeId, GridCacheVersion ver) {
         onReceived(nodeId, ver);
 
-        return next(ver);
+        return next(topVer);
     }
 
     /**
@@ -244,7 +244,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @return Next version based on given cache version.
      */
     public GridCacheVersion next(GridCacheVersion ver) {
-        return next(ver.topologyVersion(), cctx.localNode().order(), dataCenterId);
+        return next(ver.topologyVersion(), ver.nodeOrder(), dataCenterId);
     }
 
     /**
@@ -252,9 +252,9 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      *
      * @return Next version for cache store operations.
      */
-    public GridCacheVersion nextForLoad() {
-        return nextForLoad(cctx.kernalContext().discovery().topologyVersion() + offset, cctx.localNode().order(), dataCenterId);
-    }
+//    public GridCacheVersion nextForLoad() {
+//        return nextForLoad(cctx.kernalContext().discovery().topologyVersion() + offset, cctx.localNode().order(), dataCenterId);
+//    }
 
     /**
      * Gets next version for cache store load and reload operations.
@@ -262,8 +262,8 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @param topVer Topology version for which new version should be obtained.
      * @return Next version for cache store operations.
      */
-    public GridCacheVersion nextForLoad(long topVer) {
-        return nextForLoad(topVer + offset, cctx.localNode().order(), dataCenterId);
+    public GridCacheVersion nextForLoad(AffinityTopologyVersion topVer) {
+        return nextForLoad(topVer.topologyVersion() + offset, topVer.minorTopologyVersion(), dataCenterId);
     }
 
     /**
@@ -272,7 +272,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @return Next version for cache store operations.
      */
     public GridCacheVersion nextForLoad(GridCacheVersion ver) {
-        return nextForLoad(ver.topologyVersion(), cctx.localNode().order(), dataCenterId);
+        return nextForLoad(ver.topologyVersion(), ver.nodeOrder(), dataCenterId);
     }
 
     private GridCacheVersion next(long topVer, long minorTopVer, byte dataCenterId) {
