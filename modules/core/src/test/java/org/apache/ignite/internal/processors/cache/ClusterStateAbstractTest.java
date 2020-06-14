@@ -172,7 +172,7 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
             IgniteCache<Object, Object> cache0 = grid(g).cache(CACHE_NAME);
 
             for (int k = 0; k < ENTRY_CNT; k++)
-                assertEquals(k,  cache0.get(k));
+                assertEquals(k, cache0.get(k));
         }
 
         // Check that new node startup and shutdown works fine after activation.
@@ -206,7 +206,7 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
             IgniteCache<Object, Object> cache0 = grid(g).cache(CACHE_NAME);
 
             for (int k = 0; k < ENTRY_CNT; k++)
-                assertEquals(k,  cache0.get(k));
+                assertEquals(k, cache0.get(k));
         }
 
         grid(0).cluster().active(false);
@@ -269,7 +269,7 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
             IgniteCache<Object, Object> cache0 = grid(g).cache(CACHE_NAME);
 
             for (int k = 0; k < ENTRY_CNT; k++)
-                assertEquals(k,  cache0.get(k));
+                assertEquals(k, cache0.get(k));
         }
 
         cl.cluster().active(false);

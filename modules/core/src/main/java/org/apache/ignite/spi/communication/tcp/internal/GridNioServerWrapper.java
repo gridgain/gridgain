@@ -133,6 +133,7 @@ public class GridNioServerWrapper {
 
     /** Attribute names. */
     private final AttributeNames attrs;
+
     /** Tracing. */
     private final Tracing tracing;
 
@@ -654,7 +655,7 @@ public class GridNioServerWrapper {
      * @throws IgniteCheckedException If failed.
      */
     public GridCommunicationClient createTcpClient(ClusterNode node, int connIdx, boolean backwardCompatibility) throws IgniteCheckedException {
-        if(backwardCompatibility)
+        if (backwardCompatibility)
             return createTcpClientFun.apply(node, connIdx);
         else {
             GridNioSession ses = createNioSession(node, connIdx);

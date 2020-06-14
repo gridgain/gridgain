@@ -35,7 +35,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-
 /**
  * Test for rest processor hanging on stop
  */

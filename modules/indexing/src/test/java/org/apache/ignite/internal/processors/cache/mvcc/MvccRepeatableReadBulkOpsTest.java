@@ -401,11 +401,10 @@ public class MvccRepeatableReadBulkOpsTest extends CacheMvccAbstractTest {
 
         TestCache<Integer, MvccTestAccount> cache = new TestCache<>(node.cache(DEFAULT_CACHE_NAME));
 
+        final Set<Integer> keysForUpdate = new HashSet<>(3);
+        final Set<Integer> keysForRemove = new HashSet<>(3);
 
-            final Set<Integer> keysForUpdate = new HashSet<>(3);
-            final Set<Integer> keysForRemove = new HashSet<>(3);
-
-            final Set<Integer> allKeys = generateKeySet(grid(0).cache(DEFAULT_CACHE_NAME), keysForUpdate, keysForRemove);
+        final Set<Integer> allKeys = generateKeySet(grid(0).cache(DEFAULT_CACHE_NAME), keysForUpdate, keysForRemove);
 
         try {
             int updCnt = 1;
@@ -530,7 +529,7 @@ public class MvccRepeatableReadBulkOpsTest extends CacheMvccAbstractTest {
             }
             case INVOKE: {
                 CacheEntryProcessor<Integer, MvccTestAccount, MvccTestAccount> ep =
-                    new GetAndPutEntryProcessor<Integer, MvccTestAccount>(){
+                    new GetAndPutEntryProcessor<Integer, MvccTestAccount>() {
                     /** {@inheritDoc} */
                     @Override MvccTestAccount newValForKey(Integer key) {
                         return entries.get(key);
@@ -635,7 +634,7 @@ public class MvccRepeatableReadBulkOpsTest extends CacheMvccAbstractTest {
          * @param key Key.
          * @return New value.
          */
-        V newValForKey(K key){
+        V newValForKey(K key) {
             throw new UnsupportedOperationException();
         }
     }

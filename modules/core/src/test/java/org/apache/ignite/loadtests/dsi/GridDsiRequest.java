@@ -51,7 +51,7 @@ public class GridDsiRequest implements Serializable {
      * @param terminalId Terminal ID.
      * @return Cache key.
      */
-    public Object getCacheKey(String terminalId){
+    public Object getCacheKey(String terminalId) {
         return new RequestKey(id, terminalId);
     }
 

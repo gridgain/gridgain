@@ -808,7 +808,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (readPageFromStore) {
                     boolean locked = rwLock.writeLock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
-                    assert locked: "Page ID " + fullId + " expected to be locked";
+                    assert locked : "Page ID " + fullId + " expected to be locked";
 
                     lockedPageAbsPtr = absPtr;
                 }
@@ -839,7 +839,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             seg.acquirePage(absPtr);
 
-            if(!readPageFromStore)
+            if (!readPageFromStore)
                 statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
 
             return absPtr;
@@ -1565,7 +1565,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** {@inheritDoc} */
-    @Override  public long readLock(long absPtr, long pageId, boolean force, boolean touch) {
+    @Override public long readLock(long absPtr, long pageId, boolean force, boolean touch) {
         assert started;
 
         int tag = force ? -1 : PageIdUtils.tag(pageId);
@@ -2709,7 +2709,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (meta || pageIn.meta)
                 return meta ? 1 : -1;
 
-            if(dirty == pageIn.dirty)
+            if (dirty == pageIn.dirty)
                 return Long.compare(ts, pageIn.ts);
 
             return dirty ? 1 : -1;

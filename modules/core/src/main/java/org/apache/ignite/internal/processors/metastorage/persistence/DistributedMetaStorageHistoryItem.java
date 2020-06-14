@@ -89,8 +89,7 @@ final class DistributedMetaStorageHistoryItem extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
         int len = in.readInt();
 
         keys = new String[len];

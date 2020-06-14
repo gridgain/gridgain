@@ -132,7 +132,8 @@ public class SandboxMLCache {
                         data[i] = Double.NaN;
                     else
                         data[i] = Double.valueOf(cells[i]);
-                } catch (java.lang.NumberFormatException e) {
+                }
+                catch (java.lang.NumberFormatException e) {
                     try {
                         data[i] = format.parse(cells[i]).doubleValue();
                     }

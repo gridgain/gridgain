@@ -44,6 +44,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
@@ -660,7 +661,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
-        this.srvLsnr = new InboundConnectionHandler(
+        this.srvLsnr = resolve(ignite, new InboundConnectionHandler(
             log,
             cfg,
             nodeGetter,
@@ -686,12 +687,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                         lsnr.onDisconnected(nodeId);
                 }
             }
-        );
+        ));
 
-        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ?
-            ((IgniteKernal)ignite).context().timeout() : null;
+        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ? ((IgniteKernal)ignite).context().timeout() : null;
 
-        this.nioSrvWrapper = new GridNioServerWrapper(
+        this.nioSrvWrapper = resolve(ignite, new GridNioServerWrapper(
             log,
             cfg,
             timeoutProcessor,
@@ -709,11 +709,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             getWorkersRegistry(ignite),
             ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
             this::createTcpClient
-        );
+        ));
 
         this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
 
-        this.clientPool = new ConnectionClientPool(
+        this.clientPool = resolve(ignite, new ConnectionClientPool(
             cfg,
             attributeNames,
             log,
@@ -726,9 +726,10 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             timeoutProcessor,
             stateProvider,
             nioSrvWrapper
-        );
+        ));
 
-        srvLsnr.setClientPool(clientPool);
+        this.srvLsnr.setClientPool(clientPool);
+
         nioSrvWrapper.clientPool(clientPool);
 
         discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
@@ -1006,6 +1007,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         checkAttributePresence(node, createSpiAttributeName(ATTR_ADDRS));
         checkAttributePresence(node, createSpiAttributeName(ATTR_HOST_NAMES));
         checkAttributePresence(node, createSpiAttributeName(ATTR_PORT));
+    }
+
+    /**
+     * Checks {@link Ignite} implementation type and calls {@link GridResourceProcessor#resolve(Object)} or returns original.
+     */
+    private <T> T resolve(Ignite ignite, T instance) {
+        return ignite instanceof IgniteKernal ? ((IgniteKernal)ignite).context().resource().resolve(instance) : instance;
     }
 
     /**

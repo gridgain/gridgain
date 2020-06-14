@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,40 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.springdata.misc;
+
+import java.io.Serializable;
+
 /**
- * <!-- Package description. -->
- * Demonstrates usage of cron-based scheduler.
+ * Compound key.
  */
-package org.apache.ignite.examples.misc.schedule;
+public class PersonKey implements Serializable {
+    /** */
+    private int id1;
+
+    /** */
+    private int id2;
+
+    /**
+     * @param id1 ID1.
+     * @param id2 ID2.
+     */
+    public PersonKey(int id1, int id2) {
+        this.id1 = id1;
+        this.id2 = id2;
+    }
+
+    /**
+     * @return ID1
+     */
+    public int getId1() {
+        return id1;
+    }
+
+    /**
+     * @return ID1
+     */
+    public int getId2() {
+        return id1;
+    }
+}

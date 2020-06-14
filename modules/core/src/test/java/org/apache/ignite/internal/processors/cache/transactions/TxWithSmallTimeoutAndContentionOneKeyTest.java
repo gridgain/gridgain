@@ -84,7 +84,7 @@ public class TxWithSmallTimeoutAndContentionOneKeyTest extends GridCommonAbstrac
                 .setBackups(3)
         );
 
-        if (client){
+        if (client) {
             cfg.setConsistentId("Client");
 
             cfg.setClientMode(client);
@@ -126,7 +126,7 @@ public class TxWithSmallTimeoutAndContentionOneKeyTest extends GridCommonAbstrac
     /**
      * @return Random transaction isolation level.
      */
-    protected TransactionIsolation transactionIsolation(){
+    protected TransactionIsolation transactionIsolation() {
         if (MvccFeatureChecker.forcedMvcc())
             return REPEATABLE_READ;
 
@@ -229,7 +229,7 @@ public class TxWithSmallTimeoutAndContentionOneKeyTest extends GridCommonAbstrac
 
         log.info("Last commited value:" + val);
 
-        if (idleVerifyResult.hasConflicts()){
+        if (idleVerifyResult.hasConflicts()) {
             SB sb = new SB();
 
             sb.a("\n");

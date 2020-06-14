@@ -88,7 +88,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployOutsideBaseline() throws Exception {
         checkDeploymentFromOutsideNode(true, false);
     }
@@ -97,7 +97,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployOutsideBaselineNoPersistence() throws Exception {
         checkDeploymentFromOutsideNode(false, false);
     }
@@ -106,7 +106,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployOutsideBaselineStatic() throws Exception {
         checkDeploymentFromOutsideNode(true, true);
     }
@@ -115,7 +115,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployOutsideBaselineStaticNoPersistence() throws Exception {
         checkDeploymentFromOutsideNode(false, true);
     }
@@ -124,7 +124,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployFromNodeAddedToBlt() throws Exception {
         checkDeployWithNodeAddedToBlt(true);
     }
@@ -133,7 +133,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployToNodeAddedToBlt() throws Exception {
         checkDeployWithNodeAddedToBlt(false);
     }
@@ -142,7 +142,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployFromNodeRemovedFromBlt() throws Exception {
         checkDeployFromNodeRemovedFromBlt(true, false);
     }
@@ -151,7 +151,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployFromNodeRemovedFromBltStatic() throws Exception {
         checkDeployFromNodeRemovedFromBlt(true, true);
     }
@@ -160,7 +160,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployToNodeRemovedFromBlt() throws Exception {
         checkDeployFromNodeRemovedFromBlt(false, false);
     }
@@ -169,7 +169,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployFromEachNodes() throws Exception {
         checkDeployFromEachNodes(false, false);
     }
@@ -178,7 +178,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testStaticDeployFromEachNodes() throws Exception {
         checkDeployFromEachNodes(false, true);
     }

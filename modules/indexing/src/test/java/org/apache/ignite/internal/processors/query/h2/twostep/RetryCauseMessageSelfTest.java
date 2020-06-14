@@ -97,8 +97,8 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
         GridTestUtils.setFieldValue(h2Idx, "mapQryExec",
             new MockGridMapQueryExecutor() {
-                @Override
-                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                @Override public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq)
+                    throws IgniteCheckedException {
                     qryReq.caches().add(Integer.MAX_VALUE);
 
                     startedExecutor.onQueryRequest(node, qryReq);
@@ -136,8 +136,8 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
         GridTestUtils.setFieldValue(h2Idx, "mapQryExec",
             new MockGridMapQueryExecutor() {
-                @Override
-                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                @Override public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq)
+                    throws IgniteCheckedException {
                     final PartitionReservationKey grpKey = new PartitionReservationKey(ORG, null);
 
                     reservations.put(grpKey, new GridReservable() {
@@ -226,8 +226,8 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
         GridTestUtils.setFieldValue(h2Idx, "mapQryExec",
             new MockGridMapQueryExecutor() {
-                @Override
-                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                @Override public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq)
+                    throws IgniteCheckedException {
                     GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(qryReq.caches().get(0));
 
                     GridDhtLocalPartition part = cctx.topology().localPartition(0, NONE, false);
@@ -271,8 +271,8 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
         GridTestUtils.setFieldValue(h2Idx, "mapQryExec",
             new MockGridMapQueryExecutor() {
-                @Override
-                public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq) throws IgniteCheckedException {
+                @Override public void onQueryRequest(ClusterNode node, GridH2QueryRequest qryReq)
+                    throws IgniteCheckedException {
                     final PartitionReservationKey grpKey = new PartitionReservationKey(ORG, null);
 
                     reservations.put(grpKey, new GridReservable() {
@@ -384,7 +384,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setCommunicationSpi(new TcpCommunicationSpi(){
+        cfg.setCommunicationSpi(new TcpCommunicationSpi() {
             /** {@inheritDoc} */
             @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC) {
                 assert msg != null;

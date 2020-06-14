@@ -217,9 +217,9 @@ public class DefaultModelStorage implements ModelStorage {
 
         synchronize(() -> {
             FileOrDirectory file = storageProvider.get(path);
-            if(file.isDirectory()) {
+            if (file.isDirectory()) {
                 Directory dir = (Directory) file;
-                if(!dir.getFiles().isEmpty())
+                if (!dir.getFiles().isEmpty())
                     throw new IllegalArgumentException("Cannot delete non-empty directory [path=" + path + "]");
             }
 
@@ -266,7 +266,7 @@ public class DefaultModelStorage implements ModelStorage {
     /** {@inheritDoc} */
     @Override public <T> T lockPaths(Supplier<T> supplier, String... paths) {
         Lock[] locks = new Lock[paths.length];
-        for(int i = 0; i < paths.length; i++)
+        for (int i = 0; i < paths.length; i++)
             locks[i] = storageProvider.lock(paths[i]);
 
         return synchronize(supplier, locks);

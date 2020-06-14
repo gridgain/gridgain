@@ -728,7 +728,8 @@ public class PlatformCallbackGateway {
         }
         finally {
             leave();
-        }}
+        }
+    }
 
     /**
      * @param ptr Pointer.
@@ -1119,7 +1120,7 @@ public class PlatformCallbackGateway {
      *
      * @param memPtr Pointer to a stream.
      */
-    public void affinityFunctionAssignPartitions(long memPtr){
+    public void affinityFunctionAssignPartitions(long memPtr) {
         enter();
 
         try {

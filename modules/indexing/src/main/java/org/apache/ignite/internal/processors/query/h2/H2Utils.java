@@ -150,7 +150,6 @@ public class H2Utils {
     /** Quotation character. */
     private static final char ESC_CH = '\"';
 
-
     /** Hash join max table size (not final for test). */
     private static int hashJoinMaxTableSize
         = IgniteSystemProperties.getInteger(IGNITE_HASH_JOIN_MAX_TABLE_SIZE, DFLT_HASH_JOIN_MAX_TABLE_SIZE);
@@ -529,8 +528,8 @@ public class H2Utils {
      */
     @SuppressWarnings("unchecked")
     public static QueryCursorImpl<List<?>> zeroCursor() {
-        QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList
-            (Collections.singletonList(0L)), null, false, false);
+        QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList(
+            Collections.singletonList(0L)), null, false, false);
 
         resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -672,7 +671,7 @@ public class H2Utils {
      * @see Value
      * @see DataType#getTypeFromClass(Class)
      */
-    public static int getTypeFromClass(Class <?> x) {
+    public static int getTypeFromClass(Class<?> x) {
         if (x == null || Void.TYPE == x)
             return Value.NULL;
 
@@ -826,7 +825,7 @@ public class H2Utils {
                 (upper.startsWith("WHERE") || upper.startsWith("ORDER") || upper.startsWith("LIMIT") ?
                     " " : " WHERE ");
 
-        if(tableAlias != null)
+        if (tableAlias != null)
             t = tableAlias;
 
         qry = "SELECT " + t + "." + KEY_FIELD_NAME + ", " + t + "." + VAL_FIELD_NAME + from + qry;
@@ -1063,14 +1062,14 @@ public class H2Utils {
 
         boolean isSql = tbl.rowDescriptor().tableDescriptor().sql();
 
-        if(!isSql)
+        if (!isSql)
             return idxCols;
 
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
 
         for (IndexColumn idxCol : idxCols) {
-            if(idxCol.column.getColumnId() == KEY_COL){
-                if(QueryUtils.isSqlType(type.keyClass())) {
+            if (idxCol.column.getColumnId() == KEY_COL) {
+                if (QueryUtils.isSqlType(type.keyClass())) {
                     int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
                     //Remap simple key to alternative column.

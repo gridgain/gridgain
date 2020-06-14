@@ -29,7 +29,7 @@ import org.h2.expression.function.FunctionInfo;
 /**
  * SQL function manager.
  */
-public class FunctionsManager <T extends Set<String> & Serializable> implements DistributePropertyListener<T> {
+public class FunctionsManager<T extends Set<String> & Serializable> implements DistributePropertyListener<T> {
     /** Original H2 functions set. */
     private static Map<String, FunctionInfo> origFuncs;
 

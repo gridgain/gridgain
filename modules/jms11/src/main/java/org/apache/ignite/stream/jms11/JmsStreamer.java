@@ -238,8 +238,7 @@ public class JmsStreamer<T extends Message, K, V> extends StreamAdapter<T, K, V>
             if (batched && batchClosureMillis > 0) {
                 scheduler = Executors.newScheduledThreadPool(1);
                 scheduler.schedule(new Runnable() {
-                    @Override
-                    public void run() {
+                    @Override public void run() {
                         for (Session session : sessions) {
                             try {
                                 session.commit();
@@ -273,7 +272,6 @@ public class JmsStreamer<T extends Message, K, V> extends StreamAdapter<T, K, V>
     public void stop() throws IgniteException {
         if (stopped)
             throw new IgniteException("Attempted to stop an already stopped JMS Streamer");
-
 
         try {
             stopped = true;
@@ -492,7 +490,9 @@ public class JmsStreamer<T extends Message, K, V> extends StreamAdapter<T, K, V>
     private class IgniteJmsMessageListener implements MessageListener {
 
         private Session session;
+
         private AtomicInteger counter = new AtomicInteger(0);
+
         private Executor executor;
 
         public IgniteJmsMessageListener(Session session, boolean createThreadPool) {
@@ -501,15 +501,13 @@ public class JmsStreamer<T extends Message, K, V> extends StreamAdapter<T, K, V>
             // if we don't need a thread pool, create a dummy one that executes the task synchronously
             //noinspection NullableProblems
             this.executor = createThreadPool ? Executors.newFixedThreadPool(threads) : new Executor() {
-                @Override
-                public void execute(Runnable command) {
+                @Override public void execute(Runnable command) {
                     command.run();
                 }
             };
         }
 
-        @Override
-        public void onMessage(final Message message) {
+        @Override public void onMessage(final Message message) {
             if (stopped) {
                 return;
             }

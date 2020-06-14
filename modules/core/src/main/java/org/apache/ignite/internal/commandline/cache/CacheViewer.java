@@ -145,7 +145,7 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
         /**
          * @return Full config flag.
          */
-        public boolean fullConfig(){ return fullConfig; }
+        public boolean fullConfig() { return fullConfig; }
 
         /** {@inheritDoc} */
         @Override public String toString() {
@@ -181,7 +181,6 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
             else
                 printCacheInfos(res.cacheInfos(), args.cacheCommand(), logger);
         }
-
 
         return res;
     }

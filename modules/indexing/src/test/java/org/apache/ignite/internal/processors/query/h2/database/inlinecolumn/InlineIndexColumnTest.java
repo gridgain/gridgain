@@ -1032,7 +1032,6 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         /** */
         private final String val;
 
-
         /** */
         public IgnoreCaseString(String val) {
             this.val = val;

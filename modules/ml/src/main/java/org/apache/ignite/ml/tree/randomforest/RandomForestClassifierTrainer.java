@@ -86,7 +86,7 @@ public class RandomForestClassifierTrainer
             }
         );
 
-        if(uniqLabels == null)
+        if (uniqLabels == null)
             return false;
 
         int i = 0;

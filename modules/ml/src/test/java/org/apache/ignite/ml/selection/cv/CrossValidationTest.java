@@ -185,7 +185,6 @@ public class CrossValidationTest {
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
-
         assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.9745762711864406, 1.0, 0.8968253968253969, 0.8661417322834646}, 1e-6);
         assertEquals(crossValidationRes.getBestAvgScore(), 0.9343858500738256, 1e-6);
         assertEquals(crossValidationRes.getScoringBoard().size(), 80);
@@ -274,7 +273,6 @@ public class CrossValidationTest {
             .addHyperParam("locIterations", trainer::withLocIterations, new Double[]{10.0, 100.0, 1000.0, 10000.0})
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
 
-
         Pipeline<Integer, double[], Integer, Double> pipeline = new Pipeline<Integer, double[], Integer, Double>()
             .addVectorizer(vectorizer)
             .addTrainer(trainer);
@@ -322,7 +320,6 @@ public class CrossValidationTest {
             .withPreprocessor(vectorizer)
             .withAmountOfFolds(folds)
             .isRunningOnPipeline(false);
-
 
         double[] scores = scoreCalculator.scoreByFolds();
 

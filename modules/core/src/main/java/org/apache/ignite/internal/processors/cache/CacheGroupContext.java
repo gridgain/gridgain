@@ -996,7 +996,6 @@ public class CacheGroupContext {
         this.contQryCaches = contQryCaches;
     }
 
-
     /**
      * Obtain the group listeners lock. Write lock should be held to register/unregister listeners. Read lock should be
      * hel for CQ listeners notification.
@@ -1262,7 +1261,7 @@ public class CacheGroupContext {
      * @param persist If {@code true} then flag state will be persisted into metastorage.
      */
     public void localWalEnabled(boolean enabled, boolean persist) {
-        if (localWalEnabled != enabled){
+        if (localWalEnabled != enabled) {
             if (log.isInfoEnabled())
                 log.info("Local WAL state for group=" + cacheOrGroupName() +
                     " changed from " + localWalEnabled + " to " + enabled);

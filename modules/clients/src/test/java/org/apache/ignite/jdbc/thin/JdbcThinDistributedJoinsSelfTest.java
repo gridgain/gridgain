@@ -35,7 +35,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
  */
 public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
     /** JDBC URL. */
-    private static final String BASE_URL =  "jdbc:ignite:thin://127.0.0.1/default?distributedJoins=true";
+    private static final String BASE_URL = "jdbc:ignite:thin://127.0.0.1/default?distributedJoins=true";
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -79,7 +79,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNonCollocatedDistributedJoin() throws Exception {
-        try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
+        try (Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             stmt.executeUpdate("CREATE TABLE person (id LONG, name VARCHAR(64), age LONG, city_id DOUBLE, PRIMARY KEY (name)) WITH \"backups=1\";");
             stmt.executeUpdate("CREATE TABLE medical_info (id LONG, name VARCHAR(64), age LONG, blood_group VARCHAR(64), PRIMARY KEY (id)) WITH \"backups=1\";");
             stmt.executeUpdate("CREATE TABLE blood_group_info_PJ (id LONG, blood_group VARCHAR(64), universal_donor VARCHAR(64), PRIMARY KEY (id)) WITH \"backups=1\";");
@@ -105,7 +105,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
         String res2;
 
         // Join on non-primary key.
-        try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
+        try (Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             final ResultSet resultSet = stmt.executeQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_PJ.universal_donor FROM person " +
                 "LEFT JOIN medical_info ON medical_info.name = person.name " +
                 "LEFT JOIN blood_group_info_PJ ON blood_group_info_PJ.blood_group = medical_info.blood_group;");
@@ -116,7 +116,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
         }
 
         // Join on primary key.
-        try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
+        try (Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             final ResultSet resultSet = stmt.executeQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_P.universal_donor FROM person " +
                 "LEFT JOIN medical_info ON medical_info.name = person.name " +
                 "LEFT JOIN blood_group_info_P ON blood_group_info_P.blood_group = medical_info.blood_group;");
@@ -150,7 +150,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
     private String queryResultAsString(ResultSet res) throws SQLException {
         List<String> results = new ArrayList<>();
 
-        while (res.next()){
+        while (res.next()) {
             String row = String.valueOf(res.getLong(1)) + ',' +
                 res.getString(2) + ',' +
                 res.getString(3) + ',' +
@@ -171,7 +171,7 @@ public class JdbcThinDistributedJoinsSelfTest extends GridCommonAbstractTest {
 
     /** */
     private void populateData() throws SQLException {
-        try(Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
+        try (Statement stmt = DriverManager.getConnection(BASE_URL).createStatement()) {
             stmt.executeUpdate(" INSERT INTO person (id,name,age,city_id) VALUES " +
                 "(2001,'Shravya',25,1.1), " +
                 "(2002,'Kiran',26,1.1), " +

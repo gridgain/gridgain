@@ -49,7 +49,7 @@ class ProcessSensitiveDataUtils {
     /**
      * Private constructor.
      */
-    private ProcessSensitiveDataUtils(){
+    private ProcessSensitiveDataUtils() {
         throw new RuntimeException("Don't create.");
     }
 }

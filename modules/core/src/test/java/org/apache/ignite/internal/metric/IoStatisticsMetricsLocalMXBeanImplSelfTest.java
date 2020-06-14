@@ -177,20 +177,20 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
 
         // 1 of the reads got resolved from the inner page.
         // Each data page is touched twice - one during index traversal and second
-        assertEquals(cnt - 1,     pkCache1.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
-        assertEquals(0,           pkCache1.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
-        assertEquals(cnt,         pkCache1.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
-        assertEquals(0,           pkCache1.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
-        assertEquals(2 * cnt,     cache1.<LongMetric>findMetric(LOGICAL_READS).value());
-        assertEquals(0,           cache1.<LongMetric>findMetric(PHYSICAL_READS).value());
+        assertEquals(cnt - 1, pkCache1.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0, pkCache1.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(cnt, pkCache1.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0, pkCache1.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * cnt, cache1.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0, cache1.<LongMetric>findMetric(PHYSICAL_READS).value());
 
         // 1 of the reads got resolved from the inner page.
-        assertEquals(cnt - 1,     pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
-        assertEquals(0,           pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
-        assertEquals(cnt,         pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
-        assertEquals(0,           pkCache2.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
-        assertEquals(2 * cnt,     cache2.<LongMetric>findMetric(LOGICAL_READS).value());
-        assertEquals(0,           cache2.<LongMetric>findMetric(PHYSICAL_READS).value());
+        assertEquals(cnt - 1, pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(0, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(cnt, pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(0, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * cnt, cache2.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(0, cache2.<LongMetric>findMetric(PHYSICAL_READS).value());
 
         // Force physical reads
         ignite.cluster().active(false);
@@ -209,11 +209,11 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
 
         // We had a split, so now we have 2 leaf pages and 1 inner page read from disk.
         // For sure should overflow 2 data pages.
-        assertEquals(cnt - 1,     pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
-        assertEquals(2,           pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
-        assertEquals(cnt,         pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
-        assertEquals(1,           pkCache2.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
-        assertEquals(2 * cnt,     cache2.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(cnt - 1, pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(2, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(cnt, pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(1, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * cnt, cache2.<LongMetric>findMetric(LOGICAL_READS).value());
 
         long physReads = cache2.<LongMetric>findMetric(PHYSICAL_READS).value();
         assertTrue(physReads > 2);
@@ -221,11 +221,11 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
         // Check that metrics are further increasing for logical reads and stay the same for physical reads.
         readCaches(0, cnt);
 
-        assertEquals(2 * (cnt - 1),     pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
-        assertEquals(2,           pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
-        assertEquals(2 * cnt,         pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
-        assertEquals(1,           pkCache2.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
-        assertEquals(2 * 2 * cnt,     cache2.<LongMetric>findMetric(LOGICAL_READS).value());
+        assertEquals(2 * (cnt - 1), pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
+        assertEquals(2, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
+        assertEquals(2 * cnt, pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
+        assertEquals(1, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_INNER).value());
+        assertEquals(2 * 2 * cnt, cache2.<LongMetric>findMetric(LOGICAL_READS).value());
         assertEquals(physReads, cache2.<LongMetric>findMetric(PHYSICAL_READS).value());
     }
 

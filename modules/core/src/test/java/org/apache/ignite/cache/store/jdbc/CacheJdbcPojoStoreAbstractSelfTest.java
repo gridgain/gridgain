@@ -79,7 +79,7 @@ public abstract class CacheJdbcPojoStoreAbstractSelfTest extends GridCommonAbstr
     /**
      * @return Flag indicating that all internal SQL queries should use escaped identifiers.
      */
-    protected boolean sqlEscapeAll(){
+    protected boolean sqlEscapeAll() {
         return false;
     }
 
@@ -239,7 +239,7 @@ public abstract class CacheJdbcPojoStoreAbstractSelfTest extends GridCommonAbstr
     /**
      * @return Flag indicate keep value in binary format or not.
      */
-    protected boolean storeKeepBinary(){
+    protected boolean storeKeepBinary() {
         return false;
     }
 
@@ -497,7 +497,7 @@ public abstract class CacheJdbcPojoStoreAbstractSelfTest extends GridCommonAbstr
             assertEquals("Person-to-test-put-insert", rs.getString(4));
 
             assertEquals(testGender.toString(),
-                binaryMarshaller ? Gender.values()[rs.getInt(5)].toString(): rs.getString(5));
+                binaryMarshaller ? Gender.values()[rs.getInt(5)].toString() : rs.getString(5));
 
             assertFalse("Unexpected more data in result set", rs.next());
 
@@ -518,7 +518,7 @@ public abstract class CacheJdbcPojoStoreAbstractSelfTest extends GridCommonAbstr
             assertEquals("Person-to-test-put-update", rs.getString(4));
 
             assertEquals(testGender.toString(),
-                binaryMarshaller ? Gender.values()[rs.getInt(5)].toString(): rs.getString(5));
+                binaryMarshaller ? Gender.values()[rs.getInt(5)].toString() : rs.getString(5));
 
             assertFalse("Unexpected more data in result set", rs.next());
 

@@ -34,16 +34,22 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
 
     /** Data center id. */
     private byte dataCenterId;
+
     /** Server nodes count. */
     private int serverNodesCnt;
+
     /** Client nodes count. */
     private int clientNodesCnt;
+
     /** Sender hubs. */
     private List<T3<UUID, String, String>> senderHubs;
+
     /** Receiver hubs. */
     private List<T3<UUID, String, String>> receiverHubs;
+
     /** Data nodes. */
     private List<T2<UUID, String>> dataNodes;
+
     /** Other nodes. */
     private List<T3<UUID, String, String>> otherNodes;
 
@@ -122,8 +128,7 @@ public class VisorDrTopologyTaskResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         dataCenterId = in.readByte();
 
         serverNodesCnt = in.readInt();

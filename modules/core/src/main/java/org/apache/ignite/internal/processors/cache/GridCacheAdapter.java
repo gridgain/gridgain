@@ -2973,7 +2973,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             }
         }
 
-
         return isCacheMetricsV2Supported() ? new CacheMetricsSnapshotV2(ctx.cache().localMetrics(), metrics) :
             new CacheMetricsSnapshot(ctx.cache().localMetrics(), metrics);
     }

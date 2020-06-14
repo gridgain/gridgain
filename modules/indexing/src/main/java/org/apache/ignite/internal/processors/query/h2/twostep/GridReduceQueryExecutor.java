@@ -647,7 +647,7 @@ public class GridReduceQueryExecutor {
             cancel.checkCancelled();
         }
         catch (QueryCancelledException cancelEx) {
-            throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
+            throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(), cancelEx);
         }
 
         if (ctx.clientDisconnected()) {
@@ -817,7 +817,7 @@ public class GridReduceQueryExecutor {
                     nodes = singletonList(F.rand(nodes));
                 }
 
-                return new ReducePartitionMapResult(nodes,  nodesParts.partitionsMap(), nodesParts.queryPartitionsMap());
+                return new ReducePartitionMapResult(nodes, nodesParts.partitionsMap(), nodesParts.queryPartitionsMap());
             }
 
             return nodesParts;
@@ -1199,7 +1199,7 @@ public class GridReduceQueryExecutor {
         try {
             Session ses = H2Utils.session(conn);
 
-            CreateTableData data  = new CreateTableData();
+            CreateTableData data = new CreateTableData();
 
             data.tableName = "T___";
             data.schema = ses.getDatabase().getSchema(ses.getCurrentSchemaName());

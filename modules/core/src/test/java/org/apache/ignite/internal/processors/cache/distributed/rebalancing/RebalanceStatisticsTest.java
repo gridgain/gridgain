@@ -494,7 +494,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             afterStop.run();
 
         IgniteEx node = startGrid(nodeId);
-        if(nonNull(afterStart))
+        if (nonNull(afterStart))
             afterStart.accept(node);
 
         awaitPartitionMapExchange();

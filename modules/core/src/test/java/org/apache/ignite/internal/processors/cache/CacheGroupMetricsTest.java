@@ -140,7 +140,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
      *  9 | P
      *
      */
-    private static final int [][] assignmentMapArr =
+    private static final int[][] assignmentMapArr =
         new int[][] {{0}, {1, 2}, {2, 0, 1}, {1}, {2, 0}, {0, 1, 2}, {2}, {0, 1}, {1, 2, 0}, {0}};
 
     /** {@inheritDoc} */

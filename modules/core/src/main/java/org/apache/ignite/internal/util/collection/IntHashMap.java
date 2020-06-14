@@ -83,7 +83,7 @@ public class IntHashMap<V> implements IntMap<V> {
         n |= n >>> 8;
         n |= n >>> 16;
 
-        return  (n < INITIAL_CAPACITY) ? INITIAL_CAPACITY : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
+        return (n < INITIAL_CAPACITY) ? INITIAL_CAPACITY : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
     }
 
     /** Default constructor. */

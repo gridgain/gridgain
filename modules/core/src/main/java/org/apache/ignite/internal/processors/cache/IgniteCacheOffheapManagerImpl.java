@@ -1955,7 +1955,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // Make sure value bytes initialized.
                 key.valueBytes(coCtx);
 
-                if(val != null)
+                if (val != null)
                     val.valueBytes(coCtx);
 
                  MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
@@ -2117,7 +2117,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 procRes = entryProc.process(invokeEntry, invokeArgs);
 
-                if(invokeEntry.modified() && invokeEntry.op() != CacheInvokeEntry.Operation.REMOVE) {
+                if (invokeEntry.modified() && invokeEntry.op() != CacheInvokeEntry.Operation.REMOVE) {
                     Object val = invokeEntry.getValue(true);
 
                     CacheObject val0 = cctx.toCacheObject(val);
@@ -3052,6 +3052,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private class MvccUpdateRowWithPreloadInfoClosure extends MvccDataRow implements OffheapInvokeClosure {
             /** */
             private CacheDataRow oldRow;
+
             /** */
             private IgniteTree.OperationType op;
 
@@ -3292,7 +3293,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 newRow.newMvccCounter(),
                 newRow.newMvccOperationCounter()) != 0) {
 
-                assert newRow.newMvccTxState() == TxState.NA ||  newRow.newMvccCoordinatorVersion() != MVCC_CRD_COUNTER_NA;
+                assert newRow.newMvccTxState() == TxState.NA || newRow.newMvccCoordinatorVersion() != MVCC_CRD_COUNTER_NA;
 
                 iox.updateNewVersion(pageAddr, off, newRow.newMvccCoordinatorVersion(), newRow.newMvccCounter(),
                     newRow.newMvccOperationCounter(), newRow.newMvccTxState());

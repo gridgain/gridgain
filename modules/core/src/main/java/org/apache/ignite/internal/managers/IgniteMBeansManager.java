@@ -154,7 +154,7 @@ public class IgniteMBeansManager {
         registerMBean("DataStorage", dataStorageMXBean.getClass().getSimpleName(), dataStorageMXBean, DataStorageMXBean.class);
 
         // Baseline configuration
-        if(isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {
+        if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {
             BaselineAutoAdjustMXBean baselineAutoAdjustMXBean = new BaselineAutoAdjustMXBeanImpl(ctx);
             registerMBean("Baseline", baselineAutoAdjustMXBean.getClass().getSimpleName(), baselineAutoAdjustMXBean,
                 BaselineAutoAdjustMXBean.class);
