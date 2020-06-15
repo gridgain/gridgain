@@ -14,39 +14,26 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.metastorage;
+package org.apache.ignite.tests.p2p.compute;
+
+import org.apache.ignite.lang.IgniteCallable;
 
 /**
- *
  */
-public class MetsatorageSearchRowImpl implements MetastorageSearchRow {
+public class ExternalLambda {
     /** */
-    private final String key;
+    private int param;
 
     /** */
-    private final long link;
-
-    /**
-     * @param key Key.
-     * @param link Link.
-     */
-    public MetsatorageSearchRowImpl(String key, long link) {
-        this.key = key;
-        this.link = link;
+    private ExternalLambda() {
+        // No-op.
     }
 
-    /** {@inheritDoc} */
-    @Override public String key() {
-        return key;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long link() {
-        return link;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int hash() {
-        return key.hashCode();
+    /** */
+    public static IgniteCallable<Integer> lambda() {
+        return () -> {
+            System.err.println("!!!!! I am a modified lambda!");
+            return 43;
+        };
     }
 }
