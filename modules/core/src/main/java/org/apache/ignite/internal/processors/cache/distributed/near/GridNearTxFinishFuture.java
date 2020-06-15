@@ -55,6 +55,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.transactions.TransactionHeuristicException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
@@ -1032,9 +1033,22 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                                     mini.onDhtFinishResponse(backupId, true);
                             }
                         }
+                        else {
+                            onDone(new TransactionHeuristicException("Primary node [" + nodeId + "] has left the grid and there are no backup nodes"));
+                            return true;
+                        }
                     }
                 }
-
+                else {
+                    Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
+                    if (txNodes != null) {
+                        Collection<UUID> backups = txNodes.get(nodeId);
+                        if (F.isEmpty(backups) || backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
+                            onDone(new TransactionHeuristicException("Primary node [" + nodeId + "] has left the grid and there are no backup nodes"));
+                            return true;
+                        }
+                    }
+                }
                 onDone(tx);
 
                 return true;
