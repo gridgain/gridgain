@@ -2323,7 +2323,12 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     final boolean dirty = isDirty(absPageAddr);
 
-                    if (relRmvAddr == rndAddr || pinned || skip || (dirty && checkpointPages == null)) {
+                    CheckpointPages checkpointPages = this.checkpointPages;
+
+                    if (relRmvAddr == rndAddr || pinned || skip ||
+                        fullId.pageId() == storeMgr.metaPageId(fullId.groupId()) ||
+                        (dirty && (checkpointPages == null || !checkpointPages.contains(fullId)))
+                    ) {
                         i--;
 
                         continue;
