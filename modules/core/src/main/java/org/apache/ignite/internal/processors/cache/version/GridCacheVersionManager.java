@@ -262,7 +262,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @return Next version for cache store operations.
      */
     public GridCacheVersion nextForLoad(long topVer) {
-        return next(topVer + offset, cctx.localNode().order(), dataCenterId);
+        return nextForLoad(topVer + offset, cctx.localNode().order(), dataCenterId);
     }
 
     /**

@@ -317,6 +317,7 @@ public class GridDhtPartitionDemander {
                 return null;
             }
 
+            // TODO no need to check finished future.
             if (!force && (!oldFut.isDone() || oldFut.result()) && oldFut.compatibleWith(assignments)) {
                 if (!oldFut.isDone())
                     compatibleRebFut.add(oldFut);
