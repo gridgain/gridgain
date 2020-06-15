@@ -38,12 +38,14 @@ RUN libtoolize && \
     ./configure && \
     make -j8
 
-ENV CONNECTION_STRING="DRIVER={Apache Ignite};ADDRESS=127.0.0.1"
+ENV CONNECTION_STRING="DRIVER={Apache Ignite};ADDRESS=172.25.1.50;172.25.1.51;172.25.1.52"
 ENV THREAD_CNT=64
 ENV WARMUP=0
 ENV DURATION=120
 ENV CACHE_NAME=PUBLIC
 ENV CACHE_RANGE=0-10000
+
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
 WORKDIR /usr/src/ignite_cpp/benchmarks/odbc-sql
 
