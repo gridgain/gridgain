@@ -36,6 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterGroupEmptyException;
@@ -45,9 +47,11 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
+import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
@@ -95,6 +99,12 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
     private volatile String tag;
 
+    /** Ignite logger. */
+    private IgniteLogger log;
+
+    /** Property for update policy of shutdown. */
+    private SimpleDistributedProperty<ShutdownPolicy> shutdown = new SimpleDistributedProperty<>("shutdown.policy");
+
     /**
      * Flag indicates that the feature is disabled.
      */
@@ -116,6 +126,20 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         cfg = ctx.config();
 
         nodeLoc = new ClusterNodeLocalMapImpl(ctx);
+
+        log = ctx.log(getClass());
+    }
+
+    /**
+     * Invoke when metastorage ready to start component.
+     */
+    public void start() {
+        ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+            shutdown.addListener((name, oldVal, newVal) ->
+                U.log(log, "Shutdown policy was updated [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
+
+            dispatcher.registerProperty(shutdown);
+        });
     }
 
     /** {@inheritDoc} */
@@ -408,6 +432,21 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         }
         finally {
             unguard();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public ShutdownPolicy shutdownPolicy() {
+        return shutdown.getOrDefault(ctx.config().getShutdownPolicy());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void shutdownPolicy(ShutdownPolicy shutdownPolicy) {
+        try {
+            shutdown.propagate(shutdownPolicy);
+        }
+        catch (IgniteCheckedException e) {
+            U.warn(log, "Context is not initialized, the new policy was ignored: " + shutdownPolicy, e);
         }
     }
 

@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.ignite.cache.BreakRebalanceChainTest;
+import org.apache.ignite.cache.CicledRebalanceTest;
 import org.apache.ignite.cache.NotOptimizedRebalanceTest;
 import org.apache.ignite.cache.RebalanceAfterResettingLostPartitionTest;
 import org.apache.ignite.cache.RebalanceCompleteDuringExchangeTest;
@@ -88,6 +89,7 @@ public class IgnitePdsTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, NotOptimizedRebalanceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, BreakRebalanceChainTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, WalRebalanceRestartTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CicledRebalanceTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsRestartAfterFailedToWriteMetaPageTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsRemoveDuringRebalancingTest.class, ignoredTests);

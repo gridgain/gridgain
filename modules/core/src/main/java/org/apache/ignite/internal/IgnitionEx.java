@@ -57,6 +57,7 @@ import org.apache.ignite.IgniteState;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -189,10 +190,6 @@ public class IgnitionEx {
     /** Key to store list of gracefully stopping nodes within metastore. */
     private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
-
-    /** Key to store policy of shutdown. */
-    private static final String GRACEFUL_SHUTDOWN_POLICY_METASTORE_KEY =
-        DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown.policy";
 
     /** Map of named Ignite instances. */
     private static final ConcurrentMap<Object, IgniteNamedInstance> grids = new ConcurrentHashMap<>();
@@ -1626,6 +1623,13 @@ public class IgnitionEx {
         /** Start latch. */
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
+        /**
+         * This property determine dafult policy for shutdown: true for {@link ShutdownPolicy.GRACEFUL},
+         * false or not set for {@link ShutdownPolicy.IMMEDIATE}
+         */
+        private final boolean waitForBackups =
+            IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
+
         /** Raised if node is waiting graceful shutdown. Set to false to end wait. */
         private volatile boolean delayedShutdown = false;
 
@@ -2617,24 +2621,14 @@ public class IgnitionEx {
          * @return Shutdown policy.
          */
         private ShutdownPolicy determineShutdownPolicy() {
-            boolean waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
+            if (waitForBackups)
+                return ShutdownPolicy.GRACEFUL;
 
-            ShutdownPolicy shutdownPolicy = waitForBackups ? ShutdownPolicy.GRACEFUL : ShutdownPolicy.IMMEDIATE;
+            ShutdownPolicy shutdownPolicy = grid.configuration().getShutdownPolicy();
 
-            if (grid.cluster().active()) {
-                DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
+            if (grid.cluster().active())
+                return grid.cluster().shutdownPolicy();
 
-                try {
-                    ShutdownPolicy readShutdownPolicy = metaStorage.read(GRACEFUL_SHUTDOWN_POLICY_METASTORE_KEY);
-
-                    if (readShutdownPolicy != null)
-                        shutdownPolicy = readShutdownPolicy;
-                }
-                catch (IgniteCheckedException e) {
-                    U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_POLICY_METASTORE_KEY +
-                        " value from metastore.", e);
-                }
-            }
             return shutdownPolicy;
         }
 
@@ -2702,6 +2696,8 @@ public class IgnitionEx {
                         continue;
                     }
 
+                    Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers = new HashMap<>();
+
                     for (CacheGroupContext grpCtx : grid.context().cache().cacheGroups()) {
                         if (grpCtx.isLocal() || grpCtx.systemCache())
                             continue;
@@ -2730,7 +2726,7 @@ public class IgnitionEx {
 
                         nodesToExclude.retainAll(fullMap.keySet());
 
-                        if (!haveCopyLoclaPartitions(grpCtx, nodesToExclude)) {
+                        if (!haveCopyLoclaPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
                             safeToStop = false;
 
                             break;
@@ -2745,6 +2741,10 @@ public class IgnitionEx {
 
                     if (topVer != grid.cluster().topologyVersion())
                         safeToStop = false;
+
+                    if (safeToStop && !proposedSuppliers.isEmpty())
+                        safeToStop = grid0.compute(grid0.cluster().forNodeIds(proposedSuppliers.keySet()))
+                            .execute(CheckCpHistTask.class, proposedSuppliers);
 
                     if (safeToStop) {
                         try {
@@ -2807,9 +2807,14 @@ public class IgnitionEx {
         /**
          * @param grpCtx Cahce group.
          * @param nodesToExclude Nodes to exclude from check.
+         * @param proposedSuppliers Map of proposed suppliers for groups.
          * @return True if all local partition of group specified have a copy in cluster, false otherwise.
          */
-        private boolean haveCopyLoclaPartitions(CacheGroupContext grpCtx, Set<UUID> nodesToExclude) {
+        private boolean haveCopyLoclaPartitions(
+            CacheGroupContext grpCtx,
+            Set<UUID> nodesToExclude,
+            Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers
+        ) {
             GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
 
             if (fullMap == null)
@@ -2831,8 +2836,17 @@ public class IgnitionEx {
                     if (localNodeId.equals(entry.getKey()) || nodesToExclude.contains(entry.getKey()))
                         continue;
 
-                    if (entry.getValue().get(p) == GridDhtPartitionState.OWNING)
+                    //Rebalance in this cache.
+                    if (entry.getValue().hasMovingPartitions())
+                        continue;
+
+                    if (entry.getValue().get(p) == GridDhtPartitionState.OWNING) {
+                        proposedSuppliers.computeIfAbsent(entry.getKey(), (nodeId) -> new HashMap<>())
+                            .computeIfAbsent(grpCtx.groupId(), grpId -> new HashSet<>())
+                            .add(p);
+
                         foundCopy = true;
+                    }
                 }
 
                 if (!foundCopy)

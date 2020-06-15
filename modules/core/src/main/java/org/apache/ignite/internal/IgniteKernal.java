@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import javax.cache.CacheException;
-import java.text.DecimalFormatSymbols;
-import javax.management.JMException;
 import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -55,6 +53,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.CacheException;
+import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsAdapter;
 import org.apache.ignite.DataStorageMetrics;
@@ -170,8 +170,8 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
+import org.apache.ignite.internal.processors.security.IgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.security.NoOpIgniteSecurityProcessor;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
@@ -180,7 +180,6 @@ import org.apache.ignite.internal.processors.session.GridTaskSessionProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
-import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.txdr.NoOpTransactionalDrProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
@@ -223,6 +222,7 @@ import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.IgniteSpiVersionCheckException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -280,6 +280,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PREFIX;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_RESTART_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_PORT_RANGE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USER_NAME;
@@ -290,9 +291,9 @@ import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
 import static org.apache.ignite.internal.IgniteVersionUtils.REV_HASH_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
-import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_START;
 import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 
@@ -1732,6 +1733,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         add(ATTR_IGNITE_INSTANCE_NAME, igniteInstanceName);
 
         add(ATTR_PEER_CLASSLOADING, cfg.isPeerClassLoadingEnabled());
+
+        add(ATTR_SHUTDOWN_POLICY, cfg.getShutdownPolicy());
+
         add(ATTR_DEPLOYMENT_MODE, cfg.getDeploymentMode());
         add(ATTR_LANG_RUNTIME, getLanguage());
 

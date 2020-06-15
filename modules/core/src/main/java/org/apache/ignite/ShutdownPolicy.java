@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal;
+package org.apache.ignite;
 
 public enum ShutdownPolicy {
     /**
@@ -25,5 +25,37 @@ public enum ShutdownPolicy {
     /**
      * Node will stop if and only if it does not store any unique partitions, that does not have copies on cluster.
      */
-    GRACEFUL
+    GRACEFUL;
+
+    /**
+     * Return shutdown policy matching to string.
+     *
+     * @param val String representation.
+     * @return Shutdown policy.
+     */
+    public ShutdownPolicy fromString(String val) {
+        switch (val) {
+            case "IMMEDIATE":
+                return IMMEDIATE;
+
+            case "GRACEFUL":
+                return GRACEFUL;
+
+            default:
+                throw new IllegalArgumentException(val);
+        }
+    }
+
+    /** Enumerated values. */
+    private static final ShutdownPolicy[] VALS = values();
+
+    /**
+     * Efficiently gets enumerated value from its ordinal.
+     *
+     * @param ord Ordinal value.
+     * @return Enumerated value or {@code null} if ordinal out of range.
+     */
+    public static ShutdownPolicy fromOrdinal(int ord) {
+        return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
+    }
 }

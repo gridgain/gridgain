@@ -25,6 +25,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
@@ -559,4 +560,20 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+
+    /**
+     * Return a policy of shutdown or default walue {@link IgniteConfiguration.DFLT_SHUTDOWN_POLICY}
+     * if property did not set.
+     *
+     * @return Shutdown policy.
+     */
+    public ShutdownPolicy shutdownPolicy();
+
+    /**
+     * Set a shutdown policy on cluster.
+     *
+     * @param shutdownPolicy Shutdown policy.
+     * @return True if the policy has been set, false otherwise.
+     */
+    public void shutdownPolicy(ShutdownPolicy policy);
 }
