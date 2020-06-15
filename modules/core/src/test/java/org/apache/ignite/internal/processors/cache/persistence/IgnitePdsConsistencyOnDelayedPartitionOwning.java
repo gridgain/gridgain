@@ -59,7 +59,7 @@ import org.junit.Test;
  * TODO add test cancelled sync future, should not preliminary cancel.
  *
  * */
-public class  IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
+public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
     /** Parts. */
     private static final int PARTS = 128;
 

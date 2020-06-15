@@ -334,7 +334,6 @@ public class IgnitePdsCacheWalDisabledOnRebalancingTest extends GridCommonAbstra
             assertTrue("Expected non-zero value for local moving partitions count on node idx = 1: " +
                     locMovingPartsNum, 0 < locMovingPartsNum && locMovingPartsNum < CACHE3_PARTS_NUM);
 
-
             // Change baseline topology and release checkpointer to verify
             // that no partitions will be owned after affinity change.
             ig0.cluster().setBaselineTopology(ig1.context().discovery().topologyVersion());
