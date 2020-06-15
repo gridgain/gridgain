@@ -47,7 +47,18 @@ public interface GridClientClusterState {
      * Changes cluster state to {@code newState}.
      *
      * @param newState New cluster state.
+     * @param forceDeactivation If {@code true}, cluster deactivation will be forced.
      * @throws GridClientException If the request to change the cluster state failed.
+     * @see ClusterState#INACTIVE
+     */
+    public void state(ClusterState newState, boolean forceDeactivation) throws GridClientException;
+
+    /**
+     * Changes cluster state to {@code newState}.
+     *
+     * @param newState New cluster state.
+     * @throws GridClientException If the request to change the cluster state failed.
+     * @see ClusterState#INACTIVE
      */
     public void state(ClusterState newState) throws GridClientException;
 
