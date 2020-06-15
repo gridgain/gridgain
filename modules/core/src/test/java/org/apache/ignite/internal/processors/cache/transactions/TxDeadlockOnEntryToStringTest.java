@@ -43,6 +43,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+
 /**
  * GridDhtCacheEntry::toString leads to system "deadlock" on the timeoutWorker.
  */
@@ -59,7 +61,7 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
+        cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL));
 
         return cfg;
     }
@@ -86,22 +88,27 @@ public class TxDeadlockOnEntryToStringTest extends GridCommonAbstractTest {
         // Act
         ex.lockEntry(); // Lock entry in current thread
 
-        // Print the entry from another thread via timeObject.
-        CountDownLatch entryPrinted = new CountDownLatch(1);
-        CountDownLatch entryReadyToPrint = new CountDownLatch(1);
-        tp.addTimeoutObject(new EntryPrinterTimeoutObject(ex, entryPrinted, entryReadyToPrint));
+        try {
+            // Print the entry from another thread via timeObject.
+            CountDownLatch entryPrinted = new CountDownLatch(1);
+            CountDownLatch entryReadyToPrint = new CountDownLatch(1);
+            tp.addTimeoutObject(new EntryPrinterTimeoutObject(ex, entryPrinted, entryReadyToPrint));
 
-        entryReadyToPrint.await();
+            entryReadyToPrint.await();
 
-        // Try to do first handshake with hangs, after reconnect handshake should be passed.
-        rejectHandshake.set(true);
+            // Try to do first handshake with hangs, after reconnect handshake should be passed.
+            rejectHandshake.set(true);
 
-        pool.forceCloseConnection(incomingNode.localNode().id());
+            pool.forceCloseConnection(incomingNode.localNode().id());
 
-        nearNode.configuration().getCommunicationSpi().sendMessage(incomingNode.localNode(), UUIDCollectionMessage.of(UUID.randomUUID()));
+            nearNode.configuration().getCommunicationSpi().sendMessage(incomingNode.localNode(), UUIDCollectionMessage.of(UUID.randomUUID()));
 
-        // Check
-        assertTrue(GridTestUtils.waitForCondition(() -> entryPrinted.getCount() == 0, 5_000));
+            // Check
+            assertTrue(GridTestUtils.waitForCondition(() -> entryPrinted.getCount() == 0, 5_000));
+        }
+        finally {
+            ex.unlockEntry(); // Allow synchronous eviction on node stop.
+        }
     }
 
     /**
