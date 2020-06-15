@@ -53,6 +53,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.ShutdownPolicy;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -1592,6 +1593,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteCache cache = node.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, 32))
             .setBackups(1)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_ASYNC)
             .setName(DEFAULT_CACHE_NAME)
         );
 
