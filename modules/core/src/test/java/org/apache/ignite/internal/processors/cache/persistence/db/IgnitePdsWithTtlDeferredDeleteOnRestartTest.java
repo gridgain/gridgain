@@ -63,7 +63,7 @@ public class IgnitePdsWithTtlDeferredDeleteOnRestartTest extends GridCommonAbstr
     /**
      *
      */
-    public static final int ENTRIES = 100_000;
+    public static final int ENTRIES = 50_000;
 
     /**
      * Fail.
@@ -157,7 +157,7 @@ public class IgnitePdsWithTtlDeferredDeleteOnRestartTest extends GridCommonAbstr
 
             srv.cluster().active(true);
 
-            ExpiryPolicy plc = AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 20)).create();
+            ExpiryPolicy plc = AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 60)).create();
 
             IgniteCache<Integer, byte[]> cache0 = srv.cache(CACHE_NAME);
 

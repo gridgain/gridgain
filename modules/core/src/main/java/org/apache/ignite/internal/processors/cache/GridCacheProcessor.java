@@ -5065,9 +5065,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onBaselineChange() {
-            for (GridCacheAdapter<?, ?> cache : caches.values())
-                if (cache != null)
-                    cache.context().ttl().unregister();
+//            for (GridCacheAdapter<?, ?> cache : caches.values())
+//                if (cache != null)
+//                    cache.context().ttl().unregister();
 
             onKernalStopCaches(true);
 
