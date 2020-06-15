@@ -76,7 +76,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     private volatile int offset;
 
     /** */
-    private GridCacheVersion isolatedStreamerVer;
+    private volatile GridCacheVersion isolatedStreamerVer;
 
     /** */
     private final GridLocalEventListener discoLsnr = new GridLocalEventListener() {
@@ -283,7 +283,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         long ord = order.incrementAndGet();
 
         GridCacheVersion next = new GridCacheVersion(
-            (int)topVer,
+            (int) topVer,
             ord,
             (int) nodeOrder,
             dataCenterId);
@@ -304,7 +304,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         long ord = loadOrder.incrementAndGet();
 
         GridCacheVersion next = new GridCacheVersion(
-            (int)topVer,
+            (int) topVer,
             ord,
             (int) nodeOrder,
             dataCenterId);
