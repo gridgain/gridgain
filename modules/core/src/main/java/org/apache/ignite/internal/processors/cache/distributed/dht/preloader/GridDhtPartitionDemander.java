@@ -278,7 +278,6 @@ public class GridDhtPartitionDemander {
      * @param next A next rebalance routine in chain.
      * @param forcedRebFut External future for forced rebalance.
      * @param compatibleRebFut Future for waiting for compatible rebalances.
-     * TODO use chain future instance., get rid of forcedRebFut, use one.
      *
      * @return Rebalancing future or {@code null} to exclude an assignment from a chain.
      */
