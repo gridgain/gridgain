@@ -29,18 +29,23 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
-import org.apache.ignite.compute.ComputeTask;
+import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
 /**
- * Closure checks, that last checkpoint on applicable for particular groups.
+ * Task for test last checkpoint about applicable of history to all groups and partitions of parameters.
+ * If one of group or partition does not applicable force checkpoint will trigger.
  */
-public class CheckCpHistTask implements ComputeTask<Map<UUID, Map<Integer, Set<Integer>>>, Boolean> {
+@GridInternal
+public class CheckCpHistTask extends ComputeTaskAdapter<Map<UUID, Map<Integer, Set<Integer>>>, Boolean> {
+    /** Serial version id. */
+    private static final long serialVersionUID = 0L;
 
     /** Reason of checkpoint, which can be triggered by this task. */
     public static final String CP_REASON = "required by other node that shutdown was gracefully";
@@ -61,8 +66,13 @@ public class CheckCpHistTask implements ComputeTask<Map<UUID, Map<Integer, Set<I
     }
 
     /** {@inheritDoc} */
-    @Override public ComputeJobResultPolicy result(ComputeJobResult res,
-        List<ComputeJobResult> rcvd) throws IgniteException {
+    @Override public ComputeJobResultPolicy result(
+        ComputeJobResult res,
+        List<ComputeJobResult> rcvd
+    ) throws IgniteException {
+        if (res.getException() != null)
+            return super.result(res, rcvd);
+
         if (!(boolean)res.getData())
             return ComputeJobResultPolicy.REDUCE;
 
@@ -83,6 +93,9 @@ public class CheckCpHistTask implements ComputeTask<Map<UUID, Map<Integer, Set<I
      * Job of checkpoint history task.
      */
     private static class CheckCpHistClosureJob implements ComputeJob {
+        /** Serial version id. */
+        private static final long serialVersionUID = 0L;
+
         /** Logger. */
         @LoggerResource
         private IgniteLogger log;
@@ -111,8 +124,6 @@ public class CheckCpHistTask implements ComputeTask<Map<UUID, Map<Integer, Set<I
 
         /** {@inheritDoc} */
         @Override public Boolean execute() throws IgniteException {
-            log.info("Task called on node " + ignite.cluster().localNode());
-
             IgniteEx igniteEx = (IgniteEx)ignite;
 
             if (igniteEx.context().cache().context().database() instanceof GridCacheDatabaseSharedManager) {
@@ -152,8 +163,6 @@ public class CheckCpHistTask implements ComputeTask<Map<UUID, Map<Integer, Set<I
                     return false;
                 }
             }
-
-            log.info("All grps are applicable: " + grpIds);
 
             return true;
         }
