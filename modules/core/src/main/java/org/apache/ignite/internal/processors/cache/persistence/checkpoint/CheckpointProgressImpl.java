@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotOperation;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -75,6 +76,9 @@ public class CheckpointProgressImpl implements CheckpointProgress {
      * @param cpFreq Timeout until next checkpoint.
      */
     public CheckpointProgressImpl(long cpFreq) {
+        // Avoid overflow.
+        cpFreq = Math.min(TimeUnit.DAYS.convert(365, TimeUnit.NANOSECONDS), cpFreq);
+
         nextCpNanos = System.nanoTime() + U.millisToNanos(cpFreq);
     }
 
