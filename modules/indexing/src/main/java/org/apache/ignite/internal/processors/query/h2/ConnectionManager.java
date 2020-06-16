@@ -224,10 +224,8 @@ public class ConnectionManager {
      * Called periodically to clean up the statement cache.
      */
     private void cleanupStatements() {
-        long now = U.currentTimeMillis();
-
         connPool.forEach(c -> {
-            if (now - c.statementCache().lastUsage() > stmtTimeout)
+            if (c.statementCache().inactiveFor(stmtTimeout))
                 c.clearStatementCache();
         });
     }

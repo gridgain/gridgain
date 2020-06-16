@@ -56,6 +56,8 @@ public final class H2StatementCache {
      * @param stmt Statement which will be cached.
      */
     void put(H2CachedStatementKey key, @NotNull PreparedStatement stmt) {
+        lastUsage = System.nanoTime();
+
         lruStmtCache.put(key, stmt);
     }
 
@@ -66,23 +68,19 @@ public final class H2StatementCache {
      * @return Statement associated with a key.
      */
     @Nullable PreparedStatement get(H2CachedStatementKey key) {
+        lastUsage = System.nanoTime();
+
         return lruStmtCache.get(key);
     }
 
     /**
-     * The timestamp of the last usage of the cache.
+     * Checks if the current cache has not been used for at least {@code ms} milliseconds.
      *
-     * @return last usage timestamp
+     * @param ms Interval in milliseconds.
+     * @return {@code true} if the current cache has not been used for the specified period.
      */
-    long lastUsage() {
-        return lastUsage;
-    }
-
-    /**
-     * Updates the {@link #lastUsage} timestamp by current time.
-     */
-    void updateLastUsage() {
-        lastUsage = U.currentTimeMillis();
+    boolean inactiveFor(long ms) {
+        return System.nanoTime() - lastUsage >= ms * 1000 * 1000;
     }
 
     /**
@@ -92,6 +90,8 @@ public final class H2StatementCache {
      * @param sql SQL statement.
      */
     void remove(String schemaName, String sql, byte qryFlags) {
+        lastUsage = System.nanoTime();
+
         lruStmtCache.remove(new H2CachedStatementKey(schemaName, sql, qryFlags));
     }
 
