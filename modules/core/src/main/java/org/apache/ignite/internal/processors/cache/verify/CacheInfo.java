@@ -79,7 +79,7 @@ public class CacheInfo extends VisorDataTransferObject {
     /** Affinity class name. */
     private String affinityClsName;
 
-    /** Off-Heap entries count. */
+    /** Heap size. */
     @Nullable
     private Long cacheSize;
 

@@ -17,10 +17,7 @@
 package org.apache.ignite.util;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.junit.Test;
-
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
@@ -68,7 +65,7 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
      *
      * @throws Exception - exception
      */
-    private Ignite prepareGridForTest() throws Exception{
+    private Ignite prepareGridForTest() throws Exception {
         Ignite ignite = startGrids(GRID_CNT);
 
         ignite.cluster().active(true);
