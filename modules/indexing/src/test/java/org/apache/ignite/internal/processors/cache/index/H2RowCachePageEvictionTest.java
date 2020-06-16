@@ -129,6 +129,8 @@ public class H2RowCachePageEvictionTest extends AbstractIndexingCommonTest {
 
         fillRowCache(CACHE_NAME);
 
+        rowCache.printState();
+
         assertNotNull(rowCache);
 
         int rowCacheSizeBeforeEvict = rowCache.size();

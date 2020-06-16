@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -86,6 +88,12 @@ public class H2RowCache implements GridQueryRowCacheCleaner {
     /** {@inheritDoc} */
     @Override public void remove(long link) {
         rows.remove(link);
+    }
+
+    public void printState() {
+        Set<Long> pageIds = rows.keySet().stream().map(l -> PageIdUtils.pageId(l)).collect(Collectors.toSet());
+
+        System.err.println(">>>DEBUG pageIds in cache: " + pageIds);
     }
 
     /**
