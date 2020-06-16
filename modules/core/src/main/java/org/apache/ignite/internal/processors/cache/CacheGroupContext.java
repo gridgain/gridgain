@@ -1264,7 +1264,7 @@ public class CacheGroupContext {
         if (localWalEnabled != enabled) {
             if (log.isInfoEnabled())
                 log.info("Local state for group durability has changed [name=" + cacheOrGroupName() +
-                    ", enabled=" + (enabled ? "yes" : "no") + ']');
+                    ", enabled=" + enabled + ']');
 
             localWalEnabled = enabled;
         }
@@ -1272,7 +1272,7 @@ public class CacheGroupContext {
         if (persist) {
             if (log.isInfoEnabled()) {
                 log.info("Local state for group durability has been logged to WAL [name=" + cacheOrGroupName() +
-                    ", enabled=" + (enabled ? "yes" : "no") + ']');
+                    ", enabled=" + enabled + ']');
             }
 
             persistLocalWalState(enabled);
