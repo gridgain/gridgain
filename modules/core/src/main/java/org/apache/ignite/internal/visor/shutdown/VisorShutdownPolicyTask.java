@@ -30,6 +30,9 @@ import org.apache.ignite.resources.LoggerResource;
 @GridInternal
 @GridVisorManagementTask
 public class VisorShutdownPolicyTask extends VisorOneNodeTask<VisorShutdownPolicyTaskArg, VisorShutdownPolicyTaskResult> {
+    /** Serial version id. */
+    private static final long serialVersionUID = 0L;
+
     /** {@inheritDoc} */
     @Override protected VisorJob<VisorShutdownPolicyTaskArg, VisorShutdownPolicyTaskResult> job(
         VisorShutdownPolicyTaskArg arg) {
@@ -40,6 +43,9 @@ public class VisorShutdownPolicyTask extends VisorOneNodeTask<VisorShutdownPolic
      * Visor job of shutdown policy task.
      */
     private static class VisorShutdownPolicyJob extends VisorJob<VisorShutdownPolicyTaskArg, VisorShutdownPolicyTaskResult> {
+        /** Serial version id. */
+        private static final long serialVersionUID = 0L;
+
         /** Logger. */
         @LoggerResource
         private IgniteLogger log;

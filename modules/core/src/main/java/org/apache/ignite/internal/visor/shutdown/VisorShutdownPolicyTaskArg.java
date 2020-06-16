@@ -27,6 +27,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * Arguments for shutdown  policy task.
  */
 public class VisorShutdownPolicyTaskArg extends IgniteDataTransferObject {
+    /** Serial version id. */
+    private static final long serialVersionUID = 0L;
+
     /** Shutdown policy to set or {@code null} for only display. */
     private ShutdownPolicy shutdown;
 

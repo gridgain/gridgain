@@ -27,6 +27,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * Shutdown policy visor trsk result.
  */
 public class VisorShutdownPolicyTaskResult extends IgniteDataTransferObject {
+    /** Serial version id. */
+    private static final long serialVersionUID = 0L;
+
     /** Shutdown policy on result. */
     private ShutdownPolicy shutdown;
 
