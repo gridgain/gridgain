@@ -16,6 +16,7 @@
 
 package org.apache.ignite.cache;
 
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -38,29 +39,42 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+/**
+ * Tests of circled historical rebalance.
+ */
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-public class CicledRebalanceTest extends GridCommonAbstractTest {
+public class CircledRebalanceTest extends GridCommonAbstractTest {
+
+    /** Count of restart iterations. */
+    public static final int ITERATIONS = 10;
+
+    /** Count of backup for default cache. */
+    private int backups = 1;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setShutdownPolicy(ShutdownPolicy.GRACEFUL)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setConsistentId(igniteInstanceName)
             .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setCheckpointFrequency(6_000)
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(true)))
             .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-                .setAffinity(new RendezvousAffinityFunction(false, 16))
-                .setBackups(1));
+                .setAffinity(new RendezvousAffinityFunction(false, 64))
+                .setBackups(backups));
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         cleanPersistenceDir();
     }
 
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         IgnitionEx.stopAll(true, ShutdownPolicy.IMMEDIATE);
 
@@ -69,43 +83,74 @@ public class CicledRebalanceTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
+    /**
+     * Restart two nodes in a cicle.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void test() throws Exception {
-        IgniteEx ignite0 = startGrids(2);
+    public void testTwoNodesRestart() throws Exception {
+        testCircledNodesRestart(2, 4);
+    }
+
+    /**
+     * Restart one node in a cicle.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testOneNodeRestart() throws Exception {
+        testCircledNodesRestart(1, 4);
+    }
+
+    /**
+     * Test restarts in a circle all backup nodes and check that always historical rebalance happens.
+     *
+     * @param backups Count of backups of default cache.
+     * @param nodes Count of nodes.
+     * @throws Exception If failed.
+     */
+    public void testCircledNodesRestart(int backups, int nodes) throws Exception {
+        this.backups = backups;
+
+        int realBackups = Math.min(nodes - 1, backups);
+
+        IgniteEx ignite0 = startGrids(nodes);
 
         ignite0.cluster().active(true);
 
-        ignite0.cluster().shutdownPolicy(ShutdownPolicy.GRACEFUL);
-
-        loadData();
+        loadData(true);
 
         awaitPartitionMapExchange();
-        forceCheckpoint();
 
         AtomicBoolean hasFullRebalance = new AtomicBoolean();
 
-        for (int i = 0; i < 10; i++) {
-            info("Iter: " + i);
+        for (int i = 0; i < ITERATIONS; i++) {
+            int[] nodesToRestart = new int[realBackups];
 
-            stopGrid(1);
+            for (int j = 0; j < realBackups; j++)
+                nodesToRestart[j] = (i + j) % nodes;
 
-            loadData();
+            info("Iter: " + i + " restart nodes: " + Arrays.toString(nodesToRestart));
 
-            startNodeAndRecordDemandMsg(hasFullRebalance, 1);
+            for (int j = 0; j < realBackups; j++)
+                stopGrid(nodesToRestart[j]);
+
+            loadData(false);
+
+            for (int j = 0; j < realBackups; j++)
+                startNodeAndRecordDemandMsg(hasFullRebalance, nodesToRestart[j]);
+
+            for (int j = 0; j < realBackups; j++)
+                TestRecordingCommunicationSpi.spi(grid(nodesToRestart[j])).waitForRecorded();
 
             assertFalse("Assert on iter " + i, hasFullRebalance.get());
-
-            stopGrid(0);
-
-            loadData();
-
-            startNodeAndRecordDemandMsg(hasFullRebalance, 0);
-
-            assertFalse(hasFullRebalance.get());
         }
     }
 
     /**
+     * Start node matched by number of parameter and
+     *
      * @param hasFullRebalance Has full rebalance flag.
      * @throws Exception If failed.
      */
@@ -129,7 +174,12 @@ public class CicledRebalanceTest extends GridCommonAbstractTest {
         startGrid(cfg);
     }
 
-    public void loadData() {
+    /**
+     * Load some data to default cache.
+     *
+     * @param sequentially True for loading sequential keys, false for random.
+     */
+    public void loadData(boolean sequentially) {
         Random random = new Random();
 
         Ignite ignite = G.allGrids().get(0);
@@ -140,7 +190,7 @@ public class CicledRebalanceTest extends GridCommonAbstractTest {
             for (int i = 0; i < 100; i++) {
                 Integer ranDomKey = random.nextInt(10_000);
 
-                streamer.addData(ranDomKey, "Val " + ranDomKey);
+                streamer.addData(sequentially ? i : ranDomKey, "Val " + ranDomKey);
             }
         }
     }

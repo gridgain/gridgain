@@ -17,69 +17,112 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.ShutdownPolicy;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN;
 
 /**
  * Test checks various cluster shutdown and initiated policy.
  */
-public class GracefulShutdownTest extends GridCommonAbstractTest {
+@WithSystemProperty(key = IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN, value = "false")
+public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithPersistenceTest {
+
+    /** Shutdown policy of static configuration. */
+    public ShutdownPolicy policy = ShutdownPolicy.GRACEFUL;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setShutdownPolicy(ShutdownPolicy.GRACEFUL)
-            .setPeerClassLoadingEnabled(false)
-            .setActiveOnStart(false);
+            .setShutdownPolicy(policy);
     }
 
+    /**
+     * Check static configuration of shutdown policy.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void test() throws Exception {
+    public void testRestartWithStaticConfiguredPolicy() throws Exception {
         Ignite ignite0 = startGrid(0);
 
-        assertFalse(ignite0.cluster().active());
+        assertSame(ignite0.cluster().shutdownPolicy(), ignite0.configuration().getShutdownPolicy());
 
-        for (int i = 0; i < 10; i++) {
-            assertFalse(ignite0.cluster().active());
+        ignite0.close();
 
-            info("Schutdown: " + ignite0.cluster().shutdownPolicy());
+        policy = ShutdownPolicy.IMMEDIATE;
 
-            ignite0.cluster().shutdownPolicy(ShutdownPolicy.GRACEFUL);
+        ignite0 = startGrid(0);
 
-            ignite0.cluster().active(true);
+        assertSame(ignite0.cluster().shutdownPolicy(), ignite0.configuration().getShutdownPolicy());
 
-            assertTrue(ignite0.cluster().active());
-
-            info("Schutdown: " + ignite0.cluster().shutdownPolicy());
-
-            ignite0.cluster().shutdownPolicy(ShutdownPolicy.IMMEDIATE);
-
-            ignite0.cluster().active(false);
-        }
-
+        assertSame(ignite0.cluster().shutdownPolicy(), ShutdownPolicy.IMMEDIATE);
     }
 
+    /**
+     * Test checked exception which is thrown when configuration of nodes different.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testTwoNodesWithDifferenConfuguration() throws Exception {
         Ignite ignite0 = startGrid(0);
 
+        ignite0.cluster().active(true);
+
         assertSame(ignite0.configuration().getShutdownPolicy(), ShutdownPolicy.GRACEFUL);
 
-        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(1))
-            .setClientMode(true)
-            .setShutdownPolicy(ShutdownPolicy.GRACEFUL)
-//            .setCommunicationSpi(new TestRecordingCommunicationSpi())
-//            .setPeerClassLoadingEnabled(true)
-            ;
+        policy = ShutdownPolicy.IMMEDIATE;
 
-        Ignite ignite1 = startGrid(optimize(cfg));
+        GridTestUtils.assertThrowsAnyCause(log, () -> startGrid(1), IgniteCheckedException.class,
+            "Remote node hase shutdoun policy different from local local");
+    }
 
-        ignite1.cluster().active(true);
+    /**
+     * Check dynamic configuration of shutdown policy.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRestartWithDynamicConfiguredPolicy() throws Exception {
+        Ignite ignite0 = startGrid(0);
 
-        assertSame(ignite1.cluster().shutdownPolicy(), ShutdownPolicy.GRACEFUL);
+        ignite0.cluster().active(true);
 
+        assertSame(ignite0.cluster().shutdownPolicy(), ignite0.configuration().getShutdownPolicy());
 
+        ShutdownPolicy configuredPolicy = ignite0.cluster().shutdownPolicy();
+
+        ShutdownPolicy policyToChange = null;
+
+        for (ShutdownPolicy policy : ShutdownPolicy.values()) {
+            if (policy != ignite0.cluster().shutdownPolicy())
+                policyToChange = policy;
+        }
+
+        assertNotNull(policyToChange);
+
+        ignite0.cluster().shutdownPolicy(policyToChange);
+
+        ignite0.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)).put(1, 1);
+
+        forceCheckpoint();
+
+        info("Policy to change: " + policyToChange);
+
+        ignite0.close();
+
+        ignite0 = startGrid(0);
+
+        info("Policy after restart: " + ignite0.cluster().shutdownPolicy());
+
+        assertNotSame(ignite0.cluster().shutdownPolicy(), ignite0.configuration().getShutdownPolicy());
+
+        assertSame(ignite0.cluster().shutdownPolicy(), policyToChange);
     }
 }
