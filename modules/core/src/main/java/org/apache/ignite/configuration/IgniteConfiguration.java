@@ -1151,7 +1151,7 @@ public class IgniteConfiguration {
      * @return {@code this} for chaining.
      */
     public IgniteConfiguration setShutdownPolicy(ShutdownPolicy shutdownPolicy) {
-        this.shutdown = shutdownPolicy != shutdownPolicy ? shutdownPolicy : DFLT_SHUTDOWN_POLICY;
+        this.shutdown = shutdownPolicy != null ? shutdownPolicy : DFLT_SHUTDOWN_POLICY;
 
         return this;
     }

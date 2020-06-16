@@ -2624,12 +2624,7 @@ public class IgnitionEx {
             if (waitForBackups)
                 return ShutdownPolicy.GRACEFUL;
 
-            ShutdownPolicy shutdownPolicy = grid.configuration().getShutdownPolicy();
-
-            if (grid.cluster().active())
-                return grid.cluster().shutdownPolicy();
-
-            return shutdownPolicy;
+            return grid.cluster().shutdownPolicy();
         }
 
         /**
