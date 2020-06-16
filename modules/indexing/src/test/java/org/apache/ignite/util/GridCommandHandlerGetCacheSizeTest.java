@@ -32,73 +32,41 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
  * Test for get cache size
  */
 public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-    /**
-     *
-     */
+    /** */
     public static final int GRID_CNT = 2;
 
     /**
-     * Max mutable cache size. Real size no more than 10000 (hardcoded in createAndFillCache) + MAX_CACHE_SIZE
-     * */
-    public static final int MAX_CACHE_SIZE = 96 * 1024;
-
-    /**
      * Default cache size in createAndFillCache
-     * */
-    public static final int DEFAULT_CACHE_SIZE = 10000;
+     */
+    public static final int CACHE_SIZE = 10000;
 
     /**
      * Test new answer from cache list command
-     * */
+     */
     @Test
     public void testValidateGridCommandHandlerGetCacheSizeTest() throws Exception {
-        IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> filledCache = null;
-
-        filledCache = fillCache();
+        prepareGridForTest();
 
         injectTestSystemOut();
-
-        final long testSize = filledCache.sizeLong();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", "."));
 
         String out = testOut.toString();
 
-        assertContains(log, out, "cacheSize=" + testSize);
+        assertContains(log, out, "cacheSize=" + CACHE_SIZE);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "list", ".", "--groups"));
 
         out = testOut.toString();
 
-        assertContains(log, out, "cacheSize=" + (testSize + DEFAULT_CACHE_SIZE));
-        assertContains(log, out, "cacheSize=" + DEFAULT_CACHE_SIZE);
-    }
-
-    /**
-     * Fill cache with random data
-     * @return IgniteCache
-     */
-    private IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> fillCache() throws Exception {
-        Ignite ignite = prepareGridForTest();
-
-        IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> cache = ignite.cache(CACHE_NAME);
-
-        int maxCacheSizeCntr = 0;
-
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-        while(maxCacheSizeCntr++ < MAX_CACHE_SIZE) {
-            int id = rnd.nextInt(MAX_CACHE_SIZE);
-            cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
-        }
-
-        return cache;
+        assertContains(log, out, "cacheSize=" + (CACHE_SIZE + CACHE_SIZE));
+        assertContains(log, out, "cacheSize=" + CACHE_SIZE);
     }
 
     /**
      * Create and fill nodes.
      *
-     * @throws Exception
+     * @throws Exception - exception
      */
     private Ignite prepareGridForTest() throws Exception{
         Ignite ignite = startGrids(GRID_CNT);
@@ -107,9 +75,12 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
 
         Ignite client = startGrid(CLIENT_NODE_NAME_PREFIX);
 
-        createAndFillCache(client, CACHE_NAME, GROUP_NAME);
-        createAndFillCache(client, CACHE_NAME + "0", GROUP_NAME);
-        createAndFillCache(client, CACHE_NAME + "1", GROUP_NAME + "0");
+        String cacheGrpName1 = GROUP_NAME;
+        String cacheGrpName2 = GROUP_NAME + "0";
+
+        createAndFillCache(client, CACHE_NAME, cacheGrpName1);
+        createAndFillCache(client, CACHE_NAME + "0", cacheGrpName1);
+        createAndFillCache(client, CACHE_NAME + "1", cacheGrpName2);
 
         return ignite;
     }
@@ -117,7 +88,7 @@ public class GridCommandHandlerGetCacheSizeTest extends GridCommandHandlerCluste
     /**
      * Stop all grids and clean heap memory
      *
-     * @throws Exception
+     * @throws Exception - exception
      */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
