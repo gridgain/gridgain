@@ -93,6 +93,7 @@ public class H2RowCache implements GridQueryRowCacheCleaner {
     public void printState() {
         Set<Long> pageIds = rows.keySet().stream().map(l -> PageIdUtils.pageId(l)).collect(Collectors.toSet());
 
+        System.err.println(">>>DEBUG rows in cache: " + rows.size());
         System.err.println(">>>DEBUG pageIds in cache: " + pageIds);
     }
 

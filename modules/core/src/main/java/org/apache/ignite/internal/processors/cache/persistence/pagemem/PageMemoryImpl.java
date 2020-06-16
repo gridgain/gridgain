@@ -2143,9 +2143,17 @@ public class PageMemoryImpl implements PageMemoryEx {
             assert writeLock().isHeldByCurrentThread();
 
             for (PageWithAttrHolder candidate : elected) {
+
+                System.out.print(">>>DEBUG going to replacePage " + candidate.fullId.pageId());
+
                 // Do not evict cache meta pages.
-                if (candidate.fullId.pageId() == storeMgr.metaPageId(candidate.fullId.groupId()))
+                if (candidate.fullId.pageId() == storeMgr.metaPageId(candidate.fullId.groupId())) {
+                    System.out.println("... Meta");
+
                     continue;
+                }
+
+                System.out.println("... Done");
 
                 clearRowCache(candidate.fullId, candidate.absAddr);
 
