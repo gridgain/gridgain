@@ -32,6 +32,7 @@ import java.math.RoundingMode;
 import java.net.InetSocketAddress;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -327,6 +328,15 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
         assertEquals(date, val);
         assertEquals(Date.class, val.getClass());
+    }
+
+    @Test
+    public void testInstant() throws IgniteCheckedException {
+        Instant now = Instant.now();
+
+        Instant now0 = marshalUnmarshal(now);
+
+        assertEquals(now, now0);
     }
 
     /**

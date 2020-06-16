@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.query.h2.statistics.ColumnStatistics;
+import org.apache.ignite.internal.processors.query.h2.statistics.LocalTableStatistics;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Constants;
@@ -38,6 +40,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /** Const function. */
     private final CostFunction constFunc;
 
+    private final GridH2Table tbl;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -51,6 +55,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      */
     protected H2IndexCostedBase(GridH2Table tbl, String name, IndexColumn[] cols, IndexType type) {
         super(tbl, 0, name, cols, type);
+
+        this.tbl = tbl;
 
         log = tbl.rowDescriptor().tableDescriptor().indexing().kernalContext().log("H2Index");
 
@@ -100,9 +106,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to support  compatibility with old version.
      */
-    private long getCostRangeIndex_Last(int[] masks, long rowCount,
-        TableFilter[] filters, int filter, SortOrder sortOrder,
-        boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+    private long getCostRangeIndex_Last(int[] masks, long rowCount, TableFilter[] filters, int filter,
+        SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+        LocalTableStatistics locTblStats = tbl.tableStatistics();
+
+        if (locTblStats != null)
+            rowCount = locTblStats.rowCount();
+
         rowCount += Constants.COST_ROW_OFFSET;
 
         int totalSelectivity = 0;
@@ -125,8 +135,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         break;
                     }
 
-                    totalSelectivity = 100 - ((100 - totalSelectivity) *
-                        (100 - column.getSelectivity()) / 100);
+                    ColumnStatistics colStat;
+                    int selectivity = locTblStats != null
+                        && (colStat = locTblStats.columnStatistics(column.getName())) != null ? colStat.selectivity()
+                        : column.getSelectivity();
+
+                    totalSelectivity = 100 - ((100 - totalSelectivity) * (100 - selectivity) / 100);
 
                     long distinctRows = rowCount * totalSelectivity / 100;
 
