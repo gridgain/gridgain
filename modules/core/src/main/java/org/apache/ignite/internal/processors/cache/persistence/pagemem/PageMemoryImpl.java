@@ -2144,16 +2144,16 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             for (PageWithAttrHolder candidate : elected) {
 
-                System.out.print(">>>DEBUG going to replacePage " + candidate.fullId.pageId());
+                log.warning(">>>DEBUG going to replacePage " + candidate.fullId.pageId());
 
                 // Do not evict cache meta pages.
                 if (candidate.fullId.pageId() == storeMgr.metaPageId(candidate.fullId.groupId())) {
-                    System.out.println("... Meta");
+                    log.warning("... Meta");
 
                     continue;
                 }
 
-                System.out.println("... Done");
+                log.warning("... Done");
 
                 clearRowCache(candidate.fullId, candidate.absAddr);
 
