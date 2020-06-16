@@ -739,6 +739,7 @@ public class CommandHandler {
 
         printCommandsUsage();
 
+        logger.info("");
         logger.info("By default commands affecting the cluster require interactive confirmation.");
         logger.info("Use " + CMD_AUTO_CONFIRMATION + " option to disable it.");
         logger.info("");
