@@ -418,8 +418,6 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
         IgniteCacheDatabaseSharedManager db = ignite.context().cache().context().database();
 
-        DbCheckpointListener lsnr = null;
-
         try {
             for (Integer grpId: grpIds) {
                 final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
@@ -454,10 +452,6 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 integrityCheckFutures.get(j).cancel(false);
 
             throw unwrapFutureException(e);
-        }
-        finally {
-            if (db instanceof GridCacheDatabaseSharedManager && lsnr != null)
-                ((GridCacheDatabaseSharedManager)db).removeCheckpointListener(lsnr);
         }
 
         return integrityCheckResults;

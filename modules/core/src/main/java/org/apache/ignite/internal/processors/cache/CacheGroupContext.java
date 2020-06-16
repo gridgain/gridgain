@@ -1263,13 +1263,19 @@ public class CacheGroupContext {
     public void localWalEnabled(boolean enabled, boolean persist) {
         if (localWalEnabled != enabled) {
             if (log.isInfoEnabled())
-                log.info("Local WAL state for group=" + cacheOrGroupName() +
-                    " changed from " + localWalEnabled + " to " + enabled);
-
-            if (persist)
-                persistLocalWalState(enabled);
+                log.info("Local state for group durability has changed [name=" + cacheOrGroupName() +
+                    ", enabled=" + (enabled ? "yes" : "no") + ']');
 
             localWalEnabled = enabled;
+        }
+
+        if (persist) {
+            if (log.isInfoEnabled()) {
+                log.info("Local state for group durability has been logged to WAL [name=" + cacheOrGroupName() +
+                    ", enabled=" + (enabled ? "yes" : "no") + ']');
+            }
+
+            persistLocalWalState(enabled);
         }
     }
 

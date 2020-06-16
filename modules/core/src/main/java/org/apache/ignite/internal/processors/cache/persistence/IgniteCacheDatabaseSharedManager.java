@@ -936,7 +936,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Allows to wait checkpoint finished.
+     * Schedule next checkpoint right now.
      *
      * @param reason Reason.
      */

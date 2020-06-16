@@ -57,14 +57,13 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUpdateVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
-import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -93,10 +92,13 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STOPPED;
 import static org.apache.ignite.internal.IgniteFeatures.TX_TRACKING_UPDATE_COUNTER;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.processors.cache.WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintRebalanceStatistics;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.cacheGroupRebalanceStatistics;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.totalRebalanceStatistic;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.PAGE_SNAPSHOT_TAKEN;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
 
@@ -1495,8 +1497,6 @@ public class GridDhtPartitionDemander {
             }
 
             if (onDone(true, null)) {
-                grp.localWalEnabled(true, true);
-
                 // TODO remove topVer.
                 grp.topology().ownMoving(this.topVer);
 
@@ -1737,13 +1737,27 @@ public class GridDhtPartitionDemander {
                 }
 
                 // Delay owning until checkpoint is finished.
-                if (!grp.localWalEnabled() && !cancelled) {
+                if (grp.persistenceEnabled() && !grp.localWalEnabled() && !cancelled) {
                     log.info("DBG: Delay owning grp=" + grp.cacheOrGroupName() + ", ver=" + topVer);
 
-                    ctx.database().forceCheckpoint(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING + grp.groupId() + "-" + topVer).
-                        futureFor(CheckpointState.FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
+                    // Force new checkpoint to make sure owning state is captured.
+                    CheckpointProgress cp = ctx.database().forceCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING +
+                        grp.groupId() + "-" + topVer);
+
+                    cp.futureFor(PAGE_SNAPSHOT_TAKEN).listen(new IgniteInClosure<IgniteInternalFuture>() {
+                        @Override public void apply(IgniteInternalFuture fut) {
+                            // Make all new updates to the group durable.
+                            if (fut.error() == null)
+                                grp.localWalEnabled(true, false);
+                        }
+                    });
+
+                    cp.futureFor(FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
                         @Override public void apply(IgniteInternalFuture fut) {
                             if (fut.error() == null) {
+                                // Log durable state for a group.
+                                grp.localWalEnabled(true, true);
+
                                 // Avoid possible deadlocks.
                                 ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                                     @Override public void run() {
@@ -1762,7 +1776,6 @@ public class GridDhtPartitionDemander {
                             "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
 
                     ctx.exchange().refreshPartitions(Collections.singleton(grp));
-                    //ctx.exchange().scheduleResendPartitions();
                 }
             }
         }

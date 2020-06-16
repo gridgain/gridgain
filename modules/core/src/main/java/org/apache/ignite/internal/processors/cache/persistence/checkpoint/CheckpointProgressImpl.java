@@ -166,14 +166,14 @@ public class CheckpointProgressImpl implements CheckpointProgress {
     /**
      * @return Scheduled time of checkpoint.
      */
-    public long nextCopyNanos() {
+    public long nextCpNanos() {
         return nextCpNanos;
     }
 
     /**
      * @param nextCpNanos New scheduled time of checkpoint.
      */
-    public void nextCopyNanos(long nextCpNanos) {
+    public void nextCpNanos(long nextCpNanos) {
         this.nextCpNanos = nextCpNanos;
     }
 
