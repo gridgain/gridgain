@@ -49,7 +49,7 @@ public class GridAggregateOrderedFunction implements AggregateFunction {
     }
 
     /** {@inheritDoc}  */
-    @Override  public int getType(int[] inputTypes) throws SQLException {
+    @Override public int getType(int[] inputTypes) throws SQLException {
         if (inputTypes.length < 2)
             throw new SQLException("Aggregation function should have at least two arguments.");
 

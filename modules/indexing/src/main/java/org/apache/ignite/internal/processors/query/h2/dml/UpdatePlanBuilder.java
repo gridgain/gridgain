@@ -331,7 +331,7 @@ public final class UpdatePlanBuilder {
             for (int i1 = 0; i1 < row.length; i1++) {
                 GridSqlElement el = row[i1];
 
-                if(!(noQry &=  (el instanceof GridSqlConst || el instanceof GridSqlParameter)))
+                if (!(noQry &= (el instanceof GridSqlConst || el instanceof GridSqlParameter)))
                     return noQry;
 
             }
@@ -796,7 +796,6 @@ public final class UpdatePlanBuilder {
         }
         return false;
     }
-
 
     /**
      * Checks that DML query (insert, merge, update, bulk load aka copy) columns: <br/>

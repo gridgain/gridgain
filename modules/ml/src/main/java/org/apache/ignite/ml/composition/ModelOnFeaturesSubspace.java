@@ -32,6 +32,7 @@ public final class ModelOnFeaturesSubspace implements IgniteModel<Vector, Double
      * Features mapping to subspace.
      */
     private final Map<Integer, Integer> featuresMapping;
+
     /**
      * Trained model of features subspace.
      */

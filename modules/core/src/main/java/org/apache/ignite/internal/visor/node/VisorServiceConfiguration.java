@@ -103,7 +103,6 @@ public class VisorServiceConfiguration extends VisorDataTransferObject {
         return name;
     }
 
-
     /**
      * @return Service instance.
      */

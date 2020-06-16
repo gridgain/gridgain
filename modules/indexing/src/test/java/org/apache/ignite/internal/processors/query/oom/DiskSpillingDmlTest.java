@@ -55,7 +55,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
         "nulls ";
 
     /** */
-    private static final String CREATE_NEW_TBL  ="CREATE TABLE new_table (" +
+    private static final String CREATE_NEW_TBL = "CREATE TABLE new_table (" +
         "id BIGINT PRIMARY KEY, " +
         "name VARCHAR, " +
         "depId SMALLINT, " +
@@ -246,7 +246,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      * @throws IOException If failed.
      */
     @Test
-    public void testInsertSimple() throws IOException {// Ignored in lazy suite.
+    public void testInsertSimple() throws IOException { // Ignored in lazy suite.
         Assume.assumeFalse(GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY"));
 
         testInsert("INSERT INTO new_table (" + COLS + ") " +

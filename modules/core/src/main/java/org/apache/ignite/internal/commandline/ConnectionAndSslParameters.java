@@ -300,8 +300,8 @@ public class ConnectionAndSslParameters {
     @Override public String toString() {
         return S.toString(ConnectionAndSslParameters.class, this,
             "password", pwd == null ? null : "*****",
-            "sslKeyStorePassword", sslKeyStorePassword == null ? null: "*****",
-            "sslTrustStorePassword", sslTrustStorePassword == null? null: "*****"
+            "sslKeyStorePassword", sslKeyStorePassword == null ? null : "*****",
+            "sslTrustStorePassword", sslTrustStorePassword == null ? null : "*****"
             );
     }
 }

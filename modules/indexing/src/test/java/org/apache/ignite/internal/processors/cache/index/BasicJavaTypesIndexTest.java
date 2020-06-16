@@ -452,7 +452,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
     /**
      * Test class for verify index over Java Object.
      */
-    static class TestPojo implements Comparable<TestPojo>{
+    static class TestPojo implements Comparable<TestPojo> {
         /** Value. */
         private final int val;
 

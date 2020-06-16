@@ -42,8 +42,7 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 public abstract class DrAbstractRemoteSubCommand<
     VisorArgsDto extends IgniteDataTransferObject,
     VisorResultDto extends IgniteDataTransferObject,
-    DrArgs extends DrAbstractRemoteSubCommand.Arguments<VisorArgsDto>
-> implements Command<DrArgs> {
+    DrArgs extends DrAbstractRemoteSubCommand.Arguments<VisorArgsDto>> implements Command<DrArgs> {
     /** */
     protected static boolean drControlUtilitySupported(GridClientNode node) {
         return node.supports(DR_CONTROL_UTILITY);

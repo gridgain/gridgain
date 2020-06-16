@@ -68,7 +68,7 @@ public class ClientTxEndRequest extends ClientRequest {
                     tx.rollback();
             }
         }
-        catch (IgniteTxTimeoutCheckedException e){
+        catch (IgniteTxTimeoutCheckedException e) {
             throw new IgniteClientException(ClientStatus.TX_TIMED_OUT, e.getMessage(), e);
         }
         catch (IgniteCheckedException e) {

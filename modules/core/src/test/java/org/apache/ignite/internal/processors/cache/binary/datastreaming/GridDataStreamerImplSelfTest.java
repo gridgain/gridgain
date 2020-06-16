@@ -104,7 +104,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
 
             Map<Integer, String> map = U.newHashMap(KEYS_COUNT);
 
-            for (int i = 0; i < KEYS_COUNT; i ++)
+            for (int i = 0; i < KEYS_COUNT; i++)
                 map.put(i, String.valueOf(i));
 
             dataLdr.addData(map);
@@ -120,7 +120,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
 
             IgniteCache<Integer, String> c0 = g0.cache(DEFAULT_CACHE_NAME);
 
-            for (int i = 0; i < 100; i ++) {
+            for (int i = 0; i < 100; i++) {
                 Integer k = rnd.nextInt(KEYS_COUNT);
 
                 String v = c0.get(k);
@@ -156,7 +156,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
 
             Map<Integer, TestObject2> map = U.newHashMap(KEYS_COUNT);
 
-            for (int i = 0; i < KEYS_COUNT; i ++)
+            for (int i = 0; i < KEYS_COUNT; i++)
                 map.put(i, new TestObject2(i));
 
             dataLdr.addData(map).get();
@@ -189,7 +189,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
 
             Map<Integer, TestObject> map = U.newHashMap(KEYS_COUNT);
 
-            for (int i = 0; i < KEYS_COUNT; i ++)
+            for (int i = 0; i < KEYS_COUNT; i++)
                 map.put(i, new TestObject(i));
 
             dataLdr.addData(map);
@@ -205,7 +205,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
 
             IgniteCache<Integer, TestObject> c = g0.cache(DEFAULT_CACHE_NAME);
 
-            for (int i = 0; i < 100; i ++) {
+            for (int i = 0; i < 100; i++) {
                 Integer k = rnd.nextInt(KEYS_COUNT);
 
                 TestObject v = c.get(k);
@@ -216,7 +216,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
             // Read random keys. Take values as BinaryObject.
             IgniteCache<Integer, BinaryObject> c2 = ((IgniteCacheProxy)c).keepBinary();
 
-            for (int i = 0; i < 100; i ++) {
+            for (int i = 0; i < 100; i++) {
                 Integer k = rnd.nextInt(KEYS_COUNT);
 
                 BinaryObject v = c2.get(k);
@@ -276,7 +276,7 @@ public class GridDataStreamerImplSelfTest extends GridCommonAbstractTest {
         IgniteCache<Object, Object> c = g.cache(DEFAULT_CACHE_NAME);
 
         // Check that data streamer correctly split data by nodes.
-        for (int i = 0; i < KEYS_COUNT; i ++) {
+        for (int i = 0; i < KEYS_COUNT; i++) {
             if (g.affinity(DEFAULT_CACHE_NAME).isPrimary(n, i))
                 assertNotNull(c.localPeek(i));
             else

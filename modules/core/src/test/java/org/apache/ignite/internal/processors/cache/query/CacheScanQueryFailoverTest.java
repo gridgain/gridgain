@@ -102,7 +102,7 @@ public class CacheScanQueryFailoverTest extends GridCommonAbstractTest {
         queryCachesWithFailedPredicates(srv, cfg);
 
         assertEquals(client.cluster().nodes().size(), 5);
-    };
+    }
 
     /**
      * @throws Exception If failed.
@@ -115,8 +115,6 @@ public class CacheScanQueryFailoverTest extends GridCommonAbstractTest {
 
         assertEquals(srv.cluster().nodes().size(), 4);
     }
-
-    ;
 
     /**
      * Test scan query when partitions are concurrently evicting.

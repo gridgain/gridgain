@@ -306,7 +306,7 @@ public class IgniteCacheConfigurationTemplateTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
-    public void testNoPartitionExchangeForTemplate() throws Exception{
+    public void testNoPartitionExchangeForTemplate() throws Exception {
         final int GRID_CNT = 3;
 
         startGridsMultiThreaded(GRID_CNT);

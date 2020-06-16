@@ -1027,7 +1027,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                             ClusterNode newNode = ctx.affinity().mapPartitionToNode(affCacheName, affPartId,
                                 mapTopVer);
 
-                            if(!checkTargetNode(resp, jRes, newNode))
+                            if (!checkTargetNode(resp, jRes, newNode))
                                 return;
 
                             sendRequest(jRes);
@@ -1179,7 +1179,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
 
             U.error(log, errMsg, e);
 
-            userE = new ComputeUserUndeclaredException(errMsg ,e);
+            userE = new ComputeUserUndeclaredException(errMsg, e);
 
             if (e instanceof Error)
                 throw e;

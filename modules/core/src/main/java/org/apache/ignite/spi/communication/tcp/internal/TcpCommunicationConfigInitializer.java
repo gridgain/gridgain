@@ -221,7 +221,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
 
         cfg.localPortRange(locPortRange);
 
-        return  (TcpCommunicationSpi)this;
+        return (TcpCommunicationSpi)this;
     }
 
     /**
@@ -746,6 +746,33 @@ cfg.socketSendBuffer(sockSndBuf);
      */
     public int getSlowClientQueueLimit() {
         return cfg.slowClientQueueLimit();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void failureDetectionTimeoutEnabled(boolean enabled) {
+        super.failureDetectionTimeoutEnabled(enabled);
+
+        cfg.failureDetectionTimeoutEnabled(enabled);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean failureDetectionTimeoutEnabled() {
+        final boolean spiVal = super.failureDetectionTimeoutEnabled();
+        final boolean cfgVal = cfg.failureDetectionTimeoutEnabled();
+
+        assert spiVal == cfgVal : "Inconsistent value [spi=" + spiVal + ", cfg=" + cfgVal + "]";
+
+        return spiVal;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long failureDetectionTimeout() {
+        final long spiVal = super.failureDetectionTimeout();
+        final long cfgVal = cfg.failureDetectionTimeout();
+
+        assert spiVal == cfgVal : "Inconsistent value [spi=" + spiVal + ", cfg=" + cfgVal + "]";
+
+        return spiVal;
     }
 
     /**

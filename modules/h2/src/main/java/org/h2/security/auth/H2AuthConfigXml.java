@@ -62,7 +62,7 @@ public class H2AuthConfigXml extends DefaultHandler{
 
     @Override
     public void endElement(String uri, String localName, String qName) throws SAXException {
-        if (lastConfigProperties!=null && qName.equals("property")==false) {
+        if (lastConfigProperties!=null && !"property".equals(qName)) {
             lastConfigProperties=null;
         }
     }

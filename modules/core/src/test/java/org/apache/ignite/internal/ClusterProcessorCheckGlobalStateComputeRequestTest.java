@@ -27,21 +27,20 @@ import org.junit.Test;
  * Tests that the GridInternal annotation for GridClusterStateProcessor.CheckGlobalStateComputeRequest works correctly.
  */
 public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridCommonAbstractTest {
-
+    /**
+     */
     public ClusterProcessorCheckGlobalStateComputeRequestTest() {
         super(false);
     }
 
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-        if(igniteInstanceName.equalsIgnoreCase("daemon"))
+        if (igniteInstanceName.equalsIgnoreCase("daemon"))
             cfg.setDaemon(true);
 
         return cfg;
     }
-
 
     /**
      * @throws Exception If failed.
@@ -51,16 +50,15 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
         startGrids(1);
         IgniteEx daemon = startGrid("daemon");
 
-        //the GridInternal annotation will cause the job and response message to execute on management pool.
-        for(int i = 0; i < 100; i++)
+        // GridInternal annotation will cause the job and response message to execute on management pool.
+        for (int i = 0; i < 100; i++)
             daemon.cluster().active();
         checkBeanForAGrid(daemon, "Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
 
-        for(int i = 0; i < 100; i++)
+        for (int i = 0; i < 100; i++)
             grid(0).cluster().active();
         checkBeanForAGrid(grid(0), "Thread Pools", "GridManagementExecutor", "TaskCount", 100L);
     }
-
 
     /** Checks that a bean with the specified group and name is available and has the expected attribute */
     private void checkBeanForAGrid(Ignite ignite, String grp, String name, String attributeName, Object expAttributeVal) throws Exception {
@@ -69,6 +67,4 @@ public class ClusterProcessorCheckGlobalStateComputeRequestTest extends GridComm
 
         assertEquals(expAttributeVal, attributeVal);
     }
-
-
 }

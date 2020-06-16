@@ -365,7 +365,7 @@ public class TestHashJoin {
                     List<Object> row = new ArrayList<>(colCnt);
 
                     for (int i = 0; i < colCnt; i++)
-                        row.add (rs.getObject(i + 1));
+                        row.add(rs.getObject(i + 1));
 
                     res.add(row);
                 }

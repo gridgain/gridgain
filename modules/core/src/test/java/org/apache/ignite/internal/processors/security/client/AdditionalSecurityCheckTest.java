@@ -80,7 +80,7 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
         try (GridClient client = GridClientFactory.start(getGridClientConfiguration())) {
             assertFalse(client.connected());
             GridTestUtils.assertThrowsAnyCause(log,
-                ()-> {
+                () -> {
                     client.throwLastError();
                     return null;
                 },
@@ -124,7 +124,7 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
         fail = true;
 
         GridTestUtils.assertThrowsAnyCause(log,
-            ()-> {
+            () -> {
                 startGrid(2);
                 return null;
             },
@@ -144,7 +144,7 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
         fail = true;
 
         GridTestUtils.assertThrowsAnyCause(log,
-            ()-> {
+            () -> {
                 startGrid(1);
                 return null;
             },

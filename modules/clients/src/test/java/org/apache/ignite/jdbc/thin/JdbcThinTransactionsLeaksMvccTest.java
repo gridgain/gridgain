@@ -64,7 +64,7 @@ public class JdbcThinTransactionsLeaksMvccTest extends JdbcThinAbstractSelfTest 
                 s.execute("CREATE TABLE TEST (k int primary key, v int) WITH \"atomicity=transactional_snapshot\"");
 
                 for (int i = 0; i < KEYS; ++i)
-                    s.execute("INSERT INTO TEST VALUES (" + i +", " + i + ")");
+                    s.execute("INSERT INTO TEST VALUES (" + i + ", " + i + ")");
 
             }
         }
@@ -93,7 +93,7 @@ public class JdbcThinTransactionsLeaksMvccTest extends JdbcThinAbstractSelfTest 
      *
      */
     @Test
-    @WithSystemProperty(key=IGNITE_MAX_COMPLETED_TX_COUNT, value = "1024")
+    @WithSystemProperty(key = IGNITE_MAX_COMPLETED_TX_COUNT, value = "1024")
     public void testLeaks() {
         runQueries(ITERATIONS);
 

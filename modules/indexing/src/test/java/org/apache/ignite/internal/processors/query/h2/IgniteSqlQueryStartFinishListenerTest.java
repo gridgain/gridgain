@@ -439,7 +439,6 @@ public class IgniteSqlQueryStartFinishListenerTest extends AbstractIndexingCommo
         return lsnr;
     }
 
-
     /**
      * @param lsnr Listener.
      */

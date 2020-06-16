@@ -224,7 +224,7 @@ public class GridDhtPartitionFullMap extends HashMap<UUID, GridDhtPartitionMap> 
 
         buf.append('{');
 
-        while(true) {
+        while (true) {
             Map.Entry<UUID, GridDhtPartitionMap> e = it.next();
 
             UUID nodeId = e.getKey();

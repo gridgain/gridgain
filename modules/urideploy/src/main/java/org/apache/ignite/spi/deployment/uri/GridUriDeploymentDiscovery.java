@@ -61,7 +61,7 @@ final class GridUriDeploymentDiscovery {
         throws IgniteSpiException {
         Set<Class<? extends ComputeTask<?, ?>>> rsrcs = new HashSet<>();
 
-        if (file.exists() == false)
+        if (!file.exists())
             return rsrcs;
 
         GridUriDeploymentFileResourceLoader fileRsrcLdr = new GridUriDeploymentFileResourceLoader(clsLdr, file);
@@ -94,7 +94,7 @@ final class GridUriDeploymentDiscovery {
      */
     private static void findResourcesInDirectory(GridUriDeploymentFileResourceLoader clsLdr, File dir,
         Set<Class<? extends ComputeTask<?, ?>>> rsrcs) {
-        assert dir.isDirectory() == true;
+        assert dir.isDirectory();
 
         for (File file : dir.listFiles()) {
             if (file.isDirectory()) {

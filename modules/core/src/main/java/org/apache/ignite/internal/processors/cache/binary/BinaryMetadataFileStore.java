@@ -635,6 +635,7 @@ class BinaryMetadataFileStore {
     private static final class WriteOperationTask extends OperationTask {
         /** */
         private final BinaryMetadata meta;
+
         /** */
         private final int typeVer;
 

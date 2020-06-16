@@ -136,7 +136,6 @@ public class CommonArgParser {
         return SENSITIVE_ARGUMENTS.contains(arg);
     }
 
-
     /**
      * @param logger Logger.
      */

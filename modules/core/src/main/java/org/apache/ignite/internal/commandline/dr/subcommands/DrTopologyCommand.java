@@ -40,10 +40,13 @@ public class DrTopologyCommand extends
 {
     /** Sender hubs parameter. */
     public static final String SENDER_HUBS_PARAM = "--sender-hubs";
+
     /** Receiver hubs parameter. */
     public static final String RECEIVER_HUBS_PARAM = "--receiver-hubs";
+
     /** Data nodes parameter. */
     public static final String DATA_NODES_PARAM = "--data-nodes";
+
     /** Other nodes parameter. */
     public static final String OTHER_NODES_PARAM = "--other-nodes";
 
@@ -179,10 +182,13 @@ public class DrTopologyCommand extends
     public static class DrTopologyArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrTopologyTaskArgs> {
         /** */
         private final boolean senderHubs;
+
         /** */
         private final boolean receiverHubs;
+
         /** */
         private final boolean dataNodes;
+
         /** */
         private final boolean otherNodes;
 

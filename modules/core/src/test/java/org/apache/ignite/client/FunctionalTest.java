@@ -600,7 +600,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      * Test PESSIMISTIC REPEATABLE_READ tx holds lock and other tx should be timed out.
      */
     @Test
-    public void testPessimisticRepeatableReadsTransactionHoldsLock() throws Exception{
+    public void testPessimisticRepeatableReadsTransactionHoldsLock() throws Exception {
         testPessimisticTxLocking(REPEATABLE_READ);
     }
 
@@ -608,7 +608,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      * Test PESSIMISTIC SERIALIZABLE tx holds lock and other tx should be timed out.
      */
     @Test
-    public void testPessimisticSerializableTransactionHoldsLock() throws Exception{
+    public void testPessimisticSerializableTransactionHoldsLock() throws Exception {
         testPessimisticTxLocking(SERIALIZABLE);
     }
 
