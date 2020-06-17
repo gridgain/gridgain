@@ -135,9 +135,11 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         if (!reserved)
             return;
 
-        try (GridCursor<? extends CacheDataRow> cursor =
-                 locPart.dataStore().cursor(cctx.cacheId(), null, null, KEY_ONLY))
-        {
+        GridCursor<? extends CacheDataRow> cursor = null;
+
+        try {
+            cursor = locPart.dataStore().cursor(cctx.cacheId(), null, null, KEY_ONLY);
+
             boolean locked = false;
 
             try {
@@ -172,9 +174,16 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
                     cctx.shared().database().checkpointReadUnlock();
             }
         }
-        catch (Exception e) {
-            throw new IgniteCheckedException(e);
-        } finally {
+        finally {
+            if (cursor != null) {
+                try {
+                    cursor.close();
+                }
+                catch (Exception e) {
+                    throw new IgniteCheckedException(e);
+                }
+            }
+
             locPart.release();
 
             cctx.group().metrics().decrementIndexBuildCountPartitionsLeft();
@@ -185,7 +194,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
      * Process single key.
      *
      * @param key Key.
-     * @return {@code true} if no {@link Thread#interrupted()} was checked.
+     * @return {@code True} if no {@link Thread#interrupted()} was checked.
      * @throws IgniteCheckedException If failed.
      */
     private boolean processKey(KeyCacheObject key) throws IgniteCheckedException {
