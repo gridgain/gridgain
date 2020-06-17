@@ -35,6 +35,9 @@ public enum CommandList {
     STATE("--state", new StateCommand()),
 
     /** */
+    SET_STATE("--set-state", new ClusterStateChangeCommand()),
+
+    /** */
     BASELINE("--baseline", new BaselineCommand()),
 
     /** */
