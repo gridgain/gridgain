@@ -276,12 +276,4 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
             return F.eq(node.attribute(attrName), "true");
         }
     }
-
-//    @Override protected long getTestTimeout() {
-//        return super.getTestTimeout() * 100000;
-//    }
-//
-//    @Override protected long getPartitionMapExchangeTimeout() {
-//        return super.getPartitionMapExchangeTimeout() * 100000;
-//    }
 }

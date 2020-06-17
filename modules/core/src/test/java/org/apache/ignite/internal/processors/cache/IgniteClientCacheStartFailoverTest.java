@@ -68,9 +68,6 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(100000L);
-        cfg.setClientFailureDetectionTimeout(100000L);
-
         cfg.setClientMode(client);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());

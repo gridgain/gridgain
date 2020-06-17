@@ -190,8 +190,6 @@ public class GridCacheReplicatedSynchronousCommitTest extends GridCommonAbstract
             if (obj instanceof GridDistributedTxFinishResponse) {
                 msgCnt.incrementAndGet();
 
-                log.warning("DBG " + getSpiContext().localNode().order(), new Exception());
-
                 if (noCommit)
                     return;
             }
