@@ -100,8 +100,8 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         DataRegion dataReg = grp.dataRegion();
 
-        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name())
-            && (dataReg != null && !VOLATILE_DATA_REGION_NAME.equals(dataReg.config().getName()))) {
+        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name()) && (cctx.kernalContext().clientNode() ||
+            (dataReg != null && !VOLATILE_DATA_REGION_NAME.equals(dataReg.config().getName())))) {
             return new CacheInvalidStateException(new IgniteClusterReadOnlyException(
                 format(CLUSTER_READ_ONLY_ERROR_MSG, grp.name(), cctx.name())
             ));
