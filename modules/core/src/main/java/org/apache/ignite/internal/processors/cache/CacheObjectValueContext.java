@@ -26,7 +26,7 @@ import org.apache.ignite.lang.IgniteExperimental;
 public interface CacheObjectValueContext {
     /** */
     @IgniteExperimental
-    final static boolean COMPRESS_KEYS = IgniteSystemProperties.getBoolean("IGNITE_COMPRESS_KEYS", true);
+    static final boolean COMPRESS_KEYS = IgniteSystemProperties.getBoolean("IGNITE_COMPRESS_KEYS", true);
 
     /**
      * @return Kernal context.
