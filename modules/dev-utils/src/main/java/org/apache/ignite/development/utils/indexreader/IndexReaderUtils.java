@@ -48,7 +48,7 @@ public class IndexReaderUtils {
      *
      * @return Approximate link size in bytes.
      */
-    public static long linkSize(){
+    public static long linkSize() {
         return U.jvm32Bit() ? 4 : 8;
     }
 
