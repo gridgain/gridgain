@@ -124,7 +124,7 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
      * @return {@code True} if a persistent grid is required.
      */
     protected boolean persistenceEnabled() {
-        return true;
+        return false;
     }
 
     /**
