@@ -2799,7 +2799,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void ownMoving(AffinityTopologyVersion rebFinishedTopVer) {
+    @Override public void ownMoving() {
         ctx.database().checkpointReadLock();
 
         try {

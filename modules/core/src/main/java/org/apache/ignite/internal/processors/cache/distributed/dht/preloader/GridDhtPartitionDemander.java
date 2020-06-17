@@ -1477,35 +1477,38 @@ public class GridDhtPartitionDemander {
         }
 
         /**
-         * @param topVer Topology version.
+         * @param topVer Rebalancing topology version.
          */
         public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer) {
             assert state == RebalanceFutureState.STARTED : this;
+            assert topVer.equals(ctx.exchange().lastAffinityChangedTopologyVersion(topVer)) :
+                "topVer=" + topVer + ", lastTopVer=" + ctx.exchange().lastAffinityChangedTopologyVersion(topVer);
 
-            // Ignore all client exchanges.
-            AffinityTopologyVersion v0 = ctx.exchange().lastAffinityChangedTopologyVersion(topVer);
-            AffinityTopologyVersion v1 = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
+            // Ignore all client exchanges for comparison.
+            AffinityTopologyVersion rebTopVer = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
 
-            if (!v0.equals(v1)) {
-                log.info("DBG: do not own: version changed grp=" + grp.cacheOrGroupName() + ", old=" + topVer + ", new=" + v0);
+            if (!topVer.equals(rebTopVer)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Do not own partitions [grp=" +
+                        grp.cacheOrGroupName() + ", topVer=" + topVer + ", rebTopVer=" + rebTopVer + ']');
+                }
 
                 return;
             }
 
             if (onDone(true, null)) {
-                // TODO remove topVer.
-                grp.topology().ownMoving(this.topVer);
+                grp.topology().ownMoving();
 
                 if (log.isDebugEnabled())
                     log.debug("Partitions have been scheduled to resend [reason=" +
-                        "Durability checkpoint finished, grp=" + grp.cacheOrGroupName() + "]");
+                        "Group durability restored, name=" + grp.cacheOrGroupName() + "]");
 
                 ctx.exchange().refreshPartitions(Collections.singleton(grp));
-                //ctx.exchange().scheduleResendPartitions();
             }
             else {
-                log.info("DBG: do not own, already finished grp=" + grp.cacheOrGroupName() +
-                    ", ver=" + this.topVer + ", result=" + result());
+                if (log.isDebugEnabled())
+                    log.debug("Do not own partitions, future has been finished [grp=" + grp.cacheOrGroupName() +
+                        ", ver=" + this.topVer + ", result=" + result() + ']');
             }
         }
 
@@ -1532,7 +1535,7 @@ public class GridDhtPartitionDemander {
         }
 
         /**
-         * Cancel future or mark for cancel {@code RebalanceFutureState#MARK_CANCELLED}.
+         * Cancel running future or mark for cancel {@code RebalanceFutureState#MARK_CANCELLED}.
          */
         private void tryCancel() {
             if (STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED))
@@ -1759,7 +1762,7 @@ public class GridDhtPartitionDemander {
                                 // Avoid possible deadlocks.
                                 ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                                     @Override public void run() {
-                                        grp.preloader().finishFuture(topVer); // Safe, captured under cancel lock.
+                                        grp.preloader().finishPreloading(topVer); // Safe, captured under cancel lock.
                                     }
                                 }, true);
                             }
@@ -1969,10 +1972,9 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     *
      * @param topVer Topopolog verion.
      */
-    public void continueChain(AffinityTopologyVersion topVer) {
+    void finishPreloading(AffinityTopologyVersion topVer) {
         if (!rebalanceFut.isInitial())
             rebalanceFut.ownPartitionsAndFinishFuture(topVer);
     }
