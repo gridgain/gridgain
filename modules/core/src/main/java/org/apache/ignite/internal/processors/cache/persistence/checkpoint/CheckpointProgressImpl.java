@@ -16,18 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotOperation;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.LOCK_RELEASED;
@@ -77,7 +76,7 @@ public class CheckpointProgressImpl implements CheckpointProgress {
      */
     public CheckpointProgressImpl(long cpFreq) {
         // Avoid overflow.
-        cpFreq = Math.min(TimeUnit.DAYS.convert(365, TimeUnit.NANOSECONDS), cpFreq);
+        cpFreq = Math.min(TimeUnit.MILLISECONDS.convert(365, TimeUnit.DAYS), cpFreq);
 
         nextCpNanos = System.nanoTime() + U.millisToNanos(cpFreq);
     }
