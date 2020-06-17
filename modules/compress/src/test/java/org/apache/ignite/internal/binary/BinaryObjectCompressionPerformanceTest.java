@@ -21,6 +21,9 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -34,6 +37,16 @@ public class BinaryObjectCompressionPerformanceTest extends GridCommonAbstractTe
 
     /** */
     private static final int MAX_ITEMS = 3 * CYCLE;
+
+    /** */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setDataStorageConfiguration(new DataStorageConfiguration().setMetricsEnabled(true)
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMetricsEnabled(true)));
+
+        return cfg;
+    }
 
     /** */
     @Test
@@ -89,17 +102,17 @@ public class BinaryObjectCompressionPerformanceTest extends GridCommonAbstractTe
         IgniteCache c = ignite.createCache(new CacheConfiguration<>("foo"));
         long time = System.currentTimeMillis();
         for (int i = 0; i < MAX_ITEMS; i++) {
-            long seed = (i * i) % LARGE_PRIME;
-            c.put(new TestObject(seed), seed);
+            c.put(new TestObject(i), (long)i);
 
             if (i > CYCLE) {
                 int idToRmv = i - CYCLE;
 
-                c.remove(new TestObject((idToRmv * idToRmv) % LARGE_PRIME));
+                assertTrue(c.remove(new TestObject(idToRmv)));
             }
         }
 
         log.info("Time took: " + ((System.currentTimeMillis() - time) / 1_000) + "s");
+        log.info("Memory used: " + ignite.dataRegionMetrics("default").getOffheapUsedSize());
 
         ignite.close();
     }
