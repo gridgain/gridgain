@@ -1034,7 +1034,9 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                             }
                         }
                         else {
-                            onDone(new TransactionHeuristicException("Primary node [" + nodeId + "] has left the grid and there are no backup nodes"));
+                            onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
+                                m.primary().consistentId() + "] has left the grid and there are no backup nodes"));
+
                             return true;
                         }
                     }
@@ -1043,12 +1045,16 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                     Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
                     if (txNodes != null) {
                         Collection<UUID> backups = txNodes.get(nodeId);
+
                         if (F.isEmpty(backups) || backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
-                            onDone(new TransactionHeuristicException("Primary node [" + nodeId + "] has left the grid and there are no backup nodes"));
+                            onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
+                                m.primary().consistentId() + "] has left the grid and there are no backup nodes"));
+
                             return true;
                         }
                     }
                 }
+
                 onDone(tx);
 
                 return true;
