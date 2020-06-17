@@ -1068,11 +1068,11 @@ public class GridDhtPartitionDemander {
      * The future is created for each topology version if some partitions should present by affinity and completed when
      * all partitions are transferred.
      * <p>
-     * As soon as a partition was successfully preloaded it's state is switched to owning, making it consistent with
+     * As soon as a partition was successfully preloaded it's state is switched to OWNING, making it consistent with
      * other copies.
      * <p>
-     * To speed up things WAL can be locally disabled until preloading is finished (causing durability loss for a group)
-     * , in such a case partitions are owned after a checkpoint has completed.
+     * To speed up things WAL can be locally disabled until preloading is finished (causing temporary durability loss
+     * for a group) , in such a case partitions are owned after a checkpoint has completed.
      * Applicable only for persistent mode.
      *
      * Possible outcomes are:
@@ -1762,7 +1762,7 @@ public class GridDhtPartitionDemander {
                                 // Avoid possible deadlocks.
                                 ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                                     @Override public void run() {
-                                        grp.preloader().finishPreloading(topVer); // Safe, captured under cancel lock.
+                                        grp.preloader().finishPreloading(topVer);
                                     }
                                 }, true);
                             }

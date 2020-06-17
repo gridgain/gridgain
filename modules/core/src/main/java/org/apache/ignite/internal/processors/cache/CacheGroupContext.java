@@ -1246,8 +1246,8 @@ public class CacheGroupContext {
     public void globalWalEnabled(boolean enabled) {
         if (globalWalEnabled != enabled) {
             if (log.isInfoEnabled()) {
-                log.info("Global WAL state for group=" + cacheOrGroupName() +
-                    " changed from " + globalWalEnabled + " to " + enabled);
+                log.info("Global state for group durability has changed [name=" + cacheOrGroupName() +
+                    ", enabled=" + enabled + ']');
             }
 
             persistGlobalWalState(enabled);

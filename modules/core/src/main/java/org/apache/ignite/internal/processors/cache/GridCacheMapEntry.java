@@ -6752,7 +6752,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             else {
                 assert entry.isStartVersion() || ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) <= 0 :
-                    "Invalid version for inner update [cache=" + cctx.group().cacheOrGroupName() +
+                    "Invalid version for inner update [name=" + cctx.group().cacheOrGroupName() +
                         ", isNew=" + entry.isStartVersion() + ", entry=" + entry + ", newVer=" + newVer + ']';
             }
         }

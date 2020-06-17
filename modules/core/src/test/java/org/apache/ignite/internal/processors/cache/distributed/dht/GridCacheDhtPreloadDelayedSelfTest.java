@@ -540,10 +540,7 @@ public class GridCacheDhtPreloadDelayedSelfTest extends GridCommonAbstractTest {
 
                         assert cmpMap != null;
 
-                        boolean zzz = nodeMap.keySet().equals(cmpMap.keySet());
-
-                        if (!zzz)
-                            throw new AssertionError();
+                        assert nodeMap.keySet().equals(cmpMap.keySet());
 
                         for (Map.Entry<Integer, GridDhtPartitionState> nodeEntry : nodeMap.entrySet()) {
                             GridDhtPartitionState state = cmpMap.get(nodeEntry.getKey());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,15 +50,10 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Суть проблемы в том что мы комплитим фьючу и откладываем оунинг, в этом случае когда
- * начинается новый ребаланс он не может заканселить уже закомпличеную фьючу и забирает moving стейты,
- * что приводит к очистке.
- *
- * Проблема2 - стейты поменялись между generate и addAssignment ?
- *
- * TODO add test cancelled sync future, should not preliminary cancel.
- *
- * */
+ * Tests a scenario when delayed partition owning on exchange overlaps with new rebalancing.
+ * Previous future should be cancelled if it's not compatible with new to avoid sending stale partition map
+ * after checkpoint has been completed asynchronously.
+ */
 public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbstractTest {
     /** Parts. */
     private static final int PARTS = 128;
