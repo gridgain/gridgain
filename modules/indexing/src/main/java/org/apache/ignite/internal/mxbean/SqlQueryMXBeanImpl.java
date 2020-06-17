@@ -28,11 +28,6 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     /** */
     private final IgniteH2Indexing h2idx;
 
-    /** Logger. */
-    @LoggerResource
-    private IgniteLogger log;
-
-
     /**
      * @param ctx Context.
      */
@@ -83,13 +78,7 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     /** {@inheritDoc}
      * @return*/
     @Override public long getSqlGlobalMemoryQuota() {
-         Long globalQuota = 0L;
-        try {
-            globalQuota = Long.parseLong(h2idx.memoryManager().getGlobalQuota());
-        } catch (NumberFormatException e) {
-            log.error("error parsing sqlGloalMemoryQuota", e);
-        }
-        return globalQuota;
+        return Long.parseLong(h2idx.memoryManager().getGlobalQuota());
     }
 
 
@@ -110,14 +99,7 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     /** {@inheritDoc}
      * @return*/
     @Override public long getSqlQueryMemoryQuota() {
-        Long sqlMemoryQuota = 0L;
-        try {
-            sqlMemoryQuota = Long.parseLong(h2idx.memoryManager().getQueryQuotaString());
-        } catch (NumberFormatException e) {
-            log.error("error parsing SqlQueryMemoryQuota", e);
-        }
-
-        return sqlMemoryQuota;
+        return Long.parseLong(h2idx.memoryManager().getQueryQuotaString());
     }
 
     /** {@inheritDoc}
