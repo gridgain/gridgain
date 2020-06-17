@@ -29,10 +29,20 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.resources.LoggerResource;
 
 /** */
 public class ZstdDictionaryCompressor extends CompressorAdapter {
+    /** */
+    private static final int SAMPLES = IgniteSystemProperties.getInteger("IGNITE_COMPRESS_SAMPLES", 16384);
+
+    /** */
+    private static final long BUF_SIZE = IgniteSystemProperties.getLong("IGNITE_COMPRESS_BUFFER_SIZE", 4L * 1024 * 1024);
+
+    /** */
+    private static final int DICT_SIZE = IgniteSystemProperties.getInteger("IGNITE_COMPRESS_DICTIONARY_SIZE", 1024);
+
     /** Logger. */
     @LoggerResource
     private IgniteLogger log;
@@ -64,10 +74,10 @@ public class ZstdDictionaryCompressor extends CompressorAdapter {
     /** */
     public ZstdDictionaryCompressor() {
         level = 2;
-        dictSize = 1024;
+        dictSize = DICT_SIZE;
 
-        samplesToCollect.set(16384);
-        bufToCollect.set(4L * 1024 * 1024);
+        samplesToCollect.set(SAMPLES);
+        bufToCollect.set(BUF_SIZE);
 
         samples.clear();
     }

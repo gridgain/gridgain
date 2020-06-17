@@ -81,6 +81,28 @@ public class BinaryObjectCompressionPerformanceTest extends GridCommonAbstractTe
         ignite.close();
     }
 
+    /** */
+    @Test
+    public void testObjectiveKey() throws Exception {
+        Ignite ignite = startGrid(0);
+
+        IgniteCache c = ignite.createCache(new CacheConfiguration<>("foo"));
+        long time = System.currentTimeMillis();
+        for (int i = 0; i < MAX_ITEMS; i++) {
+            long seed = (i * i) % LARGE_PRIME;
+            c.put(new TestObject(seed), seed);
+
+            if (i > CYCLE) {
+                int idToRmv = i - CYCLE;
+
+                c.remove(new TestObject((idToRmv * idToRmv) % LARGE_PRIME));
+            }
+        }
+
+        log.info("Time took: " + ((System.currentTimeMillis() - time) / 1_000) + "s");
+
+        ignite.close();
+    }
 
     /** */
     private static class TestObject {

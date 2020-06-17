@@ -1210,7 +1210,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 return new KeyCacheObjectImpl(ctx.kernalContext().cacheObjects().unmarshal(ctx, bytes, null), bytes, -1);
 
             case CacheObject.TYPE_BINARY_COMPRESSED:
-                throw new IllegalArgumentException("Cache keys should not be compressed.");
+                return new BinaryObjectImpl(binaryContext(), binaryContext().compressor().decompress(bytes), 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);

@@ -438,7 +438,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
         final long pageId = pageId(link);
         final long page = acquirePage(pageId);
 
-        try {
+        if (false) try {
             long pageAddr = readLock(pageId, page); // Non-empty data page must not be recycled.
 
             assert pageAddr != 0L : link;

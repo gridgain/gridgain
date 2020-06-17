@@ -16,12 +16,18 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.lang.IgniteExperimental;
 
 /**
  * Context to get value of cache object.
  */
 public interface CacheObjectValueContext {
+    /** */
+    @IgniteExperimental
+    final static boolean COMPRESS_KEYS = IgniteSystemProperties.getBoolean("IGNITE_COMPRESS_KEYS", true);
+
     /**
      * @return Kernal context.
      */
@@ -36,6 +42,14 @@ public interface CacheObjectValueContext {
      * @return {@code True} if should store unmarshalled value in cache.
      */
     public boolean storeValue();
+
+    /**
+     * @return {@code True} if cache keys should be compressed.
+     */
+    @IgniteExperimental
+    public default boolean compressKeys() {
+        return COMPRESS_KEYS;
+    }
 
     /**
      * @return {@code True} if deployment info should be associated with the objects of this cache.

@@ -1707,7 +1707,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key.prepareForCache(coCtx, false);
+                key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 if (val != null)
                     val.prepareForCache(coCtx, true);
@@ -1758,7 +1758,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, cctx.cacheObjectContext().compressKeys());
 
                 // null is passed for loaded from store.
                 if (mvccVer == null) {
@@ -1823,7 +1823,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
@@ -1845,7 +1845,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     CacheObject val = info.value();
 
                     if (val != null)
-                        val = val.prepareForCache(coCtx, false);
+                        val = val.prepareForCache(coCtx, coCtx.compressKeys());
 
                     MvccDataRow row = new MvccDataRow(key,
                         val,
@@ -1900,7 +1900,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key.prepareForCache(coCtx, false);
+                key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 if (val != null)
                     val.prepareForCache(coCtx, true);
@@ -1957,7 +1957,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 if(val != null)
                     val = val.prepareForCache(coCtx, true);
@@ -2166,7 +2166,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
                     cctx,
@@ -2232,7 +2232,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
                     cctx,
@@ -2277,7 +2277,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
-                key = key.prepareForCache(cctx.cacheObjectContext(), false);
+                key = key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys());
 
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2419,7 +2419,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 if (val != null)
                     val = val.prepareForCache(coCtx, true);
@@ -2475,7 +2475,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key = key.prepareForCache(coCtx, false);
+                key = key.prepareForCache(coCtx, coCtx.compressKeys());
 
                 if (val != null)
                     val = val.prepareForCache(coCtx, true);
@@ -2660,7 +2660,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
-            key = key.prepareForCache(cctx.cacheObjectContext(), false);
+            key = key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys());
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2695,7 +2695,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             // Note: this method is intended for testing only.
 
-            key = key.prepareForCache(cctx.cacheObjectContext(), false);
+            key = key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys());
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2743,7 +2743,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public CacheDataRow mvccFind(GridCacheContext cctx,
             KeyCacheObject key,
             MvccSnapshot snapshot) throws IgniteCheckedException {
-            key = key.prepareForCache(cctx.cacheObjectContext(), false);
+            key = key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys());
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 

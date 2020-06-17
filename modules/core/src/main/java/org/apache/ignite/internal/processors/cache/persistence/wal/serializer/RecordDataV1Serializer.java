@@ -2094,7 +2094,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         GridCacheContext cctx = this.cctx.cacheContext(entry.cacheId());
         CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-        entry.key().prepareForCache(coCtx, false);
+        entry.key().prepareForCache(coCtx, coCtx.compressKeys());
 
         if (entry.value() != null)
             entry.value().prepareForCache(coCtx, true);

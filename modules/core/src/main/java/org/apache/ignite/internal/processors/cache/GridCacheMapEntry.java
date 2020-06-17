@@ -257,7 +257,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert key != null;
 
         try {
-            key = key.prepareForCache(cctx.cacheObjectContext(), false);
+            key = key.prepareForCache(cctx.cacheObjectContext(), cctx.cacheObjectContext().compressKeys());
         }
         catch (IgniteCheckedException e) {
             e.printStackTrace();
@@ -3350,7 +3350,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             long expTime = expireTime < 0 ? CU.toExpireTime(ttl) : expireTime;
 
             if (val != null)
-            val = val.prepareForCache(cctx.cacheObjectContext(), true);
+                val = val.prepareForCache(cctx.cacheObjectContext(), true);
 
             final boolean unswapped = (flags & IS_UNSWAPPED_MASK) != 0;
 
