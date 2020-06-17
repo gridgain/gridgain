@@ -1481,16 +1481,18 @@ public class GridDhtPartitionDemander {
          */
         public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer) {
             assert state == RebalanceFutureState.STARTED : this;
-            assert topVer.equals(ctx.exchange().lastAffinityChangedTopologyVersion(topVer)) :
-                "topVer=" + topVer + ", lastTopVer=" + ctx.exchange().lastAffinityChangedTopologyVersion(topVer);
 
-            // Ignore all client exchanges for comparison.
-            AffinityTopologyVersion rebTopVer = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
+            // Ignore all client exchanges.
+            // Note rebalancing may be started on client topology version if forced reassign was queued after client
+            // topology exchange.
+            AffinityTopologyVersion rebTopVer = ctx.exchange().lastAffinityChangedTopologyVersion(topVer);
+            AffinityTopologyVersion curRebTopVer = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
 
-            if (!topVer.equals(rebTopVer)) {
+            if (!rebTopVer.equals(curRebTopVer)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Do not own partitions [grp=" +
-                        grp.cacheOrGroupName() + ", topVer=" + topVer + ", rebTopVer=" + rebTopVer + ']');
+                    log.debug("Do not own partitions because the topology is outdated [grp=" +
+                        grp.cacheOrGroupName() + ", topVer=" + topVer + ", curTopVer=" + topologyVersion()
+                        + ", rebTopVer=" + rebTopVer + ", curRebTopVer=" + curRebTopVer + ']');
                 }
 
                 return;
@@ -1507,8 +1509,8 @@ public class GridDhtPartitionDemander {
             }
             else {
                 if (log.isDebugEnabled())
-                    log.debug("Do not own partitions, future has been finished [grp=" + grp.cacheOrGroupName() +
-                        ", ver=" + this.topVer + ", result=" + result() + ']');
+                    log.debug("Do not own partitions because the future has been finished [grp=" +
+                        grp.cacheOrGroupName() + ", ver=" + this.topVer + ", result=" + result() + ']');
             }
         }
 
