@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.net.ssl.SSLContext;
 
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.client.GridClientCacheFlag;
 import org.apache.ignite.internal.client.GridClientClosedException;
 import org.apache.ignite.internal.client.GridClientDataMetrics;
@@ -88,6 +89,15 @@ public abstract class GridClientConnection {
      * @param waitCompletion If {@code true} this method will wait until all pending requests are handled.
      */
     abstract void close(GridClientConnectionCloseReason reason, boolean waitCompletion);
+
+    /**
+     * Closes connection facade.
+     *
+     * @param reason Why this connection should be closed.
+     * @param waitCompletion If {@code true} this method will wait for all pending requests to be completed.
+     * @param cause The cause of connection close, or {@code null} if it is an ordinal close.
+     */
+    abstract void close(GridClientConnectionCloseReason reason, boolean waitCompletion, @Nullable Throwable cause);
 
     /**
      * Closes connection facade if no requests are in progress.
@@ -312,16 +322,41 @@ public abstract class GridClientConnection {
      *
      * @param active Active.
      * @param destNodeId Destination node id.
+     * @deprecated Use {@link #changeState(ClusterState, UUID)} instead.
      */
+    @Deprecated
     public abstract GridClientFuture<?> changeState(boolean active, UUID destNodeId)
             throws GridClientClosedException, GridClientConnectionResetException;
+
+    /**
+     * Changes grid global state.
+     *
+     * @param state New cluster state.
+     * @param destNodeId Destination node id.
+     * @throws GridClientConnectionResetException In case of error.
+     * @throws GridClientClosedException If client was manually closed before request was sent over network.
+     */
+    public abstract GridClientFuture<?> changeState(ClusterState state, UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException;
 
     /**
      * Get current grid state.
      *
      * @param destNodeId Destination node id.
+     * @deprecated Use {@link #state(UUID)} instead.
      */
+    @Deprecated
     public abstract GridClientFuture<Boolean> currentState(UUID destNodeId)
+        throws GridClientClosedException, GridClientConnectionResetException;
+
+    /**
+     * Gets current grid global state.
+     *
+     * @param destNodeId Destination node id.
+     * @throws GridClientConnectionResetException In case of error.
+     * @throws GridClientClosedException If client was manually closed before request was sent over network.
+     */
+    public abstract GridClientFuture<ClusterState> state(UUID destNodeId)
         throws GridClientClosedException, GridClientConnectionResetException;
 
     /**

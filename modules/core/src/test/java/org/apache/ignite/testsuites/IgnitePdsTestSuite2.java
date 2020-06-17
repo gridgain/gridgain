@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.persistence.LocalWalModeNoCha
 import org.apache.ignite.internal.processors.cache.persistence.WalPreloadingConcurrentTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.ClientAffinityAssignmentWithBaselineTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.ClusterActivationEventTest;
+import org.apache.ignite.internal.processors.cache.persistence.baseline.ClusterActivationEventWithPersistenceTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteAbsentEvictionNodeOutOfBaselineTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteAllBaselineNodesOnlineFullApiSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.baseline.IgniteBaselineRestartClusterTest;
@@ -86,6 +87,8 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.FilteredWalIteratorTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneWalRecordsIteratorTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.scanner.WalScannerTest;
+import org.apache.ignite.internal.processors.cluster.ClusterStateChangeEventTest;
+import org.apache.ignite.internal.processors.cluster.ClusterStateChangeEventWithPersistenceTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -126,6 +129,9 @@ public class IgnitePdsTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, ClientAffinityAssignmentWithBaselineTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteAbsentEvictionNodeOutOfBaselineTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterActivationEventTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClusterActivationEventWithPersistenceTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClusterStateChangeEventTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClusterStateChangeEventWithPersistenceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteBaselineRestartClusterTest.class, ignoredTests);
 
         return suite;
