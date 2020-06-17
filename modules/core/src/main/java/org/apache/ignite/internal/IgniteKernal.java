@@ -958,6 +958,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             gw.writeUnlock();
         }
 
+        log.warning("You are running GridGain compression beta build. It is NOT SUITABLE FOR PRODUCTION, " +
+            "some features may not work");
+
         assert cfg != null;
 
         // Make sure we got proper configuration.
