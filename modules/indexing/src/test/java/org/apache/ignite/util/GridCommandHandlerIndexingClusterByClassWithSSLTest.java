@@ -14,35 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.rest.request;
+package org.apache.ignite.util;
 
 /**
  *
  */
-public class GridRestReadOnlyChangeModeRequest extends GridRestRequest {
-    /** Request current state. */
-    private boolean reqCurrentMode;
-
-    /** Read only. */
-    private boolean readOnly;
-
-    /** */
-    public void reqCurrentMode() {
-        reqCurrentMode = true;
-    }
-
-    /** */
-    public boolean isReqCurrentMode() {
-        return reqCurrentMode;
-    }
-
-    /** */
-    public void readOnly(boolean readOnly) {
-        this.readOnly = readOnly;
-    }
-
-    /** */
-    public boolean readOnly() {
-        return readOnly;
+public class GridCommandHandlerIndexingClusterByClassWithSSLTest extends GridCommandHandlerIndexingClusterByClassTest {
+    /** {@inheritDoc} */
+    @Override protected boolean sslEnabled() {
+        return true;
     }
 }

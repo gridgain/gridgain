@@ -18,9 +18,13 @@ package org.apache.ignite.internal.commandline;
 
 import java.util.UUID;
 import java.util.logging.Logger;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientException;
+import org.apache.ignite.internal.client.GridClientNode;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
@@ -45,7 +49,7 @@ public class StateCommand implements Command<Void> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState state = client.state();
 
-            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE) && allServersSupportClusterIdAndTag(client)) {
                 UUID id = state.id();
                 String tag = state.tag();
 
@@ -55,7 +59,27 @@ public class StateCommand implements Command<Void> {
                 log.info(CommandHandler.DELIM);
             }
 
-            log.info("Cluster is " + (state.active() ? "active" : "inactive"));
+            ClusterState clusterState = state.state();
+
+            switch (clusterState) {
+                case ACTIVE:
+                    log.info("Cluster is active");
+
+                    break;
+
+                case INACTIVE:
+                    log.info("Cluster is inactive");
+
+                    break;
+
+                case ACTIVE_READ_ONLY:
+                    log.info("Cluster is active (read-only)");
+
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unknown state: " + clusterState);
+            }
         }
         catch (Throwable e) {
             if (!CommandHandler.isAuthError(e))
@@ -65,6 +89,24 @@ public class StateCommand implements Command<Void> {
         }
 
         return null;
+    }
+
+    /**
+     * Checks that all servers support Cluster ID and tag feature.
+     *
+     * @param client GridClient to obtain topology.
+     * @return {@code True} if all servers support the feature and {@code false} otherwise.
+     * @throws GridClientException If failed to obtain topology.
+     */
+    private boolean allServersSupportClusterIdAndTag(GridClient client) throws GridClientException {
+        for (GridClientNode node : client.compute().nodes()) {
+            if (!node.isClient()
+                && !node.isDaemon()
+                && !node.supports(IgniteFeatures.CLUSTER_ID_AND_TAG))
+                return false;
+        }
+
+        return true;
     }
 
     /** {@inheritDoc} */
