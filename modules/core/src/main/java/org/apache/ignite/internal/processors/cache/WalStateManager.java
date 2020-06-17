@@ -430,18 +430,11 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             }
 
             if (!hasOwning && !locParts.isEmpty()) {
-                grp.localWalEnabled(false, true); // TODO always persist, no need in flag.
+                grp.localWalEnabled(false, true);
 
                 names.add(grp.cacheOrGroupName());
             }
         }
-
-//        if (!names.isEmpty() && log.isInfoEnabled()) {
-//            log.info("WAL logging was disabled for some cache groups until rebalancing is finished " +
-//                "for faster rebalancing. This will cause full rebalancing if a node crashes before rebalancing is " +
-//                "completed. To switch off this behavior please use system property " +
-//                "-DIGNITE_DISABLE_WAL_DURING_REBALANCING=false " + names);
-//        }
     }
 
     /**

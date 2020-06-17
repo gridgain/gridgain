@@ -1141,7 +1141,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     assert hld != null;
 
-                    // TODO Does reservation, not needed for RENTING clearing.
                     GridCacheMapEntry cached = putEntryIfObsoleteOrAbsent(
                         hld,
                         hld.cctx,

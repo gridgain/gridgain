@@ -768,7 +768,6 @@ public final class IgniteSystemProperties {
 
     /**
      * WAL rebalance threshold.
-     * // TODO deprecate.
      */
     public static final String IGNITE_PDS_PARTITION_DESTROY_CHECKPOINT_DELAY =
         "IGNITE_PDS_PARTITION_DESTROY_CHECKPOINT_DELAY";

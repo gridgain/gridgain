@@ -630,7 +630,6 @@ public class GridDhtPartitionDemander {
 
                 d.timeout(grp.preloader().timeout());
 
-                // TODO do not send message if supplied.
                 if (!rebalanceFut.isDone()) {
                     // Send demand message.
                     try {
@@ -1083,7 +1082,6 @@ public class GridDhtPartitionDemander {
      *     <li>{@code False} if a group rebalancing was cancelled because topology has changed and new assignment is
      *     incompatible with previous, see {@link RebalanceFuture#compatibleWith(GridDhtPreloaderAssignments)}.</li>
      * </ul>
-     * TODO refactor to separate class.
      */
     public static class RebalanceFuture extends GridFutureAdapter<Boolean> {
         /** State updater. */
@@ -1523,7 +1521,6 @@ public class GridDhtPartitionDemander {
          * @return true in case future created for specified {@code rebalanceId}, false in other case.
          */
         private boolean isActual(long rebalanceId) {
-            // TODO need compare topver!???
             return this.rebalanceId == rebalanceId;
         }
 
@@ -1736,7 +1733,10 @@ public class GridDhtPartitionDemander {
 
                 // Delay owning until checkpoint is finished.
                 if (grp.persistenceEnabled() && !grp.localWalEnabled() && !cancelled) {
-                    log.info("DBG: Delay owning grp=" + grp.cacheOrGroupName() + ", ver=" + topVer);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Delaying partition owning for a group [name=" +
+                            grp.cacheOrGroupName() + ", ver=" + topVer + ']');
+                    }
 
                     // Force new checkpoint to make sure owning state is captured.
                     CheckpointProgress cp = ctx.database().forceCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING +

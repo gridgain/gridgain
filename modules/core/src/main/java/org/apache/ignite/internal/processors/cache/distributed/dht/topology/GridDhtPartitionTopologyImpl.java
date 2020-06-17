@@ -1677,7 +1677,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         int p = e.getKey();
                         GridDhtPartitionState state = e.getValue();
 
-                        // TODO can remove it ?
                         if (state == OWNING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
@@ -1694,8 +1693,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         else if (state == MOVING) {
                             GridDhtLocalPartition locPart = locParts.get(p);
 
-                            // TODO if local partition is moving no need in changed=true.
-                            // TOODO clear MOVING on node start in the same place as RENTING continued clearing.
                             rebalancePartition(p, partsToReload.contains(p) ||
                                 locPart != null && locPart.state() == MOVING && exchFut.localJoinExchange(), exchFut);
 

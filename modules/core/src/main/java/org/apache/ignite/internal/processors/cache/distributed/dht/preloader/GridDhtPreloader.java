@@ -460,7 +460,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Update topology on partition eviction and optionallly refresh partition map.
+     * Update topology on partition eviction and optionally refresh partition map.
      *
      * @param part Evicted partition.
      * @param updateSeq {@code True} to refresh partition maps.
