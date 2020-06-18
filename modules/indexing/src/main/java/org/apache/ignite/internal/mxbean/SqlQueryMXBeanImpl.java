@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal.mxbean;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.resources.LoggerResource;
 
 /**
  * QueryMXBean implementation.
