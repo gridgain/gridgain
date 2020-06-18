@@ -958,9 +958,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             gw.writeUnlock();
         }
 
-        log.warning("You are running GridGain compression beta build. It is NOT SUITABLE FOR PRODUCTION, " +
-            "some features may not work");
-
         assert cfg != null;
 
         // Make sure we got proper configuration.
@@ -972,6 +969,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         log = (GridLoggerProxy)cfg.getGridLogger().getLogger(
             getClass().getName() + (igniteInstanceName != null ? '%' + igniteInstanceName : ""));
+
+        log.warning("You are running GridGain compression beta build. It is NOT SUITABLE FOR PRODUCTION, " +
+            "some features may not work");
 
         longJVMPauseDetector = new LongJVMPauseDetector(log);
 
