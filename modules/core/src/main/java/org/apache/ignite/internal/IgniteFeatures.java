@@ -154,7 +154,11 @@ public enum IgniteFeatures {
     METASTORAGE_LONG_KEYS(38),
 
     /** Remove metadata from cluster for specified type. */
-    REMOVE_METADATA(39);
+    REMOVE_METADATA(39),
+
+    /** Snapshots without PME. */
+    EXCHANGELESS_SNAPSHOT(40);
+
     /**
      * Unique feature identifier.
      */
