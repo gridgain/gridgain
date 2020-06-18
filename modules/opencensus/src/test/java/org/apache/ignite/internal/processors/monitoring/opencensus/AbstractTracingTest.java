@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import io.opencensus.common.Functions;
+import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.AttributeValue;
 import io.opencensus.trace.Span;
 import io.opencensus.trace.SpanId;
@@ -169,6 +171,8 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         exporter.start("test");
 
         startGrids(GRID_CNT);
+
+        awaitPartitionMapExchange();
     }
 
     /**
@@ -243,6 +247,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
      * @param attributeVal Attribute value.
      */
     protected static String attributeValueToString(AttributeValue attributeVal) {
+        if (attributeVal == null)
+            return null;
+
         return attributeVal.match(
             Functions.returnToString(),
             Functions.returnToString(),

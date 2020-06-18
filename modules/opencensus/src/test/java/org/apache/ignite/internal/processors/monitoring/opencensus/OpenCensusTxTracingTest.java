@@ -70,6 +70,8 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
+
+
     }
 
     /**
@@ -81,8 +83,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      *
      * Check that got trace is equal to:
      *  transaction
-     *      transactions.near.enlist.write
-     *      transactions.colocated.lock.map
      *      transactions.near.enlist.write
      *      transactions.colocated.lock.map
      *      transactions.commit
@@ -121,7 +121,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.commit();
 
@@ -145,13 +144,13 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         checkSpan(
             TX_COLOCATED_LOCK_MAP,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         List<SpanId> commitSpanIds = checkSpan(
@@ -239,7 +238,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      * Check that got trace is equal to:
      *  transaction
      *      transactions.near.enlist.write
-     *      transactions.near.enlist.write
      *      transactions.commit
      *          transactions.near.prepare
      *              tx.near.process.prepare.request
@@ -276,7 +274,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, SERIALIZABLE);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.commit();
 
@@ -300,7 +297,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         List<SpanId> commitSpanIds = checkSpan(
@@ -389,8 +386,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      *  transaction
      *      transactions.near.enlist.write
      *      transactions.colocated.lock.map
-     *      transactions.near.enlist.write
-     *      transactions.colocated.lock.map
      *      transactions.commit
      *          transactions.near.prepare
      *              tx.near.process.prepare.request
@@ -427,7 +422,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, READ_COMMITTED);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.commit();
 
@@ -451,13 +445,13 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         checkSpan(
             TX_COLOCATED_LOCK_MAP,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         List<SpanId> commitSpanIds = checkSpan(
@@ -545,7 +539,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      * Check that got trace is equal to:
      *  transaction
      *      transactions.near.enlist.write
-     *      transactions.near.enlist.write
      *      transactions.commit
      *          transactions.near.prepare
      *              tx.near.process.prepare.request
@@ -582,7 +575,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, READ_COMMITTED);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.commit();
 
@@ -606,7 +598,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         List<SpanId> commitSpanIds = checkSpan(
@@ -695,8 +687,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      *  transaction
      *      transactions.near.enlist.write
      *      transactions.colocated.lock.map
-     *      transactions.near.enlist.write
-     *      transactions.colocated.lock.map
      *      transactions.commit
      *          transactions.near.prepare
      *              tx.near.process.prepare.request
@@ -733,7 +723,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, REPEATABLE_READ);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.commit();
 
@@ -757,13 +746,13 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         checkSpan(
             TX_COLOCATED_LOCK_MAP,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         List<SpanId> commitSpanIds = checkSpan(
@@ -851,7 +840,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      * Check that got trace is equal to:
      *  transaction
      *      transactions.near.enlist.write
-     *      transactions.near.enlist.write
      *      transactions.commit
      *          transactions.near.prepare
      *              tx.near.process.prepare.request
@@ -888,7 +876,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.commit();
 
@@ -912,7 +899,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         List<SpanId> commitSpanIds = checkSpan(
@@ -1000,7 +987,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      * Check that got trace is equal to:
      *  transaction
      *      transactions.near.enlist.write
-     *      transactions.near.enlist.write
      *      transactions.rollback
      *
      *   <p>
@@ -1023,7 +1009,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.rollback();
 
@@ -1047,7 +1032,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         checkSpan(
@@ -1066,7 +1051,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
      *
      * Check that got trace is equal to:
      *  transaction
-     *      transactions.near.enlist.write
      *      transactions.near.enlist.write
      *      transactions.close
      *
@@ -1090,7 +1074,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         Transaction tx = client.transactions().withLabel("label1").txStart(OPTIMISTIC, REPEATABLE_READ);
 
         client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
 
         tx.close();
 
@@ -1114,7 +1097,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         checkSpan(
             TX_NEAR_ENLIST_WRITE,
             txSpanIds.get(0),
-            2,
+            1,
             null);
 
         checkSpan(
