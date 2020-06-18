@@ -262,15 +262,17 @@ public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
 
             db.checkpointReadLock();
             try {
-                Collection<IgniteBiTuple<String, byte[]>> read = readTestData(testData, metaStorage);
+                Collection<IgniteBiTuple<String, byte[]>> read = metaStorage.readAll();
 
                 int cnt = 0;
                 for (IgniteBiTuple<String, byte[]> r : read) {
                     byte[] test = testData.get(r.get1());
 
-                    Assert.assertArrayEquals(r.get2(), test);
+                    if (test != null) {
+                        Assert.assertArrayEquals(r.get2(), test);
 
-                    cnt++;
+                        cnt++;
+                    }
                 }
 
                 assertEquals(cnt, testData.size());
@@ -334,15 +336,17 @@ public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
             db.checkpointReadLock();
 
             try {
-                Collection<IgniteBiTuple<String, byte[]>> read = readTestData(testData, metaStorage);
+                Collection<IgniteBiTuple<String, byte[]>> read = metaStorage.readAll();
 
                 int cnt = 0;
                 for (IgniteBiTuple<String, byte[]> r : read) {
                     byte[] test = testData.get(r.get1());
 
-                    Assert.assertArrayEquals(r.get2(), test);
+                    if (test != null) {
+                        Assert.assertArrayEquals(r.get2(), test);
 
-                    cnt++;
+                        cnt++;
+                    }
                 }
 
                 assertEquals(cnt, testData.size());
@@ -578,20 +582,5 @@ public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
 
             Assert.assertEquals(valPrefix + i, val);
         }
-    }
-
-    /* */
-    private Collection<IgniteBiTuple<String, byte[]>> readTestData(
-        Map<String, byte[]> testData,
-        MetaStorage metaStorage
-    ) throws IgniteCheckedException {
-        Collection<IgniteBiTuple<String, byte[]>> read = new ArrayList<>();
-
-        metaStorage.iterate("", (key, val) -> {
-            if (testData.containsKey(key))
-                read.add(new IgniteBiTuple<>(key, ((byte[])val)));
-        }, true);
-
-        return read;
     }
 }

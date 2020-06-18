@@ -26,7 +26,7 @@
     <suppress checks="SingleSpaceSeparator" files="JdbcThinCacheToJdbcDataTypesCoverageTest\.java" lines="86-103"/>
 
     <suppress checks="EmptyLineSeparator|GenericWhitespace|SingleSpaceSeparator|NoWhitespaceBefore|WhitespaceAround|org.apache.ignite.tools.checkstyle.OverrideAnnotationOnTheSameLineCheck"
-              files="modules[\/\\]h2[\/\\].*\.java"/>
+              files="modules\/h2\/.*\.java"/>
 
     <suppress checks="NoWhitespaceBefore" files="ConcurrentLinkedHashMap\.java"/>
 </suppressions>

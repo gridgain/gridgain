@@ -150,9 +150,6 @@ public enum IgniteFeatures {
     /** Distributed propagation of tx collisions dump interval. */
     DISTRIBUTED_TX_COLLISIONS_DUMP(37),
 
-    /** */
-    METASTORAGE_LONG_KEYS(38),
-
     /** Remove metadata from cluster for specified type. */
     REMOVE_METADATA(39);
     /**

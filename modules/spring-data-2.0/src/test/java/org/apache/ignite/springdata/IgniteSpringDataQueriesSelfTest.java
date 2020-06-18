@@ -21,8 +21,8 @@ import java.util.Iterator;
 import java.util.List;
 import javax.cache.Cache;
 import org.apache.ignite.springdata.misc.ApplicationConfiguration;
-import org.apache.ignite.springdata.misc.Person;
 import org.apache.ignite.springdata.misc.PersonRepository;
+import org.apache.ignite.springdata.misc.Person;
 import org.apache.ignite.springdata.misc.PersonSecondRepository;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -35,9 +35,6 @@ import org.springframework.data.domain.Sort;
  *
  */
 public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
-    /** Number of entries to store */
-    private static final int CACHE_SIZE = 1000;
-
     /** Repository. */
     private static PersonRepository repo;
 
@@ -47,6 +44,9 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** Context. */
     private static AnnotationConfigApplicationContext ctx;
 
+    /** Number of entries to store */
+    private static int CACHE_SIZE = 1000;
+
     /**
      * Performs context initialization before tests.
      */
@@ -54,7 +54,9 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
         super.beforeTestsStarted();
 
         ctx = new AnnotationConfigApplicationContext();
+
         ctx.register(ApplicationConfiguration.class);
+
         ctx.refresh();
 
         repo = ctx.getBean(PersonRepository.class);
@@ -69,8 +71,8 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /**
      * Performs context destroy after tests.
      */
-    @Override protected void afterTestsStopped() {
-        ctx.close();
+    @Override protected void afterTestsStopped() throws Exception {
+        ctx.destroy();
     }
 
     /** */
@@ -155,13 +157,13 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testPageable() {
-        PageRequest pageable = PageRequest.of(1, 5, Sort.Direction.DESC, "firstName");
+        PageRequest pageable = new PageRequest(1, 5, Sort.Direction.DESC, "firstName");
+
+        HashSet<String> firstNames = new HashSet<>();
 
         List<Person> pageable1 = repo.findByFirstNameRegex("^[a-z]+$", pageable);
 
         assertEquals(5, pageable1.size());
-
-        HashSet<String> firstNames = new HashSet<>();
 
         for (Person person : pageable1) {
             firstNames.add(person.getFirstName());
@@ -195,7 +197,7 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testQueryWithSort() {
-        List<Person> persons = repo.queryWithSort("^[a-z]+$", Sort.by(Sort.Direction.DESC, "secondName"));
+        List<Person> persons = repo.queryWithSort("^[a-z]+$", new Sort(Sort.Direction.DESC, "secondName"));
 
         Person previous = persons.get(0);
 
@@ -211,7 +213,7 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testQueryWithPaging() {
-        List<Person> persons = repo.queryWithPageable("^[a-z]+$", PageRequest.of(1, 7, Sort.Direction.DESC, "secondName"));
+        List<Person> persons = repo.queryWithPageable("^[a-z]+$", new PageRequest(1, 7, Sort.Direction.DESC, "secondName"));
 
         assertEquals(7, persons.size());
 
@@ -229,7 +231,7 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testQueryFields() {
-        List<String> persons = repo.selectField("^[a-z]+$", PageRequest.of(1, 7, Sort.Direction.DESC, "secondName"));
+        List<String> persons = repo.selectField("^[a-z]+$", new PageRequest(1, 7, Sort.Direction.DESC, "secondName"));
 
         assertEquals(7, persons.size());
     }
@@ -268,7 +270,7 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSelectSeveralFields() {
-        List<List> lists = repo.selectSeveralField("^[a-z]+$", PageRequest.of(2, 6));
+        List<List> lists = repo.selectSeveralField("^[a-z]+$", new PageRequest(2, 6));
 
         assertEquals(6, lists.size());
 
@@ -290,7 +292,7 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSliceOfCacheEntries() {
-        Slice<Cache.Entry<Integer, Person>> slice = repo2.findBySecondNameIsNot("lastName18", PageRequest.of(3, 4));
+        Slice<Cache.Entry<Integer, Person>> slice = repo2.findBySecondNameIsNot("lastName18", new PageRequest(3, 4));
 
         assertEquals(4, slice.getSize());
 
@@ -301,7 +303,7 @@ public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSliceOfLists() {
-        Slice<List> lists = repo2.querySliceOfList("^[a-z]+$", PageRequest.of(0, 3));
+        Slice<List> lists = repo2.querySliceOfList("^[a-z]+$", new PageRequest(0, 3));
 
         assertEquals(3, lists.getSize());
 

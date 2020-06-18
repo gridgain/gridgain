@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -127,7 +128,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
     private RootPage reuseListRoot;
 
     /** */
-    private PartitionMetaStorageImpl<MetastorageRowStoreEntry> partStorage;
+    private PartitionMetaStorageImpl<MetastorageDataRow> partStorage;
 
     /** */
     private SortedMap<String, byte[]> lastUpdates;
@@ -212,7 +213,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
         while (cur.next()) {
             MetastorageDataRow row = cur.get();
 
-            tmpStorage.add(row.key(), partStorage.readRow(row.link()));
+            tmpStorage.add(row.key(), row.value());
         }
 
         return tmpStorage;
@@ -253,14 +254,8 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
             String freeListName = METASTORAGE_CACHE_NAME + "##FreeList";
             String treeName = METASTORAGE_CACHE_NAME + "##Tree";
 
-            partStorage = new PartitionMetaStorageImpl<MetastorageRowStoreEntry>(
-                METASTORAGE_CACHE_ID,
-                freeListName,
-                regionMetrics,
-                dataRegion,
-                null,
-                wal,
-                reuseListRoot.pageId().pageId(),
+            partStorage = new PartitionMetaStorageImpl<MetastorageDataRow>(METASTORAGE_CACHE_ID, freeListName,
+                regionMetrics, dataRegion, null, wal, reuseListRoot.pageId().pageId(),
                 reuseListRoot.isAllocated(),
                 diagnosticMgr.pageLockTracker().createPageLockTracker(freeListName),
                 cctx.kernalContext(),
@@ -270,7 +265,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
                     return pageMem.allocatePage(grpId, partId, FLAG_DATA);
                 }
             };
-
+            
             MetastorageRowStore rowStore = new MetastorageRowStore(partStorage, db);
 
             tree = new MetastorageTree(METASTORAGE_CACHE_ID, treeName, dataRegion.pageMemory(), wal, rmvId,
@@ -323,9 +318,9 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
             curUpdatesEntry = updatesIter.next();
         }
 
-        MetastorageSearchRow lower = new MetastorageSearchRow(keyPrefix);
+        MetastorageDataRow lower = new MetastorageDataRow(keyPrefix, null);
 
-        MetastorageSearchRow upper = new MetastorageSearchRow(keyPrefix + "\uFFFF");
+        MetastorageDataRow upper = new MetastorageDataRow(keyPrefix + "\uFFFF", null);
 
         GridCursor<MetastorageDataRow> cur = tree.find(lower, upper);
 
@@ -333,7 +328,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
             MetastorageDataRow row = cur.get();
 
             String key = row.key();
-            byte[] valBytes = partStorage.readRow(row.link());
+            byte[] valBytes = row.value();
 
             int c = 0;
 
@@ -380,6 +375,23 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
         }
     }
 
+    /**
+     * Read all items from metastore.
+     */
+    public Collection<IgniteBiTuple<String, byte[]>> readAll() throws IgniteCheckedException {
+        ArrayList<IgniteBiTuple<String, byte[]>> res = new ArrayList<>();
+
+        GridCursor<MetastorageDataRow> cur = tree.find(null, null);
+
+        while (cur.next()) {
+            MetastorageDataRow row = cur.get();
+
+            res.add(new IgniteBiTuple<>(row.key(), marshaller.unmarshal(row.value(), getClass().getClassLoader())));
+        }
+
+        return res;
+    }
+
     /** {@inheritDoc} */
     @Override public void write(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException {
         assert val != null;
@@ -401,25 +413,16 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
             synchronized (this) {
                 ptr = wal.log(new MetastoreDataRecord(key, data));
 
-                MetastorageDataRow oldRow = tree.findOne(new MetastorageSearchRow(key));
+                MetastorageDataRow oldRow = tree.findOne(new MetastorageDataRow(key, null));
 
-                byte[] keyBytes = key.getBytes();
-
-                long keyLink;
-
-                if (oldRow != null)
-                    keyLink = oldRow.keyLink();
-                else if (keyBytes.length > MetastorageTree.MAX_KEY_LEN)
-                    keyLink = tree.rowStore().addRow(keyBytes);
-                else
-                    keyLink = 0L;
-
-                long dataLink = tree.rowStore().addRow(data);
-
-                tree.put(new MetastorageDataRow(dataLink, key, keyLink));
-
-                if (oldRow != null)
+                if (oldRow != null) {
+                    tree.removex(oldRow);
                     tree.rowStore().removeRow(oldRow.link());
+                }
+
+                MetastorageDataRow row = new MetastorageDataRow(key, data);
+                tree.rowStore().addRow(row);
+                tree.put(row);
             }
 
             wal.flush(ptr, false);
@@ -440,35 +443,30 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
                 return null;
         }
 
-        MetastorageDataRow row = tree.findOne(new MetastorageSearchRow(key));
+        MetastorageDataRow row = tree.findOne(new MetastorageDataRow(key, null));
 
         if (row == null)
             return null;
 
-        return partStorage.readRow(row.link());
+        return row.value();
     }
 
     /** */
     public void removeData(String key) throws IgniteCheckedException {
         if (!readOnly) {
-            WALPointer ptr;
-
-            synchronized (this) {
-                MetastorageDataRow oldRow = tree.findOne(new MetastorageSearchRow(key));
-
-                if (oldRow == null)
-                    return;
-
-                ptr = wal.log(new MetastoreDataRecord(key, null));
-
-                tree.removex(oldRow);
-                tree.rowStore().removeRow(oldRow.link());
-
-                if (oldRow.keyLink() != 0L)
-                    tree.rowStore().removeRow(oldRow.keyLink());
-            }
+            WALPointer ptr = wal.log(new MetastoreDataRecord(key, null));
 
             wal.flush(ptr, false);
+
+            synchronized (this) {
+                MetastorageDataRow row = new MetastorageDataRow(key, null);
+                MetastorageDataRow oldRow = tree.findOne(row);
+
+                if (oldRow != null) {
+                    tree.removex(oldRow);
+                    tree.rowStore().removeRow(oldRow.link());
+                }
+            }
         }
     }
 

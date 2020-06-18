@@ -145,14 +145,15 @@ public class TcpCommunicationConfiguration implements Serializable {
     private boolean failureDetectionTimeoutEnabled = true;
 
     /**
-     * Failure detection timeout. Initialized with the value of {@link IgniteConfiguration#getFailureDetectionTimeout()}.
+     * Failure detection timeout. Initialized with the value of
+     * {@link IgniteConfiguration#getFailureDetectionTimeout()}.
      */
     private long failureDetectionTimeout;
 
     /**
-     * Defines how many non-blocking {@code selector.selectNow()} should be made before falling into {@code
-     * selector.select(long)} in NIO server. Long value. Default is {@code 0}. Can be set to {@code Long.MAX_VALUE} so
-     * selector threads will never block.
+     * Defines how many non-blocking {@code selector.selectNow()} should be made before
+     * falling into {@code selector.select(long)} in NIO server. Long value. Default is {@code 0}.
+     * Can be set to {@code Long.MAX_VALUE} so selector threads will never block.
      */
     private long selectorSpins = IgniteSystemProperties.getLong("IGNITE_SELECTOR_SPINS", 0L);
 
@@ -553,8 +554,8 @@ public class TcpCommunicationConfiguration implements Serializable {
      * <p>
      * Default is {@link IgniteConfiguration#DFLT_FAILURE_DETECTION_TIMEOUT}.
      *
-     * @return Failure detection timeout in milliseconds.
      * @see IgniteConfiguration#setFailureDetectionTimeout(long)
+     * @return Failure detection timeout in milliseconds.
      */
     public long failureDetectionTimeout() {
         return failureDetectionTimeout;
@@ -564,7 +565,6 @@ public class TcpCommunicationConfiguration implements Serializable {
      * @param failureDetectionTimeout New failure detection timeout. Initialized with the value of .
      */
     public void failureDetectionTimeout(long failureDetectionTimeout) {
-        if (this.failureDetectionTimeoutEnabled)
-            this.failureDetectionTimeout = failureDetectionTimeout;
+        this.failureDetectionTimeout = failureDetectionTimeout;
     }
 }

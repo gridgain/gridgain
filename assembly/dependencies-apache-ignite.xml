@@ -33,7 +33,6 @@
             <includes>
                 <include>org.gridgain:ignite-spring</include>
                 <include>org.gridgain:ignite-indexing</include>
-                <include>org.gridgain:ignite-opencensus</include>
             </includes>
             <sources>
                 <includeModuleDirectory>true</includeModuleDirectory>
@@ -142,7 +141,6 @@
                 <exclude>org.gridgain:ignite-ml-spark-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-tensorflow-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-xgboost-model-parser</exclude>
-                <exclude>org.gridgain:ignite-opencensus</exclude>
             </excludes>
             <sources>
                 <includeModuleDirectory>true</includeModuleDirectory>
