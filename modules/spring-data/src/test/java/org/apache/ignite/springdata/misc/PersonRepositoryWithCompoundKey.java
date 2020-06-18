@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,34 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.metastorage;
+package org.apache.ignite.springdata.misc;
+
+import org.apache.ignite.springdata.repository.IgniteRepository;
+import org.apache.ignite.springdata.repository.config.RepositoryConfig;
 
 /**
- *
+ * Test repository.
  */
-public class MetastorageSearchRow implements MetastorageRow {
-    /** */
-    private final String key;
-
-    /**
-     * @param key Key.
-     */
-    public MetastorageSearchRow(String key) {
-        this.key = key;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long link() {
-        return 0L;
-    }
-
-    /** {@inheritDoc} */
-    @Override public String key() {
-        return key;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long keyLink() {
-        return 0L;
-    }
+@RepositoryConfig(cacheName = "PersonWithKeyCache")
+public interface PersonRepositoryWithCompoundKey extends IgniteRepository<Person, PersonKey> {
 }

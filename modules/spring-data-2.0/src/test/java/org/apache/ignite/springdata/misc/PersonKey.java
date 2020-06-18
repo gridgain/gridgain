@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,40 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.metastorage;
+package org.apache.ignite.springdata.misc;
+
+import java.io.Serializable;
 
 /**
- *
+ * Compound key.
  */
-public class MetsatorageSearchRowImpl implements MetastorageSearchRow {
+public class PersonKey implements Serializable {
     /** */
-    private final String key;
+    private int id1;
 
     /** */
-    private final long link;
+    private int id2;
 
     /**
-     * @param key Key.
-     * @param link Link.
+     * @param id1 ID1.
+     * @param id2 ID2.
      */
-    public MetsatorageSearchRowImpl(String key, long link) {
-        this.key = key;
-        this.link = link;
+    public PersonKey(int id1, int id2) {
+        this.id1 = id1;
+        this.id2 = id2;
     }
 
-    /** {@inheritDoc} */
-    @Override public String key() {
-        return key;
+    /**
+     * @return ID1
+     */
+    public int getId1() {
+        return id1;
     }
 
-    /** {@inheritDoc} */
-    @Override public long link() {
-        return link;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int hash() {
-        return key.hashCode();
+    /**
+     * @return ID1
+     */
+    public int getId2() {
+        return id1;
     }
 }
