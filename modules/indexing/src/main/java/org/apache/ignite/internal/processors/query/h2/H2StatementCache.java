@@ -74,13 +74,13 @@ public final class H2StatementCache {
     }
 
     /**
-     * Checks if the current cache has not been used for at least {@code ms} milliseconds.
+     * Checks if the current cache has not been used for at least {@code nanos} nanoseconds.
      *
-     * @param ms Interval in milliseconds.
+     * @param nanos Interval in nanoseconds.
      * @return {@code true} if the current cache has not been used for the specified period.
      */
-    boolean inactiveFor(long ms) {
-        return System.nanoTime() - lastUsage >= ms * 1000 * 1000;
+    boolean inactiveFor(long nanos) {
+        return System.nanoTime() - lastUsage >= nanos;
     }
 
     /**

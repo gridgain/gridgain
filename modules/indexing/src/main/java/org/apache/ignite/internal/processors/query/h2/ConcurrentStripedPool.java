@@ -142,7 +142,7 @@ public class ConcurrentStripedPool<E> implements Iterable<E> {
             }
 
             @Override public E next() {
-                if (it.hasNext())
+                if (hasNext())
                     return it.next();
 
                 throw new NoSuchElementException();
