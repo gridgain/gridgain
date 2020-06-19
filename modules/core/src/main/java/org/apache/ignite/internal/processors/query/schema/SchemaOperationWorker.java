@@ -64,7 +64,7 @@ public class SchemaOperationWorker extends GridWorker {
     private final AtomicBoolean startGuard = new AtomicBoolean();
 
     /** Cancellation token. */
-    private final SchemaIndexOperationCancellationToken cancelToken;
+    private final SchemaIndexOperationCancellationToken cancelToken = new SchemaIndexOperationCancellationToken();
 
     /**
      * Constructor.
@@ -89,8 +89,6 @@ public class SchemaOperationWorker extends GridWorker {
         this.nop = nop;
         this.cacheRegistered = cacheRegistered;
         this.type = type;
-
-        cancelToken = new SchemaIndexOperationCancellationToken(ctx);
 
         fut = new GridFutureAdapter();
 
@@ -179,9 +177,8 @@ public class SchemaOperationWorker extends GridWorker {
      * Cancel operation.
      */
     @Override public void cancel() {
-        cancelToken.startCancel();
-
-        cancelToken.listenFinishCancel(fut -> super.cancel());
+        if (cancelToken.cancel())
+            super.cancel();
     }
 
     /**

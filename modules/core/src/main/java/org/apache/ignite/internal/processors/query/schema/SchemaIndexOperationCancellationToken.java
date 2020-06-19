@@ -16,66 +16,33 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.lang.IgniteInClosure;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Index operation cancellation token.
- * Implements two futures chan operations.
- * In case of {@code startCancelFut} starts completion, appropriate listener completes all current index opearations.
- * While all index operations are canceled {@code finishCancelFut.onDone()} is called and appropriate listener
- * completes.
  */
 public class SchemaIndexOperationCancellationToken {
-    /** Start future chain. */
-    GridFutureAdapter startCancelFut = new GridFutureAdapter();
+    /** Cancel flag. */
+    private final AtomicBoolean flag = new AtomicBoolean();
 
-    /** End future chain. */
-    GridFutureAdapter finishCancelFut = new GridFutureAdapter();
-
-    /** Logger. */
-    private final IgniteLogger log;
-
-    /** Constructor. */
-    public SchemaIndexOperationCancellationToken(GridKernalContext kctx) {
-        log = kctx.log(SchemaIndexOperationCancellationToken.class);
-    }
-
-    /** Start cancel chain. */
-    public void startCancel() {
-        startCancelFut.onDone();
-    }
-
-    /** Finish cancel chain. */
-    public void finishCancel() {
-        finishCancelFut.onDone();
-    }
-
-    /** Start cancel listener.
-     * @param lsnr Listener.
-     **/
-    public void listenStartCancel(IgniteInClosure lsnr) {
-        startCancelFut.listen(lsnr);
-    }
-
-    /** Finish cancel listener.
-     *  Syncroniously waits the start future and further call to appropriate listener.
+    /**
+     * Get cancel state.
      *
-     *  @param lsnr Listener.
+     * @return {@code True} if cancelled.
      */
-    public void listenFinishCancel(IgniteInClosure lsnr) {
-        try {
-            finishCancelFut.get();
-        }
-        catch (IgniteCheckedException e) {
-            log.error("Error occured while waiting the finish future.", e);
-        }
+    public boolean isCancelled() {
+        return flag.get();
+    }
 
-        finishCancelFut.listen(lsnr);
+    /**
+     * Do cancel.
+     *
+     * @return {@code True} if cancel flag was set by this call.
+     */
+    public boolean cancel() {
+        return flag.compareAndSet(false, true);
     }
 
     /** {@inheritDoc} */
