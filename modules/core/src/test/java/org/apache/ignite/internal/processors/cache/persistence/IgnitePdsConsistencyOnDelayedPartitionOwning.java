@@ -110,14 +110,6 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
     /** */
     @Test
     public void checkConsistencyNodeLeft() throws Exception {
-        checkConsistency();
-    }
-
-    /**
-     * Tests a scenario with delayed partition owning after non durable rebalancing and concurrent
-     * concurrent topology change event.
-     */
-    private void checkConsistency() throws Exception {
         IgniteEx crd = (IgniteEx) startGridsMultiThreaded(4);
         crd.cluster().active(true);
 
