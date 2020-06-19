@@ -14,39 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.metastorage;
+package org.apache.ignite.internal.processors.cache;
+
+import org.apache.ignite.configuration.CacheConfiguration;
 
 /**
  *
  */
-public class MetsatorageSearchRowImpl implements MetastorageSearchRow {
-    /** */
-    private final String key;
-
-    /** */
-    private final long link;
-
-    /**
-     * @param key Key.
-     * @param link Link.
-     */
-    public MetsatorageSearchRowImpl(String key, long link) {
-        this.key = key;
-        this.link = link;
-    }
-
+public class ClusterStateNoRebalancePartitionedTest extends ClusterStateNoRebalanceAbstractTest {
     /** {@inheritDoc} */
-    @Override public String key() {
-        return key;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long link() {
-        return link;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int hash() {
-        return key.hashCode();
+    @Override protected CacheConfiguration cacheConfiguration(String cacheName) {
+        return ClusterStateTestUtils.partitionedCache(cacheName);
     }
 }

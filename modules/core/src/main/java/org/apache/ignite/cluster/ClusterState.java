@@ -16,9 +16,10 @@
 
 package org.apache.ignite.cluster;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Cluster states.
- * Partial copy from IGNITE-12576. Please replace it with a full class later.
  */
 public enum ClusterState {
     /** Cluster deactivated. Cache operations aren't allowed. */
@@ -29,4 +30,25 @@ public enum ClusterState {
 
     /** Cluster activated. Cache read operation allowed, Cache data change operation aren't allowed. */
     ACTIVE_READ_ONLY;
+
+    /** Enumerated values. */
+    private static final ClusterState[] VALS = values();
+
+    /**
+     * Efficiently gets enumerated value from its ordinal.
+     *
+     * @param ord Ordinal value.
+     * @return Enumerated value or {@code null} if ordinal out of range.
+     */
+    @Nullable public static ClusterState fromOrdinal(int ord) {
+        return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
+    }
+
+    /**
+     * @param state Cluster state
+     * @return {@code True} if cluster in given cluster {@code state} is activated and {@code False} otherwise.
+     */
+    public static boolean active(ClusterState state) {
+        return state != INACTIVE;
+    }
 }
