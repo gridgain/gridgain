@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.processors.query.h2.statistics.ColumnStatistics;
-import org.apache.ignite.internal.processors.query.h2.statistics.LocalTableStatistics;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStatistics;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.TableStatistics;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Constants;
@@ -108,7 +108,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      */
     private long getCostRangeIndex_Last(int[] masks, long rowCount, TableFilter[] filters, int filter,
         SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
-        LocalTableStatistics locTblStats = tbl.tableStatistics();
+        TableStatistics locTblStats = tbl.tableStatistics();
 
         if (locTblStats != null)
             rowCount = locTblStats.rowCount();

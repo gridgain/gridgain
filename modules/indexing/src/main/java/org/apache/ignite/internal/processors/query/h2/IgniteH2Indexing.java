@@ -145,13 +145,13 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStatistics;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStatisticsCollector;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.SqlStatisticsManager;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.TablePartitionStatistics;
 import org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
-import org.apache.ignite.internal.processors.query.h2.statistics.ColumnStatistics;
-import org.apache.ignite.internal.processors.query.h2.statistics.ColumnStatisticsCollector;
-import org.apache.ignite.internal.processors.query.h2.statistics.LocalTableStatistics;
-import org.apache.ignite.internal.processors.query.h2.statistics.TablePartitionStatistics;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutor;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridReduceQueryExecutor;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservationManager;
@@ -328,6 +328,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Query message listener. */
     private GridMessageListener qryLsnr;
+
+    private final SqlStatisticsManager statsManager = new SqlStatisticsManager();
 
     /**
      * @return Kernal context.
@@ -3308,7 +3310,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     csc -> csc.col().getName(), csc -> csc.finish(rowsCnt0)
                 ));
 
-                tblPartStats.add(new TablePartitionStatistics(locPart.id(), rowsCnt, colStats));
+                tblPartStats.add(new TablePartitionStatistics(locPart.id(), true, rowsCnt, colStats));
             }
             finally {
                 if (reserved)
@@ -3316,7 +3318,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             }
         }
 
-        tbl.tableStatistics(new LocalTableStatistics(tblPartStats));
+        statsManager.updateLocalStats(tbl, tblPartStats);
     }
 
     /** {@inheritDoc} */

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.oom;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -191,6 +192,15 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         assertEquals(1, localResults.size());
         assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
+    }
+
+    @Test
+    public void someShit() throws Exception {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
+
+//        query("select DISTINCT T.name, T.id from T ORDER BY T.name", false).getAll();
+
+        h2.collectTableStatistics("PUBLIC", "T");
     }
 
     /** {@inheritDoc} */

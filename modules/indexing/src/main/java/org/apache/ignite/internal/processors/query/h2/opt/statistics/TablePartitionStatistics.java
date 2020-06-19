@@ -14,36 +14,27 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.statistics;
+package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
-import java.util.Collections;
 import java.util.Map;
 
-public class TablePartitionStatistics {
+public class TablePartitionStatistics extends TableStatistics {
     private final int partId;
 
-    private final long rowsCnt;
+    private final boolean loc;
 
-    private final Map<String, ColumnStatistics> colNameToStat;
-
-    public TablePartitionStatistics(int partId, long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
-        assert rowsCnt >= 0: "rowsCnt >= 0";
-        assert colNameToStat != null: "colNameToStat != null";
+    public TablePartitionStatistics(int partId, boolean loc, long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
+        super(rowsCnt, colNameToStat);
 
         this.partId = partId;
-        this.rowsCnt = rowsCnt;
-        this.colNameToStat = Collections.unmodifiableMap(colNameToStat);
+        this.loc = loc;
     }
 
     public int partId() {
         return partId;
     }
 
-    public long rowCount() {
-        return rowsCnt;
-    }
-
-    public Map<String, ColumnStatistics> getColNameToStat() {
-        return colNameToStat;
+    public boolean local() {
+        return loc;
     }
 }

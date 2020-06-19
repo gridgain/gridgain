@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.statistics;
+package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
 import org.h2.value.Value;
 
@@ -27,19 +27,11 @@ public class ColumnStatistics {
 
     private final int selectivity;
 
-    public ColumnStatistics(Value min, Value max, long totalRowCnt, long nullsCnt, long distinctValuesCnt) {
+    public ColumnStatistics(Value min, Value max, int nulls, int selectivity) {
         this.min = min;
         this.max = max;
-
-        if (totalRowCnt > 0)
-            nulls = (int)(100 * nullsCnt / totalRowCnt);
-        else
-            nulls = 0;
-
-        if (totalRowCnt - nullsCnt > 0)
-            selectivity = (int)(100 * distinctValuesCnt / (totalRowCnt - nullsCnt));
-        else
-            selectivity = 0;
+        this.nulls = nulls;
+        this.selectivity = selectivity;
     }
 
     public Value min() {

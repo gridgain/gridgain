@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.statistics;
+package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
 import java.util.Comparator;
 import java.util.NavigableMap;
@@ -51,7 +51,26 @@ public class ColumnStatisticsCollector {
     }
 
     public ColumnStatistics finish(long totalRows) {
-        return new ColumnStatistics(valFreq.firstKey(), valFreq.lastKey(), totalRows, nullsCnt, valFreq.size());
+        int nulls = 0;
+        Value min = null;
+        Value max = null;
+
+
+        if (totalRows > 0) {
+            nulls = (int)(100 * nullsCnt / totalRows);
+
+            min = valFreq.firstKey();
+            max = valFreq.lastKey();
+        }
+
+        int selectivity = 0;
+
+        if (totalRows - nullsCnt > 0)
+            selectivity = (int)(100 * valFreq.size() / (totalRows - nullsCnt));
+
+
+
+        return new ColumnStatistics(min, max, nulls, selectivity);
     }
 
     public Column col() {
