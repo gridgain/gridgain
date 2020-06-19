@@ -223,13 +223,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Map<UUID, GridClientImpl> clnts = U.field(GridClientFactory.class, "openClients");
 
-        assertEquals(EXIT_CODE_OK, execute("--activate"));
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
 
-        assertTrue(clnts.isEmpty());
+        assertTrue("Still opened clients: " + new ArrayList<>(clnts.values()), clnts.isEmpty());
 
         stopAllGrids();
 
-        assertEquals(EXIT_CODE_CONNECTION_FAILED, execute("--activate"));
+        assertEquals(EXIT_CODE_CONNECTION_FAILED, execute("--set-state", "ACTIVE"));
 
         assertTrue(clnts.isEmpty());
     }
