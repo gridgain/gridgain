@@ -384,6 +384,9 @@ public class RecordV1Serializer implements RecordSerializer {
             try {
                 size = in0.io().size();
             }
+            catch (UnsupportedOperationException unsupported) {
+                size = -1;
+            }
             catch (IOException ignore) {
                 // It just for information. Fail calculate file size.
                 e.addSuppressed(ignore);
