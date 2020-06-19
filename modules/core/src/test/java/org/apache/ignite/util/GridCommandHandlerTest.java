@@ -59,6 +59,8 @@ import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.client.GridClientFactory;
+import org.apache.ignite.internal.client.impl.GridClientImpl;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
@@ -114,6 +116,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FO
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_CONNECTION_FAILED;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -207,6 +210,28 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(ACTIVE, ignite.cluster().state());
 
         assertContains(log, testOut.toString(), "Command deprecated. Use --set-state instead.");
+    }
+
+    /**
+     * Test clients leakage.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClientsLeakage() throws Exception {
+        startGrids(1);
+
+        Map<UUID, GridClientImpl> clnts = U.field(GridClientFactory.class, "openClients");
+
+        assertEquals(EXIT_CODE_OK, execute("--activate"));
+
+        assertTrue(clnts.isEmpty());
+
+        stopAllGrids();
+
+        assertEquals(EXIT_CODE_CONNECTION_FAILED, execute("--activate"));
+
+        assertTrue(clnts.isEmpty());
     }
 
     /**

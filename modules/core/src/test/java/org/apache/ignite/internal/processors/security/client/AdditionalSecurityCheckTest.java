@@ -23,6 +23,7 @@ import org.apache.ignite.client.ClientAuthenticationException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -81,8 +82,7 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
             assertFalse(client.connected());
             GridTestUtils.assertThrowsAnyCause(log,
                 () -> {
-                    client.throwLastError();
-                    return null;
+                    throw client.checkLastError();
                 },
                 GridClientAuthenticationException.class,
                 "Client version is not found.");
