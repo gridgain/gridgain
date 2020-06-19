@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.junit.Ignore;
 
-/**
- * Test partitions consistency in various scenarios when all rebalance is in-memory.
- */
-public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxPartitionCounterStateConsistencyTest {
+/** */
+public class AtomicVolatilePartitionCounterStateConsistencyTest extends AtomicPartitionCounterStateConsistencyTest {
     /** {@inheritDoc} */
     @Override protected boolean persistenceEnabled() {
         return false;
