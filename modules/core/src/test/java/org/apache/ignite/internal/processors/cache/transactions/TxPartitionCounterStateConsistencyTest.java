@@ -991,8 +991,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
-     * Tests a scenario when stale partition state message can trigger spurious late affinity switching cause
-     * mapping to moving partitions.
+     * Tests a scenario when stale partition state message can trigger spurious late affinity switching followed by
+     * possible primary mapping to moving partition.
      */
     @Test
     public void testLateAffinityChangeDuringExchange() throws Exception {
