@@ -1048,7 +1048,7 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                 else {
                     if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
                         onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                            m.primary().consistentId() + "] has left the grid and there"));
+                            m.primary().consistentId() + "] has left the grid"));
 
                         return true;
                     }

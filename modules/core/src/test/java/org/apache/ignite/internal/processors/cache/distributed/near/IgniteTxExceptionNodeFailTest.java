@@ -161,8 +161,10 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                             },
                             "node-stopper"
                         ).start();
+
                         return true;
                     }
+
                     return false;
                 }
             );
