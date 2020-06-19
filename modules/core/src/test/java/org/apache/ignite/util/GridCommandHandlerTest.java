@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -223,15 +224,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Map<UUID, GridClientImpl> clnts = U.field(GridClientFactory.class, "openClients");
 
+        Map<UUID, GridClientImpl> clntsBefore = new HashMap<>(clnts);
+
         assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
 
-        assertTrue("Still opened clients: " + new ArrayList<>(clnts.values()), clnts.isEmpty());
+        Map<UUID, GridClientImpl> clntsAfter1 = new HashMap<>(clnts);
+
+        assertTrue("Still opened clients: " + new ArrayList<>(clnts.values()), clntsBefore.equals(clntsAfter1));
 
         stopAllGrids();
 
         assertEquals(EXIT_CODE_CONNECTION_FAILED, execute("--set-state", "ACTIVE"));
 
-        assertTrue(clnts.isEmpty());
+        Map<UUID, GridClientImpl> clntsAfter2 = new HashMap<>(clnts);
+
+        assertTrue("Still opened clients: " + new ArrayList<>(clnts.values()), clntsBefore.equals(clntsAfter2));
     }
 
     /**
