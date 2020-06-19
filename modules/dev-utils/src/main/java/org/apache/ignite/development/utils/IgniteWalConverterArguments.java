@@ -33,82 +33,80 @@ import org.apache.ignite.internal.util.typedef.F;
 public class IgniteWalConverterArguments {
     /** */
     private static final String WAL_DIR = "walDir";
+
     /** */
     private static final String WAL_ARCHIVE_DIR = "walArchiveDir";
+
     /** */
     private static final String PAGE_SIZE = "pageSize";
+
     /** */
     private static final String BINARY_METADATA_FILE_STORE_DIR = "binaryMetadataFileStoreDir";
+
     /** */
     private static final String MARSHALLER_MAPPING_FILE_STORE_DIR = "marshallerMappingFileStoreDir";
+
     /** */
     private static final String KEEP_BINARY = "keepBinary";
+
     /** */
     private static final String RECORD_TYPES = "recordTypes";
+
     /** */
     private static final String WAL_TIME_FROM_MILLIS = "walTimeFromMillis";
+
     /** */
     private static final String WAL_TIME_TO_MILLIS = "walTimeToMillis";
+
     /** */
     private static final String RECORD_CONTAINS_TEXT = "recordContainsText";
+
     /** */
     private static final String PROCESS_SENSITIVE_DATA = "processSensitiveData";
+
     /** */
     private static final String PRINT_STAT = "printStat";
+
     /** */
     private static final String SKIP_CRC = "skipCrc";
 
-    /**
-     * Path to dir with wal files.
-     */
+    /** Path to dir with wal files. */
     private final File walDir;
-    /**
-     * Path to dir with archive wal files.
-     */
+
+    /** Path to dir with archive wal files. */
     private final File walArchiveDir;
-    /**
-     * Size of pages, which was selected for file store (1024, 2048, 4096, etc).
-     */
+
+    /** Size of pages, which was selected for file store (1024, 2048, 4096, etc). */
     private final int pageSize;
-    /**
-     * Path to binary metadata dir.
-     */
+
+    /** Path to binary metadata dir. */
     private final File binaryMetadataFileStoreDir;
-    /**
-     * Path to marshaller dir.
-     */
+
+    /** Path to marshaller dir. */
     private final File marshallerMappingFileStoreDir;
-    /**
-     * Keep binary flag.
-     */
+
+    /** Keep binary flag. */
     private final boolean keepBinary;
-    /**
-     * WAL record types (TX_RECORD, DATA_RECORD, etc).
-     */
+
+    /** WAL record types (TX_RECORD, DATA_RECORD, etc). */
     private final Set<WALRecord.RecordType> recordTypes;
-    /**
-     * The start time interval for the record time in milliseconds.
-     */
+
+    /** The start time interval for the record time in milliseconds. */
     private final Long fromTime;
-    /**
-     * The end time interval for the record time in milliseconds.
-     */
+
+    /** The end time interval for the record time in milliseconds. */
     private final Long toTime;
-    /**
-     * Filter by substring in the WAL record.
-     */
+
+    /** Filter by substring in the WAL record. */
     private final String recordContainsText;
-    /**
-     * Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
-     */
+
+    /** Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). */
     private final ProcessSensitiveData processSensitiveData;
-    /**
-     * Write summary statistics for WAL
-     */
+
+    /** Write summary statistics for WAL */
     private final boolean printStat;
-    /**
-     * Skip CRC calculation/check flag
-     */
+
+    /** Skip CRC calculation/check flag */
     private final boolean skipCrc;
 
     /**
@@ -465,6 +463,20 @@ public class IgniteWalConverterArguments {
             keepBinary, recordTypes, fromTime, toTime, recordContainsText, processSensitiveData, printStat, skipCrc);
     }
 
+    /**
+     * Parses the string argument as a boolean.  The {@code boolean}
+     * returned represents the value {@code true} if the string argument
+     * is not {@code null} and is equal, ignoring case, to the string
+     * {@code "true"}, returned value {@code false} if the string argument
+     * is not {@code null} and is equal, ignoring case, to the string
+     * {@code "false"}, else throw IllegalArgumentException<p>
+     *
+     * @param name
+     * @param      value   the {@code String} containing the boolean
+     *                 representation to be parsed
+     * @return     the boolean represented by the string argument
+     *
+     */
     private static boolean parseBoolean(String name, String value) {
         boolean result;
 

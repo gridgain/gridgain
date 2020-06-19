@@ -46,7 +46,10 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
     /** */
     public static final String PERSON_NAME_PREFIX = "Name ";
 
+    /** Flag "skip CRC calculation" in system property save before test and restore after. */
     private String beforeIgnitePdsSkipCrc;
+
+    /** Flag "skip CRC calculation" in RecordV1Serializer save before test and restore after. */
     private boolean beforeSkipCrc;
 
     /** {@inheritDoc} */
@@ -415,7 +418,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
             int find = 0;
 
-            while (find<2) {
+            while (find < 2) {
                 int recordTypeIndex = raf.read();
 
                 if (recordTypeIndex > 0) {
@@ -424,7 +427,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
                     if (recordTypeIndex == WALRecord.RecordType.DATA_RECORD.index()) {
                         find++;
 
-                        if (find==2) {
+                        if (find == 2) {
                             raf.seek(raf.getFilePointer() - 1);
 
                             raf.write(Byte.MAX_VALUE);
@@ -498,7 +501,6 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
 
         assertEquals(9, countErrorRead);
     }
-
 
     /**
      * Common part
