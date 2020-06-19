@@ -61,6 +61,8 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.tracing.MTC.support;
+import static org.apache.ignite.transactions.TransactionState.COMMITTED;
+import static org.apache.ignite.transactions.TransactionState.COMMITTING;
 import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_FINISH;
@@ -1034,24 +1036,21 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                             }
                         }
                         else {
-                            onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                                m.primary().consistentId() + "] has left the grid and there are no backup nodes"));
+                            if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
+                                onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
+                                    m.primary().consistentId() + "] has left the grid"));
 
-                            return true;
+                                return true;
+                            }
                         }
                     }
                 }
                 else {
-                    Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
-                    if (txNodes != null) {
-                        Collection<UUID> backups = txNodes.get(nodeId);
+                    if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
+                        onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
+                            m.primary().consistentId() + "] has left the grid and there"));
 
-                        if (F.isEmpty(backups) || backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
-                            onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                                m.primary().consistentId() + "] has left the grid and there are no backup nodes"));
-
-                            return true;
-                        }
+                        return true;
                     }
                 }
 

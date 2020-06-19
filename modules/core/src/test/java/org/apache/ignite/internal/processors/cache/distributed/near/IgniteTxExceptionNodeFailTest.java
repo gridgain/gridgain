@@ -18,11 +18,9 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.File;
 import org.apache.commons.io.FileUtils;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.Affinity;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -30,11 +28,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -43,18 +37,13 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 
 /**
  * Tests check a result of commit when a node fail before
  * send {@link GridNearTxFinishResponse} to transaction coodinator
  */
 public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
-    /** Spi for node0 */
-    private SpecialSpi spi0;
-
-    /** Spi for node1 */
-    private SpecialSpi spi1;
-
     /** syncMode */
     private static CacheWriteSynchronizationMode syncMode;
 
@@ -66,15 +55,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(true));
 
-        SpecialSpi spi = new SpecialSpi();
-
-        cfg.setCommunicationSpi(spi);
-
-        if (igniteInstanceName.contains("0"))
-            spi0 = spi;
-
-        if (igniteInstanceName.contains("1"))
-            spi1 = spi;
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         return cfg
             .setDataStorageConfiguration(dsConfig)
@@ -168,40 +149,29 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
             grid1.cache("cache").put(key0, 100);
             grid1.cache("cache").put(key1, 200);
 
+            spi(grid0).blockMessages((node, msg) -> {
+                    if (msg instanceof GridNearTxFinishResponse) {
+                        new Thread(
+                            new Runnable() {
+                                @Override public void run() {
+                                    log().info("Stopping node: [" + grid0.name() + "]");
+
+                                    IgnitionEx.stop(grid0.name(), true, null, true);
+                                }
+                            },
+                            "node-stopper"
+                        ).start();
+                        return true;
+                    }
+                    return false;
+                }
+            );
+
             GridTestUtils.assertThrows(null,
                 tx::commit,
                 TransactionHeuristicException.class,
                 "Primary node [nodeId=" + grid0.localNode().id() + ", consistentId=" +
-                    grid0.localNode().consistentId() + "] has left the grid and there are no backup nodes");
+                    grid0.localNode().consistentId() + "] has left the grid");
         }
     }
-
-    /**
-     * SPI wich block communication messages and stop a node.
-     */
-    private static class SpecialSpi extends TestRecordingCommunicationSpi {
-        /** {@inheritDoc} */
-        @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC)
-            throws IgniteSpiException {
-            if (msg instanceof GridIoMessage) {
-                Message message = ((GridIoMessage)msg).message();
-                if (message instanceof GridNearTxFinishResponse) {
-                    blockMessages((node1, msg1) -> true);
-                    new Thread(
-                        new Runnable() {
-                            @Override public void run() {
-                                ignite.log().info("Stopping node: [" + ignite.name() + "]");
-
-                                IgnitionEx.stop(ignite.name(), true, null, true);
-                            }
-                            },
-                        "node-stopper"
-                    ).start();
-                }
-            }
-
-            super.sendMessage(node, msg, ackC);
-        }
-    }
-
 }
