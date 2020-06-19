@@ -578,7 +578,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<Boolean> forceRebalance() {
-        return demander.forceRebalance();
+        if (!enterBusy())
+            return new GridFinishedFuture<>();
+
+        try {
+            return demander.forceRebalance();
+        }
+        finally {
+            leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */

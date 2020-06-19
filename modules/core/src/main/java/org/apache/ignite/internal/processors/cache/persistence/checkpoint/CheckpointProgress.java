@@ -111,4 +111,13 @@ public interface CheckpointProgress {
 
     /** Clear cp progress counters */
     public void clearCounters();
+
+    /**
+     * Invokes a callback closure then a checkpoint reaches specific state.
+     * The closure will not be called if an error has happened while transitting to the state.
+     *
+     * @param state State.
+     * @param clo Closure to call.
+     */
+    public void onStateChanged(CheckpointState state, Runnable clo);
 }

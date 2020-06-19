@@ -1212,4 +1212,14 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             return disableWal;
         }
     }
+
+    /**
+     * Checkpoint reason for enabling group durability.
+     *
+     * @param grpId Group id.
+     * @param topVer Topology version.
+     */
+    public static String reason(long grpId, AffinityTopologyVersion topVer) {
+        return ENABLE_DURABILITY_AFTER_REBALANCING + grpId + "-" + topVer;
+    }
 }

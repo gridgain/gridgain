@@ -21,11 +21,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotOperation;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
@@ -276,5 +278,17 @@ public class CheckpointProgressImpl implements CheckpointProgress {
         writtenPagesCntr = null;
         syncedPagesCntr = null;
         evictedPagesCntr = null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onStateChanged(CheckpointState state, Runnable clo) {
+        GridFutureAdapter<?> fut0 = futureFor(state);
+
+        fut0.listen(new IgniteInClosure<IgniteInternalFuture>() {
+            @Override public void apply(IgniteInternalFuture fut) {
+                if (fut.error() == null)
+                    clo.run();
+            }
+        });
     }
 }

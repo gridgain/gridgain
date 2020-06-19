@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -69,7 +70,6 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -228,18 +228,21 @@ public class GridDhtPartitionDemander {
 
             exchFut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
                 @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> t) {
-                    IgniteInternalFuture<Boolean> fut0 = ctx.exchange().forceRebalance(exchFut.exchangeId());
+                    if (t.error() == null) {
+                        IgniteInternalFuture<Boolean> fut0 = ctx.exchange().forceRebalance(exchFut.exchangeId());
 
-                    fut0.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
-                        @Override public void apply(IgniteInternalFuture<Boolean> future) {
-                            try {
-                                fut.onDone(future.get());
+                        fut0.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                            @Override public void apply(IgniteInternalFuture<Boolean> fut1) {
+                                try {
+                                    fut.onDone(fut1.get());
+                                } catch (Exception e) {
+                                    fut.onDone(e);
+                                }
                             }
-                            catch (Exception e) {
-                                fut.onDone(e);
-                            }
-                        }
-                    });
+                        });
+                    }
+                    else
+                        fut.onDone(t.error());
                 }
             });
 
@@ -1499,6 +1502,10 @@ public class GridDhtPartitionDemander {
             }
 
             if (onDone(true, null)) {
+                grp.localWalEnabled(true, true);
+
+                // Safe to own from exchange worker thread because moving partitions from new assignments
+                // cannot appear.
                 grp.topology().ownMoving();
 
                 if (log.isDebugEnabled())
@@ -1744,31 +1751,12 @@ public class GridDhtPartitionDemander {
                     }
 
                     // Force new checkpoint to make sure owning state is captured.
-                    CheckpointProgress cp = ctx.database().forceCheckpoint(ENABLE_DURABILITY_AFTER_REBALANCING +
-                        grp.groupId() + "-" + topVer);
+                    CheckpointProgress cp = ctx.database().forceCheckpoint(WalStateManager.reason(grp.groupId(), topVer));
 
-                    cp.futureFor(PAGE_SNAPSHOT_TAKEN).listen(new IgniteInClosure<IgniteInternalFuture>() {
-                        @Override public void apply(IgniteInternalFuture fut) {
-                            // Make all new updates to the group durable.
-                            if (fut.error() == null)
-                                grp.localWalEnabled(true, false);
-                        }
-                    });
+                    cp.onStateChanged(PAGE_SNAPSHOT_TAKEN, () -> grp.localWalEnabled(true, false));
 
-                    cp.futureFor(FINISHED).listen(new IgniteInClosure<IgniteInternalFuture>() {
-                        @Override public void apply(IgniteInternalFuture fut) {
-                            if (fut.error() == null) {
-                                // Log durable state for a group.
-                                grp.localWalEnabled(true, true);
-
-                                // Avoid possible deadlocks.
-                                ctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
-                                    @Override public void run() {
-                                        grp.preloader().finishPreloading(topVer);
-                                    }
-                                }, true);
-                            }
-                        }
+                    cp.onStateChanged(FINISHED, () -> {
+                        ctx.exchange().finishPreloading(topVer, grp.groupId());
                     });
                 }
                 else {
@@ -1977,7 +1965,8 @@ public class GridDhtPartitionDemander {
      * @param topVer Topopolog verion.
      */
     void finishPreloading(AffinityTopologyVersion topVer) {
-        if (!rebalanceFut.isInitial())
-            rebalanceFut.ownPartitionsAndFinishFuture(topVer);
+        assert !rebalanceFut.isInitial() : topVer;
+
+        rebalanceFut.ownPartitionsAndFinishFuture(topVer);
     }
 }

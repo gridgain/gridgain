@@ -101,6 +101,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtPartitionHistorySuppliersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtPartitionsToReloadMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.FinishPreloadingTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceReassignExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.StopCachesOnClientReconnectExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch.ExchangeLatchManager;
@@ -1267,6 +1268,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      */
     public IgniteInternalFuture<Boolean> forceRebalance(GridDhtPartitionExchangeId exchId) {
         return exchWorker.forceRebalance(exchId);
+    }
+
+    /**
+     * @param topVer Topology version.
+     * @param grpId Group id.
+     */
+    public void finishPreloading(AffinityTopologyVersion topVer, int grpId) {
+        exchWorker.finishPreloading(topVer, grpId);
     }
 
     /**
@@ -3020,6 +3029,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             futQ.add(task);
 
             return task;
+        }
+
+        /**
+         * @param topVer Topology version.
+         * @param grpId Group id.
+         */
+        void finishPreloading(AffinityTopologyVersion topVer, int grpId) {
+            futQ.add(new FinishPreloadingTask(topVer, grpId));
         }
 
         /**

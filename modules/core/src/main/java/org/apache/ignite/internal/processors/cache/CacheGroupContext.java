@@ -1227,7 +1227,7 @@ public class CacheGroupContext {
     /**
      * Local WAL enabled flag.
      *
-     * @return {@code True} if a durability (WAL logging) is disabled for a group until rebalancing has finished.
+     * @return {@code False} if a durability (WAL logging) is disabled for a group until rebalancing has finished.
      */
     public boolean localWalEnabled() {
         return localWalEnabled;

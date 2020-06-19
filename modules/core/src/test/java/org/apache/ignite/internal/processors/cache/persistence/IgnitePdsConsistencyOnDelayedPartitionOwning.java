@@ -41,13 +41,14 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId;
 
 /**
  * Tests a scenario when delayed partition owning on exchange overlaps with new rebalancing.
@@ -179,7 +180,9 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
             @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
                 String reason = ctx.progress().reason();
 
-                if (reason != null && reason.startsWith(WalStateManager.ENABLE_DURABILITY_AFTER_REBALANCING)) {
+                String reason0 = WalStateManager.reason(cacheId(DEFAULT_CACHE_NAME), new AffinityTopologyVersion(6, 0));
+
+                if (reason != null && reason.equals(reason0)) {
                     enableDurabilityCPStartLatch.countDown();
 
                     try {
@@ -204,20 +207,6 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         });
 
         grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-            @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-//                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
-//                    topInitLatch.countDown();
-//
-//                    try {
-//                        assertTrue(U.await(enableDurabilityCPStartLatch, 20_000, TimeUnit.MILLISECONDS));
-//                    } catch (IgniteInterruptedCheckedException e) {
-//                        fail(X.getFullStackTrace(e));
-//                    }
-//
-//                    System.out.println();
-//                }
-            }
-
             @Override public void onDoneBeforeTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
                 if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
                     topInitLatch.countDown();
@@ -231,18 +220,6 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
                     System.out.println();
                 }
             }
-
-            @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-//                if (fut.initialVersion().equals(new AffinityTopologyVersion(7, 0))) {
-//                    topInitLatch.countDown();
-//
-//                    try {
-//                        assertTrue(U.await(enableDurabilityCPStartLatch, 10_000, TimeUnit.MILLISECONDS));
-//                    } catch (IgniteInterruptedCheckedException e) {
-//                        fail(X.getFullStackTrace(e));
-//                    }
-//                }
-            }
         });
 
         // Trigger rebalancing remap because owner has left.
@@ -255,7 +232,7 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         // Wait for topology (7,0) init on grid1 before finishing rebalancing on (6,0).
         assertTrue(U.await(topInitLatch, 20_000, TimeUnit.MILLISECONDS));
 
-        // Release last supply message, causing triggering a cp for enablidng durability.
+        // Release last supply message, causing triggering a cp for enabling durability.
         spi3.stopBlock();
 
         // Wait for new rebalancing assignments ready on grid1.
@@ -275,11 +252,9 @@ public class IgnitePdsConsistencyOnDelayedPartitionOwning extends GridCommonAbst
         for (GridDhtPartitionsExchangeFuture fut : grid(0).context().cache().context().exchange().exchangeFutures())
             assertTrue(fut.toString(), fut.invalidPartitions().isEmpty());
 
-        CacheGroupContext grpCtx = grid(1).context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
+        CacheGroupContext grpCtx = grid(1).context().cache().cacheGroup(cacheId(DEFAULT_CACHE_NAME));
 
         if (grpCtx != null)
             assertTrue(grpCtx.localWalEnabled());
-
-        // TODO improve test for assertions on timeout.
     }
 }
