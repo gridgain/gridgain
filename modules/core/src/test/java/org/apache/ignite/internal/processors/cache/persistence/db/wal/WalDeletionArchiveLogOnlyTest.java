@@ -22,7 +22,6 @@ import org.apache.ignite.configuration.WALMode;
  *
  */
 public class WalDeletionArchiveLogOnlyTest extends WalDeletionArchiveAbstractTest {
-
     /** {@inheritDoc} */
     @Override protected WALMode walMode() {
         return WALMode.LOG_ONLY;
