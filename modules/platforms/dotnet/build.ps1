@@ -67,7 +67,7 @@ Path to nuget.exe.
 NuGet version override (normally inferred from assembly version).
 
 .EXAMPLE
-.\build.ps1 -clean  
+.\build.ps1 -clean
 # Full rebuild of Java, .NET and NuGet packages.
 
 .EXAMPLE
@@ -81,7 +81,7 @@ param (
 	[switch]$skipDotNet,
     [switch]$skipDotNetCore,
     [switch]$skipNuGet,
-    [switch]$skipCodeAnalysis,  
+    [switch]$skipCodeAnalysis,
     [switch]$clean,
     [ValidateSet("Any CPU", "x64", "x86")]
     [string]$platform="Any CPU",
@@ -114,8 +114,8 @@ function Exec([string]$command) {
 # Detect Ignite root directory
 cd $PSScriptRoot\..
 
-while (!((Test-Path bin) -and (Test-Path examples) -and ((Test-Path modules) -or (Test-Path platforms)))) { 
-	cd .. 
+while (!((Test-Path bin) -and (Test-Path examples) -and ((Test-Path modules) -or (Test-Path platforms)))) {
+	cd ..
 	if ((Get-Location).Drive.Root -eq (Get-Location).Path) {
 		break
 	}
@@ -126,7 +126,7 @@ echo "Ignite home detected at '$pwd'."
 if (!$skipJava) {
     # Detect Maven
     $mv = "mvn"
-    if ((Get-Command $mv -ErrorAction SilentlyContinue) -eq $null) { 
+    if ((Get-Command $mv -ErrorAction SilentlyContinue) -eq $null) {
         $mvHome = ($env:MAVEN_HOME, $env:M2_HOME, $env:M3_HOME, $env:MVN_HOME -ne $null)[0]
 
         if ($mvHome -eq $null) {
@@ -144,7 +144,7 @@ if (!$skipJava) {
 
     # Run Maven
     echo "Starting Java (Maven) build..."
-    
+
     $mvnTargets = if ($clean)  { "clean package" } else { "package" }
     Exec "$mv --% $mvnTargets -DskipTests $mavenOpts"
 }
@@ -160,7 +160,7 @@ Get-ChildItem $jarDirs.Split(',') *.jar -recurse `
    -include "ignite-core*","ignite-indexing*","ignite-shmem*","ignite-spring*","lucene*","ignite-h2*","cache-api*","commons-*","spring*" `
    -exclude "*-sources*","*-javadoc*","*-tests*","*optional*" `
    | % { Copy-Item -Force $_ $libsDir }
-   
+
 # Restore directory
 cd $PSScriptRoot
 
@@ -170,12 +170,13 @@ cd $PSScriptRoot
 # Detect NuGet
 $ng = if ($nugetPath) { $nugetPath } else { "nuget" }
 
-if ((Get-Command $ng -ErrorAction SilentlyContinue) -eq $null) { 
-	$ng = If ($IsLinux) { "mono $PSScriptRoot/nuget.exe" } else { "$PSScriptRoot\nuget.exe" }    
+if ((Get-Command $ng -ErrorAction SilentlyContinue) -eq $null) {
+	$ng = If ($IsLinux) { "mono $PSScriptRoot/nuget.exe" } else { "$PSScriptRoot\nuget.exe" }
 
 	if (-not (Test-Path $ng)) {
 		echo "Downloading NuGet..."
-		(New-Object System.Net.WebClient).DownloadFile("https://dist.nuget.org/win-x86-commandline/v5.3.1/nuget.exe", "$PSScriptRoot/nuget.exe")    
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::TLS12
+		(New-Object System.Net.WebClient).DownloadFile("https://dist.nuget.org/win-x86-commandline/v5.3.1/nuget.exe", "$PSScriptRoot/nuget.exe")
 	}
 }
 
@@ -204,7 +205,7 @@ if (!$skipDotNet) {
         $msBuild = (Join-Path -path (Get-ItemProperty $regKey)."MSBuildToolsPath" -childpath "msbuild.exe")
         $msBuild = "`"$msBuild`""  # Put in quotes and escape to handle whitespace in path
     }
-    
+
     echo "MSBuild detected at '$msBuild'."
 
 	# Restore NuGet packages
@@ -216,11 +217,11 @@ if (!$skipDotNet) {
 	$codeAnalysis = if ($skipCodeAnalysis) {"/p:RunCodeAnalysis=false"} else {""}
 	$msBuildCommand = "$msBuild Apache.Ignite.sln /target:$targets /p:Configuration=$configuration /p:Platform=`"$platform`" $codeAnalysis /p:UseSharedCompilation=false"
 	echo "Starting MsBuild: '$msBuildCommand'"
-	Exec $msBuildCommand   
+	Exec $msBuildCommand
 }
 
 if(!$skipDotNetCore) {
-    
+
     # Build core
     $targetSolution =  ".\Apache.Ignite\Apache.Ignite.DotNetCore.csproj"
     if ($clean) {
@@ -231,7 +232,7 @@ if(!$skipDotNetCore) {
 
     $publishCommand = "dotnet publish $targetSolution -c $configuration"
 	echo "Starting dotnet publish: '$publishCommand'"
-	Exec $publishCommand    
+	Exec $publishCommand
 }
 
 if ($asmDirs) {
@@ -248,7 +249,7 @@ if ($asmDirs) {
             Make-Dir($target)
             Copy-Item -Force $_ $target
         }
-    }    
+    }
 }
 
 # Copy binaries
@@ -258,7 +259,7 @@ Get-ChildItem *.csproj -Recurse | where Name -NotLike "*Examples*" `
                      | where Name -NotLike "*Tests*" `
                      | where Name -NotLike "*DotNetCore*" `
                      | where Name -NotLike "*Benchmark*" | % {
-    $projDir = split-path -parent $_.FullName 
+    $projDir = split-path -parent $_.FullName
     $dir = [IO.Path]::Combine($projDir, "bin", $configuration, "*")
     echo "Copying files to bin from '$dir'"
     Copy-Item -Force -Recurse $dir bin
@@ -281,7 +282,7 @@ if (!$skipNuGet) {
 
     # Find all nuspec files and run 'nuget pack' either directly, or on corresponding csproj files (if present)
     Get-ChildItem *.nuspec -Recurse  `
-        | % { 
+        | % {
             Exec "$ng pack $_ -Prop Configuration=Release -Prop Platform=AnyCPU -Version $ver -OutputDirectory $nupkgDir"
         }
 
