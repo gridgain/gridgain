@@ -735,7 +735,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             timeoutProcessor,
             stateProvider,
             nioSrvWrapper,
-            () -> connectionRequestor
+            connectionRequestor
         ));
 
         this.srvLsnr.setClientPool(clientPool);

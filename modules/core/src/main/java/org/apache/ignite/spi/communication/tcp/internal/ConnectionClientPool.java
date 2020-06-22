@@ -56,7 +56,6 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.shmem.SHMemHandshakeClosure;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
@@ -118,8 +117,8 @@ public class ConnectionClientPool {
     /** Stopping flag (set to {@code true} when SPI gets stopping signal). */
     private volatile boolean stopping = false;
 
-    /** Provider for external connection requestor. */
-    private final Supplier<ConnectionRequestor> connRequestorSupplier;
+    /** External connection requestor. */
+    private final ConnectionRequestor connRequestor;
 
     /**
      * @param cfg Config.
@@ -134,7 +133,7 @@ public class ConnectionClientPool {
      * @param timeObjProcessor Time object processor.
      * @param clusterStateProvider Cluster state provider.
      * @param nioSrvWrapper Nio server wrapper.
-     * @param connRequestorSupplier Provider for external connection requestor.
+     * @param connRequestor External connection requestor.
      */
     public ConnectionClientPool(
         TcpCommunicationConfiguration cfg,
@@ -149,7 +148,7 @@ public class ConnectionClientPool {
         GridTimeoutProcessor timeObjProcessor,
         ClusterStateProvider clusterStateProvider,
         GridNioServerWrapper nioSrvWrapper,
-        @NotNull Supplier<ConnectionRequestor> connRequestorSupplier
+        @Nullable ConnectionRequestor connRequestor
     ) {
         this.cfg = cfg;
         this.attrs = attrs;
@@ -163,7 +162,7 @@ public class ConnectionClientPool {
         this.timeObjProcessor = timeObjProcessor;
         this.clusterStateProvider = clusterStateProvider;
         this.nioSrvWrapper = nioSrvWrapper;
-        this.connRequestorSupplier = connRequestorSupplier;
+        this.connRequestor = connRequestor;
     }
 
     /**
@@ -324,7 +323,7 @@ public class ConnectionClientPool {
 
     /**
      * Handles {@link NodeUnreachableException}. This means that the method will try to trigger client itself to open
-     * connection. The only possible way of doing this is to use {@link #connRequestorSupplier}'s trigger and wait.
+     * connection. The only possible way of doing this is to use {@link #connRequestor}'s trigger and wait.
      * Specifics of triggers implementation technically should be considered unknown, but for now it's not true and we
      * expect that {@link NodeUnreachableException} won't be thrown in {@link IgniteDiscoveryThread}.
      *
@@ -342,8 +341,6 @@ public class ConnectionClientPool {
         GridFutureAdapter<GridCommunicationClient> fut,
         NodeUnreachableException e
     ) throws IgniteCheckedException {
-        ConnectionRequestor connRequestor = connRequestorSupplier.get();
-
         if (connRequestor != null) {
             ConnectFuture fut0 = (ConnectFuture)fut;
 
