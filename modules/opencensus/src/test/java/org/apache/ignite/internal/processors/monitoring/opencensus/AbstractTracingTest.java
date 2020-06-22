@@ -178,8 +178,6 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         exporter.start("test");
 
         startGrids(GRID_CNT);
-
-        awaitPartitionMapExchange();
     }
 
     /**
