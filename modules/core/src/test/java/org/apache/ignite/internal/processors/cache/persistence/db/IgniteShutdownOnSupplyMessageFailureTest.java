@@ -34,6 +34,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
@@ -46,6 +47,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_SUPPLIED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 
 /** */
@@ -84,8 +86,11 @@ public class IgniteShutdownOnSupplyMessageFailureTest extends GridCommonAbstract
             .setWalMode(WALMode.FSYNC)
             .setCheckpointFrequency(500);
 
-        if (name.equals(getTestIgniteInstanceName(NODE_NAME_WITH_TEST_FILE_FACTORY)))
+        if (name.equals(getTestIgniteInstanceName(NODE_NAME_WITH_TEST_FILE_FACTORY))) {
             conf.setFileIOFactory(new FailingFileIOFactory(canFailFirstNode));
+
+            cfg.setIncludeEventTypes(EVT_CACHE_REBALANCE_PART_SUPPLIED);
+        }
 
         if (name.equals(getTestIgniteInstanceName(NODE_NAME_LISTEN_TO_LEFT_EVENT)))
             registerLeftEvent(cfg);
@@ -135,7 +140,18 @@ public class IgniteShutdownOnSupplyMessageFailureTest extends GridCommonAbstract
 
         populateCache(ig, TEST_REBALANCE_CACHE, 3_000, 6_000);
 
+        // Breaks historical rebalance. The second node will try to switch to full rebalance.
         canFailFirstNode.set(true);
+
+        // Break full rebalance.
+        IgnitePredicate<CacheRebalancingEvent> locLsnr = evt -> {
+            if (TEST_REBALANCE_CACHE.equals(evt.cacheName()))
+                throw new AssertionError("Break full rebalance");
+
+            return true;
+        };
+
+        ig.events().localListen(locLsnr, EVT_CACHE_REBALANCE_PART_SUPPLIED);
 
         startGrid(1);
 

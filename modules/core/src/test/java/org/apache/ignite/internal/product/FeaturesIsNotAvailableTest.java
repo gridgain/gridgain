@@ -21,7 +21,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXING;
-import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.IgniteFeatures.WC_SCHEDULING_NOT_AVAILABLE;
 import static org.apache.ignite.internal.IgniteFeatures.allFeatures;
@@ -50,12 +49,6 @@ public class FeaturesIsNotAvailableTest extends GridCommonAbstractTest {
     @Test
     public void testTracingFeatureIsNotAvailable() {
         assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), TRACING));
-    }
-
-    /** */
-    @Test
-    public void testManagementConsoleFeatureIsNotAvailable() {
-        assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), MANAGEMENT_CONSOLE));
     }
 
     /** */

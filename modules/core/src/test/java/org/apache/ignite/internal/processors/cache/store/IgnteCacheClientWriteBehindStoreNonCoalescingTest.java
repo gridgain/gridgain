@@ -70,10 +70,10 @@ public class IgnteCacheClientWriteBehindStoreNonCoalescingTest extends IgniteCac
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean writeBehindEnabled() { return true;}
+    @Override protected boolean writeBehindEnabled() { return true; }
 
     /** {@inheritDoc} */
-    @Override protected boolean writeBehindCoalescing() { return false;}
+    @Override protected boolean writeBehindCoalescing() { return false; }
 
     private static Random rnd = new Random();
 
@@ -108,7 +108,7 @@ public class IgnteCacheClientWriteBehindStoreNonCoalescingTest extends IgniteCac
      * @param cache Cache to use.
      * @return IgniteFuture.
      */
-    private IgniteFuture<?>  updateKey(IgniteCache<Integer, Integer> cache) {
+    private IgniteFuture<?> updateKey(IgniteCache<Integer, Integer> cache) {
         IgniteCache asyncCache = cache.withAsync();
 
         // Using EntryProcessor.invokeAll to increment every value in place.
@@ -152,7 +152,6 @@ public class IgnteCacheClientWriteBehindStoreNonCoalescingTest extends IgniteCac
         /** {@inheritDoc} */
         @Override public void write(Cache.Entry<? extends Object, ? extends Object> entry) {
             Object oldVal = storeMap.put(entry.getKey(), entry.getValue());
-
 
             if (oldVal != null) {
                 Integer oldInt = (Integer) oldVal;

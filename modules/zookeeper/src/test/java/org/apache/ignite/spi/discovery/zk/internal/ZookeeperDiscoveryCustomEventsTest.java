@@ -352,7 +352,7 @@ public class ZookeeperDiscoveryCustomEventsTest extends ZookeeperDiscoverySpiTes
         }
 
         /** {@inheritDoc} */
-        @Override public @Nullable  DiscoveryCustomMessage ackMessage() {
+        @Override public @Nullable DiscoveryCustomMessage ackMessage() {
             return null;
         }
 

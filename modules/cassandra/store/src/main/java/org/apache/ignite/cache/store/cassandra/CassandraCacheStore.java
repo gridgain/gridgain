@@ -250,7 +250,7 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
                 }
 
                 /** {@inheritDoc} */
-                @Override  public BoundStatement bindStatement(PreparedStatement statement, K key) {
+                @Override public BoundStatement bindStatement(PreparedStatement statement, K key) {
                     return controller.bindKey(statement, key);
                 }
 
@@ -422,7 +422,6 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
                 @Override public BoundStatement bindStatement(PreparedStatement statement) {
                     return controller.bindKey(statement, key);
                 }
-
 
                 /** {@inheritDoc} */
                 @Override public KeyValuePersistenceSettings getPersistenceSettings() {

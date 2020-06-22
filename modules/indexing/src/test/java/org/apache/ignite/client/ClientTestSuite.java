@@ -16,6 +16,7 @@
 
 package org.apache.ignite.client;
 
+import org.apache.ignite.internal.client.thin.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -26,6 +27,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     ClientConfigurationTest.class,
     ClientCacheConfigurationTest.class,
+    ExpiryPolicyTest.class,
     FunctionalTest.class,
     IgniteBinaryTest.class,
     LoadTest.class,
@@ -37,7 +39,12 @@ import org.junit.runners.Suite;
     ConnectionTest.class,
     ConnectToStartingNodeTest.class,
     AsyncChannelTest.class,
-    ThinClientTxMissingBackupsFailover.class
+    ComputeTaskTest.class,
+    ThinClientTxMissingBackupsFailover.class,
+    ThinClientAffinityAwarenessConnectionTest.class,
+    ThinClientAffinityAwarenessStableTopologyTest.class,
+    ThinClientAffinityAwarenessUnstableTopologyTest.class,
+    ThinClientPartitionAwarenessResourceReleaseTest.class
 })
 public class ClientTestSuite {
     // No-op.

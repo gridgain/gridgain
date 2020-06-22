@@ -78,7 +78,7 @@ public class GridTestPrintStream extends PrintStream {
             while (grp != null && grp.getParent() != baseGrp)
                 grp = grp.getParent();
 
-            out = release == true ? streams.remove(grp) : streams.get(grp);
+            out = release ? streams.remove(grp) : streams.get(grp);
 
             if (out == null) {
                 if (release)

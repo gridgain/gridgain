@@ -29,7 +29,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @param arg Argument.
      * @return Result.
      */
-    @Gridify(igniteInstanceName="TestAopTarget")
+    @Gridify(igniteInstanceName = "TestAopTarget")
     @Override public int gridifyDefault(String arg) {
         return Integer.parseInt(arg);
     }
@@ -38,7 +38,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @param arg Argument.
      * @return Result.
      */
-    @Gridify(igniteInstanceName="TestAopTarget", taskClass = TestGridifyTask.class)
+    @Gridify(igniteInstanceName = "TestAopTarget", taskClass = TestGridifyTask.class)
     @Override public int gridifyNonDefaultClass(String arg) {
         return Integer.parseInt(arg);
     }
@@ -48,7 +48,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @param arg Argument.
      * @return Result.
      */
-    @Gridify(igniteInstanceName="TestAopTarget", taskName = TestGridifyTask.TASK_NAME)
+    @Gridify(igniteInstanceName = "TestAopTarget", taskName = TestGridifyTask.TASK_NAME)
     @Override public int gridifyNonDefaultName(String arg) {
         return Integer.parseInt(arg);
     }
@@ -57,7 +57,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @param arg Argument.
      * @return Result.
      */
-    @Gridify(igniteInstanceName="TestAopTarget", taskName = "")
+    @Gridify(igniteInstanceName = "TestAopTarget", taskName = "")
     @Override public int gridifyNoName(String arg) {
         return 0;
     }
@@ -67,7 +67,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @return Result.
      * @throws TestGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="TestAopTarget")
+    @Gridify(igniteInstanceName = "TestAopTarget")
     @Override public int gridifyDefaultException(String arg) throws TestGridifyException {
         throw new TestGridifyException(arg);
     }
@@ -77,7 +77,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @return Result.
      * @throws TestGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="TestAopTarget")
+    @Gridify(igniteInstanceName = "TestAopTarget")
     @Override public int gridifyDefaultResource(String arg) throws TestGridifyException {
         int res = Integer.parseInt(arg);
 
@@ -94,7 +94,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @return Result.
      * @throws TestGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="TestAopTarget", taskClass = TestGridifyTask.class)
+    @Gridify(igniteInstanceName = "TestAopTarget", taskClass = TestGridifyTask.class)
     @Override public int gridifyNonDefaultClassResource(String arg) throws TestGridifyException {
         assert getResource() != null;
 
@@ -107,7 +107,7 @@ public class TestAopTarget implements TestAopTargetInterface {
      * @return Result.
      * @throws TestGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="TestAopTarget", taskName = TestGridifyTask.TASK_NAME)
+    @Gridify(igniteInstanceName = "TestAopTarget", taskName = TestGridifyTask.TASK_NAME)
     @Override public int gridifyNonDefaultNameResource(String arg) throws TestGridifyException {
         assert getResource() != null;
 

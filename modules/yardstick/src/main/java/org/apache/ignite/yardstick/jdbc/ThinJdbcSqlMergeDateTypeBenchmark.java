@@ -33,6 +33,7 @@ import org.yardstickframework.BenchmarkUtils;
 public class ThinJdbcSqlMergeDateTypeBenchmark extends AbstractJdbcBenchmark {
     /** Types suppliers. */
     private Map<String, Function<Integer, Object>> valCreatorMap = new HashMap<>();
+
     {
         valCreatorMap.put("TINYINT", Integer::byteValue);
         valCreatorMap.put("SMALLINT", Integer::shortValue);

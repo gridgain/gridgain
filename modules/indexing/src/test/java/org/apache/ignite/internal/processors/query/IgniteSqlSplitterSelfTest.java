@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,6 +55,9 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.util.StringUtils;
@@ -304,7 +308,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
                             qry.a(" p0.id").a(" = ").a("p").a(j).a(".depId");
                         }
                     }
-
 
                     X.println(" ---> ik: : " + i + " " + k);
                     X.println("\nqry: \n" + qry.toString());
@@ -644,7 +647,7 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             Integer.class, Value.class));
 
         try {
-            GridTestUtils.setFieldValue(null, AbstractReducer.class, "PREFETCH_SIZE", 8);
+            GridTestUtils.setFieldValue(AbstractReducer.class, "prefetchSize", 8);
 
             Random rnd = new GridRandom();
 
@@ -652,8 +655,8 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
 
             for (int i = 0; i < cnt; i++) {
                 c.put(i, new Value(
-                    rnd.nextInt(5) == 0 ? null: rnd.nextInt(100),
-                    rnd.nextInt(8) == 0 ? null: rnd.nextInt(2000)));
+                    rnd.nextInt(5) == 0 ? null : rnd.nextInt(100),
+                    rnd.nextInt(8) == 0 ? null : rnd.nextInt(2000)));
             }
 
             List<List<?>> plan = c.query(new SqlFieldsQuery(
@@ -686,7 +689,7 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
 
                     if (x != null) {
                         if (p != null)
-                            assertTrue(x + " >= " + p,  x >= p);
+                            assertTrue(x + " >= " + p, x >= p);
 
                         p = x;
                     }
@@ -694,7 +697,7 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             }
         }
         finally {
-            GridTestUtils.setFieldValue(null, AbstractReducer.class, "PREFETCH_SIZE", 1024);
+            GridTestUtils.setFieldValue(AbstractReducer.class, "prefetchSize", 1024);
 
             c.destroy();
         }
@@ -898,6 +901,74 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
         finally {
             c1.destroy();
             c2.destroy();
+        }
+    }
+
+    /**
+     * Ensure that a ROW statement could be used in WHERE condition.
+     */
+    @Test
+    public void testRowAsFilter() {
+        GridQueryProcessor qryProc = grid(CLIENT).context().query();
+
+        try {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)"), false
+            ).getAll();
+
+            for (int i = 0; i < 10; i++) {
+                qryProc.querySqlFields(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i), false
+                ).getAll();
+            }
+
+            for (int i = 0; i < 10; i++) {
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("select id from test where (val1, val2) = (?, ?)").setArgs(i, 2 * i), false
+                ).getAll();
+
+                Assert.assertThat(res, hasSize(1));
+                Assert.assertThat(res.get(0), hasSize(1));
+                assertEquals(i, res.get(0).get(0));
+            }
+        }
+        finally {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("drop table if exists test"), false
+            ).getAll();
+        }
+    }
+
+    /**
+     * Ensure that a DISTINCT EXPRESSION could be used with aggregates.
+     */
+    @Test
+    public void testRowAsSelectExpressionForAggregatesWithDistinct() {
+        GridQueryProcessor qryProc = grid(CLIENT).context().query();
+
+        try {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("create table test(id int primary key, val1 int, val2 int)"), false
+            ).getAll();
+
+            for (int i = 0; i < 10; i++) {
+                qryProc.querySqlFields(
+                    new SqlFieldsQuery("insert into test(id, val1, val2) values (?, ?, ?)").setArgs(i, i, 2 * i), false
+                ).getAll();
+            }
+
+            List<List<?>> res = qryProc.querySqlFields(
+                new SqlFieldsQuery("select count(distinct(val1, val2)) from test"), false
+            ).getAll();
+
+            Assert.assertThat(res, hasSize(1));
+            Assert.assertThat(res.get(0), hasSize(1));
+            assertEquals(10L, res.get(0).get(0));
+        }
+        finally {
+            qryProc.querySqlFields(
+                new SqlFieldsQuery("drop table if exists test"), false
+            ).getAll();
         }
     }
 
@@ -2218,7 +2289,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             assertEquals("min", 3, ((Integer)row.get(5)).intValue());
             assertEquals("max", 3, ((Integer)row.get(6)).intValue());
 
-
             row = result.get(1);
             assertEquals("fst", 2, ((Number)row.get(0)).intValue());
             assertEquals("count", 3L, ((Number)row.get(1)).longValue());
@@ -2227,7 +2297,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             assertEquals("avg dbl", 2d, ((Number)row.get(4)).doubleValue(), 0.001);
             assertEquals("min", 1, ((Integer)row.get(5)).intValue());
             assertEquals("max", 3, ((Integer)row.get(6)).intValue());
-
 
             row = result.get(2);
             assertEquals("fst", 3, ((Number)row.get(0)).intValue());
@@ -2663,5 +2732,14 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             this.floatField = floatField;
             this.doubleField = doubleField;
         }
+    }
+
+    /** */
+    private static Matcher<Collection<?>> hasSize(int size) {
+        return new CustomMatcher<Collection<?>>("collection should be " + size + " elements in size") {
+            @Override public boolean matches(Object item) {
+                return item instanceof Collection && ((Collection<?>)item).size() == size;
+            }
+        };
     }
 }

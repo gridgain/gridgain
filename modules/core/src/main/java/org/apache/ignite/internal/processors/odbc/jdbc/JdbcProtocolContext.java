@@ -41,19 +41,25 @@ public class JdbcProtocolContext {
     /** {@code true} on client side. */
     private final boolean client;
 
+    /** {@code true} if binary should not be deserialized. */
+    private final boolean keepBinary;
+
     /**
      * @param ver Protocol version.
      * @param features Supported features.
      * @param srvTz Server timezone.
+     * @param keepBinary Wether to keep objects in binary form.
      */
-    public JdbcProtocolContext(ClientListenerProtocolVersion ver,
-        EnumSet<JdbcThinFeature> features, TimeZone srvTz, boolean client) {
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    public JdbcProtocolContext(ClientListenerProtocolVersion ver, EnumSet<JdbcThinFeature> features, TimeZone srvTz,
+        boolean client, boolean keepBinary) {
         assert Objects.nonNull(features);
 
         this.ver = ver;
         this.features = features;
         this.srvTz = srvTz;
         this.client = client;
+        this.keepBinary = keepBinary;
     }
 
     /**
@@ -85,9 +91,17 @@ public class JdbcProtocolContext {
     }
 
     /**
+     * @param feature {@code true} if given feature supported.
+     */
+    public boolean isFeatureSupported(JdbcThinFeature feature) {
+        return features.contains(feature);
+    }
+
+    /**
      * @return Supported features.
      */
-    public EnumSet<JdbcThinFeature> features() {
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    EnumSet<JdbcThinFeature> features() {
         return features;
     }
 
@@ -96,6 +110,13 @@ public class JdbcProtocolContext {
      */
     public boolean client() {
         return client;
+    }
+
+    /**
+     * @return {@code true} if binary should not be deserialized.
+     */
+    public boolean keepBinary() {
+        return keepBinary;
     }
 
     /**

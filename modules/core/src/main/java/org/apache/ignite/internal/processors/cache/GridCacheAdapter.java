@@ -2973,7 +2973,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             }
         }
 
-
         return isCacheMetricsV2Supported() ? new CacheMetricsSnapshotV2(ctx.cache().localMetrics(), metrics) :
             new CacheMetricsSnapshot(ctx.cache().localMetrics(), metrics);
     }
@@ -3655,9 +3654,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @return Next version based on given topology version.
      */
     public GridCacheVersion nextVersion() {
-        return ctx.topology().initialized() ?
-            ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion()) :
-            ctx.versions().next(ctx.kernalContext().discovery().topologyVersion());
+        return ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion());
     }
 
     /**
@@ -3667,9 +3664,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @return Next version based on given topology version.
      */
     public GridCacheVersion nextVersion(byte dataCenterId) {
-        return ctx.topology().initialized() ?
-            ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion(), dataCenterId) :
-            ctx.versions().next(ctx.kernalContext().discovery().topologyVersion());
+        return ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion(), dataCenterId);
     }
 
     /**

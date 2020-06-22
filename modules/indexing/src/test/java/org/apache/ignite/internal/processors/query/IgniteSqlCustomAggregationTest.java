@@ -353,8 +353,7 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        public Object getResult() throws SQLException {
+        @Override public Object getResult() throws SQLException {
             return res;
         }
     }

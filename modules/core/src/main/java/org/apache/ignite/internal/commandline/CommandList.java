@@ -18,7 +18,6 @@ package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
-import org.apache.ignite.internal.commandline.management.ManagementCommands;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
@@ -34,6 +33,9 @@ public enum CommandList {
 
     /** */
     STATE("--state", new StateCommand()),
+
+    /** */
+    SET_STATE("--set-state", new ClusterStateChangeCommand()),
 
     /** */
     BASELINE("--baseline", new BaselineCommand()),
@@ -60,7 +62,7 @@ public enum CommandList {
     DATA_CENTER_REPLICATION("--dr", new DrCommand()),
 
     /** */
-    MANAGEMENT("--management", new ManagementCommands());
+    TRACING_CONFIGURATION("--tracing-configuration", new TracingConfigurationCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();

@@ -279,8 +279,8 @@ public class GridSqlQuerySplitter {
         // Do the actual query split. We will update the original query AST, need to be careful.
         splitter.splitQuery(qry);
 
-        assert !F.isEmpty(splitter.mapSqlQrys): "map"; // We must have at least one map query.
-        assert splitter.rdcSqlQry != null: "rdc"; // We must have a reduce query.
+        assert !F.isEmpty(splitter.mapSqlQrys) : "map"; // We must have at least one map query.
+        assert splitter.rdcSqlQry != null : "rdc"; // We must have a reduce query.
 
         // If we have distributed joins, then we have to optimize all MAP side queries
         // to have a correct join order with respect to batched joins and check if we need
@@ -700,7 +700,7 @@ public class GridSqlQuerySplitter {
         for (int i = begin; i <= end; i++) {
             GridSqlAlias uniqueTblAlias = model.childModel(i).uniqueAlias();
 
-            assert uniqueTblAlias != null: select.getSQL();
+            assert uniqueTblAlias != null : select.getSQL();
 
             tblAliases.add(uniqueTblAlias);
         }
@@ -828,7 +828,6 @@ public class GridSqlQuerySplitter {
             //  T0   T1  T2  T3
             //  ^-----^
 
-
             //     join3
             //      / \
             //   join2 \
@@ -856,7 +855,6 @@ public class GridSqlQuerySplitter {
             //    / \   \   \
             //  T0   T1  T2  T3
             //       ^----^
-
 
             //        join3
             //         / \
@@ -1322,7 +1320,8 @@ public class GridSqlQuerySplitter {
      * @return Copy of the function or {@code null} if any argument not presented in the replacement map.
      */
     private static GridSqlFunction copyFunction(GridSqlFunction orig, Map<String, String> replacement) {
-        GridSqlFunction func = new GridSqlFunction(null, orig.name());
+        GridSqlFunction func = orig.copy();
+
         // try to copy children with alias replacement
         if (!copyChildrenWithReplacement(orig, func, replacement))
             return null;
@@ -1502,7 +1501,7 @@ public class GridSqlQuerySplitter {
         GridSqlAst tbl = GridSqlAlias.unwrap(child);
 
         assert tbl instanceof GridSqlTable || tbl instanceof GridSqlSubquery ||
-            tbl instanceof GridSqlFunction: tbl.getClass();
+            tbl instanceof GridSqlFunction : tbl.getClass();
 
         String uniqueAlias = nextUniqueTableAlias(tbl != child ? ((GridSqlAlias)child).alias() : null);
 
@@ -1589,7 +1588,9 @@ public class GridSqlQuerySplitter {
         if (el instanceof GridSqlAlias ||
             el instanceof GridSqlOperation ||
             el instanceof GridSqlFunction ||
-            el instanceof GridSqlArray) {
+            el instanceof GridSqlArray ||
+            el instanceof GridSqlValueRow
+        ) {
             for (int i = 0; i < el.size(); i++)
                 normalizeExpression(el, i);
         }
@@ -1603,7 +1604,7 @@ public class GridSqlQuerySplitter {
             GridSqlAlias uniqueAlias = uniqueFromAliases.get(tbl);
 
             // Unique aliases must be generated for all the table filters already.
-            assert uniqueAlias != null: childIdx + "\n" + parent.getSQL();
+            assert uniqueAlias != null : childIdx + "\n" + parent.getSQL();
 
             col.tableAlias(uniqueAlias.alias());
             col.expressionInFrom(uniqueAlias);
@@ -1783,7 +1784,7 @@ public class GridSqlQuerySplitter {
                         SplitterUtils.aggregate(false, SUM).addChild(SplitterUtils.column(cntMapAggAlias));
 
                     if (!SplitterUtils.isFractionalType(agg.resultType().type())) {
-                        sumUpRdc =  new GridSqlFunction(CAST).resultType(GridSqlType.BIGINT).addChild(sumUpRdc);
+                        sumUpRdc = new GridSqlFunction(CAST).resultType(GridSqlType.BIGINT).addChild(sumUpRdc);
                         sumDownRdc = new GridSqlFunction(CAST).resultType(GridSqlType.BIGINT).addChild(sumDownRdc);
                     }
 
@@ -1850,7 +1851,9 @@ public class GridSqlQuerySplitter {
                 if (hasDistinctAggregate)
                     mapAgg = agg.child();
                 else {
-                    mapAgg = SplitterUtils.aggregate(agg.distinct(), agg.type()).resultType(GridSqlType.STRING)
+                    mapAgg = SplitterUtils.aggregate(agg.distinct(), agg.type())
+                        .setGroupConcatSeparator(agg.getGroupConcatSeparator())
+                        .resultType(GridSqlType.STRING)
                         .addChild(agg.child());
                 }
 

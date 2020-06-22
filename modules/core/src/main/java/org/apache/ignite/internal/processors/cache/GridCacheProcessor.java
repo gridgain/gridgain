@@ -44,6 +44,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheExistsException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterNode;
@@ -77,6 +79,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.FinishPreloadingTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.StopCachesOnClientReconnectExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionDefferedDeleteQueueCleanupTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
@@ -388,6 +391,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             WalStateNodeLeaveExchangeTask task0 = (WalStateNodeLeaveExchangeTask)task;
 
             sharedCtx.walState().onNodeLeft(task0.node().id());
+        }
+        else if (task instanceof FinishPreloadingTask) {
+            FinishPreloadingTask task0 = (FinishPreloadingTask) task;
+
+            CacheGroupContext grp = cacheGroup(task0.groupId());
+
+            if (grp != null)
+                grp.preloader().finishPreloading(task0.topologyVersion());
         }
         else
             U.warn(log, "Unsupported custom exchange task: " + task);
@@ -1626,7 +1637,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     ctx.query().initQueryStructuresForNotStartedCache(cacheDesc);
                 }
                 catch (Exception e) {
-                    log.error("Can't initialize query structures for not started cache [cacheName=" + cacheDesc.cacheName() + "]");
+                    log.error("Can't initialize query structures for not started cache [cacheName=" +
+                        cacheDesc.cacheName() + "]", e);
                 }
             });
 
@@ -2988,7 +3000,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     @Override public @Nullable IgniteNodeValidationResult validateNode(
         ClusterNode node, JoiningNodeDiscoveryData discoData
     ) {
-        if(!cachesInfo.isMergeConfigSupports(node))
+        if (!cachesInfo.isMergeConfigSupports(node))
             return null;
 
         String validationRes = cachesInfo.validateJoiningNodeData(discoData);
@@ -4285,7 +4297,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (cachesInfo.isRestarting(name)) {
                 IgniteCacheProxyImpl<?, ?> proxy = jCacheProxies.get(name);
 
-                assert proxy != null: name;
+                assert proxy != null : name;
 
                 proxy.internalProxy(); //should throw exception
 
@@ -5062,6 +5074,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void onBaselineChange() {
+            for (GridCacheAdapter<?, ?> cache : caches.values())
+                if (cache != null)
+                    cache.context().ttl().unregister();
+
             onKernalStopCaches(true);
 
             stopCaches(true);
@@ -5290,6 +5306,54 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(EnableStatisticsFuture.class, this);
+        }
+    }
+
+    /**
+     * The reason why this class is not removed is backward compatibility
+     * in the case of using local caches with native persistence.
+     */
+    @Deprecated
+    private static class LocalAffinityFunction implements AffinityFunction {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
+        private static final org.apache.ignite.internal.processors.affinity.LocalAffinityFunction DELEGATE =
+            new org.apache.ignite.internal.processors.affinity.LocalAffinityFunction();
+
+        /**
+         * Should not be directly used.
+         */
+        LocalAffinityFunction() throws IgniteCheckedException {
+            throw new IgniteCheckedException("This class should not be directly instantiated. Please use "
+                + org.apache.ignite.internal.processors.affinity.LocalAffinityFunction.class.getCanonicalName()
+                + " instead.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public List<List<ClusterNode>> assignPartitions(AffinityFunctionContext affCtx) {
+            return DELEGATE.assignPartitions(affCtx);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void reset() {
+            DELEGATE.reset();
+        }
+
+        /** {@inheritDoc} */
+        @Override public int partitions() {
+            return DELEGATE.partitions();
+        }
+
+        /** {@inheritDoc} */
+        @Override public int partition(Object key) {
+            return DELEGATE.partition(key);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void removeNode(UUID nodeId) {
+            DELEGATE.removeNode(nodeId);
         }
     }
 }

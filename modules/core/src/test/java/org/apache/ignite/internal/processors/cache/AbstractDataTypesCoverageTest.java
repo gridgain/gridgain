@@ -67,7 +67,8 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
             @Override public String toString() {
                 return "ExpiryPolicy:60_000L, 61_000L, 62_000L";
             }
-        }};
+        }
+    };
 
     /** */
     private static final Factory[] EVICTION_FACTORIES = {
@@ -349,7 +350,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          * @param doubleField Double field.
          * @param booleanField Boolean field.
          */
-        protected ObjectBasedOnPrimitives(int intField, double doubleField, boolean booleanField) {
+        public ObjectBasedOnPrimitives(int intField, double doubleField, boolean booleanField) {
             this.intField = intField;
             this.doubleField = doubleField;
             this.booleanField = booleanField;
@@ -420,7 +421,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          * @param doubleListField Double list field.
          * @param booleanArrField Boolean array field.
          */
-        protected ObjectBasedOnPrimitivesAndCollections(int intField, List<Double> doubleListField,
+        public ObjectBasedOnPrimitivesAndCollections(int intField, List<Double> doubleListField,
             boolean[] booleanArrField) {
             this.intField = intField;
             this.doubleListField = doubleListField;
@@ -492,7 +493,7 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
          * @param doubleListField Double list field.
          * @param nestedObjField Nested object field.
          */
-        protected ObjectBasedOnPrimitivesCollectionsAndNestedObject(int intField, List<Double> doubleListField,
+        public ObjectBasedOnPrimitivesCollectionsAndNestedObject(int intField, List<Double> doubleListField,
             ObjectBasedOnPrimitivesAndCollections nestedObjField) {
             this.intField = intField;
             this.doubleListField = doubleListField;

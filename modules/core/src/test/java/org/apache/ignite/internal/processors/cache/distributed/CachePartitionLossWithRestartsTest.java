@@ -69,23 +69,23 @@ public class CachePartitionLossWithRestartsTest extends GridCommonAbstractTest {
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        boolean persistent = false;
+        for (boolean persistent : new boolean[] {true, false}) {
+            params.add(new Object[]{-1, false, persistent, 3});
+            params.add(new Object[]{0, false, persistent, 3});
+            params.add(new Object[]{2, false, persistent, 3});
 
-        params.add(new Object[]{-1, false, persistent, 3});
-        params.add(new Object[]{0, false, persistent, 3});
-        params.add(new Object[]{2, false, persistent, 3});
+            params.add(new Object[]{-1, false, persistent, -1});
+            params.add(new Object[]{0, false, persistent, -1});
+            params.add(new Object[]{2, false, persistent, -1});
 
-        params.add(new Object[]{-1, false, persistent, -1});
-        params.add(new Object[]{0, false, persistent, -1});
-        params.add(new Object[]{2, false, persistent, -1});
+            params.add(new Object[]{-1, true, persistent, 3});
+            params.add(new Object[]{0, true, persistent, 3});
+            params.add(new Object[]{2, true, persistent, 3});
 
-        params.add(new Object[]{-1, true, persistent, 3});
-        params.add(new Object[]{0, true, persistent, 3});
-        params.add(new Object[]{2, true, persistent, 3});
-
-        params.add(new Object[]{-1, true, persistent, -1});
-        params.add(new Object[]{0, true, persistent, -1});
-        params.add(new Object[]{2, true, persistent, -1});
+            params.add(new Object[]{-1, true, persistent, -1});
+            params.add(new Object[]{0, true, persistent, -1});
+            params.add(new Object[]{2, true, persistent, -1});
+        }
 
         return params;
     }

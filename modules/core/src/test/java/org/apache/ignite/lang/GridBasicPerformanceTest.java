@@ -722,7 +722,7 @@ public class GridBasicPerformanceTest {
                 F.contains(arr, ThreadLocalRandom.current().nextInt(lim));
         }
 
-        long time =  System.currentTimeMillis() - start;
+        long time = System.currentTimeMillis() - start;
 
         X.println("Array test time [time=" + time + ", len=" + arr.length + ", sort=" + sort + ']');
     }
@@ -748,7 +748,7 @@ public class GridBasicPerformanceTest {
                 F.contains(arr, ThreadLocalRandom.current().nextInt(lim));
         }
 
-        long time =  System.currentTimeMillis() - start;
+        long time = System.currentTimeMillis() - start;
 
         X.println("Array long test time [time=" + time + ", len=" + arr.length + ", sort=" + sort + ']');
     }
@@ -958,7 +958,6 @@ public class GridBasicPerformanceTest {
         for (long l : addrs)
             GridUnsafe.freeMemory(l);
     }
-
 
     /**
      * Test unsafe vs. new.

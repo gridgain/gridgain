@@ -120,8 +120,8 @@ public class JdbcQueryExecuteResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+    @Override public void writeBinary(BinaryWriterExImpl writer, JdbcProtocolContext protoCtx)
+        throws BinaryObjectException {
         super.writeBinary(writer, protoCtx);
 
         writer.writeLong(cursorId);
@@ -144,8 +144,8 @@ public class JdbcQueryExecuteResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+    @Override public void readBinary(BinaryReaderExImpl reader, JdbcProtocolContext protoCtx)
+        throws BinaryObjectException {
         super.readBinary(reader, protoCtx);
 
         cursorId = reader.readLong();

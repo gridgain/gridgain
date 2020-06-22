@@ -499,7 +499,7 @@ public class GridDhtPartitionsFullMessage extends GridDhtPartitionsAbstractMessa
                     @Override public byte[] apply(Object payload) throws IgniteCheckedException {
                         byte[] marshalled = U.marshal(ctx, payload);
 
-                        if(compressed())
+                        if (compressed())
                             marshalled = U.zip(marshalled, ctx.gridConfig().getNetworkCompressionLevel());
 
                         return marshalled;
@@ -641,10 +641,10 @@ public class GridDhtPartitionsFullMessage extends GridDhtPartitionsAbstractMessa
         if (partCntrs2 == null)
             partCntrs2 = new IgniteDhtPartitionCountersMap2();
 
-        if(partHistSuppliers == null)
+        if (partHistSuppliers == null)
             partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
-        if(partsToReload == null)
+        if (partsToReload == null)
             partsToReload = new IgniteDhtPartitionsToReloadMap();
 
         if (errs == null)

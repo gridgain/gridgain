@@ -21,6 +21,8 @@ nobase_include_HEADERS = \
 	ignite/binary/binary_writer.h \
 	ignite/binary/binary_raw_writer.h \
 	ignite/binary/binary_containers.h \
+	ignite/binary/binary_enum_entry.h \
+	ignite/binary/binary_enum.h \
 	ignite/binary/binary.h \
 	ignite/binary/binary_consts.h \
 	ignite/binary/binary_type.h \

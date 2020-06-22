@@ -23,7 +23,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -49,11 +48,12 @@ import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandle
 import org.apache.ignite.internal.processors.rest.handlers.auth.AuthenticationCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridBaselineCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeClusterStateCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeStateCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridClusterNameCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.datastructures.DataStructuresCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.log.GridLogCommandHandler;
-import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.query.QueryCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.top.GridTopologyCommandHandler;
@@ -550,6 +550,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             addHandler(new QueryCommandHandler(ctx));
             addHandler(new GridLogCommandHandler(ctx));
             addHandler(new GridChangeStateCommandHandler(ctx));
+            addHandler(new GridChangeClusterStateCommandHandler(ctx));
             addHandler(new GridClusterNameCommandHandler(ctx));
             addHandler(new AuthenticationCommandHandler(ctx));
             addHandler(new UserActionCommandHandler(ctx));
@@ -613,14 +614,15 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
             boolean interrupted = Thread.interrupted();
 
-            while (workersCnt.sum() != 0) {
-                try {
-                    Thread.sleep(200);
+            if (!cancel)
+                while (workersCnt.sum() != 0) {
+                    try {
+                        Thread.sleep(200);
+                    }
+                    catch (InterruptedException ignored) {
+                        interrupted = true;
+                    }
                 }
-                catch (InterruptedException ignored) {
-                    interrupted = true;
-                }
-            }
 
             U.interrupt(sesTimeoutCheckerThread);
 
@@ -809,7 +811,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
         authCtx.subjectType(REMOTE_CLIENT);
         authCtx.subjectId(req.clientId());
-        authCtx.nodeAttributes(Collections.<String, Object>emptyMap());
+        authCtx.nodeAttributes(req.userAttributes());
         authCtx.address(req.address());
         authCtx.certificates(req.certificates());
 
@@ -922,8 +924,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case BASELINE_SET:
             case BASELINE_ADD:
             case BASELINE_REMOVE:
-            case CLUSTER_READ_ONLY_ENABLE:
-            case CLUSTER_READ_ONLY_DISABLE:
+            case CLUSTER_SET_STATE:
                 perm = SecurityPermission.ADMIN_OPS;
 
                 break;
@@ -945,7 +946,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case CLUSTER_CURRENT_STATE:
             case CLUSTER_NAME:
             case BASELINE_CURRENT_STATE:
-            case CLUSTER_CURRENT_READ_ONLY_MODE:
+            case CLUSTER_STATE:
             case AUTHENTICATE:
             case ADD_USER:
             case REMOVE_USER:

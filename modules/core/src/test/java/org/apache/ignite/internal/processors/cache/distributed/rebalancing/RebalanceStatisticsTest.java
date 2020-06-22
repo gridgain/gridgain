@@ -46,6 +46,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -76,7 +77,6 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
@@ -494,7 +494,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             afterStop.run();
 
         IgniteEx node = startGrid(nodeId);
-        if(nonNull(afterStart))
+        if (nonNull(afterStart))
             afterStart.accept(node);
 
         awaitPartitionMapExchange();
@@ -807,10 +807,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public GrpStat value(
-            Matcher m,
-            IgniteThread t
+            Matcher m
         ) {
-            IgniteEx node = grid(t.getIgniteInstanceName());
+            IgniteEx node = IgnitionEx.localIgnite();
             CacheGroupContext grpCtx = node.context().cache().cacheGroup(cacheId(m.group(1)));
             RebalanceFuture rebFut = (RebalanceFuture)grpCtx.preloader().rebalanceFuture();
 
@@ -830,11 +829,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public T2<IgniteEx, Map<CacheGroupContext, RebalanceStatistics>> value(
-            Matcher m,
-            IgniteThread t
-        ) {
-            IgniteEx node = grid(t.getIgniteInstanceName());
+        @Override public T2<IgniteEx, Map<CacheGroupContext, RebalanceStatistics>> value(Matcher m) {
+            IgniteEx node = IgnitionEx.localIgnite();
 
             Map<CacheGroupContext, RebalanceStatistics> stat = new HashMap<>();
             for (CacheGroupContext grpCtx : node.context().cache().cacheGroups()) {
@@ -870,16 +866,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
          * Creating a special value for found statistics.
          *
          * @param m Statistics matcher.
-         * @param t Thread of found statistics.
          * @return Special value for found statistics.
          */
-        public abstract T value(Matcher m, IgniteThread t);
+        public abstract T value(Matcher m);
 
         /** {@inheritDoc} */
         @Override public boolean test(String logStr) {
             Matcher matcher = ptrn.matcher(logStr);
             if (matcher.matches()) {
-                values.add(value(matcher, (IgniteThread)Thread.currentThread()));
+                values.add(value(matcher));
 
                 return true;
             }

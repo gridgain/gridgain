@@ -25,10 +25,13 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+
     /** Config. */
     private boolean config;
+
     /** Metrics. */
     private boolean metrics;
+
     /** Clear store. */
     private boolean clearStore;
 
@@ -70,8 +73,7 @@ public class VisorDrNodeTaskArgs extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         config = in.readBoolean();
         metrics = in.readBoolean();
         clearStore = in.readBoolean();

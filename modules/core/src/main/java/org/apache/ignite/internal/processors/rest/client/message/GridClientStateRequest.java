@@ -21,8 +21,9 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 /**
- *
+ * @deprecated Use {@link GridClientClusterStateRequest} instead.
  */
+@Deprecated
 public class GridClientStateRequest extends GridClientAbstractMessage {
     /** */
     private static final long serialVersionUID = 0L;
@@ -43,7 +44,7 @@ public class GridClientStateRequest extends GridClientAbstractMessage {
     /**
      *
      */
-    public void active(boolean active){
+    public void active(boolean active) {
         this.active = active;
     }
 

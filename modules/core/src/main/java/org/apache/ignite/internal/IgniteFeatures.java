@@ -70,9 +70,8 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
-//    TODO: https://ggsystems.atlassian.net/browse/GG-25084
-//    /** Support of cluster read-only mode. */
-//    CLUSTER_READ_ONLY_MODE(9),
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
 
     /** Support of suspend/resume operations for pessimistic transactions. */
     SUSPEND_RESUME_PESSIMISTIC_TX(10),
@@ -124,8 +123,8 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /** */
-    MANAGEMENT_CONSOLE(28),
+    /** Cluster has task to clear sender store. */
+    WC_DR_CLEAR_SENDER_STORE(29),
 
     /** Distributed change timeout for dump long operations. */
     DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
@@ -135,7 +134,7 @@ public enum IgniteFeatures {
 
     /** Partition Map Exchange-free switch on baseline node left at fully rebalanced cluster. */
     PME_FREE_SWITCH(32),
-    
+
     /** */
     VOLATILE_DATA_STRUCTURES_REGION(33),
 
@@ -146,8 +145,16 @@ public enum IgniteFeatures {
     INVERSE_TCP_CONNECTION(35),
 
     /** Check secondary indexes inline size on join/by control utility request. */
-    CHECK_INDEX_INLINE_SIZES(36);
+    CHECK_INDEX_INLINE_SIZES(36),
 
+    /** Distributed propagation of tx collisions dump interval. */
+    DISTRIBUTED_TX_COLLISIONS_DUMP(37),
+
+    /** */
+    METASTORAGE_LONG_KEYS(38),
+
+    /** Remove metadata from cluster for specified type. */
+    REMOVE_METADATA(39);
     /**
      * Unique feature identifier.
      */
@@ -302,7 +309,7 @@ public enum IgniteFeatures {
                 continue;
 
             //Disable new rolling upgrade
-            if(DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
+            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
                 continue;
 
             // Add only when indexing is enabled.
@@ -311,10 +318,6 @@ public enum IgniteFeatures {
 
             // Add only when tracing is enabled.
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
-                continue;
-
-            // Add only when Control Center is enabled.
-            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
             // Add only when scheduling is disabled.

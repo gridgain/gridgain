@@ -218,7 +218,7 @@ public abstract class IgniteCacheStoreSessionAbstractTest extends IgniteCacheAbs
         private final String expMtd;
 
         /** */
-        private  final Map<Object, Object> expProps;
+        private final Map<Object, Object> expProps;
 
         /** */
         private final String expCacheName;

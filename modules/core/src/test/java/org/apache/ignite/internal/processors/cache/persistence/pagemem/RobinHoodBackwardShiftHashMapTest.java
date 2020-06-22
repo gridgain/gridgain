@@ -100,8 +100,7 @@ public class RobinHoodBackwardShiftHashMapTest {
                 }
 
                 assertEquals(cnt, map.size());
-            }
-            , cnt);
+            }, cnt);
     }
 
     /**
@@ -122,8 +121,7 @@ public class RobinHoodBackwardShiftHashMapTest {
                 }
 
                 map.put(11, 1, 11, 1);
-            }
-            , 10);
+            }, 10);
     }
 
     /**
@@ -169,8 +167,7 @@ public class RobinHoodBackwardShiftHashMapTest {
                 }
 
                 doAddRemove(map);
-            }
-            , 100);
+            }, 100);
     }
 
     /**

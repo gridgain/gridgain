@@ -351,7 +351,7 @@ public class IpcSharedMemoryServerEndpoint implements IpcServerEndpoint {
      * @param ignite Ignite
      */
     @IgniteInstanceResource
-    private void injectResources(Ignite ignite){
+    private void injectResources(Ignite ignite) {
         if (ignite != null) {
             // Inject resources.
             igniteInstanceName = ignite.name();

@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.processors.cache.GridCacheFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareFuture;
@@ -52,6 +53,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -66,6 +68,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTA
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
 import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
 import static org.apache.ignite.testframework.GridTestUtils.cleanIdleVerifyLogFiles;
+import static org.apache.ignite.util.GridCommandHandlerTestUtils.addSslParams;
 
 /**
  * Common abstract class for testing {@link CommandHandler}.
@@ -158,6 +161,8 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
         log.info(testOut.toString());
 
         testOut.reset();
+
+        GridClientFactory.stopAll(false);
     }
 
     /** {@inheritDoc} */
@@ -178,6 +183,11 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     }
 
     /** */
+    protected boolean sslEnabled() {
+        return false;
+    }
+
+    /** */
     protected boolean idleVerifyRes(Path p) {
         return p.toFile().getName().startsWith(IDLE_DUMP_FILE_PREFIX);
     }
@@ -191,7 +201,10 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
-        cfg.setConnectorConfiguration(new ConnectorConfiguration());
+        cfg.setConnectorConfiguration(new ConnectorConfiguration().setSslEnabled(sslEnabled()));
+
+        if (sslEnabled())
+            cfg.setSslContextFactory(GridTestUtils.sslFactory());
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()
             .setWalMode(WALMode.LOG_ONLY)
@@ -280,6 +293,12 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     protected void addExtraArguments(List<String> args) {
         if (autoConfirmation)
             args.add(CMD_AUTO_CONFIRMATION);
+
+        if (sslEnabled()) {
+            // We shouldn't add extra args for --cache help.
+            if (args.size() < 2 || !args.get(0).equals("--cache") || !args.get(1).equals("help"))
+                addSslParams(args);
+        }
     }
 
     /** */

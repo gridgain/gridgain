@@ -21,7 +21,7 @@ package org.apache.ignite.cache.store.jdbc;
  */
 public class CacheJdbcPojoStoreBinaryMarshallerWithSqlEscapeSelfTest extends CacheJdbcPojoStoreBinaryMarshallerSelfTest {
     /** {@inheritDoc} */
-    @Override protected boolean sqlEscapeAll(){
+    @Override protected boolean sqlEscapeAll() {
         return true;
     }
 }

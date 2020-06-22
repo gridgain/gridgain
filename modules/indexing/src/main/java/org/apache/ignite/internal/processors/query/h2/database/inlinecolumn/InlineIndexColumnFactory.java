@@ -53,7 +53,8 @@ public class InlineIndexColumnFactory {
         Value.STRING_IGNORECASE,
         Value.TIME,
         Value.TIMESTAMP,
-        Value.UUID
+        Value.UUID,
+        Value.DECIMAL
     ));
 
     /** */
@@ -115,6 +116,9 @@ public class InlineIndexColumnFactory {
 
             case Value.JAVA_OBJECT:
                 return new ObjectHashInlineIndexColumn(col);
+
+            case Value.DECIMAL:
+                return new DecimalInlineIndexColumn(col);
         }
 
         throw new IllegalStateException("Unknown value type=" + col.getType().getValueType());

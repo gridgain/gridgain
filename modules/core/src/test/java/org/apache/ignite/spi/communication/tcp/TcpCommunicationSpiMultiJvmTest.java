@@ -222,8 +222,7 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
                 }
 
                 cacheCreatedAndLoaded.set(true);
-            }
-            , "start_cache_thread");
+            }, "start_cache_thread");
 
         return cacheCreatedAndLoaded;
     }

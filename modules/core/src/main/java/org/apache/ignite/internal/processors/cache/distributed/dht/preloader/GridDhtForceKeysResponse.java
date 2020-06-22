@@ -96,7 +96,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
      * Sets error.
      * @param err Error.
      */
-    public void error(IgniteCheckedException err){
+    public void error(IgniteCheckedException err) {
         this.err = err;
     }
 

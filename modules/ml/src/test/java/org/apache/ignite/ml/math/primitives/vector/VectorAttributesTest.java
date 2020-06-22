@@ -96,10 +96,13 @@ public class VectorAttributesTest {
     private static class Specification {
         /** */
         private final Vector v;
+
         /** */
         private final Class<? extends Vector> underlyingType;
+
         /** */
         private final List<String> attrsFromUnderlying;
+
         /** */
         final String desc;
 
@@ -135,8 +138,10 @@ public class VectorAttributesTest {
     private static class AttrCfg {
         /** */
         final String name;
+
         /** */
         final Function<Vector, Boolean> obtain;
+
         /** */
         final List<Class> trueInTypes;
 

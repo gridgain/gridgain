@@ -59,7 +59,7 @@ public class JdbcMetaPrimaryKeysResult extends JdbcResult {
         else {
             writer.writeInt(meta.size());
 
-            for(JdbcPrimaryKeyMeta m : meta)
+            for (JdbcPrimaryKeyMeta m : meta)
                 m.writeBinary(writer, protoCtx);
         }
     }

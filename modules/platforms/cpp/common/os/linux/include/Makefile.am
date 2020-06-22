@@ -17,7 +17,8 @@ ACLOCAL_AMFLAGS =-I m4
 
 nobase_include_HEADERS = \
     ignite/common/common.h \
-    ignite/common/concurrent_os.h
+    ignite/common/concurrent_os.h \
+    ignite/common/dynamic_load_os.h
 
 uninstall-hook:
 	if [ -d ${includedir}/ignite ]; then find ${includedir}/ignite -type d -empty -delete; fi

@@ -128,6 +128,7 @@ import org.apache.ignite.internal.processors.cache.index.BasicIndexTest;
 import org.apache.ignite.internal.processors.cache.index.BasicJavaTypesIndexTest;
 import org.apache.ignite.internal.processors.cache.index.BasicSqlTypesIndexTest;
 import org.apache.ignite.internal.processors.cache.index.ComplexPrimaryKeyUnwrapSelfTest;
+import org.apache.ignite.internal.processors.cache.index.DecimalIndexTest;
 import org.apache.ignite.internal.processors.cache.index.DuplicateKeyValueClassesSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexClientBasicSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexServerBasicSelfTest;
@@ -194,6 +195,7 @@ import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaWithPdsEnabled;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultSchemaTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultValueTest;
+import org.apache.ignite.internal.processors.query.IgniteSqlDistributedJoin2SelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlDistributedJoinSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlEntryCacheModeAgnosticTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlGroupConcatCollocatedTest;
@@ -316,6 +318,7 @@ import org.junit.runners.Suite;
 
     BasicIndexTest.class,
     ArrayIndexTest.class,
+    DecimalIndexTest.class,
     BasicIndexMultinodeTest.class,
 
     // Misc tests.
@@ -515,6 +518,7 @@ import org.junit.runners.Suite;
     IgniteCacheDistributedJoinQueryConditionsTest.class,
     IgniteCacheDistributedJoinTest.class,
     IgniteSqlDistributedJoinSelfTest.class,
+    IgniteSqlDistributedJoin2SelfTest.class,
     IgniteSqlQueryParallelismTest.class,
 
     // Other.

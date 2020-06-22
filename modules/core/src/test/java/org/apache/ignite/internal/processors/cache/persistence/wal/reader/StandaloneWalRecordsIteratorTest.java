@@ -25,9 +25,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -54,8 +56,10 @@ import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccess
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -378,7 +382,7 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
             createWalIterator(dir, new FileWALPointer(lBound.index() - 1, 0, 0), hBound, true);
 
             return 0;
-        } , IgniteCheckedException.class, null);
+        }, IgniteCheckedException.class, null);
 
         //noinspection ThrowableNotThrown
         GridTestUtils.assertThrows(log, () -> {
@@ -404,6 +408,35 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks if binary-metadata-writer thread is not hung after standalone iterator is closed.
+     *
+     * @throws Exception if test failed.
+     */
+    @Test
+    public void testBinaryMetadataWriterStopped() throws Exception {
+        String dir = createWalFiles();
+
+        final IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory(new NullLogger());
+
+        IgniteWalIteratorFactory.IteratorParametersBuilder iterParametersBuilder =
+            new IgniteWalIteratorFactory.IteratorParametersBuilder().filesOrDirs(dir)
+                .pageSize(4096);
+
+        try (WALIterator stIt = factory.iterator(iterParametersBuilder)) {
+        }
+
+        boolean binaryMetadataWriterStopped = GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                Set<String> threadNames = Thread.getAllStackTraces().keySet().stream().map(Thread::getName).collect(Collectors.toSet());
+
+                return threadNames.stream().noneMatch(t -> t.startsWith("binary-metadata-writer"));
+            }
+        }, 10_000L);
+
+        assertTrue(binaryMetadataWriterStopped);
+    }
+
+    /**
      * Creates WALIterator associated with files inside walDir.
      *
      * @param walDir - path to WAL directory.
@@ -417,7 +450,6 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
 
         return new IgniteWalIteratorFactory(log).iterator(params.filesOrDirs(walDir));
     }
-
 
     /**
      * @param walDir Wal directory.
@@ -486,6 +518,7 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
     private static class CountedFileIO extends RandomAccessFileIO {
         /** Wal open counter. */
         private static final AtomicInteger WAL_OPEN_COUNTER = new AtomicInteger();
+
         /** Wal close counter. */
         private static final AtomicInteger WAL_CLOSE_COUNTER = new AtomicInteger();
 

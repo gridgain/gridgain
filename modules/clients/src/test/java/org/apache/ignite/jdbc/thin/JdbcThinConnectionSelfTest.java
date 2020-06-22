@@ -38,16 +38,23 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.binary.BinaryNoopMetadataHandler;
 import org.apache.ignite.internal.jdbc.thin.ConnectionProperties;
 import org.apache.ignite.internal.jdbc.thin.ConnectionPropertiesImpl;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinConnection;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinTcpIo;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.marshaller.MarshallerContext;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.NotNull;
@@ -298,8 +305,6 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
             for (JdbcThinTcpIo io : ios(conn))
                 assertEquals(100, io.connectionProperties().getPartitionAwarenessSqlCacheSize());
         }
-
-
     }
 
     /**
@@ -322,8 +327,6 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
             for (JdbcThinTcpIo io : ios(conn))
                 assertEquals(100, io.connectionProperties().getPartitionAwarenessSqlCacheSize());
         }
-
-
     }
 
     /**
@@ -792,10 +795,10 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testCreateStatement2() throws Exception {
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp)) {
-            int [] rsTypes = new int[]
+            int[] rsTypes = new int[]
                 {TYPE_FORWARD_ONLY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.TYPE_SCROLL_SENSITIVE};
 
-            int [] rsConcurs = new int[]
+            int[] rsConcurs = new int[]
                 {CONCUR_READ_ONLY, ResultSet.CONCUR_UPDATABLE};
 
             DatabaseMetaData meta = conn.getMetaData();
@@ -846,13 +849,13 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testCreateStatement3() throws Exception {
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp)) {
-            int [] rsTypes = new int[]
+            int[] rsTypes = new int[]
                 {TYPE_FORWARD_ONLY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.TYPE_SCROLL_SENSITIVE};
 
-            int [] rsConcurs = new int[]
+            int[] rsConcurs = new int[]
                 {CONCUR_READ_ONLY, ResultSet.CONCUR_UPDATABLE};
 
-            int [] rsHoldabilities = new int[]
+            int[] rsHoldabilities = new int[]
                 {HOLD_CURSORS_OVER_COMMIT, CLOSE_CURSORS_AT_COMMIT};
 
             DatabaseMetaData meta = conn.getMetaData();
@@ -942,10 +945,10 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp)) {
             final String sqlText = "select * from test where param = ?";
 
-            int [] rsTypes = new int[]
+            int[] rsTypes = new int[]
                 {TYPE_FORWARD_ONLY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.TYPE_SCROLL_SENSITIVE};
 
-            int [] rsConcurs = new int[]
+            int[] rsConcurs = new int[]
                 {CONCUR_READ_ONLY, ResultSet.CONCUR_UPDATABLE};
 
             DatabaseMetaData meta = conn.getMetaData();
@@ -1003,13 +1006,13 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp)) {
             final String sqlText = "select * from test where param = ?";
 
-            int [] rsTypes = new int[]
+            int[] rsTypes = new int[]
                 {TYPE_FORWARD_ONLY, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.TYPE_SCROLL_SENSITIVE};
 
-            int [] rsConcurs = new int[]
+            int[] rsConcurs = new int[]
                 {CONCUR_READ_ONLY, ResultSet.CONCUR_UPDATABLE};
 
-            int [] rsHoldabilities = new int[]
+            int[] rsHoldabilities = new int[]
                 {HOLD_CURSORS_OVER_COMMIT, CLOSE_CURSORS_AT_COMMIT};
 
             DatabaseMetaData meta = conn.getMetaData();
@@ -2178,7 +2181,7 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
         assertThrows(null, new Callable<Object>() {
             @SuppressWarnings("ResultOfObjectAllocationIgnored")
             @Override public Object call() throws Exception {
-                new JdbcThinTcpIo(connProps, new InetSocketAddress(LOCALHOST, DFLT_PORT), 0);
+                new JdbcThinTcpIo(connProps, new InetSocketAddress(LOCALHOST, DFLT_PORT), getBinaryContext(), 0);
 
                 return null;
             }
@@ -2188,7 +2191,7 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
     /**
      */
     @Test
-    public void testSslClientAndPlainServer()  {
+    public void testSslClientAndPlainServer() {
         Throwable e = assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 DriverManager.getConnection(urlWithPartitionAwarenessProp + "&sslMode=require" +
@@ -2218,7 +2221,7 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
 
         final boolean end[] = new boolean[] {false};
 
-        final SQLException exs [] = new SQLException[threadCnt];
+        final SQLException exs[] = new SQLException[threadCnt];
 
         final AtomicInteger exCnt = new AtomicInteger(0);
 
@@ -2285,5 +2288,64 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
                 return "savepoint";
             }
         };
+    }
+
+    /**
+     * Returns stub for marshaller context.
+     *
+     * @return Marshaller context.
+     */
+    private MarshallerContext getFakeMarshallerCtx() {
+        return new MarshallerContext() {
+            @Override public boolean registerClassName(byte platformId, int typeId,
+                String clsName) throws IgniteCheckedException {
+                return false;
+            }
+
+            @Override public boolean registerClassNameLocally(byte platformId, int typeId,
+                String clsName) throws IgniteCheckedException {
+                return false;
+            }
+
+            @Override public Class getClass(int typeId, ClassLoader ldr) throws ClassNotFoundException, IgniteCheckedException {
+                return null;
+            }
+
+            @Override public String getClassName(byte platformId,
+                int typeId) throws ClassNotFoundException, IgniteCheckedException {
+                return null;
+            }
+
+            @Override public boolean isSystemType(String typeName) {
+                return false;
+            }
+
+            @Override public IgnitePredicate<String> classNameFilter() {
+                return null;
+            }
+
+            @Override public JdkMarshaller jdkMarshaller() {
+                return null;
+            }
+        };
+    }
+
+    /**
+     * Returns new binary context.
+     *
+     * @return New binary context.
+     */
+    private BinaryContext getBinaryContext() {
+        BinaryMarshaller marsh = new BinaryMarshaller();
+
+        marsh.setContext(getFakeMarshallerCtx());
+
+        BinaryContext ctx = new BinaryContext(BinaryNoopMetadataHandler.instance(),
+            new IgniteConfiguration(), new NullLogger());
+
+        ctx.configure(marsh);
+        ctx.registerUserTypesSchema();
+
+        return ctx;
     }
 }
