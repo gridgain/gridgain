@@ -30,6 +30,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerRequest;
@@ -43,8 +44,7 @@ import org.junit.Test;
 /**
  * Test checks correctness loading data during exchange through Data streamer which cannot override entries.
  */
-public class LoadDataWiaStreamerDuringExchnageTest extends GridCommonAbstractTest {
-
+public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
     /** Count of rows which will be load to cache. */
     public static final int LOAD_LOOP = 100;
 
@@ -204,7 +204,12 @@ public class LoadDataWiaStreamerDuringExchnageTest extends GridCommonAbstractTes
             if (msg instanceof GridDhtPartitionsSingleMessage) {
                 GridDhtPartitionsSingleMessage sm = (GridDhtPartitionsSingleMessage)msg;
 
-                return sm.exchangeId() == null && !sm.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).hasMovingPartitions();
+                if (sm.exchangeId() == null) {
+                    GridDhtPartitionMap map = sm.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME));
+
+                    // Partition states message for a group is send as soon as group rebalancing has finished.
+                    return map != null && !map.hasMovingPartitions();
+                }
             }
 
             return false;
