@@ -35,6 +35,9 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     /** */
     private static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
 
+    /** */
+    private static final int UPDATE_LOG_TREE_ROOT_OFF = GAPS_LINK + 8;
+
     /**
      * @param ver Version.
      */
@@ -49,6 +52,7 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         setPendingTreeRoot(pageAddr, 0L);
         setPartitionMetaStoreReuseListRoot(pageAddr, 0L);
         setGapsLink(pageAddr, 0);
+        setUpdateTreeRoot(pageAddr, 0);
     }
 
     /** {@inheritDoc} */
@@ -100,6 +104,16 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     }
 
     /** {@inheritDoc} */
+    @Override public long getUpdateTreeRoot(long pageAddr) {
+        return PageUtils.getLong(pageAddr, UPDATE_LOG_TREE_ROOT_OFF);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setUpdateTreeRoot(long pageAddr, long listRoot) {
+        PageUtils.putLong(pageAddr, UPDATE_LOG_TREE_ROOT_OFF, listRoot);
+    }
+
+    /** {@inheritDoc} */
     @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         byte state = getPartitionState(pageAddr);
 
@@ -117,21 +131,29 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         sb.a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")");
         sb.a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr));
         sb.a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
+        sb.a(",\n\tupdLogRootPageId=").a(getUpdateTreeRoot(pageAddr));
         sb.a("\n]");
     }
 
     /**
-     * Upgrade page to PagePartitionMetaIOV2
+     * Upgrade page to PagePartitionMetaIOV2.
      *
      * @param pageAddr Page address.
+     * @param from From version.
      */
-    public void upgradePage(long pageAddr) {
+    public void upgradePage(long pageAddr, int from) {
         assert PageIO.getType(pageAddr) == getType();
-        assert PageIO.getVersion(pageAddr) < 2;
+        assert PageIO.getVersion(pageAddr) < 3;
 
         PageIO.setVersion(pageAddr, getVersion());
-        setPendingTreeRoot(pageAddr, 0);
-        setPartitionMetaStoreReuseListRoot(pageAddr, 0);
-        setGapsLink(pageAddr, 0);
+
+        if (from < 2) {
+            setPendingTreeRoot(pageAddr, 0);
+            setPartitionMetaStoreReuseListRoot(pageAddr, 0);
+            setGapsLink(pageAddr, 0);
+        }
+
+        if (from < 3)
+            setUpdateTreeRoot(pageAddr, 0);
     }
 }

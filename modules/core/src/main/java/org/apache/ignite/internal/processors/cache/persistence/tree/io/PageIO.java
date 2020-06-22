@@ -254,6 +254,18 @@ public abstract class PageIO {
     /** */
     public static final short T_DATA_PART = 32;
 
+    /** */
+    public static final short T_UPDATE_LOG_REF_INNER = 33;
+
+    /** */
+    public static final short T_UPDATE_LOG_REF_LEAF = 34;
+
+    /** */
+    public static final short T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER = 35;
+
+    /** */
+    public static final short T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF = 36;
+
     /** Index for payload == 1. */
     public static final short T_H2_EX_REF_LEAF_START = 10_000;
 

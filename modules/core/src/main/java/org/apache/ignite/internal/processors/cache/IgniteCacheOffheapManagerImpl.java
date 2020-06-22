@@ -75,6 +75,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLoc
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
+import org.apache.ignite.internal.processors.cache.tree.PartitionUpdateLogTree;
 import org.apache.ignite.internal.processors.cache.tree.DataRow;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
@@ -1258,7 +1259,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             lsnr
         );
 
-        return new CacheDataStoreImpl(p, rowStore, dataTree);
+        PartitionUpdateLogTree logTree = new PartitionUpdateLogTree(
+                grp,
+                BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData"),
+                grp.dataRegion().pageMemory(),
+                allocateForTree(),
+                grp.reuseList(),
+                true,
+                lsnr
+        );
+
+        return new CacheDataStoreImpl(p, rowStore, dataTree, logTree);
     }
 
     /** {@inheritDoc} */
@@ -1407,6 +1418,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** */
         private final CacheDataTree dataTree;
 
+        /** */
+        private final PartitionUpdateLogTree logTree;
+
         /** Update counter. */
         protected final PartitionUpdateCounter pCntr;
 
@@ -1429,15 +1443,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param partId Partition number.
          * @param rowStore Row store.
          * @param dataTree Data tree.
+         * @param logTree Update log tree.
          */
         public CacheDataStoreImpl(
-            int partId,
-            CacheDataRowStore rowStore,
-            CacheDataTree dataTree
-        ) {
+                int partId,
+                CacheDataRowStore rowStore,
+                CacheDataTree dataTree,
+                PartitionUpdateLogTree logTree) {
             this.partId = partId;
             this.rowStore = rowStore;
             this.dataTree = dataTree;
+            this.logTree = logTree;
 
             PartitionUpdateCounter delegate = grp.mvccEnabled() ? new PartitionUpdateCounterMvccImpl(grp) :
                 !grp.persistenceEnabled() || grp.hasAtomicCaches() ? new PartitionUpdateCounterVolatileImpl(grp) :
@@ -2552,8 +2568,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             throws IgniteCheckedException {
             if (oldRow == null)
                 incrementSize(cctx.cacheId());
-
-            KeyCacheObject key = newRow.key();
 
             GridCacheQueryManager qryMgr = cctx.queries();
 
