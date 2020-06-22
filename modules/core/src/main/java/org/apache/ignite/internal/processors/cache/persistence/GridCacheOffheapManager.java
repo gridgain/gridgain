@@ -996,9 +996,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
 
                 return new Metas(
-                    new RootPage(new FullPageId(metastoreRoot, grpId), allocated),
-                    new RootPage(new FullPageId(reuseListRoot, grpId), allocated),
-                    null,
+                        new RootPage(new FullPageId(metastoreRoot, grpId), allocated),
+                        new RootPage(new FullPageId(reuseListRoot, grpId), allocated),
+                        null,
                         null,
                         null);
             }
@@ -1745,7 +1745,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (PageIdUtils.partId(metas.reuseListRoot.pageId().pageId()) != partId ||
                         PageIdUtils.partId(metas.treeRoot.pageId().pageId()) != partId ||
                         PageIdUtils.partId(metas.pendingTreeRoot.pageId().pageId()) != partId ||
-                        PageIdUtils.partId(metas.partMetastoreReuseListRoot.pageId().pageId()) != partId
+                        PageIdUtils.partId(metas.partMetastoreReuseListRoot.pageId().pageId()) != partId ||
+                        PageIdUtils.partId(metas.updateLogTreeRoot.pageId().pageId()) != partId
                         ) {
                         throw new IgniteCheckedException("Invalid meta root allocated [" +
                             "cacheOrGroupName=" + grp.cacheOrGroupName() +
@@ -2095,19 +2096,22 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         if (PageIdUtils.flag(partMetaStoreReuseListRoot) != PageMemory.FLAG_DATA)
                             throw new StorageException("Wrong partition meta store list root page id flag: partMetaStoreReuseListRoot="
                                 + U.hexLong(partMetaStoreReuseListRoot) + ", part=" + partId + ", grpId=" + grpId);
+
+                        if (PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_DATA)
+                            throw new StorageException("Wrong partition update log root page id flag: updateLogTreeRoot="
+                                + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
                     }
 
                     return new Metas(
                         new RootPage(new FullPageId(treeRoot, grpId), allocated),
                         new RootPage(new FullPageId(reuseListRoot, grpId), allocated),
                         new RootPage(new FullPageId(pendingTreeRoot, grpId), allocated || pendingTreeAllocated),
-                            new RootPage(new FullPageId(partMetaStoreReuseListRoot, grpId), allocated || partMetastoreReuseListAllocated),
-
-                            new RootPage(new FullPageId(updateLogTreeRoot, grpId), allocated || updateLogTreeRootAllocated));
+                        new RootPage(new FullPageId(partMetaStoreReuseListRoot, grpId), allocated || partMetastoreReuseListAllocated),
+                        new RootPage(new FullPageId(updateLogTreeRoot, grpId), allocated || updateLogTreeRootAllocated));
                 }
                 finally {
                     pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null,
-                        allocated || pendingTreeAllocated || partMetastoreReuseListAllocated);
+                        allocated || pendingTreeAllocated || partMetastoreReuseListAllocated || updateLogTreeRootAllocated);
                 }
             }
             finally {

@@ -1259,14 +1259,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             lsnr
         );
 
+        String logTreeName = BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData");
+
         PartitionUpdateLogTree logTree = new PartitionUpdateLogTree(
-                grp,
-                BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData"),
-                grp.dataRegion().pageMemory(),
-                allocateForTree(),
-                grp.reuseList(),
-                true,
-                lsnr
+            grp,
+            logTreeName,
+            grp.dataRegion().pageMemory(),
+            allocateForTree(),
+            grp.reuseList(),
+            true,
+            ctx.diagnostic().pageLockTracker().createPageLockTracker(logTreeName)
         );
 
         return new CacheDataStoreImpl(p, rowStore, dataTree, logTree);
