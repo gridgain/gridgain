@@ -69,8 +69,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
             new TracingConfigurationParameters.Builder().
                 withSamplingRate(SAMPLING_RATE_ALWAYS).build());
-
-
     }
 
     /**
