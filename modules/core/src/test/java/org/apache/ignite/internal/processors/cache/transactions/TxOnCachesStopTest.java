@@ -42,6 +42,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
@@ -51,6 +52,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteFutureTimeoutException;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -61,7 +63,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
-import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
+import static org.apache.ignite.transactions.TransactionIsolation.*;
 
 /**
  *
@@ -85,6 +87,9 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
     /** */
     private static final int CACHE_CNT = 30;
 
+    /** */
+    private ListeningTestLogger testLogger = new ListeningTestLogger(log);
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -98,6 +103,8 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
             .setWalMode(WALMode.LOG_ONLY);
 
         cfg.setDataStorageConfiguration(memCfg);
+
+        cfg.setGridLogger(testLogger);
 
         CacheConfiguration<Integer, byte[]> ccfg1 = new CacheConfiguration<>();
 
@@ -150,6 +157,7 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTxOnCacheStopNoMessageBlock() throws Exception {
+        //Reproduce here
         runTxOnCacheStop(false);
     }
 
@@ -174,8 +182,10 @@ public class TxOnCachesStopTest extends GridCommonAbstractTest {
         ig.cluster().active(true);
 
         for (TransactionConcurrency conc : TransactionConcurrency.values()) {
-            for (TransactionIsolation iso : TransactionIsolation.values())
+            for (TransactionIsolation iso : TransactionIsolation.values()) {
+                GridCacheContext.latch = new CountDownLatch(1);
                 runTxOnCacheStop(conc, iso, ig, block);
+            }
         }
     }
 

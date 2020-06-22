@@ -2041,6 +2041,8 @@ public class GridCacheContext<K, V> implements Externalizable {
         return updatesAllowed;
     }
 
+    public static CountDownLatch latch = new CountDownLatch(1);
+
     /**
      * Nulling references to potentially leak-prone objects.
      */
@@ -2051,6 +2053,8 @@ public class GridCacheContext<K, V> implements Externalizable {
         qryMgr = null;
         dataStructuresMgr = null;
         cacheObjCtx = null;
+
+        latch.countDown();
 
         if (expiryPlc instanceof Closeable)
             U.closeQuiet((Closeable)expiryPlc);

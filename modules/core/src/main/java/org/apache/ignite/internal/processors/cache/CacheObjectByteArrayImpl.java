@@ -57,6 +57,8 @@ public class CacheObjectByteArrayImpl implements CacheObject, Externalizable {
 
     /** {@inheritDoc} */
     @Override public void finishUnmarshal(CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        if (ctx == null)
+            throw new NullPointerException();
         // No-op.
     }
 

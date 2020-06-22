@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -944,7 +945,7 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
             if (cacheCtx == null)
                 throw new CacheInvalidStateException(
                     "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
-            
+
             if (cacheCtx.isNear() && !near)
                 cacheCtx = cacheCtx.near().dht().context();
             else if (!cacheCtx.isNear() && near)
@@ -967,6 +968,12 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         }
 
         key.finishUnmarshal(context().cacheObjectContext(), clsLdr);
+
+        try {
+            GridCacheContext.latch.await();
+        }
+        catch (Exception e){
+        }
 
         val.unmarshal(this.ctx, clsLdr);
 
