@@ -454,7 +454,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_SEMAPHORES",
                 sysSchemaName() + ".DS_REENTRANTLOCKS",
                 sysSchemaName() + ".BINARY_METADATA",
-                sysSchemaName() + ".DISTRIBUTED_METASTORAGE"
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE",
+                sysSchemaName() + ".PARTITION_STATES"
         ));
 
         testGetTables(new String[] {"VIEW"}, expViews);
@@ -1120,7 +1121,12 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".BINARY_METADATA.FIELDS_COUNT.null.10",
                 sysSchemaName() + ".BINARY_METADATA.TYPE_NAME.null.2147483647",
                 sysSchemaName() + ".DISTRIBUTED_METASTORAGE.NAME.null.2147483647",
-                sysSchemaName() + ".DISTRIBUTED_METASTORAGE.VALUE.null.2147483647"
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE.VALUE.null.2147483647",
+                sysSchemaName() + ".PARTITION_STATES.CACHE_GROUP_ID.null.10",
+                sysSchemaName() + ".PARTITION_STATES.PARTITION_ID.null.10",
+                sysSchemaName() + ".PARTITION_STATES.NODE_ID.null.16",
+                sysSchemaName() + ".PARTITION_STATES.STATE.null.2147483647",
+                sysSchemaName() + ".PARTITION_STATES.IS_PRIMARY.null.1"
             ));
 
             expectedCols.addAll(Arrays.asList(
