@@ -69,6 +69,7 @@ import org.apache.ignite.internal.util.lang.GridTuple4;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T4;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -466,8 +467,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * Restarting a node with log listeners.
      *
      * @param nodeId        Node id.
-     * @param afterStop Function after stop node.
-     * @param afterStart Function after start node.
+     * @param afterStop Function will be invoked after stop of the node.
+     * @param afterStart Function will be invoked after start of the node, but before rebalance.
      * @param checkConsumer Checking listeners.
      * @param logListeners  Log listeners.
      * @throws Exception if any error occurs.
@@ -493,9 +494,28 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         if (nonNull(afterStop))
             afterStop.run();
 
-        IgniteEx node = startGrid(nodeId);
+
+        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(nodeId));
+
+        TestRecordingCommunicationSpi spi = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
+
+        spi.blockMessages((node, msg) -> {
+            if (msg instanceof GridDhtPartitionDemandMessage) {
+                GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage)msg;
+
+                if (demandMsg.groupId() != CU.cacheId(UTILITY_CACHE_NAME))
+                    return true;
+            }
+
+            return false;
+        });
+
+        IgniteEx node = startGrid(optimize(cfg));
+
         if (nonNull(afterStart))
             afterStart.accept(node);
+
+        spi.stopBlock();
 
         awaitPartitionMapExchange();
 
