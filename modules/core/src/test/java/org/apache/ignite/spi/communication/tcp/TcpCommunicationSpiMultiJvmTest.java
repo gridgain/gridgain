@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.failurehandler.StopMultiJVMGridProcessesFailureHandler;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -100,6 +101,8 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
 
         TcpCommunicationSpi commSpi = new TestCommunicationSpi(replacingAttrSpi);
         commSpi.setLocalPort(45010);

@@ -29,11 +29,14 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.failurehandler.StopMultiJVMGridProcessesFailureHandler;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -77,8 +80,11 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             );
 
-        if (!isRemoteJvm(igniteInstanceName))
+        if (!isRemoteJvm(igniteInstanceName)){
             cfg.setGridLogger(testLog);
+
+            cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
+        }
 
         if (nodeId != null)
             cfg.setNodeId(nodeId);
@@ -102,6 +108,9 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
 
         for (Map.Entry<String, Object[]> entry : getSqlStatements().entrySet())
             executeSql(grid(0), entry.getKey(), entry.getValue());
+
+        grid(0).context().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, new NullPointerException()));
+
     }
 
     /** {@inheritDoc} */
