@@ -639,7 +639,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     if (reserved)
                         client = connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
-                    if (oldFut instanceof ConnectTriggerFuture && !oldFut.isDone())
+                    if (oldFut instanceof ConnectionRequestFuture && !oldFut.isDone())
                         oldFut.onDone(client);
                 }
             }

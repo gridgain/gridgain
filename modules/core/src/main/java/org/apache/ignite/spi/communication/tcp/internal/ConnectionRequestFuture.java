@@ -23,21 +23,5 @@ import org.apache.ignite.internal.util.nio.GridCommunicationClient;
  * Marker future implementation, just like {@link ConnectFuture}, but meaning that we're waiting for the inverse
  * connection.
  */
-public class ConnectTriggerFuture extends GridFutureAdapter<GridCommunicationClient> {
-    /**
-     * Construct the future and link it with the parameter so that when current future is completed, parameter future
-     * will be completed as well.
-     *
-     * @param fut Actual current connect future.
-     */
-    public ConnectTriggerFuture(ConnectFuture fut) {
-        listen(f -> {
-            try {
-                fut.onDone(f.get());
-            }
-            catch (Throwable t) {
-                fut.onDone(t);
-            }
-        });
-    }
+public class ConnectionRequestFuture extends GridFutureAdapter<GridCommunicationClient> {
 }

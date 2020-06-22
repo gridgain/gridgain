@@ -20,12 +20,12 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 
 /** Helper interface to ask other nodes to open connections. */
-public interface ConnectionTrigger {
+public interface ConnectionRequestor {
     /**
-     * Trigger opening of TCP connection from node {@code node} with index {@code connIdx}.
+     * Request opening of TCP connection from node {@code node} with index {@code connIdx}.
      *
      * @param node Node.
      * @param connIdx Connection index.
      */
-    public void trigger(ClusterNode node, int connIdx) throws IgniteCheckedException;
+    public void request(ClusterNode node, int connIdx) throws IgniteCheckedException;
 }

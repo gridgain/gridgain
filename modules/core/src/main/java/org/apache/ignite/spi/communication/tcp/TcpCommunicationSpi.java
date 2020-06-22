@@ -84,7 +84,7 @@ import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectGateway;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionClientPool;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionTrigger;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionRequestor;
 import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.InboundConnectionHandler;
@@ -381,8 +381,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** State provider. */
     private volatile ClusterStateProvider stateProvider;
 
-    /** Connection trigger. */
-    private ConnectionTrigger connectionTrigger;
+    /** Connection requestor. */
+    private ConnectionRequestor connectionRequestor;
 
     /** Logger. */
     @LoggerResource
@@ -410,8 +410,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** */
     @IgniteExperimental
-    public void setConnectionTrigger(ConnectionTrigger connectionTrigger) {
-        this.connectionTrigger = connectionTrigger;
+    public void setConnectionRequestor(ConnectionRequestor connectionRequestor) {
+        this.connectionRequestor = connectionRequestor;
     }
 
     /** {@inheritDoc} */
@@ -735,7 +735,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             timeoutProcessor,
             stateProvider,
             nioSrvWrapper,
-            () -> connectionTrigger
+            () -> connectionRequestor
         ));
 
         this.srvLsnr.setClientPool(clientPool);

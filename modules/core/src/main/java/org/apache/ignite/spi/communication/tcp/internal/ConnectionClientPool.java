@@ -118,8 +118,8 @@ public class ConnectionClientPool {
     /** Stopping flag (set to {@code true} when SPI gets stopping signal). */
     private volatile boolean stopping = false;
 
-    /** Provider for external connection trigger. */
-    private final Supplier<ConnectionTrigger> connTriggerSupplier;
+    /** Provider for external connection requestor. */
+    private final Supplier<ConnectionRequestor> connRequestorSupplier;
 
     /**
      * @param cfg Config.
@@ -134,7 +134,7 @@ public class ConnectionClientPool {
      * @param timeObjProcessor Time object processor.
      * @param clusterStateProvider Cluster state provider.
      * @param nioSrvWrapper Nio server wrapper.
-     * @param connTriggerSupplier Provider for external connection trigger.
+     * @param connRequestorSupplier Provider for external connection requestor.
      */
     public ConnectionClientPool(
         TcpCommunicationConfiguration cfg,
@@ -149,7 +149,7 @@ public class ConnectionClientPool {
         GridTimeoutProcessor timeObjProcessor,
         ClusterStateProvider clusterStateProvider,
         GridNioServerWrapper nioSrvWrapper,
-        @NotNull Supplier<ConnectionTrigger> connTriggerSupplier
+        @NotNull Supplier<ConnectionRequestor> connRequestorSupplier
     ) {
         this.cfg = cfg;
         this.attrs = attrs;
@@ -163,7 +163,7 @@ public class ConnectionClientPool {
         this.timeObjProcessor = timeObjProcessor;
         this.clusterStateProvider = clusterStateProvider;
         this.nioSrvWrapper = nioSrvWrapper;
-        this.connTriggerSupplier = connTriggerSupplier;
+        this.connRequestorSupplier = connRequestorSupplier;
     }
 
     /**
@@ -173,7 +173,7 @@ public class ConnectionClientPool {
         this.stopping = true;
 
         for (GridFutureAdapter<GridCommunicationClient> fut : clientFuts.values()) {
-            if (fut instanceof ConnectTriggerFuture) {
+            if (fut instanceof ConnectionRequestFuture) {
                 // There's no way it would be done by itself at this point.
                 fut.onDone(new IgniteSpiException("SPI is being stopped."));
             }
@@ -324,7 +324,7 @@ public class ConnectionClientPool {
 
     /**
      * Handles {@link NodeUnreachableException}. This means that the method will try to trigger client itself to open
-     * connection. The only possible way of doing this is to use {@link #connTriggerSupplier}'s trigger and wait.
+     * connection. The only possible way of doing this is to use {@link #connRequestorSupplier}'s trigger and wait.
      * Specifics of triggers implementation technically should be considered unknown, but for now it's not true and we
      * expect that {@link NodeUnreachableException} won't be thrown in {@link IgniteDiscoveryThread}.
      *
@@ -342,17 +342,28 @@ public class ConnectionClientPool {
         GridFutureAdapter<GridCommunicationClient> fut,
         NodeUnreachableException e
     ) throws IgniteCheckedException {
-        ConnectionTrigger connTrigger = connTriggerSupplier.get();
+        ConnectionRequestor connRequestor = connRequestorSupplier.get();
 
-        if (connTrigger != null) {
-            ConnectTriggerFuture triggerFut = new ConnectTriggerFuture((ConnectFuture)fut);
+        if (connRequestor != null) {
+            ConnectFuture fut0 = (ConnectFuture)fut;
+
+            ConnectionRequestFuture triggerFut = new ConnectionRequestFuture();
+
+            triggerFut.listen(f -> {
+                try {
+                    fut0.onDone(f.get());
+                }
+                catch (Throwable t) {
+                    fut0.onDone(t);
+                }
+            });
 
             clientFuts.put(new ConnectionKey(node.id(), connIdx, -1), triggerFut);
 
             fut = triggerFut;
 
             try {
-                connTrigger.trigger(node, connIdx);
+                connRequestor.request(node, connIdx);
 
                 long failTimeout = cfg.failureDetectionTimeoutEnabled()
                     ? cfg.failureDetectionTimeout()

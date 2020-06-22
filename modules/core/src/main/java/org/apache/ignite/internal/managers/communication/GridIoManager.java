@@ -107,7 +107,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionTrigger;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionRequestor;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
 import org.jetbrains.annotations.NotNull;
@@ -338,7 +338,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         });
 
         if ((CommunicationSpi<?>)spi instanceof TcpCommunicationSpi)
-            getTcpCommunicationSpi().setConnectionTrigger(invConnHandler);
+            getTcpCommunicationSpi().setConnectionRequestor(invConnHandler);
 
         ctx.addNodeAttribute(DIRECT_PROTO_VER_ATTR, DIRECT_PROTO_VER);
 
@@ -1005,6 +1005,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         stopSpi();
+
+        invConnHandler.onStop();
 
         if (log.isDebugEnabled())
             log.debug(stopInfo());
@@ -3463,7 +3465,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      *     </li>
      * </ol>
      */
-    private final class TcpCommunicationInverseConnectionHandler implements ConnectionTrigger {
+    private final class TcpCommunicationInverseConnectionHandler implements ConnectionRequestor {
         /**
          * Executor service to send special communication message.
          */
@@ -3529,7 +3531,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
          * @param node Unreachable node.
          * @param connIdx Connection index.
          */
-        @Override public void trigger(ClusterNode node, int connIdx) {
+        @Override public void request(ClusterNode node, int connIdx) {
             TcpCommunicationSpi tcpCommSpi = getTcpCommunicationSpi();
 
             if (isPairedConnection(node, tcpCommSpi))
@@ -3549,6 +3551,15 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             catch (IgniteCheckedException ex) {
                 throw new IgniteSpiException(ex);
             }
+        }
+
+        /** */
+        public void onStop() {
+            U.shutdownNow(
+                TcpCommunicationInverseConnectionHandler.class,
+                responseSendService,
+                log
+            );
         }
     }
 }
