@@ -201,7 +201,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
             return NoopSpan.INSTANCE;
 
         // Optimization for zero sampling rate == 0.
-        if ((serializedParentSpan.length == 0 || serializedParentSpan == null)  &&
+        if ((serializedParentSpan.length == 0 || serializedParentSpan == null) &&
             tracingConfiguration.get(new TracingConfigurationCoordinates.Builder(spanType.scope()).build()).
                 samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
@@ -427,7 +427,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
             intToBytes(span.includedScopes().size()),
             0,
             serializedSpanBytes,
-            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH  +
+            SPI_SPECIFIC_SERIALIZED_SPAN_BODY_OFF + PARENT_SPAN_TYPE_BYTES_LENGTH +
                 spiSpecificSerializedSpan.length,
             INCLUDED_SCOPES_SIZE_BYTE_LENGTH);
 

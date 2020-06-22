@@ -21,7 +21,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Serializable;
-import java.util.UUID;
 
 /**
  * Specifies to which traces, specific configuration will be applied. In other words it's a sort of tracing

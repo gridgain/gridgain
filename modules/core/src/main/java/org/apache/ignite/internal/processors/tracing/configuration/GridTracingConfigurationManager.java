@@ -106,7 +106,7 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
                     if (log.isDebugEnabled())
                         log.debug("Rolling upgrade state was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
 
-                    if (newVal != null && ! newVal.isEmpty())
+                    if (newVal != null && !newVal.isEmpty())
                         tracingConfiguration = newVal;
                 }
             });
@@ -149,8 +149,9 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") @Override
-    public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll(@Nullable Scope scope) {
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    @Override public @NotNull Map<TracingConfigurationCoordinates, TracingConfigurationParameters> getAll(
+        @Nullable Scope scope) {
         return scope != null ?
             tracingConfiguration.entrySet().stream().
                 filter(e -> e.getKey().scope() == scope).
@@ -197,7 +198,6 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
         }
         else
             newTracingConfiguration = new HashMap<>(DEFAULT_CONFIGURATION_MAP);
-
 
         try {
             distributedTracingConfiguration.propagate(newTracingConfiguration);
