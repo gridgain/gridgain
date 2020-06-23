@@ -58,6 +58,9 @@ public abstract class IgniteDataTransferObject implements Externalizable {
     /** Version 7. */
     protected static final byte V7 = 7;
 
+    /** Version 8. */
+    protected static final byte V8 = 8;
+
     /**
      * @param col Source collection.
      * @param <T> Collection type.
