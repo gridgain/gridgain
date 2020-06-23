@@ -16,35 +16,101 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.h2.table.Column;
 import org.h2.value.Value;
+
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
 public class SqlStatisticsManager {
     private final Map<QueryTable, Map<Integer, TablePartitionStatistics>> partitionedTblStats = new ConcurrentHashMap<>();
 
     private final Map<QueryTable, TableStatistics> locTblStats = new ConcurrentHashMap<>();
 
+    private final GridKernalContext ctx;
+
+    public SqlStatisticsManager(GridKernalContext ctx) {
+        this.ctx = ctx;
+    }
+
     public TableStatistics localTableStatistic(String schema, String tblName) {
         return locTblStats.get(new QueryTable(schema, tblName));
     }
 
-    public synchronized void updateLocalStats(GridH2Table tbl, Collection<TablePartitionStatistics> partStats) {
+    public void collectTableStatistics(GridH2Table tbl) throws IgniteCheckedException {
+        assert tbl != null;
+
+        GridH2RowDescriptor desc = tbl.rowDescriptor();
+
+        List<TablePartitionStatistics> tblPartStats = new ArrayList<>();
+
+        for (GridDhtLocalPartition locPart : tbl.cacheContext().topology().localPartitions()) {
+            final boolean reserved = locPart.reserve();
+
+            try {
+                if (!reserved || (locPart.state() != OWNING && locPart.state() != MOVING)
+                    || !locPart.primary(ctx.discovery().topologyVersionEx()))
+                    continue;
+
+                if (locPart.state() == MOVING)
+                    tbl.cacheContext().preloader().syncFuture().get();
+
+                long rowsCnt = 0;
+
+                List<ColumnStatisticsCollector> colStatsCollected = new ArrayList<>(tbl.getColumns().length);
+
+                for (Column col : tbl.getColumns())
+                    colStatsCollected.add(new ColumnStatisticsCollector(col, tbl::compareValues));
+
+                for (CacheDataRow row : tbl.cacheContext().offheap().partitionIterator(locPart.id())) {
+                    // TODO: verify that row belongs to the table
+
+                    rowsCnt++;
+
+                    H2Row row0 = desc.createRow(row);
+
+                    for (ColumnStatisticsCollector colStat : colStatsCollected)
+                        colStat.add(row0.getValue(colStat.col().getColumnId()));
+
+                }
+
+                long rowsCnt0 = rowsCnt;
+
+                Map<String, ColumnStatistics> colStats = colStatsCollected.stream().collect(Collectors.toMap(
+                    csc -> csc.col().getName(), csc -> csc.finish(rowsCnt0)
+                ));
+
+                tblPartStats.add(new TablePartitionStatistics(locPart.id(), true, rowsCnt, colStats));
+            }
+            finally {
+                if (reserved)
+                    locPart.release();
+            }
+        }
+
         QueryTable tblId = tbl.identifier();
 
         Map<Integer, TablePartitionStatistics> tblParts = partitionedTblStats.computeIfAbsent(tblId, k -> new HashMap<>());
 
-        for (TablePartitionStatistics part : partStats)
+        for (TablePartitionStatistics part : tblPartStats)
             tblParts.put(part.partId(), part);
 
         aggregateLocalStatistics(tbl);
-
-        tbl.tableStatistics(locTblStats.get(tblId));
     }
 
     private void aggregateLocalStatistics(GridH2Table tbl) {
@@ -53,7 +119,7 @@ public class SqlStatisticsManager {
         if (!partitionedTblStats.containsKey(tblId))
             return;
 
-        long rowCount = 0;
+        long rowCnt = 0;
 
         Map<String, ColumnStatisticsAggregator> colStats = new HashMap<>();
 
@@ -61,7 +127,7 @@ public class SqlStatisticsManager {
             if (!part.local())
                 continue;
 
-            rowCount += part.rowCount();
+            rowCnt += part.rowCount();
 
             for (Map.Entry<String, ColumnStatistics> colNameToStat : part.getColNameToStat().entrySet()) {
                 ColumnStatisticsAggregator statAggregator = colStats.computeIfAbsent(colNameToStat.getKey(),
@@ -76,7 +142,11 @@ public class SqlStatisticsManager {
         for (Map.Entry<String, ColumnStatisticsAggregator> nameToAggr : colStats.entrySet())
             aggregatedStats.put(nameToAggr.getKey(), nameToAggr.getValue().finish());
 
-        locTblStats.put(tblId, new TableStatistics(rowCount, aggregatedStats));
+        TableStatistics tblStats = new TableStatistics(rowCnt, aggregatedStats);
+
+        locTblStats.put(tblId, tblStats);
+
+        tbl.tableStatistics(tblStats);
     }
 
     private static class ColumnStatisticsAggregator {

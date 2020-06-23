@@ -36,7 +36,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
@@ -74,8 +73,6 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -140,15 +137,11 @@ import org.apache.ignite.internal.processors.query.h2.dml.DmlUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdateMode;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStatistics;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStatisticsCollector;
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.SqlStatisticsManager;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.TablePartitionStatistics;
 import org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
@@ -329,7 +322,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Query message listener. */
     private GridMessageListener qryLsnr;
 
-    private final SqlStatisticsManager statsManager = new SqlStatisticsManager();
+    private volatile SqlStatisticsManager statsManager;
 
     /**
      * @return Kernal context.
@@ -2208,6 +2201,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         longRunningQryMgr = new LongRunningQueryManager(ctx);
 
+        statsManager = new SqlStatisticsManager(ctx);
+
         parser = new QueryParser(this, connections());
 
         schemaMgr = new SchemaManager(ctx, connections());
@@ -3273,52 +3268,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tbl == null)
             return;
 
-        GridH2RowDescriptor desc = tbl.rowDescriptor();
-
-        List<TablePartitionStatistics> tblPartStats = new ArrayList<>();
-
-        for (GridDhtLocalPartition locPart : tbl.cacheContext().topology().localPartitions()) {
-            final boolean reserved = locPart.reserve();
-
-            try {
-                if (!reserved || locPart.state() != GridDhtPartitionState.OWNING
-                    || !locPart.primary(ctx.discovery().topologyVersionEx()))
-                    continue;
-
-                long rowsCnt = 0;
-
-                List<ColumnStatisticsCollector> colStatsCollected = new ArrayList<>(tbl.getColumns().length);
-
-                for (Column col : tbl.getColumns())
-                    colStatsCollected.add(new ColumnStatisticsCollector(col, tbl::compareValues));
-
-                for (CacheDataRow row : tbl.cacheContext().offheap().partitionIterator(locPart.id())) {
-                    // TODO: verify that row belongs to the table
-
-                    rowsCnt++;
-
-                    H2Row row0 = desc.createRow(row);
-
-                    for (ColumnStatisticsCollector colStat : colStatsCollected)
-                        colStat.add(row0.getValue(colStat.col().getColumnId()));
-
-                }
-
-                long rowsCnt0 = rowsCnt;
-
-                Map<String, ColumnStatistics> colStats = colStatsCollected.stream().collect(Collectors.toMap(
-                    csc -> csc.col().getName(), csc -> csc.finish(rowsCnt0)
-                ));
-
-                tblPartStats.add(new TablePartitionStatistics(locPart.id(), true, rowsCnt, colStats));
-            }
-            finally {
-                if (reserved)
-                    locPart.release();
-            }
-        }
-
-        statsManager.updateLocalStats(tbl, tblPartStats);
+        statsManager.collectTableStatistics(tbl);
     }
 
     /** {@inheritDoc} */

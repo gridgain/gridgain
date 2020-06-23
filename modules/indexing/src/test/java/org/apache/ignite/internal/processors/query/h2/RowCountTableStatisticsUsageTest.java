@@ -19,7 +19,11 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.Arrays;
 import java.util.Collection;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -80,6 +84,17 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
 
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
+
+        try {
+            for (String tbl : Arrays.asList("BIG", "MED", "SMALL")) {
+                for (Ignite node : G.allGrids())
+                    ((IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing())
+                        .collectTableStatistics("PUBLIC", tbl.toUpperCase());
+            }
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteException(ex);
+        }
     }
 
     /**
