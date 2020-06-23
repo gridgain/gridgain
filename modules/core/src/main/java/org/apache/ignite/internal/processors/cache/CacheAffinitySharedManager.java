@@ -2911,7 +2911,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         /** */
         private final AffinityTopologyVersion topVer;
 
-        /** */
+        /** TODO Set of partitions not used. */
         private final Map<Integer, Set<Integer>> waitGrps = new ConcurrentHashMap<>();
 
         /** */
