@@ -107,9 +107,6 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
 
         for (Map.Entry<String, Object[]> entry : getSqlStatements().entrySet())
             executeSql(grid(0), entry.getKey(), entry.getValue());
-
-        grid(0).context().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, new NullPointerException()));
-
     }
 
     /** {@inheritDoc} */
