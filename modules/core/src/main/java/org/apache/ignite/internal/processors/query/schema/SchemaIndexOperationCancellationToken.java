@@ -16,9 +16,11 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Index operation cancellation token.
@@ -26,6 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SchemaIndexOperationCancellationToken {
     /** Cancel flag. */
     private final AtomicBoolean flag = new AtomicBoolean();
+
+    /** Operation future. */
+    @Nullable private volatile IgniteInternalFuture opFut;
 
     /**
      * Get cancel state.
@@ -43,6 +48,24 @@ public class SchemaIndexOperationCancellationToken {
      */
     public boolean cancel() {
         return flag.compareAndSet(false, true);
+    }
+
+    /**
+     * Set operation future.
+     *
+     * @param opFut Operation future.
+     */
+    public void operationFuture(@Nullable IgniteInternalFuture opFut) {
+        this.opFut = opFut;
+    }
+
+    /**
+     * Return operation future.
+     *
+     * @return Operation future.
+     */
+    @Nullable public IgniteInternalFuture operationFuture() {
+        return opFut;
     }
 
     /** {@inheritDoc} */
