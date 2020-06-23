@@ -80,9 +80,8 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             );
 
-        if (!isRemoteJvm(igniteInstanceName)){
+        if (!isRemoteJvm(igniteInstanceName)) {
             cfg.setGridLogger(testLog);
-
             cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
         }
 
