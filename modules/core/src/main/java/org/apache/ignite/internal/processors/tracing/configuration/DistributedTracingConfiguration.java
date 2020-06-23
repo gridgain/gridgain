@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
+import  org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor;
 
 /**
  * The wrapper of {@code HashMap<TracingConfigurationCoordinates, TracingConfigurationParameters>}
@@ -38,7 +39,8 @@ public class DistributedTracingConfiguration
     }
 
     /**
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * @return A new property that is detached from {@link DistributedConfigurationProcessor}.
+     * This means distributed updates are not accessible.
      */
     public static DistributedTracingConfiguration detachedProperty() {
         return new DistributedTracingConfiguration();

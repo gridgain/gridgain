@@ -23,6 +23,7 @@ import io.opencensus.trace.Sampler;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
+import org.apache.ignite.internal.tracing.TracingSpiType;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiConsistencyChecked;
@@ -167,6 +168,6 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
 
     /** {@inheritDoc} */
     @Override public byte type() {
-        return 1;
+        return TracingSpiType.OPEN_CENSUS_TRACING_SPI.index();
     }
 }

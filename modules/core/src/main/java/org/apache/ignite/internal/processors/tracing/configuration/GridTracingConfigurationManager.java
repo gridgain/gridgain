@@ -104,7 +104,7 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
             distributedTracingConfiguration.addListener((name, oldVal, newVal) -> {
                 synchronized (mux) {
                     if (log.isDebugEnabled())
-                        log.debug("Rolling upgrade state was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
+                        log.debug("Tracing configuration was updated [oldVal= " + oldVal + ", newVal=" + newVal + "]");
 
                     if (newVal != null && !newVal.isEmpty())
                         tracingConfiguration = newVal;

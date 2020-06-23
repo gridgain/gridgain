@@ -21,7 +21,7 @@ package org.apache.ignite.transactions;
  * This exception is usually thrown whenever commit partially succeeds.
  * Cache will still resolve this situation automatically to ensure data
  * integrity, by invalidating all values participating in this transaction
- * on remote nodes.Т
+ * on remote nodes.
  */
 public class TransactionHeuristicException extends TransactionException {
     /** */

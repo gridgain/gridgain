@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.tracing;
 
+import org.apache.ignite.internal.tracing.TracingSpiType;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiConsistencyChecked;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -62,6 +63,6 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi<NoopS
 
     /** {@inheritDoc} */
     @Override public byte type() {
-        return 0;
+        return TracingSpiType.NOOP_TRACING_SPI.index();
     }
 }
