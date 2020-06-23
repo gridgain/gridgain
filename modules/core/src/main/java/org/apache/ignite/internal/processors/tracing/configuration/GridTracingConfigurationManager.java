@@ -56,7 +56,7 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
     private volatile Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tracingConfiguration =
         DEFAULT_CONFIGURATION_MAP;
 
-    /** Mutex for updating local rolling upgrade rollingUpgradeStatus. */
+    /** Mutex for updating local tracing configuration. */
     @GridToStringExclude
     private final Object mux = new Object();
 
@@ -210,41 +210,4 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
             throw new IgniteException(warningMsg, e);
         }
     }
-
-//    /**
-//     * Checks if metastore if available and return it.
-//     *
-//     * @param returnNull If {@code true} return null if distributed metastorage isn't available,
-//     *  otherwise throw {@code IgniteException}
-//     * @param warningMsg Warning message to be logged and used in {@code IgniteException}
-//     * @param warningMsgFormatArgs Arguments to warning message.
-//     *
-//     * @return Distributed metastorage if it's available.
-//     */
-//    private DistributedMetaStorage distributedMetaStorage(boolean returnNull, String warningMsg, Object...warningMsgFormatArgs) {
-//        DistributedMetaStorage metaStore;
-//
-//        try {
-//            metaStore = ctx.distributedMetastorage();
-//        }
-//        catch (Exception e) {
-//            log.warning(String.format(warningMsg, warningMsgFormatArgs));
-//
-//            if (returnNull)
-//                return null;
-//            else
-//                throw new IgniteException(String.format(warningMsg, warningMsgFormatArgs), e);
-//        }
-//
-//        if (metaStore == null) {
-//            log.warning(String.format(warningMsg, warningMsgFormatArgs));
-//
-//            if (returnNull)
-//                return null;
-//            else
-//                throw new IgniteException(String.format(warningMsg, warningMsgFormatArgs));
-//        }
-//
-//        return metaStore;
-//    }
 }
