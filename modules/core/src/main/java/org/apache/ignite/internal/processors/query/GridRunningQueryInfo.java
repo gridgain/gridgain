@@ -164,7 +164,7 @@ public class GridRunningQueryInfo {
     /**
      * @return Query running future.
      */
-    public QueryRunningFuture runningFuture(){
+    public QueryRunningFuture runningFuture() {
         return fut;
     }
 

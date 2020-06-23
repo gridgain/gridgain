@@ -56,7 +56,7 @@ public class VisorRollingUpgradeChangeModeResult extends IgniteDataTransferObjec
     public VisorRollingUpgradeChangeModeResult(RollingUpgradeModeChangeResult changeModeRes) {
         res = changeModeRes.result();
         status = new VisorRollingUpgradeStatus(changeModeRes.status());
-        cause = (changeModeRes.cause() != null)? new VisorExceptionWrapper(changeModeRes.cause()) : null;
+        cause = (changeModeRes.cause() != null) ? new VisorExceptionWrapper(changeModeRes.cause()) : null;
     }
 
     /**

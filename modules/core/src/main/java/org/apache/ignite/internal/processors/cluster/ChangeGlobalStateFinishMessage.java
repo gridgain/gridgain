@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cluster;
 
 import java.util.UUID;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -24,6 +25,9 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 
 /**
  *
@@ -39,23 +43,30 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     private final UUID reqId;
 
     /** New cluster state. */
+    @Deprecated
     private final boolean clusterActive;
+
+    /** New cluster state. */
+    private final ClusterState state;
 
     /** State change error. */
     private Boolean transitionRes;
 
     /**
      * @param reqId State change request ID.
-     * @param clusterActive New cluster state.
+     * @param state New cluster state.
      */
     public ChangeGlobalStateFinishMessage(
         UUID reqId,
-        boolean clusterActive,
-        Boolean transitionRes) {
+        ClusterState state,
+        Boolean transitionRes
+    ) {
         assert reqId != null;
+        assert state != null;
 
         this.reqId = reqId;
-        this.clusterActive = clusterActive;
+        this.state = state;
+        this.clusterActive = ClusterState.active(state);
         this.transitionRes = transitionRes;
     }
 
@@ -68,7 +79,9 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
 
     /**
      * @return New cluster state.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean clusterActive() {
         return clusterActive;
     }
@@ -77,7 +90,24 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
      * @return Transition success status.
      */
     public boolean success() {
-        return transitionRes == null ? clusterActive : transitionRes;
+        if (transitionRes == null) {
+            if (state != null)
+                return ClusterState.active(state);
+            else {
+                // Backward compatibility.
+                return clusterActive;
+            }
+        }
+        return
+            transitionRes;
+    }
+
+    /**
+     * @return New cluster state.
+     */
+    public ClusterState state() {
+        // Backward compatibility.
+        return state != null ? state : (clusterActive ? ACTIVE : INACTIVE);
     }
 
     /** {@inheritDoc} */

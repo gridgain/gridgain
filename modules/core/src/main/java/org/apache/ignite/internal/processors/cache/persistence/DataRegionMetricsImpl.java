@@ -375,7 +375,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /**
      * Updates page read.
      */
-    public void onPageRead(){
+    public void onPageRead() {
         if (metricsEnabled)
             readPages.increment();
     }
@@ -383,7 +383,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /**
      * Updates page written.
      */
-    public void onPageWritten(){
+    public void onPageWritten() {
         if (metricsEnabled)
             writtenPages.increment();
     }

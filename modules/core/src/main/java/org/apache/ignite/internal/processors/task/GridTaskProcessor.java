@@ -90,6 +90,7 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_SIBLINGS;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK_CANCEL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SKIP_AUTH;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID;
@@ -143,6 +144,11 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
     /**
+     * {@code true} if local node has persistent region in configuration and is not a client.
+     */
+    private final boolean isPersistenceEnabled;
+
+    /**
      * @param ctx Kernal context.
      */
     public GridTaskProcessor(GridKernalContext ctx) {
@@ -155,6 +161,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         MetricRegistry sysreg = ctx.metric().registry(SYS_METRICS);
 
         execTasks = sysreg.longAdderMetric(TOTAL_EXEC_TASKS, "Total executed tasks.");
+
+        isPersistenceEnabled = !ctx.clientNode() && isPersistenceEnabled(ctx.config());
     }
 
     /** {@inheritDoc} */
@@ -353,7 +361,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      *      if value with given {@code key} doesn't exist.
      */
     @Nullable public <T> T getThreadContext(GridTaskThreadContextKey key) {
-        assert(key != null);
+        assert (key != null);
 
         Map<GridTaskThreadContextKey, Object> map = thCtx.get();
 
@@ -497,6 +505,9 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * @return Task name or {@code null} if not found.
      */
     public String resolveTaskName(int taskNameHash) {
+        assert !isPersistenceEnabled || !ctx.cache().context().database().checkpointLockIsHeldByThread() :
+            "Resolving a task name should not be executed under the checkpoint lock.";
+
         if (taskNameHash == 0)
             return null;
 
@@ -713,7 +724,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         UUID subjId = (UUID)map.get(TC_SUBJ_ID);
 
-        if(subjId == null && ctx.security().enabled())
+        if (subjId == null && ctx.security().enabled())
             subjId = ctx.security().securityContext().subject().id();
 
         if (subjId == null)
@@ -1070,7 +1081,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                             false);
                     }
                     catch (IgniteCheckedException e) {
-                        node = e instanceof  ClusterTopologyCheckedException ? null : ctx.discovery().node(nodeId);
+                        node = e instanceof ClusterTopologyCheckedException ? null : ctx.discovery().node(nodeId);
 
                         if (node != null) {
                             try {

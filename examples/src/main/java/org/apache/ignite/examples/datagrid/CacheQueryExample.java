@@ -133,7 +133,6 @@ public class CacheQueryExample {
         print("People with salaries between 0 and 1000 (queried with SCAN query): ", cache.query(scan).getAll());
     }
 
-
     /**
      * Example for TEXT queries using LUCENE-based indexing of people's resumes.
      */
@@ -151,7 +150,6 @@ public class CacheQueryExample {
         print("Following people have 'Master Degree' in their resumes: ", masters.getAll());
         print("Following people have 'Bachelor Degree' in their resumes: ", bachelors.getAll());
     }
-
 
     /**
      * Populate cache with test data.

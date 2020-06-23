@@ -367,7 +367,6 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
         assertCacheSize(insertedKeys);
     }
 
-
     /**
      * Scalable count of keys.
      */

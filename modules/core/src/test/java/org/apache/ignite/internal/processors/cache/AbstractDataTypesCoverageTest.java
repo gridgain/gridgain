@@ -67,7 +67,8 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
             @Override public String toString() {
                 return "ExpiryPolicy:60_000L, 61_000L, 62_000L";
             }
-        }};
+        }
+    };
 
     /** */
     private static final Factory[] EVICTION_FACTORIES = {

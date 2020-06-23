@@ -82,10 +82,13 @@ public class MatrixAttributeTest {
     private static class Specification {
         /** */
         private final Matrix m;
+
         /** */
         private final Class<? extends Matrix> underlyingType;
+
         /** */
         private final List<String> attrsFromUnderlying;
+
         /** */
         final String desc;
 
@@ -121,8 +124,10 @@ public class MatrixAttributeTest {
     private static class AttrCfg {
         /** */
         final String name;
+
         /** */
         final Function<Matrix, Boolean> obtain;
+
         /** */
         final List<Class> trueInTypes;
 

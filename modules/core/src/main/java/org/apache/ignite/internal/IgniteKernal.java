@@ -89,6 +89,7 @@ import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -180,6 +181,7 @@ import org.apache.ignite.internal.processors.session.GridTaskSessionProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.internal.processors.txdr.NoOpTransactionalDrProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
@@ -223,6 +225,7 @@ import org.apache.ignite.spi.IgniteSpiVersionCheckException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
@@ -1186,7 +1189,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                     provider.start(ctx.plugins().pluginContextForProvider(provider));
 
-                    startTimer.finishGlobalStage("Start '"+ provider.name() + "' plugin");
+                    startTimer.finishGlobalStage("Start '" + provider.name() + "' plugin");
                 }
 
                 // Start platform plugins.
@@ -2558,7 +2561,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             MarshallerExclusions.clearCache();
             BinaryEnumCache.clear();
 
-
             gw.writeLock();
 
             try {
@@ -3790,6 +3792,18 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** {@inheritDoc} */
+    @Override public @NotNull TracingConfigurationManager tracingConfiguration() {
+        guard();
+
+        try {
+            return ctx.tracing().configuration();
+        }
+        finally {
+            unguard();
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public Collection<MemoryMetrics> memoryMetrics() {
         return DataRegionMetricsAdapter.collectionOf(dataRegionMetrics());
     }
@@ -4428,6 +4442,23 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             mreg.reset();
         else if (log.isInfoEnabled())
             log.info("\"" + registry + "\" not found.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void clusterState(String state) {
+        ClusterState newState = ClusterState.valueOf(state);
+
+        cluster().state(newState);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String clusterState() {
+        return ctx.state().clusterState().state().toString();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long lastClusterStateChangeTime() {
+        return ctx.state().lastStateChangeTime();
     }
 
     /** {@inheritDoc} */

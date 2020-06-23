@@ -66,15 +66,16 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheRe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheScanQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStateRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodeIdsRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodesDetailsRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodesEndpointsRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalChangeStateRequest;
+import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalGetStateRequest;
 import org.apache.ignite.internal.processors.platform.client.compute.ClientExecuteTaskRequest;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxEndRequest;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxStartRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStateRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalChangeStateRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalGetStateRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodeIdsRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodesDetailsRequest;
 
 /**
  * Thin client message parser.
@@ -237,6 +238,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
     /** */
     private static final short OP_CLUSTER_GROUP_GET_NODE_INFO = 5101;
+
+    /** */
+    private static final short OP_CLUSTER_GROUP_GET_NODE_ENDPOINTS = 5102;
 
     /* Compute operations. */
     /** */
@@ -418,6 +422,7 @@ public class ClientMessageParser implements ClientListenerMessageParser {
                 return new ClientCacheSqlFieldsQueryRequest(reader);
 
             case OP_QUERY_SQL_FIELDS_CURSOR_GET_PAGE:
+                //noinspection DuplicateBranchesInSwitch
                 return new ClientCacheQueryNextPageRequest(reader);
 
             case OP_TX_START:
@@ -443,6 +448,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_CLUSTER_GROUP_GET_NODE_INFO:
                 return new ClientClusterGroupGetNodesDetailsRequest(reader);
+
+            case OP_CLUSTER_GROUP_GET_NODE_ENDPOINTS:
+                return new ClientClusterGroupGetNodesEndpointsRequest(reader);
 
             case OP_COMPUTE_TASK_EXECUTE:
                 return new ClientExecuteTaskRequest(reader);

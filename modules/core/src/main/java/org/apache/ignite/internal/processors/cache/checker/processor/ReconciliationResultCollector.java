@@ -353,7 +353,7 @@ public interface ReconciliationResultCollector {
         private final Map<String, String> tmpFiles = new ConcurrentHashMap<>();
 
         /** Mapping of node Ids to consistent Ids. */
-        private final Map<UUID, String> nodesIdsToConsistentIdsMap =  ignite.cluster().nodes().stream()
+        private final Map<UUID, String> nodesIdsToConsistentIdsMap = ignite.cluster().nodes().stream()
             .collect(Collectors.toMap(ClusterNode::id, n -> n.consistentId().toString()));
 
         /** Session identifier. */

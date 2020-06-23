@@ -122,7 +122,7 @@ public class IgniteSqlBigIntegerKeyTest extends AbstractIndexingCommonTest {
      */
     public static class Student {
         /** */
-        @QuerySqlField(index=true)
+        @QuerySqlField(index = true)
         BigInteger id;
 
         /** */

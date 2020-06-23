@@ -83,6 +83,7 @@ public class ToStringDumpProcessor {
     private static class ToStringHelper implements DumpProcessor {
         /** */
         private final Function<Integer, String> strucutreIdMapFunc;
+
         /** */
         private final StringBuilder sb;
 
@@ -95,6 +96,7 @@ public class ToStringDumpProcessor {
         /** Helper class for track lock/unlock count. */
         class LockState {
             int readlock;
+
             int writelock;
         }
 

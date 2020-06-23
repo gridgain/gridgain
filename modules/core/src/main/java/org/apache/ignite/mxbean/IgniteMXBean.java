@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.management.JMException;
+import org.apache.ignite.cluster.ClusterState;
 
 /**
  * This interface defines JMX view on kernal.
@@ -515,4 +516,32 @@ public interface IgniteMXBean {
     @MXBeanParametersNames("registry")
     @MXBeanParametersDescriptions("Metrics registry.")
     public void resetMetrics(String registry);
+
+    /**
+     * Checks cluster state.
+     *
+     * @return String representation of current cluster state.
+     * See {@link ClusterState}.
+     */
+    @MXBeanDescription("Checks cluster state.")
+    public String clusterState();
+
+    /**
+     * Changes current cluster state.
+     *
+     * @param state String representation of new cluster state.
+     * See {@link ClusterState}
+     */
+    @MXBeanDescription("Changes current cluster state.")
+    @MXBeanParametersNames("state")
+    @MXBeanParametersDescriptions("New cluster state.")
+    public void clusterState(String state);
+
+    /**
+     * Gets last cluster state change operation.
+     *
+     * @return Unix time of last cluster state change operation.
+     */
+    @MXBeanDescription("Unix time of last cluster state change operation.")
+    public long lastClusterStateChangeTime();
 }

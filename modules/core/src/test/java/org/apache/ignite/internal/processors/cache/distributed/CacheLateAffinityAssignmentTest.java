@@ -482,7 +482,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         int nodes = 1;
 
-        for (int i = 0;  i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             log.info("Iteration [iter=" + i + ", topVer=" + topVer + ']');
 
             topVer++;
@@ -985,7 +985,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
             final int NODES = 5;
 
-            for (int i = 0 ; i < NODES; i++)
+            for (int i = 0; i < NODES; i++)
                 startServer(i, i + 1);
 
             int majorVer = NODES;
@@ -1393,6 +1393,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         Ignite ignite3 = startServer(3, 4);
 
+        // Wait for topVer=(4,1)
+        awaitPartitionMapExchange();
+
         TestRecordingCommunicationSpi spi0 =
             (TestRecordingCommunicationSpi) ignite0.configuration().getCommunicationSpi(), spi2, spi3;
 
@@ -1563,6 +1566,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
     public void testDelayAssignmentAffinityChanged() throws Exception {
         Ignite ignite0 = startServer(0, 1);
 
+        for (int i = 0; i < 1024; i++)
+            ignite0.cache(CACHE_NAME1).put(i, i);
+
         DiscoverySpiTestListener lsnr = new DiscoverySpiTestListener();
 
         ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi()).setInternalListener(lsnr);
@@ -1595,6 +1601,10 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         commSpi0.stopBlock();
 
         checkAffinity(4, topVer(4, 1), true);
+
+        awaitPartitionMapExchange(true, true, null, false);
+
+        assertPartitionsSame(idleVerify(grid(0), CACHE_NAME1));
     }
 
     /**
@@ -2159,7 +2169,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             }
 
             //Ensure exchanges merge.
-            spiC = igniteInstanceName ->  testSpis[getTestIgniteInstanceIndex(igniteInstanceName)];
+            spiC = igniteInstanceName -> testSpis[getTestIgniteInstanceIndex(igniteInstanceName)];
 
             GridTestUtils.runAsync(() -> {
                 try {
@@ -2489,7 +2499,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         Ignite node = grid(name);
 
-        assert  node != null;
+        assert node != null;
 
         return node;
     }
@@ -2612,7 +2622,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      * @return Exchange future.
      */
     private IgniteInternalFuture<?> affinityReadyFuture(AffinityTopologyVersion topVer, Ignite node) {
-        IgniteInternalFuture<?> fut =  ((IgniteKernal)node).context().cache().context().exchange().
+        IgniteInternalFuture<?> fut = ((IgniteKernal)node).context().cache().context().exchange().
             affinityReadyFuture(topVer);
 
         return fut != null ? fut : new GridFinishedFuture<>();

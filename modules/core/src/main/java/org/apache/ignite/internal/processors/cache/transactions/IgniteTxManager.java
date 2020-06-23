@@ -1554,19 +1554,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             // 6. Remove obsolete entries from cache.
             removeObsolete(tx);
 
-            // 7. Assign transaction number at the end of transaction.
-            tx.endVersion(cctx.versions().next(tx.topologyVersion().topologyVersion()));
-
-            // 8. Remove from per-thread storage.
+            // 7. Remove from per-thread storage.
             clearThreadMap(tx);
 
-            // 9. Unregister explicit locks.
+            // 8. Unregister explicit locks.
             if (!tx.alternateVersions().isEmpty()) {
                 for (GridCacheVersion ver : tx.alternateVersions())
                     idMap.remove(ver);
             }
 
-            // 10. Remove Near-2-DHT mappings.
+            // 9. Remove Near-2-DHT mappings.
             if (tx instanceof GridCacheMappedVersion) {
                 GridCacheVersion mapped = ((GridCacheMappedVersion)tx).mappedVersion();
 
@@ -1574,10 +1571,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     mappedVers.remove(mapped);
             }
 
-            // 11. Clear context.
+            // 10. Clear context.
             resetContext();
 
-            // 12. Update metrics.
+            // 11. Update metrics.
             if (!tx.dht() && tx.local()) {
                 if (!tx.system())
                     cctx.txMetrics().onTxCommit();
@@ -1588,7 +1585,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             if (slowTxWarnTimeout > 0 && tx.local() &&
                 U.currentTimeMillis() - tx.startTime() > slowTxWarnTimeout)
                 U.warn(log, "Slow transaction detected [tx=" + tx +
-                    ", slowTxWarnTimeout=" + slowTxWarnTimeout + ']') ;
+                    ", slowTxWarnTimeout=" + slowTxWarnTimeout + ']');
 
             if (log.isDebugEnabled())
                 log.debug("Committed from TM [locNodeId=" + cctx.localNodeId() + ", tx=" + tx + ']');
@@ -2084,7 +2081,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         scheduleDumpTask(
             IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-            () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpsDumpTimeout),
+            () -> cctx.kernalContext().closure().runLocalSafe(
+                () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpsDumpTimeout)),
             longOpsDumpTimeout);
     }
 
@@ -2399,7 +2397,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param failedNodeIds Failed nodes IDs.
      */
     public void commitIfPrepared(IgniteInternalTx tx, Set<UUID> failedNodeIds) {
-        assert tx instanceof GridDhtTxLocal || tx instanceof GridDhtTxRemote  : tx;
+        assert tx instanceof GridDhtTxLocal || tx instanceof GridDhtTxRemote : tx;
         assert !F.isEmpty(tx.transactionNodes()) : tx;
         assert tx.nearXidVersion() != null : tx;
 
@@ -2919,7 +2917,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             throw new IgniteException(errMsgConstructor.apply());
     }
 
-
     /**
      * Sets if dump requests from local node to near node are allowed, when long running transaction
      * is found. If allowed, the compute request to near node will be made to get thread dump of transaction
@@ -3164,6 +3161,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private final class TxRecoveryInitRunnable implements GridPlainRunnable {
         /** */
         private final ClusterNode node;
+
         /** */
         private final MvccCoordinator mvccCrd;
 
@@ -3419,7 +3417,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 try {
                     processFailedMessage(nodeId, cacheMsg, err);
                 }
-                catch(Throwable e){
+                catch (Throwable e) {
                     U.error(log, "Failed to process message [senderId=" + nodeId +
                         ", messageType=" + cacheMsg.getClass() + ']', e);
 

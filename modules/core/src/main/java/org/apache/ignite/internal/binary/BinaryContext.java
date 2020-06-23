@@ -1172,7 +1172,7 @@ public class BinaryContext {
      * @throws BinaryObjectException In case of error.
      */
     public BinaryType metadata(int typeId, int schemaId) throws BinaryObjectException {
-        return metaHnd != null ? metaHnd.metadata(typeId, schemaId): null;
+        return metaHnd != null ? metaHnd.metadata(typeId, schemaId) : null;
     }
 
     /**
@@ -1318,6 +1318,15 @@ public class BinaryContext {
         }
 
         U.clearClassCache(ldr);
+    }
+
+    /**
+     * @param typeId Type ID.
+     */
+    public void removeType(int typeId) {
+        synchronized (this) {
+            schemas.remove(typeId);
+        }
     }
 
     /**

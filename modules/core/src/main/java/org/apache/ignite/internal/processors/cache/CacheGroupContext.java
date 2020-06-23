@@ -996,7 +996,6 @@ public class CacheGroupContext {
         this.contQryCaches = contQryCaches;
     }
 
-
     /**
      * Obtain the group listeners lock. Write lock should be held to register/unregister listeners. Read lock should be
      * hel for CQ listeners notification.
@@ -1227,6 +1226,8 @@ public class CacheGroupContext {
 
     /**
      * Local WAL enabled flag.
+     *
+     * @return {@code False} if a durability (WAL logging) is disabled for a group until rebalancing has finished.
      */
     public boolean localWalEnabled() {
         return localWalEnabled;
@@ -1244,9 +1245,10 @@ public class CacheGroupContext {
      */
     public void globalWalEnabled(boolean enabled) {
         if (globalWalEnabled != enabled) {
-            if (log.isInfoEnabled())
-                log.info("Global WAL state for group=" + cacheOrGroupName() +
-                    " changed from " + globalWalEnabled + " to " + enabled);
+            if (log.isInfoEnabled()) {
+                log.info("Global state for group durability has changed [name=" + cacheOrGroupName() +
+                    ", enabled=" + enabled + ']');
+            }
 
             persistGlobalWalState(enabled);
 
@@ -1259,15 +1261,21 @@ public class CacheGroupContext {
      * @param persist If {@code true} then flag state will be persisted into metastorage.
      */
     public void localWalEnabled(boolean enabled, boolean persist) {
-        if (localWalEnabled != enabled){
+        if (localWalEnabled != enabled) {
             if (log.isInfoEnabled())
-                log.info("Local WAL state for group=" + cacheOrGroupName() +
-                    " changed from " + localWalEnabled + " to " + enabled);
-
-            if (persist)
-                persistLocalWalState(enabled);
+                log.info("Local state for group durability has changed [name=" + cacheOrGroupName() +
+                    ", enabled=" + enabled + ']');
 
             localWalEnabled = enabled;
+        }
+
+        if (persist) {
+            if (log.isInfoEnabled()) {
+                log.info("Local state for group durability has been logged to WAL [name=" + cacheOrGroupName() +
+                    ", enabled=" + enabled + ']');
+            }
+
+            persistLocalWalState(enabled);
         }
     }
 

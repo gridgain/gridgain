@@ -46,6 +46,7 @@ import static org.mockito.Matchers.anyString;
 public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     /** Server nodes count. */
     public static final int SERVER_NODES = 3;
+
     /** */
     private String updateStatusParams;
 

@@ -83,7 +83,7 @@ public class ClosureServiceClientsNodesTest extends GridCommonAbstractTest {
                 srvNames.add(getTestIgniteInstanceName(i));
         }
 
-        for (int i = 0 ; i < NODES_CNT; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             log.info("Iteration: " + i);
 
             Ignite ignite = grid(i);
@@ -111,7 +111,7 @@ public class ClosureServiceClientsNodesTest extends GridCommonAbstractTest {
      */
     @Test
     public void testClientClosure() throws Exception {
-        for (int i = 0 ; i < NODES_CNT; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             log.info("Iteration: " + i);
 
             Ignite ignite = grid(i);
@@ -139,7 +139,7 @@ public class ClosureServiceClientsNodesTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCustomClosure() throws Exception {
-        for (int i = 0 ; i < NODES_CNT; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             log.info("Iteration: " + i);
 
             Ignite ignite = grid(i);
@@ -165,7 +165,7 @@ public class ClosureServiceClientsNodesTest extends GridCommonAbstractTest {
     public void testDefaultService() throws Exception {
         UUID clientNodeId = grid(CLIENT_IDX).cluster().localNode().id();
 
-        for (int i = 0 ; i < NODES_CNT; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             log.info("Iteration: " + i);
 
             final Ignite ignite = grid(i);
@@ -207,7 +207,7 @@ public class ClosureServiceClientsNodesTest extends GridCommonAbstractTest {
     public void testClientService() throws Exception {
         UUID clientNodeId = grid(CLIENT_IDX).cluster().localNode().id();
 
-        for (int i = 0 ; i < NODES_CNT; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             log.info("Iteration: " + i);
 
             final Ignite ignite = grid(i);

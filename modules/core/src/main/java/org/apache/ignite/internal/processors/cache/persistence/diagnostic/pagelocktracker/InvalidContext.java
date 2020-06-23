@@ -22,6 +22,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagel
 public class InvalidContext<T extends PageLockDump> {
     /** */
     public final String msg;
+
     /** */
     public final T dump;
 

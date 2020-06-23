@@ -33,7 +33,7 @@ public class GridDiscoveryManagerChangeCoordinatorTest extends GridCommonAbstrac
     private final ListeningTestLogger listeningLog = new ListeningTestLogger(false, log);
 
     /** */
-    private static final String CRD_CHANGE_MSG  = "Coordinator changed";
+    private static final String CRD_CHANGE_MSG = "Coordinator changed";
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {

@@ -163,7 +163,7 @@ public class JdbcThinMissingLongArrayResultsTest extends JdbcThinAbstractSelfTes
 
                 int cols = rs.getMetaData().getColumnCount();
 
-                while(rs.next()) {
+                while (rs.next()) {
                     StringBuilder sb = new StringBuilder();
 
                     sb.append(rs.getObject(1).toString());

@@ -24,7 +24,6 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
-
 /**
  * Represents single result set.
  */

@@ -181,7 +181,6 @@ public class IgniteChangeGlobalStateDataStructureTest extends IgniteChangeGlobal
             }
         });
 
-
         assertEquals(4, latchAct1.count());
         assertEquals(4, latchAct2.count());
         assertEquals(4, latchAct3.count());
@@ -205,7 +204,7 @@ public class IgniteChangeGlobalStateDataStructureTest extends IgniteChangeGlobal
      *
      */
     @Test
-    public void testDeActivateAndActivateAtomicSequence(){
+    public void testDeActivateAndActivateAtomicSequence() {
         String seqName = "mySeq";
 
         Ignite ig1 = primary(0);

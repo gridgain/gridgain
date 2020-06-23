@@ -98,6 +98,8 @@ public class IgniteCacheAffinitySelfTest extends IgniteCacheAbstractTest {
 
         GRID_CNT += 1;
 
+        awaitPartitionMapExchange();
+
         checkAffinity();
     }
 

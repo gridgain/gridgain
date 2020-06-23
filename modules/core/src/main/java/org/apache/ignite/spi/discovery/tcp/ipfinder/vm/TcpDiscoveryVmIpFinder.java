@@ -214,40 +214,44 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
         if (tokens.length == 2) {
             String addrStr = tokens[0];
             String portStr = tokens[1];
+            int port1, port2;
 
             if (portStr.contains("..")) {
+                port1 = Integer.parseInt(portStr.substring(0, portStr.indexOf("..")));
+                port2 = Integer.parseInt(portStr.substring(portStr.indexOf("..") + 2, portStr.length()));
+            }
+            else
+                port1 = port2 = Integer.parseInt(portStr);
+
+            if ((port1 != port2 && port2 < port1) || port1 <= 0 || port2 <= 0)
+                throw new IgniteSpiException(errMsg);
+
+            try {
+                Collection<InetSocketAddress> res = new ArrayList<>();
+
+                InetAddress[] inetAddresses;
+
                 try {
-                    int port1 = Integer.parseInt(portStr.substring(0, portStr.indexOf("..")));
-                    int port2 = Integer.parseInt(portStr.substring(portStr.indexOf("..") + 2, portStr.length()));
-
-                    if (port2 < port1 || port1 == port2 || port1 <= 0 || port2 <= 0)
-                        throw new IgniteSpiException(errMsg);
-
-                    Collection<InetSocketAddress> res = new ArrayList<>();
-
-                    InetAddress[] inetAddresses = InetAddress.getAllByName(addrStr);
-
-                    for (InetAddress curAddr : inetAddresses) {
-                        // Upper bound included.
-                        for (int i = port1; i <= port2; i++)
-                            res.add(new InetSocketAddress(curAddr, i));
-                    }
+                    inetAddresses = InetAddress.getAllByName(addrStr);
+                }
+                catch (UnknownHostException e) {
+                    //ignoring
+                    for (int i = port1; i <= port2; i++)
+                        res.add(new InetSocketAddress(addrStr, i));
 
                     return res;
                 }
-                catch (IllegalArgumentException | UnknownHostException e) {
-                    throw new IgniteSpiException(errMsg, e);
-                }
-            }
-            else {
-                try {
-                    int port = Integer.parseInt(portStr);
 
-                    return Collections.singleton(new InetSocketAddress(addrStr, port));
+                for (InetAddress curAddr : inetAddresses) {
+                    // Upper bound included.
+                    for (int i = port1; i <= port2; i++)
+                        res.add(new InetSocketAddress(curAddr, i));
                 }
-                catch (IllegalArgumentException e) {
-                    throw new IgniteSpiException(errMsg, e);
-                }
+
+                return res;
+            }
+            catch (IllegalArgumentException e) {
+                throw new IgniteSpiException(errMsg, e);
             }
         }
         else

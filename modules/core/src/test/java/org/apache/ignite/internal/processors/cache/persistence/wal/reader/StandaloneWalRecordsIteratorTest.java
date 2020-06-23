@@ -382,7 +382,7 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
             createWalIterator(dir, new FileWALPointer(lBound.index() - 1, 0, 0), hBound, true);
 
             return 0;
-        } , IgniteCheckedException.class, null);
+        }, IgniteCheckedException.class, null);
 
         //noinspection ThrowableNotThrown
         GridTestUtils.assertThrows(log, () -> {
@@ -451,7 +451,6 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
         return new IgniteWalIteratorFactory(log).iterator(params.filesOrDirs(walDir));
     }
 
-
     /**
      * @param walDir Wal directory.
      */
@@ -519,6 +518,7 @@ public class StandaloneWalRecordsIteratorTest extends GridCommonAbstractTest {
     private static class CountedFileIO extends RandomAccessFileIO {
         /** Wal open counter. */
         private static final AtomicInteger WAL_OPEN_COUNTER = new AtomicInteger();
+
         /** Wal close counter. */
         private static final AtomicInteger WAL_CLOSE_COUNTER = new AtomicInteger();
 
