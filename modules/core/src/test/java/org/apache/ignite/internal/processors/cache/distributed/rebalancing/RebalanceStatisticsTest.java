@@ -494,7 +494,6 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         if (nonNull(afterStop))
             afterStop.run();
 
-
         IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(nodeId));
 
         TestRecordingCommunicationSpi spi = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
