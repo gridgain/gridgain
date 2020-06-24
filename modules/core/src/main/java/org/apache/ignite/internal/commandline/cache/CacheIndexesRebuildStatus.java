@@ -143,7 +143,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
             return;
         }
 
-        for(Map.Entry<UUID, Set<IndexRebuildStatusInfoContainer>> entry: res.entrySet()) {
+        for (Map.Entry<UUID, Set<IndexRebuildStatusInfoContainer>> entry: res.entrySet()) {
             logger.info("");
 
             entry.getValue().stream()

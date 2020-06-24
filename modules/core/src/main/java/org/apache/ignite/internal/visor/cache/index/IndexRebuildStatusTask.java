@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * Task that collects caches that have index rebuild in progress.
  */
 @GridInternal
-public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg, Map<UUID, Set<IndexRebuildStatusInfoContainer>>, Set<IndexRebuildStatusInfoContainer> > {
+public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg, Map<UUID, Set<IndexRebuildStatusInfoContainer>>, Set<IndexRebuildStatusInfoContainer>> {
     /** */
     private static final long serialVersionUID = 0L;
 

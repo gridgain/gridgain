@@ -130,8 +130,8 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
 
             return new IndexForceRebuildTaskRes(cachesWithStartedRebuild, rebuildIdxCaches, notFoundCaches);
         }
+
         /**
-         *
          * Triggers force rebuild of indexes in all caches from {@code grpNames}.
          *
          * @param grpNames Set of cache groups names.
