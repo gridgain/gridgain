@@ -70,7 +70,6 @@ public enum ShutdownPolicy {
         return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
     }
 
-
     /**
      * Return shutdown policy matching to string.
      *

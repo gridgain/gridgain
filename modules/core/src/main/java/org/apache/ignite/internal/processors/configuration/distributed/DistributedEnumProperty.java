@@ -17,9 +17,7 @@
 package org.apache.ignite.internal.processors.configuration.distributed;
 
 import java.io.Serializable;
-import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteClosure;
