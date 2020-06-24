@@ -80,7 +80,7 @@ public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithP
         policy = ShutdownPolicy.IMMEDIATE;
 
         GridTestUtils.assertThrowsAnyCause(log, () -> startGrid(1), IgniteCheckedException.class,
-            "Remote node hase shutdoun policy different from local local");
+            "Remote node has shutdoun policy different from local local");
     }
 
     /**
