@@ -72,10 +72,10 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
             INDEX_LIST,
             desc,
             map,
-            optional(NODE_ID),
-            optional(GRP_NAME),
-            optional(CACHE_NAME),
-            optional(IDX_NAME)
+            optional(NODE_ID + " nodeId"),
+            optional(GRP_NAME + " grpRegExp"),
+            optional(CACHE_NAME + " cacheRegExp"),
+            optional(IDX_NAME + " idxNameRegExp")
         );
     }
 

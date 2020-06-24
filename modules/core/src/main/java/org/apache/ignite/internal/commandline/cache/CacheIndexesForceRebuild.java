@@ -65,7 +65,14 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
         map.put(CACHE_NAMES.argName(), "Comma-separated list of cache names for which indexes should be rebuilt.");
         map.put(GROUP_NAMES.argName(), "Comma-separated list of cache group names for which indexes should be rebuilt.");
 
-        usageCache(logger, INDEX_FORCE_REBUILD, desc, map, NODE_ID.argName(), or(CACHE_NAME, GRP_NAME));
+        usageCache(
+            logger,
+            INDEX_FORCE_REBUILD,
+            desc,
+            map,
+            NODE_ID.argName() + " nodeId",
+            or(CACHE_NAME + " cacheName1,...cacheNameN", GRP_NAME + " groupName1,...groupNameN")
+        );
     }
 
     /** {@inheritDoc} */

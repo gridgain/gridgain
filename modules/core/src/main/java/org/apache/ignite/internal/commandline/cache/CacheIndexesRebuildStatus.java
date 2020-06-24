@@ -61,7 +61,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
             INDEX_REBUILD_STATUS,
             desc,
             map,
-            optional(NODE_ID)
+            optional(NODE_ID + " nodeId")
         );
     }
 
@@ -148,14 +148,14 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
 
             entry.getValue().stream()
                 .sorted(IndexRebuildStatusInfoContainer.comparator())
-                .forEach(container -> logger.info(constructCacheOuptutString(entry.getKey(), container)));
+                .forEach(container -> logger.info(constructCacheOutputString(entry.getKey(), container)));
         }
 
         logger.info("");
     }
 
     /** */
-    private String constructCacheOuptutString(UUID nodeId, IndexRebuildStatusInfoContainer container) {
+    private String constructCacheOutputString(UUID nodeId, IndexRebuildStatusInfoContainer container) {
         return "node_id=" + nodeId + ", " + container.toString();
     }
 

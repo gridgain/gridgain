@@ -40,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * Task that collects caches that have index rebuild in progress.
  */
 @GridInternal
-public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg, IndexRebuildStatusTask.TaskRes, Set<IndexRebuildStatusInfoContainer> > {
+public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg, Map<UUID, Set<IndexRebuildStatusInfoContainer>>, Set<IndexRebuildStatusInfoContainer> > {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -50,10 +50,10 @@ public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatu
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override protected TaskRes reduce0(List<ComputeJobResult> results)
+    @Nullable @Override protected Map<UUID, Set<IndexRebuildStatusInfoContainer>> reduce0(List<ComputeJobResult> results)
         throws IgniteException
     {
-        TaskRes reduceRes = (TaskRes)new HashMap<UUID, Set<IndexRebuildStatusInfoContainer>>();
+        Map<UUID, Set<IndexRebuildStatusInfoContainer>> reduceRes = new HashMap<>();
 
         for (ComputeJobResult jobResult: results) {
             if (jobResult.<Set<IndexRebuildStatusInfoContainer>>getData().isEmpty())
@@ -108,9 +108,4 @@ public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatu
             return res;
         }
     }
-
-    /**
-     * Interface ref for convenience.
-     */
-    interface TaskRes<K, V> extends Map<UUID, Set<IndexRebuildStatusInfoContainer>> {}
 }

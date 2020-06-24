@@ -50,8 +50,8 @@ public class IndexForceRebuildTaskRes extends IgniteDataTransferObject {
     public IndexForceRebuildTaskRes(
         Set<IndexRebuildStatusInfoContainer> cachesWithStartedRebuild,
         Set<IndexRebuildStatusInfoContainer> cachesWithRebuildInProgress,
-        Set<String> notFoundCacheNames)
-    {
+        Set<String> notFoundCacheNames
+    ) {
         this.cachesWithStartedRebuild = cachesWithStartedRebuild;
         this.cachesWithRebuildInProgress = cachesWithRebuildInProgress;
         this.notFoundCacheNames = notFoundCacheNames;
