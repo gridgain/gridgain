@@ -23,6 +23,7 @@ import java.util.Collection;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Metrics snapshot.
@@ -318,6 +319,9 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
      */
     private boolean isValidForWriting;
 
+    /** Tx key collisions with appropriate queue size string representation. */
+    private String txKeyCollisions;
+
     /**
      * Default constructor.
      */
@@ -427,6 +431,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         rebalanceStartTime = m.rebalancingStartTime();
         rebalanceFinishTime = m.estimateRebalancingFinishTime();
         rebalanceClearingPartitionsLeft = m.getRebalanceClearingPartitionsLeft();
+        txKeyCollisions = m.getTxKeyCollisions();
     }
 
     /**
@@ -1043,6 +1048,11 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return txKeyCollisions;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheMetricsSnapshotV2.class, this);
     }
@@ -1123,6 +1133,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         out.writeBoolean(isEmpty);
         out.writeInt(size);
         out.writeInt(keySize);
+        U.writeLongString(out, txKeyCollisions);
     }
 
     /** {@inheritDoc} */
@@ -1201,5 +1212,6 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         isEmpty = in.readBoolean();
         size = in.readInt();
         keySize = in.readInt();
+        txKeyCollisions = U.readLongString(in);
     }
 }

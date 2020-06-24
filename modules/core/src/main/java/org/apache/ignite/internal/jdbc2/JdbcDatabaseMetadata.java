@@ -720,7 +720,7 @@ public class JdbcDatabaseMetadata implements DatabaseMetaData {
 
         boolean areTypesValid = false;
 
-        if(tblTypes == null)
+        if (tblTypes == null)
             areTypesValid = true;
         else {
             for (String type : tblTypes) {

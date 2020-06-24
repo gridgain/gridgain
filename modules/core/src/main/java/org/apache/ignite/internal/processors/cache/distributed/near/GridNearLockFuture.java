@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlock;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
+import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -700,8 +701,10 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
      * Cancellation has special meaning for lock futures. It's called then lock must be released on rollback.
      */
     @Override public boolean cancel() {
-        if (inTx())
-            onError(tx.rollbackException());
+        if (inTx()) {
+            onError(tx.commitError() != null ?
+                new IgniteTxRollbackCheckedException(tx.commitError()) : tx.rollbackException());
+        }
 
         return onComplete(false, true);
     }
@@ -843,7 +846,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
 
         if (topVer != null) {
             for (GridDhtTopologyFuture fut : cctx.shared().exchange().exchangeFutures()) {
-                if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)){
+                if (fut.exchangeDone() && fut.topologyVersion().equals(topVer)) {
                     Throwable err = null;
 
                     // Before cache validation, make sure that this topology future is already completed.
@@ -854,7 +857,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
                         err = fut.error();
                     }
 
-                    err = (err == null)? fut.validateCache(cctx, recovery, read, null, keys): err;
+                    err = (err == null) ? fut.validateCache(cctx, recovery, read, null, keys) : err;
 
                     if (err != null) {
                         onDone(err);
@@ -894,8 +897,8 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
         try {
             if (cctx.topology().stopping()) {
                 onDone(
-                    cctx.shared().cache().isCacheRestarting(cctx.name())?
-                        new IgniteCacheRestartingException(cctx.name()):
+                    cctx.shared().cache().isCacheRestarting(cctx.name()) ?
+                        new IgniteCacheRestartingException(cctx.name()) :
                         new CacheStoppedException(cctx.name()));
 
                 return;

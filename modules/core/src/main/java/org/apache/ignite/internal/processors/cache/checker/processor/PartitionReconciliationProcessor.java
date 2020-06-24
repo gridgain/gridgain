@@ -157,7 +157,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
         registerListener(workloadTracker.andThen(evtLsnr));
 
-        collector = (compact)?
+        collector = (compact) ?
             new ReconciliationResultCollector.Compact(ignite, log, sesId, includeSensitive) :
             new ReconciliationResultCollector.Simple(ignite, log, includeSensitive);
     }

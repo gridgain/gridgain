@@ -72,7 +72,6 @@ public class ParamGrid {
         return this;
     }
 
-
     /** Returns the Hyper-parameter tuning strategy. */
     public HyperParameterTuningStrategy getHyperParameterTuningStrategy() {
         return paramSearchStgy;
@@ -91,7 +90,7 @@ public class ParamGrid {
     /**
      * Prepare data for hyper-parameter tuning.
      */
-    public List<Double[]> getParamRawData () {
+    public List<Double[]> getParamRawData() {
         List<Double[]> res = new ArrayList<>();
         paramValuesByParamIdx.forEach(res::add);
         return res;

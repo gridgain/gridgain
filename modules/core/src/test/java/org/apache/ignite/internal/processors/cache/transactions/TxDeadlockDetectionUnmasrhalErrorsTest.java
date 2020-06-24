@@ -176,7 +176,7 @@ public class TxDeadlockDetectionUnmasrhalErrorsTest extends GridCommonAbstractTe
 
             assertTrue(deadlock.get());
 
-            for (int i = 0; i < NODES_CNT ; i++) {
+            for (int i = 0; i < NODES_CNT; i++) {
                 Ignite ignite = ignite(i);
 
                 IgniteTxManager txMgr = ((IgniteKernal)ignite).context().cache().context().tm();
@@ -197,8 +197,6 @@ public class TxDeadlockDetectionUnmasrhalErrorsTest extends GridCommonAbstractTe
         }
     }
 
-
-
     /**
      * @param ignite Ignite.
      * @param name Name.
@@ -213,6 +211,4 @@ public class TxDeadlockDetectionUnmasrhalErrorsTest extends GridCommonAbstractTe
 
         return ignite.getOrCreateCache(ccfg);
     }
-
-
 }

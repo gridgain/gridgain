@@ -278,7 +278,7 @@ public class IgniteCacheJoinPartitionedAndReplicatedCollocationTest extends Abst
         if (h2DataInserted)
             return;
 
-        try(PreparedStatement st = conn.prepareStatement("insert into \"person\".PERSON " +
+        try (PreparedStatement st = conn.prepareStatement("insert into \"person\".PERSON " +
             "(_key, _val, name) values(?, ?, ?)")) {
             st.setObject(1, key);
             st.setObject(2, p);
@@ -300,7 +300,7 @@ public class IgniteCacheJoinPartitionedAndReplicatedCollocationTest extends Abst
         if (h2DataInserted)
             return;
 
-        try(PreparedStatement st = conn.prepareStatement("insert into \"acc\".ACCOUNT " +
+        try (PreparedStatement st = conn.prepareStatement("insert into \"acc\".ACCOUNT " +
             "(_key, _val, personId, name) values(?, ?, ?, ?)")) {
             st.setObject(1, key);
             st.setObject(2, a);

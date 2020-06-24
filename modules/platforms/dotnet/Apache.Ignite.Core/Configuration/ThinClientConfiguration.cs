@@ -29,11 +29,17 @@ namespace Apache.Ignite.Core.Configuration
         public const int DefaultMaxActiveTxPerConnection = 100;
 
         /// <summary>
+        /// Default limit of active compute tasks per connection.
+        /// </summary>
+        public const int DefaultMaxActiveComputeTasksPerConnection = 0;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ThinClientConfiguration"/> class.
         /// </summary>
         public ThinClientConfiguration()
         {
             MaxActiveTxPerConnection = DefaultMaxActiveTxPerConnection;
+            MaxActiveComputeTasksPerConnection = DefaultMaxActiveComputeTasksPerConnection;
         }
 
         /// <summary>
@@ -41,5 +47,12 @@ namespace Apache.Ignite.Core.Configuration
         /// </summary>
         [DefaultValue(DefaultMaxActiveTxPerConnection)]
         public int MaxActiveTxPerConnection { get; set; }
+
+        /// <summary>
+        /// Gets or sets active compute tasks per connection limit.
+        /// Value <c>0</c> means that compute grid functionality is disabled for thin clients.
+        /// </summary>
+        [DefaultValue(DefaultMaxActiveComputeTasksPerConnection)]
+        public int MaxActiveComputeTasksPerConnection { get; set; }
     }
 }

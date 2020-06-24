@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
@@ -138,6 +139,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     /** Cache object processor to reading {@link DataEntry DataEntries}. */
     protected final IgniteCacheObjectProcessor co;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /** Serializer of {@link TxRecord} records. */
     private TxRecordSerializer txRecordSerializer;
 
@@ -174,6 +178,8 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             this.realPageSize = CU.encryptedPageSize(pageSize, encSpi);
         else
             this.realPageSize = pageSize;
+
+        log = cctx.logger(getClass());
     }
 
     /** {@inheritDoc} */
@@ -364,7 +370,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return 18 + cacheStatesSize + (walPtr == null ? 0 : 16);
 
             case META_PAGE_INIT:
-                return /*cache ID*/4 + /*page ID*/8 + /*ioType*/2  + /*ioVer*/2 +  /*tree root*/8 + /*reuse root*/8;
+                return /*cache ID*/4 + /*page ID*/8 + /*ioType*/2 + /*ioVer*/2 +  /*tree root*/8 + /*reuse root*/8;
 
             case PARTITION_META_PAGE_UPDATE_COUNTERS:
                 return /*cache ID*/4 + /*page ID*/8 + /*upd cntr*/8 + /*rmv id*/8 + /*part size*/4 + /*counters page id*/8 + /*state*/ 1
@@ -388,7 +394,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case METASTORE_DATA_RECORD:
                 MetastoreDataRecord metastoreDataRec = (MetastoreDataRecord)record;
 
-                return  4 + metastoreDataRec.key().getBytes().length + 4 +
+                return 4 + metastoreDataRec.key().getBytes().length + 4 +
                     (metastoreDataRec.value() != null ? metastoreDataRec.value().length : 0);
 
             case HEADER_RECORD:
@@ -595,7 +601,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 long treeRoot = in.readLong();
                 long reuseListRoot = in.readLong();
 
-                res = new MetaPageInitRecord(cacheId, pageId, ioType, ioVer, treeRoot, reuseListRoot);
+                res = new MetaPageInitRecord(cacheId, pageId, ioType, ioVer, treeRoot, reuseListRoot, log);
 
                 break;
 
@@ -800,7 +806,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 ioVer = in.readUnsignedShort();
                 long virtualPageId = in.readLong();
 
-                res = new InitNewPageRecord(cacheId, pageId, ioType, ioVer, virtualPageId);
+                res = new InitNewPageRecord(cacheId, pageId, ioType, ioVer, virtualPageId, log);
 
                 break;
 
@@ -1058,7 +1064,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 prevPageId = in.readLong();
                 long addDataPageId = in.readLong();
 
-                res = new PagesListInitNewPageRecord(cacheId, pageId, ioType, ioVer, newPageId, prevPageId, addDataPageId);
+                res = new PagesListInitNewPageRecord(cacheId, pageId, ioType, ioVer, newPageId, prevPageId, addDataPageId, log);
 
                 break;
 

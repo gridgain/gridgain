@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -71,8 +72,8 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
@@ -99,7 +100,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
-import static org.apache.ignite.internal.commandline.CommandList.MANAGEMENT;
+import static org.apache.ignite.internal.commandline.CommandList.TRACING_CONFIGURATION;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
@@ -131,6 +132,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** Special word for defining any char sequence from special word to the end of line in golden copy of help output */
     private static final String ANY = "<!any!>";
+
     /** Error stack trace prefix. */
     protected static final String ERROR_STACK_TRACE_PREFIX = "Error stack trace:";
 
@@ -457,6 +459,20 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             throw e;
         }
+    }
+
+    /** */
+    @Test
+    public void testOldReadOnlyApiNotAvailable() {
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--read-only-on"));
+
+        assertContains(log, testOut.toString(), "Check arguments. Unexpected argument: --read-only-on");
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--read-only-off"));
+
+        assertContains(log, testOut.toString(), "Check arguments. Unexpected argument: --read-only-off");
     }
 
     /** */
@@ -1312,10 +1328,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         String out = testOut.toString();
 
         // Result include info by cache "default"
-        assertContains(log ,out, "[next group: id=1544803905, name=default]");
+        assertContains(log, out, "[next group: id=1544803905, name=default]");
 
         // Result include info by cache "ignite-sys-cache"
-        assertContains(log ,out, "[next group: id=-2100569601, name=ignite-sys-cache]");
+        assertContains(log, out, "[next group: id=-2100569601, name=ignite-sys-cache]");
 
         // Run distribution for all node and all cache and include additional user attribute
         assertEquals(EXIT_CODE_OK, execute("--cache", "distribution", "null", "--user-attributes", "ZONE,CELL,DC"));
@@ -1327,7 +1343,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                                 .collect(toList());
 
         int firstIndex = outLines.indexOf("[next group: id=1544803905, name=default]");
-        int lastIndex  = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
+        int lastIndex = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
 
         String dataLine = outLines.get(firstIndex + 1);
         String userArrtDataLine = outLines.get(lastIndex + 1);
@@ -1582,7 +1598,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         Map<CommandList, Collection<String>> cmdArgs = new EnumMap<>(CommandList.class);
 
         cmdArgs.put(WAL, asList("print", "delete"));
-        cmdArgs.put(MANAGEMENT, asList("on", "off", "uri", "status"));
+        cmdArgs.put(TRACING_CONFIGURATION, Collections.singletonList("get_all"));
 
         String warning = String.format(
             "For use experimental command add %s=true to JVM_OPTS in %s",

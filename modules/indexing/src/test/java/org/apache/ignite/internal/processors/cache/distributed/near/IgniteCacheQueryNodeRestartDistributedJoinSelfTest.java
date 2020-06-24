@@ -84,7 +84,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
 
         final AtomicIntegerArray locks = new AtomicIntegerArray(totalNodes);
 
-        SqlFieldsQuery qry0 ;
+        SqlFieldsQuery qry0;
 
         if (broadcastQry)
             qry0 = new SqlFieldsQuery(QRY_0_BROADCAST).setDistributedJoins(true).setEnforceJoinOrder(true);
@@ -200,7 +200,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
                             info("Executed queries: " + c);
                     }
                 }
-                catch (Throwable e){
+                catch (Throwable e) {
                     e.printStackTrace();
 
                     error("Got exception: " + e.getMessage());

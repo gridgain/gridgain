@@ -24,7 +24,7 @@ import static org.apache.ignite.internal.processors.platform.client.ClientProtoc
 /**
  * Thin client response.
  */
-public class ClientResponse extends ClientListenerResponse {
+public class ClientResponse extends ClientListenerResponse implements ClientOutgoingMessage {
     /** Request id. */
     private final long reqId;
 
@@ -105,7 +105,7 @@ public class ClientResponse extends ClientListenerResponse {
      * @param ctx Connection context.
      * @param writer Writer.
      */
-    public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
+    @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
         encode(ctx, writer, ctx.checkAffinityTopologyVersion());
     }
 

@@ -350,7 +350,6 @@ public class IgniteCachelessQueriesSelfTest extends GridCommonAbstractTest {
         assertTrue(q.isLocal());
     }
 
-
     /**
      * Check that no distributed query has happened.
      */

@@ -25,7 +25,9 @@ import org.apache.ignite.util.GridCommandHandlerIndexListTest;
 import org.apache.ignite.util.GridCommandHandlerIndexRebuildStatusTest;
 import org.apache.ignite.util.GridCommandHandlerIndexingCheckSizeTest;
 import org.apache.ignite.util.GridCommandHandlerIndexingClusterByClassTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingClusterByClassWithSSLTest;
 import org.apache.ignite.util.GridCommandHandlerIndexingTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingWithSSLTest;
 import org.apache.ignite.util.GridCommandHandlerInterruptCommandTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -37,6 +39,9 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     GridCommandHandlerBrokenIndexTest.class,
     GridCommandHandlerIndexingTest.class,
+    GridCommandHandlerIndexingWithSSLTest.class,
+    GridCommandHandlerIndexingClusterByClassTest.class,
+    GridCommandHandlerIndexingClusterByClassWithSSLTest.class,
     GridCommandHandlerIndexingCheckSizeTest.class,
     GridCommandHandlerIndexingClusterByClassTest.class,
     GridCommandHandlerIndexForceRebuildTest.class,

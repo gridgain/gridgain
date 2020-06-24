@@ -66,6 +66,7 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
 
     /** Number of retries for the case when one of partitions not found on the node where loading is performed. */
     private final int retries;
+
     /**
      * Constructs a new instance of cache based dataset builder that makes {@link CacheBasedDataset} with default
      * predicate that passes all upstream entries to dataset.
@@ -117,7 +118,7 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
         IgniteBiPredicate<K, V> filter,
         UpstreamTransformerBuilder transformerBuilder,
         Boolean isKeepBinary,
-        int retries){
+        int retries) {
         this.ignite = ignite;
         this.upstreamCache = upstreamCache;
         this.filter = filter;
@@ -181,7 +182,7 @@ public class CacheBasedDatasetBuilder<K, V> implements DatasetBuilder<K, V> {
      *
      * @param isKeepBinary Is keep binary.
      */
-    public CacheBasedDatasetBuilder<K, V> withKeepBinary(boolean isKeepBinary){
+    public CacheBasedDatasetBuilder<K, V> withKeepBinary(boolean isKeepBinary) {
         return new CacheBasedDatasetBuilder<K, V>(ignite, upstreamCache, filter, transformerBuilder, isKeepBinary, retries);
     }
 

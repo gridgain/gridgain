@@ -80,7 +80,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
             GridH2IndexBase.columnsArray(tbl, colsList),
             IndexType.createPrimaryKey(false, true));
 
-        assert segments > 0: segments;
+        assert segments > 0 : segments;
 
         this.cctx = cctx;
         this.segments = segments;

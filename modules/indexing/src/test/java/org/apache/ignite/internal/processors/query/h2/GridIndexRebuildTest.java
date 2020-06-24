@@ -358,10 +358,13 @@ public class GridIndexRebuildTest extends GridCommonAbstractTest {
     public static class Account {
         /** */
         private Long id;
+
         /** */
         private String name;
+
         /** */
         private Long amount;
+
         /** */
         private Date updateDate;
 
@@ -395,10 +398,13 @@ public class GridIndexRebuildTest extends GridCommonAbstractTest {
     public static class Account2 {
         /** */
         private Long id;
+
         /** */
         private String name2;
+
         /** */
         private Long Wamount2;
+
         /** */
         private Date updateDate2;
 

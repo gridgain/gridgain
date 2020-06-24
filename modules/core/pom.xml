@@ -42,7 +42,7 @@
 
     <properties>
         <ignite.update.notifier.product>apache-ignite</ignite.update.notifier.product>
-        <ignite.control.center.uris>http://localhost:3000,https://ggcc.gridgain.com</ignite.control.center.uris>
+        <ignite.control.center.uris>http://localhost:3000,https://control.gridgain.com</ignite.control.center.uris>
 
         <!-- Imports:
                 - com.sun.jmx.mbeanserver => only used from TCKMBeanServerBuilder which has no usages within Ignite's
@@ -168,7 +168,7 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-shmem</artifactId>
-            <version>1.0.0</version>
+            <version>8.7.3</version>
         </dependency>
 
         <dependency>
@@ -339,7 +339,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <inherited>false</inherited>
                         <executions>
                             <execution>
