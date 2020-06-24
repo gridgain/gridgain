@@ -369,4 +369,9 @@ public class OpenCensusTracingSpiTest extends AbstractTracingTest {
             span -> "CacheAffinityChangeMessage".equals(
                 attributeValueToString(span.getAttributes().getAttributeMap().get(SpanTags.MESSAGE_CLASS)))));
     }
+
+    /** {@inheritDoc} */
+    @Override protected boolean blockRebalancing() {
+        return false;
+    }
 }
