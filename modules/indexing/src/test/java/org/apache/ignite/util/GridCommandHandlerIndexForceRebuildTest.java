@@ -46,17 +46,22 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFi
 public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerAbstractTest {
     /** */
     private static final String CACHE_NAME_1_1 = "cache_1_1";
+
     /** */
     private static final String CACHE_NAME_1_2 = "cache_1_2";
+
     /** */
     private static final String CACHE_NAME_2_1 = "cache_2_1";
+
     /** */
     private static final String CACHE_NAME_NO_GRP = "cache_no_group";
+
     /** */
     private static final String CACHE_NAME_NON_EXISTING = "non_existing_cache";
 
     /** */
     private static final String GRP_NAME_1 = "group_1";
+
     /** */
     private static final String GRP_NAME_2 = "group_2";
 

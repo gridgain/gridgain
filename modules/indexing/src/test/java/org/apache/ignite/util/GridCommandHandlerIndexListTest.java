@@ -82,7 +82,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
 
         String outStr = testOut.toString();
 
-        assertTrue(outStr.contains("grpName=" + GROUP_NAME +", cacheName=" + CACHE_NAME + ", idxName=PERSON_ORGID_ASC_IDX, " +
+        assertTrue(outStr.contains("grpName=" + GROUP_NAME + ", cacheName=" + CACHE_NAME + ", idxName=PERSON_ORGID_ASC_IDX, " +
             "colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));
         assertTrue(outStr.contains("grpName=" + GROUP_NAME_SECOND + ", cacheName=" + CACHE_NAME_SECOND +
             ", idxName=PERSON_ORGID_ASC_IDX, colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));

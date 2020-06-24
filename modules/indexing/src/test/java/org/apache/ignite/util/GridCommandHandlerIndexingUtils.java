@@ -489,8 +489,10 @@ public class GridCommandHandlerIndexingUtils {
     static class CacheEntityThreeFields implements Serializable {
         /** */
         public static final String ID_NAME = "id";
+
         /** */
         public static final String STR_NAME = "strField";
+
         /** */
         public static final String DOUBLE_NAME = "boubleField";
 
