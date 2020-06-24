@@ -27,7 +27,6 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
@@ -140,7 +139,6 @@ import static org.apache.ignite.configuration.WALMode.NONE;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.processors.query.QueryUtils.TEMPLATE_PARTITIONED;
 import static org.apache.ignite.internal.processors.query.QueryUtils.TEMPLATE_REPLICATED;
-import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_METADATA;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 
@@ -1396,7 +1394,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         // int cachesCnt = grid(0).cacheNames().size();
         // assertEquals(cachesCnt, metas.size());
 
-        String ret = content("", CACHE_METADATA);
+        String ret = content("", GridRestCommand.CACHE_METADATA);
 
         info("Cache metadata: " + ret);
 
@@ -1409,7 +1407,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         Collection<GridCacheSqlMetadata> dfltCacheMeta = cache.context().queries().sqlMetadata();
 
-        ret = content(DEFAULT_CACHE_NAME, CACHE_METADATA);
+        ret = content(DEFAULT_CACHE_NAME, GridRestCommand.CACHE_METADATA);
 
         info("Cache metadata: " + ret);
 
@@ -1419,7 +1417,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         testMetadata(dfltCacheMeta, arrRes);
 
-        assertResponseContainsError(content("nonExistingCacheName", CACHE_METADATA),
+        assertResponseContainsError(content("nonExistingCacheName", GridRestCommand.CACHE_METADATA),
             "Failed to request meta data. nonExistingCacheName is not found");
     }
 
@@ -1437,7 +1435,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         Collection<GridCacheSqlMetadata> metas = c.context().queries().sqlMetadata();
 
-        String ret = content("", CACHE_METADATA);
+        String ret = content("", GridRestCommand.CACHE_METADATA);
 
         info("Cache metadata: " + ret);
 
@@ -1449,7 +1447,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         testMetadata(metas, arrRes);
 
-        ret = content("person", CACHE_METADATA);
+        ret = content("person", GridRestCommand.CACHE_METADATA);
 
         info("Cache metadata with cacheName parameter: " + ret);
 
@@ -1459,7 +1457,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         testMetadata(metas, arrRes);
 
-        assertResponseContainsError(content("nonExistingCacheName", CACHE_METADATA),
+        assertResponseContainsError(content("nonExistingCacheName", GridRestCommand.CACHE_METADATA),
             "Failed to request meta data. nonExistingCacheName is not found");
     }
 
@@ -2922,105 +2920,6 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         cEnum.put(888, PARTITIONED);
 
         getTypedValue("int", "888", PARTITIONED.toString());
-    }
-
-    /**
-     * Checks work of Cache REST commands without cache names.
-     *
-     * @throws Exception If failed.
-     */
-
-
-    /**
-     * Test to check work of Cache REST commands without cache name
-     *
-     * Steps:
-     * 1) Start test node
-     * 2) From REST client call all Cache commands
-     * 3) All requests except request for CACHE_METADATA should fail with
-     * "Failed to find mandatory parameter in request: cacheName" exception
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testCacheCommandsWithoutCacheName() throws Exception {
-        final String ERROR_MSG = "Failed to find mandatory parameter in request: cacheName";
-
-        EnumSet<GridRestCommand> cacheCommands = EnumSet.of(GridRestCommand.DESTROY_CACHE,
-            GridRestCommand.GET_OR_CREATE_CACHE,
-            GridRestCommand.CACHE_CONTAINS_KEYS,
-            GridRestCommand.CACHE_CONTAINS_KEY,
-            GridRestCommand.CACHE_GET,
-            GridRestCommand.CACHE_GET_AND_PUT,
-            GridRestCommand.CACHE_GET_AND_REPLACE,
-            GridRestCommand.CACHE_GET_AND_PUT_IF_ABSENT,
-            GridRestCommand.CACHE_PUT_IF_ABSENT,
-            GridRestCommand.CACHE_GET_ALL,
-            GridRestCommand.CACHE_PUT,
-            GridRestCommand.CACHE_ADD,
-            GridRestCommand.CACHE_PUT_ALL,
-            GridRestCommand.CACHE_REMOVE,
-            GridRestCommand.CACHE_REMOVE_VALUE,
-            GridRestCommand.CACHE_REPLACE_VALUE,
-            GridRestCommand.CACHE_GET_AND_REMOVE,
-            GridRestCommand.CACHE_REMOVE_ALL,
-            GridRestCommand.CACHE_REPLACE,
-            GridRestCommand.CACHE_CAS,
-            GridRestCommand.CACHE_APPEND,
-            GridRestCommand.CACHE_PREPEND,
-            GridRestCommand.CACHE_METRICS,
-            GridRestCommand.CACHE_SIZE,
-            GridRestCommand.CACHE_METADATA);
-
-        for (GridRestCommand command : cacheCommands) {
-            String ret = content(null, command);
-
-            if (command == GridRestCommand.CACHE_METADATA)
-                validateJsonResponse(ret);
-            else {
-                JsonNode err = jsonTaskErrorResult(ret);
-                assertFalse(err.isNull());
-                assertTrue(err.textValue().contains(ERROR_MSG));
-            }
-        }
-    }
-
-    /**
-     * Test to check work of Query REST commands without cache name
-     *
-     * Steps:
-     * 1) Start test node
-     * 2) From REST client call all Query commands
-     * 3) All requests except requests for FETCH_SQL_QUERY and CLOSE_SQL_QUERY should fail with
-     * "Failed to find mandatory parameter in request: cacheName" exception
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testQueryCommandsWithoutCacheName() throws Exception {
-        final String ERROR_MSG = "Failed to find mandatory parameter in request: cacheName";
-
-        EnumSet<GridRestCommand> qryCommands = EnumSet.of(GridRestCommand.EXECUTE_SQL_QUERY,
-            GridRestCommand.EXECUTE_SQL_FIELDS_QUERY,
-            GridRestCommand.EXECUTE_SCAN_QUERY,
-            GridRestCommand.FETCH_SQL_QUERY,
-            GridRestCommand.CLOSE_SQL_QUERY);
-
-        for (GridRestCommand command : qryCommands) {
-            String ret = content(null, command,
-                "pageSize", "1",
-                "qry", URLEncoder.encode("SELECT * FROM table", CHARSET));
-
-            JsonNode err = jsonTaskErrorResult(ret);
-            assertFalse(err.isNull());
-
-            if (command == GridRestCommand.EXECUTE_SQL_QUERY ||
-                command == GridRestCommand.EXECUTE_SCAN_QUERY ||
-                command == GridRestCommand.EXECUTE_SQL_FIELDS_QUERY)
-                assertTrue(err.textValue().contains(ERROR_MSG));
-            else
-                assertFalse(err.textValue().contains(ERROR_MSG));
-        }
     }
 
     /**

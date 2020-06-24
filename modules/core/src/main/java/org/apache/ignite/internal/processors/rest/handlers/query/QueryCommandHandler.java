@@ -227,13 +227,6 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
                 );
         }
 
-        if (req.command() != FETCH_SQL_QUERY && req.command() != CLOSE_SQL_QUERY) {
-            if (((RestQueryRequest)req).cacheName() == null)
-                return new GridFinishedFuture<>(
-                    new IgniteCheckedException(GridRestCommandHandlerAdapter.missingParameter("cacheName"))
-                );
-        }
-
         switch (req.command()) {
             case EXECUTE_SQL_QUERY:
             case EXECUTE_SQL_FIELDS_QUERY:
@@ -321,11 +314,13 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
                         throw new IgniteException("Incorrect query type [type=" + req.queryType() + "]");
                 }
 
-                IgniteCache<Object, Object> cache = ctx.grid().cache(req.cacheName());
+                String cacheName = req.cacheName() == null ? DFLT_CACHE_NAME : req.cacheName();
+
+                IgniteCache<Object, Object> cache = ctx.grid().cache(cacheName);
 
                 if (cache == null)
                     return new GridRestResponse(GridRestResponse.STATUS_FAILED,
-                        "Failed to find cache with name: " + req.cacheName());
+                        "Failed to find cache with name: " + cacheName);
 
                 final QueryCursor qryCur = cache.query(qry);
 
