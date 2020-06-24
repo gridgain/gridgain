@@ -33,12 +33,9 @@ public class StopMultiJVMGridProcessesFailureHandler extends AbstractFailureHand
     @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
         IgniteLogger log = ignite.log();
 
-        final CountDownLatch latch = new CountDownLatch(1);
-
         try {
             U.error(log, "Do stop grid processes");
             IgniteProcessProxy.killAll();
-            latch.countDown();
         }
         catch (Exception exc) {
             U.error(log, "Stop grid processes error");
