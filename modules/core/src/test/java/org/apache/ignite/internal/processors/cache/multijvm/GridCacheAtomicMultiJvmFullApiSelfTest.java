@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.multijvm;
 
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicMultiNodeFullApiSelfTest;
+import org.apache.ignite.testframework.failurehandler.StopMultiJVMGridProcessesFailureHandler;
 
 /**
  * Multi-JVM tests.
@@ -26,4 +28,15 @@ public class GridCacheAtomicMultiJvmFullApiSelfTest extends GridCacheAtomicMulti
     @Override protected boolean isMultiJvm() {
         return true;
     }
+
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        if (!isRemoteJvm(igniteInstanceName))
+            if(!cfg.isClientMode())
+                cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
+
+        return cfg;
+    }
+
 }

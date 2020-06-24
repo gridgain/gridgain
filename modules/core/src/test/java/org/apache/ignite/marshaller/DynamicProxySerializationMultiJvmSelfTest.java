@@ -25,6 +25,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.lang.IgniteCallable;
+import org.apache.ignite.testframework.failurehandler.StopMultiJVMGridProcessesFailureHandler;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -43,6 +44,9 @@ public class DynamicProxySerializationMultiJvmSelfTest extends GridCommonAbstrac
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        if (!isRemoteJvm(igniteInstanceName))
+            cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
 
         cfg.setMarshaller(marshFactory.call());
 
