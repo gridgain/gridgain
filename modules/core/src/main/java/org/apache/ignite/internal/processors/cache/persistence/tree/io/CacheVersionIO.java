@@ -60,7 +60,7 @@ public class CacheVersionIO {
             throw new IllegalStateException("Cache version is null");
         }
 
-        return ver instanceof GridCacheVersionEx ? SIZE_V3 : SIZE_V4;
+        return ver instanceof GridCacheVersionEx ? SIZE_V4 : SIZE_V3;
     }
 
     /**
@@ -198,6 +198,12 @@ public class CacheVersionIO {
 
             case 2:
                 return SIZE_V2;
+
+            case 3:
+                return SIZE_V3;
+
+            case 4:
+                return SIZE_V4;
 
             default:
                 throw new IllegalStateException();

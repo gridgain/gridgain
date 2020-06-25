@@ -150,6 +150,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     private final boolean failNodeOnPartitionInconsistency = Boolean.getBoolean(
         IgniteSystemProperties.IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY);
 
+    private final static boolean IS_INCREMENTAL_DR_ENABLED =  Boolean.getBoolean("GG_INCREMENTAL_STATE_TRANSFER");
+
     /** Batch size for cache removals during destroy. */
     private static final int BATCH_SIZE = 1000;
 
@@ -2579,13 +2581,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             updatePendingEntries(cctx, newRow, oldRow);
 
-            if (newRow.version().updateCounter() != 0)
+            if (newRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
                 logTree.put(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
 
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
 
-                if (oldRow.version().updateCounter() != 0)
+                if (oldRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
                     logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter()));
 
                 if (newRow.link() != oldRow.link())
@@ -2659,7 +2661,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 qryMgr.remove(key, oldRow);
 
             if (oldRow != null) {
-                if (oldRow.version().updateCounter() != 0)
+                if (oldRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
                     logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter()));
 
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
