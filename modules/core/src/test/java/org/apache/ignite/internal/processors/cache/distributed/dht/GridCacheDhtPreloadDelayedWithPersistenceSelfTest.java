@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,16 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
-{
-    using NUnit.Framework;
+package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-    /// <summary>
-    /// Continuous query tests for TRANSACTIONAL cache with backups.
-    /// </summary>
-    [TestFixture]
-    public class ContinuousQueryTransactionalBackupTest : ContinuousQueryAbstractTest
-    {
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        public ContinuousQueryTransactionalBackupTest()
-            : base(CACHE_TX_BACKUP)
-        {
-            // No-op.
-        }
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
+
+/**
+ * Test cases for partitioned cache {@link GridDhtPreloader preloader} and enabled persistence.
+ */
+public class GridCacheDhtPreloadDelayedWithPersistenceSelfTest extends GridCacheDhtPreloadDelayedSelfTest {
+    /** {@inheritDoc} */
+    @Override protected boolean persistenceEnabled() {
+        return true;
     }
 }

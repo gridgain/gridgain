@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
+namespace Apache.Ignite.Core.Cache.Query.Continuous
 {
-    using NUnit.Framework;
+    using System.Diagnostics.CodeAnalysis;
 
     /// <summary>
-    /// Continuous query tests for TRANSACTIONAL cache with backups.
+    /// Represents a continuous query handle for <see cref="SqlFieldsQuery"/> used as initial query.
     /// </summary>
-    [TestFixture]
-    public class ContinuousQueryTransactionalBackupTest : ContinuousQueryAbstractTest
+    public interface IContinuousQueryHandleFields : IContinuousQueryHandle
     {
         /// <summary>
-        /// Constructor.
+        /// Gets the initial query cursor.
+        /// <para />
+        /// Can be called only once, throws exception on consequent calls.
         /// </summary>
-        public ContinuousQueryTransactionalBackupTest()
-            : base(CACHE_TX_BACKUP)
-        {
-            // No-op.
-        }
+        /// <returns>Initial query cursor.</returns>
+        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
+            Justification = "Semantics: result differs from call to call.")]
+        IFieldsQueryCursor GetInitialQueryCursor();
     }
 }

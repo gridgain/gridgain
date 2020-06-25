@@ -64,7 +64,7 @@ public class IgniteClientConnectTest extends GridCommonAbstractTest {
     private long connTimeout = -1;
 
     /** Maxx connection timeout. */
-    private long maxxConnTimeout = -1;
+    private long maxConnTimeout = -1;
 
     /** Recon count. */
     private int reconCnt = -1;
@@ -89,7 +89,7 @@ public class IgniteClientConnectTest extends GridCommonAbstractTest {
                 TcpCommunicationSpi tcpCommSpi = (TcpCommunicationSpi)cfg.getCommunicationSpi();
 
                 tcpCommSpi.setConnectTimeout(connTimeout);
-                tcpCommSpi.setMaxConnectTimeout(maxxConnTimeout);
+                tcpCommSpi.setMaxConnectTimeout(maxConnTimeout);
                 tcpCommSpi.setReconnectCount(reconCnt);
             }
         }
@@ -156,7 +156,7 @@ public class IgniteClientConnectTest extends GridCommonAbstractTest {
         failureDetectionTimeout = 1000;
 
         connTimeout = 1000;
-        maxxConnTimeout = 3000;
+        maxConnTimeout = 3000;
         reconCnt = 3;
 
         try {

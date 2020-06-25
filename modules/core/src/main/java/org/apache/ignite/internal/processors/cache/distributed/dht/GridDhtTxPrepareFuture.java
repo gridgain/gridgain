@@ -1067,7 +1067,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (tx.empty() && !req.queryUpdate()) {
                 tx.setRollbackOnly();
 
-                onDone((GridNearTxPrepareResponse)null);
+                onDone((GridNearTxPrepareResponse) null);
             }
 
             this.req = req;
@@ -1079,13 +1079,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (validateCache) {
                 GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
-            if (topFut != null) {
-                err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
+                if (topFut != null) {
+                    IgniteCheckedException err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
 
-                if (err != null)
-                    onDone(null, this.err);
+                    if (err != null)
+                        onDone(null, err);
+                }
             }
-        }
 
             boolean ser = tx.serializable() && tx.optimistic();
 
