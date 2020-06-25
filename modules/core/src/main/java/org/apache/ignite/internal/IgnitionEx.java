@@ -59,6 +59,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -2745,8 +2746,10 @@ public class IgnitionEx {
                         if (!haveCopyLoclaPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
                             safeToStop = false;
 
-                            if (log.isInfoEnabled())
-                                LT.info(log, "This node is waiting for backups of all local partitions.");
+                            if (log.isInfoEnabled()) {
+                                LT.info(log, "This node is waiting for backups of local partitions for group [id="
+                                    + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
+                            }
 
                             break;
                         }
@@ -2754,8 +2757,10 @@ public class IgnitionEx {
                         if (!isRebalanceCompleted(grpCtx)) {
                             safeToStop = false;
 
-                            if (log.isInfoEnabled())
-                                LT.info(log, "This node is waiting for completion of rebalance.");
+                            if (log.isInfoEnabled()) {
+                                LT.info(log, "This node is waiting for completion of rebalance for group [id="
+                                    + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
+                            }
 
                             break;
                         }
@@ -2858,6 +2863,8 @@ public class IgnitionEx {
 
             int parts = grpCtx.topology().partitions();
 
+            List<List<ClusterNode>> idealAssignment = grpCtx.affinity().idealAssignmentRaw();
+
             for (int p = 0; p < parts; p++) {
                 if (localPartMap.get(p) != GridDhtPartitionState.OWNING)
                     continue;
@@ -2866,6 +2873,10 @@ public class IgnitionEx {
 
                 for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
                     if (localNodeId.equals(entry.getKey()) || nodesToExclude.contains(entry.getKey()))
+                        continue;
+
+                    //This remote node does not present in ideal assignment.
+                    if (!idealAssignment.get(p).stream().filter(node -> node.id().equals(entry.getKey())).findAny().isPresent())
                         continue;
 
                     //Rebalance in this cache.

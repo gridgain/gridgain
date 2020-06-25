@@ -77,7 +77,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
     private boolean clientNodes;
 
     /** */
-    private int backups;
+    protected int backups;
 
     /** */
     public GridCacheDhtPreloadWaitForBackupsTest() {
