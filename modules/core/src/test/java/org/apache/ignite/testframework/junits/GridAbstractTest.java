@@ -2309,8 +2309,10 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             Throwable t = ex.get();
 
             if (t != null) {
-                if (t instanceof AssumptionViolatedException)
-                    U.quiet(false, "Test ignored [test=" + testDescription() + ", msg=" + t.getMessage() + "]");
+                if (t instanceof AssumptionViolatedException) {
+                    U.quietAndInfo(log, "Test ignored [test=" + testDescription() +
+                        ", msg=" + t.getMessage() + "]");
+                }
                 else {
                     U.error(log, "Test failed [test=" + testDescription() +
                         ", duration=" + (System.currentTimeMillis() - ts) + "]", t);
