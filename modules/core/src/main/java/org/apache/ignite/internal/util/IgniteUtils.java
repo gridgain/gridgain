@@ -12320,4 +12320,21 @@ public abstract class IgniteUtils {
 
         compute.broadcast(job);
     }
+
+    /**
+     * @param configuration Ignite configuration.
+     * @return Whether persistence is enabled.
+     */
+    public static boolean persistenceEnabled(IgniteConfiguration configuration) {
+        if (configuration.getDataStorageConfiguration() != null) {
+            DataRegionConfiguration[] regions = configuration.getDataStorageConfiguration().getDataRegionConfigurations();
+
+            for (DataRegionConfiguration region : regions) {
+                if (region.isPersistenceEnabled())
+                    return true;
+            }
+        }
+
+        return false;
+    }
 }
