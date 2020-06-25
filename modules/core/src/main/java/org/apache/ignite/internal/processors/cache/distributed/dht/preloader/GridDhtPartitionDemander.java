@@ -428,7 +428,6 @@ public class GridDhtPartitionDemander {
     }
 
     /**
-     * TODO remove ugly.
      * Enqueues supply message.
      *
      * @param supplyMsg Messqage.
@@ -1577,7 +1576,7 @@ public class GridDhtPartitionDemander {
         }
 
         /**
-         * Cancels this future and proceed next chain future.
+         * Cancels this future and proceeds to a next in the chain.
          *
          * @return {@code True}.
          */
