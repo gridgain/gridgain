@@ -33,8 +33,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static java.util.Objects.nonNull;
-
 /**
  * Schema operation executor.
  */
@@ -181,14 +179,12 @@ public class SchemaOperationWorker extends GridWorker {
      */
     @Override public void cancel() {
         if (cancelToken.cancel()) {
-            IgniteInternalFuture<?> opFut = cancelToken.operationFuture();
-
-            if (nonNull(opFut)) {
-                try {
-                    opFut.get(2_000);
-                }
-                catch (IgniteCheckedException ignore) {
-                }
+            try {
+                fut.get();
+            }
+            catch (IgniteCheckedException e) {
+                if (log.isDebugEnabled())
+                    log.error("Error completing operation", e);
             }
 
             super.cancel();
