@@ -52,11 +52,24 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
     /** Order. */
     private long order;
 
+    /** Update counter. */
+    private long updateCounter;
+
     /**
      * Empty constructor required by {@link Externalizable}.
      */
     public GridCacheVersion() {
         /* No-op. */
+    }
+
+    /**
+     * Copying constructor.
+     */
+    public GridCacheVersion(GridCacheVersion ver) {
+        this.topVer = ver.topVer;
+        this.nodeOrderDrId = ver.nodeOrderDrId;
+        this.order = ver.order;
+        this.updateCounter = ver.updateCounter;
     }
 
     /**
@@ -136,6 +149,22 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
     }
 
     /**
+     * @return Update counter.
+     */
+    public long updateCounter() {
+        return updateCounter;
+    }
+
+    /**
+     * Sets update counter.
+     *
+     * @param updateCounter Update counter.
+     */
+    public void updateCounter(long updateCounter) {
+        this.updateCounter = updateCounter;
+    }
+
+    /**
      * @param ver Version.
      * @return {@code True} if this version is greater.
      */
@@ -181,6 +210,8 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
+        assert false;
+
         out.writeInt(topVer);
         out.writeLong(order);
         out.writeInt(nodeOrderDrId);
@@ -188,6 +219,8 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException {
+        assert false;
+
         topVer = in.readInt();
         order = in.readLong();
         nodeOrderDrId = in.readInt();
@@ -262,6 +295,12 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
                 writer.incrementState();
 
+            case 3:
+                if (!writer.writeLong("updateCounter", updateCounter))
+                    return false;
+
+                writer.incrementState();
+
         }
 
         return true;
@@ -299,6 +338,14 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
                 reader.incrementState();
 
+            case 3:
+                updateCounter = reader.readLong("updateCounter");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridCacheVersion.class);
@@ -311,7 +358,7 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 
     /** {@inheritDoc} */

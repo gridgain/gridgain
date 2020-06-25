@@ -32,7 +32,7 @@ public final class CacheIdAwareUpdateLogLeafIO extends AbstractUpdateLogLeafIO {
      * @param ver Page format version.
      */
     private CacheIdAwareUpdateLogLeafIO(int ver) {
-        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF, ver, 20);
+        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF & 0xFFFF, ver, 20);
     }
 
     /** {@inheritDoc} */

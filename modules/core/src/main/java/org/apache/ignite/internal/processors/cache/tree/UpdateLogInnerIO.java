@@ -32,7 +32,7 @@ public final class UpdateLogInnerIO extends AbstractUpdateLogInnerIO {
      * @param ver Page format version.
      */
     private UpdateLogInnerIO(int ver) {
-        super(T_UPDATE_LOG_REF_INNER, ver, true, 16);
+        super(T_UPDATE_LOG_REF_INNER & 0xFFFF, ver, true, 16);
     }
 
     /** {@inheritDoc} */

@@ -50,7 +50,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
      * @param dataCenterId Data center ID.
      * @param drVer DR version.
      */
-    public GridCacheVersionEx(int topVer, long order, int nodeOrder, byte dataCenterId,
+    public GridCacheVersionEx(int topVer, long order, int nodeOrder, byte dataCenterId, long updateCntr,
         GridCacheVersion drVer) {
         super(topVer, order, nodeOrder, dataCenterId);
 
@@ -87,7 +87,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 4;
+        return 5;
     }
 
     /** {@inheritDoc} */
@@ -105,7 +105,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
         }
 
         switch (writer.state()) {
-            case 3:
+            case 4:
                 if (!writer.writeMessage("drVer", drVer))
                     return false;
 
@@ -127,7 +127,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
             return false;
 
         switch (reader.state()) {
-            case 3:
+            case 4:
                 drVer = reader.readMessage("drVer");
 
                 if (!reader.isLastRead())

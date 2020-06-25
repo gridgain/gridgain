@@ -92,7 +92,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseL
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
-import org.apache.ignite.internal.processors.cache.tree.PartitionUpdateLogTree;
+import org.apache.ignite.internal.processors.cache.tree.PartitionLogTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
@@ -1851,7 +1851,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     RootPage logTreeRoot = metas.updateLogTreeRoot;
 
-                    final PartitionUpdateLogTree logTree = new PartitionUpdateLogTree(
+                    final PartitionLogTree logTree = new PartitionLogTree(
                             grp,
                             logTreeName,
                             grp.dataRegion().pageMemory(),
@@ -2140,6 +2140,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             return delegate0 == null ? null : delegate0.rowStore();
         }
+
+        /** {@inheritDoc} */
+        @Override public PartitionLogTree logTree() {
+            CacheDataStore delegate0 = delegate;
+
+            return delegate0 == null ? null : delegate0.logTree();
+        }
+
 
         /** {@inheritDoc} */
         @Override public long fullSize() {

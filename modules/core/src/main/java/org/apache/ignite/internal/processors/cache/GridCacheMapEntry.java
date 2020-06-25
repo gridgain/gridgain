@@ -1499,11 +1499,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (startVer && (retval || intercept || lsnrCol != null))
                 unswap(retval);
 
-            newVer = explicitVer != null ? explicitVer : tx == null ?
-                nextVersion() : tx.writeVersion();
-
-            assert newVer != null : "Failed to get write version for tx: " + tx;
-
             old = oldValPresent ? oldVal : this.val;
 
             if (intercept)
@@ -1551,12 +1546,17 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             assert val != null;
 
+            updateCntr0 = nextPartitionCounter(tx, updateCntr);
+
+            newVer = nextVersion(explicitVer, tx);
+
+            if (cctx.isDrEnabled())
+                newVer.updateCounter(updateCntr0);
+
             storeValue(val, expireTime, newVer);
 
             if (cctx.deferredDelete() && deletedUnlocked() && !isInternal() && !detached())
                 deletedUnlocked(false);
-
-            updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
             if (tx != null && cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                 logPtr = logTxUpdate(tx, val, expireTime, updateCntr0);
@@ -1708,7 +1708,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean startVer = isStartVersion();
 
-            newVer = explicitVer != null ? explicitVer : tx == null ? nextVersion() : tx.writeVersion();
+            newVer = nextVersion(explicitVer, tx);
 
             boolean internal = isInternal() || !context().userCache();
 
@@ -1780,6 +1780,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
+            if (cctx.isDrEnabled())
+                newVer.updateCounter(updateCntr0);
+
             if (tx != null && cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                 logPtr = logTxUpdate(tx, null, 0, updateCntr0);
 
@@ -1804,7 +1807,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     log.debug("Obsolete version was not set because lock was explicit: " + this);
             }
 
-            if (evt && newVer != null && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) {
+            if (evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) {
                 CacheObject evtOld = cctx.unwrapTemporary(old);
 
                 cctx.events().addEvent(partition(),
@@ -3708,6 +3711,29 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private GridCacheVersion nextVersion() {
         // Do not change topology version when generating next version.
         return cctx.versions().next(ver);
+    }
+
+    /**
+     * Calculate next version for entry.
+     *
+     * Prefers explicit version if it is provided,
+     * then tries tx write version if tx provided,
+     * otherwise generate a new version.
+     *
+     * @param explicitVer Explicit version.
+     */
+    private GridCacheVersion nextVersion(GridCacheVersion explicitVer, IgniteInternalTx tx){
+        if (explicitVer != null)
+            return explicitVer;
+
+        if (tx == null)
+            return nextVersion();
+
+        GridCacheVersion newVer = tx.writeVersion();
+
+        assert newVer != null : "Failed to get write version for tx: " + tx;
+
+        return new GridCacheVersion(newVer); // clone.
     }
 
     /** {@inheritDoc} */
@@ -6217,6 +6243,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     newVer.order(),
                     newVer.nodeOrder(),
                     newVer.dataCenterId(),
+                    newVer.updateCounter(),
                     conflictVer);
             }
 
@@ -6471,6 +6498,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
 
+            if (cctx.isDrEnabled())
+                newVer.updateCounter(updateCntr0);
+
             entry.logUpdate(op, updated, newVer, newExpireTime, updateCntr0);
 
             if (!entry.isNear()) {
@@ -6557,6 +6587,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 cctx.store().remove(null, entry.key);
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
+
+            if (cctx.isDrEnabled())
+                newVer.updateCounter(updateCntr0);
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 

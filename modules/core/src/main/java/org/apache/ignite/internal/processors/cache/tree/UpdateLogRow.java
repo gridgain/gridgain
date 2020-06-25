@@ -52,7 +52,18 @@ public class UpdateLogRow {
     /**
      * @param cacheId Cache ID.
      * @param updateCntr Update counter.
-     * @param link Data row link.
+     */
+    public UpdateLogRow(int cacheId, long updateCntr){
+        assert updateCntr > 0;
+
+        this.cacheId = cacheId;
+        this.updateCntr = updateCntr;
+    }
+
+    /**
+     * @param cacheId    Cache ID.
+     * @param updateCntr Update counter.
+     * @param link       Data row link.
      */
     public UpdateLogRow(int cacheId, long updateCntr, long link) {
         assert updateCntr > 0;

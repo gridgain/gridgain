@@ -75,12 +75,13 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLoc
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
-import org.apache.ignite.internal.processors.cache.tree.PartitionUpdateLogTree;
 import org.apache.ignite.internal.processors.cache.tree.DataRow;
+import org.apache.ignite.internal.processors.cache.tree.PartitionLogTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.RowLinkIO;
 import org.apache.ignite.internal.processors.cache.tree.SearchRow;
+import org.apache.ignite.internal.processors.cache.tree.UpdateLogRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateDataRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
@@ -1261,7 +1262,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         String logTreeName = BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData");
 
-        PartitionUpdateLogTree logTree = new PartitionUpdateLogTree(
+        PartitionLogTree logTree = new PartitionLogTree(
             grp,
             logTreeName,
             grp.dataRegion().pageMemory(),
@@ -1421,7 +1422,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final CacheDataTree dataTree;
 
         /** */
-        private final PartitionUpdateLogTree logTree;
+        private final PartitionLogTree logTree;
 
         /** Update counter. */
         protected final PartitionUpdateCounter pCntr;
@@ -1451,7 +1452,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 int partId,
                 CacheDataRowStore rowStore,
                 CacheDataTree dataTree,
-                PartitionUpdateLogTree logTree) {
+                PartitionLogTree logTree) {
             this.partId = partId;
             this.rowStore = rowStore;
             this.dataTree = dataTree;
@@ -2578,8 +2579,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             updatePendingEntries(cctx, newRow, oldRow);
 
+            if (newRow.version().updateCounter() != 0)
+                logTree.put(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
+
+                if (oldRow.version().updateCounter() != 0)
+                    logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter()));
 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
@@ -2651,8 +2658,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (qryMgr.enabled())
                 qryMgr.remove(key, oldRow);
 
-            if (oldRow != null)
+            if (oldRow != null) {
+                if (oldRow.version().updateCounter() != 0)
+                    logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter()));
+
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
+            }
         }
 
         /**
@@ -2984,6 +2995,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 for (Map.Entry<Integer, Long> e : cacheSizes.entrySet())
                     this.cacheSizes.put(e.getKey(), new AtomicLong(e.getValue()));
             }
+        }
+
+        /** {@inheritDoc} */
+        @Override public PartitionLogTree logTree() {
+            return logTree;
         }
 
         /** {@inheritDoc} */

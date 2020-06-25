@@ -32,7 +32,7 @@ public final class UpdateLogLeafIO extends AbstractUpdateLogLeafIO {
      * @param ver Page format version.
      */
     private UpdateLogLeafIO(int ver) {
-        super(T_UPDATE_LOG_REF_LEAF, ver, 16);
+        super(T_UPDATE_LOG_REF_LEAF & 0xFFFF, ver, 16);
     }
 
     /** {@inheritDoc} */

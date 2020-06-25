@@ -32,7 +32,7 @@ public final class CacheIdAwareUpdateLogInnerIO extends AbstractUpdateLogInnerIO
      * @param ver Page format version.
      */
     private CacheIdAwareUpdateLogInnerIO(int ver) {
-        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER, ver, true, 20);
+        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER & 0xFFFF, ver, true, 20);
     }
 
     /** {@inheritDoc} */

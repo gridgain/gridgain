@@ -28,7 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 /**
  *
  */
-public class PartitionUpdateLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
+public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     /** */
     public static final Object WITHOUT_KEY = new Object();
 
@@ -44,7 +44,7 @@ public class PartitionUpdateLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow
      * @param initNew Initialize new index.
      * @throws IgniteCheckedException If failed.
      */
-    public PartitionUpdateLogTree(
+    public PartitionLogTree(
         CacheGroupContext grp,
         String name,
         PageMemory pageMem,

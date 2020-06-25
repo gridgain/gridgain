@@ -258,18 +258,6 @@ public abstract class PageIO {
     /** */
     public static final short T_DATA_PART = 32;
 
-    /** */
-    public static final short T_UPDATE_LOG_REF_INNER = 33;
-
-    /** */
-    public static final short T_UPDATE_LOG_REF_LEAF = 34;
-
-    /** */
-    public static final short T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER = 35;
-
-    /** */
-    public static final short T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF = 36;
-
     /** Index for payload == 1. */
     public static final short T_H2_EX_REF_LEAF_START = 10_000;
 
@@ -295,6 +283,18 @@ public abstract class PageIO {
     public static final short T_H2_EX_REF_MVCC_INNER_END = T_H2_EX_REF_MVCC_INNER_START + MAX_PAYLOAD_SIZE - 1;
 
     /** */
+    public static final short T_UPDATE_LOG_REF_INNER = -1;
+
+    /** */
+    public static final short T_UPDATE_LOG_REF_LEAF = -2;
+
+    /** */
+    public static final short T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER = -3;
+
+    /** */
+    public static final short T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF = -4;
+
+    /** */
     private final int ver;
 
     /** */
@@ -306,7 +306,7 @@ public abstract class PageIO {
      */
     protected PageIO(int type, int ver) {
         assert ver > 0 && ver < 65535 : ver;
-        assert type > 0 && type < 65535 : type;
+        assert type > 0 && type <= 65535 : type;
 
         this.type = type;
         this.ver = ver;
@@ -722,19 +722,35 @@ public abstract class PageIO {
      */
     @SuppressWarnings("unchecked")
     public static <Q extends BPlusIO<?>> Q getBPlusIO(int type, int ver) throws IgniteCheckedException {
-        if (type >= T_H2_EX_REF_LEAF_START && type <= T_H2_EX_REF_LEAF_END)
-            return (Q)h2ExtraLeafIOs.get(type - T_H2_EX_REF_LEAF_START).forVersion(ver);
+        assert type > 0 && type <= 65535 : type;
 
-        if (type >= T_H2_EX_REF_INNER_START && type <= T_H2_EX_REF_INNER_END)
-            return (Q)h2ExtraInnerIOs.get(type - T_H2_EX_REF_INNER_START).forVersion(ver);
+        short type0 = (short) type;
 
-        if (type >= T_H2_EX_REF_MVCC_LEAF_START && type <= T_H2_EX_REF_MVCC_LEAF_END)
-            return (Q)h2ExtraMvccLeafIOs.get(type - T_H2_EX_REF_MVCC_LEAF_START).forVersion(ver);
+        if (type0 >= T_H2_EX_REF_LEAF_START && type0 <= T_H2_EX_REF_LEAF_END)
+            return (Q)h2ExtraLeafIOs.get(type0 - T_H2_EX_REF_LEAF_START).forVersion(ver);
 
-        if (type >= T_H2_EX_REF_MVCC_INNER_START && type <= T_H2_EX_REF_MVCC_INNER_END)
-            return (Q)h2ExtraMvccInnerIOs.get(type - T_H2_EX_REF_MVCC_INNER_START).forVersion(ver);
+        if (type0 >= T_H2_EX_REF_INNER_START && type0 <= T_H2_EX_REF_INNER_END)
+            return (Q)h2ExtraInnerIOs.get(type0 - T_H2_EX_REF_INNER_START).forVersion(ver);
 
-        switch (type) {
+        if (type0 >= T_H2_EX_REF_MVCC_LEAF_START && type0 <= T_H2_EX_REF_MVCC_LEAF_END)
+            return (Q)h2ExtraMvccLeafIOs.get(type0 - T_H2_EX_REF_MVCC_LEAF_START).forVersion(ver);
+
+        if (type0 >= T_H2_EX_REF_MVCC_INNER_START && type0 <= T_H2_EX_REF_MVCC_INNER_END)
+            return (Q)h2ExtraMvccInnerIOs.get(type0 - T_H2_EX_REF_MVCC_INNER_START).forVersion(ver);
+
+        switch (type0) {
+            case  T_UPDATE_LOG_REF_INNER:
+                return (Q) UpdateLogInnerIO.VERSIONS.forVersion(ver);
+
+            case T_UPDATE_LOG_REF_LEAF:
+                return (Q) UpdateLogLeafIO.VERSIONS.forVersion(ver);
+
+            case T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER:
+                return (Q) CacheIdAwareUpdateLogInnerIO.VERSIONS.forVersion(ver);
+
+            case T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF:
+                return (Q) CacheIdAwareUpdateLogLeafIO.VERSIONS.forVersion(ver);
+
             case T_H2_REF_INNER:
                 if (h2InnerIOs == null)
                     break;
@@ -813,28 +829,16 @@ public abstract class PageIO {
             case T_DATA_REF_METASTORAGE_LEAF:
                 return (Q)MetastorageBPlusIO.LEAF_IO_VERSIONS.forVersion(ver);
 
-            case  T_UPDATE_LOG_REF_INNER:
-                return (Q) UpdateLogInnerIO.VERSIONS.forVersion(ver);
-
-            case T_UPDATE_LOG_REF_LEAF:
-                return (Q) UpdateLogLeafIO.VERSIONS.forVersion(ver);
-
-            case T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER:
-                return (Q) CacheIdAwareUpdateLogInnerIO.VERSIONS.forVersion(ver);
-
-            case T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF:
-                return (Q) CacheIdAwareUpdateLogLeafIO.VERSIONS.forVersion(ver);
-
             default:
                 // For tests.
-                if (innerTestIO != null && innerTestIO.getType() == type && innerTestIO.getVersion() == ver)
+                if (innerTestIO != null && innerTestIO.getType() == type0 && innerTestIO.getVersion() == ver)
                     return (Q)innerTestIO;
 
-                if (leafTestIO != null && leafTestIO.getType() == type && leafTestIO.getVersion() == ver)
+                if (leafTestIO != null && leafTestIO.getType() == type0 && leafTestIO.getVersion() == ver)
                     return (Q)leafTestIO;
         }
 
-        throw new IgniteCheckedException("Unknown page IO type: " + type);
+        throw new IgniteCheckedException("Unknown page IO type: " + type0);
     }
 
     /**
