@@ -2143,11 +2143,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         /** {@inheritDoc} */
         @Override public PartitionLogTree logTree() {
-            CacheDataStore delegate0 = delegate;
+            try {
+                CacheDataStore delegate0 = init0(true);
 
-            return delegate0 == null ? null : delegate0.logTree();
+                return delegate0 == null ? null : delegate0.logTree();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
         }
-
 
         /** {@inheritDoc} */
         @Override public long fullSize() {
