@@ -31,6 +31,11 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
     }
 
     /** {@inheritDoc} */
+    @Override protected int partitions() {
+        return 1024;
+    }
+
+    /** {@inheritDoc} */
     @Ignore
     @Override public void testSingleThreadedUpdateOrder() throws Exception {
         // Not applicable for volatile mode.
@@ -51,10 +56,5 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
     /** {@inheritDoc} */
     @Override protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {
         // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override protected int partitions() {
-        return 1024;
     }
 }

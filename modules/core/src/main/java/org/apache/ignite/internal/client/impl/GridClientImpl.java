@@ -349,8 +349,8 @@ public class GridClientImpl implements GridClient {
     }
 
     /** {@inheritDoc} */
-    @Override public void throwLastError() throws GridClientException {
-        top.nodes();
+    @Override public GridClientException checkLastError() {
+        return top.lastError();
     }
 
     /**
