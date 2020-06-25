@@ -32,6 +32,11 @@ public class MarkerPageIO extends PageIO {
      */
     private static final int WAL_RECORD_SERIALIZER_VERSION_OFF = MARKER_TYPE_OFF + 4;
 
+    /**
+     * Offset for count for WAL records that follow this marker.
+     */
+    public static final int WAL_RECORDS_CNT_OFF = WAL_RECORD_SERIALIZER_VERSION_OFF + 4;
+
     /** This type of marker is used to mark the end of pages stream. */
     public static final int MARKER_TYPE_TERMINATION = 1;
 
@@ -110,6 +115,34 @@ public class MarkerPageIO extends PageIO {
      */
     public void setWalRecordSerializerVersion(long pageAddr, int v) {
         PageUtils.putInt(pageAddr, WAL_RECORD_SERIALIZER_VERSION_OFF, v);
+    }
+
+    /**
+     * Returns WAL records count.
+     *
+     * @param pageAddr Page address.
+     */
+    public int walRecordsCnt(long pageAddr) {
+        return PageUtils.getInt(pageAddr, WAL_RECORDS_CNT_OFF);
+    }
+
+    /**
+     * Returns WAL records count.
+     *
+     * @param buffer Page buffer.
+     */
+    public int walRecordsCnt(ByteBuffer buffer) {
+        return buffer.getInt(WAL_RECORDS_CNT_OFF);
+    }
+
+    /**
+     * Sets WAL records count.
+     *
+     * @param pageAddr Page address.
+     * @param v WAL records count.
+     */
+    public void setWalRecordsCnt(long pageAddr, int v) {
+        PageUtils.putInt(pageAddr, WAL_RECORDS_CNT_OFF, v);
     }
 
     /** {@inheritDoc} */
