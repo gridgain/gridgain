@@ -84,10 +84,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class IgniteStopwatch {
     /** Ticker. */
     private final IgniteTicker ticker;
+
     /** Is running. */
     private boolean isRunning;
+
     /** Elapsed nanos. */
     private long elapsedNanos;
+
     /** Start tick. */
     private long startTick;
 

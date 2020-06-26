@@ -34,7 +34,7 @@ public class GridMetadataAwareAdapter {
     /**
      * Enum stored predefined keys.
      */
-    public enum EntryKey {//keys sorted by usage rate, descending.
+    public enum EntryKey { //keys sorted by usage rate, descending.
         /** Predefined key. */
         CACHE_STORE_MANAGER_KEY(0),
 

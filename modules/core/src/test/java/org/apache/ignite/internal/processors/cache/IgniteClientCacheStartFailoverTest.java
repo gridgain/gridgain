@@ -184,7 +184,6 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
         clientStartLastServerFails(TRANSACTIONAL_SNAPSHOT);
     }
 
-
     /**
      * @param atomicityMode Cache atomicity mode.
      * @throws Exception If failed.
@@ -583,7 +582,6 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
             cache.putAll(map);
         }
 
-
         return cacheNames;
     }
 
@@ -602,6 +600,7 @@ public class IgniteClientCacheStartFailoverTest extends GridCommonAbstractTest {
 
         return ccfg;
     }
+
     /**
      *
      */

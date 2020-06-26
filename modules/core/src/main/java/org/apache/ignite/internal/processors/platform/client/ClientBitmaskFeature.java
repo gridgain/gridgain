@@ -23,8 +23,17 @@ import org.apache.ignite.internal.ThinProtocolFeature;
  * Defines supported features for thin client.
  */
 public enum ClientBitmaskFeature implements ThinProtocolFeature {
-    /** Reserved for future use. */
-    RESERVED(0),
+    /** Feature for user attributes. */
+    USER_ATTRIBUTES(0),
+
+    /** Compute tasks (execute by task name). */
+    EXECUTE_TASK_BY_NAME(1),
+
+    /** Adds cluster states besides ACTIVE and INACTIVE. */
+    // CLUSTER_STATES(2),
+
+    /** Client discovery. */
+    CLUSTER_GROUP_GET_NODES_ENDPOINTS(3),
 
     /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
     DEFAULT_QRY_TIMEOUT(1);

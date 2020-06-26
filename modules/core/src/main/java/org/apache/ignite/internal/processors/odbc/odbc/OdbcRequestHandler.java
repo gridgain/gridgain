@@ -469,7 +469,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
                         + paramSet.length + ']');
 
             // Getting meta and do the checks for the first execution.
-            for (Object[] set  : paramSet)
+            for (Object[] set : paramSet)
                 qry.addBatchedArgs(set);
 
             List<FieldsQueryCursor<List<?>>> qryCurs =
@@ -587,7 +587,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
             );
         }
         catch (Exception e) {
-            U.error(log, "Failed to execute batch query [qry=" + qry +']', e);
+            U.error(log, "Failed to execute batch query [qry=" + qry + ']', e);
 
             extractBatchError(e, null, err);
         }
@@ -864,7 +864,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
      * @param queryId Query ID.
      */
     private void CloseCursor(OdbcQueryResults results, long queryId) {
-        assert(results != null);
+        assert (results != null);
 
         results.closeAll();
 

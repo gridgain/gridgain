@@ -80,7 +80,7 @@ public class ClientConsistentHashSelfTest extends GridCommonAbstractTest {
 
             if (exp.equals(act))
                 info("Validation succeed [exp=" + exp + ", act=" + act + ']');
-            else{
+            else {
                 info("Validation failed  [exp=" + exp + ", act=" + act + ']');
 
                 fail = true;

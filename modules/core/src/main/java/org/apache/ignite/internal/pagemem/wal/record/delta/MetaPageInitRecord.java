@@ -72,7 +72,6 @@ public class MetaPageInitRecord extends InitNewPageRecord {
         this.ioType = ioType;
     }
 
-
     /**
      * @return Tree root.
      */

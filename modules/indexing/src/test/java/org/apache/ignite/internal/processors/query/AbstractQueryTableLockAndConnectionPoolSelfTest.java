@@ -300,7 +300,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         // Do many concurrent queries.
         IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(new Runnable() {
             @Override public void run() {
-                while(!end.get()) {
+                while (!end.get()) {
                     try {
                         FieldsQueryCursor<List<?>> cursor = execute(node, new SqlFieldsQueryEx(
                             "SELECT pers.id, pers.name " +
@@ -316,7 +316,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                         cursor.getAll();
                     }
                     catch (Exception e) {
-                        if(X.cause(e, QueryRetryException.class) == null) {
+                        if (X.cause(e, QueryRetryException.class) == null) {
                             log.error("Unexpected exception", e);
 
                             fail("Unexpected exception. " + e);
@@ -357,7 +357,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         // Do many concurrent queries.
         IgniteInternalFuture<Long> fut = GridTestUtils.runMultiThreadedAsync(new Runnable() {
             @Override public void run() {
-                while(!end.get()) {
+                while (!end.get()) {
                     try {
                         FieldsQueryCursor<List<?>> cursor = execute(node, new SqlFieldsQuery(
                             "SELECT pers.id, pers.name FROM \"pers\".PERSON")
@@ -370,7 +370,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                         if (e.getMessage().contains("Failed to parse query. Column \"PERS.ID\" not found")) {
                             // Swallow exception when column is dropped.
                         }
-                        else if(X.cause(e, QueryRetryException.class) == null) {
+                        else if (X.cause(e, QueryRetryException.class) == null) {
                             log.error("Unexpected exception", e);
 
                             fail("Unexpected exception. " + e);
@@ -384,7 +384,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                 }
             }
         }, qryThreads, "usr-qry");
-
 
         long tEnd = U.currentTimeMillis() + TEST_DUR;
 
@@ -541,7 +540,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
 
             assertBaseQueryResults(rows);
         }
-
 
         // Test full iteration.
         {
@@ -794,7 +792,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         return ((IgniteEx)node).context().query().querySqlFields(qry.setLazy(lazy()), false);
     }
 
-
     /**
      * @return Lazy mode.
      */
@@ -843,7 +840,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
     private Set<H2PooledConnection> usedConnections(int i) {
         ConnectionManager connMgr = ((IgniteH2Indexing)grid(i).context().query().getIndexing()).connections();
 
-        return  GridTestUtils.getFieldValue(connMgr, "usedConns");
+        return GridTestUtils.getFieldValue(connMgr, "usedConns");
     }
 
     /**

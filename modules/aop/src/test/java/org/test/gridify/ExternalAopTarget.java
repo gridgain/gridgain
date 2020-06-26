@@ -29,7 +29,7 @@ public class ExternalAopTarget {
      * @param arg Argument.
      * @return Argument parsed to integer.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget")
+    @Gridify(igniteInstanceName = "ExternalAopTarget")
     public int gridifyDefault(String arg) {
         return Integer.parseInt(arg);
     }
@@ -38,7 +38,7 @@ public class ExternalAopTarget {
      * @param arg Argument.
      * @return Argument parsed to integer.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget", taskClass = ExternalGridifyTask.class)
+    @Gridify(igniteInstanceName = "ExternalAopTarget", taskClass = ExternalGridifyTask.class)
     public int gridifyNonDefaultClass(String arg) {
         return Integer.parseInt(arg);
     }
@@ -48,7 +48,7 @@ public class ExternalAopTarget {
      * @param arg Argument.
      * @return Argument parsed to integer.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget", taskName = ExternalGridifyTask.TASK_NAME)
+    @Gridify(igniteInstanceName = "ExternalAopTarget", taskName = ExternalGridifyTask.TASK_NAME)
     public int gridifyNonDefaultName(String arg) {
         return Integer.parseInt(arg);
     }
@@ -57,7 +57,7 @@ public class ExternalAopTarget {
      * @param arg Argument.
      * @return ALways 0.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget", taskName = "myTask", taskClass = ExternalGridifyTask.class)
+    @Gridify(igniteInstanceName = "ExternalAopTarget", taskName = "myTask", taskClass = ExternalGridifyTask.class)
     public int gridifyTaskClassAndTaskName(String arg) {
         assert arg != null;
 
@@ -69,7 +69,7 @@ public class ExternalAopTarget {
      * @return No-op.
      * @throws ExternalGridifyException Always.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget")
+    @Gridify(igniteInstanceName = "ExternalAopTarget")
     public int gridifyDefaultException(String arg) throws ExternalGridifyException {
         throw new ExternalGridifyException(arg);
     }
@@ -79,7 +79,7 @@ public class ExternalAopTarget {
      * @return Argument parsed to integer.
      * @throws ExternalGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget")
+    @Gridify(igniteInstanceName = "ExternalAopTarget")
     public int gridifyDefaultResource(String arg) throws ExternalGridifyException {
         getResource();
 
@@ -91,7 +91,7 @@ public class ExternalAopTarget {
      * @return Argument parsed to integer.
      * @throws ExternalGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget", taskClass = ExternalGridifyTask.class)
+    @Gridify(igniteInstanceName = "ExternalAopTarget", taskClass = ExternalGridifyTask.class)
     public int gridifyNonDefaultClassResource(String arg) throws ExternalGridifyException {
         getResource();
 
@@ -104,7 +104,7 @@ public class ExternalAopTarget {
      * @return Argument parsed to integer.
      * @throws ExternalGridifyException If failed.
      */
-    @Gridify(igniteInstanceName="ExternalAopTarget", taskName = ExternalGridifyTask.TASK_NAME)
+    @Gridify(igniteInstanceName = "ExternalAopTarget", taskName = ExternalGridifyTask.TASK_NAME)
     public int gridifyNonDefaultNameResource(String arg) throws ExternalGridifyException {
         getResource();
 

@@ -379,7 +379,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
      * @throws Exception If failed.
      */
     @Override protected void checkBasicCacheOperations(Serializable... valsToCheck) throws Exception {
-        checkBasicCacheOperations((Object o)-> o, valsToCheck);
+        checkBasicCacheOperations((Object o) -> o, valsToCheck);
     }
 
     /**
@@ -408,7 +408,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
                 (lhs, rhs) -> EqualsBuilder.reflectionEquals(
                     lhs, rhs, false, lhs.getClass(), true);
 
-        String uuidPostfix =  UUID.randomUUID().toString().replaceAll("-", "_");
+        String uuidPostfix = UUID.randomUUID().toString().replaceAll("-", "_");
 
         String cacheName = "cache" + uuidPostfix;
 
@@ -440,14 +440,13 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
         for (int i = 0; i < valsToCheck.length; i++)
             keyValMap.put(valsToCheck[i], valsToCheck[valsToCheck.length - i - 1]);
 
-
         for (Map.Entry<Serializable, Serializable> keyValEntry : keyValMap.entrySet()) {
             Object originalKey;
             Object sqlStrKey;
 
             if (keyValEntry.getKey() instanceof SqlStrConvertedValHolder) {
                 originalKey = ((SqlStrConvertedValHolder) keyValEntry.getKey()).originalVal();
-                sqlStrKey =  ((SqlStrConvertedValHolder) keyValEntry.getKey()).sqlStrVal();
+                sqlStrKey = ((SqlStrConvertedValHolder) keyValEntry.getKey()).sqlStrVal();
             }
             else {
                 originalKey = keyValEntry.getKey();

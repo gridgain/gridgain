@@ -108,6 +108,7 @@ public class IgnitePdsDataRegionMetricsTest extends GridCommonAbstractTest {
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
     }
+
     /**
      * @return Ignite cache configuration.
      */

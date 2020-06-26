@@ -49,8 +49,7 @@ public class VisorDrStateTaskArgs extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
         verbose = in.readBoolean();
     }
 }

@@ -217,7 +217,7 @@ public class IgniteModelStorageUtil {
      * @param mdl Ignite model.
      * @return Ignite model that accepts and returns serialized objects (byte arrays).
      */
-    private static  <I extends Serializable, O extends Serializable> IgniteModel<byte[], byte[]> wrapIgniteModel(
+    private static <I extends Serializable, O extends Serializable> IgniteModel<byte[], byte[]> wrapIgniteModel(
         IgniteModel<I, O> mdl) {
         return input -> {
             I deserializedInput = Utils.deserialize(input);

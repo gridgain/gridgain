@@ -51,7 +51,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private String url;
 
     /** Addresses. */
-    private HostAndPortRange [] addrs;
+    private HostAndPortRange[] addrs;
 
     /** Schema name. Hidden property. Is used to set default schema name part of the URL. */
     private StringProperty schema = new StringProperty(PROP_SCHEMA,
@@ -252,7 +252,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             if (val == null)
                 return;
 
-            String [] features = val.split("\\W+");
+            String[] features = val.split("\\W+");
 
             for (String f : features) {
                 try {
@@ -270,7 +270,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "Whether to keep binary objects in binary form.", false, false);
 
     /** Properties array. */
-    private final ConnectionProperty [] propsArray = {
+    private final ConnectionProperty[] propsArray = {
         distributedJoins, enforceJoinOrder, collocated, replicatedOnly, autoCloseServerCursor,
         tcpNoDelay, lazy, socketSendBuffer, socketReceiveBuffer, skipReducerOnUpdate, nestedTxMode,
         sslMode, sslCipherSuites, sslProtocol, sslKeyAlgorithm,
@@ -312,7 +312,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
             StringBuilder sbUrl = new StringBuilder(JdbcThinUtils.URL_PREFIX);
 
-            HostAndPortRange [] addrs = getAddresses();
+            HostAndPortRange[] addrs = getAddresses();
 
             for (int i = 0; i < addrs.length; i++) {
                 if (i > 0)
@@ -860,7 +860,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
      * @throws SQLException If failed.
      */
     private void parseEndpoints(String endpointStr) throws SQLException {
-        String [] endpoints = endpointStr.split(",");
+        String[] endpoints = endpointStr.split(",");
 
         if (endpoints.length > 0)
             addrs = new HostAndPortRange[endpoints.length];
@@ -1002,7 +1002,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
          * An array of possible values if the value may be selected
          * from a particular set of values; otherwise null.
          */
-        protected String [] choices;
+        protected String[] choices;
 
         /** Required flag. */
         protected boolean required;
@@ -1139,7 +1139,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         private static final long serialVersionUID = 0L;
 
         /** Bool choices. */
-        private static final String [] boolChoices = new String[] {Boolean.TRUE.toString(), Boolean.FALSE.toString()};
+        private static final String[] boolChoices = new String[] {Boolean.TRUE.toString(), Boolean.FALSE.toString()};
 
         /** Value. */
         private Boolean val;
@@ -1205,7 +1205,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         protected Number val;
 
         /** Allowed value range. */
-        private Number [] range;
+        private Number[] range;
 
         /**
          * @param name Name.

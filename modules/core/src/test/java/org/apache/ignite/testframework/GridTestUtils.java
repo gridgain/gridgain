@@ -458,7 +458,7 @@ public final class GridTestUtils {
      * @param col Collection.
      * @param str String.
      */
-    public static  <C extends Collection<String>> void assertContains(@Nullable IgniteLogger log, C col, String str) {
+    public static <C extends Collection<String>> void assertContains(@Nullable IgniteLogger log, C col, String str) {
         try {
             assertTrue(col.contains(str));
         } catch (AssertionError e) {
@@ -1826,7 +1826,6 @@ public final class GridTestUtils {
             cls = cls.getSuperclass();
         } while (cls != Object.class);
 
-
         throw new RuntimeException("Failed to find method" +
             " [obj=" + obj + ", mtd=" + mtd + ", params=" + Arrays.toString(params) + ']');
     }
@@ -1915,7 +1914,7 @@ public final class GridTestUtils {
      */
     public static byte[] readResource(ClassLoader classLoader, String resourceName) throws IOException {
         try (InputStream is = classLoader.getResourceAsStream(resourceName)) {
-            assertNotNull("Resource is missing: " + resourceName , is);
+            assertNotNull("Resource is missing: " + resourceName, is);
 
             try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 U.copy(is, baos);
@@ -2017,7 +2016,6 @@ public final class GridTestUtils {
 
         return factory;
     }
-
 
     /**
      * Creates test-purposed SSL context factory from test key store with disabled trust manager.
@@ -2410,10 +2408,12 @@ public final class GridTestUtils {
         return grid.context().config().getMBeanServer().getAttribute(U.makeMBeanName(grid.name(), grp, name), attr);
     }
 
-
+    /**
+     */
     public static class SqlTestFunctions {
         /** Sleep milliseconds. */
         public static volatile long sleepMs;
+
         /** Fail flag. */
         public static volatile boolean fail;
 
@@ -2427,7 +2427,7 @@ public final class GridTestUtils {
         public static long sleep() {
             long end = System.currentTimeMillis() + sleepMs;
 
-            long remainTime =sleepMs;
+            long remainTime = sleepMs;
 
             do {
                 try {

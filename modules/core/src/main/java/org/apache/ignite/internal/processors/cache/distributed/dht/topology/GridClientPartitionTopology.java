@@ -1020,7 +1020,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
         try {
             if (node2part == null)
-                node2part = new GridDhtPartitionFullMap();
+                return false;
 
             final GridClusterStateProcessor state = cctx.kernalContext().state();
 

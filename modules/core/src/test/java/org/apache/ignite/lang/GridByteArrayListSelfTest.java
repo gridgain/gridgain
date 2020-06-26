@@ -173,7 +173,7 @@ public class GridByteArrayListSelfTest extends GridCommonAbstractTest {
      */
     @SuppressWarnings({"ErrorNotRethrown"})
     @Test
-    public void testBounds()  {
+    public void testBounds() {
         GridByteArrayList list = new GridByteArrayList(3);
 
         try {

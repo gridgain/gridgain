@@ -78,7 +78,6 @@ public enum CacheCommandList {
      */
     FIND_AND_DELETE_GARBAGE("find_garbage", new FindAndDeleteGarbage());
 
-
     /** Enumerated values. */
     private static final CacheCommandList[] VALS = values();
 

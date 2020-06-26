@@ -231,7 +231,7 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
      *
      */
     private void checkDetectionFutures() {
-        for (int i = 0; i < NODES_CNT ; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             Ignite ignite = ignite(i);
 
             IgniteTxManager txMgr = ((IgniteKernal)ignite).context().cache().context().tm();

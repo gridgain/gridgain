@@ -61,7 +61,7 @@ public class SqlParseException extends IgniteException {
 
         sql = e.sql;
         pos = e.pos;
-        code = e. code;
+        code = e.code;
     }
 
     /**

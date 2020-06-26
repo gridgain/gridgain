@@ -509,12 +509,16 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
     private static class PageMeta {
         /** */
         final int structureId;
+
         /** */
         final long pageId;
+
         /** */
         final long page;
+
         /** */
         final long pageAddr;
+
         /** */
         private PageMeta(
             int structureId,

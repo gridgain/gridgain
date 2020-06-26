@@ -85,7 +85,6 @@ public enum CacheSubcommands {
      */
     CHECK_INDEX_INLINE_SIZES("check_index_inline_sizes", null, new CheckIndexInlineSizes());
 
-
     /** Enumerated values. */
     private static final CacheSubcommands[] VALS = values();
 
