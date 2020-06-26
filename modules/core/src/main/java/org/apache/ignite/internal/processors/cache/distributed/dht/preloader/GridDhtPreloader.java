@@ -214,8 +214,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
 
-        boolean changed = false;
-
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingServerExchange()) {
                 if (log.isDebugEnabled())

@@ -16,14 +16,12 @@
 
 package org.apache.ignite.spi.tracing;
 
-import java.util.Map;
-
 /**
  * Noop and null-safe implementation of {@link SpiSpecificSpan}.
  */
 public class NoopSpiSpecificSpan implements SpiSpecificSpan {
     /** Instance. */
-    public static final SpiSpecificSpan INSTANCE = new NoopSpiSpecificSpan();
+    public static final NoopSpiSpecificSpan INSTANCE = new NoopSpiSpecificSpan();
 
     /**
      * Constructor.
@@ -33,32 +31,22 @@ public class NoopSpiSpecificSpan implements SpiSpecificSpan {
     }
 
     /** {@inheritDoc} */
-    @Override public SpiSpecificSpan addTag(String tagName, String tagVal) {
+    @Override public NoopSpiSpecificSpan addTag(String tagName, String tagVal) {
         return this;
     }
 
     /** {@inheritDoc} */
-    @Override public SpiSpecificSpan addTag(String tagName, long tagVal) {
+    @Override public NoopSpiSpecificSpan addLog(String logDesc) {
         return this;
     }
 
     /** {@inheritDoc} */
-    @Override public SpiSpecificSpan addLog(String logDesc) {
+    @Override public NoopSpiSpecificSpan setStatus(SpanStatus spanStatus) {
         return this;
     }
 
     /** {@inheritDoc} */
-    @Override public SpiSpecificSpan addLog(String logDesc, Map<String, String> attrs) {
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Override public SpiSpecificSpan setStatus(SpanStatus spanStatus) {
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Override public SpiSpecificSpan end() {
+    @Override public NoopSpiSpecificSpan end() {
         return this;
     }
 
