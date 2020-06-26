@@ -258,7 +258,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void corruptFile(File workDir, int partId, int pageIdxCorrupt) throws Exception {
-        System.out.println("<!> curruptFile");
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
 
         File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME));
@@ -860,8 +859,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         A.ensure(nonNull(workDirs) && !workDirs.isEmpty(), "empty workDirs");
 
         try {
-//            int from = workDirs.size() == 1 ? 31 : 26;
-//            int to = workDirs.size() == 1 ? 35 : 29;
             for (int i = 31; i < 35; i++) {
                 for (File dir : workDirs)
                     corruptFile(dir, INDEX_PARTITION, i);
