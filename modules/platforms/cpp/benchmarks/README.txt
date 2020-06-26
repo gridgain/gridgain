@@ -9,12 +9,12 @@ Common requirements
  * GridGain must be built and packaged using Maven. You can use the following Maven command: mvn clean package -DskipTests
  * GridGain C++ must be built according to instructions for your platform. Refer to
    $IGNITE_HOME/platforms/cpp/DEVNOTES.txt for instructions.
- * For odbc-example additionally ODBC Driver Manager must be present and installed on your platform and
+ * For ODBC benchmarks additionally ODBC Driver Manager must be present and installed on your platform and
    GridGain ODBC driver must be built and installed according to instructions for your platform. Refer to
    $IGNITE_HOME/platforms/cpp/DEVNOTES.txt for build instructions and to $IGNITE_HOME/platforms/cpp/odbc/README.txt.
    for installation instructions.
 
-Running benchmarks on Linux
+Building and benchmarks on Linux manually
 ----------------------------------
 
 Prerequisites:
@@ -25,21 +25,19 @@ To build benchmarks execute the following commands one by one from benchmarks ro
  * ./configure
  * make
 
-As a result executables will appear in every example's directory.
+As a result executables will appear in every benchmark's directory.
 
-Before running benchmarks ensure that:
- * LD_LIBRARY_PATH environment variable is set and pointing to a directory with "libjvm.so" library. Typically this
-   library is located in $JAVA_HOME/jre/lib/amd64/server directory.
- * For odbc-example additionaly ODBC Driver Manager must be present and installed on your platform and
-   GridGain ODBC driver must be built and installed according to instructions for your platform.
- * For odbc-example make sure that path to GridGain libraries is added to LD_LIBRARY_PATH (usually it is /usr/local/lib).
+For running instructions refer to benchmarks/<benchmark_name>/README.txt
 
-Running benchmarks on Windows
+Building and running benchmarks using Docker
 ----------------------------------
+1. Go to modules/platforms/cpp
+$ cd modules/platforms/cpp
 
-Prerequisites:
- * Microsoft Visual Studio (tm) 2010 or higher must be installed.
- * Windows SDK 7.1 must be installed.
+2. Edit benchmarks/odbc-sql/Dockerfile if needed (to change arguments)
 
-Open Visual Studio solution %IGNITE_HOME%\platforms\cpp\benchmarks\project\vs\ignite-benchmarks.sln and select proper
-platform (x64 or x86). Run the solution.
+3. Run the following command (from modules/platforms/cpp) to build docker image:
+$ docker build -f benchmarks/odbc-sql/Dockerfile --tag odbc-sql .
+
+4. Run the following command to run docker image (from anywhere):
+$ docker run odbc-sql
