@@ -21,6 +21,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -28,12 +29,15 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class UpdateLogRow {
     /** Cache ID. */
+    @GridToStringInclude
     public int cacheId;
 
     /** Expire time. */
+    @GridToStringInclude
     public long updateCntr;
 
     /** Link. */
+    @GridToStringInclude
     public long link;
 
     /** */
@@ -47,17 +51,6 @@ public class UpdateLogRow {
      */
     public UpdateLogRow(int cacheId) {
         this.cacheId = cacheId;
-    }
-
-    /**
-     * @param cacheId Cache ID.
-     * @param updateCntr Update counter.
-     */
-    public UpdateLogRow(int cacheId, long updateCntr){
-        assert updateCntr > 0;
-
-        this.cacheId = cacheId;
-        this.updateCntr = updateCntr;
     }
 
     /**

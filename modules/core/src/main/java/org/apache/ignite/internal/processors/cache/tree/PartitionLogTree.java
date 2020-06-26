@@ -30,7 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
  */
 public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     /** */
-    public static final Object WITHOUT_KEY = new Object();
+    public static final Object WITH_KEY = new Object();
 
     /** */
     private final CacheGroupContext grp;
@@ -104,15 +104,10 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         cmp = Long.compare(updCntr, row.updateCntr);
 
-        if (cmp != 0)
-            return cmp;
+        if (cmp == 0 && row.link != 0)
+            assert io.getLink(pageAddr, idx) == row.link;
 
-        if (row.link == 0L)
-            return 0;
-
-        long link = io.getLink(pageAddr, idx);
-
-        return Long.compare(link, row.link);
+        return cmp;
     }
 
     /** {@inheritDoc} */
@@ -120,6 +115,6 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         throws IgniteCheckedException {
         UpdateLogRow row = io.getLookupRow(this, pageAddr, idx);
 
-        return flag == WITHOUT_KEY ? row : row.initKey(grp);
+        return flag == WITH_KEY ? row.initKey(grp) : row;
     }
 }

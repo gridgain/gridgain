@@ -1702,8 +1702,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 case NOOP:
-                case IN_PLACE:
+                case IN_PLACE: {
+                    if (IS_INCREMENTAL_DR_ENABLED && c.oldRow() != null && c.newRow() != null) {
+                        if (c.oldRow().version().updateCounter() != 0)
+                            logTree.removex(new UpdateLogRow(cctx.cacheId(), c.oldRow().version().updateCounter(), c.oldRow().link()));
+
+                        if (c.newRow().version().updateCounter() != 0)
+                            logTree.putx(new UpdateLogRow(cctx.cacheId(), c.newRow().version().updateCounter(), c.newRow().link()));
+                        else
+                            assert true;
+                    }
+
                     break;
+                }
 
                 default:
                     assert false : c.operationType();
@@ -2581,18 +2592,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             updatePendingEntries(cctx, newRow, oldRow);
 
-            if (newRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
-                logTree.put(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
-
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
 
                 if (oldRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
-                    logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter()));
+                    logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
+
+            if (newRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
+                logTree.put(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
         }
 
         /**
@@ -2662,7 +2673,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (oldRow != null) {
                 if (oldRow.version().updateCounter() != 0 && IS_INCREMENTAL_DR_ENABLED)
-                    logTree.remove(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter()));
+                    logTree.removex(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
