@@ -21,7 +21,6 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Shutdown policy visor trsk result.
