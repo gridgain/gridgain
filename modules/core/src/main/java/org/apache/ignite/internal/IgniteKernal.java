@@ -1735,7 +1735,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         add(ATTR_PEER_CLASSLOADING, cfg.isPeerClassLoadingEnabled());
 
-        add(ATTR_SHUTDOWN_POLICY, cfg.getShutdownPolicy().ordinal());
+        add(ATTR_SHUTDOWN_POLICY, cfg.getShutdownPolicy().index());
 
         add(ATTR_DEPLOYMENT_MODE, cfg.getDeploymentMode());
         add(ATTR_LANG_RUNTIME, getLanguage());

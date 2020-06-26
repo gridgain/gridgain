@@ -53,12 +53,12 @@ public class VisorShutdownPolicyTaskResult extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeEnum(out, shutdown);
+        out.writeInt(shutdown == null ? -1 : shutdown.index());
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        shutdown = ShutdownPolicy.fromOrdinal(in.readByte());
+        shutdown = ShutdownPolicy.fromOrdinal(in.readInt());
 
     }
 }
