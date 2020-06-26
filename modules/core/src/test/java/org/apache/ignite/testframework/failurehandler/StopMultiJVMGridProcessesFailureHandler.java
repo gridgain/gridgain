@@ -16,7 +16,6 @@
 
 package org.apache.ignite.testframework.failurehandler;
 
-import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.failure.AbstractFailureHandler;

@@ -30,11 +30,12 @@ public class GridCacheAtomicClientOnlyMultiJvmFullApiSelfTest extends
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         if (!isRemoteJvm(igniteInstanceName))
-            if(!cfg.isClientMode())
+            if (!cfg.isClientMode())
                 cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
 
         return cfg;
