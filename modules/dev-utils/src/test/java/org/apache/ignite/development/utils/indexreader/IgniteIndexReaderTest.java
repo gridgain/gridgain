@@ -69,8 +69,8 @@ import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.ERROR_PREFIX;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_GRP_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
@@ -258,6 +258,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void corruptFile(File workDir, int partId, int pageIdxCorrupt) throws Exception {
+        System.out.println("<!> curruptFile");
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
 
         File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME));
@@ -303,8 +304,6 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
                 return;
             }
-
-            throw new IgniteCheckedException("Didn't find pageIdx=" + pageIdxCorrupt);
         }
         finally {
             GridUnsafe.freeBuffer(buf);
@@ -861,6 +860,8 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         A.ensure(nonNull(workDirs) && !workDirs.isEmpty(), "empty workDirs");
 
         try {
+//            int from = workDirs.size() == 1 ? 31 : 26;
+//            int to = workDirs.size() == 1 ? 35 : 29;
             for (int i = 31; i < 35; i++) {
                 for (File dir : workDirs)
                     corruptFile(dir, INDEX_PARTITION, i);
