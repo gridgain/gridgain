@@ -809,21 +809,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     PageIdAllocator.INDEX_PARTITION,
                     pageCnt,
                     -1);
-
-//                IgniteWriteAheadLogManager wal = this.ctx.wal();
-//
-//                if (changed && PageHandler.isWalDeltaRecordNeeded(pageMem, grpId, metaPageId, metaPageAddr, wal, null))
-//                    wal.log(new MetaPageUpdatePartitionDataRecordV2(
-//                        grpId,
-//                        metaPageId,
-//                        metaIo.getUpdateCounter(metaPageAddr),
-//                        metaIo.getGlobalRemoveId(metaPageAddr),
-//                        (int)metaIo.getSize(metaPageAddr),
-//                        metaIo.getCountersPageId(metaPageAddr),
-//                        metaIo.getPartitionState(metaPageAddr),
-//                        pageCnt,
-//                        metaIo.getGapsLink(metaPageAddr)
-//                    ));
             }
             finally {
                 pageMem.writeUnlock(grpId, metaPageId, metaPage, null, changed);
