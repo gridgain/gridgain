@@ -136,7 +136,7 @@ public class SingleSegmentLogicalRecordsIterator extends AbstractWalRecordsItera
 
         /** {@inheritDoc} */
         @Override public boolean apply(WALRecord.RecordType type, WALPointer ptr) {
-            return type.purpose() == WALRecord.RecordPurpose.LOGICAL || type == WALRecord.RecordType.CHECKPOINT_RECORD;
+            return type.purpose() != WALRecord.RecordPurpose.PHYSICAL;
         }
     }
 }
