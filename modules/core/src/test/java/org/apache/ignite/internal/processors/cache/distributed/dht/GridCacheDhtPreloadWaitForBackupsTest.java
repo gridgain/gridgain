@@ -54,7 +54,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
     /** */
-    public static final int STOP_TIMEOUT_LIMIT = 3_000;
+    public static final int STOP_TIMEOUT_LIMIT = 60_000;
 
     /** */
     private CacheMode cacheMode;
