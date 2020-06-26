@@ -16,5 +16,9 @@
 ACLOCAL_AMFLAGS =-I m4
 
 noinst_HEADERS = \
-    ignite/benchmarks/basic_benchmark.h
+    ignite/benchmarks/basic_benchmark.h \
+    ignite/benchmarks/measure_thread.h \
+    ignite/benchmarks/odbc_benchmark.h \
+    ignite/benchmarks/odbc_utils.h \
+    ignite/benchmarks/replicate_thread_runner.h
 

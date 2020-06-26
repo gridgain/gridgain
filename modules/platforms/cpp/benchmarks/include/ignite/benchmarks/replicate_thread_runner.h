@@ -31,6 +31,9 @@
 
 #include <ignite/benchmarks/measure_thread.h>
 
+namespace benchmark
+{
+
 /**
  * Benchmark runner that copies a benchmark instance for every thread.
  */
@@ -46,6 +49,9 @@ public:
         // No-op.
     }
 
+    /**
+     * Destructor.
+     */
     virtual ~ReplicateThreadRunner()
     {
         // No-op.
@@ -151,6 +157,8 @@ private:
     /// Random device.
     std::random_device randomDevice;
 };
+
+} // namespace benchmark
 
 #endif // IGNITE_BENCHMARKS_REPLICATE_THREAD_RUNNER_H
 

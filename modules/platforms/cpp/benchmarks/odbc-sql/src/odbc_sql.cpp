@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& os, const Person& val)
     return os;
 }
 
-class OdbcSqlBenchmark : public OdbcBenchmark
+class OdbcSqlBenchmark : public benchmark::OdbcBenchmark
 {
 public:
     OdbcSqlBenchmark()
@@ -127,7 +127,7 @@ public:
 
         double maxSalary = salary + 1000.0;
 
-        fetchPersonsBetween(salary, maxSalary);
+        FetchPersonsBetween(salary, maxSalary);
 
         for (std::vector<Person>::iterator it = persons.begin(); it != persons.end(); ++it)
         {
@@ -141,7 +141,7 @@ public:
         }
     }
 
-    void fetchPersonsBetween(SQLDOUBLE minSalary, SQLDOUBLE maxSalary)
+    void FetchPersonsBetween(SQLDOUBLE minSalary, SQLDOUBLE maxSalary)
     {
         SQLRETURN ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &minSalary, 0, 0);
         odbc_utils::CheckOdbcOperation(ret, SQL_HANDLE_STMT, stmt, "Failed to bind 1st param");
@@ -207,7 +207,7 @@ int main()
 
     try
     {
-        ReplicateThreadRunner<OdbcSqlBenchmark> runner;
+        benchmark::ReplicateThreadRunner<OdbcSqlBenchmark> runner;
 
         runner.Run();
 

@@ -20,6 +20,9 @@
 #include <ignite/benchmarks/odbc_utils.h>
 #include <ignite/benchmarks/basic_benchmark.h>
 
+namespace benchmark
+{
+
 /**
  * Configuration for the ODBC Benchmark.
  */
@@ -180,5 +183,6 @@ protected:
     SQLHSTMT stmt;
 };
 
+} // namespace benchmark
 
 #endif // IGNITE_BENCHMARKS_ODBC_BENCHMARK_H

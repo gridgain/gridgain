@@ -26,6 +26,9 @@
 #include <algorithm>
 #include <stdexcept>
 
+namespace benchmark
+{
+
 /**
  * Benchmark abstract class.
  */
@@ -109,6 +112,8 @@ private:
     /// Random device.
     std::random_device randomDevice;
 };
+
+} // namespace benchmark
 
 #endif // IGNITE_BENCHMARKS_BASIC_BENCHMARK_H
 

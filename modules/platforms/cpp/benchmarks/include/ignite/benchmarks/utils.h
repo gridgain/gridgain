@@ -34,55 +34,56 @@
 
 namespace utils
 {
-    template<typename TO, typename TI>
-    TO LexicalCast(const TI& in)
+
+template<typename TO, typename TI>
+TO LexicalCast(const TI& in)
+{
+    TO out;
+
+    std::stringstream converter;
+    converter << in;
+    converter >> out;
+
+    return out;
+}
+
+template<>
+std::string LexicalCast(const std::string& in)
+{
+    return in;
+}
+
+template<typename OutType = std::string>
+OutType GetEnvVar(const std::string& name)
+{
+    char* var = std::getenv(name.c_str());
+
+    if (!var)
+        throw std::runtime_error("Environment variable '" + name + "' is not set");
+
+    std::string varStr(var);
+    std::cout << name << "=" << varStr << std::endl;
+
+    return LexicalCast<OutType>(varStr);
+}
+
+template<typename OutType = std::string>
+OutType GetEnvVar(const std::string& name, OutType dflt)
+{
+    char* var = std::getenv(name.c_str());
+
+    if (!var)
     {
-        TO out;
+        std::cout << name << "=" << dflt << std::endl;
 
-        std::stringstream converter;
-        converter << in;
-        converter >> out;
-
-        return out;
+        return dflt;
     }
 
-    template<>
-    std::string LexicalCast(const std::string& in)
-    {
-        return in;
-    }
+    std::string varStr(var);
+    std::cout << name << "=" << varStr << std::endl;
 
-    template<typename OutType = std::string>
-    OutType GetEnvVar(const std::string& name)
-    {
-        char* var = std::getenv(name.c_str());
-
-        if (!var)
-            throw std::runtime_error("Environment variable '" + name + "' is not set");
-
-        std::string varStr(var);
-        std::cout << name << "=" << varStr << std::endl;
-
-        return LexicalCast<OutType>(varStr);
-    }
-
-    template<typename OutType = std::string>
-    OutType GetEnvVar(const std::string& name, OutType dflt)
-    {
-        char* var = std::getenv(name.c_str());
-
-        if (!var)
-        {
-            std::cout << name << "=" << dflt << std::endl;
-
-            return dflt;
-        }
-
-        std::string varStr(var);
-        std::cout << name << "=" << varStr << std::endl;
-
-        return LexicalCast<OutType>(varStr);
-    }
+    return LexicalCast<OutType>(varStr);
+}
 
 } // namespace utils
 

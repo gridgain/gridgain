@@ -29,6 +29,8 @@
 #include <ignite/benchmarks/odbc_utils.h>
 #include <ignite/benchmarks/basic_benchmark.h>
 
+namespace benchmark
+{
 
 /**
  * The MeasureThread class.
@@ -162,5 +164,7 @@ private:
     /** Last measured latency */
     int64_t lastLatency;
 };
+
+} // namespace benchmark
 
 #endif // IGNITE_BENCHMARKS_MEASURE_THREAD_H
