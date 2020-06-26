@@ -35,7 +35,7 @@ public class GridCacheAtomicMultiJvmFullApiSelfTest extends GridCacheAtomicMulti
 
         if (!isRemoteJvm(igniteInstanceName))
             if (cfg != null)
-                if (!cfg.isClientMode())
+                if (cfg.isClientMode() != Boolean.TRUE)
                     cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
 
         return cfg;
