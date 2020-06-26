@@ -34,10 +34,10 @@ public class GridCacheAtomicMultiJvmFullApiSelfTest extends GridCacheAtomicMulti
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         if (!isRemoteJvm(igniteInstanceName))
-            if (!cfg.isClientMode())
-                cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
+            if (cfg != null)
+                if (!cfg.isClientMode())
+                    cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
 
         return cfg;
     }
-
 }
