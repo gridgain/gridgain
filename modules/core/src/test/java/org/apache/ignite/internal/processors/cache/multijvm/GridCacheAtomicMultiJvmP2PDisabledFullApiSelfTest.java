@@ -35,7 +35,7 @@ public class GridCacheAtomicMultiJvmP2PDisabledFullApiSelfTest extends
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         if (!isRemoteJvm(igniteInstanceName))
-            if (!cfg.isClientMode())
+            if (cfg.isClientMode() != Boolean.TRUE)
                 cfg.setFailureHandler(new StopMultiJVMGridProcessesFailureHandler());
 
         return cfg;
