@@ -154,7 +154,11 @@ public enum IgniteFeatures {
     METASTORAGE_LONG_KEYS(38),
 
     /** Remove metadata from cluster for specified type. */
-    REMOVE_METADATA(39);
+    REMOVE_METADATA(39),
+
+    /** Support new security processor with a delegation. */
+    IGNITE_SECURITY_PROCESSOR_V2(40);
+
     /**
      * Unique feature identifier.
      */
@@ -306,6 +310,9 @@ public enum IgniteFeatures {
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
             if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
+                continue;
+
+            if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
             //Disable new rolling upgrade

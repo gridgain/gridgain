@@ -109,8 +109,11 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
      */
     protected AuthorizationContext authenticate(Certificate[] certificates, String user, String pwd)
         throws IgniteCheckedException {
-        if (ctx.security().enabled())
-            authCtx = authenticateExternal(certificates, user, pwd).authorizationContext();
+        if (ctx.security().enabled()) {
+            AuthenticationContext ctx = authenticateExternal(certificates, user, pwd);
+
+            authCtx = ctx.authorizationContext();
+        }
         else if (ctx.authentication().enabled()) {
             if (F.isEmpty(user))
                 throw new IgniteAccessControlException("Unauthenticated sessions are prohibited.");

@@ -17,10 +17,11 @@
 package org.apache.ignite.internal.processors.security.client;
 
 import java.util.Map;
-import org.apache.ignite.internal.processors.security.AbstractTestSecurityPluginProvider;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.security.UserAttributesFactory;
 import org.apache.ignite.internal.processors.security.impl.TestAdditionalSecurityPluginProvider;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityData;
+import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -31,17 +32,15 @@ import static org.apache.ignite.plugin.security.SecurityPermissionSetBuilder.ALL
  */
 @RunWith(JUnit4.class)
 public class ThinClientPermissionCheckSecurityTest extends ThinClientPermissionCheckTest {
-    /** {@inheritDoc} */
-    @Override protected AbstractTestSecurityPluginProvider securityPluginProvider(String instanceName,
-        TestSecurityData... clientData) {
-        return new TestAdditionalSecurityPluginProvider(
-            "srv_" + instanceName,
+    @Override protected void initCredentials(IgniteConfiguration cfg, String login, SecurityPermissionSet prmSet, TestSecurityData... clientData) {
+        cfg.setPluginProviders(new TestAdditionalSecurityPluginProvider(
+            "srv_" + cfg.getIgniteInstanceName(),
             null,
             ALLOW_ALL,
             false,
             true,
             clientData
-        );
+        ));
     }
 
     /** {@inheritDoc} */

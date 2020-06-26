@@ -20,7 +20,9 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.security.impl.TestSecurityData;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginProvider;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -46,20 +48,16 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
 
     /**
      * @param instanceName Instance name.
-     * @param pluginProv Security plugin provider.
      */
-    protected IgniteConfiguration getConfiguration(String instanceName,
-        AbstractTestSecurityPluginProvider pluginProv) throws Exception {
-
-        return getConfiguration(instanceName)
+    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
+        return super.getConfiguration(instanceName)
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration().setPersistenceEnabled(true)
                     )
             )
-            .setAuthenticationEnabled(true)
-            .setPluginProviders(pluginProv);
+            .setAuthenticationEnabled(true);
     }
 
     /** */
@@ -73,13 +71,30 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @param cfg Config.
+     * @param login Login.
+     * @param prmSet Prm set.
+     * @param clientData Client data.
+     */
+    protected void initCredentials(IgniteConfiguration cfg, String login, SecurityPermissionSet prmSet, TestSecurityData... clientData) {
+        TestSecurityPluginProvider provider = new TestSecurityPluginProvider(login, "", prmSet, globalAuth, clientData);
+
+        cfg.setPluginProviders(provider);
+    }
+
+    /**
      * @param login Login.
      * @param prmSet Security permission set.
      * @param isClient Is client.
      */
-    protected IgniteEx startGrid(String login, SecurityPermissionSet prmSet, boolean isClient) throws Exception {
-        return startGrid(getConfiguration(login, new TestSecurityPluginProvider(login, "", prmSet, globalAuth))
+    protected IgniteEx startGrid(String login, SecurityPermissionSet prmSet, boolean isClient, TestSecurityData... clientData) throws Exception {
+        String name = getTestIgniteInstanceName(G.allGrids().size());
+        IgniteConfiguration cfg = getConfiguration(name);
+
+        initCredentials(cfg, login, prmSet, clientData);
+
+        return startGrid(cfg
             .setClientMode(isClient)
-            .setConsistentId(login));
+            .setConsistentId(name));
     }
 }

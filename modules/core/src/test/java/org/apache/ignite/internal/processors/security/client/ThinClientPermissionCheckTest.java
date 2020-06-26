@@ -32,11 +32,11 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.security.AbstractSecurityTest;
-import org.apache.ignite.internal.processors.security.AbstractTestSecurityPluginProvider;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityData;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginProvider;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,24 +84,35 @@ public class ThinClientPermissionCheckTest extends AbstractSecurityTest {
     public static final String CLEAR_TASK =
         "org.apache.ignite.internal.processors.cache.GridCacheAdapter$ClearTask";
 
-    /**
-     * @param clientData Array of client security data.
-     */
-    private IgniteConfiguration getConfiguration(TestSecurityData... clientData) throws Exception {
-        return getConfiguration(G.allGrids().size(), clientData);
-    }
+    /** */
+    protected static final TestSecurityData[] TEST_SECURITY_DATA = {
+        new TestSecurityData(CLIENT,
+            SecurityPermissionSetBuilder.create().defaultAllowAll(false)
+                .appendCachePermissions(CACHE, CACHE_READ, CACHE_PUT, CACHE_REMOVE)
+                .appendCachePermissions(FORBIDDEN_CACHE, EMPTY_PERMS)
+                .build()
+        ),
+        new TestSecurityData(CLIENT_SYS_PERM,
+            SecurityPermissionSetBuilder.create().defaultAllowAll(false)
+                .appendSystemPermissions(CACHE_CREATE, CACHE_DESTROY)
+                .build()
+        ),
+        new TestSecurityData(CLIENT_CACHE_TASK_OPER,
+            SecurityPermissionSetBuilder.create().defaultAllowAll(false)
+                .appendCachePermissions(CACHE, CACHE_REMOVE)
+                .appendTaskPermissions(REMOVE_ALL_TASK, TASK_EXECUTE)
+                .appendTaskPermissions(CLEAR_TASK, TASK_EXECUTE)
+                .build()
+        )
+    };
 
-    /**
-     * @param idx Index.
-     * @param clientData Array of client security data.
-     */
-    private IgniteConfiguration getConfiguration(int idx, TestSecurityData... clientData) throws Exception {
-        String instanceName = getTestIgniteInstanceName(idx);
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(instanceName);
 
-        return getConfiguration(
-            instanceName,
-            securityPluginProvider(instanceName, clientData)
-        ).setCacheConfiguration(cacheConfigurations());
+        cfg.setCacheConfiguration(cacheConfigurations());
+
+        return cfg;
     }
 
     /** Gets cache configurations */
@@ -112,39 +123,9 @@ public class ThinClientPermissionCheckTest extends AbstractSecurityTest {
         };
     }
 
-    /**
-     * @param instanceName Ignite instance name.
-     * @param clientData Client data.
-     */
-    protected AbstractTestSecurityPluginProvider securityPluginProvider(String instanceName,
-        TestSecurityData... clientData) {
-        return new TestSecurityPluginProvider("srv_" + instanceName, null, ALLOW_ALL, false, clientData);
-    }
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        IgniteEx ignite = startGrid(
-            getConfiguration(
-                new TestSecurityData(CLIENT,
-                    SecurityPermissionSetBuilder.create().defaultAllowAll(false)
-                        .appendCachePermissions(CACHE, CACHE_READ, CACHE_PUT, CACHE_REMOVE)
-                        .appendCachePermissions(FORBIDDEN_CACHE, EMPTY_PERMS)
-                        .build()
-                ),
-                new TestSecurityData(CLIENT_SYS_PERM,
-                    SecurityPermissionSetBuilder.create().defaultAllowAll(false)
-                        .appendSystemPermissions(CACHE_CREATE, CACHE_DESTROY)
-                        .build()
-                ),
-                new TestSecurityData(CLIENT_CACHE_TASK_OPER,
-                    SecurityPermissionSetBuilder.create().defaultAllowAll(false)
-                        .appendCachePermissions(CACHE, CACHE_REMOVE)
-                        .appendTaskPermissions(REMOVE_ALL_TASK, TASK_EXECUTE)
-                        .appendTaskPermissions(CLEAR_TASK, TASK_EXECUTE)
-                        .build()
-                )
-            )
-        );
+        IgniteEx ignite = startGrid("srv", ALLOW_ALL, false, TEST_SECURITY_DATA);
 
         ignite.cluster().active(true);
     }

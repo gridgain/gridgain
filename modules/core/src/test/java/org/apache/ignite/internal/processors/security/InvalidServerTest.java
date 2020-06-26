@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityProcessor;
+import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
@@ -41,9 +42,8 @@ public class InvalidServerTest extends AbstractSecurityTest {
     private final AtomicBoolean criticalFailuresFlag = new AtomicBoolean(false);
 
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String instanceName,
-        AbstractTestSecurityPluginProvider pluginProv) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(instanceName, pluginProv);
+    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(instanceName);
 
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
             @Override protected void startMessageProcess(TcpDiscoveryAbstractMessage msg) {
