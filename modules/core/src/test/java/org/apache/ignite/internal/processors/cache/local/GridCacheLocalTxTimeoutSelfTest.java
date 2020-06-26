@@ -167,7 +167,7 @@ public class GridCacheLocalTxTimeoutSelfTest extends GridCommonAbstractTest {
 
             long endTime = System.currentTimeMillis() + 100;
 
-            while(U.currentTimeMillis() < endTime)
+            while (U.currentTimeMillis() < endTime)
                 LockSupport.parkNanos(1000);
 
             cache.put(1, "2");

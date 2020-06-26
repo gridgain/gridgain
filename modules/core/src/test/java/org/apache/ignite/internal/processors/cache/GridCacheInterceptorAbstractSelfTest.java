@@ -253,7 +253,6 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
         log.info("GetAsync 1.");
 
-
         if (needVer)
             assertEquals((Integer)101, cache.getEntryAsync(key).get().getValue());
         else
@@ -300,11 +299,11 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
         Collection<CacheEntry<String, Integer>> c;
         Map<String, Integer> map;
 
-        if (needVer){
+        if (needVer) {
             c = cache.getEntries(keys);
 
             assertTrue(c.isEmpty());
-        }else {
+        } else {
             map = cache.getAll(keys);
 
             for (String key : keys)
@@ -1587,7 +1586,7 @@ public abstract class GridCacheInterceptorAbstractSelfTest extends GridCacheAbst
 
             Object ret = retInterceptor.onBeforePut(entry, newVal);
 
-            System.out.println("Before put [key=" + entry.getKey() + ", oldVal=" + entry.getValue()+ ", newVal=" + newVal
+            System.out.println("Before put [key=" + entry.getKey() + ", oldVal=" + entry.getValue() + ", newVal=" + newVal
                 + ", ret=" + ret + ']');
 
             invokeCnt.incrementAndGet();

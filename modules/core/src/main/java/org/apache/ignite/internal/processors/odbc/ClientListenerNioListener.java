@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientConnectionCon
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
+import org.apache.ignite.internal.util.nio.GridNioFuture;
 import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
@@ -194,7 +195,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
-            try(OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
+            try (OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
                 ClientListenerResponse resp = handler.handle(req);
 
                 if (resp != null) {
@@ -207,7 +208,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
                     byte[] outMsg = parser.encode(resp);
 
-                    ses.send(outMsg);
+                    GridNioFuture<?> fut = ses.send(outMsg);
+
+                    fut.listen(f -> {
+                        if (f.error() == null)
+                            resp.onSent();
+                    });
                 }
             }
             finally {

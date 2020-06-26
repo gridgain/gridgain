@@ -49,7 +49,6 @@ public class PluginValidationException extends IgniteException {
         this.rmtMsg = rmtMsg;
     }
 
-
     /**
      * @return Offending node ID.
      */

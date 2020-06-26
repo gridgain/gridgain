@@ -741,7 +741,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
         List<byte[]> encKeys = new ArrayList<>(keyCnt);
 
-        for(int i=0; i<keyCnt; i++)
+        for (int i = 0; i < keyCnt; i++)
             encKeys.add(getSpi().encryptKey(getSpi().create()));
 
         return encKeys;

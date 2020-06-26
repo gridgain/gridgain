@@ -36,7 +36,7 @@ public abstract class PushMetricsExporterAdapter extends IgniteSpiAdapter implem
     protected ReadOnlyMetricRegistry mreg;
 
     /** Metric filter. */
-    protected  @Nullable Predicate<MetricRegistry> filter;
+    protected @Nullable Predicate<MetricRegistry> filter;
 
     /** Export period. */
     private long period;

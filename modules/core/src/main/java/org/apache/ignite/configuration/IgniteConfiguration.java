@@ -38,6 +38,7 @@ import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.events.Event;
@@ -45,9 +46,10 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -81,6 +83,7 @@ import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
+import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -221,10 +224,15 @@ public class IgniteConfiguration {
     @Deprecated
     public static final boolean DFLT_LATE_AFF_ASSIGNMENT = true;
 
+    /** Default value for cluster state on start. */
+    public static final ClusterState DFLT_STATE_ON_START = ClusterState.ACTIVE;
+
     /** Default value for active on start flag. */
+    @Deprecated
     public static final boolean DFLT_ACTIVE_ON_START = true;
 
     /** Default value for auto-activation flag. */
+    @Deprecated
     public static final boolean DFLT_AUTO_ACTIVATION = true;
 
     /** Default failure detection timeout in millis. */
@@ -566,10 +574,15 @@ public class IgniteConfiguration {
     private DataStorageConfiguration dsCfg;
 
     /** Active on start flag. */
-    private boolean activeOnStart = DFLT_ACTIVE_ON_START;
+    @Deprecated
+    private Boolean activeOnStart;
 
     /** Auto-activation flag. */
-    private boolean autoActivation = DFLT_AUTO_ACTIVATION;
+    @Deprecated
+    private Boolean autoActivation;
+
+    /** Cluster state on start. */
+    private ClusterState clusterStateOnStart;
 
     /** SQL connector configuration. */
     @Deprecated
@@ -638,13 +651,14 @@ public class IgniteConfiguration {
         /*
          * Order alphabetically for maintenance purposes.
          */
-        activeOnStart = cfg.isActiveOnStart();
+        activeOnStart = cfg.activeOnStart;
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
-        autoActivation = cfg.isAutoActivationEnabled();
+        autoActivation = cfg.autoActivation;
         binaryCfg = cfg.getBinaryConfiguration();
+        clusterStateOnStart = cfg.getClusterStateOnStart();
         dsCfg = cfg.getDataStorageConfiguration();
         memCfg = cfg.getMemoryConfiguration();
         pstCfg = cfg.getPersistentStoreConfiguration();
@@ -1390,7 +1404,6 @@ public class IgniteConfiguration {
 
         return this;
     }
-
 
     /**
      * Returns {@code true} if peer class loading is enabled, {@code false}
@@ -2398,7 +2411,7 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets fully configured instance of {@link TracingSpi}.
+     * Set fully configured instance of {@link TracingSpi}.
      *
      * @param tracingSpi Fully configured instance of {@link TracingSpi}.
      * @return {@code this} for chaining.
@@ -2661,13 +2674,15 @@ public class IgniteConfiguration {
      * <p>
      * Default value is {@link #DFLT_ACTIVE_ON_START}.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
-     * cluster is always inactive on start when Ignite Persistence is enabled.
+     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
+     * Cluster is always inactive on start when Ignite Persistence is enabled.
      *
      * @return Active on start flag value.
+     * @deprecated Use {@link #getClusterStateOnStart()} instead.
      */
+    @Deprecated
     public boolean isActiveOnStart() {
-        return activeOnStart;
+        return activeOnStart == null ? DFLT_ACTIVE_ON_START : activeOnStart;
     }
 
     /**
@@ -2680,8 +2695,12 @@ public class IgniteConfiguration {
      * @param activeOnStart Active on start flag value.
      * @return {@code this} instance.
      * @see #isActiveOnStart()
+     * @deprecated Use {@link #setClusterStateOnStart(ClusterState)} instead.
      */
+    @Deprecated
     public IgniteConfiguration setActiveOnStart(boolean activeOnStart) {
+        U.warn(log, "Property activeOnStart deprecated. Use clusterStateOnStart instead.");
+
         this.activeOnStart = activeOnStart;
 
         return this;
@@ -2698,9 +2717,11 @@ public class IgniteConfiguration {
      * <p>
      *
      * @return Auto activation enabled flag value.
+     * @deprecated Use {@link IgniteConfiguration#getClusterStateOnStart()} instead.
      */
+    @Deprecated
     public boolean isAutoActivationEnabled() {
-        return autoActivation;
+        return autoActivation == null ? DFLT_AUTO_ACTIVATION : autoActivation;
     }
 
     /**
@@ -2710,9 +2731,48 @@ public class IgniteConfiguration {
      * @param autoActivation Auto activation enabled flag value.
      * @return {@code this} instance.
      * @see #isAutoActivationEnabled()
+     * @deprecated Use {@link IgniteConfiguration#setClusterStateOnStart(ClusterState)} instead.
      */
+    @Deprecated
     public IgniteConfiguration setAutoActivationEnabled(boolean autoActivation) {
+        U.warn(log, "Property autoActivation deprecated. Use clusterStateOnStart instead.");
+
         this.autoActivation = autoActivation;
+
+        return this;
+    }
+
+    /**
+     * Gets state of cluster on start.
+     * <br/>
+     * For <b>in-memory cluster</b> this state will be applied to the first started node. If
+     * cluster state on start is {@link ClusterState#INACTIVE}, further hode joins will be handled by cluster faster and
+     * manual cluster activation should be performed in order to start working the cluster and caches.
+     * <br/>
+     * For <b>persistent cluster</b> If state is different from {@link ClusterState#INACTIVE} and BaselineTopology is
+     * set (cluster was activated before, for example before cluster restart) as well then cluster moves to given
+     * cluster state when all nodes from the BaselineTopology join the cluster, i.e. manual activation isn't required
+     * in that case.
+     * <p>
+     * Default value is {@link #DFLT_STATE_ON_START}.
+     * <p>
+     *
+     * @return State of cluster on start or {@code null}, if property wasn't set. {@code Null} means that default
+     * value will be used.
+     */
+    public @Nullable ClusterState getClusterStateOnStart() {
+        return clusterStateOnStart;
+    }
+
+    /**
+     * Sets state of cluster on start.
+     *
+     * @param state New cluster state on start.
+     * @return {@code this} for chaining.
+     * @see #getClusterStateOnStart()
+     */
+    public IgniteConfiguration setClusterStateOnStart(ClusterState state) {
+        this.clusterStateOnStart = state;
 
         return this;
     }

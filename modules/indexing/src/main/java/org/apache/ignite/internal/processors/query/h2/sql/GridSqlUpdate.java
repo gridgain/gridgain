@@ -57,7 +57,6 @@ public class GridSqlUpdate extends GridSqlStatement {
         return cols;
     }
 
-
     /** */
     public GridSqlUpdate set(LinkedHashMap<String, GridSqlElement> set) {
         this.set = set;

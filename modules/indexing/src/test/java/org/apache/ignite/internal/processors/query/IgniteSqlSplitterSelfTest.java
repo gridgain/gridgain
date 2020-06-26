@@ -309,7 +309,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
                         }
                     }
 
-
                     X.println(" ---> ik: : " + i + " " + k);
                     X.println("\nqry: \n" + qry.toString());
 
@@ -656,8 +655,8 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
 
             for (int i = 0; i < cnt; i++) {
                 c.put(i, new Value(
-                    rnd.nextInt(5) == 0 ? null: rnd.nextInt(100),
-                    rnd.nextInt(8) == 0 ? null: rnd.nextInt(2000)));
+                    rnd.nextInt(5) == 0 ? null : rnd.nextInt(100),
+                    rnd.nextInt(8) == 0 ? null : rnd.nextInt(2000)));
             }
 
             List<List<?>> plan = c.query(new SqlFieldsQuery(
@@ -690,7 +689,7 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
 
                     if (x != null) {
                         if (p != null)
-                            assertTrue(x + " >= " + p,  x >= p);
+                            assertTrue(x + " >= " + p, x >= p);
 
                         p = x;
                     }
@@ -2290,7 +2289,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             assertEquals("min", 3, ((Integer)row.get(5)).intValue());
             assertEquals("max", 3, ((Integer)row.get(6)).intValue());
 
-
             row = result.get(1);
             assertEquals("fst", 2, ((Number)row.get(0)).intValue());
             assertEquals("count", 3L, ((Number)row.get(1)).longValue());
@@ -2299,7 +2297,6 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             assertEquals("avg dbl", 2d, ((Number)row.get(4)).doubleValue(), 0.001);
             assertEquals("min", 1, ((Integer)row.get(5)).intValue());
             assertEquals("max", 3, ((Integer)row.get(6)).intValue());
-
 
             row = result.get(2);
             assertEquals("fst", 3, ((Number)row.get(0)).intValue());

@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -124,7 +123,7 @@ public class TcpCommunicationSpiDropNodesTest extends GridCommonAbstractTest {
             }
         }, EVT_NODE_FAILED);
 
-        U.sleep(1000); // Wait for write timeout and closing idle connections.
+        U.sleep(2000); // Wait for write timeout and closing idle connections.
 
         block = true;
 
@@ -223,7 +222,7 @@ public class TcpCommunicationSpiDropNodesTest extends GridCommonAbstractTest {
             assertTrue(e.getCause().getCause() instanceof IgniteSpiException);
         }
 
-        assertEquals(NODES_CNT , grid(0).cluster().nodes().size());
+        assertEquals(NODES_CNT, grid(0).cluster().nodes().size());
         assertEquals(0, evts.get());
 
         for (int j = 0; j < NODES_CNT; j++) {

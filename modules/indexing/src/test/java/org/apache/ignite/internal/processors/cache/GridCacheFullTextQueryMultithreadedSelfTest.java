@@ -111,7 +111,7 @@ public class GridCacheFullTextQueryMultithreadedSelfTest extends GridCacheAbstra
 
                         int size = 0;
 
-                        while(qryFut.next() != null)
+                        while (qryFut.next() != null)
                             size++;
 
                         cnt++;

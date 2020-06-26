@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLock;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -188,6 +189,9 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** */
     private static final int OP_GET_THREAD_LOCAL = 37;
+
+    /** */
+    private static final int OP_GET_OR_CREATE_LOCK = 38;
 
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
@@ -724,6 +728,17 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 return new PlatformTransactions(platformCtx, lbl);
             }
+
+            case OP_GET_OR_CREATE_LOCK: {
+                String name = reader.readString();
+                boolean failoverSafe = reader.readBoolean();
+                boolean fair = reader.readBoolean();
+                boolean create = reader.readBoolean();
+
+                IgniteLock lock = ctx.grid().reentrantLock(name, failoverSafe, fair, create);
+
+                return lock == null ? null : new PlatformLock(platformCtx, lock);
+            }
         }
 
         return PlatformAbstractTarget.throwUnsupported(type);
@@ -879,7 +894,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             PlatformCacheExtension[] res = new PlatformCacheExtension[maxExtId + 1];
 
             for (PlatformCacheExtension cacheExt : cacheExts)
-                res[cacheExt.id()]= cacheExt;
+                res[cacheExt.id()] = cacheExt;
 
             return res;
         }
@@ -920,7 +935,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
             PlatformPluginExtension[] res = new PlatformPluginExtension[maxExtId + 1];
 
             for (PlatformPluginExtension ext : exts)
-                res[ext.id()]= ext;
+                res[ext.id()] = ext;
 
             return res;
         }

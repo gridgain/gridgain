@@ -55,7 +55,7 @@ public class KnapsackGAExample {
     public static void main(String args[]) {
         System.out.println(">>> Knapsack GA grid example started.");
 
-        try(Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             // Create GAConfiguration.
             GAConfiguration gaCfg = new GAConfiguration();
 

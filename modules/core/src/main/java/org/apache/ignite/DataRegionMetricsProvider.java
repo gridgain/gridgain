@@ -15,7 +15,6 @@
  */
 package org.apache.ignite;
 
-
 /**
  * This interface provides calculated metrics for data region.
  */

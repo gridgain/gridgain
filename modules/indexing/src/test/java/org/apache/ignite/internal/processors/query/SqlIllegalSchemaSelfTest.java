@@ -71,7 +71,7 @@ public class SqlIllegalSchemaSelfTest extends AbstractIndexingCommonTest {
         final String invalidCache = QueryUtils.sysSchemaName();
 
         doubleConsumerAccept(
-            (node)->{
+            (node) -> {
                 try {
                     node.getOrCreateCache(new CacheConfiguration().setName(invalidCache));
                 }

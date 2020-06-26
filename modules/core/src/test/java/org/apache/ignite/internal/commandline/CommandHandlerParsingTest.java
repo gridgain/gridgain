@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -31,6 +32,7 @@ import org.apache.ignite.internal.commandline.cache.CacheValidateIndexes;
 import org.apache.ignite.internal.commandline.cache.FindAndDeleteGarbage;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.tx.VisorTxOperation;
 import org.apache.ignite.internal.visor.tx.VisorTxProjection;
@@ -50,6 +52,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
+import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
@@ -328,7 +331,7 @@ public class CommandHandlerParsingTest {
 
         String rnd = UUID.randomUUID().toString();
 
-        assertParseArgsThrows("Unexpected action "  + rnd + " for " + WAL.text(), WAL.text(), rnd);
+        assertParseArgsThrows("Unexpected action " + rnd + " for " + WAL.text(), WAL.text(), rnd);
     }
 
     /**
@@ -336,32 +339,50 @@ public class CommandHandlerParsingTest {
      */
     @Test
     public void testParseAutoConfirmationFlag() {
-        for (CommandList cmd : CommandList.values()) {
-            if (cmd.command().confirmationPrompt() == null)
+        for (CommandList cmdL : CommandList.values()) {
+            // SET_STATE command have mandatory argument, which used in confirmation message.
+            Command cmd = cmdL != SET_STATE ? cmdL.command() : parseArgs(asList(cmdL.text(), "ACTIVE")).command();
+
+            if (cmd.confirmationPrompt() == null)
                 continue;
 
             ConnectionAndSslParameters args;
 
-                if (cmd == CLUSTER_CHANGE_TAG)
-                    args = parseArgs(asList(cmd.text(), "test_tag"));
+                if (cmdL == CLUSTER_CHANGE_TAG)
+                    args = parseArgs(asList(cmdL.text(), "test_tag"));
+                else if (cmdL == SET_STATE)
+                    args = parseArgs(asList(cmdL.text(), "ACTIVE"));
                 else
-                    args = parseArgs(asList(cmd.text()));
+                    args = parseArgs(asList(cmdL.text()));
 
-            checkCommonParametersCorrectlyParsed(cmd, args, false);
+            checkCommonParametersCorrectlyParsed(cmdL, args, false);
 
-            switch (cmd) {
+            switch (cmdL) {
                 case DEACTIVATE: {
-                    args = parseArgs(asList(cmd.text(), "--yes"));
+                    args = parseArgs(asList(cmdL.text(), "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                    break;
+                }
+                case SET_STATE: {
+                    for (String newState : asList("ACTIVE_READ_ONLY", "ACTIVE", "INACTIVE")) {
+                        args = parseArgs(asList(cmdL.text(), newState, "--yes"));
+
+                        checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                        ClusterState argState = ((ClusterStateChangeCommand)args.command()).arg();
+
+                        assertEquals(newState, argState.toString());
+                    }
 
                     break;
                 }
                 case BASELINE: {
                     for (String baselineAct : asList("add", "remove", "set")) {
-                        args = parseArgs(asList(cmd.text(), baselineAct, "c_id1,c_id2", "--yes"));
+                        args = parseArgs(asList(cmdL.text(), baselineAct, "c_id1,c_id2", "--yes"));
 
-                        checkCommonParametersCorrectlyParsed(cmd, args, true);
+                        checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
                         BaselineArguments arg = ((BaselineCommand)args.command()).arg();
 
@@ -373,9 +394,9 @@ public class CommandHandlerParsingTest {
                 }
 
                 case TX: {
-                    args = parseArgs(asList(cmd.text(), "--xid", "xid1", "--min-duration", "10", "--kill", "--yes"));
+                    args = parseArgs(asList(cmdL.text(), "--xid", "xid1", "--min-duration", "10", "--kill", "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
                     VisorTxTaskArg txTaskArg = ((TxCommands)args.command()).arg();
 
@@ -387,9 +408,9 @@ public class CommandHandlerParsingTest {
                 }
 
                 case CLUSTER_CHANGE_TAG: {
-                    args = parseArgs(asList(cmd.text(), "test_tag", "--yes"));
+                    args = parseArgs(asList(cmdL.text(), "test_tag", "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
                     assertEquals("test_tag", ((ClusterChangeTagCommand)args.command()).arg());
 
@@ -397,7 +418,7 @@ public class CommandHandlerParsingTest {
                 }
 
                 default:
-                    fail("Unknown command: " + cmd);
+                    fail("Unknown command: " + cmdL);
             }
         }
     }
@@ -628,6 +649,195 @@ public class CommandHandlerParsingTest {
     }
 
     /**
+     * Negative argument validation test for tracing-configuration command.
+     *
+     * validate that following tracing-configuration arguments validated as expected:
+     * <ul>
+     *     <li>
+     *         reset_all, get_all
+     *         <ul>
+     *             <li>
+     *                 --scope
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                     </li>
+     *                     <li>
+     *                         if unsupported value is used:
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *         </ul>
+     *     </li>
+     *     <li>
+     *         reset, get:
+     *         <ul>
+     *             <li>
+     *                 --scope
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                     </li>
+     *                     <li>
+     *                         if unsupported value is used:
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --label
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The label should be specified.)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *         </ul>
+     *     </li>
+     *     <li>
+     *         set:
+     *         <ul>
+     *             <li>
+     *                 --scope
+     *                 <ul>
+     *                     <li>
+     *                         if value is missing:
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                     </li>
+     *                     <li>
+     *                         if unsupported value is used:
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --label
+     *                 <ul>
+     *                     <li>
+     *                          if value is missing:
+     *                              IllegalArgumentException (The label should be specified.)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --sampling-rate
+     *                 <ul>
+     *                     <li>
+     *                          if value is missing:
+     *                              IllegalArgumentException (The sampling-rate should be specified. Decimal value between 0 and 1 should be used.)
+     *                     </li>
+     *                     <li>
+     *                          if unsupported value is used:
+     *                              IllegalArgumentException (Invalid samling-rate 'aaa'. Decimal value between 0 and 1 should be used.)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *             <li>
+     *                 --included-scopes
+     *                 <ul>
+     *                     <li>
+     *                          if value is missing:
+     *                              IllegalArgumentException (At least one supported scope should be specified.)
+     *                     </li>
+     *                     <li>
+     *                          if unsupported value is used:
+     *                              IllegalArgumentException (Invalid supported scope: aaa. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].)
+     *                     </li>
+     *                 </ul>
+     *             </li>
+     *         </ul>
+     *     </li>
+     * </ul>
+     */
+    @Test
+    public void testTracingConfigurationArgumentsValidation() {
+        // reset
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "reset", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "reset", "--scope", "aaa");
+
+        assertParseArgsThrows("The label should be specified.",
+            "--tracing-configuration", "reset", "--label");
+
+        // reset all
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "reset_all", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "reset_all", "--scope", "aaa");
+
+        // get
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get", "--scope", "aaa");
+
+        assertParseArgsThrows("The label should be specified.",
+            "--tracing-configuration", "get", "--label");
+
+        // get all
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get_all", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get_all", "--scope", "aaa");
+
+        // set
+        assertParseArgsThrows("The scope should be specified. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--scope");
+
+        assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--scope", "aaa");
+
+        assertParseArgsThrows("The label should be specified.",
+            "--tracing-configuration", "set", "--label");
+
+        assertParseArgsThrows("The sampling rate should be specified. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "set", "--sampling-rate");
+
+        assertParseArgsThrows("Invalid sampling-rate 'aaa'. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "set", "--sampling-rate", "aaa");
+
+        assertParseArgsThrows("Invalid sampling-rate '-1'. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "set", "--sampling-rate", "-1");
+
+        assertParseArgsThrows("Invalid sampling-rate '2'. Decimal value between 0 and 1 should be used.",
+            "--tracing-configuration", "set", "--sampling-rate", "2");
+
+        assertParseArgsThrows("At least one supported scope should be specified.",
+            "--tracing-configuration", "set", "--included-scopes");
+
+        assertParseArgsThrows("Invalid supported scope 'aaa'. The following values can be used: "
+                + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--included-scopes", "TX,aaa");
+    }
+
+    /**
+     * Positive argument validation test for tracing-configuration command.
+     */
+    @Test
+    public void testTracingConfigurationArgumentsValidationMandatoryArgumentSet() {
+        parseArgs(asList("--tracing-configuration"));
+
+        parseArgs(asList("--tracing-configuration", "get_all"));
+
+        assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "reset");
+
+        assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get");
+
+        assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
+            + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set");
+    }
+
+    /**
      * Test checks that option {@link CommonArgParser#CMD_VERBOSE} is parsed
      * correctly and if it is not present, it takes the default value
      * {@code false}.
@@ -687,6 +897,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WAL ||
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
-            cmd == CommandList.DATA_CENTER_REPLICATION;
+            cmd == CommandList.DATA_CENTER_REPLICATION ||
+            cmd == CommandList.SET_STATE;
     }
 }

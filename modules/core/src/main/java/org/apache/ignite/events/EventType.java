@@ -797,6 +797,30 @@ public interface EventType {
     public static final int EVT_CLUSTER_TAG_UPDATED = 143;
 
     /**
+     * Built-in event type: Cluster state changed.
+     * <p>
+     * Fired when cluster state changed.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ClusterActivationEvent
+     */
+    public static final int EVT_CLUSTER_STATE_CHANGED = 144;
+
+    /**
+     * Built-in event type: Cluster state change initiated.
+     * <p>
+     * Fired when cluster deactivation process started.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ClusterStateChangeStartedEvent
+     */
+    public static final int EVT_CLUSTER_STATE_CHANGE_STARTED = 145;
+
+    /**
      * Built-in event type: baseline topology has been changed by either user request or auto-adjust timeout event.
      * Event includes the following information: new baseline nodes.
      *
@@ -838,18 +862,6 @@ public interface EventType {
      * @see IgniteCluster#baselineAutoAdjustTimeout(long)
      */
     public static final int EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED = 148;
-
-    /**
-     * Built-in event type: Cluster state change initiated.
-     * <p>
-     * Fired when cluster deactivation process started.
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
-     * internal Ignite events and should not be used by user-defined events.
-     *
-     * @see ClusterStateChangeStartedEvent
-     */
-    public static final int EVT_CLUSTER_STATE_CHANGE_STARTED = 145;
 
     /**
      * All checkpoint events. This array can be directly passed into

@@ -185,7 +185,6 @@ public class SqlCreateIndexCommand implements SqlCommand {
         return parseIdentifier(lex, IF);
     }
 
-
     /**
      * @param lex Lexer.
      */

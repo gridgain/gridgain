@@ -839,7 +839,7 @@ public class GridCacheSharedContext<K, V> {
     /**
      * @return Diagnostic manager.
      */
-    public CacheDiagnosticManager diagnostic(){
+    public CacheDiagnosticManager diagnostic() {
         return diagnosticMgr;
     }
 

@@ -22,7 +22,7 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 /**
  *
  */
-public class GridDsiSession implements Serializable{
+public class GridDsiSession implements Serializable {
     /** */
     private String terminalId;
 
