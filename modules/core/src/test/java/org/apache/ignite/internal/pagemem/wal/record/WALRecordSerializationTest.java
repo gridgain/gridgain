@@ -162,7 +162,10 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
             for (WALRecord.RecordType recordType : recordTypes) {
                 WALRecord record = RecordUtils.buildWalRecord(recordType);
 
-                if (RecordUtils.isIncludeIntoLog(record) && recordType.purpose() != WALRecord.RecordPurpose.PHYSICAL) {
+                boolean notDeltaType = recordType.purpose() != WALRecord.RecordPurpose.PHYSICAL
+                    || recordType == WALRecord.RecordType.CHECKPOINT_RECORD;
+
+                if (RecordUtils.isIncludeIntoLog(record) && notDeltaType) {
                     serializedRecords.add(new ReflectionEquals(record, "prev", "pos",
                         "updateCounter" //updateCounter for PartitionMetaStateRecord isn't serialized.
                     ));
