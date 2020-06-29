@@ -179,6 +179,15 @@ public class GridDhtPartitionSupplier {
     }
 
     /**
+     * Check is cache having any active context for supply.
+     *
+     * @return True if a node supplies a cache to some other, otherwise is false.
+     */
+    public boolean isSupply() {
+        return !F.isEmpty(scMap);
+    }
+
+    /**
      * For each demand message method lookups (or creates new) supply context and starts to iterate entries across requested partitions.
      * Each entry in iterator is placed to prepared supply message.
      *

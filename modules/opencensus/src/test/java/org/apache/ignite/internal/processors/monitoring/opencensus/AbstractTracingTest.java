@@ -38,6 +38,8 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.spi.tracing.TracingSpi;
@@ -124,6 +126,13 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        TestRecordingCommunicationSpi spi = new TestRecordingCommunicationSpi();
+
+        if (blockRebalancing())
+            spi.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        cfg.setCommunicationSpi(spi);
 
         cfg.setConsistentId(igniteInstanceName);
 
@@ -243,6 +252,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
      * @param attributeVal Attribute value.
      */
     protected static String attributeValueToString(AttributeValue attributeVal) {
+        if (attributeVal == null)
+            return null;
+
         return attributeVal.match(
             Functions.returnToString(),
             Functions.returnToString(),
@@ -361,5 +373,12 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
                 span.end();
             }
         }
+    }
+
+    /**
+     * @return [@code True} to prevent rebalancing before test start.
+     */
+    protected boolean blockRebalancing() {
+        return true;
     }
 }

@@ -218,6 +218,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.Checkpoint
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.LOCK_RELEASED;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.LOCK_TAKEN;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.PAGE_SNAPSHOT_TAKEN;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.TMP_FILE_MATCHER;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
@@ -388,7 +389,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private WALPointer reservedForExchange;
 
     /** */
-    private final ConcurrentMap<T2</*grpId*/Integer, /*partId*/Integer>, T2</*updCntr*/Long, WALPointer>> reservedForPreloading = new ConcurrentHashMap<>();
+    private final ConcurrentMap<T2</*grpId*/Integer, /*partId*/Integer>, T2</*updCntr*/Long, WALPointer>>
+        reservedForPreloading = new ConcurrentHashMap<>();
 
     /** Snapshot manager. */
     private IgniteCacheSnapshotManager snapshotMgr;
@@ -3592,7 +3594,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         doCheckpoint();
                     else {
                         synchronized (this) {
-                            scheduledCp.nextCopyNanos(System.nanoTime() + U.millisToNanos(checkpointFreq));
+                            scheduledCp.nextCpNanos(System.nanoTime() + U.millisToNanos(checkpointFreq));
                         }
                     }
                 }
@@ -3637,7 +3639,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             IgniteInClosure<? super IgniteInternalFuture<R>> lsnr
         ) {
             if (lsnr != null) {
-                //To be sure lsnr always will be executed in checkpoint thread.
+                // To be sure lsnr always will be executed in checkpoint thread.
                 synchronized (this) {
                     CheckpointProgress sched = scheduledCp;
 
@@ -3649,16 +3651,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             long nextNanos = System.nanoTime() + U.millisToNanos(delayFromNow);
 
-            if (sched.nextCopyNanos() - nextNanos <= 0)
+            if (sched.nextCpNanos() <= nextNanos)
                 return sched;
 
             synchronized (this) {
                 sched = scheduledCp;
 
-                if (sched.nextCopyNanos() - nextNanos > 0) {
+                if (sched.nextCpNanos() > nextNanos) {
                     sched.reason(reason);
 
-                    sched.nextCopyNanos(nextNanos);
+                    sched.nextCpNanos(nextNanos);
                 }
 
                 notifyAll();
@@ -3674,7 +3676,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             GridFutureAdapter<Object> ret;
 
             synchronized (this) {
-                scheduledCp.nextCopyNanos(System.nanoTime());
+                scheduledCp.nextCpNanos(System.nanoTime());
 
                 scheduledCp.reason("snapshot");
 
@@ -4076,7 +4078,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             try {
                 synchronized (this) {
-                    long remaining = U.nanosToMillis(scheduledCp.nextCopyNanos() - System.nanoTime());
+                    long remaining = U.nanosToMillis(scheduledCp.nextCpNanos() - System.nanoTime());
 
                     while (remaining > 0 && !isCancelled()) {
                         blockingSectionBegin();
@@ -4084,7 +4086,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         try {
                             wait(remaining);
 
-                            remaining = U.nanosToMillis(scheduledCp.nextCopyNanos() - System.nanoTime());
+                            remaining = U.nanosToMillis(scheduledCp.nextCpNanos() - System.nanoTime());
                         }
                         finally {
                             blockingSectionEnd();
@@ -4163,7 +4165,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 fillCacheGroupState(cpRec);
 
-                //There are allowable to replace pages only after checkpoint entry was stored to disk.
+                // There are allowable to replace pages only after checkpoint entry was stored to disk.
                 cpPagesHolder = beginAllCheckpoints(curr.futureFor(MARKER_STORED_TO_DISK));
 
                 dirtyPagesCount = cpPagesHolder.pagesNum();
@@ -4191,6 +4193,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                     cpHist.addCheckpoint(cp);
                 }
+
+                curr.transitTo(PAGE_SNAPSHOT_TAKEN);
             }
             finally {
                 checkpointLock.writeLock().unlock();
@@ -4198,12 +4202,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 tracker.onLockRelease();
             }
 
-            DbCheckpointListener.Context ctx = createOnCheckpointBeginContext(ctx0, dirtyPagesCount > 0);
-
             curr.transitTo(LOCK_RELEASED);
 
             for (DbCheckpointListener lsnr : lsnrs)
-                lsnr.onCheckpointBegin(ctx);
+                lsnr.onCheckpointBegin(ctx0);
 
             if (snapFut != null) {
                 try {
@@ -4429,39 +4431,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             return curr;
         }
 
-        /** */
-        private DbCheckpointListener.Context createOnCheckpointBeginContext(
-            DbCheckpointListener.Context delegate,
-            boolean hasPages
-        ) {
-            return new DbCheckpointListener.Context() {
-                /** {@inheritDoc} */
-                @Override public boolean nextSnapshot() {
-                    return delegate.nextSnapshot();
-                }
-
-                /** {@inheritDoc} */
-                @Override public PartitionAllocationMap partitionStatMap() {
-                    return delegate.partitionStatMap();
-                }
-
-                /** {@inheritDoc} */
-                @Override public boolean needToSnapshot(String cacheOrGrpName) {
-                    return delegate.needToSnapshot(cacheOrGrpName);
-                }
-
-                /** {@inheritDoc} */
-                @Override public @Nullable Executor executor() {
-                    return delegate.executor();
-                }
-
-                /** {@inheritDoc} */
-                @Override public boolean hasPages() {
-                    return hasPages;
-                }
-            };
-        }
-
         /**
          * @param chp Checkpoint snapshot.
          */
@@ -4557,6 +4526,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             }
 
             /** {@inheritDoc} */
+            @Override public CheckpointProgress progress() {
+                return curr;
+            }
+
+            /** {@inheritDoc} */
             @Override public boolean nextSnapshot() {
                 return curr.nextSnapshot();
             }
@@ -4587,13 +4561,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         handleRejectiedExecutionException(e);
                     }
                 };
-            }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasPages() {
-                throw new IllegalStateException(
-                    "Property is unknown at this moment. You should use onCheckpointBegin() method."
-                );
             }
 
             /**

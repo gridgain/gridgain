@@ -214,8 +214,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
 
-        boolean changed = false;
-
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingServerExchange()) {
                 if (log.isDebugEnabled())
@@ -460,10 +458,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Resends partitions on partition evict within configured timeout.
+     * Update topology on partition eviction and optionally refresh partition map.
      *
      * @param part Evicted partition.
-     * @param updateSeq Update sequence.
+     * @param updateSeq {@code True} to refresh partition maps.
      */
     public void onPartitionEvicted(GridDhtLocalPartition part, boolean updateSeq) {
         if (!enterBusy())
@@ -578,7 +576,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<Boolean> forceRebalance() {
-        return demander.forceRebalance();
+        if (!enterBusy())
+            return new GridFinishedFuture<>();
+
+        try {
+            return demander.forceRebalance();
+        }
+        finally {
+            leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */
@@ -590,6 +596,19 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /** {@inheritDoc} */
     @Override public void resume() {
         busyLock.writeLock().unlock();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishPreloading(AffinityTopologyVersion topVer) {
+        if (!enterBusy())
+            return;
+
+        try {
+            demander.finishPreloading(topVer);
+        }
+        finally {
+            leaveBusy();
+        }
     }
 
     /**
