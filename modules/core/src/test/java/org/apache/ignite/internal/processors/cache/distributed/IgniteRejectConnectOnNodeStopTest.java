@@ -157,7 +157,6 @@ public class IgniteRejectConnectOnNodeStopTest extends GridCommonAbstractTest {
         assertTrue("Failed to get excpected error", err);
     }
 
-
     /**
      *
      */

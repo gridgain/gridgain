@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -97,7 +98,9 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
+import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 import static org.apache.ignite.events.EventType.EVT_TX_COMMITTED;
 import static org.apache.ignite.events.EventType.EVT_TX_RESUMED;
 import static org.apache.ignite.events.EventType.EVT_TX_ROLLED_BACK;
@@ -141,6 +144,10 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     private static final AtomicReferenceFieldUpdater<IgniteTxAdapter, TxCounters> TX_COUNTERS_UPD =
         AtomicReferenceFieldUpdater.newUpdater(IgniteTxAdapter.class, TxCounters.class, "txCounters");
 
+    /** Task name flag updater. */
+    protected static final AtomicIntegerFieldUpdater<IgniteTxAdapter> TASK_NAME_FLAG_UPD =
+        AtomicIntegerFieldUpdater.newUpdater(IgniteTxAdapter.class, "taskNameResolved");
+
     /** Logger. */
     protected static IgniteLogger log;
 
@@ -172,23 +179,12 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     @GridToStringInclude
     protected UUID nodeId;
 
-    /** Transaction counter value at the start of transaction. */
-    @GridToStringInclude
-    protected GridCacheVersion startVer;
-
     /** Cache registry. */
     @GridToStringExclude
     protected GridCacheSharedContext<?, ?> cctx;
 
     /** Need return value. */
     protected boolean needRetVal;
-
-    /**
-     * End version (a.k.a. <tt>'tnc'</tt> or <tt>'transaction number counter'</tt>)
-     * assigned to this transaction at the end of write phase.
-     */
-    @GridToStringInclude
-    protected GridCacheVersion endVer;
 
     /** Isolation. */
     @GridToStringInclude
@@ -266,6 +262,9 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
     /** Task name. */
     protected String taskName;
+
+    /** Flag indicating that taskName is resolved. */
+    protected volatile int taskNameResolved;
 
     /** Store used flag. */
     protected boolean storeEnabled = true;
@@ -347,8 +346,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         this.subjId = subjId;
         this.taskNameHash = taskNameHash;
 
-        startVer = cctx.versions().last();
-
         nodeId = cctx.discovery().localNode().id();
 
         threadId = Thread.currentThread().getId();
@@ -357,6 +354,15 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
             log = U.logger(cctx.kernalContext(), logRef, this);
 
         consistentIdMapper = new ConsistentIdMapper(cctx.discovery());
+
+        boolean needTaskName = cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_READ) ||
+                cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_PUT) ||
+                cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_REMOVED);
+
+        if (needTaskName)
+            resolveTaskName();
+        else
+            TASK_NAME_FLAG_UPD.compareAndSet(this, 0, 1);
     }
 
     /**
@@ -391,7 +397,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         this.nodeId = nodeId;
         this.threadId = threadId;
         this.xidVer = xidVer;
-        this.startVer = startVer;
         this.sys = sys;
         this.plc = plc;
         this.concurrency = concurrency;
@@ -408,6 +413,15 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
             log = U.logger(cctx.kernalContext(), logRef, this);
 
         consistentIdMapper = new ConsistentIdMapper(cctx.discovery());
+
+        boolean needTaskName = cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_READ) ||
+                cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_PUT) ||
+                cctx.gridEvents().isRecordable(EVT_CACHE_OBJECT_REMOVED);
+
+        if (needTaskName)
+            resolveTaskName();
+        else
+            TASK_NAME_FLAG_UPD.compareAndSet(this, 0, 1);
     }
 
     /**
@@ -1179,7 +1193,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 }
 
                 case MARKED_ROLLBACK: {
-                    valid = prev == ACTIVE  || prev == PREPARING || prev == PREPARED || prev == SUSPENDED;
+                    valid = prev == ACTIVE || prev == PREPARING || prev == PREPARED || prev == SUSPENDED;
 
                     break;
                 }
@@ -1269,7 +1283,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     }
 
     /** */
-    private void recordStateChangedEvent(TransactionState state){
+    private void recordStateChangedEvent(TransactionState state) {
         if (!near() || !local()) // Covers only GridNearTxLocal's state changes.
             return;
 
@@ -1303,7 +1317,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /**
      * @param type Event type.
      */
-    protected void recordStateChangedEvent(int type){
+    protected void recordStateChangedEvent(int type) {
         assert near() && local();
 
         GridEventStorageManager evtMgr = cctx.gridEvents();
@@ -1314,11 +1328,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 "Transaction state changed.",
                 type,
                 new TransactionEventProxyImpl((GridNearTxLocal)this)));
-    }
-
-    /** {@inheritDoc} */
-    @Override public void endVersion(GridCacheVersion endVer) {
-        this.endVer = endVer;
     }
 
     /** {@inheritDoc} */
@@ -1764,10 +1773,10 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      * @return Resolves task name.
      */
     public String resolveTaskName() {
-        if (taskName != null)
-            return taskName;
+        if (TASK_NAME_FLAG_UPD.compareAndSet(this, 0, 1))
+            taskName = cctx.kernalContext().task().resolveTaskName(taskNameHash);
 
-        return (taskName = cctx.kernalContext().task().resolveTaskName(taskNameHash));
+        return taskName;
     }
 
     /**
@@ -1878,7 +1887,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
         // Try to take either entry-recorded primary node ID,
         // or transaction node ID from near-local transactions.
-        UUID nodeId = e.nodeId() == null ? local() ? this.nodeId :  null : e.nodeId();
+        UUID nodeId = e.nodeId() == null ? local() ? this.nodeId : null : e.nodeId();
 
         if (nodeId != null && nodeId.equals(cctx.localNodeId()))
             return true;
@@ -2507,11 +2516,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         /** {@inheritDoc} */
         @Override public IgniteInternalFuture<?> salvageTx() {
             return null;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void endVersion(GridCacheVersion endVer) {
-            // No-op.
         }
 
         /** {@inheritDoc} */

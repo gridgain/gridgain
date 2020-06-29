@@ -290,7 +290,6 @@ public class GridSslBasicContextFactory implements GridSslContextFactory {
         this.cipherSuites = cipherSuites;
     }
 
-
     /**
      * Sets enabled cipher suites.
      *

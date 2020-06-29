@@ -177,7 +177,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
             ctx,
             nodeId,
             xidVer,
-            ctx.versions().last(),
+            null,
             Thread.currentThread().getId(),
             sys,
             plc,
@@ -819,7 +819,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         // Apply update counters.
                         if (txCntrs != null)
                             cctx.tm().txHandler().applyPartitionsUpdatesCounters(txCntrs.updateCounters());
-                        else if (!near()){
+                        else if (!near()) {
                             // Apply counters from message (compatibility).
                             for (IgniteTxEntry entry : writeMap.values()) {
                                 GridCacheContext ctx0 = cctx.cacheContext(entry.cacheId());

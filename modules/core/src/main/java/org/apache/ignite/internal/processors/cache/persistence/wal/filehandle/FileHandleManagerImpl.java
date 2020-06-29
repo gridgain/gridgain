@@ -60,26 +60,37 @@ public class FileHandleManagerImpl implements FileHandleManager {
 
     /** WAL writer worker. */
     private final WALWriter walWriter;
+
     /** Wal segment sync worker. */
     private final WalSegmentSyncer walSegmentSyncWorker;
+
     /** Context. */
     protected final GridCacheSharedContext cctx;
+
     /** Logger. */
     private final IgniteLogger log;
+
     /** */
     private final WALMode mode;
+
     /** Persistence metrics tracker. */
     private final DataStorageMetricsImpl metrics;
+
     /** Use mapped byte buffer. */
     private final boolean mmap;
+
     /** */
     private final RecordSerializer serializer;
+
     /** Current handle supplier. */
     private final Supplier<FileWriteHandle> currentHandleSupplier;
+
     /** WAL buffer size. */
     private final int walBufferSize;
+
     /** WAL segment size in bytes. . This is maximum value, actual segments may be shorter. */
     private final long maxWalSegmentSize;
+
     /** Fsync delay. */
     private final long fsyncDelay;
 

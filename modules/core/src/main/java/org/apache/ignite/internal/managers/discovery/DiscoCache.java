@@ -140,7 +140,7 @@ public class DiscoCache {
         Map<UUID, ClusterNode> nodeMap,
         Set<UUID> alives0,
         @Nullable Map<UUID, Short> nodeIdToConsIdx,
-        @Nullable  Map<Short, UUID> consIdxToNodeId,
+        @Nullable Map<Short, UUID> consIdxToNodeId,
         IgniteProductVersion minNodeVer,
         IgniteProductVersion minSrvNodeVer
     ) {
@@ -296,7 +296,7 @@ public class DiscoCache {
      * @return Oldest alive server node.
      */
     @SuppressWarnings("ForLoopReplaceableByForEach")
-    @Nullable public ClusterNode oldestAliveServerNode(){
+    @Nullable public ClusterNode oldestAliveServerNode() {
         // Avoid iterator allocation.
         for (int i = 0; i < srvNodes.size(); i++) {
             ClusterNode srv = srvNodes.get(i);
@@ -311,7 +311,7 @@ public class DiscoCache {
     /**
      * @return Oldest server node.
      */
-    @Nullable public ClusterNode oldestServerNode(){
+    @Nullable public ClusterNode oldestServerNode() {
         if (!srvNodes.isEmpty())
             return srvNodes.get(0);
 

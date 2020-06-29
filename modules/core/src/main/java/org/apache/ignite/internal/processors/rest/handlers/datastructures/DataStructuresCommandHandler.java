@@ -72,6 +72,7 @@ public class DataStructuresCommandHandler extends GridRestCommandHandlerAdapter 
             }
         );
     }
+
     /**
      * Handles increment and decrement commands.
      *

@@ -152,7 +152,6 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         }
     }
 
-
     /**
      * @param skippedEntries Skipped entries.
      */

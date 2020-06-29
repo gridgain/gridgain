@@ -1486,7 +1486,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         /** {@inheritDoc} */
         @SuppressWarnings("NonAtomicOperationOnVolatileField")
         @Override public String toString() {
-            if(attempts++ > attemptsBeforeE)
+            if (attempts++ > attemptsBeforeE)
                 throw new NullPointerException("Oops... incorrect customer realization.");
 
             return "CUSTOM_NODE_FILTER";

@@ -141,7 +141,7 @@ public class GridCacheTtlUpdateRequest extends GridCacheIdMessage {
     /**
      * @return Versions.
      */
-    public List<GridCacheVersion > versions() {
+    public List<GridCacheVersion> versions() {
         return vers;
     }
 
@@ -165,7 +165,7 @@ public class GridCacheTtlUpdateRequest extends GridCacheIdMessage {
     /**
      * @return Versions for near cache entries.
      */
-    public List<GridCacheVersion > nearVersions() {
+    public List<GridCacheVersion> nearVersions() {
         return nearVers;
     }
 

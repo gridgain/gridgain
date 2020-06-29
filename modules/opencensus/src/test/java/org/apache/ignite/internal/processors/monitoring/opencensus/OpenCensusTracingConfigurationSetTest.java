@@ -57,7 +57,7 @@ public class OpenCensusTracingConfigurationSetTest extends AbstractTracingTest {
             log,
             () -> grid(0).tracingConfiguration().set(TX_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS),
             IgniteException.class,
-            "Failed to save tracing configuration to meta storage. Meta storage is not available."
+            "Failed to update tracing configuration for coordinates=[" + TX_SCOPE_SPECIFIC_COORDINATES + ']'
         );
     }
 }

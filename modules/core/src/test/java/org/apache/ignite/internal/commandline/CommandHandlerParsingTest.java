@@ -24,6 +24,8 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.ignite.ShutdownPolicy;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -51,6 +53,8 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
+import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
+import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
@@ -67,6 +71,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -329,7 +334,27 @@ public class CommandHandlerParsingTest {
 
         String rnd = UUID.randomUUID().toString();
 
-        assertParseArgsThrows("Unexpected action "  + rnd + " for " + WAL.text(), WAL.text(), rnd);
+        assertParseArgsThrows("Unexpected action " + rnd + " for " + WAL.text(), WAL.text(), rnd);
+    }
+
+    /**
+     * Tets checks a parser of shutdown policy command.
+     */
+    @Test
+    public void tesParsShutdownPolicyParameters() {
+        ConnectionAndSslParameters args = parseArgs(asList(SHUTDOWN_POLICY.text()));
+
+        assertEquals(SHUTDOWN_POLICY.command(), args.command());
+
+        assertNull(((ShutdownPolicyCommand)args.command()).arg().getShutdown());
+
+        for (ShutdownPolicy policy : ShutdownPolicy.values()) {
+            args = parseArgs(asList(SHUTDOWN_POLICY.text(), String.valueOf(policy)));
+
+            assertEquals(SHUTDOWN_POLICY.command(), args.command());
+
+            assertSame(policy, ((ShutdownPolicyCommand)args.command()).arg().getShutdown());
+        }
     }
 
     /**
@@ -337,32 +362,50 @@ public class CommandHandlerParsingTest {
      */
     @Test
     public void testParseAutoConfirmationFlag() {
-        for (CommandList cmd : CommandList.values()) {
-            if (cmd.command().confirmationPrompt() == null)
+        for (CommandList cmdL : CommandList.values()) {
+            // SET_STATE command have mandatory argument, which used in confirmation message.
+            Command cmd = cmdL != SET_STATE ? cmdL.command() : parseArgs(asList(cmdL.text(), "ACTIVE")).command();
+
+            if (cmd.confirmationPrompt() == null)
                 continue;
 
             ConnectionAndSslParameters args;
 
-                if (cmd == CLUSTER_CHANGE_TAG)
-                    args = parseArgs(asList(cmd.text(), "test_tag"));
+                if (cmdL == CLUSTER_CHANGE_TAG)
+                    args = parseArgs(asList(cmdL.text(), "test_tag"));
+                else if (cmdL == SET_STATE)
+                    args = parseArgs(asList(cmdL.text(), "ACTIVE"));
                 else
-                    args = parseArgs(asList(cmd.text()));
+                    args = parseArgs(asList(cmdL.text()));
 
-            checkCommonParametersCorrectlyParsed(cmd, args, false);
+            checkCommonParametersCorrectlyParsed(cmdL, args, false);
 
-            switch (cmd) {
+            switch (cmdL) {
                 case DEACTIVATE: {
-                    args = parseArgs(asList(cmd.text(), "--yes"));
+                    args = parseArgs(asList(cmdL.text(), "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                    break;
+                }
+                case SET_STATE: {
+                    for (String newState : asList("ACTIVE_READ_ONLY", "ACTIVE", "INACTIVE")) {
+                        args = parseArgs(asList(cmdL.text(), newState, "--yes"));
+
+                        checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                        ClusterState argState = ((ClusterStateChangeCommand)args.command()).arg();
+
+                        assertEquals(newState, argState.toString());
+                    }
 
                     break;
                 }
                 case BASELINE: {
                     for (String baselineAct : asList("add", "remove", "set")) {
-                        args = parseArgs(asList(cmd.text(), baselineAct, "c_id1,c_id2", "--yes"));
+                        args = parseArgs(asList(cmdL.text(), baselineAct, "c_id1,c_id2", "--yes"));
 
-                        checkCommonParametersCorrectlyParsed(cmd, args, true);
+                        checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
                         BaselineArguments arg = ((BaselineCommand)args.command()).arg();
 
@@ -374,9 +417,9 @@ public class CommandHandlerParsingTest {
                 }
 
                 case TX: {
-                    args = parseArgs(asList(cmd.text(), "--xid", "xid1", "--min-duration", "10", "--kill", "--yes"));
+                    args = parseArgs(asList(cmdL.text(), "--xid", "xid1", "--min-duration", "10", "--kill", "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
                     VisorTxTaskArg txTaskArg = ((TxCommands)args.command()).arg();
 
@@ -388,9 +431,9 @@ public class CommandHandlerParsingTest {
                 }
 
                 case CLUSTER_CHANGE_TAG: {
-                    args = parseArgs(asList(cmd.text(), "test_tag", "--yes"));
+                    args = parseArgs(asList(cmdL.text(), "test_tag", "--yes"));
 
-                    checkCommonParametersCorrectlyParsed(cmd, args, true);
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
                     assertEquals("test_tag", ((ClusterChangeTagCommand)args.command()).arg());
 
@@ -398,7 +441,7 @@ public class CommandHandlerParsingTest {
                 }
 
                 default:
-                    fail("Unknown command: " + cmd);
+                    fail("Unknown command: " + cmdL);
             }
         }
     }
@@ -769,7 +812,6 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("Invalid scope 'aaa'. The following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "get_all", "--scope", "aaa");
 
-
         // set
         assertParseArgsThrows("The scope should be specified. The following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set", "--scope");
@@ -878,6 +920,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WAL ||
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
-            cmd == CommandList.DATA_CENTER_REPLICATION;
+            cmd == CommandList.DATA_CENTER_REPLICATION ||
+            cmd == CommandList.SET_STATE;
     }
 }

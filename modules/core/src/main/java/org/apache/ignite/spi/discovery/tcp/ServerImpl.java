@@ -75,6 +75,7 @@ import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
@@ -82,7 +83,6 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.spi.tracing.SpanStatus;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
@@ -119,8 +119,8 @@ import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutHelper;
 import org.apache.ignite.spi.IgniteSpiThread;
-import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
+import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
@@ -158,6 +158,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureS
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
+import org.apache.ignite.spi.tracing.SpanStatus;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -588,7 +589,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 Collection<ClusterNode> processed = new HashSet<>(nodes.size());
 
                 for (TcpDiscoveryNode n : nodes) {
-                    if(n.isLocal())
+                    if (n.isLocal())
                         continue;
 
                     assert n.visible();
@@ -983,7 +984,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), () -> getLocalNodeId().toString())
                 .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
                     () -> locNode.consistentId().toString())
-                .addTag(SpanTags.MESSAGE_CLASS, () ->((CustomMessageWrapper)evt).delegate().getClass().getSimpleName())
+                .addTag(SpanTags.MESSAGE_CLASS, () -> ((CustomMessageWrapper)evt).delegate().getClass().getSimpleName())
                 .addLog(() -> "Created");
 
             // This root span will be parent both from local and remote nodes.
@@ -1220,7 +1221,7 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param locCred Local security credentials for authentication.
      * @throws IgniteSpiException If any error occurs.
      */
-    private void localAuthentication(SecurityCredentials locCred){
+    private void localAuthentication(SecurityCredentials locCred) {
         assert spi.nodeAuth != null;
         assert locCred != null;
 
@@ -1448,7 +1449,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
         int reconCnt = 0;
 
-        while (true){
+        while (true) {
             // Need to set to false on each new iteration,
             // since remote node may leave in the middle of the first iteration.
             joinReqSent = false;
@@ -3176,7 +3177,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         new Thread(new Runnable() {
                             @Override public void run() {
                                 try {
-                                    IgnitionEx.stop(ignite.name(), true, false, true);
+                                    IgnitionEx.stop(ignite.name(), true, ShutdownPolicy.IMMEDIATE, true);
 
                                     U.log(log, "Stopped the node successfully in response to TcpDiscoverySpi's " +
                                         "message worker thread abnormal termination.");
@@ -3197,7 +3198,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
             finally {
                 if (spi.ignite() instanceof IgniteEx) {
-                    if (err == null && !spi.isNodeStopping0()&& spiStateCopy() != DISCONNECTING)
+                    if (err == null && !spi.isNodeStopping0() && spiStateCopy() != DISCONNECTING)
                         err = new IllegalStateException("Worker " + name() + " is terminated unexpectedly.");
 
                     FailureProcessor failure = ((IgniteEx)spi.ignite()).context().failure();
@@ -3572,7 +3573,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 addr: for (InetSocketAddress addr : spi.getNodeAddresses(next, sameHost)) {
                     long ackTimeout0 = spi.getAckTimeout();
 
-                    if (locNodeAddrs.contains(addr)){
+                    if (locNodeAddrs.contains(addr)) {
                         if (log.isDebugEnabled())
                             log.debug("Skip to send message to the local node (probably remote node has the same " +
                                 "loopback address that local node): " + addr);
@@ -5326,7 +5327,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             return;
                         }
                     }
-                    else  {
+                    else {
                         if (log.isDebugEnabled())
                             log.debug("Discarding node added message (this message has already been processed) " +
                                 "[spiState=" + spiState +
@@ -7092,7 +7093,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
                 catch (IOException e) {
                     if (log.isDebugEnabled())
-                        U.error(log, "Caught exception on handshake [err=" + e +", sock=" + sock + ']', e);
+                        U.error(log, "Caught exception on handshake [err=" + e + ", sock=" + sock + ']', e);
 
                     if (X.hasCause(e, SSLException.class) && spi.isSslEnabled() && !spi.isNodeStopping0())
                         LT.warn(log, "Failed to initialize connection " +
@@ -7119,9 +7120,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
                 catch (IgniteCheckedException e) {
                     if (log.isDebugEnabled())
-                        U.error(log, "Caught exception on handshake [err=" + e +", sock=" + sock + ']', e);
+                        U.error(log, "Caught exception on handshake [err=" + e + ", sock=" + sock + ']', e);
 
-                    onException("Caught exception on handshake [err=" + e +", sock=" + sock + ']', e);
+                    onException("Caught exception on handshake [err=" + e + ", sock=" + sock + ']', e);
 
                     if (e.hasCause(SocketTimeoutException.class))
                         LT.warn(log, "Socket operation timed out on handshake " +
@@ -8392,7 +8393,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 return addToQueue;
             }
         }
-
 
         /**
          * @param laps Number of discovery ring laps passed by the message.

@@ -92,7 +92,7 @@ public class GridArraysSelfTest extends GridCommonAbstractTest {
 
         assertNull(arr[9]);
 
-        for (int i = 0; i < 9 ; i++)
+        for (int i = 0; i < 9; i++)
             assertEquals("zz", arr[i]);
 
         clearTail(arr, 7);
@@ -101,7 +101,7 @@ public class GridArraysSelfTest extends GridCommonAbstractTest {
         assertNull(arr[8]);
         assertNull(arr[9]);
 
-        for (int i = 0; i < 7 ; i++)
+        for (int i = 0; i < 7; i++)
             assertEquals("zz", arr[i]);
     }
 

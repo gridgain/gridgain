@@ -571,6 +571,7 @@ public class IgniteMassLoadSandboxTest extends GridCommonAbstractTest {
     public static class HugeIndexedObject {
         /** Data. */
         private byte[] data;
+
         /** */
         @QuerySqlField(index = true)
         private int iVal;

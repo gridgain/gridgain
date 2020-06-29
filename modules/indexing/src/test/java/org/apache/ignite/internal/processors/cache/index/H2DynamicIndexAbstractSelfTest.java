@@ -85,7 +85,7 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
             + FIELD_NAME_1_ESCAPED + "\" ASC)")).getAll();
 
         // Test that local queries on all nodes use new index.
-        for (int i = 0 ; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             if (ignite(i).configuration().isClientMode())
                 continue;
 
@@ -161,7 +161,7 @@ public abstract class H2DynamicIndexAbstractSelfTest extends AbstractSchemaSelfT
         cache.query(new SqlFieldsQuery("DROP INDEX \"" + IDX_NAME_1_ESCAPED + "\""));
 
         // Test that no local queries on all nodes use new index.
-        for (int i = 0 ; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             if (ignite(i).configuration().isClientMode())
                 continue;
 

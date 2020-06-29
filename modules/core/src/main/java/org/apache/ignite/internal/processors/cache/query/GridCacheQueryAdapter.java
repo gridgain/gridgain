@@ -742,7 +742,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
                 throw new ClusterTopologyException("Failed to execute the query " +
                     "(all affinity nodes left the grid) [cache=" + cctx.name() +
                     ", qry=" + qry +
-                    ", startTopVer=" + cctx.versions().last().topologyVersion() +
                     ", curTopVer=" + qryMgr.queryTopologyVersion().topologyVersion() + ']');
 
             init();
@@ -944,6 +943,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     private static class MvccTrackingIterator implements GridCloseableIterator {
         /** Serial version uid. */
         private static final long serialVersionUID = -1905248502802333832L;
+
         /** Underlying iterator. */
         private final GridCloseableIterator it;
 

@@ -169,7 +169,7 @@ public class SocketStreamerSelfTest extends GridCommonAbstractTest {
 
         test(converter, null, new Runnable() {
             @Override public void run() {
-                try(Socket sock = new Socket(InetAddress.getLocalHost(), port);
+                try (Socket sock = new Socket(InetAddress.getLocalHost(), port);
                     OutputStream os = new BufferedOutputStream(sock.getOutputStream())) {
 
                     for (int i = 0; i < CNT; i++) {
@@ -198,7 +198,7 @@ public class SocketStreamerSelfTest extends GridCommonAbstractTest {
     public void testDelimiterBasedDefaultConverter() throws Exception {
         test(null, DELIM, new Runnable() {
             @Override public void run() {
-                try(Socket sock = new Socket(InetAddress.getLocalHost(), port);
+                try (Socket sock = new Socket(InetAddress.getLocalHost(), port);
                     OutputStream os = new BufferedOutputStream(sock.getOutputStream())) {
                     Marshaller marsh = new JdkMarshaller();
 
@@ -235,7 +235,7 @@ public class SocketStreamerSelfTest extends GridCommonAbstractTest {
 
         test(converter, DELIM, new Runnable() {
             @Override public void run() {
-                try(Socket sock = new Socket(InetAddress.getLocalHost(), port);
+                try (Socket sock = new Socket(InetAddress.getLocalHost(), port);
                     OutputStream os = new BufferedOutputStream(sock.getOutputStream())) {
 
                     for (int i = 0; i < CNT; i++) {

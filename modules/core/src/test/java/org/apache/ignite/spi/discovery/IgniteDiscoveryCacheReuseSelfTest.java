@@ -48,7 +48,7 @@ public class IgniteDiscoveryCacheReuseSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value="true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDiscoCacheReuseOnNodeJoin() throws Exception {
         IgniteEx ignite1 = (IgniteEx)startGridsMultiThreaded(2);
 

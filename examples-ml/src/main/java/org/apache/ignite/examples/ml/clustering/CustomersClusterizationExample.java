@@ -61,7 +61,7 @@ public class CustomersClusterizationExample {
                 dataCache = new SandboxMLCache(ignite).fillCacheWith(MLSandboxDatasets.WHOLESALE_CUSTOMERS);
 
                 System.out.println(">>> Start traininig and scoring.");
-                for(int amountOfClusters = 1; amountOfClusters < 10; amountOfClusters++) {
+                for (int amountOfClusters = 1; amountOfClusters < 10; amountOfClusters++) {
                     KMeansTrainer trainer = new KMeansTrainer()
                         .withAmountOfClusters(amountOfClusters)
                         .withDistance(new EuclideanDistance())

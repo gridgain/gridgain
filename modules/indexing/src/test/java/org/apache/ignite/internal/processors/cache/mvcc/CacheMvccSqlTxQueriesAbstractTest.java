@@ -287,7 +287,7 @@ public abstract class CacheMvccSqlTxQueriesAbstractTest extends CacheMvccAbstrac
                     fail("We should not get there.");
                 }
             }
-            catch (CacheException ex){
+            catch (CacheException ex) {
                 IgniteSQLException cause = X.cause(ex, IgniteSQLException.class);
 
                 assertNotNull(cause);

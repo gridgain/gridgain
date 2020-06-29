@@ -98,6 +98,11 @@
         <module>modules/tensorflow</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
+        <module>modules/hibernate-4.2</module>
+        <module>modules/hibernate-5.1</module>
+        <module>modules/hibernate-5.3</module>
+        <module>modules/geospatial</module>
+        <module>modules/schedule</module>
     </modules>
 
     <profiles>
@@ -277,7 +282,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <inherited>false</inherited>
                         <dependencies>
                             <dependency>
@@ -320,17 +325,6 @@
         </profile>
 
         <profile>
-            <id>lgpl</id>
-            <modules>
-                <module>modules/hibernate-4.2</module>
-                <module>modules/hibernate-5.1</module>
-                <module>modules/hibernate-5.3</module>
-                <module>modules/geospatial</module>
-                <module>modules/schedule</module>
-            </modules>
-        </profile>
-
-        <profile>
             <id>licenses</id>
             <build>
                 <plugins>
@@ -362,7 +356,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <inherited>false</inherited>
                         <dependencies>
                             <dependency>
@@ -507,6 +501,8 @@
                                         </exec>
 
                                         <exec executable="autoreconf" dir="${release.dir}/platforms/cpp"/>
+
+                                        <delete dir="${release.dir}/platforms/cpp/autom4te.cache" quiet="true"/>
                                     </target>
                                 </configuration>
                             </execution>
@@ -657,7 +653,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <executions>
                             <execution>
                                 <id>update-versions</id>
@@ -751,26 +747,6 @@
                                             <substitution expression="\1${new.client.version}\2" />
                                             <fileset dir="${basedir}/">
                                                 <include name="**/Resource.rc" />
-                                            </fileset>
-                                        </replaceregexp>
-
-                                        <replaceregexp byline="true" encoding="UTF-8">
-                                            <regexp pattern="(Version:.+)\d+\.\d+\.\d+(.*)" />
-                                            <substitution expression="\1${new.ignite.version.fixed}\2" />
-                                            <fileset dir="${basedir}/">
-                                                <include name="**/gridgain-odbc.spec" />
-                                            </fileset>
-                                        </replaceregexp>
-
-                                        <tstamp>
-                                            <format property="odbc.timestamp" pattern="EEE MMMMM d yyyy" locale="en" />
-                                        </tstamp>
-
-                                        <replaceregexp byline="true" encoding="UTF-8">
-                                            <regexp pattern="(^\%changelog.*$)" />
-                                            <substitution expression="\1${line.separator}* ${odbc.timestamp} GridGain Systems &lt;support@gridgain.com&gt; - ${new.ignite.version.fixed}-1" />
-                                            <fileset dir="${basedir}/">
-                                                <include name="**/gridgain-odbc.spec" />
                                             </fileset>
                                         </replaceregexp>
 

@@ -24,7 +24,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
  * Tests for checking partition reconciliation control.sh command within context of replicated persistent cache.
  */
 public class GridCommandHandlerPartitionReconciliationReplicatedPersistentTest extends
-    GridCommandHandlerPartitionReconciliationReplicatedTest{
+    GridCommandHandlerPartitionReconciliationReplicatedTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
