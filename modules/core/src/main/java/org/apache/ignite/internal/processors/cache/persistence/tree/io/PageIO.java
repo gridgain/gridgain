@@ -282,6 +282,9 @@ public abstract class PageIO {
     /** */
     public static final short T_H2_EX_REF_MVCC_INNER_END = T_H2_EX_REF_MVCC_INNER_START + MAX_PAYLOAD_SIZE - 1;
 
+    // Gridgain specific codes.
+    // Note: Ignite doesn't use negative types, so we can safely reserve them.
+
     /** */
     public static final short T_UPDATE_LOG_REF_INNER = -1;
 
