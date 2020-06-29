@@ -1047,10 +1047,18 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                 }
                 else {
                     if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                        onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                            m.primary().consistentId() + "] has left the grid"));
+                        Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
 
-                        return true;
+                        if (txNodes != null) {
+                            Collection<UUID> backups = txNodes.get(nodeId);
+
+                            if (F.isEmpty(backups) || backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
+                                onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
+                                    m.primary().consistentId() + "] has left the grid"));
+
+                                return true;
+                            }
+                        }
                     }
                 }
 
