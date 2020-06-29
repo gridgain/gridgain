@@ -2044,7 +2044,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             io = PagePartitionMetaIO.VERSIONS.latest();
 
-                            assert io.getVersion() == 3;
+                            assert io.getVersion() == Short.toUnsignedInt((short)-1);
 
                             ((PagePartitionMetaIOV2) io).upgradePage(pageAddr, pageVer);
 
