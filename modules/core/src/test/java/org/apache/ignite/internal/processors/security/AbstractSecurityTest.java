@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.security;
 
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityData;
@@ -46,20 +44,6 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * @param instanceName Instance name.
-     */
-    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
-        return super.getConfiguration(instanceName)
-            .setDataStorageConfiguration(
-                new DataStorageConfiguration()
-                    .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration().setPersistenceEnabled(true)
-                    )
-            )
-            .setAuthenticationEnabled(true);
-    }
-
     /** */
     protected IgniteEx startGridAllowAll(String login) throws Exception {
         return startGrid(login, ALLOW_ALL, false);
@@ -76,7 +60,7 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
      * @param prmSet Prm set.
      * @param clientData Client data.
      */
-    protected void initCredentials(IgniteConfiguration cfg, String login, SecurityPermissionSet prmSet, TestSecurityData... clientData) {
+    protected void initSecurity(IgniteConfiguration cfg, String login, SecurityPermissionSet prmSet, TestSecurityData... clientData) {
         TestSecurityPluginProvider provider = new TestSecurityPluginProvider(login, "", prmSet, globalAuth, clientData);
 
         cfg.setPluginProviders(provider);
@@ -91,7 +75,7 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
         String name = getTestIgniteInstanceName(G.allGrids().size());
         IgniteConfiguration cfg = getConfiguration(name);
 
-        initCredentials(cfg, login, prmSet, clientData);
+        initSecurity(cfg, login, prmSet, clientData);
 
         return startGrid(cfg
             .setClientMode(isClient)

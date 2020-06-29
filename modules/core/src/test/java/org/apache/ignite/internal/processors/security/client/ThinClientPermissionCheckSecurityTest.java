@@ -32,7 +32,7 @@ import static org.apache.ignite.plugin.security.SecurityPermissionSetBuilder.ALL
  */
 @RunWith(JUnit4.class)
 public class ThinClientPermissionCheckSecurityTest extends ThinClientPermissionCheckTest {
-    @Override protected void initCredentials(IgniteConfiguration cfg, String login, SecurityPermissionSet prmSet, TestSecurityData... clientData) {
+    @Override protected void initSecurity(IgniteConfiguration cfg, String login, SecurityPermissionSet prmSet, TestSecurityData... clientData) {
         cfg.setPluginProviders(new TestAdditionalSecurityPluginProvider(
             "srv_" + cfg.getIgniteInstanceName(),
             null,
