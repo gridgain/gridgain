@@ -59,6 +59,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgniteProducer;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
@@ -1168,8 +1169,11 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             ver = ver.nextVersion(histItem);
 
-            for (int i = 0, len = histItem.keys.length; i < len; i++)
-                notifyListeners(histItem.keys[i], bridge.read(histItem.keys[i]), unmarshal(marshaller, histItem.valBytesArray[i]));
+            for (int i = 0, len = histItem.keys.length; i < len; i++) {
+                DistributedMetaStorageHistoryItem finalHistItem = histItem;
+                int finalI = i;
+                notifyListeners(histItem.keys[i], bridge.read(histItem.keys[i]), () -> unmarshal(marshaller, finalHistItem.valBytesArray[finalI]));
+            }
 
             for (int i = 0, len = histItem.keys.length; i < len; i++)
                 bridge.write(histItem.keys[i], histItem.valBytesArray[i]);
@@ -1332,7 +1336,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 ++oldIdx;
             }
             else if (c > 0) {
-                notifyListeners(newKey, null, unmarshal(marshaller, newValBytes));
+                notifyListeners(newKey, null, () -> unmarshal(marshaller, newValBytes));
 
                 ++newIdx;
             }
@@ -1341,7 +1345,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
                 Serializable newVal = Arrays.equals(oldValBytes, newValBytes) ? oldVal : unmarshal(marshaller, newValBytes);
 
-                notifyListeners(oldKey, oldVal, newVal);
+                notifyListeners(oldKey, oldVal, () -> newVal);
 
                 ++oldIdx;
 
@@ -1352,8 +1356,10 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         for (; oldIdx < oldData.length; ++oldIdx)
             notifyListeners(oldData[oldIdx].key, unmarshal(marshaller, oldData[oldIdx].valBytes), null);
 
-        for (; newIdx < newData.length; ++newIdx)
-            notifyListeners(newData[newIdx].key, null, unmarshal(marshaller, newData[newIdx].valBytes));
+        for (; newIdx < newData.length; ++newIdx) {
+            int finalNewIdx = newIdx;
+            notifyListeners(newData[newIdx].key, null, () -> unmarshal(marshaller, newData[finalNewIdx].valBytes));
+        }
     }
 
     /**
@@ -1361,11 +1367,21 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      *
      * @param key The key.
      * @param oldVal Old value.
-     * @param newVal New value.
+     * @param newValProducer Function which serves as a lazy getter for a new value and is executed only
+     *                       if there are listeners for the given key.
      */
-    private void notifyListeners(String key, Serializable oldVal, Serializable newVal) {
+    private void notifyListeners(String key, Serializable oldVal, IgniteProducer<Serializable> newValProducer) throws IgniteCheckedException {
+        Serializable newVal = null;
+
+        boolean newValProduced = false;
+
         for (IgniteBiTuple<Predicate<String>, DistributedMetaStorageListener<Serializable>> entry : lsnrs) {
             if (entry.get1().test(key)) {
+                if (!newValProduced) {
+                    newVal = newValProducer.produce();
+                    newValProduced = true;
+                }
+
                 try {
                     // ClassCastException might be thrown here for crappy listeners.
                     entry.get2().onUpdate(key, oldVal, newVal);
