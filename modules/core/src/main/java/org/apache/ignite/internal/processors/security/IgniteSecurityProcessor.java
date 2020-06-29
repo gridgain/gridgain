@@ -100,6 +100,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     @Override public OperationSecurityContext withContext(SecurityContext secCtx) {
         assert secCtx != null;
 
+        secPrc.touch(secCtx);
+
         SecurityContext old = curSecCtx.get();
 
         curSecCtx.set(secCtx);

@@ -1694,14 +1694,14 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param lsnr Listener.
      * @param nodeId Node ID.
      * @param msg Message.
-     * @param secCtxMsg Security subject that will be used to open a security session.
+     * @param secPair Security id and subject pair.
      */
     private void invokeListener(
         Byte plc,
         GridMessageListener lsnr,
         UUID nodeId,
         Object msg,
-        @Nullable T2<UUID, SecurityContext> secCtxMsg
+        @Nullable T2<UUID, SecurityContext> secPair
     ) {
         MTC.span().addLog(() -> "Invoke listener");
 
@@ -1715,9 +1715,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         SecurityContext secCtx = null;
         UUID subjId = nodeId;
 
-        if (secCtxMsg != null) {
-            secCtx = secCtxMsg.get2();
-            subjId = secCtxMsg.get1();
+        if (secPair != null) {
+            secCtx = secPair.get2();
+            subjId = secPair.get1();
         }
 
         IgniteSecurity sec = ctx.security();

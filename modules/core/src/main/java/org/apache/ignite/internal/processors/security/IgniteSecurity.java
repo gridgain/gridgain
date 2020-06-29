@@ -51,8 +51,9 @@ public interface IgniteSecurity {
      *
      * @param secCtx Security Context.
      * @return Security context holder.
+     * @throws SecurityException If a context is not valid.
      */
-    public OperationSecurityContext withContext(SecurityContext secCtx);
+    public OperationSecurityContext withContext(SecurityContext secCtx) throws SecurityException;
 
     /**
      * Creates {@link OperationSecurityContext}. All calls of methods {@link #authorize(String, SecurityPermission)} or {@link

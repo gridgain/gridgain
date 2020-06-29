@@ -120,4 +120,17 @@ public interface GridSecurityProcessor extends GridProcessor {
      */
     @Deprecated
     public boolean enabled();
+
+    /**
+     * This method is called before an attempt to do any secure operation using given context.
+     *
+     * Implementation can check if a context still valid, refresh internal state or do some other
+     * implementation specific things.
+     *
+     * @param secCtx Security context.
+     * @throws SecurityException If a context is no longer valid.
+     */
+    public default void touch(SecurityContext secCtx) throws SecurityException {
+        // No-op.
+    }
 }
