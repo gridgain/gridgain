@@ -150,7 +150,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     private final boolean failNodeOnPartitionInconsistency = Boolean.getBoolean(
         IgniteSystemProperties.IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY);
 
-    private final static boolean IS_INCREMENTAL_DR_ENABLED =  Boolean.getBoolean("GG_INCREMENTAL_STATE_TRANSFER");
+    /** */
+    private static final boolean IS_INCREMENTAL_DR_ENABLED = Boolean.getBoolean("GG_INCREMENTAL_STATE_TRANSFER");
 
     /** Batch size for cache removals during destroy. */
     private static final int BATCH_SIZE = 1000;

@@ -742,17 +742,17 @@ public abstract class PageIO {
             return (Q)h2ExtraMvccInnerIOs.get(type0 - T_H2_EX_REF_MVCC_INNER_START).forVersion(ver);
 
         switch (type0) {
-            case  T_UPDATE_LOG_REF_INNER:
-                return (Q) UpdateLogInnerIO.VERSIONS.forVersion(ver);
+            case T_UPDATE_LOG_REF_INNER:
+                return (Q)UpdateLogInnerIO.VERSIONS.forVersion(ver);
 
             case T_UPDATE_LOG_REF_LEAF:
-                return (Q) UpdateLogLeafIO.VERSIONS.forVersion(ver);
+                return (Q)UpdateLogLeafIO.VERSIONS.forVersion(ver);
 
             case T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER:
-                return (Q) CacheIdAwareUpdateLogInnerIO.VERSIONS.forVersion(ver);
+                return (Q)CacheIdAwareUpdateLogInnerIO.VERSIONS.forVersion(ver);
 
             case T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF:
-                return (Q) CacheIdAwareUpdateLogLeafIO.VERSIONS.forVersion(ver);
+                return (Q)CacheIdAwareUpdateLogLeafIO.VERSIONS.forVersion(ver);
 
             case T_H2_REF_INNER:
                 if (h2InnerIOs == null)

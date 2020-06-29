@@ -3722,7 +3722,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      *
      * @param explicitVer Explicit version.
      */
-    private GridCacheVersion nextVersion(GridCacheVersion explicitVer, IgniteInternalTx tx){
+    private GridCacheVersion nextVersion(GridCacheVersion explicitVer, IgniteInternalTx tx) {
         if (explicitVer != null)
             return explicitVer;
 
