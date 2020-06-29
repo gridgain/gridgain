@@ -47,7 +47,7 @@ public class PagePartitionMetaIO extends PageMetaIO {
     public static final IOVersions<PagePartitionMetaIO> VERSIONS = new IOVersions<>(
         new PagePartitionMetaIO(1),
         new PagePartitionMetaIOV2(2),
-        new PagePartitionMetaIOV2(3) // Prevent partition usage on old versions after upgrade.
+        new PagePartitionMetaIOV2(Short.toUnsignedInt((short)-1)) // Prevent partition usage on old versions after upgrade.
     );
 
     /** {@inheritDoc} */
