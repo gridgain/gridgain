@@ -156,8 +156,11 @@ public enum IgniteFeatures {
     /** Remove metadata from cluster for specified type. */
     REMOVE_METADATA(39),
 
-    /** Support new security processor with a delegation. */
-    IGNITE_SECURITY_PROCESSOR_V2(40);
+    /** Support policy of shutdown. */
+    SHUTDOWN_POLICY(40),
+
+    /** New security processor with a security context support. */
+    IGNITE_SECURITY_PROCESSOR_V2(41);
 
     /**
      * Unique feature identifier.

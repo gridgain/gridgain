@@ -49,6 +49,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -415,8 +416,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Ignite ignite = startGrids(1);
 
-        injectTestSystemOut();
-
         assertFalse(ignite.cluster().active());
 
         injectTestSystemOut();
@@ -477,8 +476,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false")
     public void testState1() throws Exception {
         Ignite ignite = startGrids(1);
-
-        injectTestSystemOut();
 
         assertFalse(ignite.cluster().active());
 
@@ -579,6 +576,63 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
 
         assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+    }
+
+    /**
+     * Test is checking how to --shutdown-policy command works through control.sh.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShutdownPolicy() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        ShutdownPolicy policy = ignite.cluster().shutdownPolicy();
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--shutdown-policy"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Cluster shutdown policy is " + policy);
+    }
+
+    /**
+     * Change shutdown policy through command.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShutdownPolicyChange() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        ShutdownPolicy policyToChange = null;
+
+        for (ShutdownPolicy policy : ShutdownPolicy.values()) {
+            if (policy != ignite.cluster().shutdownPolicy())
+                policyToChange = policy;
+        }
+
+        assertNotNull(policyToChange);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--shutdown-policy", policyToChange.name()));
+
+        assertSame(policyToChange, ignite.cluster().shutdownPolicy());
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Cluster shutdown policy is " + policyToChange);
     }
 
     /**
