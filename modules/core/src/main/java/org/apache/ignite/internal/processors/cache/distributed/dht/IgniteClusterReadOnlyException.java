@@ -19,7 +19,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.jetbrains.annotations.Nullable;
 
 /**
- This exception is used to indicate that the cluster is in a read-only state
+ * This exception is used to indicate that the cluster is in a read-only state
  */
 public class IgniteClusterReadOnlyException extends IgniteCheckedException {
     /** */
@@ -29,6 +29,7 @@ public class IgniteClusterReadOnlyException extends IgniteCheckedException {
      * Create empty exception.
      */
     public IgniteClusterReadOnlyException() {
+        // No-op.
     }
 
     /**
@@ -41,19 +42,32 @@ public class IgniteClusterReadOnlyException extends IgniteCheckedException {
     }
 
     /**
-     * Creates new exception with given cause.
+     * Creates new grid exception with given throwable as a cause and
+     * source of error message.
      *
-     * @param cause Cause.
+     * @param cause Non-null throwable cause.
      */
     public IgniteClusterReadOnlyException(Throwable cause) {
         super(cause);
     }
 
     /**
-     * Creates new exception with given error message and cause.
+     * Creates new exception with given error message and optional nested exception.
      *
      * @param msg Error message.
-     * @param cause Cause.
+     * @param cause Optional nested exception (can be {@code null}).
+     * @param writableStackTrace whether or not the stack trace should
+     *                           be writable
+     */
+    public IgniteClusterReadOnlyException(String msg, @Nullable Throwable cause, boolean writableStackTrace) {
+        super(msg, cause, writableStackTrace);
+    }
+
+    /**
+     * Creates new exception with given error message and optional nested exception.
+     *
+     * @param msg Error message.
+     * @param cause Optional nested exception (can be {@code null}).
      */
     public IgniteClusterReadOnlyException(String msg, @Nullable Throwable cause) {
         super(msg, cause);
