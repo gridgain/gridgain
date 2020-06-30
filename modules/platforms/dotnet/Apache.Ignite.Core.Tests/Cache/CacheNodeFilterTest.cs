@@ -21,7 +21,9 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Store;
     using Apache.Ignite.Core.Cluster;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Cluster;
     using NUnit.Framework;
 
@@ -47,7 +49,8 @@ namespace Apache.Ignite.Core.Tests.Cache
         private const string AttrVal3 = "my-val";
 
         /** Grid instances. */
-        private IIgnite _grid, _grid1, _grid2, _grid3;
+        //private IIgnite _grid, _grid1, _grid2, _grid3;
+        private IIgnite _grid;
 
         /// <summary>
         ///  Fixture setup.
@@ -55,11 +58,12 @@ namespace Apache.Ignite.Core.Tests.Cache
         [TestFixtureSetUp]
         public void TestFixtureSetUp()
         {
-            _grid1 = Ignition.Start(GetTestConfiguration("Ignite1",
+            _grid = Ignition.Start(GetTestConfiguration("Ignite1",
                 new Dictionary<string, object>
                 {
                     {AttrKey1, null}
                 }));
+            /*
             _grid2 = Ignition.Start(GetTestConfiguration("Ignite2",
                 new Dictionary<string, object>
                 {
@@ -79,6 +83,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             };
 
             _grid = Ignition.Start(springConfig);
+            */
         }
 
         /// <summary>
@@ -102,6 +107,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             cfg.UserAttributes = userAttributes;
             return cfg;
         }
+        /*
 
         /// <summary>
         /// Tests attribute node filter with a custom user attribute name
@@ -224,6 +230,124 @@ namespace Apache.Ignite.Core.Tests.Cache
             var cache = _grid.GetCache<object, object>("cacheWithJavaFilter");
 
             Assert.IsNull(cache.GetConfiguration().NodeFilter);
+        }
+        */
+
+        [Test]
+        public void TestCustomFactory()
+        {
+
+            var cacheCfg = new CacheConfiguration
+            {
+                Name = "asdf",
+                CacheStoreFactory = new MyFactory()
+            };
+
+            var cache = _grid.CreateCache<object, object>(cacheCfg);
+
+
+        }
+
+        public class MyFactory : IFactory<ICacheStore>
+        {
+            /// <summary>
+            /// Creates an instance of the cache store.
+            /// </summary>
+            /// <returns>
+            /// New instance of the cache store.
+            /// </returns>
+            public ICacheStore CreateInstance()
+            {
+                return new MyCacheStore();
+            }
+        }
+
+        public class MyCacheStore : ICacheStore<int, int>
+        {
+            public void LoadCache(Action<int, int> act, params object[] args)
+            {
+                throw new NotImplementedException();
+            }
+
+            public int Load(int key)
+            {
+                throw new NotImplementedException();
+            }
+
+            public IEnumerable<KeyValuePair<int, int>> LoadAll(IEnumerable<int> keys)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Write(int key, int val)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void WriteAll(IEnumerable<KeyValuePair<int, int>> entries)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Delete(int key)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void DeleteAll(IEnumerable<int> keys)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void SessionEnd(bool commit)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [Test]
+        public void TestCustomFilter()
+        {
+            //_grid.GetBinary().GetBinaryType(typeof(CustomFilter));
+
+            var cacheCfg = new CacheConfiguration
+            {
+                Name = Guid.NewGuid().ToString(),
+                CacheMode = CacheMode.Replicated,
+                ClusterNodeFilter = new CustomFilter()
+            };
+            var cache = _grid.CreateCache<object, object>(cacheCfg);
+
+            ICollection<IClusterNode> dataNodes = _grid.GetCluster().ForDataNodes(cache.Name).GetNodes();
+        }
+
+        [Test]
+        public void TestCustomFilterAndStoreFactory()
+        {
+            var cacheCfg = new CacheConfiguration
+            {
+                Name = Guid.NewGuid().ToString(),
+                CacheMode = CacheMode.Replicated,
+                ClusterNodeFilter = new CustomFilter(),
+                CacheStoreFactory = new MyFactory()
+            };
+            var cache = _grid.CreateCache<object, object>(cacheCfg);
+
+            ICollection<IClusterNode> dataNodes = _grid.GetCluster().ForDataNodes(cache.Name).GetNodes();
+        }
+
+        public class CustomFilter : IClusterNodeFilter
+        {
+            public bool Invoke(IClusterNode node)
+            {
+                return true;
+                //throw new NotImplementedException();
+            }
+        }
+
+        public void CustomFilterWithExceptionShouldNotHangClusterNode()
+        {
+
         }
     }
 }

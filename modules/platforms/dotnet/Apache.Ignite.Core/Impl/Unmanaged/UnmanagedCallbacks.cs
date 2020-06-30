@@ -197,6 +197,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.ServiceCancel, ServiceCancel);
             AddHandler(UnmanagedCallbackOp.ServiceInvokeMethod, ServiceInvokeMethod);
             AddHandler(UnmanagedCallbackOp.ClusterNodeFilterApply, ClusterNodeFilterApply);
+            AddHandler(UnmanagedCallbackOp.ClusterNodeFilterCreate, ClusterNodeFilterCreate);
             AddHandler(UnmanagedCallbackOp.NodeInfo, NodeInfo);
             AddHandler(UnmanagedCallbackOp.OnStart, OnStart, true);
             AddHandler(UnmanagedCallbackOp.OnStop, OnStop, true);
@@ -1117,13 +1118,48 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
 
         private long ClusterNodeFilterApply(long memPtr)
         {
+            //todo: add try-catch
+            using (PlatformMemoryStream stream = IgniteManager.Memory.Get(memPtr).GetStream())
+            {
+                try
+                {
+
+                    var reader = _ignite.Marshaller.StartUnmarshal(stream);
+
+                    var filter = _handleRegistry.Get<NodeFilter>(reader.ReadLong(), true);
+
+                    var nodeId = reader.ReadGuid();
+
+                    return filter.Apply(_ignite.GetNode(nodeId)) ? 1 : 0;
+
+                }
+                catch (Exception e)
+                {
+                    throw e;
+                }
+            }
+        }
+
+        private long ClusterNodeFilterCreate(long memPtr)
+        {
+            //todo: add try-catch
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
                 var reader = _ignite.Marshaller.StartUnmarshal(stream);
 
-                var filter = reader.ReadObject<IClusterNodeFilter>();
+                //var convertBinary = reader.ReadBoolean();
+                var cacheFilter = reader.ReadObject<IClusterNodeFilter>();
 
-                return filter.Invoke(_ignite.GetNode(reader.ReadGuid())) ? 1 : 0;
+                if (cacheFilter == null)
+                {
+                    var className = reader.ReadString();
+                    var propertyMap = reader.ReadDictionaryAsGeneric<string, object>();
+
+                    cacheFilter = IgniteUtils.CreateInstance<IClusterNodeFilter>(className, propertyMap);
+                }
+
+                var filter = new NodeFilter(cacheFilter, HandleRegistry);
+                return filter.Handle;
             }
         }
 

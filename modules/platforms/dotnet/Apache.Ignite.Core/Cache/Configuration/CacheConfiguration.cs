@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
     using Apache.Ignite.Core.Cache.Eviction;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Store;
+    using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Impl;
@@ -342,6 +343,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
             NodeFilter = reader.ReadBoolean() ? new AttributeNodeFilter(reader) : null;
 
+            ClusterNodeFilter = reader.ReadObject<IClusterNodeFilter>();
+
             KeyConfiguration = reader.ReadCollectionRaw(r => new CacheKeyConfiguration(r));
 
             PlatformCacheConfiguration = reader.ReadBoolean() ? new PlatformCacheConfiguration(reader) : null;
@@ -442,6 +445,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
             ExpiryPolicySerializer.WritePolicyFactory(writer, ExpiryPolicyFactory);
 
             WriteNullableObject(NodeFilter, writer, w => NodeFilter.Write(w));
+
+            writer.WriteObject(ClusterNodeFilter);
 
             writer.WriteCollectionRaw(KeyConfiguration);
 
@@ -963,5 +968,10 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// More details: <see cref="AttributeNodeFilter"/>. 
         /// </summary>
         public AttributeNodeFilter NodeFilter { get; set; }
+
+        /// <summary>
+        /// Cluster node filter with normal 
+        /// </summary>
+        public IClusterNodeFilter ClusterNodeFilter { get; set; }
     }
 }

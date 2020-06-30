@@ -961,6 +961,22 @@ public class PlatformCallbackGateway {
     }
 
     /**
+     * Creates cluster node filter.
+     *
+     * @param memPtr Stream pointer.
+     */
+    public int clusterNodeFilterCreate(long memPtr){
+        enter();
+
+        try {
+            return (int)PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.ClusterNodeFilterCreate, memPtr);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
      * Extension callback accepting single long argument and returning long result.
      *
      * @param typ Operation type.

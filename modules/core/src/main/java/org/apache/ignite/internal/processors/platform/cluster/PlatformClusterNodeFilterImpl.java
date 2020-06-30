@@ -17,6 +17,10 @@
 package org.apache.ignite.internal.processors.platform.cluster;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryReader;
+import org.apache.ignite.binary.BinaryWriter;
+import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractPredicate;
@@ -29,9 +33,11 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 /**
  * Interop cluster node filter.
  */
-public class PlatformClusterNodeFilterImpl extends PlatformAbstractPredicate implements PlatformClusterNodeFilter {
+public class PlatformClusterNodeFilterImpl extends PlatformAbstractPredicate implements PlatformClusterNodeFilter, Binarylizable {
     /** */
     private static final long serialVersionUID = 0L;
+
+    private int handleId = -1;
 
     /**
      * {@link java.io.Externalizable} support.
@@ -48,16 +54,40 @@ public class PlatformClusterNodeFilterImpl extends PlatformAbstractPredicate imp
      */
     public PlatformClusterNodeFilterImpl(Object pred, PlatformContext ctx) {
         super(pred, 0, ctx);
+
+        init();
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean apply(ClusterNode clusterNode) {
+    /* Initializes the cluster node filter */
+    public void init(){
         try (PlatformMemory mem = ctx.memory().allocate()) {
             PlatformOutputStream out = mem.output();
 
             BinaryRawWriterEx writer = ctx.writer(out);
 
             writer.writeObject(pred);
+            out.synchronize();
+
+            handleId = ctx.gateway().clusterNodeFilterCreate(mem.pointer());
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean apply(ClusterNode clusterNode) {
+        if(handleId < 0){
+            init();
+        }
+
+        if(ctx == null){
+            return false;
+        }
+
+        try (PlatformMemory mem = ctx.memory().allocate()) {
+            PlatformOutputStream out = mem.output();
+
+            BinaryRawWriterEx writer = ctx.writer(out);
+
+            writer.writeLong(handleId);
             ctx.writeNode(writer, clusterNode);
 
             out.synchronize();
@@ -79,5 +109,15 @@ public class PlatformClusterNodeFilterImpl extends PlatformAbstractPredicate imp
      */
     public Object getInternalPredicate() {
         return pred;
+    }
+
+    @Override
+    public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
+        writer.writeObject("pred", pred);
+    }
+
+    @Override
+    public void readBinary(BinaryReader reader) throws BinaryObjectException {
+        pred = reader.readObject("pred");
     }
 }

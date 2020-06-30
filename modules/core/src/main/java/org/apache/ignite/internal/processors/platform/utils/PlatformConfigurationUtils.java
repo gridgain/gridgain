@@ -60,8 +60,10 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.cache.affinity.PlatformAffinityFunction;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicyFactory;
+import org.apache.ignite.internal.processors.platform.cluster.PlatformClusterNodeFilterImpl;
 import org.apache.ignite.internal.processors.platform.events.PlatformLocalEventListener;
 import org.apache.ignite.internal.processors.platform.plugin.cache.PlatformCachePluginConfiguration;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -145,8 +147,10 @@ public class PlatformConfigurationUtils {
      * @param in Stream.
      * @return Cache configuration.
      */
-    public static CacheConfiguration readCacheConfiguration(BinaryRawReaderEx in) {
+    public static CacheConfiguration readCacheConfiguration(BinaryRawReaderEx in, PlatformContext ctx) {
         assert in != null;
+
+        //assert ctx != null;
 
         CacheConfiguration ccfg = new CacheConfiguration();
 
@@ -229,6 +233,13 @@ public class PlatformConfigurationUtils {
 
         if (in.readBoolean())
             ccfg.setNodeFilter(readNodeFilterConfiguration(in));
+
+        Object nativeFilter = in.readObjectDetached();
+        if (nativeFilter != null) {
+            PlatformClusterNodeFilterImpl filter = new PlatformClusterNodeFilterImpl(nativeFilter, ctx);
+            ccfg.setNodeFilter(filter);
+        }
+
 
         int keyCnt = in.readInt();
 
@@ -901,7 +912,7 @@ public class PlatformConfigurationUtils {
         List<CacheConfiguration> caches = new ArrayList<>();
 
         for (int i = 0; i < len; i++)
-            caches.add(readCacheConfiguration(in));
+            caches.add(readCacheConfiguration(in, null));
 
         CacheConfiguration[] oldCaches = cfg.getCacheConfiguration();
         CacheConfiguration[] caches0 = caches.toArray(new CacheConfiguration[caches.size()]);
@@ -1112,6 +1123,12 @@ public class PlatformConfigurationUtils {
         }
         else
             writer.writeBoolean(false);
+
+        if (nodeFilter instanceof PlatformClusterNodeFilterImpl) {
+            writer.writeObject((((PlatformClusterNodeFilterImpl) nodeFilter).getInternalPredicate()));
+        }
+        else
+            writer.writeObject(null);
 
         CacheKeyConfiguration[] keys = ccfg.getKeyConfiguration();
 
