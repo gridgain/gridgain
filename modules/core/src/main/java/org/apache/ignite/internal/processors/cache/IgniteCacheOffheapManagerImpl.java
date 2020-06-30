@@ -1687,7 +1687,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 case PUT: {
                     assert c.newRow() != null : c;
 
-                    finishUpdate(cctx, c.newRow(),  c.oldRow());
+                    finishUpdate(cctx, c.newRow(), c.oldRow());
 
                     break;
                 }
