@@ -210,20 +210,22 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        assert false;
-
         out.writeInt(topVer);
         out.writeLong(order);
         out.writeInt(nodeOrderDrId);
+
+        // TODO: GG-29644 Fix compatibility
+//        out.writeLong(updateCounter);
     }
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException {
-        assert false;
-
         topVer = in.readInt();
         order = in.readLong();
         nodeOrderDrId = in.readInt();
+
+        // TODO: GG-29644 Fix compatibility
+//        updateCounter = in.readLong();
     }
 
     /** {@inheritDoc} */

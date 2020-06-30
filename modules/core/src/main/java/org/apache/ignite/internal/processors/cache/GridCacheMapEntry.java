@@ -6498,8 +6498,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
 
-            if (cctx.isDrEnabled())
-                newVer.updateCounter(updateCntr0);
+            newVer.updateCounter(updateCntr0);
 
             entry.logUpdate(op, updated, newVer, newExpireTime, updateCntr0);
 
@@ -6588,8 +6587,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
 
-            if (cctx.isDrEnabled())
-                newVer.updateCounter(updateCntr0);
+            newVer.updateCounter(updateCntr0);
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 
