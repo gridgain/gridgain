@@ -1709,8 +1709,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                         if (newRow.version().updateCounter() != 0)
                             addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
-                        else
-                            assert true;
                     }
 
                     break;
