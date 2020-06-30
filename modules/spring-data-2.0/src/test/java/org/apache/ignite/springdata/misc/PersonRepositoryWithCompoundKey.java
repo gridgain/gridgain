@@ -22,6 +22,6 @@ import org.apache.ignite.springdata20.repository.config.RepositoryConfig;
 /**
  * Test repository.
  */
-@RepositoryConfig(cacheName = "PersonWithKeyCache")
+@RepositoryConfig(cacheName = "PersonWithKeyCache", autoCreateCache = true)
 public interface PersonRepositoryWithCompoundKey extends IgniteRepository<Person, PersonKey> {
 }
