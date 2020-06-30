@@ -1170,9 +1170,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             ver = ver.nextVersion(histItem);
 
             for (int i = 0, len = histItem.keys.length; i < len; i++) {
-                DistributedMetaStorageHistoryItem finalHistItem = histItem;
                 int finalI = i;
-                notifyListeners(histItem.keys[i], bridge.read(histItem.keys[i]), () -> unmarshal(marshaller, finalHistItem.valBytesArray[finalI]));
+                DistributedMetaStorageHistoryItem finalHistItem = histItem;
+
+                notifyListeners(histItem.keys[i],
+                                () -> bridge.read(finalHistItem.keys[finalI]),
+                                () -> unmarshal(marshaller, finalHistItem.valBytesArray[finalI]));
             }
 
             for (int i = 0, len = histItem.keys.length; i < len; i++)
@@ -1331,21 +1334,19 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             int c = oldKey.compareTo(newKey);
 
             if (c < 0) {
-                notifyListeners(oldKey, unmarshal(marshaller, oldValBytes), null);
+                notifyListeners(oldKey, () -> unmarshal(marshaller, oldValBytes), () -> null);
 
                 ++oldIdx;
             }
             else if (c > 0) {
-                notifyListeners(newKey, null, () -> unmarshal(marshaller, newValBytes));
+                notifyListeners(newKey, () -> null, () -> unmarshal(marshaller, newValBytes));
 
                 ++newIdx;
             }
             else {
-                Serializable oldVal = unmarshal(marshaller, oldValBytes);
-
-                Serializable newVal = Arrays.equals(oldValBytes, newValBytes) ? oldVal : unmarshal(marshaller, newValBytes);
-
-                notifyListeners(oldKey, oldVal, () -> newVal);
+                notifyListeners(oldKey,
+                                () -> unmarshal(marshaller, oldValBytes),
+                                () -> unmarshal(marshaller, newValBytes));
 
                 ++oldIdx;
 
@@ -1353,12 +1354,14 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             }
         }
 
-        for (; oldIdx < oldData.length; ++oldIdx)
-            notifyListeners(oldData[oldIdx].key, unmarshal(marshaller, oldData[oldIdx].valBytes), null);
+        for (; oldIdx < oldData.length; ++oldIdx) {
+            int finalOldIdx = oldIdx;
+            notifyListeners(oldData[oldIdx].key, () -> unmarshal(marshaller, oldData[finalOldIdx].valBytes), () -> null);
+        }
 
         for (; newIdx < newData.length; ++newIdx) {
             int finalNewIdx = newIdx;
-            notifyListeners(newData[newIdx].key, null, () -> unmarshal(marshaller, newData[finalNewIdx].valBytes));
+            notifyListeners(newData[newIdx].key, () -> null, () -> unmarshal(marshaller, newData[finalNewIdx].valBytes));
         }
     }
 
@@ -1366,20 +1369,24 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * Notify listeners.
      *
      * @param key The key.
-     * @param oldVal Old value.
-     * @param newValProducer Function which serves as a lazy getter for a new value and is executed only
-     *                       if there are listeners for the given key.
+     * @param oldValProducer Lazy getter for an old value and is executed only if there are listeners for the given key.
+     * @param newValProducer Lazy getter for a new value and is executed only if there are listeners for the given key.
      */
-    private void notifyListeners(String key, Serializable oldVal, IgniteProducer<Serializable> newValProducer) throws IgniteCheckedException {
+    private void notifyListeners(String key,
+                                 @NotNull IgniteProducer<Serializable> oldValProducer,
+                                 @NotNull IgniteProducer<Serializable> newValProducer) throws IgniteCheckedException {
+        boolean valuesProduced = false;
+
         Serializable newVal = null;
 
-        boolean newValProduced = false;
+        Serializable oldVal = null;
 
         for (IgniteBiTuple<Predicate<String>, DistributedMetaStorageListener<Serializable>> entry : lsnrs) {
             if (entry.get1().test(key)) {
-                if (!newValProduced) {
+                if (!valuesProduced) {
                     newVal = newValProducer.produce();
-                    newValProduced = true;
+                    oldVal = oldValProducer.produce();
+                    valuesProduced = true;
                 }
 
                 try {

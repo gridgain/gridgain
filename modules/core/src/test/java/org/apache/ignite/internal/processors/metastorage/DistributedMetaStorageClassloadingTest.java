@@ -65,7 +65,10 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
      * Description:
      * Start server node with exclusion of certain BamboozleClass (this is done via system property
      * which adds class filter to class loader).
-     * Start client node and write new instance of BamboozleClass to the distributed metastorage.
+     * Start client node and write new instance of BamboozleClass to the distributed metastorage to test that
+     * new value is not marshalled.
+     * Write another instance of BamboozleClass (with different value of fields) to test that
+     * old value is not unmarshalled.
      * There must be no failures and all 2 grids must be alive.
      *
      * @throws Exception If failed.
@@ -80,7 +83,8 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
 
         IgniteEx client = startClient(0);
 
-        client.context().distributedMetastorage().write("hey", new BamboozleClass());
+        client.context().distributedMetastorage().write("hey", new BamboozleClass(0));
+        client.context().distributedMetastorage().write("hey", new BamboozleClass(1));
 
         assertEquals(0, failureHandler.getCount());
     }
@@ -106,7 +110,7 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
 
         IgniteEx client = startClient(0);
 
-        client.context().distributedMetastorage().write("hey", new BamboozleClass());
+        client.context().distributedMetastorage().write("hey", new BamboozleClass(0));
 
         try {
             Serializable hey = ignite.context().distributedMetastorage().read("hey");
@@ -144,7 +148,7 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
         });
 
         try {
-            client.context().distributedMetastorage().write("hey", new BamboozleClass());
+            client.context().distributedMetastorage().write("hey", new BamboozleClass(0));
         }
         catch (Exception ignored) {}
 
@@ -160,7 +164,18 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
     /**
      * Class that would be excluded on the certain npde.
      */
-    public static final class BamboozleClass implements Serializable {}
+    public static final class BamboozleClass implements Serializable {
+
+        private final int i;
+
+        public BamboozleClass(int i) {
+            this.i = i;
+        }
+
+        public int getI() {
+            return i;
+        }
+    }
 
     /** */
     protected IgniteEx startClient(int idx) throws Exception {
