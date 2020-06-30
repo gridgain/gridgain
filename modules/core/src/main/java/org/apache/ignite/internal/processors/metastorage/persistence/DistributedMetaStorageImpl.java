@@ -1170,12 +1170,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             ver = ver.nextVersion(histItem);
 
             for (int i = 0, len = histItem.keys.length; i < len; i++) {
-                int finalI = i;
-                DistributedMetaStorageHistoryItem finalHistItem = histItem;
+                String key = histItem.keys[i];
+                byte[] valBytes = histItem.valBytesArray[i];
 
                 notifyListeners(histItem.keys[i],
-                                () -> bridge.read(finalHistItem.keys[finalI]),
-                                () -> unmarshal(marshaller, finalHistItem.valBytesArray[finalI]));
+                                () -> bridge.read(key),
+                                () -> unmarshal(marshaller, valBytes));
             }
 
             for (int i = 0, len = histItem.keys.length; i < len; i++)
@@ -1355,13 +1355,13 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         }
 
         for (; oldIdx < oldData.length; ++oldIdx) {
-            int finalOldIdx = oldIdx;
-            notifyListeners(oldData[oldIdx].key, () -> unmarshal(marshaller, oldData[finalOldIdx].valBytes), () -> null);
+            byte[] oldValBytes = oldData[oldIdx].valBytes;
+            notifyListeners(oldData[oldIdx].key, () -> unmarshal(marshaller, oldValBytes), () -> null);
         }
 
         for (; newIdx < newData.length; ++newIdx) {
-            int finalNewIdx = newIdx;
-            notifyListeners(newData[newIdx].key, () -> null, () -> unmarshal(marshaller, newData[finalNewIdx].valBytes));
+            byte[] newValBytes = newData[newIdx].valBytes;
+            notifyListeners(newData[newIdx].key, () -> null, () -> unmarshal(marshaller, newValBytes));
         }
     }
 
