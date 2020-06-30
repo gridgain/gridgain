@@ -173,7 +173,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                 tx::commit,
                 TransactionHeuristicException.class,
                 "Primary node [nodeId=" + grid0.localNode().id() + ", consistentId=" +
-                    grid0.localNode().consistentId() + "] has left the grid");
+                    grid0.localNode().consistentId() + "] has left the grid and there are no backup nodes");
         }
     }
 }

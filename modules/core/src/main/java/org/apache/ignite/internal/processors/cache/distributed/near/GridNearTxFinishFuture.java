@@ -30,6 +30,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
@@ -981,6 +982,21 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
 
         /** {@inheritDoc} */
         @Override boolean onNodeLeft(UUID nodeId, boolean discoThread) {
+            if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
+                Set<UUID> backups = m.backups();
+
+                if (backups != null) {
+                    if (cctx.discovery().node(m.primary().id()) == null &&
+                        backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
+                        onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
+                            m.primary().consistentId() + "] has left the grid and there are no backup nodes",
+                            new CacheInvalidStateException()));
+
+                        return true;
+                    }
+                }
+            }
+
             if (nodeId.equals(m.primary().id())) {
                 if (msgLog.isDebugEnabled()) {
                     msgLog.debug("Near finish fut, mini future node left [txId=" + tx.nearXidVersion() +
@@ -1033,30 +1049,6 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                                 }
                                 else
                                     mini.onDhtFinishResponse(backupId, true);
-                            }
-                        }
-                        else {
-                            if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                                onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                                    m.primary().consistentId() + "] has left the grid"));
-
-                                return true;
-                            }
-                        }
-                    }
-                }
-                else {
-                    if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                        Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
-
-                        if (txNodes != null) {
-                            Collection<UUID> backups = txNodes.get(nodeId);
-
-                            if (F.isEmpty(backups) || backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
-                                onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                                    m.primary().consistentId() + "] has left the grid"));
-
-                                return true;
                             }
                         }
                     }
