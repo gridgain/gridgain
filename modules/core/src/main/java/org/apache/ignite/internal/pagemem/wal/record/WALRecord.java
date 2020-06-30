@@ -215,14 +215,17 @@ public abstract class WALRecord {
         /** Rollback tx record. */
         ROLLBACK_TX_RECORD(57, LOGICAL),
 
-        /** */
+        /** Partition meta page containing update counter gaps. */
         PARTITION_META_PAGE_UPDATE_COUNTERS_V2(58, PHYSICAL),
 
         /** Init root meta page (with flags and created version)*/
         BTREE_META_PAGE_INIT_ROOT_V3(59, PHYSICAL),
 
         /** Record that indicates that "corrupted" flag should be removed from tracking page. */
-        TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL);
+        TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
+
+        /** Master key change record. */
+        MASTER_KEY_CHANGE_RECORD(62, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

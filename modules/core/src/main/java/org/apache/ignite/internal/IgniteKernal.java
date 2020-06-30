@@ -70,6 +70,7 @@ import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteCountDownLatch;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLock;
@@ -1130,7 +1131,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startManager(new GridFailoverManager(ctx));
             startManager(new GridCollisionManager(ctx));
             startManager(new GridIndexingManager(ctx));
-            startManager(new GridEncryptionManager(ctx));
 
             ackSecurity();
 
@@ -1139,6 +1139,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             final GridManager discoMgr = new GridDiscoveryManager(ctx);
 
             ctx.add(discoMgr, false);
+
+            // Start the encryption manager after assigning the discovery manager to context, so it will be
+            // able to register custom event listener.
+            startManager(new GridEncryptionManager(ctx));
 
             // Start processors before discovery manager, so they will
             // be able to start receiving messages once discovery completes.
@@ -2800,7 +2804,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Acknowledge the Ignite configuration related to the data storage.
      */
     private void ackMemoryConfiguration() {
         DataStorageConfiguration memCfg = cfg.getDataStorageConfiguration();
@@ -2814,7 +2818,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Acknowledge all caches configurations presented in the IgniteConfiguration.
      */
     private void ackCacheConfiguration() {
         CacheConfiguration[] cacheCfgs = cfg.getCacheConfiguration();
@@ -2858,7 +2862,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Acknowledge configuration related to the peer class loading.
      */
     private void ackP2pConfiguration() {
         assert cfg != null;
@@ -2931,7 +2935,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @param cfg Grid configuration.
+     * @param cfg Ignite configuration to use.
      * @return Components provided in configuration which can implement {@link LifecycleAware} interface.
      */
     private Iterable<Object> lifecycleAwares(IgniteConfiguration cfg) {
@@ -3074,7 +3078,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /**
      * @param name Cache name.
-     * @return Cache.
+     * @return Ignite internal cache instance related to the given name.
      */
     public <K, V> IgniteInternalCache<K, V> getCache(String name) {
         CU.validateCacheName(name);
@@ -3415,7 +3419,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @param cache Cache.
+     * @param cache Ignite cache instance to check.
      * @throws IgniteCheckedException If cache without near cache was already started.
      */
     private void checkNearCacheStarted(IgniteCacheProxy<?, ?> cache) throws IgniteCheckedException {
@@ -3481,7 +3485,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /**
      * @param cacheNames Collection of cache names.
      * @param checkThreadTx If {@code true} checks that current thread does not have active transactions.
-     * @return Ignite future.
+     * @return Ignite future which will be completed when cache is destored.
      */
     public IgniteInternalFuture<?> destroyCachesAsync(Collection<String> cacheNames, boolean checkThreadTx) {
         CU.validateCacheNames(cacheNames);
@@ -3572,7 +3576,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @return Public caches.
+     * @return Collection of public cache instances.
      */
     public Collection<IgniteCacheProxy<?, ?>> caches() {
         guard();
@@ -3808,6 +3812,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteEncryption encryption() {
+        return ctx.encryption();
+    }
+
+    /** {@inheritDoc} */
     @Override public Collection<MemoryMetrics> memoryMetrics() {
         return DataRegionMetricsAdapter.collectionOf(dataRegionMetrics());
     }
@@ -4023,7 +4032,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * <tt>ctx.gateway().readLock()</tt>
+     * The {@code ctx.gateway().readLock()} is used underneath.
      */
     private void guard() {
         assert ctx != null;
@@ -4032,7 +4041,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * <tt>ctx.gateway().readUnlock()</tt>
+     * The {@code ctx.gateway().readUnlock()} is used underneath.
      */
     private void unguard() {
         assert ctx != null;
@@ -4043,7 +4052,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /**
      * Validate operation on cluster. Check current cluster state.
      *
-     * @throws IgniteException if cluster in inActive state
+     * @throws IgniteException If cluster in inActive state.
      */
     private void checkClusterState() throws IgniteException {
         if (!ctx.state().publicApiActiveState(true)) {
@@ -4054,7 +4063,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     *
+     * Method is responsible for handling the {@link EventType#EVT_CLIENT_NODE_DISCONNECTED} event. Notify all the
+     * GridComponents that the such even has been occurred (e.g. if the local client node disconnected from the cluster
+     * components will be notified with a future which will be completed when the client is reconnected).
      */
     public void onDisconnected() {
         Throwable err = null;
