@@ -37,6 +37,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Schema operation executor.
  */
 public class SchemaOperationWorker extends GridWorker {
+    /** Kernal context. */
+    protected final GridKernalContext ctx;
+
     /** Query processor */
     private final GridQueryProcessor qryProc;
 
@@ -84,6 +87,7 @@ public class SchemaOperationWorker extends GridWorker {
         @Nullable QueryTypeDescriptorImpl type) {
         super(ctx.igniteInstanceName(), workerName(op), ctx.log(SchemaOperationWorker.class));
 
+        this.ctx = ctx;
         this.qryProc = qryProc;
         this.depId = depId;
         this.op = op;
@@ -180,7 +184,7 @@ public class SchemaOperationWorker extends GridWorker {
     @Override public void cancel() {
         if (cancelToken.cancel()) {
             try {
-                fut.get();
+                fut.get(ctx.workersRegistry().getSystemWorkerBlockedTimeout());
             }
             catch (IgniteCheckedException e) {
                 if (log.isDebugEnabled())
