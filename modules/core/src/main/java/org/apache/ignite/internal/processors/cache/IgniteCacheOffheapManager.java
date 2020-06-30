@@ -1045,6 +1045,11 @@ public interface IgniteCacheOffheapManager {
          */
         public void setRowCacheCleaner(GridQueryRowCacheCleaner rowCacheCleaner);
 
+        /**
+         * Return partition update log tree.
+         *
+         * @return PartitionLogTree instance.
+         */
         PartitionLogTree logTree();
 
         /**

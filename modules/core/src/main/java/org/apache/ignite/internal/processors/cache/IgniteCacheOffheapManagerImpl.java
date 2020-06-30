@@ -1449,7 +1449,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param partId Partition number.
          * @param rowStore Row store.
          * @param dataTree Data tree.
-         * @param logTree Update log tree.
+         * @param logTree Partition log tree.
          */
         public CacheDataStoreImpl(
                 int partId,
@@ -1703,7 +1703,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     CacheDataRow oldRow = c.oldRow();
                     CacheDataRow newRow = c.newRow();
 
-                    if (oldRow != null && newRow != null) {
+                    if (isIncrementalDrEnabled(cctx) && oldRow != null && newRow != null) {
                         if (oldRow.version().updateCounter() != 0)
                             removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
@@ -2076,7 +2076,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 else if (oldRow != null)
                     rowStore.updateDataRow(oldRow.link(), mvccUpdateMarker, updateRow, grp.statisticsHolderData());
 
-                if (isIncrementalDrEnabled(cctx))
+                if (ver.updateCounter() == 0)
                     ver.updateCounter(nextUpdateCounter());
 
                 if (!grp.storeCacheIdInDataPage() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
@@ -2104,8 +2104,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 assert !old;
 
-                if (ver.updateCounter() != 0)
+                if (isIncrementalDrEnabled(cctx)) {
+                    assert ver.updateCounter() != 0;
+
                     addUpdateToLog(new UpdateLogRow(cacheId, ver.updateCounter(), updateRow.link()));
+                }
 
                 GridCacheQueryManager qryMgr = cctx.queries();
 
@@ -2408,10 +2411,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (oldRow != null) { // oldRow == null means it was cleaned by another cleanup process.
                     assert oldRow.mvccCounter() == cleanupRow.mvccCounter();
 
-                    if (oldRow.version().updateCounter() != 0)
+                    if (isIncrementalDrEnabled(cctx) && oldRow.version().updateCounter() != 0)
                         removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
-                    else
-                        assert !cctx.isDrEnabled(); // TODO: remove this
 
                     if (qryMgr.enabled())
                         qryMgr.remove(oldRow.key(), oldRow);
@@ -2558,8 +2559,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 if (val != null) {
-                    if (isIncrementalDrEnabled(cctx))
-                        ver.updateCounter(nextUpdateCounter());
+                    assert ver.updateCounter() == 0;
+
+                    ver.updateCounter(nextUpdateCounter());
 
                     if (!grp.storeCacheIdInDataPage() && updateRow.cacheId() != CU.UNDEFINED_CACHE_ID) {
                         updateRow.cacheId(CU.UNDEFINED_CACHE_ID);
@@ -2575,8 +2577,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     assert !old;
 
-                    if (ver.updateCounter() != 0)
+                    if (isIncrementalDrEnabled(cctx)) {
+                        assert ver.updateCounter() != 0;
+
                         addUpdateToLog(new UpdateLogRow(cacheId, ver.updateCounter(), updateRow.link()));
+                    }
 
                     GridCacheQueryManager qryMgr = cctx.queries();
 
@@ -2612,15 +2617,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow != null) {
                 assert oldRow.link() != 0 : oldRow;
 
-                if (oldRow.version().updateCounter() != 0)
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
-
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
 
-            if (newRow.version().updateCounter() != 0)
+            if (isIncrementalDrEnabled(cctx)) {
+                if (oldRow != null && oldRow.version().updateCounter() != 0)
+                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+
+                assert newRow.version().updateCounter() != 0;
+
                 addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+            }
         }
 
         /**
@@ -2689,10 +2697,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 qryMgr.remove(key, oldRow);
 
             if (oldRow != null) {
-                if (oldRow.version().updateCounter() != 0)
+                if (isIncrementalDrEnabled(cctx) && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
-                else
-                    assert !cctx.isDrEnabled(); //TODO remove this.
 
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
@@ -3034,13 +3040,24 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return logTree;
         }
 
+        /**
+         * Remove row from partition log.
+         *
+         * @param row Log row.
+         * @throws IgniteCheckedException If failed.
+         */
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             UpdateLogRow old = logTree.remove(row);
 
-            assert old != null && old.link == row.link;
+            assert old == null || old.link == row.link;
         }
 
-
+        /**
+         * Add row to partition log.
+         *
+         * @param row Log row.
+         * @throws IgniteCheckedException If failed.
+         */
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             boolean res = logTree.putx(row);
 
@@ -3236,6 +3253,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
     }
 
+    /**
+     * @param cctx Cache context.
+     * @return {@code True} if Incremental DR enabled for cache.m {@code false} otherwise.
+     */
     private boolean isIncrementalDrEnabled(GridCacheContext cctx) {
         return IS_INCREMENTAL_DR_ENABLED && cctx.isDrEnabled();
     }
