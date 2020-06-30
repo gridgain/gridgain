@@ -51,6 +51,7 @@ final class BinaryMetadataHolder implements Serializable {
      * @param metadata Metadata.
      * @param pendingVer Pending updates count.
      * @param acceptedVer Version of this metadata - how many updates were issued for this type.
+     * @param removing Flag means the metadata is removing now.
      */
     private BinaryMetadataHolder(BinaryMetadata metadata, int pendingVer, int acceptedVer, boolean removing) {
         assert metadata != null;
@@ -59,7 +60,6 @@ final class BinaryMetadataHolder implements Serializable {
         this.pendingVer = pendingVer;
         this.acceptedVer = acceptedVer;
         this.removing = removing;
-
     }
 
     /**
@@ -91,7 +91,7 @@ final class BinaryMetadataHolder implements Serializable {
     }
 
     /**
-     *
+     * @return {@code true} is the metadata is removing now.
      */
     boolean removing() {
         return removing;

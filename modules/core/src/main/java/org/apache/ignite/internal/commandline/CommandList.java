@@ -19,6 +19,7 @@ package org.apache.ignite.internal.commandline;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
+import org.apache.ignite.internal.commandline.meta.MetadataCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -65,7 +66,10 @@ public enum CommandList {
     TRACING_CONFIGURATION("--tracing-configuration", new TracingConfigurationCommand()),
 
     /** */
-    SHUTDOWN_POLICY("--shutdown-policy", new ShutdownPolicyCommand());
+    SHUTDOWN_POLICY("--shutdown-policy", new ShutdownPolicyCommand()),
+
+    /** */
+    METADATA("--meta", new MetadataCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();
