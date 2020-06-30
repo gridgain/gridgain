@@ -154,7 +154,10 @@ public enum IgniteFeatures {
     METASTORAGE_LONG_KEYS(38),
 
     /** Remove metadata from cluster for specified type. */
-    REMOVE_METADATA(39);
+    REMOVE_METADATA(39),
+
+    /** Support policy of shutdown. */
+    SHUTDOWN_POLICY(40);
     /**
      * Unique feature identifier.
      */
