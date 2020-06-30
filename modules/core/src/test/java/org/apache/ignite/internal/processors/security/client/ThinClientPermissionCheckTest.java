@@ -33,6 +33,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.security.AbstractSecurityTest;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityData;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilder;
 import org.junit.Test;
@@ -122,7 +123,7 @@ public class ThinClientPermissionCheckTest extends AbstractSecurityTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        IgniteEx ignite = startGrid("srv", ALLOW_ALL, false, TEST_SECURITY_DATA);
+        IgniteEx ignite = startGrid(getTestIgniteInstanceName(G.allGrids().size()), ALLOW_ALL, false, TEST_SECURITY_DATA);
 
         ignite.cluster().active(true);
     }
