@@ -526,7 +526,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     grpHolder = getOrCreateGroupHolder(topVer, grpDesc);
 
                 // If current node is not client and current node have no aff holder.
-                if (grpHolder.nonAffNode() && !cctx.localNode().isClient()) {
+                if (grpHolder.nonAffNode()) {
                     GridDhtPartitionsExchangeFuture excFut = context().exchange().lastFinishedFuture();
 
                     grp.topology().updateTopologyVersion(excFut, discoCache, -1, false);
