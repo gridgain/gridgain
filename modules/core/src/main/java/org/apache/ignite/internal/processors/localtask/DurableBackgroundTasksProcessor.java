@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
@@ -75,7 +76,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      *
      *  @see #onStateChangeFinish(ChangeGlobalStateFinishMessage)
      */
-    private volatile boolean banStartingNewTasks = false;
+    private volatile boolean banStartingNewTasks;
 
     /**
      * @param ctx Kernal context.
@@ -120,9 +121,9 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
                     task.execute(ctx);
 
-                    log.info("Execution of durable background task completed: " + task.shortName());
-
                     task.complete();
+
+                    log.info("Execution of durable background task completed: " + task.shortName());
                 }
                 catch (Throwable e) {
                     log.error("Could not execute durable background task: " + task.shortName(), e);
@@ -156,13 +157,13 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
         awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
 
-        IgniteCacheDatabaseSharedManager dbSharedMgr = ctx.cache().context().database();
-
-        if (dbSharedMgr instanceof GridCacheDatabaseSharedManager) {
-            GridCacheDatabaseSharedManager mgr = (GridCacheDatabaseSharedManager)dbSharedMgr;
-
-            mgr.removeCheckpointListener(this);
-        }
+//        IgniteCacheDatabaseSharedManager dbSharedMgr = ctx.cache().context().database();
+//
+//        if (dbSharedMgr instanceof GridCacheDatabaseSharedManager) {
+//            GridCacheDatabaseSharedManager mgr = (GridCacheDatabaseSharedManager)dbSharedMgr;
+//
+//            mgr.removeCheckpointListener(this);
+//        }
     }
 
     /** {@inheritDoc} */
@@ -174,7 +175,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param msg Message.
      */
     public void onStateChange(ChangeGlobalStateMessage msg) {
-        if (!msg.activate()) {
+        if (msg.state() == ClusterState.INACTIVE) {
             banStartingNewTasks = true;
 
             awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
@@ -185,7 +186,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param msg Message.
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
-        if (msg.clusterActive()) {
+        if (msg.state() != ClusterState.INACTIVE) {
             banStartingNewTasks = false;
 
             asyncDurableBackgroundTasksExecution();
@@ -319,15 +320,15 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /** {@inheritDoc} */
     @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
-
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
         for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
             if (task.isCompleted())
                 removeDurableBackgroundTask(task);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
+
     }
 
     /** {@inheritDoc} */
