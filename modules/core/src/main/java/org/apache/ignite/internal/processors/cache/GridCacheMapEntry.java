@@ -1550,8 +1550,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
-            assert updateCntr0 != 0 || isNear();
-
             newVer.updateCounter(updateCntr0);
 
             storeValue(val, expireTime, newVer);
