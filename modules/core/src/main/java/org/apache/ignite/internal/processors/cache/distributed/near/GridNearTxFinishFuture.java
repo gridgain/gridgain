@@ -983,23 +983,16 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
         /** {@inheritDoc} */
         @Override boolean onNodeLeft(UUID nodeId, boolean discoThread) {
             if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-//                    Set<UUID> backups = m.backups();
-
                 Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
 
                 Collection<UUID> backups = txNodes.get(nodeId);
 
-                if (backups != null) {
-                    if (cctx.discovery().node(m.primary().id()) == null &&
-                        backups.stream().allMatch(backupId -> cctx.discovery().node(backupId) == null)) {
-                        onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                            m.primary().consistentId() + "] has left the grid and there are no backup nodes",
-                            new CacheInvalidStateException()));
+                boolean hasBackups = false;
 
-                        return true;
-                    }
-                }
-                else if (cctx.discovery().node(m.primary().id()) == null) {
+                if (backups != null)
+                    hasBackups = backups.stream().anyMatch(backupId -> cctx.discovery().node(backupId) != null);
+
+                if (cctx.discovery().node(m.primary().id()) == null && !hasBackups) {
                     onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
                         m.primary().consistentId() + "] has left the grid and there are no backup nodes",
                         new CacheInvalidStateException()));
