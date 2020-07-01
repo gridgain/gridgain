@@ -475,8 +475,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void logOutOfOrderUpdate(
+    @Override protected void logOutOfOrderUpdate(
         GridCacheOperation op,
         CacheObject val,
         GridCacheVersion writeVer,
