@@ -475,11 +475,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected void logOutOfOrderUpdate(Long gapStart) throws IgniteCheckedException {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
     @Override
     protected void logOutOfOrderUpdate(
         GridCacheOperation op,

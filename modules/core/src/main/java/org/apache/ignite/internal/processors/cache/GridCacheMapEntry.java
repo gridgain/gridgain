@@ -4342,30 +4342,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Appends a new rollback record to the write-ahead log if persistence enabled.
-     * This record keeps track the gap that corresponds to the update counter of out-of-order update in the ATOMIC cache.
+     * Appends a new out-of-order update record to the write-ahead log if persistence enabled.
+     * This record keeps track the out-of-order updates in the ATOMIC cache.
      *
-     * @param gapStart Update counter corresponds to out-of-order update.
-     */
-    protected void logOutOfOrderUpdate(Long gapStart) throws IgniteCheckedException {
-        assert cctx.atomic() : "Individual updates must be logged only for ATOMIC caches.";
-        assert gapStart != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
-
-        try {
-            if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                cctx.shared().wal().log(new RollbackRecord(cctx.groupId(), partition(), gapStart, 1));
-        }
-        catch (StorageException e) {
-            throw new IgniteCheckedException("Failed to log ATOMIC cache out-of-order update [key=" + key +
-                ", updCntr=" + gapStart + ']', e);
-        }
-    }
-
-    /**
-     * Appends a new rollback record to the write-ahead log if persistence enabled.
-     * This record keeps track the gap that corresponds to the update counter of out-of-order update in the ATOMIC cache.
-     *
-     * @param gapStart Update counter corresponds to out-of-order update.
+     * @param op Update operation.
+     * @param val Write value.
+     * @param writeVer Write version.
+     * @param expireTime Expire time.
+     * @param updCntr Update counter.
      */
     protected void logOutOfOrderUpdate(
         GridCacheOperation op,
@@ -4375,8 +4359,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         Long updCntr
     ) throws IgniteCheckedException {
         assert cctx.atomic() : "Individual updates must be logged only for ATOMIC caches.";
-//        assert gapStart != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
-//
+        assert updCntr != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
+
         try {
             if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                 cctx.shared().wal().log(new OutOfOrderDataRecord(new DataEntry(
@@ -6210,14 +6194,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (updateRes != null) {
                     assert treeOp == IgniteTree.OperationType.NOOP : treeOp;
 
-                    if (outOfOrderUpdate) {
-//                        if (invoke)
-//                            op = writeObj == null ? DELETE : UPDATE;
-
-                        outOfOrderUpdate(conflictCtx, invokeRes, false/*storeLoadedVal != null*/, false/*transformed*/);
-
-//                        entry.logOutOfOrderUpdate(updateCntr);
-                    }
+                    if (outOfOrderUpdate)
+                        outOfOrderUpdate(conflictCtx);
 
                     return;
                 }
@@ -6425,19 +6403,18 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 treeOp = IgniteTree.OperationType.NOOP;
         }
 
-        private void outOfOrderUpdate(
-            @Nullable GridCacheVersionConflictContext<?, ?> conflictCtx,
-            @Nullable IgniteBiTuple<Object, Exception> invokeRes,
-            boolean readFromStore,
-            boolean transformed
-        ) throws IgniteCheckedException {
-            assert outOfOrderUpdate;
+        /**
+         *
+         * @param conflictCtx Conflict context.
+         * @throws IgniteCheckedException If failed.
+         */
+        private void outOfOrderUpdate(@Nullable GridCacheVersionConflictContext<?, ?> conflictCtx) throws IgniteCheckedException {
+            assert outOfOrderUpdate : "This method can be executed only for out-of-order updates.";
             assert !primary : "Out of order update can only be logged on backup nodes.";
-            assert !intercept;
+            assert !intercept : "Out of prder update should not be intercepted on backup node.";
 
             if (op == UPDATE) {
                 assert writeObj != null;
-//                update(conflictCtx, invokeRes, false /*storeLoadedVal != null*/, transformed);
 
                 GridCacheContext cctx = entry.context();
 
@@ -6467,7 +6444,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                             writeObj = null;
 
-//                            remove(conflictCtx, invokeRes, readFromStore, false);
                             entry.logOutOfOrderUpdate(op, null, newVer, 0, updateCntr);
 
                             return;
@@ -6485,7 +6461,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             else {
                 assert op == DELETE && writeObj == null : op;
-//                remove(conflictCtx, invokeRes, false /*storeLoadedVal != null*/, transformed);
 
                 entry.logOutOfOrderUpdate(op, null, newVer, 0, updateCntr);
             }
