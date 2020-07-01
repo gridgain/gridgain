@@ -486,7 +486,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         CacheObject val,
         GridCacheVersion writeVer,
         long expireTime,
-        long updCntr
+        Long updCntr
     ) throws IgniteCheckedException {
         // No-op.
     }

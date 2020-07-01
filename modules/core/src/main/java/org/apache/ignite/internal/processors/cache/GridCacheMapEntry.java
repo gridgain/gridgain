@@ -4372,7 +4372,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         CacheObject val,
         GridCacheVersion writeVer,
         long expireTime,
-        long updCntr
+        Long updCntr
     ) throws IgniteCheckedException {
         assert cctx.atomic() : "Individual updates must be logged only for ATOMIC caches.";
 //        assert gapStart != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
