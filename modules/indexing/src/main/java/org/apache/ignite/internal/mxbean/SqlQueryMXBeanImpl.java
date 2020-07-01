@@ -73,37 +73,35 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
         h2idx.longRunningQueries().setResultSetSizeThresholdMultiplier(rsSizeThresholdMultiplier);
     }
 
-    /** {@inheritDoc}
-     * @return*/
-    @Override public long getSqlGlobalMemoryQuota() {
+    /** {@inheritDoc} */
+    @Override public Long getSqlGlobalMemoryQuotaBytes() {
         return Long.parseLong(h2idx.memoryManager().getGlobalQuota());
     }
 
-
-    /** {@inheritDoc}
-     * @return*/
-    @Override
-    public long getSqlGloqbalMemoryUsage() {
-         return h2idx.memoryManager().reserved();
+    /** {@inheritDoc} */
+    @Override public String getSqlGlobalMemoryQuota() {
+        return h2idx.memoryManager().getGlobalQuota();
     }
 
-
-    /** {@inheritDoc}
-     * @param size*/
-    @Override public void setSqlGlobalMemoryQuota(long size) {
-        h2idx.memoryManager().setGlobalQuota(Long.valueOf(size).toString());
+    /** {@inheritDoc} */
+    @Override public void setSqlGlobalMemoryQuota(String size) {
+        h2idx.memoryManager().setGlobalQuota(size);
     }
 
-    /** {@inheritDoc}
-     * @return*/
-    @Override public long getSqlQueryMemoryQuota() {
+    /** {@inheritDoc} */
+    @Override public Long getSqlQueryMemoryQuotaBytes() {
         return Long.parseLong(h2idx.memoryManager().getQueryQuotaString());
     }
 
-    /** {@inheritDoc}
-     * @param size*/
-    @Override public void setSqlQueryMemoryQuota(long size) {
-        h2idx.memoryManager().setQueryQuota(Long.valueOf(size).toString());
+
+    /** {@inheritDoc} */
+    @Override public String getSqlQueryMemoryQuota() {
+        return h2idx.memoryManager().getQueryQuotaString();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlQueryMemoryQuota(String size) {
+        h2idx.memoryManager().setQueryQuota(size);
     }
 
     /** {@inheritDoc} */
