@@ -2300,7 +2300,8 @@ public abstract class IgniteUtils {
                     boolean itf1ForceOrdering = itf1.getName().charAt(0) < 'e';
                     boolean itf2ForceOrdering = itf2.getName().charAt(0) < 'e';
 
-                    // Interfaces whose name starts with 'e' should go first.
+                    // Interfaces whose name start with letter before 'e' should go last.
+                    // This helps avoiding interfaces like "docker0" to be recognized as local host.
                     if (itf1ForceOrdering != itf2ForceOrdering)
                         return itf1ForceOrdering ? 1 : -1;
 
