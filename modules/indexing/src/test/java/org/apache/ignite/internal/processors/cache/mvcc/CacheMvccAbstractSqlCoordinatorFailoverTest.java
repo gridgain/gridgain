@@ -282,8 +282,6 @@ public abstract class CacheMvccAbstractSqlCoordinatorFailoverTest extends CacheM
             }
         }, "start-cache");
 
-        U.sleep(1000);
-
         assertFalse(fut.isDone());
 
         stopGrid(1);
