@@ -978,54 +978,22 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
     ) {
         assert keys != null;
 
-        IgniteInternalFuture<Object> keyFut = ctx.group().preloader().request(cacheCtx, keys, topVer);
+        assertOwning(cacheCtx, keys, topVer);
 
-        // Prevent embedded future creation if possible.
-        if (keyFut == null || keyFut.isDone()) {
-            // Check for exception.
-            if (keyFut != null && keyFut.error() != null)
-                return new GridFinishedFuture<>(keyFut.error());
-
-            return lockAllAsync0(cacheCtx,
-                tx,
-                threadId,
-                ver,
-                topVer,
-                keys,
-                txRead,
-                retval,
-                timeout,
-                createTtl,
-                accessTtl,
-                filter,
-                skipStore,
-                keepBinary);
-        }
-        else {
-            return new GridEmbeddedFuture<>(keyFut,
-                new C2<Object, Exception, IgniteInternalFuture<Exception>>() {
-                    @Override public IgniteInternalFuture<Exception> apply(Object o, Exception exx) {
-                        if (exx != null)
-                            return new GridDhtFinishedFuture<>(exx);
-
-                        return lockAllAsync0(cacheCtx,
-                            tx,
-                            threadId,
-                            ver,
-                            topVer,
-                            keys,
-                            txRead,
-                            retval,
-                            timeout,
-                            createTtl,
-                            accessTtl,
-                            filter,
-                            skipStore,
-                            keepBinary);
-                    }
-                }
-            );
-        }
+        return lockAllAsync0(cacheCtx,
+            tx,
+            threadId,
+            ver,
+            topVer,
+            keys,
+            txRead,
+            retval,
+            timeout,
+            createTtl,
+            accessTtl,
+            filter,
+            skipStore,
+            keepBinary);
     }
 
     /**

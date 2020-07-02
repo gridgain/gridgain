@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.EntryGetResult;
@@ -39,7 +38,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
@@ -91,7 +89,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
     private AffinityTopologyVersion topVer;
 
     /** Retry because ownership changed. */
-    private Integer retry;
+    private Integer invalidPart;
 
     /** Subject ID. */
     private UUID subjId;
@@ -209,62 +207,10 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
      *
      */
     private void map() {
-        // TODO Get rid of force keys request https://issues.apache.org/jira/browse/IGNITE-10251.
-        if (cctx.group().preloader().needForceKeys()) {
-            assert !cctx.mvccEnabled();
+        assert invalidPart == null : invalidPart;
 
-            GridDhtFuture<Object> fut = cctx.group().preloader().request(
-                cctx,
-                Collections.singleton(key),
-                topVer);
-
-            if (fut != null) {
-                if (!F.isEmpty(fut.invalidPartitions())) {
-                    assert fut.invalidPartitions().size() == 1 : fut.invalidPartitions();
-
-                    retry = F.first(fut.invalidPartitions());
-
-                    onDone((GridCacheEntryInfo)null);
-
-                    return;
-                }
-
-                fut.listen(
-                    new IgniteInClosure<IgniteInternalFuture<Object>>() {
-                        @Override public void apply(IgniteInternalFuture<Object> fut) {
-                            Throwable e = fut.error();
-
-                            if (e != null) { // Check error first.
-                                if (log.isDebugEnabled())
-                                    log.debug("Failed to request keys from preloader " +
-                                        "[keys=" + key + ", err=" + e + ']');
-
-                                if (e instanceof NodeStoppingException)
-                                    return;
-
-                                onDone(e);
-                            }
-                            else
-                                map0(true);
-                        }
-                    }
-                );
-
-                return;
-            }
-        }
-
-        map0(false);
-    }
-
-    /**
-     *
-     */
-    private void map0(boolean forceKeys) {
-        assert retry == null : retry;
-
-        if (!map(key, forceKeys)) {
-            retry = cctx.affinity().partition(key);
+        if (!reservePartition(key)) {
+            invalidPart = cctx.affinity().partition(key);
 
             if (!isDone())
                 onDone((GridCacheEntryInfo)null);
@@ -277,28 +223,16 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
 
     /** {@inheritDoc} */
     @Override public Collection<Integer> invalidPartitions() {
-        return retry == null ? Collections.<Integer>emptyList() : Collections.singletonList(retry);
+        return invalidPart == null ? Collections.<Integer>emptyList() : Collections.singletonList(invalidPart);
     }
 
     /**
      * @param key Key.
      * @return {@code True} if mapped.
      */
-    private boolean map(KeyCacheObject key, boolean forceKeys) {
+    private boolean reservePartition(KeyCacheObject key) {
         try {
             int keyPart = cctx.affinity().partition(key);
-
-            if (cctx.mvccEnabled()) {
-                boolean noOwners = cctx.topology().owners(keyPart, topVer).isEmpty();
-
-                // Force key request is disabled for MVCC. So if there are no partition owners for the given key
-                // (we have a not strict partition loss policy if we've got here) we need to set flag forceKeys to true
-                // to avoid useless remapping to other non-owning partitions. For non-mvcc caches the force key request
-                // is also useless in the such situations, so the same flow is here: allegedly we've made a force key
-                // request with no results and therefore forceKeys flag may be set to true here.
-                if (noOwners)
-                    forceKeys = true;
-            }
 
             GridDhtLocalPartition part = topVer.topologyVersion() > 0 ?
                 cache().topology().localPartition(keyPart, topVer, true) :
@@ -311,7 +245,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
 
             // By reserving, we make sure that partition won't be unloaded while processed.
             if (part.reserve()) {
-                if (forceKeys || (part.state() == OWNING || part.state() == LOST)) {
+                if (part.state() == OWNING || part.state() == LOST) {
                     this.part = part.id();
 
                     return true;

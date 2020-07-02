@@ -140,18 +140,6 @@ public interface GridCachePreloader {
      * Requests that preloader sends the request for the key.
      *
      * @param cctx Cache context.
-     * @param keys Keys to request.
-     * @param topVer Topology version, {@code -1} if not required.
-     * @return Future to complete when all keys are preloaded.
-     */
-    public GridDhtFuture<Object> request(GridCacheContext cctx,
-        Collection<KeyCacheObject> keys,
-        AffinityTopologyVersion topVer);
-
-    /**
-     * Requests that preloader sends the request for the key.
-     *
-     * @param cctx Cache context.
      * @param req Message with keys to request.
      * @param topVer Topology version, {@code -1} if not required.
      * @return Future to complete when all keys are preloaded.

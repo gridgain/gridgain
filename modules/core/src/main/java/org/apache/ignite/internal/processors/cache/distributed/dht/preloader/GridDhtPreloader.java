@@ -513,19 +513,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * @param keys Keys to request.
-     * @return Future for request.
-     */
-    @Override public GridDhtFuture<Object> request(GridCacheContext cctx,
-        Collection<KeyCacheObject> keys,
-        AffinityTopologyVersion topVer) {
-        if (!needForceKeys())
-            return null;
-
-        return request0(cctx, keys, topVer);
-    }
-
-    /**
      * @param cctx Cache context.
      * @param keys Keys to request.
      * @param topVer Topology version.

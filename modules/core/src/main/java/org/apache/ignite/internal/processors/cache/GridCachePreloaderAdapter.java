@@ -135,12 +135,6 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtFuture<Object> request(GridCacheContext ctx, Collection<KeyCacheObject> keys,
-        AffinityTopologyVersion topVer) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
     @Override public GridDhtFuture<Object> request(GridCacheContext ctx, GridNearAtomicAbstractUpdateRequest req,
         AffinityTopologyVersion topVer) {
         return null;

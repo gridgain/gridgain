@@ -191,7 +191,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return TEST_TIMEOUT;
+        return 10_000_000;
     }
 
     /** {@inheritDoc} */

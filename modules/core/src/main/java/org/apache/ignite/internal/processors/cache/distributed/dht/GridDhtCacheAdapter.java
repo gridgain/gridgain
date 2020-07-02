@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.CacheVersionedValue;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
@@ -135,6 +136,21 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                 f.onDiscoveryEvent(e);
         }
     };
+
+    protected void assertOwning(GridCacheContext cctx, Collection<KeyCacheObject> keys, AffinityTopologyVersion topVer) {
+        HashSet<Integer> parts = new HashSet<>(keys.size(), 1.f);
+
+        for (KeyCacheObject key : keys) {
+            int part = cctx.affinity().partition(key);
+
+            if (parts.add(part)) {
+                GridDhtLocalPartition dPart = cctx.topology().localPartition(part, topVer, false);
+
+                assert dPart != null && dPart.state() == GridDhtPartitionState.OWNING :
+                    "Invalid partition state [part=" + dPart + ", key=" + key + ", topVer=" + topVer + ']';
+            }
+        }
+    }
 
     /**
      * Empty constructor required for {@link Externalizable}.

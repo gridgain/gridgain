@@ -253,22 +253,6 @@ public class GridCacheNearReadersSelfTest extends GridCommonAbstractTest {
 
         List<KeyCacheObject> cacheKeys = F.asList(ctx.toCacheKeyObject(1), ctx.toCacheKeyObject(2));
 
-        IgniteInternalFuture<Object> f1 = ((IgniteKernal)g1).internalCache(DEFAULT_CACHE_NAME).preloader().request(
-            ctx,
-            cacheKeys,
-            new AffinityTopologyVersion(2));
-
-        if (f1 != null)
-            f1.get();
-
-        IgniteInternalFuture<Object> f2 = ((IgniteKernal)g2).internalCache(DEFAULT_CACHE_NAME).preloader().request(
-            ((IgniteKernal)g2).internalCache(DEFAULT_CACHE_NAME).context(),
-            cacheKeys,
-            new AffinityTopologyVersion(2));
-
-        if (f2 != null)
-            f2.get();
-
         IgniteCache<Integer, String> cache1 = g1.cache(DEFAULT_CACHE_NAME);
         IgniteCache<Integer, String> cache2 = g2.cache(DEFAULT_CACHE_NAME);
 

@@ -475,45 +475,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 ", node=" + nodeId + ']');
         }
 
-        IgniteInternalFuture<Object> keyFut = F.isEmpty(req.keys()) ? null :
-            ctx.group().preloader().request(ctx, req.keys(), req.topologyVersion());
-
-        if (keyFut == null || keyFut.isDone()) {
-            if (keyFut != null) {
-                try {
-                    keyFut.get();
-                }
-                catch (NodeStoppingException ignored) {
-                    return;
-                }
-                catch (IgniteCheckedException e) {
-                    onForceKeysError(nodeId, req, e);
-
-                    return;
-                }
-            }
-
-            processDhtLockRequest0(nodeId, req);
-        }
-        else {
-            keyFut.listen(new CI1<IgniteInternalFuture<Object>>() {
-                @Override public void apply(IgniteInternalFuture<Object> fut) {
-                    try {
-                        fut.get();
-                    }
-                    catch (NodeStoppingException ignored) {
-                        return;
-                    }
-                    catch (IgniteCheckedException e) {
-                        onForceKeysError(nodeId, req, e);
-
-                        return;
-                    }
-
-                    processDhtLockRequest0(nodeId, req);
-                }
-            });
-        }
+        processDhtLockRequest0(nodeId, req);
     }
 
     /**
