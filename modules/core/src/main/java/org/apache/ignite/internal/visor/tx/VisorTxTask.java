@@ -34,6 +34,9 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -41,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxRemote;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteTxMappings;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -83,38 +87,22 @@ public class VisorTxTask extends VisorMultiNodeTask<VisorTxTaskArg, Map<ClusterN
         final VisorTxTaskArg taskArg = arg.getArgument();
 
         if (taskArg.getConsistentIds() != null) {
-            return F.transform(ignite.cluster().forPredicate(new IgnitePredicate<ClusterNode>() {
-                @Override public boolean apply(ClusterNode node) {
-                    return taskArg.getConsistentIds().contains((String)node.consistentId().toString());
-                }
-            }).nodes(), new IgniteClosure<ClusterNode, UUID>() {
-                @Override public UUID apply(ClusterNode node) {
-                    return node.id();
-                }
-            });
+            return F.transform(ignite.cluster().forPredicate(
+                node -> taskArg.getConsistentIds().contains(node.consistentId().toString())).nodes(), ClusterNode::id);
         }
 
-        if (taskArg.getProjection() == VisorTxProjection.SERVER) {
-            return F.transform(ignite.cluster().forServers().nodes(), new IgniteClosure<ClusterNode, UUID>() {
-                @Override public UUID apply(ClusterNode node) {
-                    return node.id();
-                }
-            });
-        }
+        // Use last initialized topology version to exclude joining server nodes from a mapping.
+        GridDhtPartitionsExchangeFuture lastFut = ignite.context().cache().context().exchange().lastFinishedFuture();
 
-        if (taskArg.getProjection() == VisorTxProjection.CLIENT) {
-            return F.transform(ignite.cluster().forClients().nodes(), new IgniteClosure<ClusterNode, UUID>() {
-                @Override public UUID apply(ClusterNode node) {
-                    return node.id();
-                }
-            });
-        }
+        DiscoCache discoCache = lastFut.events().discoveryCache();
 
-        return F.transform(ignite.cluster().nodes(), new IgniteClosure<ClusterNode, UUID>() {
-            @Override public UUID apply(ClusterNode node) {
-                return node.id();
-            }
-        });
+        if (taskArg.getProjection() == VisorTxProjection.SERVER)
+            return F.transform(discoCache.serverNodes(), (IgniteClosure<ClusterNode, UUID>) ClusterNode::id);
+
+        if (taskArg.getProjection() == VisorTxProjection.CLIENT)
+            return F.transform(ignite.cluster().forClients().nodes(), (IgniteClosure<ClusterNode, UUID>) ClusterNode::id);
+
+        return F.transform(discoCache.allNodes(), (IgniteClosure<ClusterNode, UUID>) ClusterNode::id);
     }
 
     /** {@inheritDoc} */

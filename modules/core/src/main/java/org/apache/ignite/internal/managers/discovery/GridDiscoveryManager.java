@@ -1767,9 +1767,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      * @return Node for ID.
      */
     @Nullable public ClusterNode node(UUID nodeId) {
-        if (nodeId == null)
-            System.out.println();
-
         assert nodeId != null;
 
         return discoCache().node(nodeId);
