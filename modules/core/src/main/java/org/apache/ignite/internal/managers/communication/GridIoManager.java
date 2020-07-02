@@ -51,8 +51,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
@@ -1892,29 +1894,23 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         boolean skipOnTimeout,
         int connIdx
     ) throws IgniteCheckedException {
-        if (ctx.security().enabled() && !(msg instanceof GridDhtPartitionsAbstractMessage)) {
-            boolean v1 = allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR);
-            // We don't need enabled v1 to enforce v2.
+        if (ctx.security().enabled() &&
+            !(msg instanceof GridDhtPartitionsAbstractMessage) && !(msg instanceof GridJobExecuteResponse)) {
+            // We don't need enabled v1 to enable v2.
             boolean v2 = allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR_V2);
 
-            if (v1 || v2) {
+            if (v2 || allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
                 SecurityContext secCtx = ctx.security().securityContext();
-                UUID curSecSubjId = secCtx.subject().id();
+                UUID subjId = secCtx.subject().id();
 
-                UUID secSubjId = null;
+                byte[] serSubj = null;
 
-                if (!locNodeId.equals(curSecSubjId))
-                    secSubjId = curSecSubjId;
-                else
-                    secSubjId = locNodeId;
+                // Skip sending serialized subject if all nodes support IGNITE_SECURITY_PROCESSOR_V2 and state=ACTIVE.
+                if (!v2 || ctx.state().clusterState().state() == ClusterState.INACTIVE)
+                    serSubj = !locNodeId.equals(subjId) ? U.marshal(marsh, secCtx) : null;
 
-                byte[] secSubj = null;
-
-                // Skip sending serialized subject if all nodes support IGNITE_SECURITY_PROCESSOR_V2.
-                if (!v2)
-                    secSubj = secSubjId != null && ctx.discovery().node(secSubjId) == null ? U.marshal(marsh, secCtx) : null;
-
-                return new GridIoSecurityAwareMessage(secSubjId, secSubj, plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout, connIdx);
+                return new GridIoSecurityAwareMessage(subjId, serSubj, plc, topic, topicOrd, msg, ordered, timeout,
+                    skipOnTimeout, connIdx);
             }
         }
 
