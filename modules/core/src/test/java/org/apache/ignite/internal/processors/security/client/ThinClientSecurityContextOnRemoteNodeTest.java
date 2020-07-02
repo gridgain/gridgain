@@ -34,8 +34,8 @@ public class ThinClientSecurityContextOnRemoteNodeTest extends ThinClientPermiss
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        startGridAllowAll("srv");
-
         super.beforeTestsStarted();
+
+        startGridAllowAll("srv");
     }
 }
