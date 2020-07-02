@@ -593,7 +593,6 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * Set a shutdown policy on a cluster.
      *
      * @param shutdownPolicy Shutdown policy.
-     * @return True if the policy has been set, false otherwise.
      */
     public void shutdownPolicy(ShutdownPolicy policy);
 }

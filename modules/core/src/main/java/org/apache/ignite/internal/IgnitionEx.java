@@ -390,7 +390,7 @@ public class IgnitionEx {
     /**
      * @deprecated
      *
-     * Behavior of the method is the almost same as {@link IgnitionEx#stop(String, boolean, Boolean, boolean)}.
+     * Behavior of the method is the almost same as {@link IgnitionEx#stop(boolean, ShutdownPolicy)}.
      * If node stopping process will not be finished within {@code timeoutMs} whole JVM will be killed.
      *
      * @param timeoutMs Timeout to wait graceful stopping.
@@ -2652,7 +2652,7 @@ public class IgnitionEx {
         /**
          * Stop instance synchronously according to parameters.
          *
-         * @param cancel Flag indicating whether all currently running jobsCorruptedCheckpointReservationTest
+         * @param cancel Flag indicating whether all currently running jobs
          *      should be cancelled.
          * @param shutdown Policy of according which shutdown will be produced.
          */
