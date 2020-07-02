@@ -3477,7 +3477,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /**
      * @param msg Communication message.
-     *
      * @return A pair that represents a security subject id and security context. The returned value is {@code null}
      * if security is not enabled.
      */
