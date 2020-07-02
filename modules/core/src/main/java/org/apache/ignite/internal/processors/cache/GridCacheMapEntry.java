@@ -1779,8 +1779,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
-            newVer.updateCounter(updateCntr0);
-
             if (tx != null && cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                 logPtr = logTxUpdate(tx, null, 0, updateCntr0);
 
@@ -2298,7 +2296,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             c = new AtomicCacheUpdateClosure(this,
                 topVer,
-                newVer,
+                new GridCacheVersion(newVer),
                 op,
                 writeObj,
                 invokeArgs,
@@ -6496,7 +6494,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
 
-            newVer.updateCounter(updateCntr0);
+           if (newVer.updateCounter() == 0)  // primary and/or putAll
+               newVer.updateCounter(updateCntr0);
 
             entry.logUpdate(op, updated, newVer, newExpireTime, updateCntr0);
 
@@ -6584,8 +6583,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 cctx.store().remove(null, entry.key);
 
             long updateCntr0 = entry.nextPartitionCounter(topVer, primary, false, updateCntr);
-
-            newVer.updateCounter(updateCntr0);
 
             entry.logUpdate(op, null, newVer, 0, updateCntr0);
 
