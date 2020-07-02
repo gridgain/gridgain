@@ -1698,14 +1698,14 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param lsnr Listener.
      * @param nodeId Node ID.
      * @param msg Message.
-     * @param secPair Security id and subject pair.
+     * @param secCtx Optional security context.
      */
     private void invokeListener(
         Byte plc,
         GridMessageListener lsnr,
         UUID nodeId,
         Object msg,
-        @Nullable T2<UUID, SecurityContext> secPair
+        @Nullable T2<UUID, SecurityContext> secCtx
     ) {
         MTC.span().addLog(() -> "Invoke listener");
 
@@ -1716,17 +1716,17 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (change)
             CUR_PLC.set(plc);
 
-        SecurityContext secCtx = null;
+        SecurityContext secCtx0 = null;
         UUID subjId = nodeId;
 
-        if (secPair != null) {
-            secCtx = secPair.get2();
-            subjId = secPair.get1();
+        if (secCtx != null) {
+            secCtx0 = secCtx.get2();
+            subjId = secCtx.get1();
         }
 
         IgniteSecurity sec = ctx.security();
 
-        try (OperationSecurityContext ignored = secCtx != null ? sec.withContext(secCtx) : sec.withContext(subjId)) {
+        try (OperationSecurityContext ignored = secCtx0 != null ? sec.withContext(secCtx0) : sec.withContext(subjId)) {
             lsnr.onMessage(nodeId, msg, plc);
         }
         finally {
