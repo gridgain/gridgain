@@ -850,6 +850,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
             this.lostParts = lostParts == null ? null : new TreeSet<>(lostParts);
 
+            detectLostPartitions(exchangeVer, exchFut);
+
             if (log.isDebugEnabled())
                 log.debug("Partition map after full update: " + fullMapString());
 
