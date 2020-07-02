@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.spi.communication.tcp.internal;
+
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+
 /**
- * This package contain cache with persistence implementation. <br>
- * See also
- * <a href="https://github.com/apache/ignite/tree/master/modules/core/src/main/java/org/apache/ignite/internal/processors/cache/persistence">GitHub Package Readme</a>
+ * Marker future implementation, just like {@link ConnectFuture}, but meaning that we're waiting for the inverse
+ * connection.
  */
-package org.apache.ignite.internal.processors.cache.persistence;
+public class ConnectionRequestFuture extends GridFutureAdapter<GridCommunicationClient> {
+}

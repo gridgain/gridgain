@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-/**
- * This package contain cache with persistence implementation. <br>
- * See also
- * <a href="https://github.com/apache/ignite/tree/master/modules/core/src/main/java/org/apache/ignite/internal/processors/cache/persistence">GitHub Package Readme</a>
- */
-package org.apache.ignite.internal.processors.cache.persistence;
+package org.apache.ignite.spi.communication.tcp.internal;
+
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
+
+/** Helper interface to ask other nodes to open connections. */
+public interface ConnectionRequestor {
+    /**
+     * Request opening of TCP connection from node {@code node} with index {@code connIdx}.
+     *
+     * @param node Node.
+     * @param connIdx Connection index.
+     */
+    public void request(ClusterNode node, int connIdx) throws IgniteCheckedException;
+}

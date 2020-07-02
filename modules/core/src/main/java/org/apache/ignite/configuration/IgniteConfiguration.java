@@ -48,7 +48,6 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -84,6 +83,7 @@ import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.Nullable;
 
@@ -296,9 +296,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED;
-
-    /** Default value of environment type is {@link EnvironmentType#STANDALONE}. */
-    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STANDALONE;
 
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
@@ -611,10 +608,6 @@ public class IgniteConfiguration {
     /** Communication failure resolver */
     private CommunicationFailureResolver commFailureRslvr;
 
-    /** Environment type - hint to Ignite that it is started in a specific environment and should adapt
-     * its behavior and algorithms to specific properties. */
-    private EnvironmentType envType = DFLT_ENV_TYPE;
-
     /** Plugin providers. */
     private PluginProvider[] pluginProvs;
 
@@ -746,7 +739,6 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
-        envType = cfg.getEnvironmentType();
         sqlCfg = cfg.getSqlConfiguration();
         shutdown = cfg.getShutdownPolicy();
     }
@@ -3670,35 +3662,6 @@ public class IgniteConfiguration {
     @Deprecated
     public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         sqlCfg.setSqlOffloadingEnabled(offloadingEnabled);
-
-        return this;
-    }
-
-    /**
-     * <b>This is an experimental feature. Envronment awareness approac may be changed.</b>
-     * <p>
-     *
-     * Configured environment type.
-     *
-     * @return {@link EnvironmentType environment type}.
-     */
-    @IgniteExperimental
-    public EnvironmentType getEnvironmentType() {
-        return envType;
-    }
-
-    /**
-     * <b>This is an experimental feature. Envronment awareness approac may be changed.</b>
-     * <p>
-     *
-     * Sets environment type hint.
-     *
-     * @param environmentType Environment type value.
-     * @return {@code this} for chaining.
-     */
-    @IgniteExperimental
-    public IgniteConfiguration setEnvironmentType(EnvironmentType environmentType) {
-        this.envType = environmentType;
 
         return this;
     }
