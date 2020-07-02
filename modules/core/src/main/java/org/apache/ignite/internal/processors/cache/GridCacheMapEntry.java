@@ -1105,9 +1105,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         try {
             checkObsolete();
 
-            newVer = tx.writeVersion();
+            assert tx.writeVersion() != null : "Failed to get write version for tx: " + tx;
 
-            assert newVer != null : "Failed to get write version for tx: " + tx;
+            newVer = nextVersion(null, tx);
 
             // Determine new ttl and expire time.
             long expireTime, ttl = ttl0;
