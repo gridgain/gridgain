@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.cache.binary;
 
 import java.util.UUID;
@@ -28,8 +29,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * <b>MetadataRemoveProposedMessage</b> and {@link MetadataRemoveAcceptedMessage} messages make a basis for
- * discovery-based protocol for manage {@link BinaryMetadata metadata} describing objects in binary format stored in Ignite caches.
- *
+ * discovery-based protocol for manage {@link BinaryMetadata metadata} describing objects in binary format
+ * stored in Ignite caches.
  */
 public final class MetadataRemoveProposedMessage implements DiscoveryCustomMessage {
     /** */
@@ -65,23 +66,17 @@ public final class MetadataRemoveProposedMessage implements DiscoveryCustomMessa
         this.typeId = typeId;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override public IgniteUuid id() {
         return id;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Nullable @Override public DiscoveryCustomMessage ackMessage() {
         return (status == ProposalStatus.SUCCESSFUL) ? new MetadataRemoveAcceptedMessage(typeId) : null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override public boolean isMutable() {
         return true;
     }
@@ -105,44 +100,32 @@ public final class MetadataRemoveProposedMessage implements DiscoveryCustomMessa
         this.err = err;
     }
 
-    /**
-     *
-     */
+    /** */
     boolean rejected() {
         return status == ProposalStatus.REJECTED;
     }
 
-    /**
-     *
-     */
+    /** */
     BinaryObjectException rejectionError() {
         return err;
     }
 
-    /**
-     *
-     */
+    /** */
     UUID origNodeId() {
         return origNodeId;
     }
 
-    /**
-     *
-     */
+    /** */
     public int typeId() {
         return typeId;
     }
 
-    /**
-     *
-     */
+    /** */
     public boolean isOnCoordinator() {
         return onCoordinator;
     }
 
-    /**
-     *
-     */
+    /** */
     public void setOnCoordinator(boolean onCoordinator) {
         this.onCoordinator = onCoordinator;
     }

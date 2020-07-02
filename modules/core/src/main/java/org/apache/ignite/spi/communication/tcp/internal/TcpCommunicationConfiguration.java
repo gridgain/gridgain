@@ -156,6 +156,9 @@ public class TcpCommunicationConfiguration implements Serializable {
      */
     private long selectorSpins = IgniteSystemProperties.getLong("IGNITE_SELECTOR_SPINS", 0L);
 
+    /** */
+    private boolean forceClientToSrvConnections;
+
     /** Address resolver. */
     public AddressResolver addrRslvr() {
         return addrRslvr;
@@ -566,5 +569,15 @@ public class TcpCommunicationConfiguration implements Serializable {
     public void failureDetectionTimeout(long failureDetectionTimeout) {
         if (this.failureDetectionTimeoutEnabled)
             this.failureDetectionTimeout = failureDetectionTimeout;
+    }
+
+    /** */
+    public boolean forceClientToServerConnections() {
+        return forceClientToSrvConnections;
+    }
+
+    /** */
+    public void forceClientToServerConnections(boolean forceClientToSrvConnections) {
+        this.forceClientToSrvConnections = forceClientToSrvConnections;
     }
 }

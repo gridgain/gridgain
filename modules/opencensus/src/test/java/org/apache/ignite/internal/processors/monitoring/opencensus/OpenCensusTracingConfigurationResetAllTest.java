@@ -118,7 +118,7 @@ public class OpenCensusTracingConfigurationResetAllTest extends AbstractTracingT
             log,
             () -> grid(0).tracingConfiguration().resetAll(TX),
             IgniteException.class,
-            "Failed to reset tracing configuration for scope=[TX] to default. Meta storage is not available."
+            "Failed to update tracing configuration for scope=[TX]."
         );
     }
 }
