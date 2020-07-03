@@ -208,8 +208,15 @@ public class TcpDiscoveryVmIpFinderSelfTest
 
         int srvSize = sharedStaticIpFinder.getRegisteredAddresses().size();
 
+        System.out.println("<!> " + sharedStaticIpFinder.getRegisteredAddresses());
+
         Ignition.start(config("server2", false, false));
+
+        System.out.println("<!> " + sharedStaticIpFinder.getRegisteredAddresses());
+
         Ignition.start(config("client1", true, false));
+
+        System.out.println("<!> " + sharedStaticIpFinder.getRegisteredAddresses());
 
         assertEquals(2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
