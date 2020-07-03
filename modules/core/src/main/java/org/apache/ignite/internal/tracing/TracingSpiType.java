@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.tracing;
+package org.apache.ignite.internal.tracing;
 
 /**
  * Type of the tracing spi.
