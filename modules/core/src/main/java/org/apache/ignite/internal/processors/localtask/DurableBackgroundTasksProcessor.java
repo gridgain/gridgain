@@ -29,6 +29,7 @@ import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
@@ -75,7 +76,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      *
      *  @see #onStateChangeFinish(ChangeGlobalStateFinishMessage)
      */
-    private volatile boolean banStartingNewTasks;
+    private volatile boolean forbidStartingNewTasks;
 
     /**
      * @param ctx Kernal context.
@@ -113,7 +114,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
             @Override protected void body() {
                 try {
-                    if (banStartingNewTasks)
+                    if (forbidStartingNewTasks)
                         return;
 
                     log.info("Executing durable background task: " + task.shortName());
@@ -152,9 +153,31 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        banStartingNewTasks = true;
+        forbidStartingNewTasks = true;
 
         awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
+
+        removeCheckpointListener();
+    }
+
+    /**
+     *  Remove checkpoint listener.
+     */
+    private void removeCheckpointListener() {
+        IgniteCacheDatabaseSharedManager dbSharedMgr = ctx.cache().context().database();
+
+        dbSharedMgr.checkpointReadLock();
+
+        try {
+            if (dbSharedMgr instanceof GridCacheDatabaseSharedManager) {
+                GridCacheDatabaseSharedManager mgr = (GridCacheDatabaseSharedManager) dbSharedMgr;
+
+                mgr.removeCheckpointListener(this);
+            }
+        }
+        finally {
+            dbSharedMgr.checkpointReadUnlock();
+        }
     }
 
     /** {@inheritDoc} */
@@ -167,7 +190,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      */
     public void onStateChange(ChangeGlobalStateMessage msg) {
         if (msg.state() == ClusterState.INACTIVE) {
-            banStartingNewTasks = true;
+            forbidStartingNewTasks = true;
 
             awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
         }
@@ -178,7 +201,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
         if (msg.state() != ClusterState.INACTIVE) {
-            banStartingNewTasks = false;
+            forbidStartingNewTasks = false;
 
             asyncDurableBackgroundTasksExecution();
         }
@@ -310,7 +333,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     }
 
     /** {@inheritDoc} */
-    @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
+    @Override public void onMarkCheckpointBegin(Context ctx) {
         for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
             if (task.isCompleted())
                 removeDurableBackgroundTask(task);
@@ -318,12 +341,12 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     }
 
     /** {@inheritDoc} */
-    @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
-
+    @Override public void onCheckpointBegin(Context ctx) {
+        /* No op. */
     }
 
     /** {@inheritDoc} */
-    @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
-
+    @Override public void beforeCheckpointBegin(Context ctx) {
+        /* No op. */
     }
 }

@@ -63,7 +63,6 @@ import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.Inli
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.lang.GridTuple3;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesPartitionResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
@@ -459,7 +458,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
         IgniteEx ignite = startGrids(nodeCnt);
 
         if (createLsnr) {
-            GridCacheSharedContext ctx = U.field(ignite.context().cache(), "sharedCtx");
+            GridCacheSharedContext ctx = ignite.context().cache().context();
 
             durableBackgroundTaskTestLsnr = new DurableBackgroundTaskTestListener(ctx.database().metaStorage());
 
@@ -800,7 +799,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
          * Checks that saved tasks from before checkpoint begin step removed from metastorage.
          * Сall after the end of the checkpoint.
          *
-         * @return true if check is successful
+         * @return true if check is successful.
          */
         public boolean check() throws IgniteCheckedException {
             if (savedTasks.isEmpty())
@@ -817,13 +816,13 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
         }
 
         /** {@inheritDoc} */
-        @Override public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {
-
+        @Override public void onMarkCheckpointBegin(Context ctx) {
+            /* No op. */
         }
 
         /** {@inheritDoc} */
-        @Override public void onCheckpointBegin(Context ctx) throws IgniteCheckedException {
-
+        @Override public void onCheckpointBegin(Context ctx) {
+            /* No op. */
         }
 
         /** {@inheritDoc} */
