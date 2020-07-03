@@ -81,7 +81,7 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
         startGrid(1);
         System.clearProperty(IGNITE_MARSHALLER_BLACKLIST);
 
-        IgniteEx client = startClient(0);
+        IgniteEx client = startClientGrid(0);
 
         client.context().distributedMetastorage().write("hey", new BamboozleClass(0));
         client.context().distributedMetastorage().write("hey", new BamboozleClass(1));
@@ -108,7 +108,7 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
         IgniteEx ignite = startGrid(1);
         System.clearProperty(IGNITE_MARSHALLER_BLACKLIST);
 
-        IgniteEx client = startClient(0);
+        IgniteEx client = startClientGrid(0);
 
         client.context().distributedMetastorage().write("hey", new BamboozleClass(0));
 
@@ -141,7 +141,7 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
         IgniteEx ignite = startGrid(1);
         System.clearProperty(IGNITE_MARSHALLER_BLACKLIST);
 
-        IgniteEx client = startClient(0);
+        IgniteEx client = startClientGrid(0);
 
         ignite.context().distributedMetastorage().listen("hey"::equals, (key, oldVal, newVal) -> {
             System.out.println(newVal);
@@ -175,11 +175,6 @@ public class DistributedMetaStorageClassloadingTest extends GridCommonAbstractTe
         public int getI() {
             return i;
         }
-    }
-
-    /** */
-    protected IgniteEx startClient(int idx) throws Exception {
-        return startGrid(getConfiguration(getTestIgniteInstanceName(idx)).setClientMode(true));
     }
 
     /**
