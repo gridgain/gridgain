@@ -116,6 +116,25 @@ This utility can do the following commands:
   Set new tracing configuration. If both --scope and --label are specified then add or override label specific configuration, if only --scope is specified, then override scope specific configuration. Print applied configuration.
     control.(sh|bat) --tracing-configuration set (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX [--label] [--sampling-rate Decimal value between 0 and 1, where 0 means never and 1 means always. More or less reflects the probability of sampling specific trace.] [--included-scopes Set of scopes with comma as separator  DISCOVERY|EXCHANGE|COMMUNICATION|TX])
 
+  Set or display shutdown policy:
+    control.(sh|bat) --shutdown-policy [IMMEDIATE|GRACEFUL]
+
+  Print metadata command help:
+    control.(sh|bat) --meta help
+
+  Print list of binary metadata types:
+    control.(sh|bat) --meta list
+
+  Print detailed info about specified binary type (the type must be specified by type name or by type identifier):
+    control.(sh|bat) --meta details [--typeId <typeId>] [--typeName <typeName>]
+
+  Remove the metadata of the specified type (the type must be specified by type name or by type identifier) from cluster and saves the removed metadata to the specified file.
+If the file name isn't specified the output file name is: '<typeId>.bin'
+    control.(sh|bat) --meta remove [--typeId <typeId>] [--typeName <typeName>] [--out <fileName>]
+
+  Update cluster metadata from specified file (file name is required)
+    control.(sh|bat) --meta update --in <fileName>
+
 By default commands affecting the cluster require interactive confirmation.
 Use --yes option to disable it.
 

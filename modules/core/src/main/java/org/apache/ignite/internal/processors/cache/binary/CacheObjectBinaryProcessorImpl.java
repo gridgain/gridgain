@@ -893,6 +893,28 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         });
     }
 
+    /**
+     * @return Cluster binary metadata.
+     * @throws BinaryObjectException on error.
+     */
+    public Collection<BinaryMetadata> binaryMetadata() throws BinaryObjectException {
+        return F.viewReadOnly(metadataLocCache.values(), new IgniteClosure<BinaryMetadataHolder, BinaryMetadata>() {
+            @Override public BinaryMetadata apply(BinaryMetadataHolder metaHolder) {
+                return metaHolder.metadata();
+            }
+        });
+    }
+
+    /**
+     * @return Binary metadata for specified type.
+     * @throws BinaryObjectException on error.
+     */
+    public BinaryMetadata binaryMetadata(int typeId) throws BinaryObjectException {
+        BinaryMetadataHolder hld = metadataLocCache.get(typeId);
+
+        return hld != null ? hld.metadata() : null;
+    }
+
     /** {@inheritDoc} */
     @Override public BinaryObject buildEnum(String typeName, int ord) throws BinaryObjectException {
         A.notNullOrEmpty(typeName, "enum type name");
@@ -1491,11 +1513,12 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void removeType(int typeId) {
-        if (metadataLocCache.computeIfAbsent(typeId,
-                (id) -> {
-                    throw new IgniteException("Failed to remove metadata, type not found: " + id);
-                })
-            .removing())
+        BinaryMetadataHolder oldHld = metadataLocCache.get(typeId);
+
+        if (oldHld == null)
+            throw new IgniteException("Failed to remove metadata, type not found: " + typeId);
+
+        if (oldHld.removing())
             throw new IgniteException("Failed to remove metadata, type is being removed: " + typeId);
 
         if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.REMOVE_METADATA)) {
