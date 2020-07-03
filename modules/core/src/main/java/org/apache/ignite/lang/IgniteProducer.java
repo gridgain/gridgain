@@ -18,9 +18,16 @@ package org.apache.ignite.lang;
 
 import org.apache.ignite.IgniteCheckedException;
 
+/**
+ * Defines a producer which can throw IgniteCheckedException.
+ *
+ * @param <T> Type of producible value.
+ */
 @FunctionalInterface
 public interface IgniteProducer<T> {
-
-    T produce() throws IgniteCheckedException;
+    /**
+     * Produce value.
+     */
+    public T produce() throws IgniteCheckedException;
 
 }

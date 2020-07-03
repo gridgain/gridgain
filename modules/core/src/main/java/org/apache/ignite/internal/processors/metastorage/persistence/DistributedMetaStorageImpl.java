@@ -1174,9 +1174,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 byte[] valBytes = histItem.valBytesArray[i];
 
                 notifyListeners(
-                        histItem.keys[i],
-                        () -> bridge.read(key),
-                        () -> unmarshal(marshaller, valBytes));
+                    histItem.keys[i],
+                    () -> bridge.read(key),
+                    () -> unmarshal(marshaller, valBytes));
             }
 
             for (int i = 0, len = histItem.keys.length; i < len; i++)
@@ -1346,9 +1346,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             }
             else {
                 notifyListeners(
-                        oldKey,
-                        () -> unmarshal(marshaller, oldValBytes),
-                        () -> unmarshal(marshaller, newValBytes));
+                    oldKey,
+                    () -> unmarshal(marshaller, oldValBytes),
+                    () -> unmarshal(marshaller, newValBytes));
 
                 ++oldIdx;
 
