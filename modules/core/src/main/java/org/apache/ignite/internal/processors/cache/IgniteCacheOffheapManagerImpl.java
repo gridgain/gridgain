@@ -2900,6 +2900,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public void destroy() throws IgniteCheckedException {
             final AtomicReference<IgniteCheckedException> exception = new AtomicReference<>();
 
+            logTree.destroy();
+
             dataTree.destroy(new IgniteInClosure<CacheSearchRow>() {
                 @Override public void apply(CacheSearchRow row) {
                     try {
