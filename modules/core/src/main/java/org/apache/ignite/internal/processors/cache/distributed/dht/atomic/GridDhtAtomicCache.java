@@ -71,7 +71,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopolo
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridPartitionedGetFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridPartitionedSingleGetFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -391,15 +390,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             new MessageHandler<GridDhtForceKeysRequest>() {
                 @Override public void onMessage(ClusterNode node, GridDhtForceKeysRequest msg) {
                     processForceKeysRequest(node, msg);
-                }
-            });
-
-        ctx.io().addCacheHandler(
-            ctx.cacheId(),
-            GridDhtForceKeysResponse.class,
-            new MessageHandler<GridDhtForceKeysResponse>() {
-                @Override public void onMessage(ClusterNode node, GridDhtForceKeysResponse msg) {
-                    processForceKeyResponse(node, msg);
                 }
             });
 
@@ -1667,43 +1657,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         final GridNearAtomicAbstractUpdateRequest req,
         final UpdateReplyClosure completionCb
     ) {
-        IgniteInternalFuture<Object> forceFut = ctx.group().preloader().request(ctx, req, req.topologyVersion());
-
-        if (forceFut == null || forceFut.isDone()) {
-            try {
-                if (forceFut != null)
-                    forceFut.get();
-            }
-            catch (NodeStoppingException ignored) {
-                return;
-            }
-            catch (IgniteCheckedException e) {
-                onForceKeysError(node.id(), req, completionCb, e);
-
-                return;
-            }
-
-            updateAllAsyncInternal0(node, req, completionCb);
-        }
-        else {
-            forceFut.listen(new CI1<IgniteInternalFuture<Object>>() {
-                @Override public void apply(IgniteInternalFuture<Object> fut) {
-                    try {
-                        fut.get();
-                    }
-                    catch (NodeStoppingException ignored) {
-                        return;
-                    }
-                    catch (IgniteCheckedException e) {
-                        onForceKeysError(node.id(), req, completionCb, e);
-
-                        return;
-                    }
-
-                    updateAllAsyncInternal0(node, req, completionCb);
-                }
-            });
-        }
+        updateAllAsyncInternal0(node, req, completionCb);
     }
 
     /**

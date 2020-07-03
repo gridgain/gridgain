@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-import javax.cache.Cache;
-import javax.cache.expiry.ExpiryPolicy;
 import java.io.Externalizable;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,16 +27,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
+import javax.cache.Cache;
+import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
-import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
@@ -60,7 +56,6 @@ import org.apache.ignite.internal.processors.cache.distributed.GridCacheTtlUpdat
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtDetachedCacheEntry;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -100,11 +95,8 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
-import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_LOAD;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
-import static org.apache.ignite.internal.util.GridConcurrentFactory.newMap;
 
 /**
  * DHT cache adapter.
@@ -113,30 +105,9 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Force key futures. */
-    private final ConcurrentMap<IgniteUuid, GridDhtForceKeysFuture<?, ?>> forceKeyFuts = newMap();
-
-    /** */
-    private volatile boolean stopping;
-
-    /** Discovery listener. */
-    private final GridLocalEventListener discoLsnr = new GridLocalEventListener() {
-        @Override public void onEvent(Event evt) {
-            DiscoveryEvent e = (DiscoveryEvent)evt;
-
-            ClusterNode loc = ctx.localNode();
-
-            assert e.type() == EVT_NODE_LEFT || e.type() == EVT_NODE_FAILED : e;
-
-            final ClusterNode n = e.eventNode();
-
-            assert !loc.id().equals(n.id());
-
-            for (GridDhtForceKeysFuture<?, ?> f : forceKeyFuts.values())
-                f.onDiscoveryEvent(e);
-        }
-    };
-
+    /**
+     * TODO GG-30033 remove this method.
+     */
     protected void assertOwning(GridCacheContext cctx, Collection<KeyCacheObject> keys, AffinityTopologyVersion topVer) {
         HashSet<Integer> parts = new HashSet<>(keys.size(), 1.f);
 
@@ -157,47 +128,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      */
     protected GridDhtCacheAdapter() {
         // No-op.
-    }
-
-    /**
-     * Adds future to future map.
-     *
-     * @param fut Future to add.
-     * @return {@code False} if node cache is stopping and future was completed with error.
-     */
-    public boolean addFuture(GridDhtForceKeysFuture<?, ?> fut) {
-        forceKeyFuts.put(fut.futureId(), fut);
-
-        if (stopping) {
-            fut.onDone(stopError());
-
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Removes future from future map.
-     *
-     * @param fut Future to remove.
-     */
-    public void removeFuture(GridDhtForceKeysFuture<?, ?> fut) {
-        forceKeyFuts.remove(fut.futureId(), fut);
-    }
-
-    /**
-     * @param node Node.
-     * @param msg Message.
-     */
-    protected final void processForceKeyResponse(ClusterNode node, GridDhtForceKeysResponse msg) {
-        GridDhtForceKeysFuture<?, ?> f = forceKeyFuts.get(msg.futureId());
-
-        if (f != null)
-            f.onResult(msg);
-        else if (log.isDebugEnabled())
-            log.debug("Receive force key response for unknown future (is it duplicate?) [nodeId=" + node.id() +
-                ", res=" + msg + ']');
     }
 
     /**
@@ -318,32 +248,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     }
 
     /**
-     *
-     */
-    public void dumpDebugInfo() {
-        if (!forceKeyFuts.isEmpty()) {
-            U.warn(log, "Pending force key futures [cache=" + ctx.name() + "]:");
-
-            for (GridDhtForceKeysFuture fut : forceKeyFuts.values())
-                U.warn(log, ">>> " + fut);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onKernalStop() {
-        super.onKernalStop();
-
-        stopping = true;
-
-        IgniteCheckedException err = stopError();
-
-        for (GridDhtForceKeysFuture fut : forceKeyFuts.values())
-            fut.onDone(err);
-
-        ctx.gridEvents().removeLocalEventListener(discoLsnr);
-    }
-
-    /**
      * @return Node stop exception.
      */
     private IgniteCheckedException stopError() {
@@ -412,8 +316,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     @Override public void start() throws IgniteCheckedException {
         ctx.io().addCacheHandler(ctx.cacheId(), GridCacheTtlUpdateRequest.class,
             (CI2<UUID, GridCacheTtlUpdateRequest>)this::processTtlUpdateRequest);
-
-        ctx.gridEvents().addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
 
     /** {@inheritDoc} */
@@ -736,7 +638,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         MvccSnapshot mvccSnapshot
     ) {
         if (F.isEmpty(keys))
-            return new GridFinishedFuture<>(Collections.<K1, V1>emptyMap());
+            return new GridFinishedFuture<>(Collections.emptyMap());
 
         assert (mvccSnapshot == null) == !ctx.mvccEnabled();
 

@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -32,20 +31,14 @@ import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePreloaderAdapter;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridPlainRunnable;
-import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -484,81 +477,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         finally {
             leaveBusy();
         }
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean needForceKeys() {
-        // Do not use force key request with enabled MVCC.
-        if (grp.mvccEnabled())
-            return false;
-
-        if (grp.rebalanceEnabled()) {
-            IgniteInternalFuture<Boolean> rebalanceFut = rebalanceFuture();
-
-            if (rebalanceFut.isDone() && Boolean.TRUE.equals(rebalanceFut.result()))
-                return false;
-        }
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridDhtFuture<Object> request(GridCacheContext cctx,
-        GridNearAtomicAbstractUpdateRequest req,
-        AffinityTopologyVersion topVer) {
-        if (!needForceKeys())
-            return null;
-
-        return request0(cctx, req.keys(), topVer);
-    }
-
-    /**
-     * @param cctx Cache context.
-     * @param keys Keys to request.
-     * @param topVer Topology version.
-     * @return Future for request.
-     */
-    @SuppressWarnings({"unchecked", "RedundantCast"})
-    private GridDhtFuture<Object> request0(GridCacheContext cctx, Collection<KeyCacheObject> keys,
-        AffinityTopologyVersion topVer) {
-        if (cctx.isNear())
-            cctx = cctx.near().dht().context();
-
-        final GridDhtForceKeysFuture<?, ?> fut = new GridDhtForceKeysFuture<>(cctx, topVer, keys);
-
-        IgniteInternalFuture<?> topReadyFut = cctx.affinity().affinityReadyFuturex(topVer);
-
-        if (startFut.isDone() && topReadyFut == null)
-            fut.init();
-        else {
-            if (topReadyFut == null)
-                startFut.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> syncFut) {
-                        ctx.kernalContext().closure().runLocalSafe(
-                            new GridPlainRunnable() {
-                                @Override public void run() {
-                                    fut.init();
-                                }
-                            });
-                    }
-                });
-            else {
-                GridCompoundFuture<Object, Object> compound = new GridCompoundFuture<>();
-
-                compound.add((IgniteInternalFuture<Object>)startFut);
-                compound.add((IgniteInternalFuture<Object>)topReadyFut);
-
-                compound.markInitialized();
-
-                compound.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> syncFut) {
-                        fut.init();
-                    }
-                });
-            }
-        }
-
-        return (GridDhtFuture)fut;
     }
 
     /** {@inheritDoc} */

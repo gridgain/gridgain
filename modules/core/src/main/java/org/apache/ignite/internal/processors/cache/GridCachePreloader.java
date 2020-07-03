@@ -16,15 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ForceRebalanceExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
@@ -129,24 +126,6 @@ public interface GridCachePreloader {
      *
      */
     public IgniteInternalFuture<Boolean> rebalanceFuture();
-
-    /**
-     * @return {@code true} if there is no need to force keys preloading
-     *      (e.g. rebalancing has been completed).
-     */
-    public boolean needForceKeys();
-
-    /**
-     * Requests that preloader sends the request for the key.
-     *
-     * @param cctx Cache context.
-     * @param req Message with keys to request.
-     * @param topVer Topology version, {@code -1} if not required.
-     * @return Future to complete when all keys are preloaded.
-     */
-    public GridDhtFuture<Object> request(GridCacheContext cctx,
-        GridNearAtomicAbstractUpdateRequest req,
-        AffinityTopologyVersion topVer);
 
     /**
      * Force Rebalance process.
