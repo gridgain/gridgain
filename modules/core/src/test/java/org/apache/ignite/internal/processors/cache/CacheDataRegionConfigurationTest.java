@@ -63,7 +63,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
     private IgniteLogger logger;
 
     /** */
-    private static final long DFLT_MEM_PLC_SIZE = 10L * 1024 * 1024;
+    private static final long DFLT_MEM_PLC_SIZE = 18 * 1024 * 1024;
 
     /** */
     private static final long BIG_MEM_PLC_SIZE = 1024L * 1024 * 1024;

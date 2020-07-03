@@ -2744,6 +2744,9 @@ public class PageMemoryImpl implements PageMemoryEx {
                 int type = PageIO.getType(dataAddr);
                 int ver = PageIO.getVersion(dataAddr);
 
+                if (type == 0)
+                    return false;  // Skip. Most likely page has been allocated recently and is not initialized yet.
+
                 PageIO io = PageIO.getPageIO(type, ver);
 
                 return io instanceof PagePartitionMetaIO
