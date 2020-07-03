@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.lang.String.join;
@@ -75,6 +76,25 @@ public class IgniteUtilsWorkDirectoryTest {
             setProperty(IgniteSystemProperties.IGNITE_HOME, dfltIgniteHome);
         if (dfltUserDir != null)
             setProperty("user.dir", dfltUserDir);
+    }
+
+    /**
+     * The work directory specified by the user has the highest priority
+     */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28145")
+    @Test
+    public void testW_1() {
+        executeGenericTest(true, false, false,
+            USER_WORK_DIR);
+    }
+
+    /**
+     * The work directory specified by the user has the highest priority
+     */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28145")
+    @Test
+    public void testW_2() {
+        throw new RuntimeException("zzzzz");
     }
 
     /**
