@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -28,12 +30,13 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionHeuristicException;
 import org.junit.Test;
+import org.locationtech.jts.util.Assert;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
@@ -169,11 +172,22 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                 }
             );
 
-            GridTestUtils.assertThrows(null,
-                tx::commit,
-                TransactionHeuristicException.class,
-                "Primary node [nodeId=" + grid0.localNode().id() + ", consistentId=" +
-                    grid0.localNode().consistentId() + "] has left the grid and there are no backup nodes");
+            try {
+                tx.commit();
+            }
+            catch (Throwable e) {
+                String msg = e.getMessage();
+
+                Assert.isTrue(e.getCause() instanceof CacheInvalidStateException);
+
+                Pattern msgPattern = Pattern.compile("Failed to commit a transaction \\(all partition owners have left the grid, " +
+                    "partition data has been lost\\) \\[cacheName=cache, partition=\\d+, " +
+                    "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 + ", hasValBytes=true\\]\\]");
+
+                Matcher matcher = msgPattern.matcher(msg);
+
+                Assert.isTrue(matcher.find());
+            }
         }
     }
 }

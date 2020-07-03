@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFini
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccFuture;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -56,7 +57,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.transactions.TransactionHeuristicException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
@@ -993,9 +993,20 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                     hasBackups = backups.stream().anyMatch(backupId -> cctx.discovery().node(backupId) != null);
 
                 if (cctx.discovery().node(m.primary().id()) == null && !hasBackups) {
-                    onDone(new TransactionHeuristicException("Primary node [nodeId=" + nodeId + ", consistentId=" +
-                        m.primary().consistentId() + "] has left the grid and there are no backup nodes",
-                        new CacheInvalidStateException()));
+                    IgniteTxEntry firstTxEntry = m.entries().iterator().next();
+
+                    String strTxEntry = "";
+
+                    if (firstTxEntry != null)
+                        strTxEntry = " [cacheName=" + firstTxEntry.cached().context().name() +
+                            ", partition=" + firstTxEntry.key().partition() +
+                            (S.includeSensitive() ? ", key=" + firstTxEntry.key() : "") +
+                            "]";
+
+                    onDone(new CacheInvalidStateException("Failed to commit a transaction " +
+                        "(all partition owners have left the grid, partition data has been lost)" +
+                        strTxEntry)
+                    );
 
                     return true;
                 }
