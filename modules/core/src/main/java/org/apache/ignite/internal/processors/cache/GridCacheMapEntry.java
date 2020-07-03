@@ -47,7 +47,7 @@ import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
+import org.apache.ignite.internal.pagemem.wal.record.OutOfOrderDataRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
@@ -4341,22 +4341,42 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Appends a new rollback record to the write-ahead log if persistence enabled.
-     * This record keeps track the gap that corresponds to the update counter of out-of-order update in the ATOMIC cache.
+     * Appends a new out-of-order update record to the write-ahead log if persistence enabled.
+     * This record keeps track the out-of-order updates in the ATOMIC cache.
      *
-     * @param gapStart Update counter corresponds to out-of-order update.
+     * @param op Update operation.
+     * @param val Write value.
+     * @param writeVer Write version.
+     * @param expireTime Expire time.
+     * @param updCntr Update counter.
      */
-    protected void logOutOfOrderUpdate(Long gapStart) throws IgniteCheckedException {
+    protected void logOutOfOrderUpdate(
+        GridCacheOperation op,
+        CacheObject val,
+        GridCacheVersion writeVer,
+        long expireTime,
+        Long updCntr
+    ) throws IgniteCheckedException {
         assert cctx.atomic() : "Individual updates must be logged only for ATOMIC caches.";
-        assert gapStart != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
+        assert updCntr != null : "Out-of-order update must provide an update counter [entry=" + this + ']';
 
         try {
             if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                cctx.shared().wal().log(new RollbackRecord(cctx.groupId(), partition(), gapStart, 1));
+                cctx.shared().wal().log(new OutOfOrderDataRecord(new DataEntry(
+                    cctx.cacheId(),
+                    key,
+                    val,
+                    op,
+                    null,
+                    writeVer,
+                    expireTime,
+                    partition(),
+                    updCntr)));
+
         }
         catch (StorageException e) {
             throw new IgniteCheckedException("Failed to log ATOMIC cache out-of-order update [key=" + key +
-                ", updCntr=" + gapStart + ']', e);
+                ", updCntr=" + updCntr + ']', e);
         }
     }
 
@@ -6174,7 +6194,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     assert treeOp == IgniteTree.OperationType.NOOP : treeOp;
 
                     if (outOfOrderUpdate)
-                        entry.logOutOfOrderUpdate(updateCntr);
+                        outOfOrderUpdate(conflictCtx);
 
                     return;
                 }
@@ -6380,6 +6400,69 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             else
                 treeOp = IgniteTree.OperationType.NOOP;
+        }
+
+        /**
+         *
+         * @param conflictCtx Conflict context.
+         * @throws IgniteCheckedException If failed.
+         */
+        private void outOfOrderUpdate(@Nullable GridCacheVersionConflictContext<?, ?> conflictCtx) throws IgniteCheckedException {
+            assert outOfOrderUpdate : "This method can be executed only for out-of-order updates.";
+            assert !primary : "Out of order update can only be logged on backup nodes.";
+            assert !intercept : "Out of prder update should not be intercepted on backup node.";
+
+            if (op == UPDATE) {
+                assert writeObj != null;
+
+                GridCacheContext cctx = entry.context();
+
+                CacheObject prevUpdate = (CacheObject)writeObj;
+
+                long newSysTtl;
+                long newExpireTime;
+
+                // Conflict context is null if there were no explicit conflict resolution.
+                if (conflictCtx == null) {
+                    // Calculate TTL and expire time for local update.
+                    if (explicitTtl != CU.TTL_NOT_CHANGED) {
+                        // If conflict existed, expire time must be explicit.
+                        assert conflictVer == null || explicitExpireTime != CU.EXPIRE_TIME_CALCULATE;
+
+                        newExpireTime = explicitExpireTime != CU.EXPIRE_TIME_CALCULATE ?
+                            explicitExpireTime : CU.toExpireTime(explicitTtl);
+                    }
+                    else {
+                        newSysTtl = expiryPlc == null ? CU.TTL_NOT_CHANGED :
+                            entry.val != null ? expiryPlc.forUpdate() : expiryPlc.forCreate();
+
+                        if (newSysTtl == CU.TTL_NOT_CHANGED)
+                            newExpireTime = entry.expireTimeExtras();
+                        else if (newSysTtl == CU.TTL_ZERO) {
+                            op = DELETE;
+
+                            writeObj = null;
+
+                            entry.logOutOfOrderUpdate(op, null, newVer, 0, updateCntr);
+
+                            return;
+                        }
+                        else
+                            newExpireTime = CU.toExpireTime(newSysTtl);
+                    }
+                }
+                else
+                    newExpireTime = conflictCtx.expireTime();
+
+                prevUpdate = cctx.kernalContext().cacheObjects().prepareForCache(prevUpdate, cctx);
+
+                entry.logOutOfOrderUpdate(op, prevUpdate, newVer, newExpireTime, updateCntr);
+            }
+            else {
+                assert op == DELETE && writeObj == null : op;
+
+                entry.logOutOfOrderUpdate(op, null, newVer, 0, updateCntr);
+            }
         }
 
         /**
