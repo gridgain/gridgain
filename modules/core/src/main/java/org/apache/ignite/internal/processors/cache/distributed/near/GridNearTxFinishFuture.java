@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -993,15 +994,18 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                     hasBackups = backups.stream().anyMatch(backupId -> cctx.discovery().node(backupId) != null);
 
                 if (cctx.discovery().node(m.primary().id()) == null && !hasBackups) {
-                    IgniteTxEntry firstTxEntry = m.entries().iterator().next();
-
                     String strTxEntry = "";
 
-                    if (firstTxEntry != null)
+                    Iterator<IgniteTxEntry> entryIter = m.entries().iterator();
+
+                    if (entryIter.hasNext()) {
+                        IgniteTxEntry firstTxEntry = entryIter.next();
+
                         strTxEntry = " [cacheName=" + firstTxEntry.cached().context().name() +
                             ", partition=" + firstTxEntry.key().partition() +
                             (S.includeSensitive() ? ", key=" + firstTxEntry.key() : "") +
                             "]";
+                    }
 
                     onDone(new CacheInvalidStateException("Failed to commit a transaction " +
                         "(all partition owners have left the grid, partition data has been lost)" +
