@@ -54,6 +54,11 @@ import static java.util.stream.IntStream.range;
  * Striped executor.
  */
 public class StripedExecutor implements ExecutorService {
+
+    /** */
+    private static final int STRIPED_THREAD_SPINS =
+        IgniteSystemProperties.getInteger("STRIPED_THREAD_SPINS",2048);
+
     /** Stripes. */
     private final Stripe[] stripes;
 
@@ -685,7 +690,7 @@ public class StripedExecutor implements ExecutorService {
         @Override Runnable take() throws InterruptedException {
             Runnable r;
 
-            for (int i = 0; i < 2048; i++) {
+            for (int i = 0; i < STRIPED_THREAD_SPINS; i++) {
                 r = queue.poll();
 
                 if (r != null)

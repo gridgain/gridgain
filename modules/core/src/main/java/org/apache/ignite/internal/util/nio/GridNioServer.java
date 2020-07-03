@@ -143,6 +143,14 @@ public class GridNioServer<T> {
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_NO_SELECTOR_OPTS);
 
     /** */
+    private static final boolean PROCESS_WRITE_ON_CHANGE_REQUEST =
+        IgniteSystemProperties.getBoolean("PROCESS_WRITE_ON_CHANGE_REQUEST");
+
+    /** */
+    private static final boolean KEEP_POLLING_WHILE_SPINNING =
+        IgniteSystemProperties.getBoolean("KEEP_POLLING_WHILE_SPINNING");
+
+    /** */
     public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME = "outboundMessagesQueueSize";
 
     /** */
@@ -1208,7 +1216,7 @@ public class GridNioServer<T> {
          * @param key Key that is ready to be written.
          * @throws IOException If write failed.
          */
-        @Override protected void processWrite(SelectionKey key) throws IOException {
+        @Override protected void processWrite(SelectionKey key, boolean shouldClose) throws IOException {
             WritableByteChannel sockCh = (WritableByteChannel)key.channel();
 
             final GridSelectorNioSessionImpl ses = (GridSelectorNioSessionImpl)key.attachment();
@@ -1378,11 +1386,11 @@ public class GridNioServer<T> {
          * @param key Key that is ready to be written.
          * @throws IOException If write failed.
          */
-        @Override protected void processWrite(SelectionKey key) throws IOException {
+        @Override protected void processWrite(SelectionKey key, boolean shouldClose) throws IOException {
             if (sslFilter != null)
                 processWriteSsl(key);
             else
-                processWrite0(key);
+                processWrite0(key,shouldClose);
         }
 
         /**
@@ -1647,7 +1655,7 @@ public class GridNioServer<T> {
          * @param key Key that is ready to be written.
          * @throws IOException If write failed.
          */
-        private void processWrite0(SelectionKey key) throws IOException {
+        private void processWrite0(SelectionKey key,boolean shouldClose) throws IOException {
             WritableByteChannel sockCh = (WritableByteChannel)key.channel();
 
             GridSelectorNioSessionImpl ses = (GridSelectorNioSessionImpl)key.attachment();
@@ -1672,7 +1680,9 @@ public class GridNioServer<T> {
                     req = ses.pollFuture();
 
                     if (req == null && buf.position() == 0) {
-                        stopPollingForWrite(key, ses);
+
+                        if(shouldClose)
+                            stopPollingForWrite(key, ses);
 
                         return;
                     }
@@ -2130,7 +2140,12 @@ public class GridNioServer<T> {
                             case REQUIRE_WRITE: {
                                 SessionWriteRequest req = (SessionWriteRequest)req0;
 
-                                registerWrite((GridSelectorNioSessionImpl)req.session());
+                                GridSelectorNioSessionImpl ses = (GridSelectorNioSessionImpl)req.session();
+
+                                if(PROCESS_WRITE_ON_CHANGE_REQUEST)
+                                    processWrite(ses.key(), false);
+
+                                registerWrite(ses);
 
                                 break;
                             }
@@ -2214,9 +2229,9 @@ public class GridNioServer<T> {
                             updateHeartbeat();
 
                             if (selectedKeys == null)
-                                processSelectedKeys(selector.selectedKeys());
+                                processSelectedKeys(selector.selectedKeys(),!KEEP_POLLING_WHILE_SPINNING);
                             else
-                                processSelectedKeysOptimized(selectedKeys.flip());
+                                processSelectedKeysOptimized(selectedKeys.flip(),!KEEP_POLLING_WHILE_SPINNING);
                         }
 
                         if (!changeReqs.isEmpty())
@@ -2248,9 +2263,9 @@ public class GridNioServer<T> {
                         if (selector.select(2000) > 0) {
                             // Walk through the ready keys collection and process network events.
                             if (selectedKeys == null)
-                                processSelectedKeys(selector.selectedKeys());
+                                processSelectedKeys(selector.selectedKeys(),true);
                             else
-                                processSelectedKeysOptimized(selectedKeys.flip());
+                                processSelectedKeysOptimized(selectedKeys.flip(),true);
                         }
 
                         // select() call above doesn't throw on interruption; checking it here to propagate timely.
@@ -2456,7 +2471,7 @@ public class GridNioServer<T> {
          * @param keys Selected keys.
          * @throws ClosedByInterruptException If this thread was interrupted while reading data.
          */
-        private void processSelectedKeysOptimized(SelectionKey[] keys) throws ClosedByInterruptException {
+        private void processSelectedKeysOptimized(SelectionKey[] keys, boolean shouldClose) throws ClosedByInterruptException {
             for (int i = 0; ; i++) {
                 final SelectionKey key = keys[i];
 
@@ -2486,7 +2501,7 @@ public class GridNioServer<T> {
                         processRead(key);
 
                     if (key.isValid() && key.isWritable())
-                        processWrite(key);
+                        processWrite(key,shouldClose);
                 }
                 catch (ClosedByInterruptException e) {
                     // This exception will be handled in bodyInternal() method.
@@ -2522,7 +2537,7 @@ public class GridNioServer<T> {
          * @param keys Selected keys.
          * @throws ClosedByInterruptException If this thread was interrupted while reading data.
          */
-        private void processSelectedKeys(Set<SelectionKey> keys) throws ClosedByInterruptException {
+        private void processSelectedKeys(Set<SelectionKey> keys, boolean shouldClose) throws ClosedByInterruptException {
             if (log.isTraceEnabled())
                 log.trace("Processing keys in client worker: " + keys.size());
 
@@ -2553,7 +2568,7 @@ public class GridNioServer<T> {
                         processRead(key);
 
                     if (key.isValid() && key.isWritable())
-                        processWrite(key);
+                        processWrite(key, shouldClose);
                 }
                 catch (ClosedByInterruptException e) {
                     // This exception will be handled in bodyInternal() method.
@@ -2885,7 +2900,7 @@ public class GridNioServer<T> {
          * @param key Key that is ready to be written.
          * @throws IOException If write failed.
          */
-        protected abstract void processWrite(SelectionKey key) throws IOException;
+        protected abstract void processWrite(SelectionKey key, boolean shouldClose) throws IOException;
 
         /**
          * @param cnt
