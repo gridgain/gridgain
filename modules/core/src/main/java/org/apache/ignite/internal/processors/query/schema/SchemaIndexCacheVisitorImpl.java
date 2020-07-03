@@ -35,6 +35,7 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.util.worker.GridWorkerFuture;
+import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -52,7 +53,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     private final GridCacheContext cctx;
 
     /** Cancellation token. */
-    private final SchemaIndexOperationCancellationToken cancel;
+    @Nullable private final SchemaIndexOperationCancellationToken cancel;
 
     /** Future for create/rebuild index. */
     protected final GridFutureAdapter<Void> buildIdxFut;
@@ -69,7 +70,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      */
     public SchemaIndexCacheVisitorImpl(
         GridCacheContext cctx,
-        SchemaIndexOperationCancellationToken cancel,
+        @Nullable SchemaIndexOperationCancellationToken cancel,
         GridFutureAdapter<Void> buildIdxFut
     ) {
         assert nonNull(cctx);
