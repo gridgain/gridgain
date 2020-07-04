@@ -156,28 +156,6 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
         forbidStartingNewTasks = true;
 
         awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
-
-        removeCheckpointListener();
-    }
-
-    /**
-     *  Remove checkpoint listener.
-     */
-    private void removeCheckpointListener() {
-        IgniteCacheDatabaseSharedManager dbSharedMgr = ctx.cache().context().database();
-
-        dbSharedMgr.checkpointReadLock();
-
-        try {
-            if (dbSharedMgr instanceof GridCacheDatabaseSharedManager) {
-                GridCacheDatabaseSharedManager mgr = (GridCacheDatabaseSharedManager) dbSharedMgr;
-
-                mgr.removeCheckpointListener(this);
-            }
-        }
-        finally {
-            dbSharedMgr.checkpointReadUnlock();
-        }
     }
 
     /** {@inheritDoc} */
