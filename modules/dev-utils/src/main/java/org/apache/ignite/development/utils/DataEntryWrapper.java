@@ -94,8 +94,7 @@ class DataEntryWrapper extends DataEntry {
         return new SB(this.source.getClass().getSimpleName())
             .a("[k = ").a(keyStr)
             .a(", v = [").a(valueStr).a("]")
-            // TODO source.super.toString()
-            .a(", super = [").a(super.toString()).a("]]")
+            .a(", super = [").a(S.toString(DataEntry.class, source)).a("]]")
             .toString();
     }
 
