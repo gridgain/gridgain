@@ -39,7 +39,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -51,7 +50,6 @@ import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.function.ThrowableBiFunction;
 import org.apache.ignite.internal.util.function.ThrowableSupplier;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridConnectionBytesVerifyFilter;
 import org.apache.ignite.internal.util.nio.GridDirectParser;
@@ -315,13 +313,11 @@ public class GridNioServerWrapper {
         boolean locNodeIsSrv = !locNodeSupplier.get().isClient() && !locNodeSupplier.get().isDaemon();
 
         if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
-            if (node.isClient() && startedInVirtualizedEnvironment(node)) {
+            if (node.isClient() && forceClientToServerConnections(node)) {
                 String msg = "Failed to connect to node " + node.id() +
                     " because it is started in virtualized environment; inverse connection will be requested.";
 
-                GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
-
-                throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
+                throw new NodeUnreachableException(msg);
             }
         }
 
@@ -613,9 +609,7 @@ public class GridNioServerWrapper {
                     String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
                         "; inverse connection will be requested.";
 
-                    GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
-
-                    throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
+                    throw new NodeUnreachableException(msg);
                 }
             }
 
@@ -637,12 +631,12 @@ public class GridNioServerWrapper {
 
     /**
      * @param node Node.
-     * @return {@code True} if remote node is
+     * @return {@code True} if remote current node cannot receive TCP connections. Applicable for client nodes only.
      */
-    private boolean startedInVirtualizedEnvironment(ClusterNode node) {
-        String envType = node.attribute(attrs.environmentType());
+    private boolean forceClientToServerConnections(ClusterNode node) {
+        Boolean forceClientToSrvConnections = node.attribute(attrs.forceClientToServerConnections());
 
-        return EnvironmentType.VIRTUALIZED.toString().equals(envType);
+        return Boolean.TRUE.equals(forceClientToSrvConnections);
     }
 
     /**
