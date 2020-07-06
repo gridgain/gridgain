@@ -65,7 +65,6 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.regex.Matcher;
@@ -1538,7 +1537,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @param contexts Collection of cache contexts for which indexes should be rebuilt.
      * @param rebuildCond Condition that should be met for indexes to be rebuilt for specific cache.
      */
-    private void rebuildIndexes(Collection<GridCacheContext> contexts, Function<GridCacheContext, Boolean> rebuildCond) {
+    private void rebuildIndexes(Collection<GridCacheContext> contexts, Predicate<GridCacheContext> rebuildCond) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
         if (!qryProc.moduleEnabled())
@@ -1547,7 +1546,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         GridCompoundFuture allCacheIdxsCompoundFut = null;
 
         for (GridCacheContext cacheCtx : contexts) {
-            if (!rebuildCond.apply(cacheCtx))
+            if (!rebuildCond.test(cacheCtx))
                 continue;
 
             int cacheId = cacheCtx.cacheId();
