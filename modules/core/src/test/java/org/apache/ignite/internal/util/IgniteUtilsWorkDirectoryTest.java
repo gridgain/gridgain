@@ -101,6 +101,23 @@ public class IgniteUtilsWorkDirectoryTest {
      * The work directory specified by the user has the highest priority
      */
     @Test
+    public void testW_3() {
+        executeGenericTest(true, false, false,
+            USER_WORK_DIR);
+    }
+
+    /**
+     * The work directory specified by the user has the highest priority
+     */
+    @Test
+    public void testW_4() {
+        throw new RuntimeException("xxxxx");
+    }
+
+    /**
+     * The work directory specified by the user has the highest priority
+     */
+    @Test
     public void testWorkDirectory1() {
         executeGenericTest(true, false, false,
             USER_WORK_DIR);
