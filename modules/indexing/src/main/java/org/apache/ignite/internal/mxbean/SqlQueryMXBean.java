@@ -126,7 +126,7 @@ public interface SqlQueryMXBean {
     @MXBeanDescription("Gets global SQL query memory quota. Global SQL query memory pool size or SQL query memory " +
         "quota is an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
         "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
-        "heavy analytics query.  Same as SqlGlobalMemoryQuota but with a Long return type.")
+        "heavy analytics query.  Same as SqlGlobalMemoryQuota, but with a Long return type.")
     Long getSqlGlobalMemoryQuotaBytes();
 
     /**
