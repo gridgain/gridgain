@@ -16,10 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
-import java.io.File;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.io.FileUtils;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.Affinity;
@@ -31,31 +30,41 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionHeuristicException;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.locationtech.jts.util.Assert;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
+import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishFuture.ALL_PARTITION_OWNERS_LEFT_GRID_MSG;
 
 /**
  * Tests check a result of commit when a node fail before
  * send {@link GridNearTxFinishResponse} to transaction coodinator
  */
+@RunWith(Parameterized.class)
 public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
+    /** Parameters. */
+    @Parameterized.Parameters(name = "syncMode={0}")
+    public static Iterable<CacheWriteSynchronizationMode> data() {
+        return Arrays.asList(PRIMARY_SYNC, FULL_SYNC);
+    }
+
     /** syncMode */
-    private static CacheWriteSynchronizationMode syncMode;
+    @Parameterized.Parameter()
+    public CacheWriteSynchronizationMode syncMode;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         DataStorageConfiguration dsConfig = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(100L * 1024 * 1024)
                 .setPersistenceEnabled(true));
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
@@ -71,7 +80,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        FileUtils.deleteDirectory(new File(U.defaultWorkDirectory()));
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -82,26 +91,8 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test with {@link CacheWriteSynchronizationMode#PRIMARY_SYNC}
-     * @throws Exception
-     */
-    @Test
-    public void testNodeFailWithPrimarySync() throws Exception {
-        testNodeFail(PRIMARY_SYNC);
-    }
-
-    /**
-     * Test with {@link CacheWriteSynchronizationMode#FULL_SYNC}
-     * @throws Exception
-     */
-    @Test
-    public void testNodeFailWithFullSync() throws Exception {
-        testNodeFail(FULL_SYNC);
-    }
-
-    /**
      * <ul>
-     * <li>Start 2 nodes with transactional cache without backups
+     * <li>Start 2 nodes with transactional cache, without backups, with {@link IgniteTxExceptionNodeFailTest#syncMode}
      * <li>Start transaction:
      *  <ul>
      *  <li>put a key to a partition on transaction coordinator
@@ -112,12 +103,10 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
      * <li>Check that {@link Transaction#commit()} throw {@link TransactionHeuristicException}
      * </ul>
      *
-     * @param testSyncMode
-     * @throws Exception
+     * @throws Exception If failed
      */
-    private void testNodeFail(CacheWriteSynchronizationMode testSyncMode) throws Exception {
-        syncMode = testSyncMode;
-
+    @Test
+    public void testNodeFailBeforeSendGridNearTxFinishResponse() throws Exception {
         startGrids(2);
 
         grid(0).cluster().active(true);
@@ -172,6 +161,8 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
                 }
             );
 
+            boolean passed = false;
+
             try {
                 tx.commit();
             }
@@ -180,14 +171,19 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
 
                 Assert.isTrue(e.getCause() instanceof CacheInvalidStateException);
 
-                Pattern msgPattern = Pattern.compile("Failed to commit a transaction \\(all partition owners have left the grid, " +
-                    "partition data has been lost\\) \\[cacheName=cache, partition=\\d+, " +
-                    "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 + ", hasValBytes=true\\]\\]");
+                Assert.isTrue(msg.contains(ALL_PARTITION_OWNERS_LEFT_GRID_MSG));
 
-                Matcher matcher = msgPattern.matcher(msg);
+                Pattern msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " + "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 +
+                    ", hasValBytes=true\\]\\]");
+
+                Matcher matcher = msgPtrn.matcher(msg);
 
                 Assert.isTrue(matcher.find());
+
+                passed = true;
             }
+
+            Assert.isTrue(passed);
         }
     }
 }

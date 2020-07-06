@@ -77,6 +77,10 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** All owners left grid message. */
+    public static final String ALL_PARTITION_OWNERS_LEFT_GRID_MSG =
+        "Failed to commit a transaction (all partition owners have left the grid, partition data has been lost)";
+
     /** Tracing span. */
     private Span span;
 
@@ -1007,17 +1011,13 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                             "]";
                     }
 
-                    onDone(new CacheInvalidStateException("Failed to commit a transaction " +
-                        "(all partition owners have left the grid, partition data has been lost)" +
-                        strTxEntry)
-                    );
+                    onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG + strTxEntry));
 
                     return true;
                 }
             }
 
             if (nodeId.equals(m.primary().id())) {
-
                 if (msgLog.isDebugEnabled()) {
                     msgLog.debug("Near finish fut, mini future node left [txId=" + tx.nearXidVersion() +
                         ", node=" + m.primary().id() + ']');
