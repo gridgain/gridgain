@@ -251,6 +251,8 @@ public class ConnectionClientPool {
                         fut.onDone(client0);
                     }
                     catch (NodeUnreachableException e) {
+                        log.warning(e.getMessage());
+
                         fut = handleUnreachableNodeException(node, connIdx, fut, e);
                     }
                     catch (Throwable e) {
