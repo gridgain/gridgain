@@ -175,8 +175,7 @@ public class OpenCensusTracingConfigurationResetTest extends AbstractTracingTest
             log,
             () -> grid(0).tracingConfiguration().reset(TX_SCOPE_SPECIFIC_COORDINATES),
             IgniteException.class,
-            "Failed to reset tracing configuration for coordinates=[" + TX_SCOPE_SPECIFIC_COORDINATES +
-                "] to default. Meta storage is not available."
+            "Failed to update tracing configuration for coordinates=[" + TX_SCOPE_SPECIFIC_COORDINATES + ']'
         );
     }
 }
