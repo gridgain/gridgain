@@ -24,8 +24,8 @@ import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_NAME;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME_SECOND;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;

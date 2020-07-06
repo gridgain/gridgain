@@ -38,6 +38,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexForceRebuildTaskRes;
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusInfoContainer;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
+import static org.apache.ignite.internal.client.util.GridClientUtils.nodeSupports;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
@@ -81,13 +82,15 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
 
         IndexForceRebuildTaskArg taskArg = new IndexForceRebuildTaskArg(args.cacheGrps, args.cacheNames);
 
+        final UUID nodeId = args.nodeId;
+
         try (GridClient client = Command.startClient(clientCfg)) {
-            if (U.allNodesSupport(client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
+            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg,
-                    args.nodeId, clientCfg);
+                    nodeId, clientCfg);
             }
             else {
-                logger.info("Indexes force rebuild is not supported clusterwide.");
+                logger.info("Indexes force rebuild is not supported by node " + nodeId);
 
                 return null;
             }

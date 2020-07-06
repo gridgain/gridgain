@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_NAME;
+import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
 
 /**
  * Container for index info.
@@ -113,17 +113,22 @@ public class IndexListInfoContainer extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
         if (!(o instanceof IndexListInfoContainer))
             return false;
 
         IndexListInfoContainer other = (IndexListInfoContainer)o;
 
-        return cacheName.equals(other.cacheName) && idxName.equals(other.idxName);
+        return cacheName.equals(other.cacheName) && grpName.equals(other.groupName()) && idxName.equals(other.idxName)
+            && tblName.equals(other.tblName) && colsNames.equals(other.colsNames);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return cacheName.hashCode();
+        return 7 * cacheName.hashCode() + 11 * grpName.hashCode() + 13 * idxName.hashCode() + 17 * colsNames.hashCode()
+            + 23 * tblName.hashCode();
     }
 
     /**

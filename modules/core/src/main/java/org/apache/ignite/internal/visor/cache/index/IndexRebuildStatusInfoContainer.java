@@ -25,7 +25,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.commandline.CommandHandler.EMPTY_GROUP_NAME;
+import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
 
 /**
  * Container for index rebuild status info.

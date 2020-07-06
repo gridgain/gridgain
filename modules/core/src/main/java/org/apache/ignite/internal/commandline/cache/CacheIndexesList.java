@@ -37,6 +37,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.apache.ignite.internal.visor.cache.index.IndexListTaskArg;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
+import static org.apache.ignite.internal.client.util.GridClientUtils.nodeSupports;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_LIST;
@@ -83,22 +84,20 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         Set<IndexListInfoContainer> taskRes;
 
-        final UUID id = args.nodeId;
+        final UUID nodeId = args.nodeId;
 
         IndexListTaskArg taskArg = new IndexListTaskArg(args.groupsRegEx, args.cachesRegEx, args.indexesRegEx);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            if ((id == null && U.allNodesSupport(client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) ||
-                id != null && client.compute().node(id).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
-            {
+            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client,
-                    "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, id, clientCfg);
+                    "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, nodeId, clientCfg);
             }
             else {
-                if (id == null)
+                if (nodeId == null)
                     logger.info("Listing indexes is not supported clusterwide. Try specifying node id");
                 else
-                    logger.info("Listing indexes is not supported by node " + id);
+                    logger.info("Listing indexes is not supported by node " + nodeId);
 
                 return null;
             }

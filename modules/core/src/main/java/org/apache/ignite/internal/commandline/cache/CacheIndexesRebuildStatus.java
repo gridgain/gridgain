@@ -22,7 +22,6 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
@@ -35,6 +34,7 @@ import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusTask;
 import org.apache.ignite.internal.visor.cache.index.IndexRebuildStatusTaskArg;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
+import static org.apache.ignite.internal.client.util.GridClientUtils.nodeSupports;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDEX_REBUILD_STATUS;
@@ -74,9 +74,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         IndexRebuildStatusTaskArg taskArg = new IndexRebuildStatusTaskArg(nodeId);
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            if ((nodeId == null && allNodesSupport(client)) ||
-                nodeId != null && client.compute().node(nodeId).supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
-            {
+            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
                     nodeId, clientCfg);
             }
@@ -182,18 +180,5 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
         @Override public String toString() {
             return S.toString(CacheIndexesRebuildStatus.Arguments.class, this);
         }
-    }
-
-    /**
-     * @param client Client
-     * @return {@code True} if all cluster nodes support indexes manipulations
-     * from control script.
-     * @throws GridClientException if failed to connect.
-     */
-    private boolean allNodesSupport(GridClient client) throws GridClientException {
-        return client.compute()
-            .nodes()
-            .stream()
-            .allMatch(node -> node.supports(INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT));
     }
 }

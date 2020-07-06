@@ -201,8 +201,6 @@ import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
-import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.cluster.ClusterGroupEmptyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.compute.ComputeTaskCancelledCheckedException;
@@ -12274,19 +12272,6 @@ public abstract class IgniteUtils {
         }
 
         out.writeUTF(s);
-    }
-
-    /**
-     * @param client Client node.
-     * @param feature {@code IgniteFeatures} to check.
-     * @return {@code True} if all nodes support {@code feature}
-     * @throws GridClientException If failed to get cluster nodes list.
-     */
-    public static boolean allNodesSupport(GridClient client, IgniteFeatures feature) throws GridClientException {
-        return client.compute()
-            .nodes()
-            .stream()
-            .allMatch(node -> node.supports(feature));
     }
 
     /**
