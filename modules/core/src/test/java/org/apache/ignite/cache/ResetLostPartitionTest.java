@@ -27,7 +27,9 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
@@ -68,7 +70,8 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName)
+            .setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         cfg.setConsistentId(igniteInstanceName);
 
@@ -164,8 +167,24 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
         //Here we have two from three data nodes and cache with 1 backup. So there is no data loss expected.
         assertEquals(CACHE_NAMES.length * CACHE_SIZE, averageSizeAroundAllNodes());
 
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(grid(2));
+
+        spi.blockMessages((node, msg) -> {
+            if (msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage supplyMsg = (GridDhtPartitionSupplyMessage)msg;
+
+                for (String cachName: CACHE_NAMES) {
+                    return CU.cacheId(cachName) == supplyMsg.groupId();
+                }
+            }
+
+            return false;
+        });
+
         //Start node 2 with empty PDS. Rebalance will be started.
         startGrid(1);
+
+        spi.waitForBlocked();
 
         //During rebalance stop node 3. Rebalance will be stopped.
         stopGrid(2);

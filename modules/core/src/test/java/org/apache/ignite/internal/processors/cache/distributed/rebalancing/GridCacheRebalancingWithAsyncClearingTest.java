@@ -41,6 +41,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 
 /**
  *
@@ -117,6 +118,7 @@ public class GridCacheRebalancingWithAsyncClearingTest extends GridCommonAbstrac
      */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE, value = "1")
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "500000")
     public void testPartitionClearingNotBlockExchange() throws Exception {
         IgniteEx ig = startGrids(3);
         ig.cluster().active(true);
