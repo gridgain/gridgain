@@ -17,6 +17,8 @@
 #ifndef IGNITE_BENCHMARKS_ODBC_BENCHMARK_H
 #define IGNITE_BENCHMARKS_ODBC_BENCHMARK_H
 
+#include <boost/program_options.hpp>
+
 #include <ignite/benchmarks/odbc_utils.h>
 #include <ignite/benchmarks/basic_benchmark.h>
 
@@ -31,12 +33,6 @@ struct OdbcBenchmarkConfig
     /** Connection string. */
     std::string connectionString;
 
-    /** How long should take a warmup phase. */
-    int warmupSecs;
-
-    /** How long should the whole measurement take. */
-    int durationSecs;
-
     /** Name of the cache to use. */
     std::string cacheName;
 
@@ -45,9 +41,6 @@ struct OdbcBenchmarkConfig
 
     /** End of the cache key range to use. */
     int32_t cacheRangeEnd;
-
-    /** Number of threads to use in benchmark. */
-    int32_t threadCnt;
 
     /**
      * Initialize a benchmark config using environment variables.
@@ -60,17 +53,43 @@ struct OdbcBenchmarkConfig
 
         self.connectionString = utils::GetEnvVar("CONNECTION_STRING");
 
-        self.warmupSecs = utils::GetEnvVar<int32_t>("WARMUP", 0);
-        self.durationSecs = utils::GetEnvVar<int32_t>("DURATION");
-
-        self.threadCnt = utils::GetEnvVar<int32_t>("THREAD_CNT");
-
         self.cacheName = utils::GetEnvVar("CACHE_NAME", std::string("PUBLIC"));
 
         std::string range = utils::GetEnvVar("CACHE_RANGE");
 
         if (std::count(range.begin(), range.end(), '-') != 1)
             throw std::runtime_error("Invalid CACHE_RANGE: expected format is <number>-<number>");
+
+        std::string::iterator dlIt = std::find(range.begin(), range.end(), '-');
+        size_t dlPos = dlIt - range.begin();
+
+        std::string range_begin = range.substr(0, dlPos);
+        std::string range_end = range.substr(dlPos + 1);
+
+        self.cacheRangeBegin = utils::LexicalCast<int32_t>(range_begin);
+        self.cacheRangeEnd = utils::LexicalCast<int32_t>(range_end);
+
+        return self;
+    }
+
+    /**
+     * Initialize a benchmark config using environment variables.
+     *
+     * @param vm Variable map.
+     * @return Instance of config.
+     */
+    static OdbcBenchmarkConfig GetFromVm(boost::program_options::variables_map& vm)
+    {
+        OdbcBenchmarkConfig self;
+
+        self.connectionString = vm["connection_string"].as<std::string>();
+
+        self.cacheName = vm["cache"].as<std::string>();
+
+        std::string range = vm["range"].as<std::string>();
+
+        if (std::count(range.begin(), range.end(), '-') != 1)
+            throw std::runtime_error("Invalid cache range: expected format is <number>-<number>");
 
         std::string::iterator dlIt = std::find(range.begin(), range.end(), '-');
         size_t dlPos = dlIt - range.begin();
@@ -101,20 +120,11 @@ public:
     typedef OdbcBenchmarkConfig ConfigType;
 
     /**
-     * Get a config for the benchmark.
-     */
-    static const ConfigType& GetConfig()
-    {
-        static ConfigType cfg = ConfigType::GetFromEnv();
-
-        return cfg;
-    }
-
-    /**
      * Default constructor.
      */
-    OdbcBenchmark() :
-        BasicBenchmark()
+    OdbcBenchmark(boost::shared_ptr<const ConfigType> cfg) :
+        BasicBenchmark(),
+        config(cfg)
     {
         // No-op.
     }
@@ -141,7 +151,7 @@ public:
         SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
 
         // Combining connect string
-        std::vector<SQLCHAR> connectStr(GetConfig().connectionString.begin(), GetConfig().connectionString.end());
+        std::vector<SQLCHAR> connectStr(config->connectionString.begin(), config->connectionString.end());
 
         SQLCHAR outStr[odbc_utils::ODBC_BUFFER_SIZE];
         SQLSMALLINT outStrLen;
@@ -181,6 +191,9 @@ protected:
 
     /** Statement handle. */
     SQLHSTMT stmt;
+
+    /** Benchmark config. */
+    boost::shared_ptr<const ConfigType> config;
 };
 
 } // namespace benchmark

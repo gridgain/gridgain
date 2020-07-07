@@ -32,7 +32,8 @@ ignite_odbc_sql_benchmark_LDADD = \
     -lpthread \
     -lboost_thread \
     -lboost_system \
-    -lboost_chrono
+    -lboost_chrono \
+    -lboost_program_options
 
 ignite_odbc_sql_benchmark_LDFLAGS = \
     -static-libtool-libs

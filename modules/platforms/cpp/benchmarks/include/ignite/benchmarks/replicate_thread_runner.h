@@ -28,11 +28,87 @@
 #include <boost/atomic.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/program_options.hpp>
 
 #include <ignite/benchmarks/measure_thread.h>
 
 namespace benchmark
 {
+
+/**
+ * Configuration for the Runner.
+ */
+struct RunnerConfig
+{
+    /** How long should take a warmup phase. */
+    int32_t warmupSecs;
+
+    /** How long should the whole measurement take. */
+    int32_t durationSecs;
+
+    /** Number of threads to use in benchmark. */
+    int32_t threadCnt;
+
+    /**
+     * Initialize a runner config using environment variables.
+     *
+     * @return Instance of config.
+     */
+    static RunnerConfig GetFromEnv()
+    {
+        RunnerConfig self;
+
+        self.warmupSecs = utils::GetEnvVar<int32_t>("WARMUP", 0);
+        self.durationSecs = utils::GetEnvVar<int32_t>("DURATION");
+
+        self.threadCnt = utils::GetEnvVar<int32_t>("THREAD_CNT");
+
+        return self;
+    }
+
+    /**
+     * Initialize a runner config using environment variables.
+     *
+     * @param vm Variable map.
+     * @return Instance of config.
+     */
+    static RunnerConfig GetFromVm(boost::program_options::variables_map& vm)
+    {
+        RunnerConfig self;
+
+        self.warmupSecs = vm["warmup"].as<int32_t>();
+        self.durationSecs = vm["duration"].as<int32_t>();
+        self.threadCnt = vm["threads"].as<int32_t>();
+
+        return self;
+    }
+};
+
+/**
+ * Benchmark factory.
+ */
+template<typename Benchmark>
+class BenchmarkFactory
+{
+public:
+    /** Benchmark type. */
+    typedef Benchmark BenchmarkType;
+
+    /**
+     * Destructor.
+     */
+    virtual ~BenchmarkFactory()
+    {
+        // No-op.
+    }
+
+    /**
+     * Construct a new instance of the benchmark.
+     *
+     * @return New instance of the benchmark.
+     */
+    virtual boost::shared_ptr<BenchmarkType> Construct() = 0;
+};
 
 /**
  * Benchmark runner that copies a benchmark instance for every thread.
@@ -44,7 +120,9 @@ public:
     /**
      * Default constructor.
      */
-    ReplicateThreadRunner()
+    ReplicateThreadRunner(const RunnerConfig &cfg, BenchmarkFactory<Benchmark>& factory) :
+        config(cfg),
+        factory(factory)
     {
         // No-op.
     }
@@ -66,10 +144,6 @@ public:
     {
         using namespace boost::chrono;
 
-        typedef typename Benchmark::ConfigType BenchmarkConfig;
-
-        BenchmarkConfig config = Benchmark::GetConfig();
-
         int retcode = 0;
 
         boost::atomic_uint_fast64_t accumulator;
@@ -86,18 +160,18 @@ public:
             {
                 std::cout << "Loading data to the server" << std::endl;
 
-                Benchmark loadBench;
+                boost::shared_ptr<Benchmark> loadBench = factory.Construct();
 
-                loadBench.SetUp();
-                loadBench.LoadData();
-                loadBench.CleanUp();
+                loadBench->SetUp();
+                loadBench->LoadData();
+                loadBench->CleanUp();
             }
 
             steady_clock::time_point begin = steady_clock::now();
 
             for (size_t i = 0; i < threads.size(); ++i)
             {
-                benchmarks.push_back(boost::make_shared<Benchmark>());
+                benchmarks.push_back(factory.Construct());
 
                 threads.at(i).Start(*benchmarks.back(), accumulator);
             }
@@ -112,9 +186,11 @@ public:
             uint_fast64_t lastSeenCounter = accumulator.load();
             steady_clock::time_point lastSeenTime = steady_clock::now();
 
-            std::cout << "Time, sec | Operations/sec | Latency, nsec" << std::endl;
+            std::cout << "Time (sec),Operations/sec,Latency (nsec)" << std::endl;
 
-            while (steady_clock::now() - begin < seconds(config.durationSecs))
+            int32_t totalDuration = config.durationSecs + config.warmupSecs;
+
+            while (steady_clock::now() - begin < seconds(totalDuration))
             {
                 boost::this_thread::sleep_for(seconds(1));
 
@@ -132,7 +208,7 @@ public:
 
                 uint_fast64_t throughput = static_cast<uint_fast64_t>(operations / secsPassed);
 
-                std::cout << time(NULL) << " | " << throughput << " | " << latency << std::endl;
+                std::cout << time(NULL) << "," << throughput << "," << latency << std::endl;
             }
 
             std::cout << "END" << std::endl;
@@ -154,7 +230,13 @@ public:
     }
 
 private:
-    /// Random device.
+    /** Config */
+    RunnerConfig config;
+
+    /** Benchmark factory */
+    BenchmarkFactory<Benchmark>& factory;
+
+    /** Random device. */
     std::random_device randomDevice;
 };
 

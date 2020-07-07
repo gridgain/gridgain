@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <boost/program_options.hpp>
 
 #include <ignite/benchmarks/odbc_utils.h>
 #include <ignite/benchmarks/odbc_benchmark.h>
@@ -49,7 +50,8 @@ std::ostream& operator<<(std::ostream& os, const Person& val)
 class OdbcSqlBenchmark : public benchmark::OdbcBenchmark
 {
 public:
-    OdbcSqlBenchmark()
+    OdbcSqlBenchmark(boost::shared_ptr<const ConfigType> cfg) :
+        OdbcBenchmark(cfg)
     {
         // No-op.
     }
@@ -61,7 +63,7 @@ public:
 
     virtual void LoadData()
     {
-        if (GetConfig().cacheName == "PUBLIC")
+        if (config->cacheName == "PUBLIC")
         {
             odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE IF EXISTS PUBLIC.Person");
             odbc_utils::ExecuteNoFetch(dbc, "CREATE TABLE PUBLIC.Person ("
@@ -90,7 +92,7 @@ public:
         odbc_utils::ExecuteNoFetch(dbc, "DELETE FROM " + fullTableName);
 
         std::cout << "Filling table..." << std::endl;
-        for (int32_t i = GetConfig().cacheRangeBegin; i < GetConfig().cacheRangeEnd; ++i)
+        for (int32_t i = config->cacheRangeBegin; i < config->cacheRangeEnd; ++i)
         {
             std::stringstream query;
             query << "INSERT INTO " << fullTableName << " "
@@ -107,8 +109,8 @@ public:
     {
         OdbcBenchmark::SetUp();
 
-        if (GetConfig().cacheName != "PUBLIC")
-            fullTableName = '"' + GetConfig().cacheName + '"' + ".Person";
+        if (config->cacheName != "PUBLIC")
+            fullTableName = '"' + config->cacheName + '"' + ".Person";
         else
             fullTableName = "PUBLIC.Person";
 
@@ -123,7 +125,7 @@ public:
 
     virtual void DoAction()
     {
-        double salary = NextRandomDouble(GetConfig().cacheRangeBegin, GetConfig().cacheRangeEnd) * 1000;
+        double salary = NextRandomDouble(config->cacheRangeBegin, config->cacheRangeEnd) * 1000;
 
         double maxSalary = salary + 1000.0;
 
@@ -196,18 +198,90 @@ private:
     std::vector<Person> persons;
 };
 
+class OdbcSqlBenchmarkFactory : public benchmark::BenchmarkFactory<OdbcSqlBenchmark>
+{
+public:
+    /**
+     * Constructor.
+     *
+     *  @param
+     */
+    OdbcSqlBenchmarkFactory(const benchmark::OdbcBenchmarkConfig& cfg) :
+        config(new benchmark::OdbcBenchmarkConfig(cfg))
+    {
+        // No-op.
+    }
+
+    /**
+     * Construct a new instance of the benchmark.
+     *
+     * @return New instance of the benchmark.
+     */
+    virtual boost::shared_ptr<OdbcSqlBenchmark> Construct()
+    {
+        return boost::make_shared<OdbcSqlBenchmark>(config);
+    }
+
+private:
+    boost::shared_ptr<const benchmark::OdbcBenchmarkConfig> config;
+};
+
 /**
  * Program entry point.
  *
  * @return Exit code.
  */
-int main()
+int main(int argc, char *argv[])
 {
     int exitCode = 0;
 
     try
     {
-        benchmark::ReplicateThreadRunner<OdbcSqlBenchmark> runner;
+        using namespace boost::program_options;
+
+        options_description desc("Options");
+
+        desc.add_options()
+            ("help,h", "Help screen.")
+
+            ("connection_string,s", value<std::string>()->required(),
+             "Used as a connection string for ODBC client. Example: DRIVER={Apache Ignite};ADDRESS=127.0.0.1.")
+
+            ("duration,d", value<int32_t>()->default_value(600),
+             "Benchmark duration, in seconds. Does no include warmup duration.")
+
+            ("warmup,w", value<int32_t>()->default_value(0),
+             "Warmup duration in seconds. During warmup no data is printed.")
+
+            ("threads,t", value<int32_t>()->default_value(64),
+             "Number of thread to use from a single client when performing benchmark.")
+
+            ("cache,n", value<std::string>()->default_value("PUBLIC"),
+             "Name of the cache to use. If 'PUBLIC' cache is used all neccessary tables created by client. If not, "
+             "cache should be already created.")
+
+            ("range,r", value<std::string>()->default_value("1-10000"),
+             "Range of keys in cache to be used by benchmark. Format is '<begin>-<end>', where <begin> and <end> are "
+             "numbers and <begin> less than <end>.");
+
+        variables_map vm;
+
+        store(parse_command_line(argc, argv, desc), vm);
+
+        if (vm.count("help"))
+        {
+            std::cout << desc << std::endl;
+
+            return 0;
+        }
+
+        notify(vm);
+
+        benchmark::OdbcBenchmarkConfig odbcCfg = benchmark::OdbcBenchmarkConfig::GetFromVm(vm);
+        OdbcSqlBenchmarkFactory factory(odbcCfg);
+
+        benchmark::RunnerConfig runnerCfg = benchmark::RunnerConfig::GetFromVm(vm);
+        benchmark::ReplicateThreadRunner<OdbcSqlBenchmark> runner(runnerCfg, factory);
 
         runner.Run();
 
