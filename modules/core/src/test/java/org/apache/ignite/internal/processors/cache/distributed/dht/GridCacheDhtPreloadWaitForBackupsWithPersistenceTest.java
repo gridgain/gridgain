@@ -37,7 +37,7 @@ public class GridCacheDhtPreloadWaitForBackupsWithPersistenceTest extends GridCa
 
     /** */
     @Override protected int iterations() {
-        return 5;
+        return 2;
     }
 
     /** {@inheritDoc} */

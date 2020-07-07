@@ -59,7 +59,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     private final AtomicBoolean stop;
 
     /** Cancellation token between all workers for all caches. */
-    private final SchemaIndexOperationCancellationToken cancel;
+    @Nullable private final SchemaIndexOperationCancellationToken cancel;
 
     /** Index closure. */
     private final SchemaIndexCacheVisitorClosureWrapper wrappedClo;
@@ -84,7 +84,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         GridCacheContext cctx,
         GridDhtLocalPartition locPart,
         AtomicBoolean stop,
-        SchemaIndexOperationCancellationToken cancel,
+        @Nullable SchemaIndexOperationCancellationToken cancel,
         SchemaIndexCacheVisitorClosure clo,
         GridFutureAdapter<SchemaIndexCacheStat> fut
     ) {
@@ -148,14 +148,12 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
         if (!reserved)
             return;
 
-        try {
-            GridCursor<? extends CacheDataRow> cursor = locPart.dataStore().cursor(
-                cctx.cacheId(),
-                null,
-                null,
-                KEY_ONLY
-            );
-
+        try (GridCursor<? extends CacheDataRow> cursor = locPart.dataStore().cursor(
+            cctx.cacheId(),
+            null,
+            null,
+            KEY_ONLY
+        )) {
             boolean locked = false;
 
             try {
@@ -188,6 +186,9 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
                 if (locked)
                     cctx.shared().database().checkpointReadUnlock();
             }
+        }
+        catch (Exception e) {
+            throw new IgniteCheckedException(e);
         }
         finally {
             locPart.release();

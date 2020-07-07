@@ -156,6 +156,9 @@ public enum IgniteFeatures {
     /** Remove metadata from cluster for specified type. */
     REMOVE_METADATA(39),
 
+    /** Support policy of shutdown. */
+    SHUTDOWN_POLICY(40),
+
     /** Force rebuild, list or request indexes rebuild status from control script. */
     INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(41);
     /**
