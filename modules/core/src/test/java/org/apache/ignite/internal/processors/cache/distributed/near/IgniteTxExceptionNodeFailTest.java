@@ -42,6 +42,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishFuture.ALL_PARTITION_OWNERS_LEFT_GRID_MSG;
+import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
 
 /**
  * Tests check a result of commit when a node fail before
@@ -128,7 +129,7 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
         }
 
         for (int i = key0; i < 1000; i++) {
-            if (grid1.equals(grid(aff.mapKeyToNode(i))) && !aff.mapKeyToNode(key1).equals(aff.mapKeyToNode(i))) {
+            if (grid1.equals(grid(aff.mapKeyToNode(i))) && !aff.mapKeyToNode(key0).equals(aff.mapKeyToNode(i))) {
                 key1 = i;
 
                 break;
@@ -173,12 +174,14 @@ public class IgniteTxExceptionNodeFailTest extends GridCommonAbstractTest {
 
                 Assert.isTrue(msg.contains(ALL_PARTITION_OWNERS_LEFT_GRID_MSG));
 
-                Pattern msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " + "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 +
-                    ", hasValBytes=true\\]\\]");
+                if (!mvccEnabled(grid1.context())) {
+                    Pattern msgPtrn = Pattern.compile(" \\[cacheName=cache, partition=\\d+, " + "key=KeyCacheObjectImpl \\[part=\\d+, val=" + key0 +
+                        ", hasValBytes=true\\]\\]");
 
-                Matcher matcher = msgPtrn.matcher(msg);
+                    Matcher matcher = msgPtrn.matcher(msg);
 
-                Assert.isTrue(matcher.find());
+                    Assert.isTrue(matcher.find());
+                }
 
                 passed = true;
             }
