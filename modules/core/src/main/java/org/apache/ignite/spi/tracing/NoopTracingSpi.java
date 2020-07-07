@@ -41,8 +41,7 @@ public class NoopTracingSpi extends IgniteSpiAdapter implements TracingSpi<NoopS
     /** {@inheritDoc} */
     @Override public @NotNull NoopSpiSpecificSpan create(
         @NotNull String name,
-        @Nullable NoopSpiSpecificSpan parentSpan,
-        double samplingRate) {
+        @Nullable NoopSpiSpecificSpan parentSpan) {
         return NoopSpiSpecificSpan.INSTANCE;
     }
 
