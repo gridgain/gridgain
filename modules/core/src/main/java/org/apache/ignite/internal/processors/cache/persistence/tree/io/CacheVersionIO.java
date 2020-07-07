@@ -63,7 +63,10 @@ public class CacheVersionIO {
             throw new IllegalStateException("Cache version is null");
         }
 
-        return ver instanceof GridCacheVersionEx ? SIZE_GG_V2 : SIZE_GG_V1;
+        if (ver.updateCounter() == 0)
+            return ver instanceof GridCacheVersionEx ? SIZE_V2 : SIZE_V1;
+        else
+            return ver instanceof GridCacheVersionEx ? SIZE_GG_V2 : SIZE_GG_V1;
     }
 
     /**
@@ -78,27 +81,51 @@ public class CacheVersionIO {
             else
                 throw new IllegalStateException("Cache version is null");
         }
-        else if (ver instanceof GridCacheVersionEx) {
-            byte protoVer = -2; // Version of serialization protocol.
+        else if (ver.updateCounter() != 0) {
+            if (ver instanceof GridCacheVersionEx) {
+                byte protoVer = -2; // Version of serialization protocol.
 
-            buf.put(protoVer);
-            buf.putInt(ver.topologyVersion());
-            buf.putInt(ver.nodeOrderAndDrIdRaw());
-            buf.putLong(ver.order());
-            buf.putLong(ver.updateCounter());
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+                buf.putLong(ver.updateCounter());
 
-            buf.putInt(ver.conflictVersion().topologyVersion());
-            buf.putInt(ver.conflictVersion().nodeOrderAndDrIdRaw());
-            buf.putLong(ver.conflictVersion().order());
+                buf.putInt(ver.conflictVersion().topologyVersion());
+                buf.putInt(ver.conflictVersion().nodeOrderAndDrIdRaw());
+                buf.putLong(ver.conflictVersion().order());
+            }
+            else {
+                byte protoVer = -1; // Version of serialization protocol.
+
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+                buf.putLong(ver.updateCounter());
+            }
         }
         else {
-            byte protoVer = -1; // Version of serialization protocol.
+            if (ver instanceof GridCacheVersionEx) {
+                byte protoVer = 2; // Version of serialization protocol.
 
-            buf.put(protoVer);
-            buf.putInt(ver.topologyVersion());
-            buf.putInt(ver.nodeOrderAndDrIdRaw());
-            buf.putLong(ver.order());
-            buf.putLong(ver.updateCounter());
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+
+                buf.putInt(ver.conflictVersion().topologyVersion());
+                buf.putInt(ver.conflictVersion().nodeOrderAndDrIdRaw());
+                buf.putLong(ver.conflictVersion().order());
+            }
+            else {
+                byte protoVer = 1; // Version of serialization protocol.
+
+                buf.put(protoVer);
+                buf.putInt(ver.topologyVersion());
+                buf.putInt(ver.nodeOrderAndDrIdRaw());
+                buf.putLong(ver.order());
+            }
         }
     }
 
@@ -114,27 +141,51 @@ public class CacheVersionIO {
             else
                 throw new IllegalStateException("Cache version is null");
         }
-        else if (ver instanceof GridCacheVersionEx) {
-            byte protoVer = -2; // Version of serialization protocol.
+        else if (ver.updateCounter() != 0) {
+            if (ver instanceof GridCacheVersionEx) {
+                byte protoVer = -2; // Version of serialization protocol.
 
-            PageUtils.putByte(addr, 0, protoVer);
-            PageUtils.putInt(addr, 1, ver.topologyVersion());
-            PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
-            PageUtils.putLong(addr, 9, ver.order());
-            PageUtils.putLong(addr, 17, ver.updateCounter());
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+                PageUtils.putLong(addr, 17, ver.updateCounter());
 
-            PageUtils.putInt(addr, 25, ver.conflictVersion().topologyVersion());
-            PageUtils.putInt(addr, 29, ver.conflictVersion().nodeOrderAndDrIdRaw());
-            PageUtils.putLong(addr, 33, ver.conflictVersion().order());
+                PageUtils.putInt(addr, 25, ver.conflictVersion().topologyVersion());
+                PageUtils.putInt(addr, 29, ver.conflictVersion().nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 33, ver.conflictVersion().order());
+            }
+            else {
+                byte protoVer = -1; // Version of serialization protocol.
+
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+                PageUtils.putLong(addr, 17, ver.updateCounter());
+            }
         }
         else {
-            byte protoVer = -1; // Version of serialization protocol.
+            if (ver instanceof GridCacheVersionEx) {
+                byte protoVer = 2; // Version of serialization protocol.
 
-            PageUtils.putByte(addr, 0, protoVer);
-            PageUtils.putInt(addr, 1, ver.topologyVersion());
-            PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
-            PageUtils.putLong(addr, 9, ver.order());
-            PageUtils.putLong(addr, 17, ver.updateCounter());
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+
+                PageUtils.putInt(addr, 17, ver.conflictVersion().topologyVersion());
+                PageUtils.putInt(addr, 21, ver.conflictVersion().nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 25, ver.conflictVersion().order());
+            }
+            else {
+                byte protoVer = 1; // Version of serialization protocol.
+
+                PageUtils.putByte(addr, 0, protoVer);
+                PageUtils.putInt(addr, 1, ver.topologyVersion());
+                PageUtils.putInt(addr, 5, ver.nodeOrderAndDrIdRaw());
+                PageUtils.putLong(addr, 9, ver.order());
+            }
         }
     }
 
