@@ -99,17 +99,26 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
         if (discoEvt.eventNode().isClient() || discoEvt.eventNode().isDaemon())
             return;
 
-        synchronized (this) {
-            lastBaselineData = lastBaselineData.next(discoEvt.topologyVersion());
+        triggerBaselineUpdate(discoEvt.topologyVersion());
+    }
 
-            if (isLocalNodeCoordinator(discoveryMgr)) {
-                exchangeManager.affinityReadyFuture(new AffinityTopologyVersion(discoEvt.topologyVersion()))
+    /**
+     * Schedule update of the baseline topology
+     * @param topologyVersion version of topology
+     */
+    public synchronized void triggerBaselineUpdate(long topologyVersion) {
+        lastBaselineData = lastBaselineData.next(topologyVersion);
+
+        final BaselineAutoAdjustData baselineData = lastBaselineData;
+
+        if (isLocalNodeCoordinator(discoveryMgr)) {
+            exchangeManager.affinityReadyFuture(new AffinityTopologyVersion(topologyVersion))
                     .listen(future -> {
                         if (future.error() != null)
                             return;
 
                         if (exchangeManager.lastFinishedFuture().hasLostPartitions()) {
-                            log.warning("Baseline won't be changed cause the lost partitions were detected");
+                            log.warning("Baseline won't be changed cause lost partitions were detected");
 
                             return;
                         }
@@ -118,10 +127,9 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
 
                         log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
 
-                        baselineAutoAdjustScheduler.schedule(lastBaselineData, timeout);
+                        baselineAutoAdjustScheduler.schedule(baselineData, timeout);
                     });
 
-            }
         }
     }
 

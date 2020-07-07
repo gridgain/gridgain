@@ -501,6 +501,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             changeTopologyWatcher = new ChangeTopologyWatcher(ctx),
             EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_JOINED
         );
+
+        distributedBaselineConfiguration.listenAutoAdjustEnabled((name, oldVal, newVal) -> {
+           if (newVal != null && newVal) {
+               long topVer = ctx.discovery().topologyVersion();
+               changeTopologyWatcher.triggerBaselineUpdate(topVer);
+           }
+        });
     }
 
     /** {@inheritDoc} */
