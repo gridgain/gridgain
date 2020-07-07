@@ -158,7 +158,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(true)
-                        .setInitialSize(10 * 1024L * 1024L)
+                        .setInitialSize(20 * 1024L * 1024L)
                         .setMaxSize(50 * 1024L * 1024L)
                 )
         ).setCacheConfiguration(
