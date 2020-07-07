@@ -142,18 +142,22 @@ public class GridCacheVersionEx extends GridCacheVersion {
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException {
-        super.readExternal(in);
+        readExternalV1(in);
 
         drVer = new GridCacheVersion();
 
         drVer.readExternal(in);
+
+        readExternalV2(in);
     }
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        super.writeExternal(out);
+        writeExternalV1(out);
 
         drVer.writeExternal(out);
+
+        writeExternalV2(out);
     }
 
     /** {@inheritDoc} */

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.version;
 
+import java.io.EOFException;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -210,22 +211,59 @@ public class GridCacheVersion implements Message, Comparable<GridCacheVersion>, 
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(topVer);
-        out.writeLong(order);
-        out.writeInt(nodeOrderDrId);
-
-        // TODO: GG-29644 Fix compatibility
-//        out.writeLong(updateCounter);
+        writeExternalV1(out);
+        writeExternalV2(out);
     }
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException {
+        readExternalV1(in);
+        readExternalV2(in);
+    }
+
+    /**
+     * Protocol version 1.
+     * @param out the stream to write the object to
+     * @exception IOException Includes any I/O exceptions that may occur
+     */
+    protected void writeExternalV1(ObjectOutput out) throws IOException {
+        out.writeInt(topVer);
+        out.writeLong(order);
+        out.writeInt(nodeOrderDrId);
+    }
+
+    /**
+     * Protocol version 1.
+     * @param in the stream to read data from in order to restore the object
+     * @throws IOException if I/O errors occur
+     */
+    protected void readExternalV1(ObjectInput in) throws IOException {
         topVer = in.readInt();
         order = in.readLong();
         nodeOrderDrId = in.readInt();
+    }
 
-        // TODO: GG-29644 Fix compatibility
-//        updateCounter = in.readLong();
+    /**
+     * Protocol version 2.
+     * @param out the stream to write the object to
+     * @exception IOException Includes any I/O exceptions that may occur
+     */
+    protected void writeExternalV2(ObjectOutput out) throws IOException {
+        out.writeLong(updateCounter);
+    }
+
+    /**
+     * Protocol version 2.
+     * @param in the stream to read data from in order to restore the object
+     * @throws IOException if I/O errors occur
+     */
+    protected void readExternalV2(ObjectInput in) throws IOException {
+        try {
+            updateCounter = in.readLong();
+        }
+        catch (EOFException ignore) {
+            // Noop.
+        }
     }
 
     /** {@inheritDoc} */
