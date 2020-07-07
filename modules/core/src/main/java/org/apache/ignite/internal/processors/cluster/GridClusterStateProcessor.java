@@ -2252,6 +2252,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      */
     @Deprecated
     @GridInternal
+    @TransientSerializable(methodName = "transientSerializableFields")
     private static class ClientChangeGlobalStateComputeRequest implements IgniteRunnable {
         /** */
         private static final long serialVersionUID = 0L;
@@ -2305,6 +2306,22 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             catch (IgniteCheckedException ex) {
                 throw new IgniteException(ex);
             }
+        }
+
+        /**
+         * Excludes incompatible fields from serialization/deserialization process.
+         *
+         * @param ver Sender/Receiver node version.
+         * @return Array of excluded from serialization/deserialization fields.
+         */
+        @SuppressWarnings("unused")
+        private static String[] transientSerializableFields(IgniteProductVersion ver) {
+            ArrayList<String> transients = new ArrayList<>(1);
+
+            if (READ_ONLY_FLAG_SINCE.compareToIgnoreTimestamp(ver) > 0)
+                transients.add("readOnly");
+
+            return transients.isEmpty() ? null : transients.toArray(new String[transients.size()]);
         }
     }
 
