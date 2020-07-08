@@ -128,19 +128,29 @@ void CheckDecimalWriteRead(const std::string& val)
  * 3. Read using standard de-serialization algorithm.
  * 4. Check that initial and read value are equal.
  *
- * Repeat with the following values: 0, 1, -1, 42, -42, 160, -160, 34729864879625196, -34729864879625196
+ * Repeat with the following values: 0, 1, -1, 0.1, -0.1, 42, -42, 160, -160, 34729864879625196, -34729864879625196,
+ * 3472986487.9625196, -3472986487.9625196, 3472.9864879625196, -3472.9864879625196, 0.34729864879625196,
+ * -0.34729864879625196
  */
 BOOST_AUTO_TEST_CASE(TestUtilityWriteReadDecimal)
 {
     CheckDecimalWriteRead("0");
     CheckDecimalWriteRead("1");
     CheckDecimalWriteRead("-1");
+    CheckDecimalWriteRead("0.1");
+    CheckDecimalWriteRead("-0.1");
     CheckDecimalWriteRead("42");
     CheckDecimalWriteRead("-42");
     CheckDecimalWriteRead("160");
     CheckDecimalWriteRead("-160");
     CheckDecimalWriteRead("34729864879625196");
     CheckDecimalWriteRead("-34729864879625196");
+    CheckDecimalWriteRead("3472986487.9625196");
+    CheckDecimalWriteRead("-3472986487.9625196");
+    CheckDecimalWriteRead("3472.9864879625196");
+    CheckDecimalWriteRead("-3472.9864879625196");
+    CheckDecimalWriteRead("0.34729864879625196");
+    CheckDecimalWriteRead("-0.34729864879625196");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
