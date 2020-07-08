@@ -210,7 +210,7 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
                     latch.await();
                 }
                 catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    Thread.currentThread().interrupt();
                 }
             }
         });

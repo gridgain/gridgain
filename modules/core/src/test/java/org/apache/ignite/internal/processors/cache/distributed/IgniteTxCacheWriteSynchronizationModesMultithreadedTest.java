@@ -454,8 +454,6 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
         finally {
             stop.set(true);
 
-            ignite.destroyCache(DEFAULT_CACHE_NAME);
-
             if (restartFut != null)
                 restartFut.get();
         }
