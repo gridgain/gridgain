@@ -1134,6 +1134,7 @@ namespace ignite
         using odbc::Environment;
 
         LOG_MSG("SQLSetEnvAttr called");
+        LOG_MSG("Attribute: " << attr << ", Value: " << (size_t)value);
 
         Environment *environment = reinterpret_cast<Environment*>(env);
 
@@ -1164,7 +1165,7 @@ namespace ignite
             return SQL_INVALID_HANDLE;
 
         SqlLen outResLen;
-        ApplicationDataBuffer outBuffer(OdbcNativeType::AI_DEFAULT, valueBuf,
+        ApplicationDataBuffer outBuffer(OdbcNativeType::AI_SIGNED_LONG, valueBuf,
             static_cast<int32_t>(valueBufLen), &outResLen);
 
         environment->GetAttribute(attr, outBuffer);

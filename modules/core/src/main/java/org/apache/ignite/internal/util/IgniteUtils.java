@@ -2297,12 +2297,14 @@ public abstract class IgniteUtils {
 
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
                 @Override public int compare(NetworkInterface itf1, NetworkInterface itf2) {
-                    // Interfaces whose name starts with 'e' should go first.
-                    if (itf1.getName().charAt(0) < 'e')
-                        return 1;
+                    boolean itf1ForceOrdering = itf1.getName().charAt(0) < 'e';
+                    boolean itf2ForceOrdering = itf2.getName().charAt(0) < 'e';
 
-                    if (itf2.getName().charAt(0) < 'e')
-                        return -1;
+                    // Interfaces whose name start with letter before 'e' should go last.
+                    // This helps avoiding interfaces like "docker0" to be recognized as local host.
+                    if (itf1ForceOrdering != itf2ForceOrdering)
+                        return itf1ForceOrdering ? 1 : -1;
+
                     return itf1.getName().compareTo(itf2.getName());
                 }
             });
@@ -9053,7 +9055,7 @@ public abstract class IgniteUtils {
 
         if (cls == null) {
             if (clsFilter != null && !clsFilter.apply(clsName))
-                throw new RuntimeException("Deserialization of class " + clsName + " is disallowed.");
+                throw new ClassNotFoundException("Deserialization of class " + clsName + " is disallowed.");
 
             // Avoid class caching inside Class.forName
             if (ldr instanceof CacheClassLoaderMarker)
