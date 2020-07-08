@@ -63,227 +63,227 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
             Boolean.FALSE);
     }
 
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-int
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.INT,
-            0,
-            1,
-            Integer.MAX_VALUE,
-            Integer.MIN_VALUE);
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-tinyint
-     *
-     * @throws Exception If failed.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23065")
-    @Test
-    public void testTinyIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.TINYINT,
-            (byte)0,
-            (byte)1,
-            Byte.MIN_VALUE,
-            Byte.MAX_VALUE);
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-smallint
-     *
-     * @throws Exception If failed.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23065")
-    @Test
-    public void testSmallIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.SMALLINT,
-            (short)0,
-            (short)1,
-            Short.MIN_VALUE,
-            Short.MAX_VALUE);
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-bigint
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testBigIntDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.BIGINT,
-            0L,
-            1L,
-            Long.MIN_VALUE,
-            Long.MAX_VALUE);
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-decimal
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testDecimalDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.DECIMAL,
-            new BigDecimal(123.123),
-            BigDecimal.ONE,
-            BigDecimal.ZERO,
-            BigDecimal.valueOf(123456789, 0),
-            BigDecimal.valueOf(123456789, 1),
-            BigDecimal.valueOf(123456789, 2),
-            BigDecimal.valueOf(123456789, 3));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-double
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testDoubleDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.DOUBLE,
-            Double.MIN_VALUE,
-            Double.MAX_VALUE,
-            new Quoted(Double.NaN),
-            new Quoted(Double.NEGATIVE_INFINITY),
-            new Quoted(Double.POSITIVE_INFINITY),
-            0D,
-            0.0,
-            1D,
-            1.0,
-            1.1);
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-real
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRealDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.REAL,
-            Float.MIN_VALUE,
-            Float.MAX_VALUE,
-            new Quoted(Float.NaN),
-            new Quoted(Float.NEGATIVE_INFINITY),
-            new Quoted(Float.POSITIVE_INFINITY),
-            0F,
-            0.0F,
-            1F,
-            1.1F);
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-time
-     *
-     * @throws Exception If failed.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23410")
-    @Test
-    public void testTimeDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.TIME,
-            new Timed(new java.sql.Time(0L)),
-            new Timed(new java.sql.Time(123L)));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-date
-     *
-     * @throws Exception If failed.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-17353")
-    @Test
-    public void testDateDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.DATE,
-            new Dated(new java.sql.Date(0L)),
-            new Dated(new java.sql.Date(123L)));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-timestamp
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testTimestampDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.TIMESTAMP,
-            new Dated(new java.sql.Timestamp(0L)),
-            new Dated(new java.sql.Timestamp(123L)));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-varchar
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testVarcharDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.VARCHAR,
-            new Quoted(""),
-            new Quoted("abcABC"),
-            new Quoted("!@#$%^&*()"));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-char
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testCharDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.CHAR,
-            new Quoted("a"),
-            new Quoted("A"),
-            new Quoted("@"));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-uuid
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testUUIDDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.UUID,
-            new Quoted(UUID.randomUUID()),
-            new Quoted(UUID.randomUUID()));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-binary
-     *
-     * @throws Exception If failed.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23401")
-    @SuppressWarnings("ZeroLengthArrayAllocation")
-    @Test
-    public void testBinaryDataType() throws Exception {
-        checkBasicSqlOperations(SqlDataType.BINARY,
-            new ByteArrayed(new byte[] {1, 2, 3}),
-            new ByteArrayed(new byte[] {3, 2, 1}),
-            new ByteArrayed(new byte[] {}));
-    }
-
-    /**
-     * https://apacheignite-sql.readme.io/docs/data-types#section-geometry
-     *
-     * @throws Exception If failed.
-     */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23066")
-    @Test
-    public void testGeometryDataType() throws Exception {
-        GeometryFactory geometryFactory = new GeometryFactory();
-
-        checkBasicSqlOperations(SqlDataType.GEOMETRY,
-            new Quoted(new Point(
-                new CoordinateArraySequence(new Coordinate[] {new Coordinate(1.1, 2.2)}),geometryFactory)),
-            new Quoted(new Point(
-                new CoordinateArraySequence(new Coordinate[] {new Coordinate(3.3, 4.4)}),geometryFactory)));
-    }
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-int
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testIntDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.INT,
+//            0,
+//            1,
+//            Integer.MAX_VALUE,
+//            Integer.MIN_VALUE);
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-tinyint
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23065")
+//    @Test
+//    public void testTinyIntDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.TINYINT,
+//            (byte)0,
+//            (byte)1,
+//            Byte.MIN_VALUE,
+//            Byte.MAX_VALUE);
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-smallint
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23065")
+//    @Test
+//    public void testSmallIntDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.SMALLINT,
+//            (short)0,
+//            (short)1,
+//            Short.MIN_VALUE,
+//            Short.MAX_VALUE);
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-bigint
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testBigIntDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.BIGINT,
+//            0L,
+//            1L,
+//            Long.MIN_VALUE,
+//            Long.MAX_VALUE);
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-decimal
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testDecimalDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.DECIMAL,
+//            new BigDecimal(123.123),
+//            BigDecimal.ONE,
+//            BigDecimal.ZERO,
+//            BigDecimal.valueOf(123456789, 0),
+//            BigDecimal.valueOf(123456789, 1),
+//            BigDecimal.valueOf(123456789, 2),
+//            BigDecimal.valueOf(123456789, 3));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-double
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testDoubleDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.DOUBLE,
+//            Double.MIN_VALUE,
+//            Double.MAX_VALUE,
+//            new Quoted(Double.NaN),
+//            new Quoted(Double.NEGATIVE_INFINITY),
+//            new Quoted(Double.POSITIVE_INFINITY),
+//            0D,
+//            0.0,
+//            1D,
+//            1.0,
+//            1.1);
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-real
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testRealDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.REAL,
+//            Float.MIN_VALUE,
+//            Float.MAX_VALUE,
+//            new Quoted(Float.NaN),
+//            new Quoted(Float.NEGATIVE_INFINITY),
+//            new Quoted(Float.POSITIVE_INFINITY),
+//            0F,
+//            0.0F,
+//            1F,
+//            1.1F);
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-time
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23410")
+//    @Test
+//    public void testTimeDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.TIME,
+//            new Timed(new java.sql.Time(0L)),
+//            new Timed(new java.sql.Time(123L)));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-date
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-17353")
+//    @Test
+//    public void testDateDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.DATE,
+//            new Dated(new java.sql.Date(0L)),
+//            new Dated(new java.sql.Date(123L)));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-timestamp
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testTimestampDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.TIMESTAMP,
+//            new Dated(new java.sql.Timestamp(0L)),
+//            new Dated(new java.sql.Timestamp(123L)));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-varchar
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testVarcharDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.VARCHAR,
+//            new Quoted(""),
+//            new Quoted("abcABC"),
+//            new Quoted("!@#$%^&*()"));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-char
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testCharDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.CHAR,
+//            new Quoted("a"),
+//            new Quoted("A"),
+//            new Quoted("@"));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-uuid
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testUUIDDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.UUID,
+//            new Quoted(UUID.randomUUID()),
+//            new Quoted(UUID.randomUUID()));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-binary
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23401")
+//    @SuppressWarnings("ZeroLengthArrayAllocation")
+//    @Test
+//    public void testBinaryDataType() throws Exception {
+//        checkBasicSqlOperations(SqlDataType.BINARY,
+//            new ByteArrayed(new byte[] {1, 2, 3}),
+//            new ByteArrayed(new byte[] {3, 2, 1}),
+//            new ByteArrayed(new byte[] {}));
+//    }
+//
+//    /**
+//     * https://apacheignite-sql.readme.io/docs/data-types#section-geometry
+//     *
+//     * @throws Exception If failed.
+//     */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23066")
+//    @Test
+//    public void testGeometryDataType() throws Exception {
+//        GeometryFactory geometryFactory = new GeometryFactory();
+//
+//        checkBasicSqlOperations(SqlDataType.GEOMETRY,
+//            new Quoted(new Point(
+//                new CoordinateArraySequence(new Coordinate[] {new Coordinate(1.1, 2.2)}),geometryFactory)),
+//            new Quoted(new Point(
+//                new CoordinateArraySequence(new Coordinate[] {new Coordinate(3.3, 4.4)}),geometryFactory)));
+//    }
 
     /**
      * Create table based on test-parameters-dependent template with both id (PK) and val of {@code dataType}.
