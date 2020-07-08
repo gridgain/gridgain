@@ -326,14 +326,14 @@ public class H2TableDescriptor {
             if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                for (String propName : type.fields().keySet()) {
-                    GridQueryProperty prop = type.property(propName);
+                for (String keyName : type.primaryKeyFields()) {
+                    GridQueryProperty prop = type.property(keyName);
 
-                    if (prop.key()) {
-                        Column col = tbl.getColumn(propName);
+                    assert prop.key() : keyName + " is not a key field";
 
-                        keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
-                    }
+                    Column col = tbl.getColumn(prop.name());
+
+                    keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
                 }
 
                 // If key is object but the user has not specified any particular columns,
