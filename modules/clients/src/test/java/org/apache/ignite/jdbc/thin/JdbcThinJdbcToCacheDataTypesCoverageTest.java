@@ -87,42 +87,42 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
         }
     }
 
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testTimeDataType() throws Exception {
-        super.testTimeDataType();
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testSmallIntDataType() throws Exception {
-        super.testSmallIntDataType();
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testBinaryDataType() throws Exception {
-        super.testBinaryDataType();
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testGeometryDataType() throws Exception {
-        super.testGeometryDataType();
-    }
-
-    /** {@inheritDoc} */
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23665")
-    @Test
-    @Override public void testDateDataType() throws Exception {
-        super.testDateDataType();
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testTinyIntDataType() throws Exception {
-        super.testTinyIntDataType();
-    }
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testTimeDataType() throws Exception {
+//        super.testTimeDataType();
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testSmallIntDataType() throws Exception {
+//        super.testSmallIntDataType();
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testBinaryDataType() throws Exception {
+//        super.testBinaryDataType();
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testGeometryDataType() throws Exception {
+//        super.testGeometryDataType();
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Ignore("https://ggsystems.atlassian.net/browse/GG-23665")
+//    @Test
+//    @Override public void testDateDataType() throws Exception {
+//        super.testDateDataType();
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testTinyIntDataType() throws Exception {
+//        super.testTinyIntDataType();
+//    }
 
     /**
      * Create cache/table based on test-parameters-dependent template.
