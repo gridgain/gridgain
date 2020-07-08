@@ -155,73 +155,73 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
 
         Object[] paramLine = null;
 
-        for (CacheAtomicityMode atomicityMode : CacheAtomicityMode.values()) {
-            paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+//        for (CacheAtomicityMode atomicityMode : CacheAtomicityMode.ATOMIC) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[1] = atomicityMode;
+        paramLine[1] = CacheAtomicityMode.ATOMIC;
 
-            params.add(paramLine);
-        }
+        params.add(paramLine);
+//        }
 
-        for (CacheMode cacheMode : CacheMode.values()) {
-            paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+//        for (CacheMode cacheMode : CacheMode.values()) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[2] = cacheMode;
+        paramLine[2] = CacheMode.PARTITIONED;
 
-            params.add(paramLine);
-        }
+        params.add(paramLine);
+//        }
 
         assert paramLine != null;
 
         if ((paramLine[1]) != CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT) {
-            for (Factory ttlFactory : TTL_FACTORIES) {
-                paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
-
-                paramLine[3] = ttlFactory;
-
-                params.add(paramLine);
-            }
-        }
-
-        for (int backups : new int[] {0, 1, 2}) {
+//            for (Factory ttlFactory : TTL_FACTORIES) {
             paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[4] = backups;
+            paramLine[3] = null;
 
             params.add(paramLine);
+//            }
         }
 
-        for (Factory evictionFactory : EVICTION_FACTORIES) {
-            paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+//        for (int backups : new int[] {0, 1, 2}) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[5] = evictionFactory;
+        paramLine[4] = 2;
 
-            params.add(paramLine);
-        }
+        params.add(paramLine);
+//        }
 
-        for (Boolean onheapCacheEnabled : BOOLEANS) {
-            paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+//        for (Factory evictionFactory : EVICTION_FACTORIES) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[6] = onheapCacheEnabled;
+        paramLine[5] = EVICTION_FACTORIES[1];
 
-            params.add(paramLine);
-        }
+        params.add(paramLine);
+//        }
 
-        for (CacheWriteSynchronizationMode writeSyncMode : CacheWriteSynchronizationMode.values()) {
-            paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+//        for (Boolean onheapCacheEnabled : BOOLEANS) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[7] = writeSyncMode;
+        paramLine[6] = false;
 
-            params.add(paramLine);
-        }
+        params.add(paramLine);
+//        }
 
-        for (boolean persistenceEnabled : BOOLEANS) {
-            paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+//        for (CacheWriteSynchronizationMode writeSyncMode : CacheWriteSynchronizationMode.values()) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
 
-            paramLine[8] = persistenceEnabled;
+        paramLine[7] = CacheWriteSynchronizationMode.FULL_SYNC;
 
-            params.add(paramLine);
-        }
+        params.add(paramLine);
+//        }
+
+//        for (boolean persistenceEnabled : BOOLEANS) {
+        paramLine = Arrays.copyOf(baseParamLine, baseParamLine.length);
+
+        paramLine[8] = false;
+
+        params.add(paramLine);
+//        }
 
         for (Object[] pLine : params)
             pLine[0] = UUID.randomUUID();
