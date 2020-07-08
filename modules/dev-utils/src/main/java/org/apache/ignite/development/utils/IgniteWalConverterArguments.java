@@ -471,22 +471,20 @@ public class IgniteWalConverterArguments {
      * is not {@code null} and is equal, ignoring case, to the string
      * {@code "false"}, else throw IllegalArgumentException<p>
      *
-     * @param name
-     * @param      value   the {@code String} containing the boolean
-     *                 representation to be parsed
-     * @return     the boolean represented by the string argument
+     * @param name parameter name of boolean type.
+     * @param value the {@code String} containing the boolean representation to be parsed.
+     * @return the boolean represented by the string argument
      *
      */
     private static boolean parseBoolean(String name, String value) {
-        boolean result;
+        if (value == null)
+            throw new IllegalArgumentException("Null value passed for flag " + name);
 
-        if ((value != null) && value.equalsIgnoreCase("true"))
-            result = true;
-        else if ((value != null) && value.equalsIgnoreCase("false"))
-            result = false;
+        if (value.equalsIgnoreCase(Boolean.TRUE.toString()))
+            return true;
+        else if (value.equalsIgnoreCase(Boolean.FALSE.toString()))
+            return false;
         else
             throw new IllegalArgumentException("Incorrect flag " + name + ", valid value: true or false. Error parse: " + value);
-
-        return result;
     }
 }

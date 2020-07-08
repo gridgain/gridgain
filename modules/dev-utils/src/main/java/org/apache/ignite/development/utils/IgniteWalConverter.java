@@ -49,7 +49,7 @@ public class IgniteWalConverter {
      * @param args Args.
      * @throws Exception If failed.
      */
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
 
         if (parameters != null)
@@ -60,36 +60,38 @@ public class IgniteWalConverter {
      * Write to out WAL log data in human-readable form.
      *
      * @param out        Receiver of result.
-     * @param parameters Parameters.
+     * @param params Parameters.
      */
-    public static void convert(final PrintStream out, final IgniteWalConverterArguments parameters) {
+    public static void convert(final PrintStream out, final IgniteWalConverterArguments params) {
         PageIO.registerH2(H2InnerIO.VERSIONS, H2LeafIO.VERSIONS, H2MvccInnerIO.VERSIONS, H2MvccLeafIO.VERSIONS);
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
 
         System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE,
-            Boolean.toString(parameters.getProcessSensitiveData() == ProcessSensitiveData.HIDE));
+            Boolean.toString(params.getProcessSensitiveData() == ProcessSensitiveData.HIDE));
 
-        System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(parameters.isSkipCrc()));
-        RecordV1Serializer.skipCrc = parameters.isSkipCrc();
+        System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(params.isSkipCrc()));
+        RecordV1Serializer.skipCrc = params.isSkipCrc();
 
         System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_MAX_LENGTH, String.valueOf(Integer.MAX_VALUE));
 
-        final WalStat stat = parameters.isPrintStat() ? new WalStat() : null;
+        final WalStat stat = params.isPrintStat() ? new WalStat() : null;
 
-        IgniteWalIteratorFactory.IteratorParametersBuilder iteratorParametersBuilder = new IgniteWalIteratorFactory.IteratorParametersBuilder().
-            pageSize(parameters.getPageSize()).
-            binaryMetadataFileStoreDir(parameters.getBinaryMetadataFileStoreDir()).
-            marshallerMappingFileStoreDir(parameters.getMarshallerMappingFileStoreDir()).
-            keepBinary(parameters.isKeepBinary());
+        IgniteWalIteratorFactory.IteratorParametersBuilder iteratorParametersBuilder = new IgniteWalIteratorFactory.IteratorParametersBuilder()
+            .pageSize(params.getPageSize())
+            .binaryMetadataFileStoreDir(params.getBinaryMetadataFileStoreDir())
+            .marshallerMappingFileStoreDir(params.getMarshallerMappingFileStoreDir())
+            .keepBinary(params.isKeepBinary());
 
-        if (parameters.getWalDir() != null)
-            iteratorParametersBuilder.filesOrDirs(parameters.getWalDir());
+        if (params.getWalDir() != null)
+            iteratorParametersBuilder.filesOrDirs(params.getWalDir());
 
-        if (parameters.getWalArchiveDir() != null)
-            iteratorParametersBuilder.filesOrDirs(parameters.getWalArchiveDir());
+        if (params.getWalArchiveDir() != null)
+            iteratorParametersBuilder.filesOrDirs(params.getWalArchiveDir());
 
         final IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory();
+
+        boolean printAlways = F.isEmpty(params.getRecordTypes());
 
         try (WALIterator stIt = factory.iterator(iteratorParametersBuilder)) {
             String currentWalPath = null;
@@ -112,21 +114,15 @@ public class IgniteWalConverter {
                 if (stat != null)
                     stat.registerRecord(record, pointer, true);
 
-                if (F.isEmpty(parameters.getRecordTypes()) || parameters.getRecordTypes().contains(record.type())) {
-
+                if (printAlways || params.getRecordTypes().contains(record.type())) {
                     boolean print = true;
-                    if ((parameters.getFromTime() != null || parameters.getToTime() != null) && record instanceof TimeStampRecord) {
-                        TimeStampRecord dataRecord = (TimeStampRecord)record;
-                        if (parameters.getFromTime() != null && dataRecord.timestamp() < parameters.getFromTime())
-                            print = false;
 
-                        if (print && parameters.getToTime() != null && dataRecord.timestamp() > parameters.getToTime())
-                            print = false;
-                    }
+                    if (record instanceof TimeStampRecord)
+                        print = withinTimeRange((TimeStampRecord) record, params.getFromTime(), params.getToTime());
 
-                    final String recordStr = toString(record, parameters.getProcessSensitiveData());
+                    final String recordStr = toString(record, params.getProcessSensitiveData());
 
-                    if (print && (F.isEmpty(parameters.getRecordContainsText()) || recordStr.contains(parameters.getRecordContainsText())))
+                    if (print && (F.isEmpty(params.getRecordContainsText()) || recordStr.contains(params.getRecordContainsText())))
                         out.println(recordStr);
                 }
             }
@@ -140,6 +136,24 @@ public class IgniteWalConverter {
     }
 
     /**
+     * Checks if provided TimeStampRecord is within time range.
+     *
+     * @param rec Record.
+     * @param fromTime Lower bound for timestamp.
+     * @param toTime Upper bound for timestamp;
+     * @return {@code True} if timestamp is within range.
+     */
+    private static boolean withinTimeRange(TimeStampRecord rec, Long fromTime, Long toTime) {
+        if (fromTime != null && rec.timestamp() < fromTime)
+            return false;
+
+        if (toTime != null && rec.timestamp() > toTime)
+            return false;
+
+        return true;
+    }
+
+    /**
      * Get current wal file path, used in {@code WALIterator}
      *
      * @param it WALIterator.
@@ -147,6 +161,7 @@ public class IgniteWalConverter {
      */
     private static String getCurrentWalFilePath(WALIterator it) {
         String result = null;
+
         try {
             final Integer curIdx = IgniteUtils.field(it, "curIdx");
 
@@ -158,6 +173,7 @@ public class IgniteWalConverter {
         catch (Exception e) {
             e.printStackTrace();
         }
+
         return result;
     }
 
