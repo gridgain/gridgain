@@ -1506,8 +1506,6 @@ public class GridDhtPartitionDemander {
          * @param topVer Rebalancing topology version.
          */
         public void ownPartitionsAndFinishFuture(AffinityTopologyVersion topVer) {
-            assert state == RebalanceFutureState.STARTED : this;
-
             // Ignore all client exchanges.
             // Note rebalancing may be started on client topology version if forced reassign was queued after client
             // topology exchange.
@@ -1523,6 +1521,8 @@ public class GridDhtPartitionDemander {
 
                 return;
             }
+
+            assert state == RebalanceFutureState.STARTED : this;
 
             if (onDone(true, null)) {
                 grp.localWalEnabled(true, true);
