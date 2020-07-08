@@ -2907,8 +2907,11 @@ public class IgnitionEx {
          * @return True if rebalance completed, false otherwise.
          */
         private boolean isRebalanceCompleted(CacheGroupContext grpCtx) {
-            if (!grpCtx.preloader().rebalanceFuture().isDone())
+            if (!grpCtx.preloader().rebalanceFuture().isDone()) {
+                log.info("Incomplete fut: " + grpCtx.preloader().rebalanceFuture());
+
                 return false;
+            }
 
             grpCtx.preloader().pause();
 
