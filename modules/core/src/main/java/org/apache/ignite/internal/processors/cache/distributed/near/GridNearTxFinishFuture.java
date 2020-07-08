@@ -60,6 +60,8 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.transactions.TransactionRollbackException;
 
+import static java.util.stream.Stream.concat;
+import static java.util.stream.Stream.of;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.tracing.MTC.support;
@@ -988,30 +990,12 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
         /** {@inheritDoc} */
         @Override boolean onNodeLeft(UUID nodeId, boolean discoThread) {
             if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
-
-                Collection<UUID> backups = txNodes.get(nodeId);
-
-                boolean hasBackups = false;
-
-                if (backups != null)
-                    hasBackups = backups.stream().anyMatch(backupId -> cctx.discovery().node(backupId) != null);
-
-                if (cctx.discovery().node(m.primary().id()) == null && !hasBackups) {
-                    String strTxEntry = "";
-
-                    Iterator<IgniteTxEntry> entryIter = m.entries().iterator();
-
-                    if (entryIter.hasNext()) {
-                        IgniteTxEntry firstTxEntry = entryIter.next();
-
-                        strTxEntry = " [cacheName=" + firstTxEntry.cached().context().name() +
-                            ", partition=" + firstTxEntry.key().partition() +
-                            (S.includeSensitive() ? ", key=" + firstTxEntry.key() : "") +
-                            "]";
-                    }
-
-                    onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG + strTxEntry));
+                if (concat(of(m.primary().id()), m.backups().stream()).noneMatch(uuid -> cctx.discovery().alive(uuid))) {
+                    onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG +
+                        m.entries().stream().map(e -> " [cacheName=" + e.cached().context().name() +
+                            ", partition=" + e.key().partition() +
+                            (S.includeSensitive() ? ", key=" + e.key() : "") +
+                            "]").findFirst().orElse("")));
 
                     return true;
                 }
