@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -988,7 +989,8 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
         /** {@inheritDoc} */
         @Override boolean onNodeLeft(UUID nodeId, boolean discoThread) {
             if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                if (concat(of(m.primary().id()), tx.transactionNodes().get(nodeId).stream()).noneMatch(uuid -> cctx.discovery().alive(uuid))) {
+                if (concat(of(m.primary().id()), Optional.of(tx.transactionNodes().get(nodeId)).orElse(Collections.emptySet()).stream())
+                    .noneMatch(uuid -> cctx.discovery().alive(uuid))) {
                     onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG +
                         m.entries().stream().map(e -> " [cacheName=" + e.cached().context().name() +
                             ", partition=" + e.key().partition() +
