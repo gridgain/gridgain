@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -43,7 +42,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFini
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccFuture;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -60,14 +58,16 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.transactions.TransactionRollbackException;
 
+import static java.util.stream.Stream.concat;
+import static java.util.stream.Stream.of;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.MTC.support;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_FINISH;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
 import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
-import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
-import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_FINISH;
 
 /**
  *
@@ -988,30 +988,12 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
         /** {@inheritDoc} */
         @Override boolean onNodeLeft(UUID nodeId, boolean discoThread) {
             if (tx.state() == COMMITTING || tx.state() == COMMITTED) {
-                Map<UUID, Collection<UUID>> txNodes = tx.transactionNodes();
-
-                Collection<UUID> backups = txNodes.get(nodeId);
-
-                boolean hasBackups = false;
-
-                if (backups != null)
-                    hasBackups = backups.stream().anyMatch(backupId -> cctx.discovery().node(backupId) != null);
-
-                if (cctx.discovery().node(m.primary().id()) == null && !hasBackups) {
-                    String strTxEntry = "";
-
-                    Iterator<IgniteTxEntry> entryIter = m.entries().iterator();
-
-                    if (entryIter.hasNext()) {
-                        IgniteTxEntry firstTxEntry = entryIter.next();
-
-                        strTxEntry = " [cacheName=" + firstTxEntry.cached().context().name() +
-                            ", partition=" + firstTxEntry.key().partition() +
-                            (S.includeSensitive() ? ", key=" + firstTxEntry.key() : "") +
-                            "]";
-                    }
-
-                    onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG + strTxEntry));
+                if (concat(of(m.primary().id()), tx.transactionNodes().get(nodeId).stream()).noneMatch(uuid -> cctx.discovery().alive(uuid))) {
+                    onDone(new CacheInvalidStateException(ALL_PARTITION_OWNERS_LEFT_GRID_MSG +
+                        m.entries().stream().map(e -> " [cacheName=" + e.cached().context().name() +
+                            ", partition=" + e.key().partition() +
+                            (S.includeSensitive() ? ", key=" + e.key() : "") +
+                            "]").findFirst().orElse("")));
 
                     return true;
                 }
