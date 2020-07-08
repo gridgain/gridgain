@@ -291,8 +291,8 @@ public class GridDhtPartitionDemander {
         @Nullable final GridCompoundFuture<Boolean, Boolean> forcedRebFut,
         GridCompoundFuture<Boolean, Boolean> compatibleRebFut
     ) {
-        if (log.isDebugEnabled())
-            log.debug("Adding partition assignments: " + assignments);
+        if (log.isInfoEnabled())
+            log.info("Adding partition assignments for " + grp.cacheOrGroupName() + ": " + assignments);
 
         assert force == (forcedRebFut != null);
 
@@ -302,15 +302,15 @@ public class GridDhtPartitionDemander {
             final RebalanceFuture oldFut = rebalanceFut;
 
             if (assignments.cancelled()) { // Pending exchange.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to cancelled assignments.");
+                if (log.isInfoEnabled())
+                    log.info("Rebalancing skipped due to cancelled assignments.");
 
                 return null;
             }
 
             if (assignments.isEmpty()) { // Nothing to rebalance.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to empty assignments.");
+                if (log.isInfoEnabled())
+                    log.info("Rebalancing skipped due to empty assignments.");
 
                 if (oldFut.isInitial())
                     oldFut.onDone(true);
@@ -338,8 +338,12 @@ public class GridDhtPartitionDemander {
             assignments.retainMoving(grp.topology());
 
             // Skip rebalanced group.
-            if (assignments.isEmpty())
+            if (assignments.isEmpty()) {
+                if (log.isInfoEnabled())
+                    log.info("Rebalancing skipped due to empty assignments after retain.");
+
                 return null;
+            }
 
             final RebalanceFuture fut = new RebalanceFuture(grp, lastExchangeFut, assignments, log, rebalanceId, next, oldFut);
 
