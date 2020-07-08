@@ -57,6 +57,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLSocket;
@@ -5475,7 +5476,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 try {
                     if (spi.ipFinder.isShared() && locNodeCoord && node.clientRouterNodeId() == null)
-                        spi.ipFinder.registerAddresses(node.socketAddresses());
+                        spi.ipFinder.registerAddresses(node.socketAddresses().stream().filter(a -> !a.isUnresolved()).collect(Collectors.toList()));
                 }
                 catch (IgniteSpiException e) {
                     if (log.isDebugEnabled())
