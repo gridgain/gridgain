@@ -88,7 +88,7 @@ keytool -deststorepass ${PASS} -noprompt  -import -file ca_generator.pem -alias 
 
 # Generate Server certs
 keytool -genkey -keyalg RSA -keysize 2048 -alias server -deststorepass ${PASS} -keystore server.jks -noprompt \
- -dname "CN=mqttserver.ibm.com, OU=ID, O=IBM, L=Hursley, S=Hants, C=GB" \
+ -dname "CN=mqttserver.gridgain.com, OU=ID, O=GridGain, C=US" \
  -storepass ${PASS} \
  -keypass ${PASS}
 
@@ -107,7 +107,7 @@ openssl pkcs12 -in server.p12 -passin pass:${PASS} -nodes -nocerts -out server.k
 # Generate Client certs
 # -dname should be different from server
 keytool -genkey -keyalg RSA -keysize 2048 -alias client -deststorepass ${PASS} -keystore client.jks -noprompt \
- -dname "CN=clein.ibm.com, OU=Qs, O=Ewq, L=WEWe, S=Asda, C=GB" \
+ -dname "CN=clein.gridgain.com, OU=Qs, O=GridGain, C=US" \
  -storepass ${PASS} \
  -keypass ${PASS}
 
