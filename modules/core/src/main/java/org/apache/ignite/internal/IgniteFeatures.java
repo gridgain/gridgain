@@ -159,8 +159,8 @@ public enum IgniteFeatures {
     /** Support policy of shutdown. */
     SHUTDOWN_POLICY(40),
 
-    /** Snapshots upload via sttp. */
-    SNAPSHOT_SFTP_UPLOAD(42);
+    /** Snapshots upload via sftp. */
+    SNAPSHOT_SFTP_UPLOAD(43);
 
     /**
      * Unique feature identifier.
