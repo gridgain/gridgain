@@ -290,9 +290,9 @@ public final class DmlAstUtils {
         if (!(column.column().getTable() instanceof GridH2Table))
             return false;
 
-        GridH2RowDescriptor desc =((GridH2Table) column.column().getTable()).rowDescriptor();
+        GridH2RowDescriptor desc = ((GridH2Table) column.column().getTable()).rowDescriptor();
 
-        return  (key ? desc.isKeyColumn(column.column().getColumnId()) :
+        return (key ? desc.isKeyColumn(column.column().getColumnId()) :
                        desc.isValueColumn(column.column().getColumnId())) &&
                 (right instanceof GridSqlConst || right instanceof GridSqlParameter);
     }
@@ -312,7 +312,6 @@ public final class DmlAstUtils {
     private static boolean isValueEqualityCondition(GridSqlOperation op) {
         return isEqualityCondition(op, false);
     }
-
 
     /**
      * Generate SQL SELECT based on UPDATE's WHERE, LIMIT, etc.
@@ -371,7 +370,7 @@ public final class DmlAstUtils {
         //    UPDATE test SET val1 = val1 + 1 WHERE val0 >= ?
         mapQry.canBeLazy(!isIndexWithUpdateColumnsMayBeUsed(
             gridTbl,
-            update.cols().stream().map(sqlCol-> sqlCol.column()).collect(Collectors.toSet()),
+            update.cols().stream().map(sqlCol -> sqlCol.column()).collect(Collectors.toSet()),
             extractColumns(gridTbl, where)));
 
         mapQry.where(where);

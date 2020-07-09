@@ -24,7 +24,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
-
 /**
  * Tests for checking partition reconciliation control.sh command within context of transactional cache.
  */

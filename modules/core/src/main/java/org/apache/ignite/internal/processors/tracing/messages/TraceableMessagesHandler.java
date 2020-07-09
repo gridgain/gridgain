@@ -20,14 +20,13 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.SpanManager;
 
-import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
-
 /**
  * Helper to handle traceable messages.
  */
 public class TraceableMessagesHandler {
     /** Span manager. */
     private final SpanManager spanMgr;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -46,7 +45,6 @@ public class TraceableMessagesHandler {
      * from contained serialized span {@link SpanContainer#serializedSpanBytes()}
      *
      * @param msg Traceable message.
-     * @see org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable
      */
     public void afterReceive(TraceableMessage msg) {
         if (log.isDebugEnabled())
@@ -54,8 +52,8 @@ public class TraceableMessagesHandler {
 
         if (msg.spanContainer().span() == NoopSpan.INSTANCE && msg.spanContainer().serializedSpanBytes() != null)
             msg.spanContainer().span(
-                spanMgr.create(traceName(msg.getClass()), msg.spanContainer().serializedSpanBytes())
-                    .addLog("Received")
+                spanMgr.create(TraceableMessagesTable.traceName(msg.getClass()), msg.spanContainer().serializedSpanBytes())
+                    .addLog(() -> "Received")
             );
     }
 
@@ -86,8 +84,8 @@ public class TraceableMessagesHandler {
         );
 
         msg.spanContainer().span(
-            spanMgr.create(traceName(msg.getClass()), parent.spanContainer().span())
-                .addLog("Created")
+            spanMgr.create(TraceableMessagesTable.traceName(msg.getClass()), parent.spanContainer().span())
+                .addLog(() -> "Created")
         );
 
         return msg;
@@ -102,7 +100,7 @@ public class TraceableMessagesHandler {
 
         if (!msg.spanContainer().span().isEnded())
             msg.spanContainer().span()
-                .addLog("Processed")
+                .addLog(() -> "Processed")
                 .end();
     }
 }

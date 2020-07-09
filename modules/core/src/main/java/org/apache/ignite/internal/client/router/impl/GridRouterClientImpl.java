@@ -220,7 +220,7 @@ public class GridRouterClientImpl implements GridClient {
     }
 
     /** {@inheritDoc} */
-    @Override public void throwLastError() throws GridClientException {
-        clientImpl.throwLastError();
+    @Override public GridClientException checkLastError() {
+        return clientImpl.checkLastError();
     }
 }

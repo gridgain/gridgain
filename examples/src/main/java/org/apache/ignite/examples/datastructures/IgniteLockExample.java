@@ -102,7 +102,7 @@ public class IgniteLockExample {
 
                 int count = cache.get(SYNC_NAME);
 
-                while(count > 0) {
+                while (count > 0) {
                     notDone.await();
 
                     count = cache.get(SYNC_NAME);
@@ -168,7 +168,7 @@ public class IgniteLockExample {
 
                     int val = cache.get(QUEUE_ID);
 
-                    while(val >= 100){
+                    while (val >= 100) {
                         System.out.println("Queue is full. Producer [nodeId=" + Ignition.ignite().cluster().localNode().id() +
                             " paused.");
 

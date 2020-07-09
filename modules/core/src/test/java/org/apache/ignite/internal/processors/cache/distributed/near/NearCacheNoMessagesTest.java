@@ -134,7 +134,7 @@ public class NearCacheNoMessagesTest extends GridCommonAbstractTest {
 
         String oldValue = System.getProperty(IGNITE_READ_LOAD_BALANCING);
 
-        System.setProperty(IGNITE_READ_LOAD_BALANCING, readLoadBalancing? "true" : "false");
+        System.setProperty(IGNITE_READ_LOAD_BALANCING, readLoadBalancing ? "true" : "false");
 
         ignite(0).createCache(
             new CacheConfiguration<>("testCache")

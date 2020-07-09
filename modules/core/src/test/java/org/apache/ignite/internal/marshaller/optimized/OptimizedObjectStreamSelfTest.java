@@ -2367,12 +2367,12 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
     /** */
     static class BadDeserializableValue implements Serializable {
         /** */
-        private void writeObject(ObjectOutputStream os) throws IOException{
+        private void writeObject(ObjectOutputStream os) throws IOException {
             os.write(10);
         }
 
         /** */
-        private void readObject(ObjectInputStream os){
+        private void readObject(ObjectInputStream os) {
             throw new RuntimeException("bad object");
         }
     }
@@ -2386,12 +2386,12 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
     /** */
     static class BadSerializableValue implements Serializable {
         /** */
-        private void writeObject(ObjectOutputStream os){
+        private void writeObject(ObjectOutputStream os) {
             throw new RuntimeException("bad object");
         }
 
         /** */
-        private void readObject(ObjectInputStream os){
+        private void readObject(ObjectInputStream os) {
             throw new RuntimeException("bad object");
         }
     }

@@ -91,7 +91,7 @@ public class TcpDiscoveryWithWrongServerTest extends GridCommonAbstractTest {
         new GridTestThread(new Runnable() {
             @Override public void run() {
                 try {
-                    while(!Thread.currentThread().isInterrupted()) {
+                    while (!Thread.currentThread().isInterrupted()) {
                         Socket clientSock = srvSock.accept();
 
                         connCnt.getAndIncrement();

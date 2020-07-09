@@ -227,8 +227,8 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         GridTestUtils.assertThrows(log,
             () ->
-                cache.query(new SqlFieldsQuery(sql).setSchema(SCHEMA_NAME)).getAll()
-            , CacheException.class,
+                cache.query(new SqlFieldsQuery(sql).setSchema(SCHEMA_NAME)).getAll(),
+            CacheException.class,
             "Exception calling user-defined function");
 
         String sqlHist = "SELECT " + Arrays.stream(QueriesHistoryViewField.values())

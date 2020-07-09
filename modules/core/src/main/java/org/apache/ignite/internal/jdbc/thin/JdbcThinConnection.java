@@ -249,10 +249,10 @@ public class JdbcThinConnection implements Connection {
     private final IgniteProductVersion baseEndpointVer;
 
     /** Binary context. */
-    private final BinaryContext ctx;
+    private volatile BinaryContext ctx;
 
     /** Binary metadata handler. */
-    private final JdbcBinaryMetadataHandler metaHnd;
+    private volatile JdbcBinaryMetadataHandler metaHnd;
 
     /** Marshaller context. */
     private final JdbcMarshallerContext marshCtx;
@@ -1332,6 +1332,10 @@ public class JdbcThinConnection implements Connection {
 
             stmts.clear();
         }
+
+        // Clear local metadata cache on disconnect.
+        metaHnd = new JdbcBinaryMetadataHandler();
+        ctx = createBinaryCtx(metaHnd, marshCtx);
     }
 
     /**
@@ -2101,8 +2105,7 @@ public class JdbcThinConnection implements Connection {
                 }
             }
             catch (Exception e) {
-                LOG.log(Level.WARNING, "Connection handler processing failure. Reconnection processes was stopped."
-                    , e);
+                LOG.log(Level.WARNING, "Connection handler processing failure. Reconnection processes was stopped.", e);
 
                 connectionsHndScheduledFut.cancel(false);
             }

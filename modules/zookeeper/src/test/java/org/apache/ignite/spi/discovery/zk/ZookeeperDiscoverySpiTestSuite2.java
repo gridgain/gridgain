@@ -39,7 +39,7 @@ import org.junit.runners.Suite;
     GridCommandHandlerTest.class,
     GridCommandHandlerClusterByClassTest.class
 })
-public class ZookeeperDiscoverySpiTestSuite2  {
+public class ZookeeperDiscoverySpiTestSuite2 {
     /**
      * @throws Exception Thrown in case of the failure.
      */

@@ -116,7 +116,7 @@ public class IgniteWithoutArchiverWalIteratorInvalidCrcTest extends GridCommonAb
 
         List<FileWALPointer> pointers = WalTestUtils.getPointers(lastWalFile, iterFactory, LOGICAL);
 
-        WalTestUtils.corruptWalRecord(lastWalFile, pointers.get(pointers.size()-1));
+        WalTestUtils.corruptWalRecord(lastWalFile, pointers.get(pointers.size() - 1));
 
         IgniteEx ex = startGrid(0);
 

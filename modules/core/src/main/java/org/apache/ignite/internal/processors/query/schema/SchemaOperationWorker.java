@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -36,6 +37,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Schema operation executor.
  */
 public class SchemaOperationWorker extends GridWorker {
+    /** Kernal context. */
+    protected final GridKernalContext ctx;
+
     /** Query processor */
     private final GridQueryProcessor qryProc;
 
@@ -83,6 +87,7 @@ public class SchemaOperationWorker extends GridWorker {
         @Nullable QueryTypeDescriptorImpl type) {
         super(ctx.igniteInstanceName(), workerName(op), ctx.log(SchemaOperationWorker.class));
 
+        this.ctx = ctx;
         this.qryProc = qryProc;
         this.depId = depId;
         this.op = op;
@@ -177,8 +182,17 @@ public class SchemaOperationWorker extends GridWorker {
      * Cancel operation.
      */
     @Override public void cancel() {
-        if (cancelToken.cancel())
+        if (cancelToken.cancel()) {
+            try {
+                fut.get(ctx.workersRegistry().getSystemWorkerBlockedTimeout());
+            }
+            catch (IgniteCheckedException e) {
+                if (log.isDebugEnabled())
+                    log.error("Error completing operation", e);
+            }
+
             super.cancel();
+        }
     }
 
     /**

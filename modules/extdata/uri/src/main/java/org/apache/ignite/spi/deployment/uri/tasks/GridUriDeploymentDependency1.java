@@ -48,7 +48,7 @@ public class GridUriDeploymentDependency1 {
         catch (IOException e) {
             e.printStackTrace();
         }
-        finally{
+        finally {
             U.close(in, null);
         }
 

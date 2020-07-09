@@ -312,7 +312,7 @@ public class CommandHandler {
 
                     String pwd = new String(requestPasswordFromConsole("password: "));
 
-                    clientCfg = getClientConfiguration(user, pwd,  args);
+                    clientCfg = getClientConfiguration(user, pwd, args);
 
                     credentialsRequested = true;
                 }
@@ -635,7 +635,6 @@ public class CommandHandler {
         return in.nextLine();
     }
 
-
     /**
      * Requests interactive user confirmation if forthcoming operation is dangerous.
      *
@@ -740,6 +739,7 @@ public class CommandHandler {
 
         printCommandsUsage();
 
+        logger.info("");
         logger.info("By default commands affecting the cluster require interactive confirmation.");
         logger.info("Use " + CMD_AUTO_CONFIRMATION + " option to disable it.");
         logger.info("");

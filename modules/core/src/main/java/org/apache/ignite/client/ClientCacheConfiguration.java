@@ -452,7 +452,6 @@ public final class ClientCacheConfiguration implements Serializable {
         return this;
     }
 
-
     /**
      * @return Copy on read.
      */
@@ -629,7 +628,6 @@ public final class ClientCacheConfiguration implements Serializable {
         return this;
     }
 
-
     /**
      * @return Cache key configuration.
      */
@@ -681,8 +679,7 @@ public final class ClientCacheConfiguration implements Serializable {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public String toString() {
+    @Override public String toString() {
         return S.toString(ClientCacheConfiguration.class, this);
     }
 }

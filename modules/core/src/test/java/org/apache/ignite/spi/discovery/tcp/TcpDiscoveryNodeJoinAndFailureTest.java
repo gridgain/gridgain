@@ -185,7 +185,6 @@ public class TcpDiscoveryNodeJoinAndFailureTest extends GridCommonAbstractTest {
                     }
                 }
 
-
                 if (msg instanceof TcpDiscoveryJoinRequestMessage) {
                     TcpDiscoveryJoinRequestMessage joinReq = (TcpDiscoveryJoinRequestMessage)msg;
 

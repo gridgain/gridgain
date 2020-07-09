@@ -58,6 +58,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Row count. */
     static final int BIG_TABLE_SIZE = 10_000;
 
+    /** Size of the reservation block. */
+    static final long RESERVATION_BLOCK_SIZE = KB;
+
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
 
@@ -75,7 +78,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         super.beforeTestsStarted();
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
-        System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(KB));
+        System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(RESERVATION_BLOCK_SIZE));
 
         startGrid(0);
 
@@ -206,7 +209,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         execSql("create index K_IDX on K(indexed)");
         execSql("create index K_GRP_IDX on K(grp_indexed)");
     }
-
 
     /**
      * @param sql SQL query
