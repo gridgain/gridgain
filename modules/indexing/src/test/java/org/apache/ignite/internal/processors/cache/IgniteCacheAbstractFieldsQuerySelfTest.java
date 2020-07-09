@@ -336,7 +336,8 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
                 }
                 else if (DEFAULT_CACHE_NAME.equals(meta.cacheName()) || noOpCache.getName().equals(meta.cacheName()))
                     assertTrue("Invalid types size", types.isEmpty());
-                else if (!"cacheWithCustomKeyPrecision".equalsIgnoreCase(meta.cacheName()))
+                else if (!"cacheWithCustomKeyPrecision".equalsIgnoreCase(meta.cacheName()) &&
+                         !"cacheWithDecimalPrecisionAndScale".equalsIgnoreCase(meta.cacheName()))
                     fail("Unknown cache: " + meta.cacheName());
             }
         }
@@ -434,7 +435,7 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
         GridQueryProcessor qryProc = grid(0).context().query();
 
         qryProc.querySqlFields(
-                new SqlFieldsQuery("INSERT INTO TestType(_, age) VALUES(?, ?)")
+                new SqlFieldsQuery("INSERT INTO TestType(_key, age) VALUES(?, ?)")
                         .setSchema("cacheWithDecimalPrecisionAndScale")
                         .setArgs(1, new BigDecimal(160)), true);
 
