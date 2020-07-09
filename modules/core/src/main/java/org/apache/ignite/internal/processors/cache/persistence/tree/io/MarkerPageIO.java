@@ -72,10 +72,10 @@ public class MarkerPageIO extends PageIO {
     /**
      * Type of a marker.
      *
-     * @param buffer Page buffer.
+     * @param buf Page buffer.
      */
-    public int markerType(ByteBuffer buffer) {
-        return buffer.getInt(MARKER_TYPE_OFF);
+    public int markerType(ByteBuffer buf) {
+        return buf.getInt(MARKER_TYPE_OFF);
     }
 
     /**
@@ -101,10 +101,10 @@ public class MarkerPageIO extends PageIO {
     /**
      * Returns WAL record serializer version, see {@link #walRecordSerializerVersion(long)}.
      *
-     * @param buffer Page buffer.
+     * @param buf Page buffer.
      */
-    public int walRecordSerializerVersion(ByteBuffer buffer) {
-        return buffer.getInt(WAL_RECORD_SERIALIZER_VERSION_OFF);
+    public int walRecordSerializerVersion(ByteBuffer buf) {
+        return buf.getInt(WAL_RECORD_SERIALIZER_VERSION_OFF);
     }
 
     /**
@@ -129,10 +129,10 @@ public class MarkerPageIO extends PageIO {
     /**
      * Returns WAL records count.
      *
-     * @param buffer Page buffer.
+     * @param buf Page buffer.
      */
-    public int walRecordsCnt(ByteBuffer buffer) {
-        return buffer.getInt(WAL_RECORDS_CNT_OFF);
+    public int walRecordsCnt(ByteBuffer buf) {
+        return buf.getInt(WAL_RECORDS_CNT_OFF);
     }
 
     /**

@@ -21,7 +21,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -30,16 +29,15 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
  *
  */
-@SystemPropertiesList({
-    @WithSystemProperty(key = IGNITE_WAL_LOG_TX_RECORDS, value = "false"),
-    @WithSystemProperty(key = IGNITE_PENDING_TX_TRACKER_ENABLED, value = "true")
-})
+@WithSystemProperty(key = IGNITE_WAL_LOG_TX_RECORDS, value = "false")
+@WithSystemProperty(key = IGNITE_PENDING_TX_TRACKER_ENABLED, value = "true")
 public class TxLocalTrackerWithoutTxRecordLoggingTest extends GridCommonAbstractTest {
     /** */
     @Override protected void beforeTest() throws Exception {
@@ -73,7 +71,7 @@ public class TxLocalTrackerWithoutTxRecordLoggingTest extends GridCommonAbstract
     public void test() throws Exception {
         IgniteEx ignite = startGrid(2);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         LocalPendingTransactionsTracker tracker = ignite.context().cache().context().tm().pendingTxsTracker();
 

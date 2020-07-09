@@ -6410,7 +6410,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         private void outOfOrderUpdate(@Nullable GridCacheVersionConflictContext<?, ?> conflictCtx) throws IgniteCheckedException {
             assert outOfOrderUpdate : "This method can be executed only for out-of-order updates.";
             assert !primary : "Out of order update can only be logged on backup nodes.";
-            assert !intercept : "Out of prder update should not be intercepted on backup node.";
+            assert !intercept : "Out of order update should not be intercepted on backup node.";
 
             if (op == UPDATE) {
                 assert writeObj != null;
