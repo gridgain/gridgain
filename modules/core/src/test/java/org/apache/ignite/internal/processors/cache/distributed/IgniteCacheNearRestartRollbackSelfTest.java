@@ -142,7 +142,8 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
                 }
 
                 return null;
-            });
+            },
+                "async-restarter-tread");
 
             int currVal = 0;
             boolean invoke = false;
@@ -208,6 +209,9 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
                         ClusterTopologyException topEx = (ClusterTopologyException)e.getCause();
 
                         topEx.retryReadyFuture().get();
+                    }
+                    else if (e.getCause() instanceof TransactionRollbackException) {
+                        // Safe to retry right away.
                     }
                     else
                         throw e;
