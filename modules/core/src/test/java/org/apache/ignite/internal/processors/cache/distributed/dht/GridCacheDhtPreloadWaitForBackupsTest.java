@@ -103,8 +103,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
     /** */
     @Override protected void afterTest() throws Exception {
-        info("Test closer name: " + Thread.currentThread().getName());
-
         IgnitionEx.stopAll(true, ShutdownPolicy.IMMEDIATE);
     }
 
@@ -684,8 +682,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             int stopTmp = (nextGrid + 2) % 5;
 
             startGrid(startGrid);
-
-            info("Test runner name: " + Thread.currentThread().getName());
 
             grid(stopTmp).close();
 

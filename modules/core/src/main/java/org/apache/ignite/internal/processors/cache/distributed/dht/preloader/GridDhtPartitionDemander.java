@@ -291,8 +291,8 @@ public class GridDhtPartitionDemander {
         @Nullable final GridCompoundFuture<Boolean, Boolean> forcedRebFut,
         GridCompoundFuture<Boolean, Boolean> compatibleRebFut
     ) {
-        if (log.isInfoEnabled())
-            log.info("Adding partition assignments for " + grp.cacheOrGroupName() + ": " + assignments);
+        if (log.isDebugEnabled())
+            log.debug("Adding partition assignments: " + assignments);
 
         assert force == (forcedRebFut != null);
 
@@ -302,18 +302,20 @@ public class GridDhtPartitionDemander {
             final RebalanceFuture oldFut = rebalanceFut;
 
             if (assignments.cancelled()) { // Pending exchange.
-                if (log.isInfoEnabled())
-                    log.info("Rebalancing skipped due to cancelled assignments.");
+                if (log.isDebugEnabled())
+                    log.debug("Rebalancing skipped due to cancelled assignments.");
 
                 return null;
             }
 
             if (assignments.isEmpty()) { // Nothing to rebalance.
-                if (log.isInfoEnabled())
-                    log.info("Rebalancing skipped due to empty assignments.");
+                if (log.isDebugEnabled())
+                    log.debug("Rebalancing skipped due to empty assignments.");
 
                 if (oldFut.isInitial())
                     oldFut.onDone(true);
+                else if (!oldFut.isDone())
+                    oldFut.tryCancel();
 
                 ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
 
@@ -338,12 +340,8 @@ public class GridDhtPartitionDemander {
             assignments.retainMoving(grp.topology());
 
             // Skip rebalanced group.
-            if (assignments.isEmpty()) {
-                if (log.isInfoEnabled())
-                    log.info("Rebalancing skipped due to empty assignments after retain.");
-
+            if (assignments.isEmpty())
                 return null;
-            }
 
             final RebalanceFuture fut = new RebalanceFuture(grp, lastExchangeFut, assignments, log, rebalanceId, next, oldFut);
 

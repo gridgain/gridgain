@@ -184,14 +184,6 @@ public class GridDhtPartitionSupplier {
      * @return True if a node supplies a cache to some other, otherwise is false.
      */
     public boolean isSupply() {
-        if (!F.isEmpty(scMap)) {
-            for (T3<UUID, Integer, AffinityTopologyVersion> t3 : scMap.keySet())
-                log.info("Context: " + t3.get1() + ", " + t3.get2() + ", " + t3.get3());
-
-
-            return false;
-        }
-
         return !F.isEmpty(scMap);
     }
 
