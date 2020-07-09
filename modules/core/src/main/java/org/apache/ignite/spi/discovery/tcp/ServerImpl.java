@@ -5475,8 +5475,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
 
                 try {
-                    if (spi.ipFinder.isShared() && locNodeCoord && node.clientRouterNodeId() == null)
-                        spi.ipFinder.registerAddresses(node.socketAddresses().stream().filter(a -> !a.isUnresolved()).collect(Collectors.toList()));
+                    if (spi.ipFinder.isShared() && locNodeCoord && node.clientRouterNodeId() == null) {
+                        spi.ipFinder.registerAddresses(
+                            node.socketAddresses().stream()
+                                .filter(addr -> !addr.isUnresolved()).collect(Collectors.toList())
+                        );
+                    }
                 }
                 catch (IgniteSpiException e) {
                     if (log.isDebugEnabled())
