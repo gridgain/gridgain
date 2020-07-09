@@ -20,7 +20,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.cache.Cache;
@@ -38,11 +37,9 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -94,12 +91,12 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 5 * 60_000;
+        return 60_000;
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
         startGridsMultiThreaded(SRVS);
 
@@ -111,67 +108,205 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
             assertTrue(grid(SRVS + i).configuration().isClientMode());
     }
 
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testMultithreadedPrimarySyncRestart() throws Exception {
-        multithreadedTests(PRIMARY_SYNC, true);
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testMultithreadedPrimarySync() throws Exception {
-        multithreadedTests(PRIMARY_SYNC, false);
+    public void testMultithreadedPrimarySyncRestartWithoutBackupsAndStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 0, false, false, true);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testMultithreadedFullSync() throws Exception {
-        multithreadedTests(FULL_SYNC, false);
+    public void testMultithreadedPrimarySyncWithoutBackupsAndStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 0, false, false, false);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testMultithreadedFullSyncRestart() throws Exception {
-        multithreadedTests(FULL_SYNC, true);
+    public void testMultithreadedFullSyncWithoutBackupsAndStores() throws Exception {
+        multithreaded(FULL_SYNC, 0, false, false, false);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testMultithreadedFullAsync() throws Exception {
-        multithreadedTests(FULL_ASYNC, false);
+    public void testMultithreadedFullSyncRestartWithoutBackupsAndStores() throws Exception {
+        multithreaded(FULL_SYNC, 0, false, false, true);
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void testMultithreadedFullAsyncRestart() throws Exception {
-        multithreadedTests(FULL_ASYNC, true);
+    public void testMultithreadedFullAsyncWithoutBackupsAndStores() throws Exception {
+        multithreaded(FULL_ASYNC, 0, false, false, false);
     }
 
     /**
-     * @param syncMode Write synchronization mode.
-     * @param restart Restart flag.
      * @throws Exception If failed.
      */
-    private void multithreadedTests(CacheWriteSynchronizationMode syncMode, boolean restart) throws Exception {
-        multithreaded(syncMode, 0, false, false, restart);
+    @Test
+    public void testMultithreadedFullAsyncRestartWithoutBackupsAndStores() throws Exception {
+        multithreaded(FULL_ASYNC, 0, false, false, true);
+    }
 
-        multithreaded(syncMode, 1, false, false, restart);
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedPrimarySyncRestartOneBackupsAndWithoutStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 1, false, false, true);
+    }
 
-        multithreaded(syncMode, 1, true, false, restart);
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedPrimarySyncOneBackupsAndWithoutStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 1, false, false, false);
+    }
 
-        multithreaded(syncMode, 2, false, false, restart);
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullSyncWithoutOneAndWithoutStores() throws Exception {
+        multithreaded(FULL_SYNC, 1, false, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullSyncRestartOneBackupsAndWithoutStores() throws Exception {
+        multithreaded(FULL_SYNC, 1, false, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullAsyncWithoutOneAndWithoutStores() throws Exception {
+        multithreaded(FULL_ASYNC, 1, false, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullAsyncRestartOneBackupsAndWithoutStores() throws Exception {
+        multithreaded(FULL_ASYNC, 1, false, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedPrimarySyncRestartOneBackupsAndStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 1, true, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedPrimarySyncOneBackupsAndStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 1, true, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullSyncWithoutOneAndStores() throws Exception {
+        multithreaded(FULL_SYNC, 1, true, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullSyncRestartOneBackupsAndStores() throws Exception {
+        multithreaded(FULL_SYNC, 1, true, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullAsyncWithoutOneAndStores() throws Exception {
+        multithreaded(FULL_ASYNC, 1, true, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullAsyncRestartOneBackupsAndStores() throws Exception {
+        multithreaded(FULL_ASYNC, 1, true, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedPrimarySyncRestartTwoBackupsAndWithoutStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 2, false, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedPrimarySyncTwoBackupsAndWithoutStores() throws Exception {
+        multithreaded(PRIMARY_SYNC, 2, false, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullSyncWithoutTwoAndWithoutStores() throws Exception {
+        multithreaded(FULL_SYNC, 2, false, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullSyncRestartTwoBackupsAndWithoutStores() throws Exception {
+        multithreaded(FULL_SYNC, 2, false, false, true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullAsyncWithoutTwoAndWithoutStores() throws Exception {
+        multithreaded(FULL_ASYNC, 2, false, false, false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultithreadedFullAsyncRestartTwoBackupsAndWithoutStores() throws Exception {
+        multithreaded(FULL_ASYNC, 2, false, false, true);
     }
 
     /**
@@ -187,6 +322,7 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
         boolean store,
         boolean nearCache,
         boolean restart) throws Exception {
+
         if (MvccFeatureChecker.forcedMvcc()) {
             if (store && !MvccFeatureChecker.isSupported(MvccFeatureChecker.Feature.CACHE_STORE))
                 return;
@@ -205,121 +341,111 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
 
         try {
             if (restart) {
-                restartFut = GridTestUtils.runAsync(new Callable<Void>() {
-                    @Override public Void call() throws Exception {
-                        while (!stop.get()) {
-                            startGrid(NODES);
+                restartFut = GridTestUtils.runAsync(() -> {
+                    while (!stop.get()) {
+                        startGrid(NODES);
 
-                            U.sleep(100);
+                        U.sleep(100);
 
-                            stopGrid(NODES);
-                        }
-                        return null;
+                        stopGrid(NODES);
                     }
+                    return null;
                 }, "restart-thread");
             }
 
-            commitMultithreaded(new IgniteBiInClosure<Ignite, IgniteCache<Integer, Integer>>() {
-                @Override public void apply(Ignite ignite, IgniteCache<Integer, Integer> cache) {
-                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+            commitMultithreaded((ignite14, cache) -> {
+                ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
+                Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
+
+                while (true) {
+                    try {
+                        cache.put(key, rnd.nextInt());
+
+                        break;
+                    }
+                    catch (CacheException e) {
+                        MvccFeatureChecker.assertMvccWriteConflict(e);
+                    }
+                }
+            });
+
+            commitMultithreaded((ignite13, cache) -> {
+                ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+                Map<Integer, Integer> map = new TreeMap<>();
+
+                for (int i = 0; i < 100; i++) {
                     Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
 
-                    while (true) {
-                        try {
-                            cache.put(key, rnd.nextInt());
-
-                            break;
-                        }
-                        catch (CacheException e) {
-                            MvccFeatureChecker.assertMvccWriteConflict(e);
-                        }
-                    }
+                    map.put(key, rnd.nextInt());
                 }
-            });
 
-            commitMultithreaded(new IgniteBiInClosure<Ignite, IgniteCache<Integer, Integer>>() {
-                @Override public void apply(Ignite ignite, IgniteCache<Integer, Integer> cache) {
-                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-                    Map<Integer, Integer> map = new TreeMap<>();
-
-                    for (int i = 0; i < 100; i++) {
-                        Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
-
-                        map.put(key, rnd.nextInt());
-                    }
-
-                    while (true) {
-                        try {
-                            cache.putAll(map);
-
-                            break;
-                        }
-                        catch (CacheException e) {
-                            if (X.hasCause(e, TransactionRollbackException.class))
-                                return;
-
-                            MvccFeatureChecker.assertMvccWriteConflict(e);
-                        }
-                    }
-                }
-            });
-
-            commitMultithreaded(new IgniteBiInClosure<Ignite, IgniteCache<Integer, Integer>>() {
-                @Override public void apply(Ignite ignite, IgniteCache<Integer, Integer> cache) {
-                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-                    Map<Integer, Integer> map = new TreeMap<>();
-
-                    for (int i = 0; i < 100; i++) {
-                        Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
-
-                        map.put(key, rnd.nextInt());
-                    }
-
+                while (true) {
                     try {
-                        try (Transaction tx = ignite.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
-                            for (Map.Entry<Integer, Integer> e : map.entrySet())
-                                cache.put(e.getKey(), e.getValue());
+                        cache.putAll(map);
 
-                            tx.commit();
-                        }
+                        break;
                     }
-                    catch (CacheException | IgniteException ignored) {
-                        // No-op.
+                    catch (CacheException e) {
+                        if (X.hasCause(e, TransactionRollbackException.class))
+                            return;
+
+                        MvccFeatureChecker.assertMvccWriteConflict(e);
                     }
+                }
+            });
+
+            commitMultithreaded((ignite12, cache) -> {
+                ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+                Map<Integer, Integer> map = new TreeMap<>();
+
+                for (int i = 0; i < 100; i++) {
+                    Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
+
+                    map.put(key, rnd.nextInt());
+                }
+
+                try {
+                    try (Transaction tx = ignite12.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                        for (Map.Entry<Integer, Integer> e : map.entrySet())
+                            cache.put(e.getKey(), e.getValue());
+
+                        tx.commit();
+                    }
+                }
+                catch (CacheException | IgniteException ignored) {
+                    // No-op.
                 }
             });
 
             if (!MvccFeatureChecker.forcedMvcc()) {
-                commitMultithreaded(new IgniteBiInClosure<Ignite, IgniteCache<Integer, Integer>>() {
-                    @Override public void apply(Ignite ignite, IgniteCache<Integer, Integer> cache) {
-                        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+                commitMultithreaded((ignite1, cache) -> {
+                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                        Map<Integer, Integer> map = new LinkedHashMap<>();
+                    Map<Integer, Integer> map = new LinkedHashMap<>();
 
-                        for (int i = 0; i < 10; i++) {
-                            Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
+                    for (int i = 0; i < 10; i++) {
+                        Integer key = rnd.nextInt(MULTITHREADED_TEST_KEYS);
 
-                            map.put(key, rnd.nextInt());
+                        map.put(key, rnd.nextInt());
+                    }
+
+                    while (true) {
+                        try (Transaction tx = ignite1.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
+                            for (Map.Entry<Integer, Integer> e : map.entrySet())
+                                cache.put(e.getKey(), e.getValue());
+
+                            tx.commit();
+
+                            break;
                         }
-
-                        while (true) {
-                            try (Transaction tx = ignite.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
-                                for (Map.Entry<Integer, Integer> e : map.entrySet())
-                                    cache.put(e.getKey(), e.getValue());
-
-                                tx.commit();
-
-                                break;
-                            }
-                            catch (TransactionOptimisticException ignored) {
-                                // Retry.
-                            }
-                            catch (CacheException | IgniteException ignored) {
-                                break;
-                            }
+                        catch (TransactionOptimisticException ignored) {
+                            // Retry.
+                        }
+                        catch (CacheException | IgniteException ignored) {
+                            break;
                         }
                     }
                 });
@@ -327,8 +453,6 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
         }
         finally {
             stop.set(true);
-
-            ignite.destroyCache(DEFAULT_CACHE_NAME);
 
             if (restartFut != null)
                 restartFut.get();
@@ -339,22 +463,21 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
      * @param c Test iteration closure.
      * @throws Exception If failed.
      */
-    private void commitMultithreaded(final IgniteBiInClosure<Ignite, IgniteCache<Integer, Integer>> c) throws Exception {
+    private void commitMultithreaded(
+        final IgniteBiInClosure<Ignite, IgniteCache<Integer, Integer>> c) throws Exception {
         final long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(10_000, 3_000);
 
-        GridTestUtils.runMultiThreaded(new IgniteInClosure<Integer>() {
-            @Override public void apply(Integer idx) {
-                int nodeIdx = idx % NODES;
+        GridTestUtils.runMultiThreaded(idx -> {
+            int nodeIdx = idx % NODES;
 
-                Thread.currentThread().setName("tx-thread-" + nodeIdx);
+            Thread.currentThread().setName("tx-thread-" + nodeIdx);
 
-                Ignite ignite = ignite(nodeIdx);
+            Ignite ignite = ignite(nodeIdx);
 
-                IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
+            IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
-                while (System.currentTimeMillis() < stopTime)
-                    c.apply(ignite, cache);
-            }
+            while (System.currentTimeMillis() < stopTime)
+                c.apply(ignite, cache);
         }, NODES * 3, "tx-thread");
 
         final IgniteCache<Integer, Integer> cache = ignite(0).cache(DEFAULT_CACHE_NAME);
@@ -362,18 +485,16 @@ public class IgniteTxCacheWriteSynchronizationModesMultithreadedTest extends Gri
         for (int key = 0; key < MULTITHREADED_TEST_KEYS; key++) {
             final Integer key0 = key;
 
-            boolean wait = GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                @Override public boolean apply() {
-                    final Integer val = cache.get(key0);
+            boolean wait = GridTestUtils.waitForCondition(() -> {
+                final Integer val = cache.get(key0);
 
-                    for (int i = 1; i < NODES; i++) {
-                        IgniteCache<Integer, Integer> cache = ignite(i).cache(DEFAULT_CACHE_NAME);
+                for (int i = 1; i < NODES; i++) {
+                    IgniteCache<Integer, Integer> cache1 = ignite(i).cache(DEFAULT_CACHE_NAME);
 
-                        if (!Objects.equals(val, cache.get(key0)))
-                            return false;
-                    }
-                    return true;
+                    if (!Objects.equals(val, cache1.get(key0)))
+                        return false;
                 }
+                return true;
             }, 5000);
 
             assertTrue(wait);

@@ -39,7 +39,7 @@ namespace ignite_test
             std::string(reinterpret_cast<char*>(message), reallen));
     }
 
-    std::string GetOdbcErrorState(SQLSMALLINT handleType, SQLHANDLE handle)
+    std::string GetOdbcErrorState(SQLSMALLINT handleType, SQLHANDLE handle, int idx)
     {
         SQLCHAR sqlstate[7] = {};
         SQLINTEGER nativeCode;
@@ -47,12 +47,12 @@ namespace ignite_test
         SQLCHAR message[ODBC_BUFFER_SIZE];
         SQLSMALLINT reallen = 0;
 
-        SQLGetDiagRec(handleType, handle, 1, sqlstate, &nativeCode, message, ODBC_BUFFER_SIZE, &reallen);
+        SQLGetDiagRec(handleType, handle, idx, sqlstate, &nativeCode, message, ODBC_BUFFER_SIZE, &reallen);
 
         return std::string(reinterpret_cast<char*>(sqlstate));
     }
 
-    std::string GetOdbcErrorMessage(SQLSMALLINT handleType, SQLHANDLE handle)
+    std::string GetOdbcErrorMessage(SQLSMALLINT handleType, SQLHANDLE handle, int idx)
     {
         SQLCHAR sqlstate[7] = {};
         SQLINTEGER nativeCode;
@@ -60,7 +60,7 @@ namespace ignite_test
         SQLCHAR message[ODBC_BUFFER_SIZE];
         SQLSMALLINT reallen = 0;
 
-        SQLGetDiagRec(handleType, handle, 1, sqlstate, &nativeCode, message, ODBC_BUFFER_SIZE, &reallen);
+        SQLGetDiagRec(handleType, handle, idx, sqlstate, &nativeCode, message, ODBC_BUFFER_SIZE, &reallen);
 
         std::string res(reinterpret_cast<char*>(sqlstate));
 

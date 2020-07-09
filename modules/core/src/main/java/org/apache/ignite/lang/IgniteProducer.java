@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
 
-import org.apache.ignite.development.utils.indexreader.IgniteIndexReaderTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.lang;
+
+import org.apache.ignite.IgniteCheckedException;
 
 /**
- * Test suite for dev utils.
+ * Defines a producer which can throw IgniteCheckedException.
+ *
+ * @param <T> Type of producible value.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteIndexReaderTest.class,
-    IgniteWalConverterTest.class,
-    IgniteWalConverterArgumentsTest.class,
-    IgniteWalConverterSensitiveDataTest.class
-})
-public class DevUtilsTestSuite {
+@FunctionalInterface
+public interface IgniteProducer<T> {
+    /**
+     * Produce value.
+     */
+    public T produce() throws IgniteCheckedException;
+
 }
