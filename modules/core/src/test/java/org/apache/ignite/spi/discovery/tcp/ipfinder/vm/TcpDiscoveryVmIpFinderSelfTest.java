@@ -211,22 +211,22 @@ public class TcpDiscoveryVmIpFinderSelfTest
         Ignition.start(config("server2", false, false));
         Ignition.start(config("client1", true, false));
 
-        assertEquals(2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
+        assertEquals(1 + 2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
         Ignition.start(config("client2", true, false));
         Ignition.start(config("client3", true, false));
 
-        assertEquals(2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
+        assertEquals(1 + 2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
         Ignition.start(config("client4", true, true));
 
-        assertEquals(3 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
+        assertEquals(1 + 3 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
         Ignition.stop("client1", true);
         Ignition.stop("client2", true);
         Ignition.stop("client3", true);
 
-        assertEquals(3 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
+        assertEquals(1 + 3 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
         Ignition.stop("client4", true);
 
