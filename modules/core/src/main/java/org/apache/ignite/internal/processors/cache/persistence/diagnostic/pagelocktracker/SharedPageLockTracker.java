@@ -67,11 +67,6 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
     /**
      *
      */
-    public final int timeOutWorkerInterval;
-
-    /**
-     *
-     */
     private final Map<Long, PageLockTracker<? extends PageLockDump>> threadStacks = new HashMap<>();
 
     /**
