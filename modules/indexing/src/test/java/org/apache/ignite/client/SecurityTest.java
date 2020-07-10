@@ -78,10 +78,10 @@ public class SecurityTest {
             rsrc
         ).toString();
 
-        sslCfg.setKeyStoreFilePath(rsrcPath.apply("/server.jks"));
-        sslCfg.setKeyStorePassword("123456".toCharArray());
-        sslCfg.setTrustStoreFilePath(rsrcPath.apply("/trust.jks"));
-        sslCfg.setTrustStorePassword("123456".toCharArray());
+        sslCfg.setKeyStoreFilePath(GridTestUtils.keyStorePath("node03"));
+        sslCfg.setKeyStorePassword(GridTestUtils.keyStorePassword().toCharArray());
+        sslCfg.setTrustStoreFilePath(GridTestUtils.keyStorePath("trusttwo"));
+        sslCfg.setTrustStorePassword(GridTestUtils.keyStorePassword().toCharArray());
 
         srvCfg.setClientConnectorConfiguration(new ClientConnectorConfiguration()
             .setSslEnabled(true)
@@ -110,12 +110,12 @@ public class SecurityTest {
             // Not using user-supplied SSL Context Factory:
             try (IgniteClient client = Ignition.startClient(clientCfg
                 .setSslMode(SslMode.REQUIRED)
-                .setSslClientCertificateKeyStorePath(rsrcPath.apply("/client.jks"))
+                .setSslClientCertificateKeyStorePath(GridTestUtils.keyStorePath("node02"))
                 .setSslClientCertificateKeyStoreType(DFLT_STORE_TYPE)
-                .setSslClientCertificateKeyStorePassword("123456")
-                .setSslTrustCertificateKeyStorePath(rsrcPath.apply("/trust.jks"))
+                .setSslClientCertificateKeyStorePassword(GridTestUtils.keyStorePassword())
+                .setSslTrustCertificateKeyStorePath(GridTestUtils.keyStorePath("trusttwo"))
                 .setSslTrustCertificateKeyStoreType(DFLT_STORE_TYPE)
-                .setSslTrustCertificateKeyStorePassword("123456")
+                .setSslTrustCertificateKeyStorePassword(GridTestUtils.keyStorePassword())
                 .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM)
                 .setSslTrustAll(false)
                 .setSslProtocol(SslProtocol.TLS)

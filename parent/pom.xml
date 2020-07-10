@@ -981,15 +981,11 @@
                                         <exclude>**/*.csv</exclude><!--CSV files-->
                                         <exclude>**/*.jks</exclude><!--bin-files-->
                                         <exclude>**/*.p12</exclude><!--cert-files-->
+                                        <exclude>**/*.pem</exclude><!--cert-files-->
+                                        <exclude>**/*.pfx</exclude><!--bin-files-->
                                         <exclude>**/*.crt</exclude><!--bin-files-->
                                         <exclude>**/*.key</exclude><!--bin-files-->
                                         <exclude>**/pom-installed.xml</exclude><!--tmp-files-->
-                                        <exclude>**/keystore</exclude><!--bin-files-->
-                                        <exclude>**/keystore/*.jks</exclude><!--bin-files-->
-                                        <exclude>**/keystore/*.pem</exclude><!--auto generated files-->
-                                        <exclude>**/keystore/*.pfx</exclude><!--bin-files-->
-                                        <exclude>**/keystore/ca/*.jks</exclude><!--bin-files-->
-                                        <exclude>**/keystore/ca/*.key</exclude><!--bin-files-->
                                         <exclude>**/keystore/ca/*.txt</exclude><!--auto generated files-->
                                         <exclude>**/keystore/ca/*.txt.attr</exclude><!--auto generated files-->
                                         <exclude>**/keystore/ca/*serial</exclude><!--auto generated files-->
