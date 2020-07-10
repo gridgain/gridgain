@@ -1981,8 +1981,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         assert ver != null : "Got null version for update request: " + req;
 
-        assertOwning(ctx, req.keys(), req.topologyVersion());
-
         boolean sndPrevVal = !top.rebalanceFinished(req.topologyVersion());
 
         if (dhtUpdRes.dhtFuture() == null)

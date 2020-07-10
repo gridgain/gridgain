@@ -977,8 +977,6 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
     ) {
         assert keys != null;
 
-        assertOwning(cacheCtx, keys, topVer);
-
         return lockAllAsync0(cacheCtx,
             tx,
             threadId,
