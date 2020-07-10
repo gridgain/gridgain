@@ -24,6 +24,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -71,12 +72,14 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
 
     /**
      * @param snapshotOperation current snapshot operation.
+     * @param cpRec Checkpoint record.
      * @param map  (cacheId, partId) -> (lastAllocatedIndex, count)
      *
      * @return {@code true} if next operation must be snapshot, {@code false} if checkpoint must be executed.
      */
     public IgniteFuture<?> onMarkCheckPointBegin(
         T snapshotOperation,
+        CheckpointRecord cpRec,
         PartitionAllocationMap map
     ) throws IgniteCheckedException {
         return null;
