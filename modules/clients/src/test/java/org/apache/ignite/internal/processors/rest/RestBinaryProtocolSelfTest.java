@@ -268,7 +268,6 @@ public class RestBinaryProtocolSelfTest extends GridCommonAbstractTest {
 
         assertNull(jcacheDflt.get("key"));
 
-
         jcacheName.put("key", "val");
 
         assertTrue(client.cacheRemove(CACHE_NAME, "key"));
@@ -516,7 +515,7 @@ public class RestBinaryProtocolSelfTest extends GridCommonAbstractTest {
         assertFalse(node.getAttributes().isEmpty());
         assertNotNull(node.getMetrics());
         assertNotNull(node.getTcpAddresses());
-        assertEquals(PORT,  node.getTcpPort());
+        assertEquals(PORT, node.getTcpPort());
         assertEquals(grid().localNode().id(), node.getNodeId());
 
         node = client.node(grid().localNode().id(), false, false);
@@ -525,7 +524,7 @@ public class RestBinaryProtocolSelfTest extends GridCommonAbstractTest {
         assertNull(node.getAttributes());
         assertNull(node.getMetrics());
         assertNotNull(node.getTcpAddresses());
-        assertEquals(PORT,  node.getTcpPort());
+        assertEquals(PORT, node.getTcpPort());
         assertEquals(grid().localNode().id(), node.getNodeId());
 
         node = client.node(HOST, true, true);
@@ -534,7 +533,7 @@ public class RestBinaryProtocolSelfTest extends GridCommonAbstractTest {
         assertFalse(node.getAttributes().isEmpty());
         assertNotNull(node.getMetrics());
         assertNotNull(node.getTcpAddresses());
-        assertEquals(PORT,  node.getTcpPort());
+        assertEquals(PORT, node.getTcpPort());
         assertEquals(grid().localNode().id(), node.getNodeId());
 
         node = client.node(HOST, false, false);
@@ -543,7 +542,7 @@ public class RestBinaryProtocolSelfTest extends GridCommonAbstractTest {
         assertNull(node.getAttributes());
         assertNull(node.getMetrics());
         assertNotNull(node.getTcpAddresses());
-        assertEquals(PORT,  node.getTcpPort());
+        assertEquals(PORT, node.getTcpPort());
         assertEquals(grid().localNode().id(), node.getNodeId());
     }
 

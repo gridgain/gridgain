@@ -17,7 +17,7 @@
 package org.apache.ignite.client;
 
 /**
- * Common thin client checked exception.
+ * Common thin client unchecked exception.
  */
 public class ClientException extends RuntimeException {
     /** Serial version uid. */
@@ -71,7 +71,7 @@ public class ClientException extends RuntimeException {
      * @param writableStackTrace whether or not the stack trace should
      *                           be writable
      */
-    public ClientException(String msg, Throwable cause,  boolean enableSuppression, boolean writableStackTrace) {
+    public ClientException(String msg, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(msg, cause, enableSuppression, writableStackTrace);
     }
 }

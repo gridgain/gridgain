@@ -105,7 +105,7 @@ public class GridH2SpatialIndex extends GridH2IndexBase implements SpatialIndex 
      */
     @SuppressWarnings("unchecked")
     public GridH2SpatialIndex(GridH2Table tbl, String idxName, int segmentsCnt, IndexColumn... cols) {
-        super(tbl, idxName,  validateColumns(cols), IndexType.createNonUnique(false, false, true));
+        super(tbl, idxName, validateColumns(cols), IndexType.createNonUnique(false, false, true));
 
         // Index in memory
         store = MVStore.open(null);

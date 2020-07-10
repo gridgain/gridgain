@@ -40,6 +40,7 @@ public final class BinaryObjectVectorizer<K> extends ExtractionUtils.StringCoord
 
     /** Object for denoting default value of feature mapping. */
     public static final String DEFAULT_VALUE = "DEFAULT";
+
     /** Mapping for feature with non-number values. */
     private HashMap<String, HashMap<Object, Double>> featureValueMappings = new HashMap<>();
 
@@ -134,7 +135,7 @@ public final class BinaryObjectVectorizer<K> extends ExtractionUtils.StringCoord
          * Converts mapping to HashMap.
          */
         private HashMap<Object, Double> toMap() {
-            if(!value.containsKey(DEFAULT_VALUE))
+            if (!value.containsKey(DEFAULT_VALUE))
                 value.put(DEFAULT_VALUE, null);
 
             return value;

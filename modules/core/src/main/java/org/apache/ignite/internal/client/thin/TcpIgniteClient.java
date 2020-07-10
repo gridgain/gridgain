@@ -33,6 +33,9 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientCacheConfiguration;
+import org.apache.ignite.client.ClientCluster;
+import org.apache.ignite.client.ClientClusterGroup;
+import org.apache.ignite.client.ClientCompute;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.client.IgniteClient;
@@ -68,6 +71,12 @@ public class TcpIgniteClient implements IgniteClient {
     /** Transactions facade. */
     private final TcpClientTransactions transactions;
 
+    /** Compute facade. */
+    private final ClientComputeImpl compute;
+
+    /** Cluster facade. */
+    private final ClientClusterImpl cluster;
+
     /** Marshaller. */
     private final ClientBinaryMarshaller marsh;
 
@@ -89,7 +98,9 @@ public class TcpIgniteClient implements IgniteClient {
         Function<ClientChannelConfiguration, ClientChannel> chFactory,
         ClientConfiguration cfg
     ) throws ClientException {
-        marsh = new ClientBinaryMarshaller(new ClientBinaryMetadataHandler(), new ClientMarshallerContext());
+        final ClientBinaryMetadataHandler metadataHandler = new ClientBinaryMetadataHandler();
+
+        marsh = new ClientBinaryMarshaller(metadataHandler, new ClientMarshallerContext());
 
         marsh.setBinaryConfiguration(cfg.getBinaryConfiguration());
 
@@ -99,8 +110,14 @@ public class TcpIgniteClient implements IgniteClient {
 
         ch = new ReliableChannel(chFactory, cfg, binary);
 
+        ch.addChannelFailListener(() -> metadataHandler.onReconnect());
+
         transactions = new TcpClientTransactions(ch, marsh,
             new ClientTransactionConfiguration(cfg.getTransactionConfiguration()));
+
+        cluster = new ClientClusterImpl();
+
+        compute = new ClientComputeImpl(ch, marsh, cluster);
     }
 
     /** {@inheritDoc} */
@@ -199,6 +216,21 @@ public class TcpIgniteClient implements IgniteClient {
         return transactions;
     }
 
+    /** {@inheritDoc} */
+    @Override public ClientCompute compute() {
+        return compute;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ClientCompute compute(ClientClusterGroup grp) {
+        return compute.withClusterGroup((ClientClusterGroupImpl)grp);
+    }
+
+    /** {@inheritDoc} */
+    @Override public ClientCluster cluster() {
+        return cluster;
+    }
+
     /**
      * Initializes new instance of {@link IgniteClient}.
      *
@@ -247,10 +279,11 @@ public class TcpIgniteClient implements IgniteClient {
      */
     private class ClientBinaryMetadataHandler implements BinaryMetadataHandler {
         /** In-memory metadata cache. */
-        private final BinaryMetadataHandler cache = BinaryCachingMetadataHandler.create();
+        private volatile BinaryMetadataHandler cache = BinaryCachingMetadataHandler.create();
 
         /** {@inheritDoc} */
-        @Override public void addMeta(int typeId, BinaryType meta, boolean failIfUnregistered) throws BinaryObjectException {
+        @Override public void addMeta(int typeId, BinaryType meta, boolean failIfUnregistered)
+            throws BinaryObjectException {
             if (cache.metadata(typeId) == null) {
                 try {
                     ch.request(
@@ -320,6 +353,13 @@ public class TcpIgniteClient implements IgniteClient {
         /** {@inheritDoc} */
         @Override public Collection<BinaryType> metadata() throws BinaryObjectException {
             return cache.metadata();
+        }
+
+        /**
+         * Clear local cache on reconnect.
+         */
+        void onReconnect() {
+            cache = BinaryCachingMetadataHandler.create();
         }
     }
 

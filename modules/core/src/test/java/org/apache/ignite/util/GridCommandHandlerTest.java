@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,22 +36,25 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -58,10 +62,13 @@ import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.client.GridClientFactory;
+import org.apache.ignite.internal.client.impl.GridClientImpl;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.cache.ClusterStateTestUtils;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
@@ -104,11 +111,15 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_CONNECTION_FAILED;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -128,14 +139,16 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  * nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
  */
 public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-    /**
-     *
-     */
+    /** Partitioned cache name. */
+    protected static final String PARTITIONED_CACHE_NAME = "part_cache";
+
+    /** Replicated cache name. */
+    protected static final String REPLICATED_CACHE_NAME = "repl_cache";
+
+    /** */
     protected static File defaultDiagnosticDir;
 
-    /**
-     *
-     */
+    /** */
     protected static File customDiagnosticDir;
 
     /** {@inheritDoc} */
@@ -191,11 +204,71 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testActivate() throws Exception {
         Ignite ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
+        injectTestSystemOut();
+
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         assertEquals(EXIT_CODE_OK, execute("--activate"));
 
-        assertTrue(ignite.cluster().active());
+        assertEquals(ACTIVE, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Command deprecated. Use --set-state instead.");
+    }
+
+    /**
+     * Test clients leakage.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClientsLeakage() throws Exception {
+        startGrids(1);
+
+        Map<UUID, GridClientImpl> clnts = U.field(GridClientFactory.class, "openClients");
+
+        Map<UUID, GridClientImpl> clntsBefore = new HashMap<>(clnts);
+
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
+
+        Map<UUID, GridClientImpl> clntsAfter1 = new HashMap<>(clnts);
+
+        assertTrue("Still opened clients: " + new ArrayList<>(clnts.values()), clntsBefore.equals(clntsAfter1));
+
+        stopAllGrids();
+
+        assertEquals(EXIT_CODE_CONNECTION_FAILED, execute("--set-state", "ACTIVE"));
+
+        Map<UUID, GridClientImpl> clntsAfter2 = new HashMap<>(clnts);
+
+        assertTrue("Still opened clients: " + new ArrayList<>(clnts.values()), clntsBefore.equals(clntsAfter2));
+    }
+
+    /**
+     * Test enabling/disabling read-only mode works via control.sh
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testReadOnlyEnableDisable() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(ACTIVE, ignite.cluster().state());
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE_READ_ONLY"));
+
+        assertEquals(ACTIVE_READ_ONLY, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Cluster state changed to ACTIVE_READ_ONLY");
+
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
+
+        assertEquals(ACTIVE, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Cluster state changed to ACTIVE");
     }
 
     /**
@@ -241,14 +314,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         Ignite ignite = startGrids(1);
 
         assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertTrue(ignite.cluster().active());
+        assertEquals(ACTIVE, ignite.cluster().state());
+
+        injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--deactivate"));
 
         assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Command deprecated. Use --set-state instead.");
     }
 
     /**
@@ -337,8 +417,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Ignite ignite = startGrids(1);
 
-        injectTestSystemOut();
-
         assertFalse(ignite.cluster().active());
 
         injectTestSystemOut();
@@ -378,6 +456,16 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
         assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
+
+        ignite.cluster().state(ACTIVE_READ_ONLY);
+
+        awaitPartitionMapExchange();
+
+        assertEquals(ACTIVE_READ_ONLY, ignite.cluster().state());
+
+        assertEquals(EXIT_CODE_OK, execute("--state"));
+
+        assertContains(log, testOut.toString(), "Cluster is active (read-only)");
     }
 
     /**
@@ -390,8 +478,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState1() throws Exception {
         Ignite ignite = startGrids(1);
 
-        injectTestSystemOut();
-
         assertFalse(ignite.cluster().active());
 
         injectTestSystemOut();
@@ -403,6 +489,76 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertContains(log, out, "Cluster is inactive");
         assertNotContains(log, out, "Cluster  ID: ");
         assertNotContains(log, out, "Cluster tag: ");
+    }
+
+    /**
+     * Test --set-state command works correct.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSetState() throws Exception {
+        Ignite ignite = startGrids(2);
+
+        ignite.cluster().state(ACTIVE);
+
+        ignite.createCache(ClusterStateTestUtils.partitionedCache(PARTITIONED_CACHE_NAME));
+        ignite.createCache(ClusterStateTestUtils.replicatedCache(REPLICATED_CACHE_NAME));
+
+        ignite.cluster().state(INACTIVE);
+
+        injectTestSystemOut();
+
+        assertEquals(INACTIVE, ignite.cluster().state());
+
+        // INACTIVE -> INACTIVE.
+        setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // INACTIVE -> ACTIVE_READ_ONLY.
+        setState(ignite, ACTIVE_READ_ONLY, "ACTIVE_READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // ACTIVE_READ_ONLY -> ACTIVE_READ_ONLY.
+        setState(ignite, ACTIVE_READ_ONLY, "ACTIVE_READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // ACTIVE_READ_ONLY -> ACTIVE.
+        setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // ACTIVE -> ACTIVE.
+        setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // ACTIVE -> INACTIVE.
+        setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // INACTIVE -> ACTIVE.
+        setState(ignite, ACTIVE, "ACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // ACTIVE -> ACTIVE_READ_ONLY.
+        setState(ignite, ACTIVE_READ_ONLY, "ACTIVE_READ_ONLY", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+
+        // ACTIVE_READ_ONLY -> INACTIVE.
+        setState(ignite, INACTIVE, "INACTIVE", PARTITIONED_CACHE_NAME, REPLICATED_CACHE_NAME);
+    }
+
+    /** */
+    private void setState(Ignite ignite, ClusterState state, String strState, String... cacheNames) {
+        log.info(ignite.cluster().state() + " -> " + state);
+
+        assertEquals(EXIT_CODE_OK, execute("--set-state", strState));
+
+        assertEquals(state, ignite.cluster().state());
+
+        assertContains(log, testOut.toString(), "Cluster state changed to " + strState);
+
+        List<IgniteEx> nodes = IntStream.range(0, 2)
+            .mapToObj(this::grid)
+            .collect(Collectors.toList());
+
+        ClusterStateTestUtils.putSomeDataAndCheck(log, nodes, cacheNames);
+
+        if (state == ACTIVE) {
+            for (String cacheName : cacheNames)
+                grid(0).cache(cacheName).clear();
+        }
     }
 
     /**
@@ -421,6 +577,63 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
 
         assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+    }
+
+    /**
+     * Test is checking how to --shutdown-policy command works through control.sh.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShutdownPolicy() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        ShutdownPolicy policy = ignite.cluster().shutdownPolicy();
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--shutdown-policy"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Cluster shutdown policy is " + policy);
+    }
+
+    /**
+     * Change shutdown policy through command.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShutdownPolicyChange() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        ShutdownPolicy policyToChange = null;
+
+        for (ShutdownPolicy policy : ShutdownPolicy.values()) {
+            if (policy != ignite.cluster().shutdownPolicy())
+                policyToChange = policy;
+        }
+
+        assertNotNull(policyToChange);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--shutdown-policy", policyToChange.name()));
+
+        assertSame(policyToChange, ignite.cluster().shutdownPolicy());
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Cluster shutdown policy is " + policyToChange);
     }
 
     /**
@@ -722,7 +935,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
             log.registerListener(lsnrs[g] = bldr.build());
         }
-
 
         ignite.cluster().active(true);
 
@@ -1686,7 +1898,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testDiagnosticPageLocksTracker() throws Exception {
-        Ignite ignite = startGrids(4);
+        Ignite ignite = startGrid(0, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node0/dump"));
+        startGrid(1, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node1/dump"));
+        startGrid(2, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node2/dump"));
+        startGrid(3, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node3/dump"));
 
         Collection<ClusterNode> nodes = ignite.cluster().nodes();
 

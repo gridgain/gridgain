@@ -98,8 +98,10 @@ import static org.junit.Assert.assertArrayEquals;
 public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     /** */
     public static final int[] EMPTY = new int[0];
+
     /** Maximum string length to be written at once. */
     private static final int MAX_STR_LEN = 0xFFFF / 4;
+
     /**
      * @return 120 character length string.
      */
@@ -764,7 +766,6 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         assertTrue(ips.get(ips.size() - 1).isUnresolved());
     }
 
-
     @Test
     public void testMD5Calculation() throws Exception {
         String md5 = U.calculateMD5(new ByteArrayInputStream("Corrupted information.".getBytes(StandardCharsets.UTF_8)));
@@ -819,7 +820,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     private static String composeString(int len) {
         StringBuilder sb = new StringBuilder();
 
-        for (int i=0; i<len; i++)
+        for (int i = 0; i < len; i++)
             sb.append((char)i);
 
         String x = sb.toString();
@@ -1096,8 +1097,8 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
             new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
         try {
-            for(int parallelism = 1; parallelism < 16; parallelism++)
-                for(int size = 0; size < 10_000; size++)
+            for (int parallelism = 1; parallelism < 16; parallelism++)
+                for (int size = 0; size < 10_000; size++)
                     testOrder(executorService, size, parallelism);
         } finally {
             executorService.shutdownNow();
@@ -1118,8 +1119,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
         // Busy one thread from the pool.
         executorService.submit(new Runnable() {
-            @Override
-            public void run() {
+            @Override public void run() {
                 try {
                     poolThreadLatch.await();
                 }
@@ -1187,9 +1187,9 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         ExecutorService executorService = Executors.newFixedThreadPool(2,
             new IgniteThreadFactory("testscope", "ignite-utils-test"));
 
-        Future<?> f1 = executorService.submit(()-> runTask(executorService));
-        Future<?> f2 = executorService.submit(()-> runTask(executorService));
-        Future<?> f3 = executorService.submit(()-> runTask(executorService));
+        Future<?> f1 = executorService.submit(() -> runTask(executorService));
+        Future<?> f2 = executorService.submit(() -> runTask(executorService));
+        Future<?> f3 = executorService.submit(() -> runTask(executorService));
 
         f1.get();
         f2.get();
@@ -1256,7 +1256,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
      */
     private void testOrder(ExecutorService executorService, int size, int parallelism) throws IgniteCheckedException {
         List<Integer> list = new ArrayList<>();
-        for(int i = 0; i < size; i++)
+        for (int i = 0; i < size; i++)
             list.add(i);
 
         Collection<Integer> results = IgniteUtils.doInParallel(
@@ -1434,13 +1434,19 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     private @interface Ann2 {}
 
     private static class A1 implements I3, I5 {}
+
     private static class A2 extends A1 {}
+
     private static class A3 implements I5 {}
 
     @Ann1 private interface I1 {}
+
     private interface I2 extends I1 {}
+
     private interface I3 extends I2 {}
+
     @Ann2 private interface I4 {}
+
     private interface I5 extends I4 {}
 
     /**

@@ -30,6 +30,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch.ExchangeLatchManager;
@@ -84,7 +85,7 @@ public class IgniteExchangeLatchManagerDiscoHistoryTest extends GridCommonAbstra
 
         TcpDiscoveryIpFinder ipFinder = ((TcpDiscoverySpi)cfg.getDiscoverySpi()).getIpFinder();
 
-        int topHistSize = victim? TOPOLOGY_HISTORY_SIZE: TcpDiscoverySpi.DFLT_TOP_HISTORY_SIZE;
+        int topHistSize = victim ? TOPOLOGY_HISTORY_SIZE : TcpDiscoverySpi.DFLT_TOP_HISTORY_SIZE;
 
         CustomTcpDiscoverySpi discoSpi = new CustomTcpDiscoverySpi(topHistSize, ipFinder);
 
@@ -188,7 +189,7 @@ public class IgniteExchangeLatchManagerDiscoHistoryTest extends GridCommonAbstra
         // Start server node with short topology history.
         victim = true;
 
-        GridTestUtils.runAsync(() ->startGrid(1));
+        GridTestUtils.runAsync(() -> startGrid(1));
 
         // Waits for the initial exchange.
         startSrvsLatch.await(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -243,7 +244,7 @@ public class IgniteExchangeLatchManagerDiscoHistoryTest extends GridCommonAbstra
                 "Consider increasing IGNITE_DISCOVERY_HISTORY_SIZE property. Current value is " + DISCO_HISTORY_SIZE);
         }
         finally {
-            IgnitionEx.stop(getTestIgniteInstanceName(1), true, false, true);
+            IgnitionEx.stop(getTestIgniteInstanceName(1), true, ShutdownPolicy.IMMEDIATE, true);
 
             srvFuts.forEach(f -> {
                 try {

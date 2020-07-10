@@ -34,18 +34,25 @@ import static org.apache.ignite.internal.processors.cache.persistence.diagnostic
 public class PageLockLogSnapshot implements PageLockDump {
     /** Page lock log name. */
     public final String name;
+
     /** Creation time. */
     public final long time;
+
     /** Head position. */
     public final int headIdx;
+
     /** List of log entries. */
     public final List<LogEntry> locklog;
+
     /** */
     public final PageMetaInfoStore log;
+
     /** Next operation. */
     public final int nextOp;
+
     /** Next data structure. */
     public final int nextOpStructureId;
+
     /** Next page id. */
     public final long nextOpPageId;
 
@@ -79,7 +86,7 @@ public class PageLockLogSnapshot implements PageLockDump {
     private List<PageLockLogSnapshot.LogEntry> toList(PageMetaInfoStore pages) {
         List<PageLockLogSnapshot.LogEntry> lockLog = new ArrayList<>(pages.capacity());
 
-        for (int itemIdx = 0; itemIdx < headIdx; itemIdx ++) {
+        for (int itemIdx = 0; itemIdx < headIdx; itemIdx++) {
             int metaOnLock = pages.getOperation(itemIdx);
 
             assert metaOnLock != 0;
@@ -106,12 +113,16 @@ public class PageLockLogSnapshot implements PageLockDump {
     public static class LogEntry {
         /** */
         public final long pageId;
+
         /** */
         public final int structureId;
+
         /** */
         public final int operation;
+
         /** */
         public final int holdedLocks;
+
         /** */
         public LogEntry(long pageId, int structureId, int operation, int holdedLock) {
             this.pageId = pageId;

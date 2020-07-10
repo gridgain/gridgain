@@ -204,23 +204,28 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     private static interface TestTransaction<K, V> {
         /** Possible operations. */
         static int POSSIBLE_OPERATIONS = 5;
+
         /**
          * @param key Key.
          */
         V get(K key);
+
         /**
          * @param key Key.
          * @param val Value.
          */
         void put(K key, V val);
+
         /**
          * @param key Key.
          */
         void remove(K key);
+
         /**
          * @param map Map.
          */
         void putAll(Map<K, V> map);
+
         /**
          * @param keys Keys.
          */
@@ -233,6 +238,7 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     private static class NamedClosure<K, V> implements IgniteInClosure<TestTransaction<K, V>> {
         /** Closure. */
         private final IgniteInClosure<TestTransaction<K, V>> c;
+
         /** Name. */
         private final String name;
 
@@ -262,8 +268,10 @@ public class ClientSlowDiscoveryTransactionRemapTest extends ClientSlowDiscovery
     private static class TestTransactionEngine<K, V> implements TestTransaction<K, V> {
         /** Removed. */
         private final Object RMV = new Object();
+
         /** Cache. */
         private final IgniteCache<K, V> cache;
+
         /** Map to consistency check. */
         private final Map<K, Object> map;
 

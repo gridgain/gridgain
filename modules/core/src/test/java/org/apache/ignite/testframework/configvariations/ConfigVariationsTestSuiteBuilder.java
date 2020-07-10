@@ -429,8 +429,7 @@ public class ConfigVariationsTestSuiteBuilder {
                     + "this.testsCfg = "
                     + ConfigVariationsTestSuiteBuilder.class.getName()
                     + ".getCfg(\"" + clsName + "\"); "
-                    + "}"
-                , cl));
+                    + "}", cl));
 
             return cl.toClass();
         }

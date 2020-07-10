@@ -18,7 +18,6 @@ package org.apache.ignite.ml.util.genetic;
 
 import org.jetbrains.annotations.NotNull;
 
-
 /**
  * Representes the set of genes, known as chromosome in genetic programming.
  *
@@ -48,7 +47,7 @@ public class Chromosome implements Comparable {
     /**
      * Returns the double array chromosome representation.
      */
-    public Double[] toDoubleArray(){
+    public Double[] toDoubleArray() {
         return genes;
     }
 
@@ -97,7 +96,7 @@ public class Chromosome implements Comparable {
     /**
      * Creates chromosome copy.
      */
-    public Chromosome copy(){
+    public Chromosome copy() {
         Chromosome cp = new Chromosome(genes);
         cp.fitness = fitness;
         return cp;

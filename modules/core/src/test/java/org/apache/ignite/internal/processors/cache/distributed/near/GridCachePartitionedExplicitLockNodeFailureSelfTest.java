@@ -82,6 +82,8 @@ public class GridCachePartitionedExplicitLockNodeFailureSelfTest extends GridCom
     public void testLockFromNearOrBackup() throws Exception {
         startGrids(GRID_CNT);
 
+        awaitPartitionMapExchange();
+
         int idx = 0;
 
         info("Grid will be stopped: " + idx);

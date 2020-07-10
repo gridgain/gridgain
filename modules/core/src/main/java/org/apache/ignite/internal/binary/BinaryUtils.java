@@ -368,7 +368,7 @@ public class BinaryUtils {
      * @return Field type name or {@code null} if unknown.
      */
     public static String fieldTypeName(int typeId) {
-        if(typeId < 0 || typeId >= FIELD_TYPE_NAMES.length)
+        if (typeId < 0 || typeId >= FIELD_TYPE_NAMES.length)
             return null;
 
         return FIELD_TYPE_NAMES[typeId];
@@ -712,7 +712,7 @@ public class BinaryUtils {
         if (obj == null)
             return false;
 
-        Class<?> cls= obj.getClass();
+        Class<?> cls = obj.getClass();
 
         return cls == KeyCacheObjectImpl.class ||
             cls == BinaryObjectImpl.class ||
@@ -732,7 +732,7 @@ public class BinaryUtils {
         if (arr == null)
             return false;
 
-        Class<?> cls =  arr.getClass();
+        Class<?> cls = arr.getClass();
 
         return cls == byte[].class || cls == short[].class || cls == int[].class || cls == long[].class ||
             cls == float[].class || cls == double[].class || cls == char[].class || cls == boolean[].class ||
@@ -1043,8 +1043,11 @@ public class BinaryUtils {
                             "Type '" + oldMeta.typeName() + "' with typeId " + oldMeta.typeId()
                                 + " has a different/incorrect type for field '" + newField.getKey()
                                 + "'. Expected '" + oldFieldTypeName + "' but '" + newFieldTypeName
-                                + "' was provided. Field type's modification is unsupported, clean {root_path}/marshaller " +
-                                "and {root_path}/db/binary_meta directories if the type change is required."
+                                + "' was provided. The type of an existing field can not be changed. " +
+                                "Use a different field name or follow this procedure to reuse the current name:\n" +
+                                "- Delete data records that use the old field type;\n" +
+                                "- Remove metadata by the command: " +
+                                "'control.sh --meta remove --typeId " + oldMeta.typeId() + "'."
                         );
                     }
                 }
@@ -2383,7 +2386,7 @@ public class BinaryUtils {
             }
             else {
                 arr[position++] = (byte)(0xC0 | ((c >> 6) & 0x1F));
-                arr[position++] = (byte)(0x80 | (c  & 0x3F));
+                arr[position++] = (byte)(0x80 | (c & 0x3F));
             }
         }
 

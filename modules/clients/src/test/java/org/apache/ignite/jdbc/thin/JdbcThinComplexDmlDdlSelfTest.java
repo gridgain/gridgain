@@ -327,7 +327,7 @@ public class JdbcThinComplexDmlDdlSelfTest extends GridCommonAbstractTest {
             int cols = rs.getMetaData().getColumnCount();
 
             while (rs.next()) {
-                Object [] rowObjs = new Object[cols];
+                Object[] rowObjs = new Object[cols];
 
                 for (int i = 0; i < cols; ++i)
                     rowObjs[i] = rs.getObject(i + 1);
@@ -413,7 +413,7 @@ public class JdbcThinComplexDmlDdlSelfTest extends GridCommonAbstractTest {
             int cols = rs.getMetaData().getColumnCount();
 
             while (rs.next()) {
-                Object [] rowObjs = new Object[cols];
+                Object[] rowObjs = new Object[cols];
 
                 for (int i = 0; i < cols; ++i)
                     rowObjs[i] = rs.getObject(i + 1);

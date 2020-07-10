@@ -210,7 +210,7 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
                     latch.await();
                 }
                 catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
                 }
             }
         });
@@ -248,10 +248,12 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
 
             return key;
         }
+
         /** {@inheritDoc} */
         @Override public void write(javax.cache.Cache.Entry<? extends Integer, ? extends Integer> e) {
             // No-op;
         }
+
         /** {@inheritDoc} */
         @Override public void delete(Object key) {
             // No-op;

@@ -30,7 +30,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
@@ -74,7 +73,7 @@ public abstract class CacheMvccAbstractSqlCoordinatorFailoverTest extends CacheM
      */
     @Test
     public void testPutAllGetAll_ClientServer_Backups0_RestartCoordinator_ScanDml() throws Exception {
-        putAllGetAll(RestartMode.RESTART_CRD  , 2, 1, 0, 64,
+        putAllGetAll(RestartMode.RESTART_CRD, 2, 1, 0, 64,
             new InitIndexing(Integer.class, Integer.class), SCAN, DML);
     }
 
@@ -86,7 +85,7 @@ public abstract class CacheMvccAbstractSqlCoordinatorFailoverTest extends CacheM
     public void testPutAllGetAll_SingleNode_RestartCoordinator_ScanDml_Persistence() throws Exception {
         persistence = true;
 
-        putAllGetAll(RestartMode.RESTART_CRD  , 1, 0, 0, 1,
+        putAllGetAll(RestartMode.RESTART_CRD, 1, 0, 0, 1,
             new InitIndexing(Integer.class, Integer.class), SCAN, DML);
     }
 
@@ -281,8 +280,6 @@ public abstract class CacheMvccAbstractSqlCoordinatorFailoverTest extends CacheM
                 return null;
             }
         }, "start-cache");
-
-        U.sleep(1000);
 
         assertFalse(fut.isDone());
 

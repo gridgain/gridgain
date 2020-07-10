@@ -209,7 +209,7 @@ public class MarshallerContextSelfTest extends GridCommonAbstractTest {
 
         List list = U.field(ctx, "allCaches");
 
-        assertNotNull("Mapping cache is null for platformId: 0" , list.get(0));
+        assertNotNull("Mapping cache is null for platformId: 0", list.get(0));
         assertNull("Mapping cache is not null for platformId: 1", list.get(1));
         assertNotNull("Mapping cache is null for platformId: 2", list.get(2));
 
@@ -243,7 +243,7 @@ public class MarshallerContextSelfTest extends GridCommonAbstractTest {
 
         List list = U.field(ctx, "allCaches");
 
-        assertNotNull("Mapping cache is null for platformId: 0" , list.get(0));
+        assertNotNull("Mapping cache is null for platformId: 0", list.get(0));
         assertNotNull("Mapping cache is null for platformId: 1", list.get(1));
 
         boolean excObserved = false;

@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.binary;
 
-import javax.cache.CacheException;
 import java.io.File;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -49,6 +49,7 @@ import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
@@ -206,8 +207,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             if (!ctx.clientNode())
                 metadataFileStore = new BinaryMetadataFileStore(metadataLocCache, ctx, log, binaryMetadataFileStoreDir);
 
-            transport = new BinaryMetadataTransport(metadataLocCache, metadataFileStore, ctx, log);
-
             BinaryMetadataHandler metaHnd = new BinaryMetadataHandler() {
                 @Override public void addMeta(
                     int typeId,
@@ -260,6 +259,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             binaryCtx = useTestBinaryCtx ?
                 new TestBinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class)) :
                 new BinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class));
+
+            transport = new BinaryMetadataTransport(metadataLocCache, metadataFileStore, binaryCtx, ctx, log);
 
             IgniteUtils.invoke(BinaryMarshaller.class, bMarsh0, "setBinaryContext", binaryCtx, ctx.config());
 
@@ -695,6 +696,19 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         }
 
         if (holder != null) {
+            if (holder.removing()) {
+                GridFutureAdapter<MetadataUpdateResult> fut = transport.awaitMetadataRemove(typeId);
+
+                try {
+                    fut.get();
+                }
+                catch (IgniteCheckedException ignored) {
+                    // No-op.
+                }
+
+                return null;
+            }
+
             if (curThread instanceof IgniteDiscoveryThread || (curThread != null && curThread.isForbiddenToRequestBinaryMetadata()))
                 return holder.metadata();
 
@@ -743,7 +757,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         " [typeId=" + typeId
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + (holder == null ? "NA" : holder.pendingVersion())
-                        + ", acceptedVer=" + (holder == null ? "NA" :holder.acceptedVersion()) + ']');
+                        + ", acceptedVer=" + (holder == null ? "NA" : holder.acceptedVersion()) + ']');
 
                 try {
                     transport.requestUpToDateMetadata(typeId).get();
@@ -764,7 +778,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         " [typeId=" + typeId
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + (holder == null ? "NA" : holder.pendingVersion())
-                        + ", acceptedVer=" + (holder == null ? "NA" :holder.acceptedVersion()) + ']');
+                        + ", acceptedVer=" + (holder == null ? "NA" : holder.acceptedVersion()) + ']');
             }
         }
         else {
@@ -810,7 +824,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         + ", missingSchemaId=" + schemaId
                         + ", pendingVer=" + (holder == null ? "NA" : holder.pendingVersion())
                         + ", acceptedVer=" + (holder == null ? "NA" : holder.acceptedVersion())
-                        + ", binMetaUpdateTimeout=" + waitSchemaTimeout +']');
+                        + ", binMetaUpdateTimeout=" + waitSchemaTimeout + ']');
 
                 long t0 = System.nanoTime();
 
@@ -877,6 +891,28 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 return metaHolder.metadata().wrap(binaryCtx);
             }
         });
+    }
+
+    /**
+     * @return Cluster binary metadata.
+     * @throws BinaryObjectException on error.
+     */
+    public Collection<BinaryMetadata> binaryMetadata() throws BinaryObjectException {
+        return F.viewReadOnly(metadataLocCache.values(), new IgniteClosure<BinaryMetadataHolder, BinaryMetadata>() {
+            @Override public BinaryMetadata apply(BinaryMetadataHolder metaHolder) {
+                return metaHolder.metadata();
+            }
+        });
+    }
+
+    /**
+     * @return Binary metadata for specified type.
+     * @throws BinaryObjectException on error.
+     */
+    public BinaryMetadata binaryMetadata(int typeId) throws BinaryObjectException {
+        BinaryMetadataHolder hld = metadataLocCache.get(typeId);
+
+        return hld != null ? hld.metadata() : null;
     }
 
     /** {@inheritDoc} */
@@ -1172,7 +1208,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to get partition", e);
 
-            return  -1;
+            return -1;
         }
     }
 
@@ -1370,8 +1406,10 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         if (!dataBag.commonDataCollectedFor(BINARY_PROC.ordinal())) {
             Map<Integer, BinaryMetadataHolder> res = U.newHashMap(metadataLocCache.size());
 
-            for (Map.Entry<Integer,BinaryMetadataHolder> e : metadataLocCache.entrySet())
-                res.put(e.getKey(), e.getValue());
+            for (Map.Entry<Integer,BinaryMetadataHolder> e : metadataLocCache.entrySet()) {
+                if (!e.getValue().removing())
+                    res.put(e.getKey(), e.getValue());
+            }
 
             dataBag.addGridCommonData(BINARY_PROC.ordinal(), (Serializable) res);
         }
@@ -1471,6 +1509,42 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
      */
     public void setBinaryMetadataFileStoreDir(@Nullable File binaryMetadataFileStoreDir) {
         this.binaryMetadataFileStoreDir = binaryMetadataFileStoreDir;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void removeType(int typeId) {
+        BinaryMetadataHolder oldHld = metadataLocCache.get(typeId);
+
+        if (oldHld == null)
+            throw new IgniteException("Failed to remove metadata, type not found: " + typeId);
+
+        if (oldHld.removing())
+            throw new IgniteException("Failed to remove metadata, type is being removed: " + typeId);
+
+        if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.REMOVE_METADATA)) {
+            throw new IgniteException("Failed to remove metadata, " +
+                "all cluster nodes must support the remove type feature");
+        }
+
+        try {
+            GridFutureAdapter<MetadataUpdateResult> fut = transport.requestMetadataRemove(typeId);
+
+            MetadataUpdateResult res = fut.get();
+
+            if (res.rejected())
+                throw res.error();
+        }
+        catch (IgniteCheckedException e) {
+            IgniteCheckedException ex = e;
+
+            if (ctx.isStopping()) {
+                ex = new NodeStoppingException("Node is stopping.");
+
+                ex.addSuppressed(e);
+            }
+
+            throw new BinaryObjectException("Failed to remove metadata for type: " + typeId, ex);
+        }
     }
 
     /** */

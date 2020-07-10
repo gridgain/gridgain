@@ -45,7 +45,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
             //client, local
             { false, false },
             { false, true },
-            { true,  false },
+            { true, false },
         });
     }
 

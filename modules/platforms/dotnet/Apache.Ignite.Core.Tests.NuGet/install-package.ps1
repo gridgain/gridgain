@@ -13,6 +13,9 @@ rmdir packages -Force -Recurse
 	
 # Detect NuGet
 $ng = "nuget"
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 if ((Get-Command $ng -ErrorAction SilentlyContinue) -eq $null) { 
     $ng = "$PSScriptRoot\..\nuget.exe"
 

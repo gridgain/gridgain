@@ -501,7 +501,7 @@ class OptimizedClassDescriptor {
 
                         List<FieldInfo> clsFields = new ArrayList<>(clsFields0.length);
 
-                        boolean hasSerialPersistentFields  = false;
+                        boolean hasSerialPersistentFields = false;
 
                         try {
                             Field serFieldsDesc = c.getDeclaredField("serialPersistentFields");

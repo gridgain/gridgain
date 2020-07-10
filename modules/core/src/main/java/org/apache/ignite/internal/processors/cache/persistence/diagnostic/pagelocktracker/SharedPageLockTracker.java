@@ -63,32 +63,44 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
      *
      */
     public final int threadLimits;
+
+    /**
+     *
+     */
+    public final int timeOutWorkerInterval;
+
     /**
      *
      */
     private final Map<Long, PageLockTracker<? extends PageLockDump>> threadStacks = new HashMap<>();
+
     /**
      *
      */
     private final Map<Long, Thread> threadIdToThreadRef = new HashMap<>();
+
     /**
      *
      */
     private final Map<String, Integer> structureNameToId = new HashMap<>();
+
     /** Thread for clean terminated threads from map. */
     private final TimeOutWorker timeOutWorker;
     /**
      *
      */
     private Map<Long, SharedPageLockTracker.State> prevThreadsState = new HashMap<>();
+
     /**
      *
      */
     private int idGen;
+
     /**
      *
      */
     private final Consumer<Set<SharedPageLockTracker.State>> hangThreadsCallBack;
+
     /**
      *
      */
@@ -387,10 +399,12 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
          *
          */
         final long threadOpCnt;
+
         /**
          *
          */
         final long heldLockCnt;
+
         /**
          *
          */
