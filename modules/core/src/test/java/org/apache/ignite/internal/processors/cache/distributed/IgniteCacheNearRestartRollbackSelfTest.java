@@ -143,7 +143,7 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
 
                 return null;
             },
-                "async-restarter-tread");
+                "async-restarter-thread");
 
             int currVal = 0;
             boolean invoke = false;
