@@ -157,7 +157,11 @@ public enum IgniteFeatures {
     REMOVE_METADATA(39),
 
     /** Support policy of shutdown. */
-    SHUTDOWN_POLICY(40);
+    SHUTDOWN_POLICY(40),
+
+    /** New security processor with a security context support. */
+    IGNITE_SECURITY_PROCESSOR_V2(41);
+
     /**
      * Unique feature identifier.
      */
@@ -309,6 +313,9 @@ public enum IgniteFeatures {
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
             if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
+                continue;
+
+            if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
             //Disable new rolling upgrade

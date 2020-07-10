@@ -41,9 +41,8 @@ public class InvalidServerTest extends AbstractSecurityTest {
     private final AtomicBoolean criticalFailuresFlag = new AtomicBoolean(false);
 
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String instanceName,
-        AbstractTestSecurityPluginProvider pluginProv) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(instanceName, pluginProv);
+    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(instanceName);
 
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
             @Override protected void startMessageProcess(TcpDiscoveryAbstractMessage msg) {
