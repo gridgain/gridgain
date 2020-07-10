@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -112,13 +113,17 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
 
         final AtomicLong lastUpdateTs = new AtomicLong(System.currentTimeMillis());
 
+        final AtomicBoolean doRestarts = new AtomicBoolean(true);
+
+        IgniteInternalFuture<Object> fut = null;
+
         try {
             Set<Integer> keys = new LinkedHashSet<>();
 
             for (int i = 0; i < ENTRY_COUNT; i++)
                 keys.add(i);
 
-            IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(() -> {
+            fut = GridTestUtils.runAsync(() -> {
                 for (int i = 0; i < GridTestUtils.SF.applyLB(50, 20); i++) {
                     stopGrid(0);
 
@@ -134,6 +139,9 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
 
                     synchronized (lastUpdateTs) {
                         while (System.currentTimeMillis() - lastUpdateTs.get() > 1_000) {
+                            if (!doRestarts.get())
+                                return null;
+
                             info("Will wait for an update operation to finish.");
 
                             lastUpdateTs.wait(1_000);
@@ -166,13 +174,15 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
                 catch (Throwable e) {
                     log.error("Update failed: " + e, e);
 
+                    doRestarts.set(false);
+
                     throw e;
                 }
             }
-
-            fut.get();
         }
         finally {
+            fut.get();
+
             stopAllGrids();
         }
     }
