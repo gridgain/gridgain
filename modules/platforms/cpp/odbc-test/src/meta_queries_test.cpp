@@ -131,6 +131,103 @@ struct MetaQueriesTestSuiteFixture : public odbc::OdbcTestSuite
     }
 
     /**
+     * Check result set column metadata.
+     *
+     * @param stmt Statement.
+     * @param idx Index.
+     * @param expName Expected name.
+     * @param expDataType Expected data type.
+     * @param expSize Expected column size.
+     * @param expScale Expected column scale.
+     * @param expNullability expected nullability.
+     */
+    void CheckColumnMeta(SQLHSTMT stmt, SQLUSMALLINT idx, const std::string& expName, SQLSMALLINT expDataType,
+        SQLULEN expSize, SQLSMALLINT expScale, SQLSMALLINT expNullability)
+    {
+        std::vector<SQLCHAR> name(ODBC_BUFFER_SIZE);
+        SQLSMALLINT nameLen = 0;
+        SQLSMALLINT dataType = 0;
+        SQLULEN size;
+        SQLSMALLINT scale;
+        SQLSMALLINT nullability;
+
+        SQLRETURN ret = SQLDescribeCol(stmt, idx, &name[0], name.size(), &nameLen, &dataType, &size, &scale, &nullability);
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        BOOST_CHECK_GE(nameLen, 0);
+        BOOST_CHECK_LE(nameLen, static_cast<SQLSMALLINT>(ODBC_BUFFER_SIZE));
+
+        std::string nameStr(name.begin(), name.begin() + nameLen);
+
+        BOOST_CHECK_EQUAL(nameStr, expName);
+        BOOST_CHECK_EQUAL(dataType, expDataType);
+        BOOST_CHECK_EQUAL(size, expSize);
+        BOOST_CHECK_EQUAL(scale, expScale);
+        BOOST_CHECK_EQUAL(nullability, expNullability);
+    }
+
+    /**
+     * @param func Function to call before tests. May be PrepareQuery or ExecQuery.
+     *
+     * 1. Start node.
+     * 2. Connect to node using ODBC.
+     * 3. Create table with decimal and char columns with specified size and scale.
+     * 4. Execute or prepare statement.
+     * 5. Check presicion and scale of every column.
+     */
+    template<typename F>
+    void CheckSQLDescribeColPrecisionAndScale(F func)
+    {
+        Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=PUBLIC");
+
+        SQLRETURN ret = ExecQuery(
+            "create table TestScalePrecision("
+            "   id int primary key,"
+            "   dec1 decimal(3,0),"
+            "   dec2 decimal(42,12),"
+            "   dec3 decimal,"
+            "   char1 char(3),"
+            "   char2 char(42),"
+            "   char3 char,"
+            "   vchar varchar"
+            ")");
+
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        ret = SQLFreeStmt(stmt, SQL_CLOSE);
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        ret = ExecQuery(
+            "insert into "
+            "TestScalePrecision(id, dec1, dec2, dec3, char1, char2, char3, vchar) "
+            "values (1, 12, 160.23, -1234.56789, 'TST', 'Lorem Ipsum', 'Some test value', 'Some test varchar')");
+
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        ret = SQLFreeStmt(stmt, SQL_CLOSE);
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        ret = (this->*func)("select id, dec1, dec2, dec3, char1, char2, char3, vchar from PUBLIC.TestScalePrecision");
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        SQLSMALLINT columnCount = 0;
+
+        ret = SQLNumResultCols(stmt, &columnCount);
+        ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+        BOOST_CHECK_EQUAL(columnCount, 8);
+
+        CheckColumnMeta(stmt, 1, "ID", SQL_INTEGER, 10, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 2, "DEC1", SQL_DECIMAL, 3, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 3, "DEC2", SQL_DECIMAL, 42, 12, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 4, "DEC3", SQL_DECIMAL, 65535, 32767, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 5, "CHAR1", SQL_VARCHAR, 3, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 6, "CHAR2", SQL_VARCHAR, 42, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 7, "CHAR3", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE_UNKNOWN);
+        CheckColumnMeta(stmt, 8, "VCHAR", SQL_VARCHAR, 2147483647, 0, SQL_NULLABLE_UNKNOWN);
+    }
+
+    /**
      * Destructor.
      */
     ~MetaQueriesTestSuiteFixture()
@@ -582,6 +679,33 @@ BOOST_AUTO_TEST_CASE(TestSQLNumResultColsAfterSQLPrepare)
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     BOOST_CHECK_EQUAL(columnCount, 4);
+}
+
+/**
+ * Check that SQLDescribeCol return valid scale and precision for columns of different type after Prepare.
+ *
+ * 1. Start node.
+ * 2. Connect to node using ODBC.
+ * 3. Create table with decimal and char columns with specified size and scale.
+ * 4. Prepare statement.
+ * 5. Check presicion and scale of every column.
+ */
+BOOST_AUTO_TEST_CASE(TestSQLDescribeColPrecisionAndScaleAfterPrepare)
+{
+    CheckSQLDescribeColPrecisionAndScale(&OdbcTestSuite::PrepareQuery);
+}
+
+/**
+ * Check that SQLDescribeCol return valid scale and precision for columns of different type after Execute.
+ *
+ * 1. Start node.
+ * 2. Connect to node using ODBC.
+ * 3. Create table with decimal and char columns with specified size and scale.
+ * 4. Execute statement.
+ * 5. Check presicion and scale of every column. */
+BOOST_AUTO_TEST_CASE(TestSQLDescribeColPrecisionAndScaleAfterExec)
+{
+    CheckSQLDescribeColPrecisionAndScale(&OdbcTestSuite::ExecQuery);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
