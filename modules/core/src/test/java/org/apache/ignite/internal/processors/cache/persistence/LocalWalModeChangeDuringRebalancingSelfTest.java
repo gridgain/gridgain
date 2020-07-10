@@ -581,6 +581,8 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         newIgnite.cluster().setBaselineTopology(newIgnite.cluster().nodes());
 
+        awaitPartitionMapExchange();
+
         cache = newIgnite.cache(DEFAULT_CACHE_NAME);
 
         Collection<Integer> lostParts = cache.lostPartitions();
