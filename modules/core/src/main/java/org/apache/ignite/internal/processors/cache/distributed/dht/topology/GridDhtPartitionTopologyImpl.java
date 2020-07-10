@@ -181,7 +181,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         cntrMap = new CachePartitionFullCountersMap(locParts.length());
 
-        partFactory = (ctx1, grp1, id) -> new GridDhtLocalPartition(ctx1, grp1, id, false);
+        partFactory = GridDhtLocalPartition::new;
     }
 
     /**
@@ -905,7 +905,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 recreate = true;
             }
 
-            locParts.set(p, loc = partFactory.create(ctx, grp, p));
+            locParts.set(p, loc = partFactory.create(ctx, grp, p, false));
 
             if (recreate)
                 loc.resetUpdateCounter();
@@ -952,7 +952,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
             }
 
-            part = new GridDhtLocalPartition(ctx, grp, p, true);
+            part = partFactory.create(ctx, grp, p, true);
 
             if (recreate)
                 part.resetUpdateCounter();
@@ -1036,7 +1036,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "[grp=" + grp.cacheOrGroupName() + ", part=" + p + ", topVer=" + topVer +
                             ", this.topVer=" + this.readyTopVer + ']');
 
-                    locParts.set(p, loc = partFactory.create(ctx, grp, p));
+                    locParts.set(p, loc = partFactory.create(ctx, grp, p, false));
 
                     if (recreate)
                         loc.resetUpdateCounter();
@@ -3308,6 +3308,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
          */
         public GridDhtLocalPartition create(GridCacheSharedContext ctx,
             CacheGroupContext grp,
-            int id);
+            int id,
+            boolean recovery);
     }
 }

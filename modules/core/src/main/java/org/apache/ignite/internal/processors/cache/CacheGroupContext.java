@@ -1095,7 +1095,7 @@ public class CacheGroupContext {
             );
 
         if (ccfg.getCacheMode() != LOCAL) {
-            top = new GridDhtPartitionTopologyImpl(ctx, this);
+            top = ctx.kernalContext().resource().resolve(new GridDhtPartitionTopologyImpl(ctx, this));
 
             metrics.onTopologyInitialized();
         }
