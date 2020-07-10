@@ -49,6 +49,9 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     /** Permissions. */
     public static final Map<SecurityCredentials, SecurityPermissionSet> PERMS = new ConcurrentHashMap<>();
 
+    /** */
+    private static final Map<UUID, SecurityContext> SECURITY_CONTEXTS = new ConcurrentHashMap<>();
+
     /** Node security data. */
     private final TestSecurityData nodeSecData;
 
@@ -156,7 +159,7 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
             ((SecurityBasicPermissionSet) perms).setDefaultAllowAll(true);
         }
 
-        return new TestSecurityContext(
+        SecurityContext res = new TestSecurityContext(
             new TestSecuritySubject()
                 .setType(ctx.subjectType())
                 .setId(ctx.subjectId())
@@ -165,6 +168,10 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
                 .setPerms(perms)
                 .setCerts(ctx.certificates())
         );
+
+        SECURITY_CONTEXTS.put(res.subject().id(), res);
+
+        return res;
     }
 
     /** {@inheritDoc} */
@@ -175,6 +182,11 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     /** {@inheritDoc} */
     @Override public SecuritySubject authenticatedSubject(UUID subjId) {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public SecurityContext securityContext(UUID subjId) {
+        return SECURITY_CONTEXTS.get(subjId);
     }
 
     /** {@inheritDoc} */

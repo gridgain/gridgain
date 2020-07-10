@@ -185,19 +185,22 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
 
         // Finished DHT future is required for topology validation.
         if (!fut.isDone()) {
-            if (fut.initialVersion().after(topVer) || (fut.exchangeActions() != null && fut.exchangeActions().hasStop()))
+            if ((topVer.topologyVersion() > 0 && fut.initialVersion().after(topVer))
+                || (fut.exchangeActions() != null && fut.exchangeActions().hasStop()))
                 fut = cctx.shared().exchange().lastFinishedFuture();
             else {
                 fut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
-                        if (fut.error() != null)
-                            onDone(fut.error());
-                        else {
+                        try {
+                            AffinityTopologyVersion topVer0 = fut.get();
+
                             cctx.closures().runLocalSafe(new GridPlainRunnable() {
                                 @Override public void run() {
-                                    map(keys, mapped, topVer);
+                                    map(keys, mapped, topVer.topologyVersion() > 0 ? topVer : topVer0);
                                 }
                             }, true);
+                        } catch (IgniteCheckedException e) {
+                            onDone(e);
                         }
                     }
                 });
@@ -589,7 +592,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
      * @param topFut Topology future.
      */
     private void validate(Collection<ClusterNode> cacheNodes, GridDhtTopologyFuture topFut) {
-        assert topFut.isDone() : topFut;
+        assert topFut != null && topFut.isDone() : topFut;
 
         Throwable err = topFut != null ? topFut.validateCache(cctx, recovery, true, null, keys) : null;
 
