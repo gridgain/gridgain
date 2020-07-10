@@ -315,7 +315,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             }
         }.start();
 
-        executorService.scheduleAtFixedRate(new MetricsSender(), spi.metricsUpdateFreq, spi.metricsUpdateFreq, MILLISECONDS) ;
+        executorService.scheduleAtFixedRate(new MetricsSender(), spi.metricsUpdateFreq, spi.metricsUpdateFreq, MILLISECONDS);
 
         try {
             joinLatch.await();

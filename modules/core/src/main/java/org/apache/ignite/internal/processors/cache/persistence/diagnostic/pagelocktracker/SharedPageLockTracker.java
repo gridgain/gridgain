@@ -81,6 +81,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
 
     /** Thread for clean terminated threads from map. */
     private final TimeOutWorker timeOutWorker;
+
     /**
      *
      */
@@ -364,14 +365,12 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
      */
     private class TimeOutWorker extends CycleThread {
 
-
         /**
          *
          */
         TimeOutWorker(long interval) {
             super("page-lock-tracker-timeout", interval);
         }
-
 
         /** {@inheritDoc} */
         @Override public void iteration() {

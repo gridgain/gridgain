@@ -52,12 +52,10 @@ public abstract class CycleThread extends Thread {
         }
     }
 
-
     /**
      * Called on each iteration.
      *
-     * @throws InterruptedException throws if no specific handling required
+     * @throws InterruptedException Еhrows if no specific handling required.
      */
     public abstract void iteration() throws InterruptedException;
-
 }

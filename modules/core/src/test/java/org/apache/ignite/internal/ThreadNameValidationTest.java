@@ -25,11 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -38,8 +36,6 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runners.model.Statement;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY;
 
 /**
  * Check threads for default names in single and thread pool instances.
@@ -57,7 +53,6 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
 
     /** Sequence for sets objects. */
     private static final transient AtomicLong SEQUENCE = new AtomicLong();
-
 
     /** */
     private static final TestRule beforeAllTestRule = (base, description) -> new Statement() {
