@@ -214,12 +214,31 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             }
         }
 
+        TableFilter fil = filters[filter];
+
+        boolean skipColumnsIntersection = false;
+
+        if (fil != null && columns != null) {
+            skipColumnsIntersection = true;
+
+            ArrayList<IndexCondition> idxConds = fil.getIndexConditions();
+
+            for (IndexCondition cond : idxConds) {
+                if (cond.getColumn() == columns[0]) {
+                    skipColumnsIntersection = false;
+
+                    break;
+                }
+            }
+
+        }
+
         // If we have two indexes with the same cost, and one of the indexes can
         // satisfy the query without needing to read from the primary table
         // (scan index), make that one slightly lower cost.
         boolean needsToReadFromScanIndex = true;
 
-        if (!isScanIndex && allColumnsSet != null) {
+        if (!isScanIndex && allColumnsSet != null && !skipColumnsIntersection) {
             boolean foundAllColumnsWeNeed = true;
 
             ArrayList<Column> foundCols = allColumnsSet.get(getTable());
