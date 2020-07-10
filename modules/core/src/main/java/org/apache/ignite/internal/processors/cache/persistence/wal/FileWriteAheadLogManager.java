@@ -1006,8 +1006,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (inArchive)
             return true;
 
-        if (absIdx <= lastArchivedIndex())
-            return false;
+        if (absIdx <= lastArchivedIndex()) {
+            // TODO: https://issues.apache.org/jira/browse/IGNITE-13137
+            return new File(walArchiveDir, segmentName).exists() || new File(walArchiveDir, zipSegmentName).exists();
+        }
 
         FileWriteHandle cur = currHnd;
 

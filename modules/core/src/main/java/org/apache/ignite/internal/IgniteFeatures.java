@@ -160,7 +160,10 @@ public enum IgniteFeatures {
     SHUTDOWN_POLICY(40),
 
     /** New security processor with a security context support. */
-    IGNITE_SECURITY_PROCESSOR_V2(41);
+    IGNITE_SECURITY_PROCESSOR_V2(41),
+
+    /** Snapshots without PME. */
+    EXCHANGELESS_SNAPSHOT(43);
 
     /**
      * Unique feature identifier.
