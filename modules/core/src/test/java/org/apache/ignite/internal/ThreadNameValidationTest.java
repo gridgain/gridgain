@@ -218,7 +218,5 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
             this.id = id;
             this.name = name;
         }
-
-    }
-
+ё    }
 }
