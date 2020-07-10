@@ -98,10 +98,11 @@ public class ThinClientSslPermissionCheckTest extends AbstractSecurityTest {
     private IgniteConfiguration getConfiguration(int idx, TestSecurityData... clientData) throws Exception {
         String instanceName = getTestIgniteInstanceName(idx);
 
-        return getConfiguration(
-            instanceName,
-            new TestCertificateSecurityPluginProvider(clientData)
-        ).setCacheConfiguration(
+        IgniteConfiguration cfg = getConfiguration(instanceName);
+
+        cfg.setPluginProviders(new TestCertificateSecurityPluginProvider(clientData));
+
+        return cfg.setCacheConfiguration(
             new CacheConfiguration().setName(CACHE),
             new CacheConfiguration().setName(FORBIDDEN_CACHE)
         ).setClientConnectorConfiguration(

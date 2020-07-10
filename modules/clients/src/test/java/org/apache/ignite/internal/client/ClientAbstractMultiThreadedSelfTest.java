@@ -39,7 +39,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.balancer.GridClientRoundRobinBalancer;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -91,10 +90,6 @@ public abstract class ClientAbstractMultiThreadedSelfTest extends GridCommonAbst
 
     /** Base for tcp rest ports. */
     public static final int REST_TCP_PORT_BASE = 12345;
-
-    static {
-        System.setProperty("CLIENTS_MODULE_PATH", U.resolveIgnitePath("modules/clients").getAbsolutePath());
-    }
 
     /** Client instance for each test. */
     protected GridClient client;
