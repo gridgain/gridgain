@@ -317,7 +317,7 @@ namespace ignite
 
         LOG_MSG("DSN: " << dsn);
 
-        odbc::ReadDsnConfiguration(dsn.c_str(), config);
+        odbc::ReadDsnConfiguration(dsn.c_str(), config, &connection->GetDiagnosticRecords());
 
         connection->Establish(config);
 
