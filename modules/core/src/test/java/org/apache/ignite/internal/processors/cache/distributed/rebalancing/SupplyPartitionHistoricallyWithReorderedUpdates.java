@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -37,10 +38,10 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Supplay a partition from a beckup in a cluster.
+ * Checks a historical rebalance on atomic cache, when demand node has re-ordered updates.
  */
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-public class SupplyPartitionHistoricallyToBackupPartition extends GridCommonAbstractTest {
+public class SupplyPartitionHistoricallyWithReorderedUpdates extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
@@ -51,7 +52,17 @@ public class SupplyPartitionHistoricallyToBackupPartition extends GridCommonAbst
                     .setPersistenceEnabled(true)))
             .setConsistentId(igniteInstanceName)
             .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
+                .setAtomicityMode(CacheAtomicityMode.ATOMIC)
                 .setAffinity(new TestAffinity(getTestIgniteInstanceName(0), getTestIgniteInstanceName(1))));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** {@inheritDoc} */
@@ -64,22 +75,32 @@ public class SupplyPartitionHistoricallyToBackupPartition extends GridCommonAbst
     }
 
     /**
+     * Backup node loses one entry, after this it will restore state through historical rebalance.
+     *
      * @throws Exception If failed.
      */
     @Test
-    public void testNothingSupply() throws Exception {
-        restartsBackupWithoutReorderedUpdate(false);
+    public void testLoosingCreateSupplyLatestUpdates() throws Exception {
+        restartsBackupWithReorderedUpdate(false);
     }
 
     /**
+     * Backup node loses one update entry, after this it will restore state through historical rebalance.
+     *
      * @throws Exception If failed.
      */
     @Test
-    public void testSupplyLatestUpdates() throws Exception {
-        restartsBackupWithoutReorderedUpdate(true);
+    public void testLoosingUpdateSupplyLatestUpdates() throws Exception {
+        restartsBackupWithReorderedUpdate(true);
     }
 
-    private void restartsBackupWithoutReorderedUpdate(boolean loadDataAfterCheckpoint) throws Exception {
+    /**
+     * Starts two nodes (first primary, second backup), reorders update on a backup and after restarts the backup node.
+     *
+     * @param updateExistedKys True for reordered update existing key, false reordered creating new entries.
+     * @throws Exception If failed.
+     */
+    private void restartsBackupWithReorderedUpdate(boolean updateExistedKys) throws Exception {
         IgniteEx ignite0 = startGrids(2);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
@@ -91,29 +112,32 @@ public class SupplyPartitionHistoricallyToBackupPartition extends GridCommonAbst
 
         AtomicBoolean blocked = new AtomicBoolean();
 
-        TestRecordingCommunicationSpi.spi(ignite0).blockMessages((node, msg) -> {
-            info("Msg: " + msg.getClass().getSimpleName() + " to node: " + node.consistentId());
-
-            return msg instanceof GridDhtAtomicSingleUpdateRequest &&
+        TestRecordingCommunicationSpi.spi(ignite0).blockMessages((node, msg) ->
+            msg instanceof GridDhtAtomicSingleUpdateRequest &&
                 getTestIgniteInstanceName(1).equals(node.consistentId()) &&
-                blocked.compareAndSet(false, true);
-        });
+                blocked.compareAndSet(false, true));
 
-        for (int i = 10; i < 20; i++)
-            cache.put(i, i);
+        if (updateExistedKys) {
+            for (int i = 0; i < 10; i++)
+                cache.put(i, i + 1);
+        }
+        else {
+            for (int i = 10; i < 20; i++)
+                cache.put(i, i);
+        }
 
         TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked();
 
         forceCheckpoint();
 
-        if (loadDataAfterCheckpoint) {
-            for (int i = 20; i < 30; i++)
-                cache.put(i, i);
-        }
-
         stopGrid(1);
 
         TestRecordingCommunicationSpi.spi(ignite0).stopBlock();
+
+        for (int i = 20; i < 30; i++)
+            cache.put(i, i);
+
+        forceCheckpoint(ignite0);
 
         startGrid(1);
 

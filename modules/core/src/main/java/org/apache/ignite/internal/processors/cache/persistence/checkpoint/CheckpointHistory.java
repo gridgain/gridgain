@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -39,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPa
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -459,7 +461,11 @@ public class CheckpointHistory {
      * @param partsCounter Partition mapped to update counter.
      * @return Earliest WAL pointer for group specified.
      */
-    @Nullable public WALPointer searchEarliestWalPointer(int grpId, Map<Integer, Long> partsCounter) throws IgniteCheckedException {
+    @Nullable public WALPointer searchEarliestWalPointer(
+        int grpId,
+        Map<Integer, Long> partsCounter,
+        long margin
+    ) throws IgniteCheckedException {
         if (F.isEmpty(partsCounter))
             return null;
 
@@ -467,8 +473,29 @@ public class CheckpointHistory {
 
         FileWALPointer minPtr = null;
 
+        LinkedList<T3<Map.Entry<Integer, Long>, FileWALPointer, Long>> historyPointerCandidat = new LinkedList<>();
+
         for (Long cpTs : checkpoints(true)) {
             CheckpointEntry cpEntry = entry(cpTs);
+
+            while (!F.isEmpty(historyPointerCandidat)) {
+                T3<Map.Entry<Integer, Long>, FileWALPointer, Long> entry = historyPointerCandidat.poll();
+
+                Long foundCntr = cpEntry.partitionCounter(cctx, grpId, entry.get1().getKey());
+
+                FileWALPointer ptr;
+
+                if (foundCntr == null || foundCntr == entry.get3())
+                    ptr = entry.get2();
+                else {
+                    ptr =(FileWALPointer)cpEntry.checkpointMark();
+
+                    partsCounter.put(entry.get1().getKey(), Math.min(foundCntr, entry.get1().getValue() + margin));
+                }
+
+                if (minPtr == null || ptr.compareTo(minPtr) < 0)
+                    minPtr = ptr;
+            }
 
             Iterator<Map.Entry<Integer, Long>> iter = modifiedPartsCounter.entrySet().iterator();
 
@@ -487,12 +514,17 @@ public class CheckpointHistory {
                             + entry.getKey() + ", partCntrSince=" + entry.getValue() + "]");
                     }
 
-                    if (minPtr == null || ptr.compareTo(minPtr) < 0)
+                    if (foundCntr + margin > entry.getValue())
+                        historyPointerCandidat.add(new T3<>(entry, ptr, foundCntr));
+                    else if (minPtr == null || ptr.compareTo(minPtr) < 0) {
                         minPtr = ptr;
+
+                        partsCounter.put(entry.getKey(), entry.getValue() + margin);
+                    }
                 }
             }
 
-            if (F.isEmpty(modifiedPartsCounter))
+            if (F.isEmpty(modifiedPartsCounter) && F.isEmpty(historyPointerCandidat))
                 return minPtr;
         }
 
@@ -501,6 +533,15 @@ public class CheckpointHistory {
 
             throw new IgniteCheckedException("Could not find start pointer for partition [part="
                 + entry.getKey() + ", partCntrSince=" + entry.getValue() + "]");
+        }
+
+        if (!F.isEmpty(historyPointerCandidat)) {
+            while (!F.isEmpty(historyPointerCandidat)) {
+                T3<Map.Entry<Integer, Long>, FileWALPointer, Long> entry = historyPointerCandidat.poll();
+
+                if (minPtr == null || entry.get2().compareTo(minPtr) < 0)
+                    minPtr = entry.get2();
+            }
         }
 
         return minPtr;
