@@ -160,7 +160,7 @@ public enum IgniteFeatures {
     SHUTDOWN_POLICY(40),
 
     /** Snapshots without PME. */
-    EXCHANGELESS_SNAPSHOT(41);
+    EXCHANGELESS_SNAPSHOT(42);
 
     /**
      * Unique feature identifier.
