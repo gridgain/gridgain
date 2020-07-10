@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -30,6 +31,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -93,11 +95,13 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
 
         super.beforeTest();
 
-        anonymousThreadCountBeforeTest = getAnonymousThreadCount();
+        // MBean used LogManager with anonymous shutdown hook Thread,
+        // init here if required for same behavior in runs in suite and test only
+        if (!U.IGNITE_MBEANS_DISABLED) {
+            ManagementFactory.getPlatformMBeanServer();
+        }
 
-        // MBean used LogManager with anonymous shutdown hook Thread.
-        if (!U.IGNITE_MBEANS_DISABLED)
-            anonymousThreadCountBeforeTest++;
+        anonymousThreadCountBeforeTest = getAnonymousThreadCount();
 
         super.beforeTest();
     }
