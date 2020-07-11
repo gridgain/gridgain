@@ -488,7 +488,7 @@ public class CheckpointHistory {
                 if (foundCntr == null || foundCntr == entry.get3())
                     ptr = entry.get2();
                 else {
-                    ptr =(FileWALPointer)cpEntry.checkpointMark();
+                    ptr = (FileWALPointer)cpEntry.checkpointMark();
 
                     partsCounter.put(entry.get1().getKey(), Math.max(foundCntr, entry.get1().getValue() - margin));
                 }
