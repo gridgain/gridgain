@@ -490,7 +490,7 @@ public class CheckpointHistory {
                 else {
                     ptr =(FileWALPointer)cpEntry.checkpointMark();
 
-                    partsCounter.put(entry.get1().getKey(), Math.min(foundCntr, entry.get1().getValue() + margin));
+                    partsCounter.put(entry.get1().getKey(), Math.max(foundCntr, entry.get1().getValue() - margin));
                 }
 
                 if (minPtr == null || ptr.compareTo(minPtr) < 0)
@@ -519,7 +519,7 @@ public class CheckpointHistory {
                     else if (minPtr == null || ptr.compareTo(minPtr) < 0) {
                         minPtr = ptr;
 
-                        partsCounter.put(entry.getKey(), entry.getValue() + margin);
+                        partsCounter.put(entry.getKey(), entry.getValue() - margin);
                     }
                 }
             }

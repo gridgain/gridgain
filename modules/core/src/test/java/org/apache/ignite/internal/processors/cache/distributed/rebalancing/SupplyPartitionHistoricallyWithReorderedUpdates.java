@@ -118,11 +118,11 @@ public class SupplyPartitionHistoricallyWithReorderedUpdates extends GridCommonA
                 blocked.compareAndSet(false, true));
 
         if (updateExistedKys) {
-            for (int i = 0; i < 10; i++)
+            for (int i = 5; i < 10; i++)
                 cache.put(i, i + 1);
         }
         else {
-            for (int i = 10; i < 20; i++)
+            for (int i = 15; i < 20; i++)
                 cache.put(i, i);
         }
 
