@@ -31,6 +31,9 @@ namespace Apache.Ignite.Core.Impl.Cluster
     /// </summary>
     internal class ClusterNodeImpl : IClusterNode
     {
+        /** Detached mode */
+        private readonly bool _isDetached;
+
         /** Node ID. */
         private readonly Guid _id;
 
@@ -73,23 +76,60 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /// <param name="reader">The reader.</param>
         public ClusterNodeImpl(IBinaryRawReader reader)
         {
-            var id = reader.ReadGuid();
+            //C++ breaker.
+            _isDetached = reader.ReadBoolean();
 
-            Debug.Assert(id.HasValue);
+            //If there would be any errors, the cluster will hang.
+            //Rolling upgrade breaker.
+            if (_isDetached)
+            {
+                var id = reader.ReadGuid();
 
-            _id = id.Value;
+                Debug.Assert(id.HasValue);
 
-            _attrs = ReadAttributes(reader);
-            _addrs = reader.ReadCollectionAsList<string>().AsReadOnly();
-            _hosts = reader.ReadCollectionAsList<string>().AsReadOnly();
-            _order = reader.ReadLong();
-            _isLocal = reader.ReadBoolean();
-            _isDaemon = reader.ReadBoolean();
-            _isClient = reader.ReadBoolean();
-            _consistentId = reader.ReadObject<object>();
-            _version = new IgniteProductVersion(reader);
+                _id = id.Value;
 
-            _metrics = reader.ReadBoolean() ? new ClusterMetricsImpl(reader) : null;
+                _consistentId = reader.ReadObject<object>();
+                _attrs = ReadAttributes(reader);
+            }
+            if (!_isDetached)
+            {
+                var id = reader.ReadGuid();
+
+                Debug.Assert(id.HasValue);
+
+                _id = id.Value;
+
+                _attrs = ReadAttributes(reader);
+
+                _addrs = reader.ReadCollectionAsList<string>().AsReadOnly();
+                _hosts = reader.ReadCollectionAsList<string>().AsReadOnly();
+                _order = reader.ReadLong();
+                _isLocal = reader.ReadBoolean();
+                _isDaemon = reader.ReadBoolean();
+                _isClient = reader.ReadBoolean();
+                _consistentId = reader.ReadObject<object>();
+                _version = new IgniteProductVersion(reader);
+
+                _metrics = reader.ReadBoolean() ? new ClusterMetricsImpl(reader) : null;
+            }
+        }
+
+        /// <summary>
+        /// Checks that current operation is available and if it's not
+        /// throws the <exception cref="DetachedClusterNodeException"> exception</exception>.
+        /// </summary>
+        /// <typeparam name="T">Type of value.</typeparam>
+        /// <param name="val">Value.</param>
+        /// <returns>Value.</returns>
+        private T ValidateDetachedNode<T>(T val)
+        {
+            if (_isDetached)
+            {
+                throw new DetachedClusterNodeException("Operation is not supported on DetachedClusterNode");
+            }
+
+            return val;
         }
 
         /** <inheritDoc /> */
@@ -133,19 +173,19 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /** <inheritDoc /> */
         public ICollection<string> Addresses
         {
-            get { return _addrs; }
+            get { return ValidateDetachedNode(_addrs); }
         }
 
         /** <inheritDoc /> */
         public ICollection<string> HostNames
         {
-            get { return _hosts; }
+            get { return ValidateDetachedNode(_hosts); }
         }
 
         /** <inheritDoc /> */
         public long Order
         {
-            get { return _order; }
+            get { return ValidateDetachedNode(_order); }
         }
 
         /** <inheritDoc /> */
@@ -163,11 +203,13 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /** <inheritDoc /> */
         public IgniteProductVersion Version
         {
-            get { return _version; }
+            get { return ValidateDetachedNode(_version); }
         }
 
         public IClusterMetrics GetMetrics()
         {
+            ValidateDetachedNode<object>(null);
+
             var ignite = (Ignite)_igniteRef.Target;
 
             if (ignite == null)

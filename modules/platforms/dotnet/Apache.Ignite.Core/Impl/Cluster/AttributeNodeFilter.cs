@@ -16,9 +16,11 @@
 
 namespace Apache.Ignite.Core.Impl.Cluster
 {
+    using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
@@ -29,7 +31,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
     ///
     /// You can set user attribute using <see cref="IgniteConfiguration.UserAttributes"/> property. 
     /// </summary>
-    public sealed class AttributeNodeFilter
+    public sealed class AttributeNodeFilter : IClusterNodeFilter
     {
         /// <summary>
         /// Attributes dictionary match.
@@ -56,6 +58,13 @@ namespace Apache.Ignite.Core.Impl.Cluster
             {
                 {attrName, attrValue}
             };
+        }
+
+
+        /** <inheritdoc /> */
+        public bool Invoke(IClusterNode node)
+        {
+            throw new NotSupportedException("Should not be called from .NET side.");
         }
 
         /// <summary>
