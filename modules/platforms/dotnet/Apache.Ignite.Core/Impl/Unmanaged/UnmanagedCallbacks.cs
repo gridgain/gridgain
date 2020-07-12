@@ -1118,7 +1118,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
 
         private long ClusterNodeFilterApply(long memPtr)
         {
-            //todo: add try-catch
             using (PlatformMemoryStream stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
                 try
@@ -1135,7 +1134,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 }
                 catch (Exception e)
                 {
-                    throw e;
+                    //Possible null reference?
+                    _ignite.Logger.Error("Failed to process node filter", e);
+
+                    return -1;
                 }
             }
         }

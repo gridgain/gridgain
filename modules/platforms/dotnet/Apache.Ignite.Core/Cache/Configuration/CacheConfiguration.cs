@@ -341,9 +341,9 @@ namespace Apache.Ignite.Core.Cache.Configuration
             AffinityFunction = AffinityFunctionSerializer.Read(reader);
             ExpiryPolicyFactory = ExpiryPolicySerializer.ReadPolicyFactory(reader);
 
-            NodeFilter = reader.ReadBoolean() ? new AttributeNodeFilter(reader) : null;
-
-            ClusterNodeFilter = reader.ReadObject<IClusterNodeFilter>();
+            NodeFilter = reader.ReadBoolean() 
+                ? new AttributeNodeFilter(reader) 
+                : reader.ReadObject<IClusterNodeFilter>();
 
             KeyConfiguration = reader.ReadCollectionRaw(r => new CacheKeyConfiguration(r));
 
@@ -444,9 +444,17 @@ namespace Apache.Ignite.Core.Cache.Configuration
             AffinityFunctionSerializer.Write(writer, AffinityFunction);
             ExpiryPolicySerializer.WritePolicyFactory(writer, ExpiryPolicyFactory);
 
-            WriteNullableObject(NodeFilter, writer, w => NodeFilter.Write(w));
-
-            writer.WriteObject(ClusterNodeFilter);
+            var attributeFilter = NodeFilter as AttributeNodeFilter;
+            if (attributeFilter != null)
+            {
+                writer.WriteBoolean(true);
+                attributeFilter.Write(writer);
+            }
+            else
+            {
+                writer.WriteBoolean(false);
+                writer.WriteObject(NodeFilter);
+            }
 
             writer.WriteCollectionRaw(KeyConfiguration);
 
@@ -964,14 +972,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
         public PlatformCacheConfiguration PlatformCacheConfiguration { get; set; }
 
         /// <summary>
-        /// Gets or sets node attribute filters configuration.
-        /// More details: <see cref="AttributeNodeFilter"/>. 
-        /// </summary>
-        public AttributeNodeFilter NodeFilter { get; set; }
-
-        /// <summary>
         /// Cluster node filter with normal 
         /// </summary>
-        public IClusterNodeFilter ClusterNodeFilter { get; set; }
+        public IClusterNodeFilter NodeFilter { get; set; }
     }
 }

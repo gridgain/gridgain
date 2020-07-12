@@ -39,6 +39,7 @@ import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryTypeImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
+import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -202,28 +203,49 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
         if (node == null || sentNodes.contains(node.id()))
             return;
 
-        // Send node info to the native platform
-        try (PlatformMemory mem0 = mem.allocate()) {
-            PlatformOutputStream out = mem0.output();
 
-            BinaryRawWriterEx w = writer(out);
+        if(node.getClass() == DetachedClusterNode.class){
+            // Send detached node info
+            try (PlatformMemory mem0 = mem.allocate()) {
+                PlatformOutputStream out = mem0.output();
 
-            w.writeUuid(node.id());
-            PlatformUtils.writeNodeAttributes(w, node.attributes());
-            w.writeCollection(node.addresses());
-            w.writeCollection(node.hostNames());
-            w.writeLong(node.order());
-            w.writeBoolean(node.isLocal());
-            w.writeBoolean(node.isDaemon());
-            w.writeBoolean(node.isClient());
-            w.writeObjectDetached(node.consistentId());
-            PlatformUtils.writeNodeVersion(w, node.version());
+                BinaryRawWriterEx w = writer(out);
 
-            writeClusterMetrics(w, node.metrics());
+                w.writeBoolean(true);
+                w.writeUuid(node.id());
+                w.writeObjectDetached(node.consistentId());
+                PlatformUtils.writeNodeAttributes(w, node.attributes());
 
-            out.synchronize();
+                out.synchronize();
 
-            gateway().nodeInfo(mem0.pointer());
+                gateway().nodeInfo(mem0.pointer());
+            }
+        }
+        else {
+            // Send node info to the native platform
+            try (PlatformMemory mem0 = mem.allocate()) {
+                PlatformOutputStream out = mem0.output();
+
+                BinaryRawWriterEx w = writer(out);
+
+                w.writeBoolean(false);
+                w.writeUuid(node.id());
+                PlatformUtils.writeNodeAttributes(w, node.attributes());
+                w.writeCollection(node.addresses());
+                w.writeCollection(node.hostNames());
+                w.writeLong(node.order());
+                w.writeBoolean(node.isLocal());
+                w.writeBoolean(node.isDaemon());
+                w.writeBoolean(node.isClient());
+                w.writeObjectDetached(node.consistentId());
+                PlatformUtils.writeNodeVersion(w, node.version());
+
+                writeClusterMetrics(w, node.metrics());
+
+                out.synchronize();
+
+                gateway().nodeInfo(mem0.pointer());
+            }
         }
 
         sentNodes.add(node.id());

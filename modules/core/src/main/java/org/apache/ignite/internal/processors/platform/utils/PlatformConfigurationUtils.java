@@ -232,14 +232,14 @@ public class PlatformConfigurationUtils {
         ccfg.setExpiryPolicyFactory(readExpiryPolicyFactory(in));
 
         if (in.readBoolean())
-            ccfg.setNodeFilter(readNodeFilterConfiguration(in));
-
-        Object nativeFilter = in.readObjectDetached();
-        if (nativeFilter != null) {
-            PlatformClusterNodeFilterImpl filter = new PlatformClusterNodeFilterImpl(nativeFilter, ctx);
-            ccfg.setNodeFilter(filter);
+            ccfg.setNodeFilter(readAttributeNodeFilter(in));
+        else {
+            Object nativeFilter = in.readObjectDetached();
+            if (nativeFilter != null) {
+                PlatformClusterNodeFilterImpl filter = new PlatformClusterNodeFilterImpl(nativeFilter, ctx);
+                ccfg.setNodeFilter(filter);
+            }
         }
-
 
         int keyCnt = in.readInt();
 
@@ -334,7 +334,7 @@ public class PlatformConfigurationUtils {
      * @param in Stream.
      * @return AttributeNodeFilter.
      */
-    public static AttributeNodeFilter readNodeFilterConfiguration(BinaryRawReader in) {
+    public static AttributeNodeFilter readAttributeNodeFilter(BinaryRawReader in) {
         int cnt = in.readInt();
 
         Map<String, Object> attrs = new HashMap<>(cnt);
@@ -446,7 +446,7 @@ public class PlatformConfigurationUtils {
      * @param out Stream.
      * @param nodeFilter AttributeNodeFilter.
      */
-    private static void writeNodefilter(BinaryRawWriter out, AttributeNodeFilter nodeFilter) {
+    private static void writeAttributeNodeFilter(BinaryRawWriter out, AttributeNodeFilter nodeFilter) {
         assert nodeFilter != null;
 
         Map<String, Object> attrs = nodeFilter.getAttrs();
@@ -1115,20 +1115,17 @@ public class PlatformConfigurationUtils {
         writeExpiryPolicyFactory(writer, ccfg.getExpiryPolicyFactory());
 
         IgnitePredicate nodeFilter = ccfg.getNodeFilter();
-
         if (nodeFilter instanceof AttributeNodeFilter) {
             writer.writeBoolean(true);
-
-            writeNodefilter(writer, (AttributeNodeFilter) nodeFilter);
+            writeAttributeNodeFilter(writer, (AttributeNodeFilter) nodeFilter);
         }
-        else
+        else {
             writer.writeBoolean(false);
-
-        if (nodeFilter instanceof PlatformClusterNodeFilterImpl) {
-            writer.writeObject((((PlatformClusterNodeFilterImpl) nodeFilter).getInternalPredicate()));
+            if (nodeFilter instanceof PlatformClusterNodeFilterImpl)
+                writer.writeObject(((PlatformClusterNodeFilterImpl) nodeFilter).getInternalPredicate());
+            else
+                writer.writeObject(null);
         }
-        else
-            writer.writeObject(null);
 
         CacheKeyConfiguration[] keys = ccfg.getKeyConfiguration();
 

@@ -73,13 +73,14 @@ public class PlatformClusterNodeFilterImpl extends PlatformAbstractPredicate imp
     }
 
     /** {@inheritDoc} */
-    @Override public boolean apply(ClusterNode clusterNode) {
-        if(handleId < 0){
-            init();
-        }
+    @Override public boolean apply(ClusterNode clusterNode)  {
 
         if(ctx == null){
             return false;
+        }
+
+        if(handleId < 0){
+            init();
         }
 
         try (PlatformMemory mem = ctx.memory().allocate()) {
@@ -92,7 +93,10 @@ public class PlatformClusterNodeFilterImpl extends PlatformAbstractPredicate imp
 
             out.synchronize();
 
-            return ctx.gateway().clusterNodeFilterApply(mem.pointer()) != 0;
+            int res = ctx.gateway().clusterNodeFilterApply(mem.pointer());
+
+            // Should handle .NET exceptions
+            return res == 1;
         }
     }
 
