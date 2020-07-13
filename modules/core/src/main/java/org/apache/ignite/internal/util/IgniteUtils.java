@@ -9480,7 +9480,7 @@ public abstract class IgniteUtils {
         for (String addr : addrs) {
             String hostName = hostNamesIt.hasNext() ? hostNamesIt.next() : null;
 
-            if (!F.isEmpty(hostName)) {
+            if (!F.isEmpty(hostName) && !addrs.contains(hostName)) {
                 InetSocketAddress inetSockAddr = resolve
                     ? new InetSocketAddress(hostName, port)
                     : InetSocketAddress.createUnresolved(hostName, port);
