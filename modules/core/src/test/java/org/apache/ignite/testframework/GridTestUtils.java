@@ -1975,6 +1975,7 @@ public final class GridTestUtils {
 
         return false;
     }
+
     /**
      * Waits for condition, polling in busy wait loop.
      *
