@@ -182,8 +182,6 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
         }
         finally {
             fut.get();
-
-            stopAllGrids();
         }
     }
 
@@ -264,6 +262,13 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
 
             cache.putAll(entries);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
     }
 
     /**
