@@ -187,7 +187,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /** */
     private final JdkMarshaller marsh = new JdkMarshaller();
 
-    /** Watcher of topology change for baseline auto-adjust. */
+    /** Updater of baseline topology. */
     private BaselineTopologyUpdater baselineTopologyUpdater;
 
     /** Distributed baseline configuration. */
