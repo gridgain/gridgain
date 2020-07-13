@@ -90,6 +90,11 @@ public abstract class AbstractInlineIndexColumn implements InlineIndexColumn {
             return (PageUtils.getShort(pageAddr, off + 1) & 0x7FFF) + 3;
     }
 
+    /** {@inheritDoc} */
+    @Override public String columnSql() {
+        return col.getOriginalSQL();
+    }
+
     /**
      * Restores value from inline, if possible.
      *
