@@ -263,6 +263,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (cacheConfiguration != null && cacheConfiguration.length > 0) {
             boolean hasConfiguredIndexes = Arrays.stream(cacheConfiguration).anyMatch(QueryUtils::isEnabled);
+            
             if (hasConfiguredIndexes && idx == null)
                 log.warning("Indexed types for caches are configured but ignite-indexing is missing from classpath " +
                         "and no GridQueryIndexing is set up.");
