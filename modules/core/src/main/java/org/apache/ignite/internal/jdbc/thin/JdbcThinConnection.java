@@ -930,7 +930,7 @@ public class JdbcThinConnection implements Connection {
     /**
      * @return node UUID
     */
-    public UUID nodeId(){
+    public UUID nodeId() {
         if (singleIo != null)
             return singleIo.nodeId();
         return null;
