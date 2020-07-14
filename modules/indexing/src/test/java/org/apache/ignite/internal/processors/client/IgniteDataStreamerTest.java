@@ -67,6 +67,8 @@ public class IgniteDataStreamerTest extends GridCommonAbstractTest {
         super.afterTest();
 
         grid("client").destroyCache(CACHE_NAME);
+
+        awaitPartitionMapExchange();
     }
 
     /**

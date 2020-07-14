@@ -2318,7 +2318,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         private static String[] transientSerializableFields(IgniteProductVersion ver) {
             ArrayList<String> transients = new ArrayList<>(1);
 
-            if (READ_ONLY_FLAG_SINCE.compareToIgnoreTimestamp(ver) >= 0)
+            if (READ_ONLY_FLAG_SINCE.compareToIgnoreTimestamp(ver) > 0)
                 transients.add("readOnly");
 
             return transients.isEmpty() ? null : transients.toArray(new String[transients.size()]);

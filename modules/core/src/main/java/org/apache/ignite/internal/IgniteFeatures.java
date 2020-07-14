@@ -159,8 +159,14 @@ public enum IgniteFeatures {
     /** Support policy of shutdown. */
     SHUTDOWN_POLICY(40),
 
+    /** New security processor with a security context support. */
+    IGNITE_SECURITY_PROCESSOR_V2(41),
+
     /** Force rebuild, list or request indexes rebuild status from control script. */
-    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(41);
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
+
+    /** Snapshots without PME. */
+    EXCHANGELESS_SNAPSHOT(43);
     /**
      * Unique feature identifier.
      */
