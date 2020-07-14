@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.query.ScanQueryOffheapExpiryP
 import org.apache.ignite.internal.processors.database.baseline.IgniteChangingBaselineCacheQueryNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineCacheQueryNodeRestartsSelfTest;
 import org.apache.ignite.internal.processors.query.BasicSqlTest;
+import org.apache.ignite.internal.processors.query.CreateIndexOnInvalidDataTypeTest;
 import org.apache.ignite.internal.processors.query.DisabledSqlFunctionsTest;
 import org.apache.ignite.internal.processors.query.DmlBatchSizeDeadlockTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsCompareQueryTest;
@@ -116,6 +117,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    CreateIndexOnInvalidDataTypeTest.class,
+
     BasicSqlTest.class,
 
     UseOneTimeZoneForClusterTest.class,

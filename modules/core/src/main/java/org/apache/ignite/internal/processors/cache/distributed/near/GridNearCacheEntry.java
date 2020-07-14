@@ -475,7 +475,18 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr)
+    @Override protected void logOutOfOrderUpdate(
+        GridCacheOperation op,
+        CacheObject val,
+        GridCacheVersion writeVer,
+        long expireTime,
+        Long updCntr
+    ) throws IgniteCheckedException {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr, boolean walEnabled)
         throws IgniteCheckedException {
         return null;
     }

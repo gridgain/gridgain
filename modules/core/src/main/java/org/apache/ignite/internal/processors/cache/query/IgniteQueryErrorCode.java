@@ -137,6 +137,9 @@ public final class IgniteQueryErrorCode {
     /** Transaction serialization error. */
     public static final int TRANSACTION_SERIALIZATION_ERROR = 5005;
 
+    /** Field type mismatch. e.g.: cause is ClassCastException. */
+    public static final int FIELD_TYPE_MISMATCH = 5006;
+
     /** */
     private IgniteQueryErrorCode() {
         // No-op.
@@ -206,6 +209,9 @@ public final class IgniteQueryErrorCode {
 
             case QUERY_OUT_OF_MEMORY:
                 return SqlStateCode.MEMORY_ALLOCATION_ERROR;
+
+            case CLUSTER_READ_ONLY_MODE_ENABLED:
+                return SqlStateCode.CLUSTER_READ_ONLY_MODE_ENABLED;
 
             default:
                 return SqlStateCode.INTERNAL_ERROR;

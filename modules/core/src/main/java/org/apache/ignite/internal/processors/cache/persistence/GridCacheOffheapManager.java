@@ -776,15 +776,30 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         int grpId = grp.groupId();
         PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
 
-        long metaPageId = pageMem.metaPageId(grpId);
+        long metaPageId = PageIdUtils.pageId(PageIdAllocator.INDEX_PARTITION, PageIdAllocator.FLAG_IDX, 0);
+
         long metaPage = pageMem.acquirePage(grpId, metaPageId);
 
         try {
             long metaPageAddr = pageMem.writeLock(grpId, metaPageId, metaPage);
 
+            if (metaPageAddr == 0L) {
+                U.warn(log, "Failed to acquire write lock for index meta page [grpId=" + grpId +
+                    ", metaPageId=" + metaPageId + ']');
+
+                return;
+            }
+
+            boolean changed = false;
+
             try {
                 PageMetaIO metaIo = PageMetaIO.getPageIO(metaPageAddr);
 
+                int pageCnt = this.ctx.pageStore().pages(grpId, PageIdAllocator.INDEX_PARTITION);
+
+                changed = metaIo.setCandidatePageCount(metaPageAddr, pageCnt);
+
+                // Following method doesn't modify page data, it only reads last allocated page count from it.
                 addPartition(
                     null,
                     ctx.partitionStatMap(),
@@ -792,11 +807,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     metaIo,
                     grpId,
                     PageIdAllocator.INDEX_PARTITION,
-                    this.ctx.pageStore().pages(grpId, PageIdAllocator.INDEX_PARTITION),
+                    pageCnt,
                     -1);
             }
             finally {
-                pageMem.writeUnlock(grpId, metaPageId, metaPage, null, true);
+                pageMem.writeUnlock(grpId, metaPageId, metaPage, null, changed);
             }
         }
         finally {
@@ -1020,23 +1035,18 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (grp.mvccEnabled()) // TODO IGNITE-7384
             return super.historicalIterator(partCntrs, missing);
 
-        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
-
-        FileWALPointer minPtr = null;
+        Map<Integer, Long> partsCounters = new HashMap<>();
 
         for (int i = 0; i < partCntrs.size(); i++) {
             int p = partCntrs.partitionAt(i);
             long initCntr = partCntrs.initialUpdateCounterAt(i);
 
-            FileWALPointer startPtr = (FileWALPointer)database.checkpointHistory().searchPartitionCounter(
-                grp.groupId(), p, initCntr);
-
-            if (startPtr == null)
-                throw new IgniteCheckedException("Could not find start pointer for partition [part=" + p + ", partCntrSince=" + initCntr + "]");
-
-            if (minPtr == null || startPtr.compareTo(minPtr) < 0)
-                minPtr = startPtr;
+            partsCounters.put(p, initCntr);
         }
+
+        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
+
+        FileWALPointer minPtr = (FileWALPointer)database.checkpointHistory().searchEarliestWalPointer(grp.groupId(), partsCounters);
 
         try {
             WALIterator it = grp.shared().wal().replay(minPtr);

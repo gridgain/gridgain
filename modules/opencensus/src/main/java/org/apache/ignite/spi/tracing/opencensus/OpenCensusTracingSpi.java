@@ -19,24 +19,17 @@ package org.apache.ignite.spi.tracing.opencensus;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import io.opencensus.trace.BlankSpan;
-import io.opencensus.trace.Sampler;
 import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
-import org.apache.ignite.spi.tracing.SpiSpecificSpan;
+import org.apache.ignite.internal.tracing.TracingSpiType;
 import org.apache.ignite.spi.tracing.TracingSpi;
-import org.apache.ignite.spi.tracing.TracingSpiType;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiConsistencyChecked;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiMultipleInstancesSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
-import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 
 /**
  * Tracing SPI implementation based on OpenCensus library.
@@ -58,7 +51,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  */
 @IgniteSpiMultipleInstancesSupport(value = true)
 @IgniteSpiConsistencyChecked(optional = true)
-public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi {
+public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi<OpenCensusSpanAdapter> {
     /** Configured exporters. */
     private final List<OpenCensusTraceExporter> exporters;
 
@@ -90,32 +83,11 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public SpiSpecificSpan create(@NotNull String name, @Nullable SpiSpecificSpan parentSpan) {
-        try {
-            io.opencensus.trace.Span openCensusParent = null;
-
-            if (parentSpan instanceof OpenCensusSpanAdapter)
-                openCensusParent = ((OpenCensusSpanAdapter)parentSpan).impl();
-
-            return new OpenCensusSpanAdapter(
-                Tracing.getTracer().spanBuilderWithExplicitParent(
-                    name,
-                    openCensusParent
-                )
-                    .setSampler(Samplers.alwaysSample())
-                    .startSpan()
-            );
-        }
-        catch (Exception e) {
-            LT.warn(log, "Failed to create span from parent " +
-                "[spanName=" + name + ", parentSpan=" + parentSpan + "]");
-
-            return new OpenCensusSpanAdapter(BlankSpan.INSTANCE);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public SpiSpecificSpan create(@NotNull String name, @Nullable byte[] parentSerializedSpan) throws Exception {
+    @Override public OpenCensusSpanAdapter create(
+        @NotNull String name,
+        @Nullable byte[] parentSerializedSpan
+    ) throws Exception
+    {
         return new OpenCensusSpanAdapter(
             Tracing.getTracer().spanBuilderWithRemoteParent(
                 name,
@@ -127,36 +99,21 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull SpiSpecificSpan create(
+    @Override public @NotNull OpenCensusSpanAdapter create(
         @NotNull String name,
-        @Nullable SpiSpecificSpan parentSpan,
-        double samplingRate) {
+        @Nullable OpenCensusSpanAdapter parentSpan) {
         try {
             io.opencensus.trace.Span openCensusParent = null;
 
-            if (parentSpan instanceof OpenCensusSpanAdapter)
-                openCensusParent = ((OpenCensusSpanAdapter)parentSpan).impl();
-
-            Sampler sampler;
-
-            if (Double.compare(samplingRate, SAMPLING_RATE_NEVER) == 0) {
-                // We should never get here, because of an optimization that produces {@code NoopSpan.Instance}
-                // instead of a span with {@code SAMPLING_RATE_NEVER} sampling rate. It is useful cause in case
-                // of {@code NoopSpan.Instance} we will not send span data over the network.assert false;
-
-                sampler = Samplers.neverSample(); // Just in case.
-            }
-            else if (Double.compare(samplingRate, SAMPLING_RATE_ALWAYS) == 0)
-                sampler = Samplers.alwaysSample();
-            else
-                sampler = Samplers.probabilitySampler(samplingRate);
+            if (parentSpan != null)
+                openCensusParent = parentSpan.impl();
 
             return new OpenCensusSpanAdapter(
                 Tracing.getTracer().spanBuilderWithExplicitParent(
                     name,
                     openCensusParent
                 )
-                    .setSampler(sampler)
+                    .setSampler(Samplers.alwaysSample())
                     .startSpan()
             );
         }
@@ -167,9 +124,8 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public byte[] serialize(@NotNull SpiSpecificSpan span) {
-        return Tracing.getPropagationComponent().getBinaryFormat().
-            toByteArray(((OpenCensusSpanAdapter) span).impl().getContext());
+    @Override public byte[] serialize(@NotNull OpenCensusSpanAdapter span) {
+        return Tracing.getPropagationComponent().getBinaryFormat().toByteArray(span.impl().getContext());
     }
 
     /** {@inheritDoc} */
@@ -192,7 +148,7 @@ public class OpenCensusTracingSpi extends IgniteSpiAdapter implements TracingSpi
     }
 
     /** {@inheritDoc} */
-    @Override public TracingSpiType type() {
-        return TracingSpiType.OPEN_CENSUS_TRACING_SPI;
+    @Override public byte type() {
+        return TracingSpiType.OPEN_CENSUS_TRACING_SPI.index();
     }
 }

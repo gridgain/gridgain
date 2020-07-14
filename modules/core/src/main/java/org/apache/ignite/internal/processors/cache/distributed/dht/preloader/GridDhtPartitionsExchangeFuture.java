@@ -49,6 +49,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -134,6 +135,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
+import static org.apache.ignite.cluster.ClusterState.active;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -1302,11 +1304,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             exchangeLocE = state.transitionError();
 
         if (req.activeChanged()) {
-            if (req.activate()) {
+            if (active(req.state())) {
                 if (log.isInfoEnabled()) {
                     log.info("Start activation process [nodeId=" + cctx.localNodeId() +
                         ", client=" + kctx.clientNode() +
-                        ", topVer=" + initialVersion() + "]");
+                        ", topVer=" + initialVersion() + "]. New state: " + req.state());
                 }
 
                 try {
@@ -1336,13 +1338,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     if (log.isInfoEnabled()) {
                         log.info("Successfully activated caches [nodeId=" + cctx.localNodeId() +
                             ", client=" + kctx.clientNode() +
-                            ", topVer=" + initialVersion() + "]");
+                            ", topVer=" + initialVersion() + ", newState=" + req.state() + "]");
                     }
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to activate node components [nodeId=" + cctx.localNodeId() +
                         ", client=" + kctx.clientNode() +
-                        ", topVer=" + initialVersion() + "]", e);
+                        ", topVer=" + initialVersion() + ", newState=" + req.state() + "]", e);
 
                     exchangeLocE = e;
 
@@ -1405,7 +1407,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
             }
         }
-        else if (req.activate()) {
+        else if (active(req.state())) {
             cctx.exchange().exchangerBlockingSectionBegin();
 
             // TODO: BLT changes on inactive cluster can't be handled easily because persistent storage hasn't been initialized yet.
@@ -1637,22 +1639,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         timeBag.finishGlobalStage("Preloading notification");
 
-        cctx.exchange().exchangerBlockingSectionBegin();
-
-        try {
-            cctx.database().releaseHistoryForPreloading();
-
-            // To correctly rebalance when persistence is enabled, it is necessary to reserve history within exchange.
-            partHistReserved = cctx.database().reserveHistoryForExchange();
-        }
-        finally {
-            cctx.exchange().exchangerBlockingSectionEnd();
-        }
-
-        clearingPartitions = new HashMap();
-
-        timeBag.finishGlobalStage("WAL history reservation");
-
         // Skipping wait on local join is available when all cluster nodes have the same protocol.
         boolean skipWaitOnLocalJoin = cctx.exchange().latch().canSkipJoiningNodes(initialVersion())
             && localJoinExchange();
@@ -1745,6 +1731,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         timeBag.finishGlobalStage("After states restored callback");
+
+        cctx.exchange().exchangerBlockingSectionBegin();
+
+        try {
+            cctx.database().releaseHistoryForPreloading();
+
+            // To correctly rebalance when persistence is enabled, it is necessary to reserve history within exchange.
+            partHistReserved = cctx.database().reserveHistoryForExchange();
+        }
+        finally {
+            cctx.exchange().exchangerBlockingSectionEnd();
+        }
+
+        clearingPartitions = new HashMap();
+
+        timeBag.finishGlobalStage("WAL history reservation");
 
         changeWalModeIfNeeded();
 
@@ -2508,15 +2510,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             Map<T2<Integer, Integer>, Long> localReserved = partHistSuppliers.getReservations(cctx.localNodeId());
 
             if (localReserved != null) {
-                for (Map.Entry<T2<Integer, Integer>, Long> e : localReserved.entrySet()) {
-                    boolean success = cctx.database().reserveHistoryForPreloading(
-                        e.getKey().get1(), e.getKey().get2(), e.getValue());
+                boolean success = cctx.database().reserveHistoryForPreloading(localReserved);
 
-                    if (!success) {
-                        // TODO: how to handle?
-                        err = new IgniteCheckedException("Could not reserve history");
-                    }
-                }
+                // TODO: how to handle?
+                if (!success)
+                    err = new IgniteCheckedException("Could not reserve history");
             }
 
             cctx.database().releaseHistoryForExchange();
@@ -2530,7 +2528,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
 
                 if (changedAffinity())
-                    cctx.walState().changeLocalStatesOnExchangeDone(res, this);
+                    cctx.walState().disableGroupDurabilityForPreloading(res, this);
             }
         }
         catch (Throwable t) {
@@ -3533,7 +3531,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
             }
 
-            //No one reservation matched for this partition.
+            // No one reservation matched for this partition.
             if (!haveHistory.contains(p)) {
                 list.add(new SupplyPartitionInfo(
                     p,
@@ -4003,11 +4001,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
 
                 if (!cctx.kernalContext().state().clusterState().localBaselineAutoAdjustment()) {
-                    boolean active = !stateChangeErr && req.activate();
+                    ClusterState state = stateChangeErr ? ClusterState.INACTIVE : req.state();
 
                     ChangeGlobalStateFinishMessage stateFinishMsg = new ChangeGlobalStateFinishMessage(
                         req.requestId(),
-                        active,
+                        state,
                         !stateChangeErr
                     );
 
@@ -4182,7 +4180,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to assign partition states", e);
         }
 
-        if (log.isInfoEnabled() && !F.isEmpty(supplyInfoMap))
+        if (!F.isEmpty(supplyInfoMap))
             printPartitionRebalancingFully(supplyInfoMap);
 
         timeBag.finishGlobalStage("Assign partitions states");
@@ -4195,38 +4193,43 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param supplyInfoMap Map contains information about supplying partitions.
      */
     private void printPartitionRebalancingFully(Map<String, List<SupplyPartitionInfo>> supplyInfoMap) {
-        if (hasPartitonToLog(supplyInfoMap, false)) {
-            log.info("Partitions weren't present in any history reservation: [" +
-                supplyInfoMap.entrySet().stream().map(entry ->
-                    "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
-                        .filter(info -> !info.isHistoryReserved())
-                        .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
-                ).collect(Collectors.joining(", ")) + ']');
-        }
+        try {
+            if (hasPartitionToLog(supplyInfoMap, false)) {
+                log.info("Partitions weren't present in any history reservation: [" +
+                    supplyInfoMap.entrySet().stream().map(entry ->
+                        "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
+                            .filter(info -> !info.isHistoryReserved())
+                            .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
+                    ).collect(Collectors.joining(", ")) + ']');
+            }
 
-        if (hasPartitonToLog(supplyInfoMap, true)) {
-            log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
-                supplyInfoMap.entrySet().stream().map(entry ->
-                    "[grp=" + entry.getKey() + ' ' +
-                        entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
-                            "[part=" + info.part() +
-                                ", minCntr=" + info.minCntr() +
-                                ", maxReserved=" + info.maxReserved() +
-                                ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
-                        ).collect(Collectors.joining(", ")) + ']'
-                ).collect(Collectors.joining(", ")) + ']');
+            if (hasPartitionToLog(supplyInfoMap, true)) {
+                log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
+                    supplyInfoMap.entrySet().stream().map(entry ->
+                        "[grp=" + entry.getKey() + ' ' +
+                            entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
+                                "[part=" + info.part() +
+                                    ", minCntr=" + info.minCntr() +
+                                    ", maxReserved=" + info.maxReserved() +
+                                    ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
+                            ).collect(Collectors.joining(", ")) + ']'
+                    ).collect(Collectors.joining(", ")) + ']');
+            }
+        }
+        catch (Exception e) {
+            log.error("An error happened during printing partitions that have no history.", e);
         }
     }
 
     /**
      * Does information contain partitions which will print to log.
      *
-     * @param supplayInfoMap Map contains information about supplying partitions.
+     * @param supplyInfoMap Map contains information about supplying partitions.
      * @param reserved Reservation flag.
      * @return True if map has partitions with same reserved flag, false otherwise.
      */
-    private boolean hasPartitonToLog(Map<String, List<SupplyPartitionInfo>> supplayInfoMap, boolean reserved) {
-        for (List<SupplyPartitionInfo> infos : supplayInfoMap.values()) {
+    private boolean hasPartitionToLog(Map<String, List<SupplyPartitionInfo>> supplyInfoMap, boolean reserved) {
+        for (List<SupplyPartitionInfo> infos : supplyInfoMap.values()) {
             for (SupplyPartitionInfo info : infos) {
                 if (info.isHistoryReserved() == reserved)
                     return true;

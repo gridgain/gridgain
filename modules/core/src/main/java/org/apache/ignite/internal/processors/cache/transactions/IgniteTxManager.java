@@ -1554,19 +1554,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             // 6. Remove obsolete entries from cache.
             removeObsolete(tx);
 
-            // 7. Assign transaction number at the end of transaction.
-            tx.endVersion(cctx.versions().next(tx.topologyVersion().topologyVersion()));
-
-            // 8. Remove from per-thread storage.
+            // 7. Remove from per-thread storage.
             clearThreadMap(tx);
 
-            // 9. Unregister explicit locks.
+            // 8. Unregister explicit locks.
             if (!tx.alternateVersions().isEmpty()) {
                 for (GridCacheVersion ver : tx.alternateVersions())
                     idMap.remove(ver);
             }
 
-            // 10. Remove Near-2-DHT mappings.
+            // 9. Remove Near-2-DHT mappings.
             if (tx instanceof GridCacheMappedVersion) {
                 GridCacheVersion mapped = ((GridCacheMappedVersion)tx).mappedVersion();
 
@@ -1574,10 +1571,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     mappedVers.remove(mapped);
             }
 
-            // 11. Clear context.
+            // 10. Clear context.
             resetContext();
 
-            // 12. Update metrics.
+            // 11. Update metrics.
             if (!tx.dht() && tx.local()) {
                 if (!tx.system())
                     cctx.txMetrics().onTxCommit();
@@ -2084,7 +2081,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         scheduleDumpTask(
             IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-            () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpsDumpTimeout),
+            () -> cctx.kernalContext().closure().runLocalSafe(
+                () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(longOpsDumpTimeout)),
             longOpsDumpTimeout);
     }
 
@@ -2762,11 +2760,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Enables pending transactions tracker.
      * Also enables transaction wal logging, if it was disabled.
      */
-    public void trackPendingTxs() {
+    public void trackPendingTxs(boolean logTxRecords) {
         pendingTracker.enable();
 
-        if (!logTxRecords) {
-            logTxRecords = true;
+        if (logTxRecords && !this.logTxRecords) {
+            this.logTxRecords = true;
 
             U.warn(log, "Transaction wal logging is enabled, because pending transaction tracker is enabled.");
         }
@@ -2829,24 +2827,32 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             record = new TxRecord(tx.state(), tx.nearXidVersion(), tx.writeVersion(), nodes);
 
         try {
-            WALPointer ptr = cctx.wal().log(record);
-
-            TransactionState txState = tx.state();
-
-            if (txState == PREPARED)
-                cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
-            else if (txState == ROLLED_BACK)
-                cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
-            else
-                cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
-
-            return ptr;
+            return cctx.wal().log(record);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to log TxRecord: " + record, e);
 
             throw new IgniteException("Failed to log TxRecord: " + record, e);
         }
+    }
+
+    /**
+     * Tracks transaction state.
+     *
+     * @param tx Transaction.
+     */
+    void trackTransaction(IgniteTxAdapter tx) {
+        if (!cctx.tm().pendingTxsTracker().enabled())
+            return;
+
+        TransactionState txState = tx.state();
+
+        if (txState == PREPARED)
+            cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
+        else if (txState == ROLLED_BACK)
+            cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
+        else
+            cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
     }
 
     /**

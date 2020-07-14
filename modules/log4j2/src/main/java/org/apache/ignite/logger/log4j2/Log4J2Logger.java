@@ -119,7 +119,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
      */
     private Log4J2Logger(final Logger impl, String path) {
         assert impl != null;
-        
+
         addConsoleAppenderIfNeeded(new C1<Boolean, Logger>() {
             @Override public Logger apply(Boolean init) {
                 return impl;
@@ -236,7 +236,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
                     try {
                         RoutingAppender routing = (RoutingAppender)a;
 
-                        Field appsFiled = routing.getClass().getDeclaredField("appenders");
+                        Field appsFiled = routing.getClass().getDeclaredField("createdAppenders");
 
                         appsFiled.setAccessible(true);
 

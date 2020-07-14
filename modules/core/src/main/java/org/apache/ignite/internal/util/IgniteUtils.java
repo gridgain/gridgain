@@ -266,6 +266,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiOrderSupport;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
@@ -2130,7 +2131,8 @@ public abstract class IgniteUtils {
 
         Collection<Future<?>> futs = new ArrayList<>(addrs.size());
 
-        ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, addrs.size()));
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, addrs.size()),
+            new IgniteThreadFactory("utils", "reachable"));
 
         try {
             for (final InetAddress addr : addrs) {
@@ -2297,12 +2299,14 @@ public abstract class IgniteUtils {
 
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
                 @Override public int compare(NetworkInterface itf1, NetworkInterface itf2) {
-                    // Interfaces whose name starts with 'e' should go first.
-                    if (itf1.getName().charAt(0) < 'e')
-                        return 1;
+                    boolean itf1ForceOrdering = itf1.getName().charAt(0) < 'e';
+                    boolean itf2ForceOrdering = itf2.getName().charAt(0) < 'e';
 
-                    if (itf2.getName().charAt(0) < 'e')
-                        return -1;
+                    // Interfaces whose name start with letter before 'e' should go last.
+                    // This helps avoiding interfaces like "docker0" to be recognized as local host.
+                    if (itf1ForceOrdering != itf2ForceOrdering)
+                        return itf1ForceOrdering ? 1 : -1;
+
                     return itf1.getName().compareTo(itf2.getName());
                 }
             });
@@ -9053,7 +9057,7 @@ public abstract class IgniteUtils {
 
         if (cls == null) {
             if (clsFilter != null && !clsFilter.apply(clsName))
-                throw new RuntimeException("Deserialization of class " + clsName + " is disallowed.");
+                throw new ClassNotFoundException("Deserialization of class " + clsName + " is disallowed.");
 
             // Avoid class caching inside Class.forName
             if (ldr instanceof CacheClassLoaderMarker)
@@ -9478,7 +9482,7 @@ public abstract class IgniteUtils {
         for (String addr : addrs) {
             String hostName = hostNamesIt.hasNext() ? hostNamesIt.next() : null;
 
-            if (!F.isEmpty(hostName)) {
+            if (!F.isEmpty(hostName) && !addrs.contains(hostName)) {
                 InetSocketAddress inetSockAddr = resolve
                     ? new InetSocketAddress(hostName, port)
                     : InetSocketAddress.createUnresolved(hostName, port);
@@ -12319,5 +12323,28 @@ public abstract class IgniteUtils {
         IgniteCompute compute = kctx.grid().compute(grp);
 
         compute.broadcast(job);
+    }
+
+    /**
+     * @param configuration Ignite configuration.
+     * @return Whether persistence is enabled.
+     */
+    public static boolean persistenceEnabled(IgniteConfiguration configuration) {
+        if (configuration.getDataStorageConfiguration() != null) {
+            DataStorageConfiguration dsCfg = configuration.getDataStorageConfiguration();
+            if (dsCfg.getDefaultDataRegionConfiguration() != null && dsCfg.getDefaultDataRegionConfiguration().isPersistenceEnabled())
+                return true;
+
+            DataRegionConfiguration[] regions = dsCfg.getDataRegionConfigurations();
+
+            if (regions != null) {
+                for (DataRegionConfiguration region : regions) {
+                    if (region.isPersistenceEnabled())
+                        return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

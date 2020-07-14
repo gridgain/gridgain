@@ -39,7 +39,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -51,7 +50,6 @@ import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.function.ThrowableBiFunction;
 import org.apache.ignite.internal.util.function.ThrowableSupplier;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridConnectionBytesVerifyFilter;
 import org.apache.ignite.internal.util.nio.GridDirectParser;
@@ -315,13 +313,11 @@ public class GridNioServerWrapper {
         boolean locNodeIsSrv = !locNodeSupplier.get().isClient() && !locNodeSupplier.get().isDaemon();
 
         if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
-            if (node.isClient() && startedInVirtualizedEnvironment(node)) {
-                String msg = "Failed to connect to node " + node.id() +
-                    " because it is started in virtualized environment; inverse connection will be requested.";
+            if (node.isClient() && forceClientToServerConnections(node)) {
+                String msg = "Failed to connect to node " + node.id() + " because it is started" +
+                    " in 'forceClientToServerConnections' mode; inverse connection will be requested.";
 
-                GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
-
-                throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
+                throw new NodeUnreachableException(msg);
             }
         }
 
@@ -458,36 +454,24 @@ public class GridNioServerWrapper {
 
                         if (rcvCnt == ALREADY_CONNECTED)
                             return null;
-                        else if (rcvCnt == NODE_STOPPING)
+                        else if (rcvCnt == NODE_STOPPING) {
+                            // Safe to remap on remote node stopping.
                             throw new ClusterTopologyCheckedException("Remote node started stop procedure: " + node.id());
+                        }
                         else if (rcvCnt == UNKNOWN_NODE)
-                            throw new ClusterTopologyCheckedException("Remote node does not observe current node " +
+                            throw new IgniteCheckedException("Remote node does not observe current node " +
                                 "in topology : " + node.id());
                         else if (rcvCnt == NEED_WAIT) {
-                            //check that failure timeout will be reached after sleep(outOfTopDelay).
-                            if (connTimeoutStgy.checkTimeout(DFLT_NEED_WAIT_DELAY)) {
-                                U.warn(log, "Handshake NEED_WAIT timed out (will stop attempts to perform the handshake) " +
-                                    "[node=" + node.id() +
-                                    ", connTimeoutStgy=" + connTimeoutStgy +
-                                    ", addr=" + addr +
-                                    ", failureDetectionTimeoutEnabled=" + cfg.failureDetectionTimeoutEnabled() +
-                                    ", timeout=" + timeout + ']');
+                            // Should wait for discovery lag without applying connTimeoutStgy, otherwise cache operations
+                            // may hang on waiting inexistent topology, see IgniteClientConnectTest for test
+                            // scenarios with delayed client node join.
+                            if (log.isDebugEnabled())
+                                log.debug("NEED_WAIT received, handshake after delay [node = "
+                                    + node + ", outOfTopologyDelay = " + DFLT_NEED_WAIT_DELAY + "ms]");
 
-                                throw new ClusterTopologyCheckedException("Failed to connect to node " +
-                                    "(current or target node is out of topology on target node within timeout). " +
-                                    "Make sure that each ComputeTask and cache Transaction has a timeout set " +
-                                    "in order to prevent parties from waiting forever in case of network issues " +
-                                    "[nodeId=" + node.id() + ", addrs=" + addrs + ']');
-                            }
-                            else {
-                                if (log.isDebugEnabled())
-                                    log.debug("NEED_WAIT received, handshake after delay [node = "
-                                        + node + ", outOfTopologyDelay = " + DFLT_NEED_WAIT_DELAY + "ms]");
+                            U.sleep(DFLT_NEED_WAIT_DELAY);
 
-                                U.sleep(DFLT_NEED_WAIT_DELAY);
-
-                                continue;
-                            }
+                            continue;
                         }
                         else if (rcvCnt < 0)
                             throw new IgniteCheckedException("Unsupported negative receivedCount [rcvCnt=" + rcvCnt +
@@ -625,9 +609,7 @@ public class GridNioServerWrapper {
                     String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
                         "; inverse connection will be requested.";
 
-                    GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
-
-                    throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
+                    throw new NodeUnreachableException(msg);
                 }
             }
 
@@ -649,12 +631,12 @@ public class GridNioServerWrapper {
 
     /**
      * @param node Node.
-     * @return {@code True} if remote node is
+     * @return {@code True} if remote current node cannot receive TCP connections. Applicable for client nodes only.
      */
-    private boolean startedInVirtualizedEnvironment(ClusterNode node) {
-        String envType = node.attribute(attrs.environmentType());
+    private boolean forceClientToServerConnections(ClusterNode node) {
+        Boolean forceClientToSrvConnections = node.attribute(attrs.forceClientToServerConnections());
 
-        return EnvironmentType.VIRTUALIZED.toString().equals(envType);
+        return Boolean.TRUE.equals(forceClientToSrvConnections);
     }
 
     /**

@@ -1095,6 +1095,8 @@ namespace ignite
         {
             const meta::ColumnMetaVector *meta = GetMeta();
 
+            LOG_MSG("Collumn ID: " << colIdx << ", Attribute ID: " << attrId);
+
             if (!meta)
                 return SqlResult::AI_ERROR;
 
