@@ -178,7 +178,7 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
             ccfg.setName(testCacheName(cnt));
             ccfg.setCacheMode(PARTITIONED);
             ccfg.setWriteSynchronizationMode(PRIMARY_SYNC);
-            ccfg.setBackups(0);
+            ccfg.setBackups(1);
             ccfg.setTopologyValidator(new SplitAwareTopologyValidator());
 
             if (useCacheGrp)
