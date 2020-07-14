@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Constants;
@@ -214,14 +215,18 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             }
         }
 
-        TableFilter fil = filters[filter];
+        TableFilter tableFilter;
 
         boolean skipColumnsIntersection = false;
 
-        if (fil != null && columns != null) {
+        if (filters != null && (tableFilter = filters[filter]) != null && columns != null) {
             skipColumnsIntersection = true;
 
-            ArrayList<IndexCondition> idxConds = fil.getIndexConditions();
+            ArrayList<IndexCondition> idxConds = tableFilter.getIndexConditions();
+
+            // Only pk with _key used.
+            if (F.isEmpty(idxConds))
+                skipColumnsIntersection = false;
 
             for (IndexCondition cond : idxConds) {
                 if (cond.getColumn() == columns[0]) {
@@ -230,7 +235,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     break;
                 }
             }
-
         }
 
         // If we have two indexes with the same cost, and one of the indexes can
