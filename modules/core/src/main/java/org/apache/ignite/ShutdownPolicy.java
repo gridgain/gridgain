@@ -16,6 +16,9 @@
 
 package org.apache.ignite;
 
+/**
+ * Represents a shutdown policy that is used for stopping a node.
+ */
 public enum ShutdownPolicy {
     /**
      * Stop immediately as soon as all components are ready.
