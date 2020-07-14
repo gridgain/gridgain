@@ -82,6 +82,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT;
+import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  * Logic related to cache discovery data processing.
@@ -922,7 +923,10 @@ class ClusterCachesInfo {
 
         IgniteCheckedException err = null;
 
-        if (ctx.cache().context().readOnlyMode()) {
+        String dataReg = ccfg.getDataRegionName();
+
+        if (ctx.cache().context().readOnlyMode() &&
+            (ctx.clientNode() || (!VOLATILE_DATA_REGION_NAME.equals(dataReg)))) {
             err = new IgniteClusterReadOnlyException(
                 String.format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT, "start cache", ccfg.getGroupName(), cacheName)
             );
