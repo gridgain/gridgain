@@ -918,7 +918,7 @@ public class JdbcThinConnection implements Connection {
     /**
      * @return Ignite server version.
      */
-    IgniteProductVersion igniteVersion() {
+    public IgniteProductVersion igniteVersion() {
         if (partitionAwareness) {
             return ios.values().stream().map(JdbcThinTcpIo::igniteVersion).min(IgniteProductVersion::compareTo).
                 orElse(baseEndpointVer);
@@ -926,6 +926,16 @@ public class JdbcThinConnection implements Connection {
         else
             return singleIo.igniteVersion();
     }
+
+    /**
+     * @return node UUID
+    */
+    public UUID nodeId(){
+        if (singleIo != null)
+            return singleIo.nodeId();
+        return null;
+    }
+
 
     /**
      * @return Auto close server cursors flag.
