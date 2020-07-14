@@ -432,6 +432,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         cache.query(new SqlFieldsQuery("create index \"idx4\" on Val(valLong)"));
 
+        String plan = cache.query(new SqlFieldsQuery("explain select min(_key), max(_key) from Val")).getAll()
+            .get(0).get(0).toString().toUpperCase();
+
+        assertTrue(plan, plan.contains(PK_IDX_NAME.toUpperCase()));
+
         assertTrue(lsnr.check());
 
         srvLog.unregisterListener(lsnr);
