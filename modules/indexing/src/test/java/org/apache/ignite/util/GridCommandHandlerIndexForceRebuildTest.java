@@ -18,24 +18,35 @@ package org.apache.ignite.util;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
+import org.apache.ignite.util.GridCommandHandlerIndexingUtils.Person;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static java.lang.String.valueOf;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakSqlIndex;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.complexIndexEntity;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillThreeFieldsEntryCache;
@@ -280,6 +291,149 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
     }
 
     /**
+     * Checks client node id as an agrument. Command shoul
+     *
+     * @throws Exception If failed to start client node.
+     */
+    @Test
+    public void testClientNodeConnection() throws Exception {
+        IgniteEx client = startGrid("client");
+
+        try {
+            assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--cache", "indexes_force_rebuild",
+                "--node-id", client.localNode().id().toString(),
+                "--group-names", GRP_NAME_1));
+        }
+        finally {
+            stopGrid("client");
+        }
+    }
+
+    /**
+     * Checks that 2 commands launch trigger async index rebuild.
+     */
+    @Test
+    public void testAsyncIndexesRebuild() throws IgniteInterruptedCheckedException {
+        cacheNamesBlockedIdxRebuild.add(CACHE_NAME_1_1);
+        cacheNamesBlockedIdxRebuild.add(CACHE_NAME_1_2);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "indexes_force_rebuild",
+            "--node-id", grid(0).localNode().id().toString(),
+            "--cache-names", CACHE_NAME_1_1));
+
+        assertTrue("Failed to wait for index rebuild start for first cache.",
+            GridTestUtils.waitForCondition(() -> getActiveRebuildCaches(grid(0)).size() == 1, 10_000));
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "indexes_force_rebuild",
+            "--node-id", grid(0).localNode().id().toString(),
+            "--cache-names", CACHE_NAME_1_2));
+
+        assertTrue("Failed to wait for index rebuild start for second cache.",
+            GridTestUtils.waitForCondition(() -> getActiveRebuildCaches(grid(0)).size() == 2, 10_000));
+
+        cacheNamesBlockedIdxRebuild.clear();
+
+        assertTrue("Failed to wait for final index rebuild.", waitForIndexesRebuild(grid(0)));
+    }
+
+    /**
+     * Checks how index force rebuild command behaves when caches are under load.
+     */
+    @Test
+    public void testIndexRebuildUnderLoad() throws IgniteInterruptedCheckedException {
+        IgniteEx ignite = grid(0);
+
+        AtomicBoolean stopLoad = new AtomicBoolean(false);
+
+        Random rand = new Random();
+
+        final String cacheName1 = "tmpCache1";
+        final String cacheName2 = "tmpCache2";
+        final String grpName = "tmpGrp";
+
+        try {
+            createAndFillCache(ignite, cacheName1, grpName);
+            createAndFillCache(ignite, cacheName2, grpName);
+
+            IgniteCache<Long, Person> cache1 = ignite.cache(cacheName1);
+
+            cacheNamesBlockedIdxRebuild.add(cacheName1);
+            cacheNamesBlockedIdxRebuild.add(cacheName2);
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "indexes_force_rebuild",
+                "--node-id", ignite.localNode().id().toString(),
+                "--cache-names", cacheName1 + "," + cacheName2));
+
+            GridTestUtils.runAsync(() -> {
+                while (!stopLoad.get())
+                    cache1.put(rand.nextLong(), new Person(rand.nextInt(), valueOf(rand.nextLong())));
+            });
+
+            ignite.destroyCache(cacheName2);
+
+            U.sleep(2000);
+
+            stopLoad.set(true);
+
+            cacheNamesBlockedIdxRebuild.clear();
+
+            waitForIndexesRebuild(ignite);
+
+            injectTestSystemOut();
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc", cacheName1));
+
+            assertContains(log, testOut.toString(), "no issues found.");
+        }
+        finally {
+            stopLoad.set(true);
+
+            ignite.destroyCache(cacheName1);
+            ignite.destroyCache(cacheName2);
+        }
+    }
+
+    /**
+     * Checks that corrupted index is successfully rebuilt by the command.
+     */
+    @Test
+    public void testCorruptedIndexRebuild() throws Exception {
+        IgniteEx ignite = grid(0);
+
+        final String cacheName = "tmpCache";
+        final String grpName = "tmpGrp";
+
+        try {
+            createAndFillCache(ignite, cacheName, grpName);
+
+            breakSqlIndex(ignite.cachex(cacheName), 1, null);
+
+            injectTestSystemOut();
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc", "--check-sizes"));
+
+            assertContains(log, testOut.toString(), "issues found (listed above)");
+
+            testOut.reset();
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "indexes_force_rebuild",
+                "--node-id", ignite.localNode().id().toString(),
+                "--cache-names", cacheName));
+
+            assertTrue(waitForIndexesRebuild(ignite));
+
+            forceCheckpoint(ignite);
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc", cacheName));
+
+            assertContains(log, testOut.toString(), "no issues found.");
+        }
+        finally {
+            ignite.destroyCache(cacheName);
+        }
+    }
+
+    /**
      * Validated control.sh utility output for {@link #testCacheNamesArg()}.
      */
     private void validateTestCacheNamesArgOutput() {
@@ -359,6 +513,17 @@ public class GridCommandHandlerIndexForceRebuildTest extends GridCommandHandlerA
                 .filter(c -> !excludedCacheNames.contains(c.getName()))
                 .allMatch(c -> c.indexReadyFuture().isDone()),
             timeout);
+    }
+
+    /**
+     * @param ignite Node from which caches will be collected.
+     * @return {@code Set} of ignite caches that have index rebuild in process.
+     */
+    private Set<IgniteCacheProxy<?, ?>> getActiveRebuildCaches(IgniteEx ignite) {
+        return ignite.context().cache().publicCaches()
+            .stream()
+            .filter(c -> !c.indexReadyFuture().isDone())
+            .collect(Collectors.toSet());
     }
 
     /**

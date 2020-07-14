@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Predicate;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.junit.Test;
@@ -113,6 +115,61 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
                 .allMatch((name) -> name.equals(idxName));
 
         assertTrue("Unexpected result set", isResSetCorrect);
+    }
+
+    /**
+     * Checks that command with all arguments specified works.
+     */
+    @Test
+    public void tesAllArgs() {
+        final String idxName = "PERSON_ORGID_ASC_IDX";
+
+        injectTestSystemOut();
+
+        final CommandHandler handler = new CommandHandler(createTestLogger());
+
+        assertEquals(EXIT_CODE_OK, execute(handler, "--cache", "indexes_list",
+            "--node-id", grid(0).localNode().id().toString(),
+            "--group-name", "^" + GROUP_NAME + "$",
+            "--cache-name",  CACHE_NAME,
+            "--index-name", idxName));
+
+        assertTrue(testOut.toString().contains("grpName=" + GROUP_NAME + ", cacheName=" + CACHE_NAME +
+            ", idxName=PERSON_ORGID_ASC_IDX, colsNames=ArrayList [ORGID, _KEY], tblName=PERSON"));
+    }
+
+    /**
+     * Checks that command works for cache without indexes.
+     */
+    @Test
+    public void testListCacheWithoutIndexes() {
+        IgniteEx ignite = grid(0);
+
+        final String tmpCacheName = "tmpCache";
+
+        injectTestSystemOut();
+
+        final CommandHandler handler = new CommandHandler(createTestLogger());
+
+        try {
+            ignite.createCache(tmpCacheName);
+
+            try (IgniteDataStreamer<Long, Long> streamer = ignite.dataStreamer(tmpCacheName)) {
+                for (long i = 0; i < 1000; i++)
+                    streamer.addData(i * 13, i * 17);
+            }
+
+            assertEquals(EXIT_CODE_OK, execute(handler, "--cache", "indexes_list", "--cache-name", tmpCacheName));
+
+            String str = testOut.toString();
+
+            String[] lines = str.split("\n");
+
+            assertEquals("Unexpected output size", 11, lines.length);
+        }
+        finally {
+            ignite.destroyCache(tmpCacheName);
+        }
     }
 
     /**
