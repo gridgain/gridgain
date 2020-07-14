@@ -18,9 +18,10 @@ package org.apache.ignite.internal.processors.cache.tree;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
-import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -41,7 +42,7 @@ public class UpdateLogRow {
     public long link;
 
     /** */
-    public KeyCacheObject key;
+    private CacheDataRowAdapter rowData;
 
     /**
      * Creates a new instance which represents an upper or lower bound
@@ -67,17 +68,48 @@ public class UpdateLogRow {
     }
 
     /**
+     * @param cacheId    Cache ID.
+     * @param updateCntr Update counter.
+     * @param link       Data row link.
+     */
+    public UpdateLogRow(int cacheId, long updateCntr) {
+        this.cacheId = cacheId;
+        this.updateCntr = updateCntr;
+    }
+
+    /**
      * @param grp Cache group.
      * @return Row.
      * @throws IgniteCheckedException If failed.
      */
-    UpdateLogRow initKey(CacheGroupContext grp) throws IgniteCheckedException {
-        CacheDataRowAdapter rowData = grp.mvccEnabled() ? new MvccDataRow(link) : new CacheDataRowAdapter(link);
-        rowData.initFromLink(grp, CacheDataRowAdapter.RowData.KEY_ONLY);
+    UpdateLogRow initRow(CacheGroupContext grp) throws IgniteCheckedException {
+        assert !grp.mvccEnabled() : "MVCC is not supported.";
 
-        key = rowData.key();
+        rowData = new CacheDataRowAdapter(link);
+
+        rowData.initFromLink(grp, CacheDataRowAdapter.RowData.FULL);
 
         return this;
+    }
+
+    /** Updated entry key. */
+    public KeyCacheObject key() {
+        return rowData.key();
+    }
+
+    /** Updated entry value. */
+    public CacheObject value() {
+        return rowData.value();
+    }
+
+    /** Updated entry version. */
+    public GridCacheVersion version() {
+        return rowData.version();
+    }
+
+    /** Updated entry expire time. */
+    public long expireTime() {
+        return rowData.expireTime();
     }
 
     /** {@inheritDoc} */

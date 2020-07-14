@@ -30,7 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
  */
 public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     /** */
-    public static final Object WITH_KEY = new Object();
+    public static final Object FULL_ROW = new Object();
 
     /** */
     private final CacheGroupContext grp;
@@ -115,6 +115,6 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         throws IgniteCheckedException {
         UpdateLogRow row = io.getLookupRow(this, pageAddr, idx);
 
-        return flag == WITH_KEY ? row.initKey(grp) : row;
+        return flag == FULL_ROW ? row.initRow(grp) : row;
     }
 }
