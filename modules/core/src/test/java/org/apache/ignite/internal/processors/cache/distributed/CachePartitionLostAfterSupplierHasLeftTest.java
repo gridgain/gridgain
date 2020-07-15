@@ -52,7 +52,6 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 /**
  * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
  */
-@WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "500000")
 public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstractTest {
     /** */
     private static final int PARTS_CNT = 64;

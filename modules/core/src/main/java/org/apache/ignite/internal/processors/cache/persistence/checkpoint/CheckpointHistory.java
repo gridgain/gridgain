@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPa
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -473,25 +472,14 @@ public class CheckpointHistory {
 
         FileWALPointer minPtr = null;
 
-        LinkedList<T3<Map.Entry<Integer, Long>, FileWALPointer, Long>> historyPointerCandidat = new LinkedList<>();
+        LinkedList<WalPointerCandidate> historyPointerCandidate = new LinkedList<>();
 
         for (Long cpTs : checkpoints(true)) {
             CheckpointEntry cpEntry = entry(cpTs);
 
-            while (!F.isEmpty(historyPointerCandidat)) {
-                T3<Map.Entry<Integer, Long>, FileWALPointer, Long> entry = historyPointerCandidat.poll();
-
-                Long foundCntr = cpEntry.partitionCounter(cctx, grpId, entry.get1().getKey());
-
-                FileWALPointer ptr;
-
-                if (foundCntr == null || foundCntr == entry.get3())
-                    ptr = entry.get2();
-                else {
-                    ptr = (FileWALPointer)cpEntry.checkpointMark();
-
-                    partsCounter.put(entry.get1().getKey(), Math.max(foundCntr, entry.get1().getValue() - margin));
-                }
+            while (!F.isEmpty(historyPointerCandidate)) {
+                FileWALPointer ptr = historyPointerCandidate.poll()
+                    .choose(cpEntry, margin, partsCounter);
 
                 if (minPtr == null || ptr.compareTo(minPtr) < 0)
                     minPtr = ptr;
@@ -514,17 +502,21 @@ public class CheckpointHistory {
                             + entry.getKey() + ", partCntrSince=" + entry.getValue() + "]");
                     }
 
-                    if (foundCntr + margin > entry.getValue())
-                        historyPointerCandidat.add(new T3<>(entry, ptr, foundCntr));
-                    else if (minPtr == null || ptr.compareTo(minPtr) < 0) {
-                        minPtr = ptr;
+                    if (foundCntr + margin > entry.getValue()) {
+                        historyPointerCandidate.add(new WalPointerCandidate(grpId, entry.getKey(), entry.getValue(), ptr,
+                            foundCntr));
 
-                        partsCounter.put(entry.getKey(), entry.getValue() - margin);
+                        continue;
                     }
+
+                    partsCounter.put(entry.getKey(), entry.getValue() - margin);
+
+                    if (minPtr == null || ptr.compareTo(minPtr) < 0)
+                        minPtr = ptr;
                 }
             }
 
-            if (F.isEmpty(modifiedPartsCounter) && F.isEmpty(historyPointerCandidat))
+            if (F.isEmpty(modifiedPartsCounter) && F.isEmpty(historyPointerCandidate))
                 return minPtr;
         }
 
@@ -535,16 +527,82 @@ public class CheckpointHistory {
                 + entry.getKey() + ", partCntrSince=" + entry.getValue() + "]");
         }
 
-        if (!F.isEmpty(historyPointerCandidat)) {
-            while (!F.isEmpty(historyPointerCandidat)) {
-                T3<Map.Entry<Integer, Long>, FileWALPointer, Long> entry = historyPointerCandidat.poll();
+        while (!F.isEmpty(historyPointerCandidate)) {
+            FileWALPointer ptr = historyPointerCandidate.poll()
+                .choose(null, margin, partsCounter);
 
-                if (minPtr == null || entry.get2().compareTo(minPtr) < 0)
-                    minPtr = entry.get2();
-            }
+            if (minPtr == null || ptr.compareTo(minPtr) < 0)
+                minPtr = ptr;
         }
 
         return minPtr;
+    }
+
+    /**
+     * The class is used for get a pointer with a specific margin.
+     * This stores the nearest pointer which covering a partition counter.
+     * It is able to choose between other pointer and this.
+     */
+    private class WalPointerCandidate {
+        /** Group id. */
+        private int grpId;
+
+        /** Partition id. */
+        private int part;
+
+        /** Partition counter. */
+        private long partContr;
+
+        /** WAL pointer. */
+        private FileWALPointer walPntr;
+
+        /** Partition counter at the moment of WAL pointer. */
+        private long walPntrCntr;
+
+        /**
+         * @param grpId Group id.
+         * @param part Partition id.
+         * @param partContr Partition counter.
+         * @param walPntr WAL pointer.
+         * @param walPntrCntr Counter of WAL pointer.
+         */
+        public WalPointerCandidate(int grpId, int part, long partContr, FileWALPointer walPntr, long walPntrCntr) {
+            this.grpId = grpId;
+            this.part = part;
+            this.partContr = partContr;
+            this.walPntr = walPntr;
+            this.walPntrCntr = walPntrCntr;
+        }
+
+        /**
+         * Make a choice between stored WAL pointer and other, getting from checkpoint, with a specific margin.
+         * Updates counter in collection from parameters.
+         *
+         * @param cpEntry Checkpoint entry.
+         * @param otherPntr Other WAL pointer.
+         * @param otherPntrCntr Counter of other WAL pointer.
+         * @param margin Margin.
+         * @param partCntsForUpdate Collection of partition id by counter.
+         * @return Chosen WAL pointer.
+         */
+        public FileWALPointer choose(
+            CheckpointEntry cpEntry,
+            long margin,
+            Map<Integer, Long> partCntsForUpdate
+        ) {
+            Long foundCntr = cpEntry == null ? null : cpEntry.partitionCounter(cctx, grpId, part);
+
+            if (foundCntr == null || foundCntr == walPntrCntr) {
+                partCntsForUpdate.put(part, walPntrCntr);
+
+                return walPntr;
+            }
+            else {
+                partCntsForUpdate.put(part, Math.max(foundCntr, partContr - margin));
+
+                return (FileWALPointer)cpEntry.checkpointMark();
+            }
+        }
     }
 
     /**
