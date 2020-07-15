@@ -53,6 +53,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
+import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
@@ -82,7 +83,6 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT;
-import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  * Logic related to cache discovery data processing.
@@ -923,10 +923,9 @@ class ClusterCachesInfo {
 
         IgniteCheckedException err = null;
 
-        String dataReg = ccfg.getDataRegionName();
+        IgniteCacheSnapshotManager snapshotMgr = ctx.cache().context().snapshot();
 
-        if (ctx.cache().context().readOnlyMode() &&
-            (ctx.clientNode() || (!VOLATILE_DATA_REGION_NAME.equals(dataReg)))) {
+        if (ctx.cache().context().readOnlyMode() && !snapshotMgr.restoreOrRecoveryInProgress()) {
             err = new IgniteClusterReadOnlyException(
                 String.format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT, "start cache", ccfg.getGroupName(), cacheName)
             );
