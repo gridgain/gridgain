@@ -579,8 +579,6 @@ public class CheckpointHistory {
          * Updates counter in collection from parameters.
          *
          * @param cpEntry Checkpoint entry.
-         * @param otherPntr Other WAL pointer.
-         * @param otherPntrCntr Counter of other WAL pointer.
          * @param margin Margin.
          * @param partCntsForUpdate Collection of partition id by counter.
          * @return Chosen WAL pointer.
