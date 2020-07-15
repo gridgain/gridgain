@@ -34,7 +34,7 @@ class LinkStorage implements ItemStorage<CacheAwareLink> {
     private final Map<Integer, Map<Integer, Map<Byte, IntSet>>> store = new HashMap<>();
 
     /** */
-    private long size;
+    private long size = 0;
 
     /** {@inheritDoc} */
     @Override public void add(CacheAwareLink cacheAwareLink) {

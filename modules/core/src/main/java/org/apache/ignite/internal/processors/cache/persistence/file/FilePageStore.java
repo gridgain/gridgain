@@ -75,7 +75,7 @@ public class FilePageStore implements PageStore {
     protected volatile FileIO fileIO;
 
     /** */
-    protected final AtomicLong allocated;
+    private final AtomicLong allocated;
 
     /** Region metrics updater. */
     private final LongAdderMetric allocatedTracker;
@@ -84,7 +84,7 @@ public class FilePageStore implements PageStore {
     protected final int pageSize;
 
     /** */
-    protected volatile boolean inited;
+    private volatile boolean inited;
 
     /** */
     private volatile boolean recover;
@@ -415,7 +415,7 @@ public class FilePageStore implements PageStore {
                 ", allocated=" + allocated.get() + ", headerSize=" + headerSize() + ", cfgFile=" +
                 pathProvider.apply().toAbsolutePath();
 
-            int n = readWithFailover(pageBuf, off, pageId, false);
+            int n = readWithFailover(pageBuf, off);
 
             // If page was not written yet, nothing to read.
             if (n < 0) {
@@ -459,7 +459,7 @@ public class FilePageStore implements PageStore {
         try {
             assert buf.remaining() == headerSize();
 
-            readWithFailover(buf, 0, 0, true);
+            readWithFailover(buf, 0);
         }
         catch (IOException e) {
             throw new StorageException("Failed to read header [file=" + getFileAbsolutePath() + "]", e);
@@ -772,18 +772,15 @@ public class FilePageStore implements PageStore {
     /**
      * @param destBuf Destination buffer.
      * @param position Position.
-     * @param pageId Page ID.
-     * @param hdr Flag header.
      * @return Number of read bytes.
-     * @throws IOException If some I/O error occurs.
      */
-    private int readWithFailover(ByteBuffer destBuf, long position, long pageId, boolean hdr) throws IOException {
+    private int readWithFailover(ByteBuffer destBuf, long position) throws IOException {
         boolean interrupted = false;
 
         int bufPos = destBuf.position();
 
         while (true) {
-            FileIO fileIO = fileIO(pageId, hdr);
+            FileIO fileIO = this.fileIO;
 
             if (fileIO == null)
                 throw new IOException("FileIO has stopped");
@@ -810,16 +807,5 @@ public class FilePageStore implements PageStore {
                 reinit(fileIO);
             }
         }
-    }
-
-    /**
-     * Return file I/O interface.
-     *
-     * @param pageId Page ID.
-     * @param hdr Flag header.
-     * @return File I/O interface.
-     */
-    protected FileIO fileIO(long pageId, boolean hdr) {
-        return fileIO;
     }
 }
