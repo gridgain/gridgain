@@ -99,6 +99,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionStateValidationException;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -3556,18 +3557,28 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         Set<Integer> haveHistory,
         T2<UUID, Long> deepestReserved
     ) {
+        boolean prefereWalRebalance = ((GridCacheDatabaseSharedManager)cctx.database()).prefereWalRebalance();
+
         while (!nonMaxCntrs.isEmpty()) {
             Long ceilingMinReserved = nonMaxCntrs.ceiling(ownerHistCntr);
 
             if (ceilingMinReserved == null)
                 break;
 
-            if (maxOwnerCntr - ceilingMinReserved < ownerSize) {
+            if (prefereWalRebalance || maxOwnerCntr - ceilingMinReserved < ownerSize) {
                 partHistSuppliers.put(ownerId, grpId, p, ceilingMinReserved);
 
                 haveHistory.add(p);
 
                 break;
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Partition will not be supplied historically [grp=" + grpId +
+                    ", p=" + p +
+                    ", histUpdates=" + (maxOwnerCntr - ceilingMinReserved) +
+                    ", partSized=" + ownerSize +
+                    ']');
             }
 
             nonMaxCntrs = nonMaxCntrs.tailSet(ceilingMinReserved, false);

@@ -777,6 +777,14 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
+    /**
+     * Prefere historical rebalance if it possible, even if all hieristic say other.
+     * This property is intended for tests only, so that predict rebalance type.
+     * <p/>
+     * Default is {@code false}.
+     */
+    public static final String IGNITE_PREFERE_WAL_REBALANCE = "IGNITE_PREFERE_WAL_REBALANCE";
+
     /** Ignite page memory concurrency level. */
     public static final String IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL = "IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL";
 

@@ -201,6 +201,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_READ_LOCK_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JVM_PAUSE_DETECTOR_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFERE_WAL_REBALANCE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_RECOVERY_SEMAPHORE_PERMITS;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
@@ -261,6 +262,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** */
     private final int walRebalanceThreshold = getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, 500);
+
+    /** Prefere historical rebalance flag. */
+    private final boolean prefereWalRebalance = getBoolean(IGNITE_PREFERE_WAL_REBALANCE);
 
     /** Value of property for throttling policy override. */
     private final String throttlingPlcOverride = IgniteSystemProperties.getString(
@@ -504,6 +508,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     public IgniteThread checkpointerThread() {
         return checkpointerThread;
+    }
+
+    /**
+     * Returns true if historical rebalance is preferred,
+     * false means use heuristic for determine rebalance type.
+     *
+     * @return Flag of preferred historical rebalance.
+     */
+    public boolean prefereWalRebalance() {
+        return prefereWalRebalance;
     }
 
     /**
@@ -1922,7 +1936,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 continue;
 
             for (GridDhtLocalPartition locPart : grp.topology().currentLocalPartitions()) {
-                if (locPart.state() == OWNING && locPart.fullSize() > walRebalanceThreshold)
+                if (locPart.state() == OWNING && (prefereWalRebalance() || locPart.fullSize() > walRebalanceThreshold))
                     res.computeIfAbsent(grp.groupId(), k -> new HashSet<>()).add(locPart.id());
             }
         }
