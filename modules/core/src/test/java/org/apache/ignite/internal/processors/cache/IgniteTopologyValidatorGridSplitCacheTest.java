@@ -240,6 +240,96 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
         testTopologyValidator0(true);
     }
 
+    @Test
+    public void testTopologyValidator1() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup1() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator2() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup2() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator3() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup3() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator4() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup4() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator5() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup5() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator6() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup6() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator7() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup7() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator8() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup8() throws Exception {
+        testTopologyValidator0(true);
+    }
+
+    @Test
+    public void testTopologyValidator9() throws Exception {
+        testTopologyValidator0(false);
+    }
+
+    @Test
+    public void testTopologyValidatorWithCacheGroup9() throws Exception {
+        testTopologyValidator0(true);
+    }
+
     /**
      * Tests topology split scenario.
      *
