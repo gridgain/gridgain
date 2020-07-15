@@ -272,7 +272,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
                         Thread.sleep(500);
                     }
                     catch (Exception e) {
-                        throw new RuntimeException();
+                        throw new RuntimeException("Exception during restart victim node", e);
                     }
 
                     restartCnt.incrementAndGet();
