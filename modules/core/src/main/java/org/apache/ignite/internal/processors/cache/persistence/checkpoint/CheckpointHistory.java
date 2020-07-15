@@ -597,11 +597,10 @@ public class CheckpointHistory {
 
                 return walPntr;
             }
-            else {
-                partCntsForUpdate.put(part, Math.max(foundCntr, partContr - margin));
 
-                return (FileWALPointer)cpEntry.checkpointMark();
-            }
+            partCntsForUpdate.put(part, Math.max(foundCntr, partContr - margin));
+
+            return (FileWALPointer)cpEntry.checkpointMark();
         }
     }
 
