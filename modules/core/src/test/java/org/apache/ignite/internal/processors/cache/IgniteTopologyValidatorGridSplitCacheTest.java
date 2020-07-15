@@ -163,7 +163,7 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
         cfg.setUserAttributes(userAttrs);
 
         cfg.setMemoryConfiguration(new MemoryConfiguration().
-            setDefaultMemoryPolicySize((50L << 20) + (100L << 20) * CACHES_CNT / GRID_CNT));
+            setDefaultMemoryPolicySize((50L << 20) + (50L << 20) * CACHES_CNT / GRID_CNT));
 
         return cfg;
     }
