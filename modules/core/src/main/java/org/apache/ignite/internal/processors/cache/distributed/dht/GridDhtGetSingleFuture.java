@@ -234,9 +234,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
         try {
             int keyPart = cctx.affinity().partition(key);
 
-            GridDhtLocalPartition part = topVer.topologyVersion() > 0 ?
-                cache().topology().localPartition(keyPart, topVer, true) :
-                cache().topology().localPartition(keyPart);
+            GridDhtLocalPartition part = cache().topology().localPartition(keyPart);
 
             if (part == null)
                 return false;
@@ -247,6 +245,9 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
             if (part.reserve()) {
                 if (part.state() == OWNING || part.state() == LOST) {
                     this.part = part.id();
+
+                    assert cctx.config().isReadFromBackup() ||
+                        cctx.affinity().primaryByPartition(cctx.kernalContext().discovery().localNode(), keyPart, topVer);
 
                     return true;
                 }

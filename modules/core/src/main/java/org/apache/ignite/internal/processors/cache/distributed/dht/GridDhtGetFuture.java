@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -40,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridCompoundIdentityFuture;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
@@ -86,7 +86,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
     private Map<KeyCacheObject, Boolean> keys;
 
     /** Reserved partitions. */
-    private int[] parts;
+    private IntHashMap<Void> parts;
 
     /** Future ID. */
     private IgniteUuid futId;
@@ -97,7 +97,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
     /** Topology version .*/
     private AffinityTopologyVersion topVer;
 
-    /** Retries because ownership changed. */
+    /** Partitions that were not preset in OWNING state on local node. Will be returned to originator and retried. */
     private Collection<Integer> invalidParts;
 
     /** Subject ID. */
@@ -193,7 +193,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
             int part = cctx.affinity().partition(key.getKey());
 
             if (invalidParts == null || !invalidParts.contains(part)) {
-                if (!reservePartition(key.getKey())) {
+                if (!reservePartition(key.getKey(), part)) {
                     if (invalidParts == null)
                         invalidParts = new HashSet<>();
 
@@ -259,7 +259,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
         if (super.onDone(res, err)) {
             // Release all partitions reserved by this future.
             if (parts != null)
-                cctx.topology().releasePartitions(parts);
+                parts.forEach((part, v) -> cctx.topology().localPartition(part).release());
 
             return true;
         }
@@ -269,26 +269,27 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
 
     /**
      * @param key Key.
+     * @param keyPart Pre-calculated key partition.
      * @return {@code True} if mapped.
      */
-    private boolean reservePartition(KeyCacheObject key) {
+    private boolean reservePartition(KeyCacheObject key, int keyPart) {
         try {
-            int keyPart = cctx.affinity().partition(key);
-
-            GridDhtLocalPartition part = topVer.topologyVersion() > 0 ?
-                cache().topology().localPartition(keyPart, topVer, true) :
-                cache().topology().localPartition(keyPart);
+            GridDhtLocalPartition part = cache().topology().localPartition(keyPart);
 
             if (part == null)
                 return false;
 
-            if (parts == null || !F.contains(parts, part.id())) {
+            if (parts == null || !parts.containsKey(keyPart)) {
                 // By reserving, we make sure that partition won't be unloaded while processed.
                 if (part.reserve()) {
                     if (part.state() == OWNING || part.state() == LOST) {
-                        parts = parts == null ? new int[1] : Arrays.copyOf(parts, parts.length + 1);
+                        if (parts == null)
+                            parts = new IntHashMap<>();
 
-                        parts[parts.length - 1] = part.id();
+                        assert cctx.config().isReadFromBackup() ||
+                            cctx.affinity().primaryByPartition(cctx.kernalContext().discovery().localNode(), keyPart, topVer);
+
+                        parts.put(keyPart, null);
 
                         return true;
                     }
