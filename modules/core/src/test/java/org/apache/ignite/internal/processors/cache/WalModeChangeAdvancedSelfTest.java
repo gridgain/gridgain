@@ -250,7 +250,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         final int restarts = SF.applyLB(10, 3);
 
-        Thread t = new Thread(new Runnable() {
+        IgniteInternalFuture nodeRestartFut = GridTestUtils.runAsync(new Runnable() {
             @Override public void run() {
                 boolean firstOrSecond = true;
 
@@ -282,11 +282,10 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
             }
         });
 
-        t.start();
 
         boolean state = true;
 
-        while (restartCnt.get() < restarts && !Thread.currentThread().isInterrupted()) {
+        while (!nodeRestartFut.isDone() && restartCnt.get() < restarts && !Thread.currentThread().isInterrupted()) {
             try {
                 if (state)
                     cli.cluster().disableWal(CACHE_NAME);
@@ -299,6 +298,8 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
                 // Possible disconnect, re-try.
             }
         }
+
+        nodeRestartFut.get();
     }
 
     /**
@@ -523,5 +524,16 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
         catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void main(String[] args) {
+        Thread t = new Thread(new Runnable() {
+            @Override public void run() {
+                throw new RuntimeException();
+            }
+        });
+
+        doSleep(2000);
+        System.out.println("qwer");
     }
 }
