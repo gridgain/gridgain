@@ -263,6 +263,55 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
     public void testServerRestartNonCoordinator9() throws Exception {
         checkNodeRestart(false);
     }
+    @Test
+    public void testServerRestartNonCoordinator10() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator11() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator12() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator13() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator14() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator15() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator16() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator17() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator18() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator19() throws Exception {
+        checkNodeRestart(false);
+    }
 
     /**
      * Test server restart (coordinator).
