@@ -93,7 +93,7 @@ public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithP
      * @throws Exception If failed.
      */
     @Test
-    public void testTwoNodesWithDifferenConfuguration() throws Exception {
+    public void testTwoNodesWithDifferentConfuguration() throws Exception {
         Ignite ignite0 = startGrid(0);
 
         ignite0.cluster().active(true);
@@ -153,7 +153,7 @@ public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithP
      * @throws Exception If failed.
      */
     @Test
-    public void testNotIdialOwners() throws Exception {
+    public void testNotIdealOwners() throws Exception {
         backups = 1;
 
         Ignite ignite0 = startGrid(0);
@@ -218,7 +218,7 @@ public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithP
      * @throws Exception If failed.
      */
     @Test
-    public void tesStartCacheWheNodeStopping() throws Exception {
+    public void tesStartCacheWhenNodeStopping() throws Exception {
         backups = 2;
 
         Ignite ignite0 = startGrid(0);

@@ -19,7 +19,7 @@ package org.apache.ignite.internal.commandline.shutdown;
 import org.apache.ignite.ShutdownPolicy;
 
 /**
- * Srgumants of shutdown policy command.
+ * Argumants of shutdown policy command.
  */
 public class ShutdownPolicyArgument {
     /**

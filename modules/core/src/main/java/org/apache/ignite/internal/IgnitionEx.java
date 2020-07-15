@@ -317,8 +317,8 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
-     *       If this parameter is {@code null} common cluster policy will use.
+     * @param shutdown If this parameter is set explicitly this policy will use for stopping node.
+     *       If this parameter is {@code null} common cluster policy will be use.
      * @return {@code true} if default grid instance was indeed stopped,
      *      {@code false} otherwise (if it was not started).
      */
@@ -341,8 +341,8 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
-     *      If this parameter is {@code null} common cluster policy will use.
+     * @param shutdown If this parameter is set explicitly this policy will use for stopping node.
+     *      If this parameter is {@code null} common cluster policy will be use.
      * @param stopNotStarted If {@code true} and node start did not finish then interrupts starting thread.
      * @return {@code true} if named Ignite instance was indeed found and stopped,
      *      {@code false} otherwise (the instance with given {@code name} was
@@ -390,7 +390,7 @@ public class IgnitionEx {
     /**
      * @deprecated
      *
-     * Behavior of the method is the almost same as {@link IgnitionEx#stop(String, boolean, Boolean, boolean)}.
+     * Behavior of the method is the almost same as {@link IgnitionEx#stop(boolean, ShutdownPolicy)}.
      * If node stopping process will not be finished within {@code timeoutMs} whole JVM will be killed.
      *
      * @param timeoutMs Timeout to wait graceful stopping.
@@ -435,8 +435,8 @@ public class IgnitionEx {
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
      *      jobs running on it before stopping.
-     * @param shutdown If this parameter sets explicitly this policy will use for stopping node.
-     *      If this parameter is {@code null} common cluster policy will use.
+     * @param shutdown If this parameter is set explicitly this policy will use for stopping node.
+     *      If this parameter is {@code null} common cluster policy will be use.
      */
     public static void stopAll(boolean cancel, @Nullable ShutdownPolicy shutdown) {
         IgniteNamedInstance grid0 = dfltGrid;
@@ -2619,8 +2619,8 @@ public class IgnitionEx {
          *
          * @param cancel Flag indicating whether all currently running jobs
          *      should be cancelled.
-         * @param shutdown This is a policy of shutdown which applied forcibly.
-         * If this property is null policy will apply policy of whole cluster.
+         * @param shutdown This is a policy of shutdown which is applied forcibly.
+         * If this property is {@code null}, present policy of the cluster will be used.
          */
         void stop(boolean cancel, ShutdownPolicy shutdown) {
             // Stop cannot be called prior to start from public API,
@@ -2638,7 +2638,7 @@ public class IgnitionEx {
         }
 
         /**
-         * Read policy from meta storage or return a default value if it didn't find.
+         * Reads a policy from distributed meta storage or returns a default value if it isn't present.
          *
          * @return Shutdown policy.
          */
@@ -2650,11 +2650,11 @@ public class IgnitionEx {
         }
 
         /**
-         * Stop instance synchronously according to parameters.
+         * Stops instance synchronously according to parameters.
          *
-         * @param cancel Flag indicating whether all currently running jobsCorruptedCheckpointReservationTest
+         * @param cancel Flag indicating whether all currently running jobs
          *      should be cancelled.
-         * @param shutdown Policy of according which shutdown will be produced.
+         * @param shutdown Policy according to which shutdown will be performed.
          */
         private synchronized void stop0(boolean cancel, ShutdownPolicy shutdown) {
             IgniteKernal grid0 = grid;
@@ -2743,7 +2743,7 @@ public class IgnitionEx {
 
                         nodesToExclude.retainAll(fullMap.keySet());
 
-                        if (!haveCopyLoclaPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
+                        if (!haveCopyLocalPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
                             safeToStop = false;
 
                             if (log.isInfoEnabled()) {
@@ -2842,12 +2842,15 @@ public class IgnitionEx {
         }
 
         /**
+         * Checks, does the cluster have another copy of each local partition for specific group.
+         * Also, the method collects all nodes with can supply a local partition into {@code proposedSuppliers}.
+         *
          * @param grpCtx Cahce group.
          * @param nodesToExclude Nodes to exclude from check.
          * @param proposedSuppliers Map of proposed suppliers for groups.
          * @return True if all local partition of group specified have a copy in cluster, false otherwise.
          */
-        private boolean haveCopyLoclaPartitions(
+        private boolean haveCopyLocalPartitions(
             CacheGroupContext grpCtx,
             Set<UUID> nodesToExclude,
             Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers
@@ -2876,7 +2879,7 @@ public class IgnitionEx {
                         continue;
 
                     //This remote node does not present in ideal assignment.
-                    if (!idealAssignment.get(p).stream().filter(node -> node.id().equals(entry.getKey())).findAny().isPresent())
+                    if (!idealAssignment.get(p).stream().anyMatch(node -> node.id().equals(entry.getKey())))
                         continue;
 
                     //Rebalance in this cache.
