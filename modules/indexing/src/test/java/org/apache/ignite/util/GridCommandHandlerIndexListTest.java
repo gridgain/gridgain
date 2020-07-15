@@ -131,7 +131,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
         assertEquals(EXIT_CODE_OK, execute(handler, "--cache", "indexes_list",
             "--node-id", grid(0).localNode().id().toString(),
             "--group-name", "^" + GROUP_NAME + "$",
-            "--cache-name",  CACHE_NAME,
+            "--cache-name", CACHE_NAME,
             "--index-name", idxName));
 
         assertTrue(testOut.toString().contains("grpName=" + GROUP_NAME + ", cacheName=" + CACHE_NAME +
