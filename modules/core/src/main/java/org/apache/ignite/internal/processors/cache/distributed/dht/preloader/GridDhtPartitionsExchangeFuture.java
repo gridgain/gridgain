@@ -3573,14 +3573,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 break;
             }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Partition will not be supplied historically [grp=" + grpId +
-                    ", p=" + p +
-                    ", histUpdates=" + (maxOwnerCntr - ceilingMinReserved) +
-                    ", partSized=" + ownerSize +
-                    ']');
-            }
-
             nonMaxCntrs = nonMaxCntrs.tailSet(ceilingMinReserved, false);
         }
 
@@ -4247,7 +4239,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             }
 
             if (hasPartitionToLog(supplyInfoMap, true)) {
-                log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
+                log.info("Partitions were reserved, but maximum available counter is greater than demanded " +
+                    "or WAL contains too many updates: [" +
                     supplyInfoMap.entrySet().stream().map(entry ->
                         "[grp=" + entry.getKey() + ' ' +
                             entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->

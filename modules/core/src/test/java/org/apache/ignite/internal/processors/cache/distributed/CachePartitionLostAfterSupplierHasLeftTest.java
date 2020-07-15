@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
@@ -52,6 +53,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 /**
  * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
  */
+@WithSystemProperty(key = IGNITE_PREFERE_WAL_REBALANCE, value = "true")
 public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstractTest {
     /** */
     private static final int PARTS_CNT = 64;
@@ -332,13 +334,31 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
 
         load(grid(idx0), DEFAULT_CACHE_NAME, keys.subList(keysCnt - 10, keysCnt));
 
-        IgniteEx g1 = startGrid(idx1);
+        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(idx1));
+
+        ((TestRecordingCommunicationSpi)cfg.getCommunicationSpi()).blockMessages((node, msg) -> {
+            if (msg instanceof GridDhtPartitionDemandMessage) {
+                GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage)msg;
+
+                return CU.cacheId(DEFAULT_CACHE_NAME) == demandMsg.groupId();
+            }
+
+            return false;
+        });
+
+        IgniteEx g1 = startGrid(optimize(cfg));
 
         stopGrid(idx0); // Stop supplier in the middle of clearing.
 
+        TestRecordingCommunicationSpi.spi(g1).stopBlock();
+
         final GridDhtLocalPartition part = g1.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(partId);
 
-        assertEquals(GridDhtPartitionState.LOST, part.state());
+        assertTrue("Unexpected partition state [p=" + partId +
+                ", expected=" + GridDhtPartitionState.LOST +
+                ", actual=" + part.state() + ']',
+            GridTestUtils.waitForCondition(() -> part.state() == GridDhtPartitionState.LOST, 30_000));
+
         assertTrue(g1.cachex(DEFAULT_CACHE_NAME).lostPartitions().contains(partId));
 
         if (mode != 0) {

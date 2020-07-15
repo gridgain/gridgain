@@ -90,6 +90,7 @@ import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFERE_WAL_REBALANCE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
@@ -223,7 +224,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @throws Exception if any error occurs.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
+    @WithSystemProperty(key = IGNITE_PREFERE_WAL_REBALANCE, value = "true")
     public void testHistRebalanceStatistics() throws Exception {
         dsCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(
