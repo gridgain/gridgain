@@ -76,8 +76,6 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
                 if ((failed == null) == readOnly)
                     fail("SQL delete from " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
 
-                checkRootCause(failed, "assertSqlReadOnlyMode");
-
                 failed = null;
 
                 try (FieldsQueryCursor<?> cur = cache.query(new SqlFieldsQuery(
@@ -93,8 +91,6 @@ public class ClusterReadOnlyModeSqlTest extends ClusterReadOnlyModeAbstractTest 
 
                 if ((failed == null) == readOnly)
                     fail("SQL insert into " + cacheName + " must " + (readOnly ? "fail" : "succeed"));
-
-                checkRootCause(failed, "assertSqlReadOnlyMode");
             }
         }
     }
