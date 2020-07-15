@@ -694,6 +694,28 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Check three fields in pk index.
+     */
+    @Test
+    public void testCheckThreeFieldsInPk() throws Exception {
+        inlineSize = 10;
+
+        srvLog = new ListeningTestLogger(log);
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 3, "c1", "c2", "c3", "c4", "c5", "c6");
+
+        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c1"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c2"));
+
+        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c3"));
+    }
+
+    /**
      * Test composite indices with PK field in first place.
      *
      * There is no sense to create such indices:
