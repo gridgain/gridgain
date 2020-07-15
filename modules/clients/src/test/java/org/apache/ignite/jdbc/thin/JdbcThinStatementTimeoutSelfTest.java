@@ -195,7 +195,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
      * @param timeout - timeout
      * @return Timeout message
      */
-    private String getInfoFromConnection(JdbcThinConnection conn, int timeout){
+    private String getInfoFromConnection(JdbcThinConnection conn, int timeout) {
 
         String cliIoInfo = "";
 
