@@ -1953,10 +1953,11 @@ public final class GridTestUtils {
      *
      * @param cond Condition to wait for.
      * @param timeout Max time to wait in milliseconds.
+     * @param checkInterval Time interval between two consecutive condition checks.
      * @return {@code true} if condition was achieved, {@code false} otherwise.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
      */
-    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout, long checkInterval) throws IgniteInterruptedCheckedException {
         long curTime = U.currentTimeMillis();
         long endTime = curTime + timeout;
 
@@ -1967,12 +1968,25 @@ public final class GridTestUtils {
             if (cond.apply())
                 return true;
 
-            U.sleep(DFLT_BUSYWAIT_SLEEP_INTERVAL);
+            if (checkInterval > 0)
+                U.sleep(checkInterval);
 
             curTime = U.currentTimeMillis();
         }
 
         return false;
+    }
+
+    /**
+     * Waits for condition, polling in busy wait loop.
+     *
+     * @param cond Condition to wait for.
+     * @param timeout Max time to wait in milliseconds.
+     * @return {@code true} if condition was achieved, {@code false} otherwise.
+     * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
+     */
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+        return waitForCondition(cond, timeout, DFLT_BUSYWAIT_SLEEP_INTERVAL);
     }
 
     /**
