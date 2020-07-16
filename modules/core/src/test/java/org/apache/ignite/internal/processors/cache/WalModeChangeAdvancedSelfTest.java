@@ -66,7 +66,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testCacheCleanup() throws Exception {
         Ignite srv = startGrid(config(SRV_1, false, false));
 
@@ -135,7 +135,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoin() throws Exception {
         checkJoin(false);
     }
@@ -145,7 +145,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinCoordinator() throws Exception {
         checkJoin(true);
     }
@@ -219,13 +219,158 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
         checkNodeRestart(false);
     }
 
+    @Test
+    public void testServerRestartNonCoordinator1() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator2() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator3() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator4() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator5() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator6() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator7() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator8() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator9() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator10() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator11() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator12() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator13() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator14() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator15() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator16() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator17() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator18() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator19() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator20() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator21() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator22() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator23() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator24() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator25() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator26() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator27() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator28() throws Exception {
+        checkNodeRestart(false);
+    }
+
+    @Test
+    public void testServerRestartNonCoordinator29() throws Exception {
+        checkNodeRestart(false);
+    }
+
     /**
      * Test server restart (coordinator).
      *
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-7472")
-    @Test
+//    @Ignore("https://issues.apache.org/jira/browse/IGNITE-7472")
+//    @Test
     public void testServerRestartCoordinator() throws Exception {
         checkNodeRestart(true);
     }
@@ -250,7 +395,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         final int restarts = SF.applyLB(10, 3);
 
-        Thread t = new Thread(new Runnable() {
+        IgniteInternalFuture nodeRestartFut = GridTestUtils.runAsync(new Runnable() {
             @Override public void run() {
                 boolean firstOrSecond = true;
 
@@ -272,7 +417,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
                         Thread.sleep(500);
                     }
                     catch (Exception e) {
-                        throw new RuntimeException();
+                        throw new RuntimeException("Exception during restart victim node", e);
                     }
 
                     restartCnt.incrementAndGet();
@@ -282,11 +427,9 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
             }
         });
 
-        t.start();
-
         boolean state = true;
 
-        while (restartCnt.get() < restarts && !Thread.currentThread().isInterrupted()) {
+        while (!nodeRestartFut.isDone() && restartCnt.get() < restarts && !Thread.currentThread().isInterrupted()) {
             try {
                 if (state)
                     cli.cluster().disableWal(CACHE_NAME);
@@ -299,6 +442,8 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
                 // Possible disconnect, re-try.
             }
         }
+
+        nodeRestartFut.get(60000);
     }
 
     /**
@@ -306,7 +451,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnect() throws Exception {
         final Ignite srv = startGrid(config(SRV_1, false, false));
         Ignite cli = startGrid(config(CLI, true, false));
@@ -365,7 +510,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testCacheDestroy() throws Exception {
         final Ignite srv = startGrid(config(SRV_1, false, false));
         Ignite cli = startGrid(config(CLI, true, false));
@@ -426,7 +571,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testConcurrentOperations() throws Exception {
         final Ignite srv1 = startGrid(config(SRV_1, false, false));
         final Ignite srv2 = startGrid(config(SRV_2, false, false));
