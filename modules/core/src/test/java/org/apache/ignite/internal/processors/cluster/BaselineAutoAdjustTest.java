@@ -608,9 +608,11 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         startGrid(1);
 
-        assertTrue(GridTestUtils.waitForCondition(() -> {
-            return 2 == ignite0.cluster().nodes().size();
-        }, 15_000));
+        awaitPartitionMapExchange();
+
+        assertEquals(2, ignite0.cluster().nodes().size());
+
+        assertEquals(1, ignite0.cluster().currentBaselineTopology().size());
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 

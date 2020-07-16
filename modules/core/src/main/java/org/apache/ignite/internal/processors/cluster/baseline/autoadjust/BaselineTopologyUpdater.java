@@ -147,10 +147,7 @@ public class BaselineTopologyUpdater {
      */
     public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted())
-                return BaselineAutoAdjustStatus.notScheduled();
-
-            if (baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData))
+            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData))
                 return BaselineAutoAdjustStatus.notScheduled();
 
             long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
