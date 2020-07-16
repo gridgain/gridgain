@@ -1536,6 +1536,21 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture exchangeFut) {
+        rebuildIndexes(cctx.cacheContexts(), (cacheCtx) -> cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()));
+    }
+
+    /** {@inheritDoc} */
+    @Override public void forceRebuildIndexes(Collection<GridCacheContext> contexts) {
+        contexts.forEach(ctx -> prepareIndexRebuildFuture(ctx.cacheId()));
+
+        rebuildIndexes(contexts, (cacheCtx) -> true);
+    }
+
+    /**
+     * @param contexts Collection of cache contexts for which indexes should be rebuilt.
+     * @param rebuildCond Condition that should be met for indexes to be rebuilt for specific cache.
+     */
+    private void rebuildIndexes(Collection<GridCacheContext> contexts, Predicate<GridCacheContext> rebuildCond) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
         if (!qryProc.moduleEnabled())
@@ -1543,8 +1558,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         GridCompoundFuture allCacheIdxsCompoundFut = null;
 
-        for (GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
-            if (!cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()))
+        for (GridCacheContext cacheCtx : contexts) {
+            if (!rebuildCond.test(cacheCtx))
                 continue;
 
             int cacheId = cacheCtx.cacheId();

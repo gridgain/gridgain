@@ -1284,6 +1284,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             using (new TransactionScope())
             {
                 cache[2] = new Foo(3);
+                Assert.IsNotNull(_grid.GetTransactions().Tx);
                 Assert.AreNotSame(foo, cache[1]);
             }
 

@@ -16,6 +16,10 @@
 
 package org.apache.ignite;
 
+/**
+ * This class reperesents a policy of shutdown.
+ * The policy specifies data safety guarantees on ordinary shutdown of one or more cluster nodes.
+ */
 public enum ShutdownPolicy {
     /**
      * Stop immediately as soon as all components are ready.
@@ -23,7 +27,7 @@ public enum ShutdownPolicy {
     IMMEDIATE(0),
 
     /**
-     * Node will stop if and only if it does not store any unique partitions, that does not have copies on cluster.
+     * Node will stop if and only if it does not store any unique partitions, that don't have another copies in the cluster.
      */
     GRACEFUL(1);
 
