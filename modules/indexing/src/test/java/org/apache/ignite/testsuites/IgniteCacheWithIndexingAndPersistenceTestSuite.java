@@ -30,16 +30,16 @@ import org.junit.runners.Suite;
 /**
  * Cache tests using indexing.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    GridCommandHandlerBrokenIndexTest.class,
-    GridCommandHandlerIndexingTest.class,
-    GridCommandHandlerIndexingClusterByClassTest.class,
-    GridCommandHandlerIndexingCheckSizeTest.class,
-    GridCommandHandlerCheckIndexesInlineSizeTest.class,
-    StartCachesInParallelTest.class,
-    IoStatisticsBasicIndexSelfTest.class,
-    GridCommandHandlerInterruptCommandTest.class
-})
+//@RunWith(Suite.class)
+//@Suite.SuiteClasses({
+//    GridCommandHandlerBrokenIndexTest.class,
+//    GridCommandHandlerIndexingTest.class,
+//    GridCommandHandlerIndexingClusterByClassTest.class,
+//    GridCommandHandlerIndexingCheckSizeTest.class,
+//    GridCommandHandlerCheckIndexesInlineSizeTest.class,
+//    StartCachesInParallelTest.class,
+//    IoStatisticsBasicIndexSelfTest.class,
+//    GridCommandHandlerInterruptCommandTest.class
+//})
 public class IgniteCacheWithIndexingAndPersistenceTestSuite {
 }
