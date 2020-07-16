@@ -48,7 +48,7 @@ public class RowStore {
     private final boolean persistenceEnabled;
 
     /** Row cache cleaner. */
-    private GridQueryRowCacheCleaner rowCacheCleaner;
+    private volatile GridQueryRowCacheCleaner rowCacheCleaner;
 
     /** */
     protected final CacheGroupContext grp;
