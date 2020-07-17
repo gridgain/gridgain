@@ -82,9 +82,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     private static final int SRVS_NUM = 2;
 
     /** */
-    private boolean clientMode;
-
-    /** */
     private boolean forceClientToSrvConnections;
 
     /** */
@@ -95,6 +92,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         super.beforeTest();
 
         stopAllGrids();
+
+        forceClientToSrvConnections = false;
     }
 
     /** {@inheritDoc} */
@@ -110,16 +109,16 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         cfg.setFailureDetectionTimeout(8_000);
 
-        cfg.setCommunicationSpi(new TestCommunicationSpi());
+        cfg.setCommunicationSpi(
+            new TestCommunicationSpi()
+                .setForceClientToServerConnections(forceClientToSrvConnections)
+        );
 
         if (ccfg != null) {
             cfg.setCacheConfiguration(ccfg);
 
             ccfg = null;
         }
-
-        if (clientMode)
-            cfg.setClientMode(true);
 
         return cfg;
     }
@@ -259,10 +258,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             });
         }
 
-        clientMode = true;
         this.forceClientToSrvConnections = forceClientToSrvConnections;
 
-        startGrid(SRVS_NUM);
+        startClientGrid(SRVS_NUM);
 
         putAndCheckKey();
 
@@ -293,10 +291,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             return cfg.setGridLogger(log);
         });
 
-        clientMode = true;
         forceClientToSrvConnections = false;
 
-        IgniteEx client = startGrid(SRVS_NUM);
+        IgniteEx client = startClientGrid(SRVS_NUM);
         ClusterNode clientNode = client.localNode();
 
         IgniteEx srv = grid(SRVS_NUM - 1);
@@ -369,11 +366,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     }
 
     /** */
-    private class TestCommunicationSpi extends TcpCommunicationSpi {
-        {
-            setForceClientToServerConnections(forceClientToSrvConnections);
-        }
-
+    private static class TestCommunicationSpi extends TcpCommunicationSpi {
         /** {@inheritDoc} */
         @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
             if (node.isClient()) {

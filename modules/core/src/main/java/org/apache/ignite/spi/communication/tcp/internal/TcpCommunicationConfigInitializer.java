@@ -838,7 +838,11 @@ cfg.socketSendBuffer(sockSndBuf);
     @Override public Map<String, Object> getNodeAttributes() throws IgniteSpiException {
         initFailureDetectionTimeout();
 
-        assertParameter(cfg.localPort() > 1023, "locPort > 1023");
+        if (ignite.configuration().isClientMode())
+            assertParameter(cfg.localPort() > 1023 || cfg.localPort() == -1, "locPort > 1023 || locPort == -1");
+        else
+            assertParameter(cfg.localPort() > 1023, "locPort > 1023");
+
         assertParameter(cfg.localPort() <= 0xffff, "locPort < 0xffff");
         assertParameter(cfg.localPortRange() >= 0, "locPortRange >= 0");
         assertParameter(cfg.idleConnectionTimeout() > 0, "idleConnTimeout > 0");
@@ -868,7 +872,7 @@ cfg.socketSendBuffer(sockSndBuf);
                 "Specified 'unackedMsgsBufSize' is too low, it should be at least 'ackSndThreshold * 5'.");
         }
 
-        boolean forceClientToSrvConnections = cfg.forceClientToServerConnections();
+        boolean forceClientToSrvConnections = cfg.forceClientToServerConnections() || cfg.localPort() == -1;
 
         if (cfg.usePairedConnections() && forceClientToSrvConnections) {
             throw new IgniteSpiException("Node using paired connections " +
@@ -890,7 +894,7 @@ cfg.socketSendBuffer(sockSndBuf);
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());
             res.put(createSpiAttributeName(ATTR_HOST_NAMES), setEmptyHostNamesAttr ? emptyList() : addrs.get2());
-            res.put(createSpiAttributeName(ATTR_PORT), cfg.boundTcpPort());
+            res.put(createSpiAttributeName(ATTR_PORT), cfg.boundTcpPort() == -1 ? 0 : cfg.boundTcpPort());
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), cfg.boundTcpShmemPort() >= 0 ? cfg.boundTcpShmemPort() : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);
             res.put(createSpiAttributeName(ATTR_PAIRED_CONN), cfg.usePairedConnections());

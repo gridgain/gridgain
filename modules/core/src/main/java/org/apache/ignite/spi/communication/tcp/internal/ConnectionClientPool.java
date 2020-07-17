@@ -191,6 +191,13 @@ public class ConnectionClientPool {
         assert node != null;
         assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
 
+        if (locNodeSupplier.get().isClient()) {
+            if (node.isClient()) {
+                if (Integer.valueOf(0).equals(node.attribute(attrs.port())))
+                    throw new IgniteSpiException("Cannot send message to the client node with no server socket opened.");
+            }
+        }
+
         UUID nodeId = node.id();
 
         if (log.isDebugEnabled())

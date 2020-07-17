@@ -36,6 +36,7 @@ import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiStartStopS
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiTcpFailureDetectionSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiTcpNoDelayOffSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiTcpSelfTest;
+import org.apache.ignite.spi.communication.tcp.GridTotallyUnreachableClientTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationConnectOnInitTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationHandshakeWaitSslTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationHandshakeWaitTest;
@@ -105,6 +106,7 @@ import org.junit.runners.Suite;
     TooManyOpenFilesTcpCommunicationSpiTest.class,
 
     GridTcpCommunicationInverseConnectionEstablishingTest.class,
+    GridTotallyUnreachableClientTest.class,
     
     GridTcpCommunicationSpiLogTest.class
 

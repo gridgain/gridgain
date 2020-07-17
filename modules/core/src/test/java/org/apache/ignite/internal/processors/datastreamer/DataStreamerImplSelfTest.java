@@ -611,8 +611,7 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
                             appMsg,
                             GridTestUtils.<Boolean>getFieldValue(ioMsg, "ordered"),
                             ioMsg.timeout(),
-                            ioMsg.skipOnTimeout(),
-                            UNDEFINED_CONNECTION_INDEX
+                            ioMsg.skipOnTimeout()
                         );
 
                         needStaleTop = false;
