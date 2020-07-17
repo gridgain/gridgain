@@ -838,7 +838,7 @@ cfg.socketSendBuffer(sockSndBuf);
     @Override public Map<String, Object> getNodeAttributes() throws IgniteSpiException {
         initFailureDetectionTimeout();
 
-        if (ignite.configuration().isClientMode())
+        if (Boolean.TRUE .equals(ignite.configuration().isClientMode()))
             assertParameter(cfg.localPort() > 1023 || cfg.localPort() == -1, "locPort > 1023 || locPort == -1");
         else
             assertParameter(cfg.localPort() > 1023, "locPort > 1023");
