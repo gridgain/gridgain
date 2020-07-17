@@ -1524,9 +1524,9 @@ public class GridDhtPartitionDemander {
                 return;
             }
 
-            assert state == RebalanceFutureState.STARTED : this;
-
             if (onDone(true, null)) {
+                assert state == RebalanceFutureState.STARTED : this;
+
                 grp.localWalEnabled(true, true);
 
                 // Safe to own from exchange worker thread because moving partitions from new assignments

@@ -442,7 +442,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Reserves a partition so it won't be cleared or evicted.
+     * Reserves the partition so it won't be cleared or evicted.
      *
      * @return {@code True} if reserved.
      */
@@ -502,7 +502,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         // Prevents delayed renting on topology which expects ownership.
                         delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
                         rent(true);
-                    else if (getPartState(state) == RENTING)
+                    else if (getPartState(state) == RENTING) // If was reserved in renting state continue clearing.
                         tryContinueClearing();
                 }
 
@@ -625,7 +625,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             GridDhtPartitionState partState = getPartState(state);
 
-            assert partState == OWNING || partState == RENTING : "Only partitions in state OWNING or RENTING can be moved to MOVING state";
+            assert partState == OWNING || partState == RENTING :
+                "Only partitions in state OWNING or RENTING can be moved to MOVING state";
 
             if (casState(state, MOVING))
                 break;
@@ -813,10 +814,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         GridDhtPartitionState state = getPartState(state0);
 
+        assert state != EVICTED : this;
+
         // Some entries still might be present in partition cache maps due to concurrent updates on backup nodes,
         // but it's safe to finish eviction because no physical updates are possible.
-        if (state == EVICTED ||
-                (store.isEmpty() && getReservations(state0) == 0 && state == RENTING && casState(state0, EVICTED)))
+        // A partition is promoted to EVICTED state if it is not reserved and empty.
+        if (getReservations(state0) == 0 && store.isEmpty() && state == RENTING && casState(state0, EVICTED))
             updateSeqOnDestroy = updateSeq;
     }
 
@@ -888,9 +891,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @param evictionCtx Eviction context.
      *
      * @return {@code false} if clearing is not started due to existing reservations.
-     * @throws NodeStoppingException If node is stopping.
+     * @throws Exception If failed.
      */
-    public boolean tryClear(EvictionContext evictionCtx) throws NodeStoppingException {
+    public boolean tryClear(EvictionContext evictionCtx) throws Exception {
         if (clearFuture.isDone())
             return true;
 
@@ -907,16 +910,16 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 if (log.isDebugEnabled())
                     log.debug("Partition has been cleared [grp=" + grp.cacheOrGroupName()
                         + ", p=" + id + ", state=" + state() + ", clearedCnt=" + clearedEntities + "]");
+
+                clearFuture.finish(); // Invokes clear future listeners.
             }
-            catch (NodeStoppingException e) {
+            catch (Throwable e) {
                 clearFuture.finish(e);
 
                 throw e;
             }
             finally {
                 clearEvicting();
-
-                clearFuture.finish(); // Invokes clear future listeners.
             }
         }
 
@@ -1133,7 +1136,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // This is required because normal updates are possible to moving partition which is currently cleared.
                     // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
-                    if ((state() == MOVING || state() == OWNING) && row.version().order() > order)
+                    if (row.version().order() > order)
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))

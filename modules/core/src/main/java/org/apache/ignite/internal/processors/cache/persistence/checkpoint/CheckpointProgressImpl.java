@@ -77,8 +77,8 @@ public class CheckpointProgressImpl implements CheckpointProgress {
      * @param cpFreq Timeout until next checkpoint.
      */
     public CheckpointProgressImpl(long cpFreq) {
-        // Avoid overflow.
-        cpFreq = Math.min(TimeUnit.MILLISECONDS.convert(365, TimeUnit.DAYS), cpFreq);
+        // Avoid overflow on nextCpNanos.
+        cpFreq = Math.min(TimeUnit.DAYS.toMillis(365), cpFreq);
 
         nextCpNanos = System.nanoTime() + U.millisToNanos(cpFreq);
     }

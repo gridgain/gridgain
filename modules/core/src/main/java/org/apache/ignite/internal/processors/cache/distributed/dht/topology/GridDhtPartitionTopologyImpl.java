@@ -534,7 +534,21 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         for (int p = 0; p < partitions; p++) {
             if (node2part != null && node2part.valid()) {
                 if (localNode(p, aff)) {
-                    GridDhtLocalPartition locPart = getOrCreatePartition(p);
+                    GridDhtLocalPartition locPart = locParts.get(p);
+
+                    if (locPart != null) {
+                        if (locPart.state() == RENTING) {
+                            if (lostPartitions().contains(locPart.id()))
+                                locPart.markLost(); // Preserve LOST state.
+                            else
+                                locPart.moving();
+                        }
+
+                        if (locPart.state() == EVICTED)
+                            locPart = getOrCreatePartition(p);
+                    }
+                    else
+                        locPart = getOrCreatePartition(p);
 
                     updateSeq = updateLocal(p, locPart.state(), updateSeq, affVer);
                 }
