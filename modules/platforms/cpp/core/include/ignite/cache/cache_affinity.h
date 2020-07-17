@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
+ /**
+  * @file
+  * Declares ignite::cache::CacheAffinity class.
+  */
+
 #ifndef _IGNITE_CACHE_AFFINITY
 #define _IGNITE_CACHE_AFFINITY
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
-/**
- * @file
- * Declares ignite::cache::CacheAffinity class.
- */
 
 #include <ignite/cluster/cluster_group.h>
 
@@ -239,5 +237,4 @@ namespace ignite
     }
 }
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 #endif //_IGNITE_CACHE_AFFINITY

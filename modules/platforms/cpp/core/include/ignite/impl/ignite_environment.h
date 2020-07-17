@@ -25,7 +25,6 @@
 
 #include <ignite/impl/interop/interop_memory.h>
 #include <ignite/impl/binary/binary_type_manager.h>
-#include <ignite/impl/cluster/cluster_node_impl.h>
 #include <ignite/impl/handle_registry.h>
 
 namespace ignite
@@ -40,6 +39,9 @@ namespace ignite
         class IgniteBindingImpl;
         class ModuleManager;
         class ClusterNodesHolder;
+        namespace cluster {
+            class ClusterNodeImpl;
+        }
 
         typedef common::concurrent::SharedPointer<IgniteEnvironment> SP_IgniteEnvironment;
 
@@ -48,9 +50,7 @@ namespace ignite
          */
         class IGNITE_IMPORT_EXPORT IgniteEnvironment
         {
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
             typedef common::concurrent::SharedPointer<cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
         public:
             /**
              * Default memory block allocation size.
@@ -201,8 +201,6 @@ namespace ignite
              */
             binary::BinaryTypeUpdater* GetTypeUpdater();
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
             /**
              * Get local cluster node implementation.
              *
@@ -216,8 +214,6 @@ namespace ignite
              * @return Cluster node implementation or NULL if does not exist.
              */
             SP_ClusterNodeImpl GetNode(Guid Id);
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
             /**
              * Notify processor that Ignite instance has started.
