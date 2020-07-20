@@ -1204,17 +1204,17 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         lock.readLock().lock();
 
         try {
+            assert node2part != null && node2part.valid() : "Invalid node-to-partitions map [topVer1=" + topVer +
+                ", topVer2=" + readyTopVer +
+                ", node=" + ctx.igniteInstanceName() +
+                ", grp=" + grp.cacheOrGroupName() +
+                ", node2part=" + node2part + ']';
+
             List<ClusterNode> nodes = null;
 
             AffinityTopologyVersion diffVer = diffFromAffinityVer;
 
             if (!diffVer.equals(topVer)) {
-                assert node2part != null && node2part.valid() : "Invalid node-to-partitions map [topVer1=" + topVer +
-                    ", topVer2=" + readyTopVer +
-                    ", node=" + ctx.igniteInstanceName() +
-                    ", grp=" + grp.cacheOrGroupName() +
-                    ", node2part=" + node2part + ']';
-
                 if (log.isDebugEnabled()) {
                     log.debug("Requested topology version does not match calculated diff, need to check if " +
                         "affinity has changed [grp=" + grp.cacheOrGroupName() + ", topVer=" + topVer +
