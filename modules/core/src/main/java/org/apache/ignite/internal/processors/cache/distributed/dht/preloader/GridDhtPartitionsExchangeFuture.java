@@ -3557,7 +3557,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         Set<Integer> haveHistory,
         T2<UUID, Long> deepestReserved
     ) {
-        boolean prefereWalRebalance = ((GridCacheDatabaseSharedManager)cctx.database()).prefereWalRebalance();
+        boolean preferWalRebalance = ((GridCacheDatabaseSharedManager)cctx.database()).preferWalRebalance();
 
         while (!nonMaxCntrs.isEmpty()) {
             Long ceilingMinReserved = nonMaxCntrs.ceiling(ownerHistCntr);
@@ -3565,7 +3565,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (ceilingMinReserved == null)
                 break;
 
-            if (prefereWalRebalance || maxOwnerCntr - ceilingMinReserved < ownerSize) {
+            if (preferWalRebalance || maxOwnerCntr - ceilingMinReserved < ownerSize) {
                 partHistSuppliers.put(ownerId, grpId, p, ceilingMinReserved);
 
                 haveHistory.add(p);

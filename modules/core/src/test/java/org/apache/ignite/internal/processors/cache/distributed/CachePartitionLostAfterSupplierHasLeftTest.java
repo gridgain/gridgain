@@ -46,14 +46,14 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFERE_WAL_REBALANCE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
  * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
  */
-@WithSystemProperty(key = IGNITE_PREFERE_WAL_REBALANCE, value = "true")
+@WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
 public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstractTest {
     /** */
     private static final int PARTS_CNT = 64;
@@ -139,7 +139,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_PREFERE_WAL_REBALANCE, value = "true")
+    @WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
     public void testPartitionLostWhileClearing_FailOnFullMessage() throws Exception {
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
         persistence = true;

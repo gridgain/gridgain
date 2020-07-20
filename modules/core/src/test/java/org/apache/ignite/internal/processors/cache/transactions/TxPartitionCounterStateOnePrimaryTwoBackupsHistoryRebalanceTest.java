@@ -21,12 +21,12 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFERE_WAL_REBALANCE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
 
 /**
  *
  */
-@WithSystemProperty(key = IGNITE_PREFERE_WAL_REBALANCE, value = "true")
+@WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
 public class TxPartitionCounterStateOnePrimaryTwoBackupsHistoryRebalanceTest
     extends TxPartitionCounterStateOnePrimaryTwoBackupsTest {
     /** {@inheritDoc} */
