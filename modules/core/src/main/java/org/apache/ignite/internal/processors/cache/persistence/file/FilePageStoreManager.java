@@ -345,6 +345,30 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** {@inheritDoc} */
     @Override public void beginRecover() {
+        for (Integer grpDescId : idxCacheStores.keySet()) {
+            CacheGroupDescriptor desc = cctx.cache().cacheGroupDescriptor(grpDescId);
+
+            if (desc != null && desc.persistenceEnabled()) {
+                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] looking for deleting");
+
+                boolean localEnabled = cctx.database().walEnabled(grpDescId, true);
+                boolean globalEnabled = cctx.database().walEnabled(grpDescId, false);
+
+                if (!localEnabled || !globalEnabled) {
+                    File dir = cacheWorkDir(desc.config());
+
+                    assert dir.exists();
+
+                    boolean res = IgniteUtils.delete(dir);
+
+                    assert res;
+
+                    if (!globalEnabled)
+                        desc.walEnabled(false);
+                }
+            }
+        }
+
         for (CacheStoreHolder holder : idxCacheStores.values()) {
             holder.idxStore.beginRecover();
 
@@ -1183,23 +1207,23 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** {@inheritDoc} */
     @Override public void beforeCacheGroupStart(CacheGroupDescriptor grpDesc) {
-        if (grpDesc.persistenceEnabled()) {
-            boolean localEnabled = cctx.database().walEnabled(grpDesc.groupId(), true);
-            boolean globalEnabled = cctx.database().walEnabled(grpDesc.groupId(), false);
-
-            if (!localEnabled || !globalEnabled) {
-                File dir = cacheWorkDir(grpDesc.config());
-
-                assert dir.exists();
-
-                boolean res = IgniteUtils.delete(dir);
-
-                assert res;
-
-                if (!globalEnabled)
-                    grpDesc.walEnabled(false);
-            }
-        }
+//        if (grpDesc.persistenceEnabled()) {
+//            boolean localEnabled = cctx.database().walEnabled(grpDesc.groupId(), true);
+//            boolean globalEnabled = cctx.database().walEnabled(grpDesc.groupId(), false);
+//
+//            if (!localEnabled || !globalEnabled) {
+//                File dir = cacheWorkDir(grpDesc.config());
+//
+//                assert dir.exists();
+//
+//                boolean res = IgniteUtils.delete(dir);
+//
+//                assert res;
+//
+//                if (!globalEnabled)
+//                    grpDesc.walEnabled(false);
+//            }
+//        }
     }
 
     /**
