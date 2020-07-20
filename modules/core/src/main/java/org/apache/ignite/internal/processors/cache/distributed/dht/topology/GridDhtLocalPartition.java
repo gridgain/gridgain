@@ -1136,6 +1136,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // This is required because normal updates are possible to moving partition which is currently cleared.
                     // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
+                    // Partition state can be switched from RENTING to MOVING during clearing.
                     if (row.version().order() > order)
                         continue;
 

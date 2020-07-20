@@ -143,7 +143,7 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
             @Override public <T> T resolve(T instance) {
                 if (instance instanceof GridDhtPartitionTopologyImpl) {
                     ((GridDhtPartitionTopologyImpl)instance).partitionFactory((ctx, grp, id, recovery) -> new GridDhtLocalPartition(ctx, grp, id, recovery) {
-                        @Override public boolean tryClear(EvictionContext evictionCtx) throws NodeStoppingException {
+                        @Override public boolean tryClear(EvictionContext evictionCtx) throws Exception {
                             if (!check.get()) {
                                 lock.lock();
 

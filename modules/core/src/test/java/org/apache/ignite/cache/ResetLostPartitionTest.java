@@ -78,6 +78,8 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration storageCfg = new DataStorageConfiguration();
