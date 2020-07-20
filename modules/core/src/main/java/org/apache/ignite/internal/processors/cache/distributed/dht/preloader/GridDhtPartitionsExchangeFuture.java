@@ -177,7 +177,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private static final boolean SKIP_PARTITION_SIZE_VALIDATION = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SKIP_PARTITION_SIZE_VALIDATION);
 
     /** */
-    private static final String DISTRIBUTED_LATCH_ID = "exchange";
+    public static final String DISTRIBUTED_LATCH_ID = "exchange";
 
     /** */
     @GridToStringExclude
