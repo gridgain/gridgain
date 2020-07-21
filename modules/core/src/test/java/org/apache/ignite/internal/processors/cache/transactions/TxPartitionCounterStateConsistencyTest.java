@@ -132,7 +132,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     public static Collection<String[]> testData() {
         List<String[]> res = new ArrayList<>();
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 1; i++)
             res.add(new String[] {String.valueOf(i)});
 
         return res;
