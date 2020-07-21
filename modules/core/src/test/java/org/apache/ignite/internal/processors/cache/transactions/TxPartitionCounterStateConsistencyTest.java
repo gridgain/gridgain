@@ -16,12 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,6 +33,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -67,6 +68,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -111,6 +113,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     public String testId;
 
     protected boolean saveLfs;
+
+    protected final AtomicInteger val = new AtomicInteger(0);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -236,6 +240,22 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             saveLfs = true;
 
         assertPartitionsSame(res);
+    }
+
+    public void _testScanWal() throws Exception {
+        WALIterator iterator = new IgniteWalIteratorFactory().iterator(new File("C:\\Users\\irakov\\Downloads\\persistent_storage\\transactions.TxPartitionCounterStateConsistencyTest_testId_5\\db\\wal\\archive\\nodetransactions_TxPartitionCounterStateConsistencyTest0"));
+
+        while (iterator.hasNext()) {
+            IgniteBiTuple<WALPointer, WALRecord> next = iterator.next();
+
+            if (next.get2().type() == WALRecord.RecordType.DATA_RECORD) {
+                String s = next.get2().toString();
+
+                if (s.contains("[topVer=206817143, order=1595337245211, nodeOrder=14]") || s.contains("k = 7154"))
+                    System.out.println(next);
+            }
+        }
+
     }
 
     /** {@inheritDoc} */
@@ -1302,7 +1322,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                     List<Integer> insertedKeys = new ArrayList<>();
 
                     for (Integer key : keys) {
-                        cache.put(key, key);
+                        cache.put(key, val.incrementAndGet());
                         insertedKeys.add(key);
 
                         puts.increment();

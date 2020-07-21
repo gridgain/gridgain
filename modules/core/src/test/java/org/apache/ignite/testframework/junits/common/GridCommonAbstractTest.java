@@ -2038,7 +2038,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
     /**
      * Call this method in order to save persistent storage of failed test as TC build artifact.
-     * Artifact will appear after adding <code>**\workDirArtifactsToAnalyze => persistent_storage.zip</code>
+     * Artifact will appear after adding <code>workDirArtifactsToAnalyze => persistent_storage.zip</code>
      * to "Artifact paths:" property of the build configuration.
      *
      * @param subfolderName Subfolder name in the artifact folder to distinguish stored persistent dirs.
