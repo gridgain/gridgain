@@ -54,8 +54,10 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
@@ -233,6 +235,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         doRandomUpdates(r, client, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
+
+        for (int i = 0; i < SERVER_NODES; i++) {
+            for (int j = 0; j < 11; j++)
+                grid(i).context().cache().context().wal().log(new ConsistentCutRecord(), RolloverType.NEXT_SEGMENT);
+        }
 
         IdleVerifyResultV2 res = idleVerify(client, DEFAULT_CACHE_NAME);
 
