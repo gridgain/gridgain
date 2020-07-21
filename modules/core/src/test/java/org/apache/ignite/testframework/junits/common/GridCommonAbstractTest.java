@@ -2059,6 +2059,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         File dst = new File(tmpCheckoutDirPath);
         dst = new File(dst, "workDirArtifactsToAnalyze");
+        dst = new File(dst, subfolderName);
 
         File src = new File(U.defaultWorkDirectory());
 
