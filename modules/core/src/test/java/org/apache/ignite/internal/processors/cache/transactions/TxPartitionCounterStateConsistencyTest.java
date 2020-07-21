@@ -237,8 +237,16 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         fut.get();
 
         for (int i = 0; i < SERVER_NODES; i++) {
-            for (int j = 0; j < 11; j++)
-                grid(i).context().cache().context().wal().log(new ConsistentCutRecord(), RolloverType.NEXT_SEGMENT);
+            for (int j = 0; j < 11; j++) {
+                grid(i).context().cache().context().database().checkpointReadLock();
+
+                try {
+                    grid(i).context().cache().context().wal().log(new ConsistentCutRecord(), RolloverType.NEXT_SEGMENT);
+                }
+                finally {
+                    grid(i).context().cache().context().database().checkpointReadUnlock();
+                }
+            }
         }
 
         IdleVerifyResultV2 res = idleVerify(client, DEFAULT_CACHE_NAME);
