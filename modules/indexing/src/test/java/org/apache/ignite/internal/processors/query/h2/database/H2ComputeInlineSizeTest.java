@@ -27,25 +27,15 @@ import org.h2.value.TypeInfo;
 import org.h2.value.Value;
 import org.junit.Test;
 
-/** Tests for the computation of default inline size */
+/** Tests for the computation of default inline size. */
 public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
 
     /**
-     * Default variable length of the column's index
-     */
-    private static final int DEFAULT_VARIABLE_LENGTH = 10;
-
-    /**
-     * Default max length of the default index
-     */
-    private static final int DEFAULT_MAX_LENGTH = 64;
-
-    /**
-     * Test to check calculation of the default size for StringInlineIndexColumn
+     * Test to check calculation of the default size for {@link StringInlineIndexColumn}.
      *
      * Steps:
-     * 1) Call H2TreeIndexBase.computeInlineSize() function for StringInlineIndexColumn
-     * 2) Check that computed size is equal to default length for variable types
+     * 1) Call {}{@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn}.
+     * 2) Check that computed size is equal to default length for variable types.
      */
     @Test
     public void testDefaultSizeForString() {
@@ -54,15 +44,15 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(new StringInlineIndexColumn(c, false));
 
-        assertEquals(DEFAULT_VARIABLE_LENGTH, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+        assertEquals(H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
     }
 
     /**
-     * Test to check calculation of the default size for StringInlineIndexColumn
+     * Test to check calculation of the default size for {@link BytesInlineIndexColumn}.
      *
      * Steps:
-     * 1) Call H2TreeIndexBase.computeInlineSize() function for BytesInlineIndexColumn
-     * 2) Check that computed size is equal to default length for variable types
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link BytesInlineIndexColumn}.
+     * 2) Check that computed size is equal to default length for variable types.
      */
     @Test
     public void testDefaultSizeForByteArray() {
@@ -71,19 +61,19 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(new BytesInlineIndexColumn(c, false));
 
-        assertEquals(DEFAULT_VARIABLE_LENGTH, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+        assertEquals(H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
     }
 
     /**
-     * Test to check calculation of the default size for StringInlineIndexColumn with defined length
+     * Test to check calculation of the default size for {@link StringInlineIndexColumn} with defined length.
      *
      * Steps:
-     * 1) Call H2TreeIndexBase.computeInlineSize() function for StringInlineIndexColumn with defined length
-     * 2) Check that computed size is equal to defined length
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn} with defined length.
+     * 2) Check that computed size is equal to defined length + 3 bytes (inner system info for String type).
      */
     @Test
     public void testDefaultSizeForStringWithDefinedLength() {
-        final byte LEN = DEFAULT_VARIABLE_LENGTH + 10;
+        final byte LEN = H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + 10;
 
         Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
         c.setOriginalSQL("VARCHAR(" + LEN + ")");
@@ -91,15 +81,35 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(new StringInlineIndexColumn(c, false));
 
-        assertEquals(LEN, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+        assertEquals(LEN + 3, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
     }
 
     /**
-     * Test to check calculation of the default size for StringInlineIndexColumn with unexpected sql pattern
+     * Test to check calculation of the default size for {@link BytesInlineIndexColumn} with defined length.
      *
      * Steps:
-     * 1) Call H2TreeIndexBase.computeInlineSize() function for StringInlineIndexColumn with unexpected sql pattern
-     * 2) Check that computed size is equal to default length for variable types
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link BytesInlineIndexColumn} with defined length.
+     * 2) Check that computed size is equal to defined length + 3 bytes (inner system info for byte[] type).
+     */
+    @Test
+    public void testDefaultSizeForBytesWithDefinedLength() {
+        final byte LEN = H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + 20;
+
+        Column c = new Column("c", new TypeInfo(Value.BYTES, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        c.setOriginalSQL("BINARY(" + LEN + ")");
+
+        List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
+        inlineIdxs.add(new BytesInlineIndexColumn(c, false));
+
+        assertEquals(LEN + 3, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+    }
+
+    /**
+     * Test to check calculation of the default size for {@link StringInlineIndexColumn} with unexpected sql pattern.
+     *
+     * Steps:
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn} with unexpected sql pattern.
+     * 2) Check that computed size is equal to default length for variable types.
      */
     @Test
     public void testDefaultSizeForStringWithIncorrectSql() {
@@ -109,41 +119,47 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(new StringInlineIndexColumn(c, false));
 
-        assertEquals(DEFAULT_VARIABLE_LENGTH, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+        assertEquals(H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
     }
 
     /**
-     * Test to check calculation of the default size for composite index
+     * Test to check calculation of the default size for composite index.
      *
      * Steps:
-     * 1) Call H2TreeIndexBase.computeInlineSize() function for 2 StringInlineIndexColumns, 1 BytesInlineIndexColumns
-     * and 1 LongInlineIndexColumn
-     * 2) Check that computed size is equal to 3 * default length for variable types + constant length of long column
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn},
+     * {@link BytesInlineIndexColumn}, {@link LongInlineIndexColumn} and {@link StringInlineIndexColumn} with defined length.
+     * 2) Check that computed size is equal to 2 * default length for variable types + constant length of long column +
+     * defined String length + 3 bytes (inner system info for String type).
      */
     @Test
     public void testDefaultSizeForCompositeIndex() {
-        Column c1 = new Column("c1", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
-        Column c2 = new Column("c2", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
-        Column c3 = new Column("c3", new TypeInfo(Value.BYTES, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
-        Column c4 = new Column("c4", new TypeInfo(Value.LONG, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        final byte LEN = H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE - 1;
 
-        InlineIndexColumn lCol = new LongInlineIndexColumn(c4);
+        Column c1 = new Column("c1", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        Column c2 = new Column("c2", new TypeInfo(Value.BYTES, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        Column c3 = new Column("c3", new TypeInfo(Value.LONG, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+
+        Column c4 = new Column("c4", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        c4.setOriginalSQL("VARCHAR(" + LEN + ")");
+
+        InlineIndexColumn lCol = new LongInlineIndexColumn(c3);
 
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(new StringInlineIndexColumn(c1, false));
-        inlineIdxs.add(new StringInlineIndexColumn(c2, false));
-        inlineIdxs.add(new BytesInlineIndexColumn(c3, false));
+        inlineIdxs.add(new BytesInlineIndexColumn(c2, false));
         inlineIdxs.add(lCol);
+        inlineIdxs.add(new StringInlineIndexColumn(c4, false));
 
-        assertEquals(3 * DEFAULT_VARIABLE_LENGTH + lCol.size() + 1, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+        assertEquals(2 * H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + lCol.size() + 1 + LEN + 3,
+            H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
     }
 
     /**
-     * Test to check calculation of the default size when calculated default size is larger than max default index size
+     * Test to check calculation of the default size when calculated default size is larger than max default index size.
      *
      * Steps:
-     * 1) Call H2TreeIndexBase.computeInlineSize() function for StringInlineIndexColumn with large length
-     * 2) Check that computed size is equal to default max length
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn} with large length.
+     * 2) Check that computed size is equal to default max length.
      */
     @Test
     public void testDefaultSizeForLargeIndex() {
@@ -153,6 +169,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(new StringInlineIndexColumn(c, false));
 
-        assertEquals(DEFAULT_MAX_LENGTH, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
+        assertEquals(H2TreeIndexBase.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, H2TreeIndexBase.computeInlineSize(inlineIdxs, -1, -1));
     }
+    
 }
