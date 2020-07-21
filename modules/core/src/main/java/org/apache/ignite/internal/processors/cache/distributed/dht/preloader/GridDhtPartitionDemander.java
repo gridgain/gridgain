@@ -356,6 +356,9 @@ public class GridDhtPartitionDemander {
 
                         assert part.state() == MOVING : part;
 
+                        // Reset the initial update counter value to prevent historical rebalancing on this partition.
+                        part.dataStore().resetInitialUpdateCounter();
+
                         part.clearAsync();
                     }
                 }

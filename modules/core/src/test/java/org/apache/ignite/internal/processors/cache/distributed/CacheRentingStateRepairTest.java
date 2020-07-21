@@ -270,7 +270,7 @@ public class CacheRentingStateRepairTest extends GridCommonAbstractTest {
 
             part.release();
 
-            part.rent(false).get();
+            part.rent().get();
 
             CountDownLatch l1 = new CountDownLatch(1);
             CountDownLatch l2 = new CountDownLatch(1);

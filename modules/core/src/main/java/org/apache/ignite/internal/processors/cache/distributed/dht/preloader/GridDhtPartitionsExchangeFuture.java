@@ -2528,7 +2528,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
 
                 if (changedAffinity())
-                    cctx.walState().disableGroupDurabilityForPreloading(res, this);
+                    cctx.walState().disableGroupDurabilityForPreloading(this);
             }
         }
         catch (Throwable t) {
