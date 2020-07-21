@@ -40,6 +40,20 @@ namespace ignite
             {
                 if (idRslvr)
                     this->idRslvr = idRslvr->Clone();
+
+                while (true)
+                {
+                    int8_t hdr = BinaryUtils::ReadInt8(mem, this->start);
+
+                    if (hdr != IGNITE_TYPE_BINARY)
+                        break;
+
+                    // Total length of binary object.
+                    int32_t portLen = BinaryUtils::ReadInt32(mem, this->start + 1);
+                    int32_t portOff = BinaryUtils::ReadInt32(mem, this->start + 5 + portLen);
+
+                    this->start += portOff + 5;
+                }
             }
 
             BinaryObjectImpl::~BinaryObjectImpl()

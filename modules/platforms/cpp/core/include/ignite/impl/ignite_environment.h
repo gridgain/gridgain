@@ -137,6 +137,29 @@ namespace ignite
             int64_t OnContinuousQueryFilterApply(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
 
             /**
+             * Callback on future result recieved.
+             *
+             * @param handle Task handle.
+             * @param mem Memory with data.
+             */
+            int64_t OnFutureResult(int64_t handle, common::concurrent::SharedPointer<interop::InteropMemory> &mem);
+
+            /**
+             * Callback on future error recieved.
+             *
+             * @param handle Task handle.
+             * @param mem Memory with data.
+             */
+            int64_t OnFutureError(int64_t handle, common::concurrent::SharedPointer<interop::InteropMemory>& mem);
+
+            /**
+             * Callback on compute function execute request.
+             *
+             * @param mem Memory with data.
+             */
+            int64_t OnComputeFuncExecute(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
+
+            /**
              * Cache Invoke callback.
              *
              * @param mem Input-output memory.

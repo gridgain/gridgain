@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -58,12 +58,17 @@ namespace ignite
                 CONTINUOUS_QUERY_FILTER_CREATE = 19,
                 CONTINUOUS_QUERY_FILTER_APPLY = 20,
                 CONTINUOUS_QUERY_FILTER_RELEASE = 21,
+                FUTURE_OBJECT_RESULT = 32,
+                FUTURE_NULL_RESULT = 33,
+                FUTURE_ERROR = 34,
                 REALLOC = 36,
                 NODE_INFO = 48,
                 ON_START = 49,
                 ON_STOP = 50,
                 COMPUTE_TASK_LOCAL_JOB_RESULT = 60,
                 COMPUTE_JOB_EXECUTE_LOCAL = 61,
+                COMPUTE_OUT_FUNC_EXECUTE = 74,
+                COMPUTE_ACTION_EXECUTE = 75,
             };
         };
 
@@ -243,6 +248,26 @@ namespace ignite
                 case OperationCallback::CONTINUOUS_QUERY_FILTER_RELEASE:
                 {
                     // No-op.
+
+                    break;
+                }
+
+                case OperationCallback::COMPUTE_ACTION_EXECUTE:
+                case OperationCallback::COMPUTE_OUT_FUNC_EXECUTE:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
+
+                    res = env->Get()->OnComputeFuncExecute(mem);
+
+                    break;
+                }
+
+                case OperationCallback::FUTURE_NULL_RESULT:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->AllocateMemory();
+
+                    env->Get()->OnFutureResult(val, mem);
+
                     break;
                 }
 
@@ -315,6 +340,24 @@ namespace ignite
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val1);
 
                     mem.Get()->Reallocate(static_cast<int32_t>(val2));
+
+                    break;
+                }
+
+                case OperationCallback::FUTURE_OBJECT_RESULT:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val2);
+
+                    env->Get()->OnFutureResult(val1, mem);
+
+                    break;
+                }
+
+                case OperationCallback::FUTURE_ERROR:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val2);
+
+                    env->Get()->OnFutureError(val1, mem);
 
                     break;
                 }
@@ -642,18 +685,13 @@ namespace ignite
             // Cancel flag
             reader.ReadBool();
 
-            SharedPointer<compute::ComputeJobHolder> job0 =
-                StaticPointerCast<compute::ComputeJobHolder>(registry.Get(jobHandle));
-
-            compute::ComputeJobHolder* job = job0.Get();
-
             SharedPointer<compute::ComputeTaskHolder> task0 =
                 StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(taskHandle));
 
             compute::ComputeTaskHolder* task = task0.Get();
 
-            if (task && job)
-                return task->JobResultRemote(*job, reader);
+            if (task)
+                return task->JobResultRemote(reader);
 
             if (!task)
             {
@@ -770,6 +808,107 @@ namespace ignite
             bool res = filter->ReadAndProcessEvent(rawReader);
 
             return res ? 1 : 0;
+        }
+
+        int64_t IgniteEnvironment::OnFutureResult(int64_t handle, SharedPointer<InteropMemory>& mem)
+        {
+            InteropInputStream inStream(mem.Get());
+            BinaryReaderImpl reader(&inStream);
+
+            SharedPointer<compute::ComputeTaskHolder> task0 =
+                StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(handle));
+
+            compute::ComputeTaskHolder* task = task0.Get();
+
+            task->JobResultSuccess(reader);
+            task->Reduce();
+
+            return 1;
+        }
+
+        int64_t IgniteEnvironment::OnFutureError(int64_t handle, SharedPointer<InteropMemory>& mem)
+        {
+            InteropInputStream inStream(mem.Get());
+            BinaryReaderImpl reader(&inStream);
+            BinaryRawReader rawReader(&reader);
+
+            rawReader.ReadString();
+            rawReader.ReadString();
+
+            std::string errStr = rawReader.ReadString();
+
+            IgniteError err(IgniteError::IGNITE_ERR_GENERIC, errStr.c_str());
+
+            SharedPointer<compute::ComputeTaskHolder> task0 =
+                StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(handle));
+
+            compute::ComputeTaskHolder* task = task0.Get();
+
+            task->JobResultError(err);
+            task->Reduce();
+
+            return 1;
+        }
+
+        int64_t IgniteEnvironment::OnComputeFuncExecute(SharedPointer<InteropMemory>& mem)
+        {
+            InteropInputStream inStream(mem.Get());
+            BinaryReaderImpl reader(&inStream);
+
+            InteropOutputStream outStream(mem.Get());
+            BinaryWriterImpl writer(&outStream, GetTypeManager());
+
+            bool local = reader.ReadBool();
+
+            int64_t handle = -1;
+
+            if (local)
+            {
+                handle = reader.ReadInt64();
+            }
+            else
+            {
+                bool invoked = false;
+
+                BinaryObjectImpl func(*mem.Get(), inStream.Position(), 0, 0);
+                int32_t jobTypeId = func.GetTypeId();
+
+                handle = binding.Get()->InvokeCallback(invoked,
+                    IgniteBindingImpl::CallbackType::COMPUTE_JOB_CREATE, jobTypeId, reader, writer);
+
+                if (!invoked)
+                {
+                    IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
+                        "Compute function is not registred", "jobTypeId", jobTypeId);
+                }
+            }
+
+            SharedPointer<compute::ComputeJobHolder> job0 =
+                StaticPointerCast<compute::ComputeJobHolder>(registry.Get(handle));
+
+            compute::ComputeJobHolder* job = job0.Get();
+
+            if (!job)
+            {
+                IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
+                    "Job is not registred for handle", "handle", handle);
+            }
+
+            try {
+                job->ExecuteRemote(this, writer);
+            }
+            catch (...)
+            {
+                registry.Release(handle);
+
+                throw;
+            }
+
+            registry.Release(handle);
+
+            outStream.Synchronize();
+
+            return 1;
         }
 
         void IgniteEnvironment::CacheInvokeCallback(SharedPointer<InteropMemory>& mem)
