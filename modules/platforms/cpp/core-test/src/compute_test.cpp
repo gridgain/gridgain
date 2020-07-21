@@ -31,12 +31,16 @@ using namespace ignite_test;
 
 using namespace boost::unit_test;
 
+enum { RETRIES_FOR_STABLE_TOPOLOGY = 5};
+
 /*
  * Test setup fixture for cache affinity.
  */
 struct ComputeTestSuiteFixtureAffinity
 {
-    Ignite node0, node1, node2;
+    Ignite node0;
+    Ignite node1;
+    Ignite node2;
 
     Ignite MakeNode(const char* name)
     {
@@ -522,138 +526,174 @@ BOOST_FIXTURE_TEST_SUITE(ComputeTestSuiteAffinity, ComputeTestSuiteFixtureAffini
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityCall)
 {
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
+    const int32_t key = 100;
+    const int32_t value = 500;
 
-    const int32_t key = 100, value = 500;
-    cache.Put(key, value);
+    WITH_RETRY_BEGIN
+    {
+        std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
+        Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-    CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
-    Compute compute = node0.GetCompute();
+        cache.Put(key, value);
 
-    BOOST_TEST_CHECKPOINT("Starting local calls loop");
+        CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
+        Compute compute = node0.GetCompute();
 
-    std::vector<int32_t> aKeys = GetPrimaryKeys(100, nodes.front(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
-        BOOST_CHECK_EQUAL(compute.AffinityCall<int32_t>(cache.GetName(), aKeys[i],
-            FuncAffinityCall(node0.GetName(), cache.GetName(), key)), value);
+        BOOST_TEST_CHECKPOINT("Starting local calls loop");
 
-    BOOST_TEST_CHECKPOINT("Starting remote calls loop");
+        std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            int32_t res = compute.AffinityCall<int32_t>(cache.GetName(), aKeys[i],
+                FuncAffinityCall(node0.GetName(), cache.GetName(), key));
 
-    aKeys = GetPrimaryKeys(100, nodes.back(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
-        BOOST_CHECK_EQUAL(compute.AffinityCall<int32_t>(cache.GetName(), aKeys[i],
-            FuncAffinityCall(node0.GetName(), cache.GetName(), key)), 0);
+            CHECK_EQUAL_OR_RETRY(res, value);
+        }
+
+        BOOST_TEST_CHECKPOINT("Starting remote calls loop");
+
+        aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            int32_t res = compute.AffinityCall<int32_t>(cache.GetName(), aKeys[i],
+                FuncAffinityCall(node0.GetName(), cache.GetName(), key));
+
+            CHECK_EQUAL_OR_RETRY(res, 0);
+        }
+    }
+    WITH_RETRY_END
 }
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityCallAsync)
 {
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
+    const int32_t key = 100;
+    const int32_t value = 500;
 
-    const int32_t key = 100, value = 500;
-    cache.Put(key, value);
-
-    CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
-    Compute compute = node0.GetCompute();
-
-    BOOST_TEST_CHECKPOINT("Starting calls loop");
-
-    std::vector<int32_t> aKeys = GetPrimaryKeys(1000, nodes.front(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
+    WITH_RETRY_BEGIN
     {
-        Future<int32_t> res = compute.AffinityCallAsync<int32_t>(cache.GetName(), aKeys[i],
-            FuncAffinityCall(node0.GetName(), cache.GetName(), key));
+        std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
+        Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-        BOOST_CHECK_EQUAL(res.GetValue(), value);
+        cache.Put(key, value);
+
+        CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
+        Compute compute = node0.GetCompute();
+
+        BOOST_TEST_CHECKPOINT("Starting calls loop");
+
+        std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            Future<int32_t> res = compute.AffinityCallAsync<int32_t>(cache.GetName(), aKeys[i],
+                FuncAffinityCall(node0.GetName(), cache.GetName(), key));
+
+            int32_t resVal = res.GetValue();
+            CHECK_EQUAL_OR_RETRY(value, resVal);
+        }
+
+        BOOST_TEST_CHECKPOINT("Starting remote calls loop");
+
+        aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            Future<int32_t> res = compute.AffinityCallAsync<int32_t>(cache.GetName(), aKeys[i],
+                FuncAffinityCall(node0.GetName(), cache.GetName(), key));
+
+            int32_t resVal = res.GetValue();
+            CHECK_EQUAL_OR_RETRY(0, resVal);
+        }
     }
-
-    BOOST_TEST_CHECKPOINT("Starting remote calls loop");
-
-    aKeys = GetPrimaryKeys(100, nodes.back(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
-    {
-        Future<int32_t> res = compute.AffinityCallAsync<int32_t>(cache.GetName(), aKeys[i],
-            FuncAffinityCall(node0.GetName(), cache.GetName(), key));
-
-        BOOST_CHECK_EQUAL(res.GetValue(), 0);
-    }
+    WITH_RETRY_END
 }
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityRun)
 {
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
-
     const int32_t key = 100;
     const int32_t checkKey = -1;
     const int32_t value = 500;
-    cache.Put(key, value);
 
-    CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
-    Compute compute = node0.GetCompute();
-
-    BOOST_TEST_CHECKPOINT("Starting calls loop");
-
-    std::vector<int32_t> aKeys = GetPrimaryKeys(100, nodes.front(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
+    WITH_RETRY_BEGIN
     {
-        compute.AffinityRun(cache.GetName(), aKeys[i],
-            FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
+        std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
+        Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-        BOOST_CHECK_EQUAL(cache.Get(checkKey), 500);
+        cache.Put(key, value);
+
+        CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
+        Compute compute = node0.GetCompute();
+
+        BOOST_TEST_CHECKPOINT("Starting calls loop");
+
+        std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            compute.AffinityRun(cache.GetName(), aKeys[i],
+                FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
+
+            int32_t resVal = cache.Get(checkKey);
+            CHECK_EQUAL_OR_RETRY(500, resVal);
+        }
+
+        BOOST_TEST_CHECKPOINT("Starting remote calls loop");
+
+        aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            compute.AffinityRun(cache.GetName(), aKeys[i],
+                FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
+
+            int32_t resVal = cache.Get(checkKey);
+            CHECK_EQUAL_OR_RETRY(0, resVal);
+        }
     }
-
-    BOOST_TEST_CHECKPOINT("Starting remote calls loop");
-
-    aKeys = GetPrimaryKeys(100, nodes.back(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
-    {
-        compute.AffinityRun(cache.GetName(), aKeys[i],
-            FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
-
-        BOOST_CHECK_EQUAL(cache.Get(checkKey), 0);
-    }
+    WITH_RETRY_END
 }
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityRunAsync)
 {
-    std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
-    Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
-
     const int32_t key = 100;
     const int32_t checkKey = -1;
     const int32_t value = 500;
-    cache.Put(key, value);
 
-    CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
-    Compute compute = node0.GetCompute();
-
-    BOOST_TEST_CHECKPOINT("Starting calls loop");
-
-    std::vector<int32_t> aKeys = GetPrimaryKeys(100, nodes.front(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
+    WITH_RETRY_BEGIN
     {
-        Future<void> res = compute.AffinityRunAsync(cache.GetName(), aKeys[i],
-            FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
+        std::vector<ClusterNode> nodes = node0.GetCluster().AsClusterGroup().GetNodes();
+        Cache<int32_t, int32_t> cache = node0.GetCache<int32_t, int32_t>("cache1");
 
-        res.GetValue();
+        cache.Put(key, value);
 
-        BOOST_CHECK_EQUAL(cache.Get(checkKey), 500);
+        CacheAffinity<int> affinity = node0.GetAffinity<int32_t>(cache.GetName());
+        Compute compute = node0.GetCompute();
+
+        BOOST_TEST_CHECKPOINT("Starting calls loop");
+
+        std::vector<int32_t> aKeys = GetPrimaryKeys(10, nodes.front(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            Future<void> res = compute.AffinityRunAsync(cache.GetName(), aKeys[i],
+                FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
+
+            res.GetValue();
+
+            int32_t resVal = cache.Get(checkKey);
+            CHECK_EQUAL_OR_RETRY(500, resVal);
+        }
+
+        BOOST_TEST_CHECKPOINT("Starting remote calls loop");
+
+        aKeys = GetPrimaryKeys(10, nodes.back(), affinity);
+        for (size_t i = 0; i < aKeys.size(); i++)
+        {
+            Future<void> res = compute.AffinityRunAsync<int32_t>(cache.GetName(), aKeys[i],
+                FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
+
+            res.GetValue();
+
+            int32_t resVal = cache.Get(checkKey);
+            CHECK_EQUAL_OR_RETRY(0, resVal);
+        }
     }
-
-    BOOST_TEST_CHECKPOINT("Starting remote calls loop");
-
-    aKeys = GetPrimaryKeys(100, nodes.back(), affinity);
-    for (size_t i = 0; i < aKeys.size(); i++)
-    {
-        Future<void> res = compute.AffinityRunAsync<int32_t>(cache.GetName(), aKeys[i],
-            FuncAffinityRun(node0.GetName(), cache.GetName(), key, checkKey));
-
-        res.GetValue();
-
-        BOOST_CHECK_EQUAL(cache.Get(checkKey), 0);
-    }
+    WITH_RETRY_END
 }
 
 BOOST_AUTO_TEST_SUITE_END()
