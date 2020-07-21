@@ -16,6 +16,7 @@
 
 package org.apache.ignite.util;
 
+import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -25,9 +26,12 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
@@ -42,12 +46,15 @@ import org.apache.ignite.internal.binary.BinarySchema;
 import org.apache.ignite.internal.binary.BinaryTypeImpl;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
 /**
  * Checks command line metadata commands.
@@ -59,6 +66,19 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     /** Types count. */
     private static final int TYPES_CNT = 10;
 
+    /** */
+    @Before
+    public void init() {
+        injectTestSystemOut();
+    }
+
+    /** */
+    @After
+    public void clear() {
+        crd.binary().types().stream().filter(type -> type.typeName().startsWith("Type"))
+            .forEach(type -> crd.context().cacheObjects().removeType(type.typeId()));
+    }
+
     /**
      * Check the command '--meta list'.
      * Steps:
@@ -68,8 +88,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      */
     @Test
     public void testMetadataList() {
-        injectTestSystemOut();
-
         for (int typeNum = 0; typeNum < TYPES_CNT; ++typeNum) {
             BinaryObjectBuilder bob = crd.binary().builder("Type_" + typeNum);
 
@@ -98,8 +116,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      */
     @Test
     public void testMetadataDetails() {
-        injectTestSystemOut();
-
         BinaryObjectBuilder bob0 = crd.binary().builder("TypeName0");
         bob0.setField("fld0", 0);
         bob0.build();
@@ -151,8 +167,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      */
     @Test
     public void testInvalidArguments() {
-        injectTestSystemOut();
-
         String out;
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--meta", "remove"));
@@ -184,8 +198,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      */
     @Test
     public void testRemoveUpdate() throws Exception {
-        injectTestSystemOut();
-
         Path typeFile = FS.getPath("type0.bin");
 
         try {
@@ -251,8 +263,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      */
     @Test
     public void testDropThinConnectionsOnRemove() throws Exception {
-        injectTestSystemOut();
-
         Path typeFile = FS.getPath("type0.bin");
 
         try (IgniteClient cli = Ignition.startClient(clientConfiguration())) {
@@ -287,8 +297,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      */
     @Test
     public void testDropJdbcThinConnectionsOnRemove() throws Exception {
-        injectTestSystemOut();
-
         Path typeFile = FS.getPath("type0.bin");
 
         try (Connection conn = DriverManager.getConnection(jdbcThinUrl())) {
@@ -335,6 +343,250 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     }
 
     /**
+     * Check the type successfully merged after remove-recreate-update operations.
+     * Steps:
+     * - creates several types with name 'TypeNameX' where X - some index.
+     * - removes the type by cmdline utility (store removed metadata to specified file).
+     * - checks that type removed.
+     * - creates new types with the same names but different field names
+     * - restores removed types from the file
+     * - checks all types sucessfully merged.
+     */
+    @Test
+    public void testTypeMergedAfterRemoveUpdate() {
+        String[] typeNames = new String[]{"TypeName0", "TypeName1"};
+
+        final int cnt = typeNames.length;
+
+        Object[] typeValues = new Object[]{0, LocalDate.now()};
+
+        int[] typeIds = new int[cnt];
+
+        repeat(cnt, i -> typeIds[i] = crd.binary().builder(typeNames[i])
+            .setField("fld0", typeValues[i])
+            .build().type().typeId());
+
+        Path[] typeBackups = new Path[typeNames.length];
+
+        try {
+            repeat(cnt, i -> {
+                Path path = FS.getPath(typeNames[i] + ".bin");
+
+                typeBackups[i] = path;
+
+                assertEquals(EXIT_CODE_OK, execute("--meta", "remove",
+                    "--typeName", typeNames[i],
+                    "--out", path.toString()));
+            });
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+
+            String out = testOut.toString();
+
+            repeat(cnt, i -> assertNotContains(log, out, "typeName=" + typeNames[i]));
+
+            repeat(cnt, i -> crd.binary().builder(typeNames[i])
+                .setField("fld1", typeValues[i])
+                .build());
+
+            repeat(cnt, i -> assertEquals(EXIT_CODE_OK, execute("--meta", "update", "--in",
+                typeBackups[i].toString())));
+
+            repeat(cnt, i -> {
+                assertEquals(EXIT_CODE_OK, execute("--meta", "details", "--typeName", typeNames[i]));
+                checkTypeDetails(log, testOut.toString(), crd.context().cacheObjects().metadata(typeIds[i]));
+            });
+        }
+        finally {
+            repeat(cnt, i -> {
+                if (typeBackups[i] != null) {
+                    try {
+                        Files.deleteIfExists(typeBackups[i]);
+                    }
+                    catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Check the type can't be merged after remove-recreate-update operations
+     * with incompatible changes.
+     *
+     * Steps:
+     * - creates several types with name 'TypeNameX' where X - some index.
+     * - removes the type by cmdline utility (store removed metadata to specified file).
+     * - checks that type removed.
+     * - creates new types with the same names and same fields but different field types.
+     * - try to restores and verifies that it fails.
+     */
+    @Test
+    public void testTypeCantBeMergedAfterRemoveUpdateWithIncompatibleChanges() {
+        String[] typeNames = new String[]{"TypeName0", "TypeName1"};
+
+        final int cnt = typeNames.length;
+
+        Object[] typeValues = new Object[]{0, LocalDate.now()};
+
+        repeat(cnt, i -> crd.binary().builder(typeNames[i])
+            .setField("fld0", typeValues[i])
+            .build().type().typeId());
+
+        Path[] typeBackups = new Path[typeNames.length];
+
+        try {
+            repeat(cnt, i -> {
+                Path path = FS.getPath(typeNames[i] + ".bin");
+
+                typeBackups[i] = path;
+
+                assertEquals(EXIT_CODE_OK, execute("--meta", "remove",
+                    "--typeName", typeNames[i],
+                    "--out", path.toString()));
+            });
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+
+            String out = testOut.toString();
+
+            repeat(cnt, i -> assertNotContains(log, out, "typeName=" + typeNames[i]));
+
+            repeat(cnt, i -> crd.binary().builder(typeNames[i])
+                .setField("fld0", typeValues[cnt - i - 1]) // swap values
+                .build());
+
+            repeat(cnt, i -> {
+                assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--meta", "update", "--in",
+                    typeBackups[i].toString()));
+
+                assertContains(log, testOut.toString(), "The type of an existing field can not be changed");
+            });
+        }
+        finally {
+            repeat(cnt, i -> {
+                if (typeBackups[i] != null) {
+                    try {
+                        Files.deleteIfExists(typeBackups[i]);
+                    }
+                    catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        }
+    }
+
+    @Test
+    public void test() {
+
+    }
+
+    /**
+     * Check that you could remove and update type when metadata store under load.
+     *
+     * Steps:
+     * - creates type with name 'Type0'.
+     * - start another thread which generates in an infinite loop new types.
+     * - removes the type by cmdline utility (store removed metadata to specified file).
+     * - checks that type removed.
+     * - restore the type.
+     * - checks that type restored.
+     */
+    @Test
+    public void testRemoveUpdateUnderLoad() throws Exception {
+        Path typeFile = FS.getPath("type0.bin");
+
+        try {
+            createType("Type0", 0);
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+            assertContains(log, testOut.toString(), "typeName=Type0");
+
+            AtomicBoolean stop = new AtomicBoolean(false);
+
+            Thread t = new Thread(() -> {
+                long i = 1;
+
+                while (!stop.get())
+                    createType("Type" + i++, i);
+            });
+            t.start();
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "remove",
+                "--typeName", "Type0",
+                "--out", typeFile.toString()));
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+            assertNotContains(log, testOut.toString(), "typeName=Type0");
+
+            // Restore the metadata from file.
+            assertEquals(EXIT_CODE_OK, execute("--meta", "update", "--in", typeFile.toString()));
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+            assertContains(log, testOut.toString(), "typeName=Type0");
+
+            stop.set(true);
+
+            t.join(getTestTimeout());
+        }
+        finally {
+            if (Files.exists(typeFile))
+                Files.delete(typeFile);
+        }
+    }
+
+    /**
+     * Repeats {@code cons} {@code cnt} times.
+     *
+     * @param cnt Count.
+     * @param cons Cons.
+     */
+    private void repeat(int cnt, Consumer<Integer> cons) {
+        for (int i = 0; i < cnt; i++)
+            cons.accept(i);
+    }
+
+    /**
+     * Checks metadata list/details behaviour after a type removing.
+     *
+     * Steps:
+     * - creates some type.
+     * - checks that metadata list|details command returns proper type information.
+     * - removes the type by cmdline utility.
+     * - checks list command output not contains removed type.
+     * - checks details command fails with "Type not found" error.
+     */
+    @Test
+    public void testMetadataListDetailsAfterTypeRemoving() throws IOException {
+        Path typeFile = FS.getPath("type0.bin");
+
+        try {
+            int typeId = createType("Type0", 0);
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+            assertContains(log, testOut.toString(), "typeName=Type0");
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "details", "--typeName", "Type0"));
+            checkTypeDetails(log, testOut.toString(), crd.binary().type(typeId));
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "remove",
+                "--typeName", "Type0",
+                "--out", typeFile.toString()));
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+            assertNotContains(log, testOut.toString(), "typeName=Type0");
+
+            assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--meta", "details", "--typeName", "Type0"));
+            assertContains(log, testOut.toString(), "type not found: " + typeId);
+        }
+        finally {
+            Files.deleteIfExists(typeFile);
+        }
+    }
+
+    /**
      * @param t Binary type.
      */
     private void checkTypeDetails(@Nullable IgniteLogger log, String cmdOut, BinaryType t) {
@@ -353,18 +605,20 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      * @param typeName Type name
      * @param val Field value.
      */
-    void createType(String typeName, Object val) {
-        createType(crd.binary(), typeName, val);
+    int createType(String typeName, Object val) {
+        return createType(crd.binary(), typeName, val);
     }
 
     /**
      * @param typeName Type name.
      * @param val Field value.
      */
-    void createType(IgniteBinary bin, String typeName, Object val) {
-        BinaryObjectBuilder bob = bin.builder(typeName);
-        bob.setField("fld", val);
-        bob.build();
+    int createType(IgniteBinary bin, String typeName, Object val) {
+        return bin.builder(typeName)
+            .setField("fld", val)
+            .build()
+            .type()
+            .typeId();
     }
 
     /** */
