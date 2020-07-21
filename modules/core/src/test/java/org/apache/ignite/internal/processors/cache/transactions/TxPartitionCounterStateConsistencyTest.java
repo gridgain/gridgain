@@ -132,7 +132,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     public static Collection<String[]> testData() {
         List<String[]> res = new ArrayList<>();
 
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < 20; i++)
             res.add(new String[] {String.valueOf(i)});
 
         return res;
@@ -229,9 +229,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         doRandomUpdates(r, client, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
-
-        grid(1).cache(DEFAULT_CACHE_NAME).localClearAll(
-            new HashSet<>(primaryKeys.subList(0, Math.min(primaryKeys.size(), 30))));
 
         IdleVerifyResultV2 res = idleVerify(client, DEFAULT_CACHE_NAME);
 
