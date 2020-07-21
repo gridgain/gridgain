@@ -654,7 +654,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Initiates partition eviction process and/or get a eviction future.
+     * Initiates partition eviction process and returns an eviction future.
+     * Future will be completed when a partition is moved to EVICTED state (possibly not yet physically deleted).
      *
      * If partition has reservations, eviction will be delayed and continued after all reservations will be released.
      *
@@ -689,7 +690,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      *
      * {@link GridDhtPreloader#onPartitionEvicted(GridDhtLocalPartition, boolean) onPartitionEvicted}.
      */
-    private void clearAsync0() {
+    private IgniteInternalFuture<?> clearAsync0() {
         // Method expected to be called from exchange worker or rebalancing thread when rebalancing is done.
         long state = this.state.get();
 
@@ -699,41 +700,37 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         boolean clearingRequested = partState == MOVING;
 
         if (!evictionRequested && !clearingRequested)
-            return;
+            return new GridFinishedFuture<>();
 
-        if (clearing.compareAndSet(false, true))
-            return;
+        if (!clearing.compareAndSet(false, true))
+            return clearFut;
 
         // TODO add assertion for rebalance future.
         //assert grp.preloader().rebalanceFuture().isDone() : grp.preloader().rebalanceFuture();
 
         // Evict partition asynchronously to avoid deadlocks.
-        clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING);
+        (clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING))
+            .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+                @Override public void apply(IgniteInternalFuture<?> fut) {
+                    clearFut = null;
 
-        clearFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
-            @Override public void apply(IgniteInternalFuture<?> fut) {
-                if (evictionRequested)
-                    rent.onDone(fut.error());
-                else
-                    clearing.set(false);
-            }
-        });
+                    if (evictionRequested)
+                        rent.onDone(fut.error());
+                    else
+                        clearing.set(false);
+                }
+            });
+
+        return clearFut;
     }
 
     /**
      * Initiates single clear process if partition is in MOVING state or continues cleaning for RENTING state.
-     * Method does nothing if clear process is already running.
-     *
-     * IMPORTANT: if clearing is required when after return from method call clear future must be initialized.
-     * This enforces clearing happens before sending demand requests.
+     * For RENTING partitions tries to evict and destroy a partition after clearing.
+     * @return Current future if a clearing is already in progress or finished future if a clearing is not required.
      */
-    public void clearAsync() {
-        GridDhtPartitionState state0 = state();
-
-        if (state0 != MOVING && state0 != RENTING)
-            return;
-
-        clearAsync0();
+    public IgniteInternalFuture<?> clearAsync() {
+        return clearAsync0();
     }
 
     /**

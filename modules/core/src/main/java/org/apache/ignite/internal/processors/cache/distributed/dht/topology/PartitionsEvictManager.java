@@ -28,7 +28,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -305,6 +304,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     @Override protected void stop0(boolean cancel) {
         super.stop0(cancel);
 
+        // Prevents new eviction tasks from appearing.
         busyLock.writeLock().lock();
 
         Collection<GroupEvictionContext> evictionGrps = evictionGroupsMap.values();
@@ -350,7 +350,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         /** Future for currently running partition eviction task. */
         private final Map<Integer, IgniteInternalFuture<?>> partsEvictFutures = new ConcurrentHashMap<>();
 
-        /** Flag indicates that eviction process has stopped for this group. */
+        /** Stop exception. */
         private volatile Exception stopEx;
 
         /** Total partition to evict. */
@@ -403,15 +403,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         /**
          * @param ex Stop exception.
          */
+        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
         void stop(Exception ex) {
-            stopLock.writeLock().lock();
+            stopEx = ex;
 
-            try {
-                stopEx = ex;
-            }
-            finally {
-                stopLock.writeLock().unlock();
-            }
+            stopLock.writeLock().lock();
         }
 
         /**
@@ -497,15 +493,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** {@inheritDoc} */
         @Override public void run() {
-            grpEvictionCtx.stopLock.readLock().lock();
+            if (!grpEvictionCtx.stopLock.readLock().tryLock()) {
+                finishFut.onDone(grpEvictionCtx.stopEx);
+
+                return;
+            }
 
             try {
-                if (grpEvictionCtx.stopEx != null) {
-                    finishFut.onDone(grpEvictionCtx.stopEx);
-
-                    return;
-                }
-
                 // TODO get rid, should be always success.
                 boolean success = part.tryClear(grpEvictionCtx);
 
@@ -516,7 +510,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 // simultaneous eviction stopping and scheduling new eviction.
                 finishFut.onDone();
 
-                // Re-offer partition if clear was unsuccessful due to partition reservation.
+                // Resubmit a partition if clearing was unsuccessful due to partition reservation.
                 if (!success)
                     evictPartitionAsync(grpEvictionCtx.grp, part, reason);
             }
@@ -524,14 +518,15 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 finishFut.onDone(ex);
 
                 if (cctx.kernalContext().isStopping()) {
-                    LT.warn(log, ex, "Partition eviction has cancelled (current node is stopping) " +
+                    LT.warn(log, ex, "Partition eviction has been cancelled (local node is stopping) " +
                         "[grp=" + grpEvictionCtx.grp.cacheOrGroupName() +
                         ", readyVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion() + ']',
                         false,
                         true);
                 }
                 else {
-                    LT.error(log, ex, "Partition eviction failed, this can cause grid hang.");
+                    LT.error(log, ex, "Partition eviction has failed [grp=" +
+                        grpEvictionCtx.grp.cacheOrGroupName() + ", part=" + part.id() + ']');
 
                     cctx.kernalContext().failure().process(new FailureContext(SYSTEM_WORKER_TERMINATION, ex));
                 }
