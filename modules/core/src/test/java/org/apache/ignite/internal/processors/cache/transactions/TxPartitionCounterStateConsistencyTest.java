@@ -19,7 +19,9 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,6 +67,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -79,6 +82,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -90,6 +95,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 /**
  * Test partitions consistency in various scenarios.
  */
+@RunWith(Parameterized.class)
 public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterStateAbstractTest {
     /** */
     public static final int PARTITION_ID = 0;
@@ -99,6 +105,12 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
     /** */
     protected TcpDiscoverySpi customDiscoSpi;
+
+    /** Client mode. */
+    @Parameterized.Parameter()
+    public String testId;
+
+    protected boolean saveLfs;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -114,10 +126,22 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
+     * @return List of versions pairs to test.
+     */
+    @Parameterized.Parameters(name = "{0}")
+    public static Collection<String[]> testData() {
+        List<String[]> res = new ArrayList<>();
+
+        for (int i = 0; i < 5; i++)
+            res.add(new String[] {String.valueOf(i)});
+
+        return res;
+    }
+
+    /**
      * Tests for same order of updates on all owners after txs are finished.
      */
-    @Test
-    public void testSingleThreadedUpdateOrder() throws Exception {
+        public void _testSingleThreadedUpdateOrder() throws Exception {
         backups = 2;
 
         startGridsMultiThreaded(SERVER_NODES);
@@ -178,13 +202,13 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
 
-        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 60_000);
 
         Random r = new Random();
 
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
-                doSleep(GridTestUtils.SF.applyLB(30_000, 15_000));
+                doSleep(GridTestUtils.SF.applyLB(5_000, 3_000));
 
                 stopGrid(true, prim.name());
 
@@ -193,7 +217,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     startGrid(prim.name());
 
-                    awaitPartitionMapExchange();
+                    awaitPartitionMapExchange(true, true, null);
 
                     doSleep(GridTestUtils.SF.applyLB(5_000, 2_000));
                 }
@@ -206,14 +230,39 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         doRandomUpdates(r, client, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
 
-        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+        grid(1).cache(DEFAULT_CACHE_NAME).localClearAll(
+            new HashSet<>(primaryKeys.subList(0, Math.min(primaryKeys.size(), 30))));
+
+        IdleVerifyResultV2 res = idleVerify(client, DEFAULT_CACHE_NAME);
+
+        if (res.hasConflicts())
+            saveLfs = true;
+
+        assertPartitionsSame(res);
     }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        if (saveLfs) {
+            try {
+                saveWorkDirAsTcArtifact(getTestIgniteInstanceName() + "_testId_" + testId);
+            }
+            finally {
+                saveLfs = false;
+            }
+        }
+
+        super.afterTest();
+    }
+
+
 
     /**
      * Test primary-backup partitions consistency while restarting random backup nodes under load.
      */
-    @Test
-    public void testPartitionConsistencyWithBackupsRestart() throws Exception {
+        public void _testPartitionConsistencyWithBackupsRestart() throws Exception {
         backups = 2;
 
         final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
@@ -276,8 +325,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     /**
      * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
      */
-    @Test
-    public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
+        public void _testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
         backups = 2;
 
         final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
@@ -353,8 +401,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Tests reproduces the problem: deferred removal queue should never be cleared during rebalance OR rebalanced
      * entries could undo deletion causing inconsistency.
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
+        public void _testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_RemoveQueueCleared() throws Exception {
         backups = 2;
 
         Ignite prim = startGridsMultiThreaded(SERVER_NODES);
@@ -413,8 +460,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Tests reproduces the problem: in-place update in tree during rebalance in partition was not handled as update
      * causing missed WAL record which has to be processed on recovery.
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_CheckpointDuringRebalance() throws Exception {
+        public void _testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_CheckpointDuringRebalance() throws Exception {
         backups = 2;
 
         Ignite crd = startGridsMultiThreaded(SERVER_NODES);
@@ -476,8 +522,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testPartitionConsistencyCancelledRebalanceCoordinatorIsDemander() throws Exception {
+        public void _testPartitionConsistencyCancelledRebalanceCoordinatorIsDemander() throws Exception {
         backups = 2;
 
         Ignite crd = startGrids(SERVER_NODES);
@@ -573,9 +618,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NoOp() throws Exception {
-        testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(s -> {}, s -> {});
+        public void _testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_NoOp() throws Exception {
+        _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(s -> {}, s -> {});
     }
 
     /**
@@ -583,9 +627,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      * @throws Exception
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange_DemanderRestart() throws Exception {
-        testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
+        public void _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange_DemanderRestart() throws Exception {
+        _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
             demanderNodeName -> stopGrid(true, demanderNodeName),
             demanderNodeName -> {
                 try {
@@ -602,9 +645,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      * @throws Exception
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange_CacheStart() throws Exception {
-        testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
+        public void _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange_CacheStart() throws Exception {
+        _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
             demanderNodeName -> grid(0).getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME + "2")),
             demanderNodeName -> {});
     }
@@ -614,9 +656,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      * @throws Exception
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange_NonBLTNodeStart() throws Exception {
-        testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
+        public void _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange_NonBLTNodeStart() throws Exception {
+        _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
             demanderNodeName -> {
                 try {
                     startGrid(SERVER_NODES);
@@ -629,8 +670,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /** */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
+        public void _testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
         backups = 2;
 
         Ignite crd = startGridsMultiThreaded(SERVER_NODES);
@@ -710,8 +750,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * In such scenario a race is possible with tx updates and PME counters set.
      * Outdated counters on PME should be ignored.
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
+        public void _testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
         backups = 2;
 
         Ignite crd = startGrid(0);
@@ -817,8 +856,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Success: key over moving partition is prepared on new owner (choosed after late affinity switch),
      * otherwise it's possible txs are prepared on different primaries after late affinity switch.
      */
-    @Test
-    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
+        public void _testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
         backups = 1;
 
         customDiscoSpi = new BlockTcpDiscoverySpi().setIpFinder(IP_FINDER);
@@ -949,44 +987,37 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /** */
-    @Test
-    public void testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
+        public void _testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
         doTestConsistencyAfterBaselineNodeStopAndRemoval(0);
     }
 
     /** */
-    @Test
-    public void testConsistencyAfterBaselineNodeStopAndRemoval_WithRestart() throws Exception {
+        public void _testConsistencyAfterBaselineNodeStopAndRemoval_WithRestart() throws Exception {
         doTestConsistencyAfterBaselineNodeStopAndRemoval(1);
     }
 
     /** */
-    @Test
-    public void testConsistencyAfterBaselineNodeStopAndRemoval_WithRestartAndSkipCheckpoint() throws Exception {
+        public void _testConsistencyAfterBaselineNodeStopAndRemoval_WithRestartAndSkipCheckpoint() throws Exception {
         doTestConsistencyAfterBaselineNodeStopAndRemoval(2);
     }
 
     /** */
-    @Test
-    public void testPrimaryLeftUnderLoadToSwitchingPartitions_1() throws Exception {
+        public void _testPrimaryLeftUnderLoadToSwitchingPartitions_1() throws Exception {
         doTestPrimaryLeftUnderLoadToSwitchingPartitions(0, 2);
     }
 
     /** */
-    @Test
-    public void testPrimaryLeftUnderLoadToSwitchingPartitions_2() throws Exception {
+        public void _testPrimaryLeftUnderLoadToSwitchingPartitions_2() throws Exception {
         doTestPrimaryLeftUnderLoadToSwitchingPartitions(1, 2);
     }
 
     /** */
-    @Test
-    public void testPrimaryLeftUnderLoadToSwitchingPartitions_3() throws Exception {
+        public void _testPrimaryLeftUnderLoadToSwitchingPartitions_3() throws Exception {
         doTestPrimaryLeftUnderLoadToSwitchingPartitions(0, 3);
     }
 
     /** */
-    @Test
-    public void testPrimaryLeftUnderLoadToSwitchingPartitions_4() throws Exception {
+        public void _testPrimaryLeftUnderLoadToSwitchingPartitions_4() throws Exception {
         doTestPrimaryLeftUnderLoadToSwitchingPartitions(1, 3);
     }
 
@@ -994,8 +1025,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Tests a scenario when stale partition state message can trigger spurious late affinity switching followed by
      * possible primary mapping to moving partition.
      */
-    @Test
-    public void testLateAffinityChangeDuringExchange() throws Exception {
+        public void _testLateAffinityChangeDuringExchange() throws Exception {
         backups = 2;
         Ignite crd = startGridsMultiThreaded(3);
         crd.cluster().active(true);
@@ -1316,7 +1346,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      * @throws Exception If failed.
      */
-    protected void testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
+    protected void _testPartitionConsistencyDuringRebalanceConcurrentlyWithTopologyChange(
         Consumer<String> rebBlockClo,
         Consumer<String> rebUnblockClo)
         throws Exception {

@@ -46,23 +46,23 @@ public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCount
         return super.cacheConfiguration(name).setAtomicityMode(ATOMIC);
     }
 
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
-        // No-op.
-    }
+//    /** {@inheritDoc} */
+//    @Ignore
+//    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
+//        // No-op.
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Ignore
+//    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
+//        // No-op.
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Ignore
+//    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
+//        // No-op.
+//    }
 
     /** {@inheritDoc} */
     @Override protected IgniteInternalFuture<?> doRandomUpdates(Random r, Ignite near, List<Integer> primaryKeys,

@@ -35,23 +35,23 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
         return 1024;
     }
 
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testSingleThreadedUpdateOrder() throws Exception {
-        // Not applicable for volatile mode.
-    }
-
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyCancelledRebalanceCoordinatorIsDemander() throws Exception {
-        // Not applicable for volatile mode.
-    }
-
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testLateAffinityChangeDuringExchange() throws Exception {
-        // Not applicable for volatile mode.
-    }
+//    /** {@inheritDoc} */
+//    @Ignore
+//    @Override public void testSingleThreadedUpdateOrder() throws Exception {
+//        // Not applicable for volatile mode.
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Ignore
+//    @Override public void testPartitionConsistencyCancelledRebalanceCoordinatorIsDemander() throws Exception {
+//        // Not applicable for volatile mode.
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Ignore
+//    @Override public void testLateAffinityChangeDuringExchange() throws Exception {
+//        // Not applicable for volatile mode.
+//    }
 
     /** {@inheritDoc} */
     @Override protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {

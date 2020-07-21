@@ -29,15 +29,15 @@ public class TxPartitionCounterStateConsistencyOptimisticTest extends TxPartitio
         return OPTIMISTIC;
     }
 
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
-        // No-op.
-    }
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
+//        // No-op.
+//    }
+//
+//    /** {@inheritDoc} */
+//    @Test
+//    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
+//        // No-op.
+//    }
 }

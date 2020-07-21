@@ -1056,6 +1056,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         try {
             WALIterator it = grp.shared().wal().replay(minPtr);
 
+            log.info("^^^^^^^ Started reading WAL for historical supplying from " + minPtr + " for group " + grp.cacheOrGroupName());
+
             WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, partsCounters, it);
 
             // Add historical partitions which are unabled to reserve to missing set.
@@ -1233,6 +1235,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** */
         private DataEntry next;
 
+        /** */
+        private WALPointer lastReadPtr;
+
         /**
          * Rebalanced counters in the range from initialUpdateCntr to updateCntr.
          * Invariant: initUpdCntr[idx] + rebalancedCntrs[idx] = updateCntr[idx]
@@ -1293,6 +1298,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** {@inheritDoc} */
         @Override public void close() throws IgniteCheckedException {
             walIt.close();
+
+            log.info("^^^^^^^ Last read WAL pointer for historical supplying is " + lastReadPtr + " for group " + grp.cacheOrGroupName());
+
             releasePartitions();
         }
 
@@ -1336,8 +1344,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (donePart != -1) {
                 int pIdx = partMap.partitionIndex(donePart);
 
-                if (log.isDebugEnabled()) {
-                    log.debug("Partition done [grpId=" + grp.groupId() +
+                if (log.isInfoEnabled()) {
+                    log.info("^^^^^^^ Partition done [grpId=" + grp.groupId() +
                         ", partId=" + donePart +
                         ", from=" + partMap.initialUpdateCounterAt(pIdx) +
                         ", to=" + partMap.updateCounterAt(pIdx) + ']');
@@ -1439,6 +1447,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     while (walIt.hasNext()) {
                         IgniteBiTuple<WALPointer, WALRecord> rec = walIt.next();
 
+                        lastReadPtr = rec.get2().position();
+
                         if (rec.get2() instanceof DataRecord) {
                             DataRecord data = (DataRecord)rec.get2();
 
@@ -1462,8 +1472,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 rebalancedCntrs[idx] += rbRec.overlap(from, to);
 
                                 if (rebalancedCntrs[idx] == partMap.updateCounterAt(idx)) {
-                                    if (log.isDebugEnabled()) {
-                                        log.debug("Partition done [grpId=" + grp.groupId() +
+                                    if (log.isInfoEnabled()) {
+                                        log.info("^^^^^^^ Partition done [grpId=" + grp.groupId() +
                                             ", partId=" + donePart +
                                             ", from=" + from +
                                             ", to=" + to + ']');
