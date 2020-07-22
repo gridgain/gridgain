@@ -16,18 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.file.OpenOption;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -37,6 +25,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -63,6 +52,17 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.file.OpenOption;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
@@ -111,6 +111,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
                 // Test checks internal state before and after rebalance, so it is configured to be triggered manually
                 .setRebalanceDelay(-1)
+                .setAffinity(new RendezvousAffinityFunction(false, 32))
                 .setBackups(dfltCacheBackupCnt),
 
             new CacheConfiguration(REPL_CACHE)
@@ -545,60 +546,56 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     }
 
     /**
+     * Test case scenario
+     *
      * @throws Exception If failed.
      */
     @Test
     public void testDataClearedAfterRestartWithDisabledWal() throws Exception {
-        IgniteEx ignite = startGrid(0);
+        dfltCacheBackupCnt = 1;
 
-        ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().active(true);
+        IgniteEx ig0 = startGrid(0);
+        IgniteEx ig1 = startGrid(1);
 
-        IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
+        ig0.cluster().baselineAutoAdjustEnabled(false);
+        ig0.cluster().state(ClusterState.ACTIVE);
 
-        int keysCnt = getKeysCount();
+        IgniteCache<Integer, Integer> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
-        for (int k = 0; k < keysCnt; k++)
+        for (int k = 0; k < 2500; k++)
             cache.put(k, k);
 
-        IgniteEx newIgnite = startGrid(1);
+        GridCacheDatabaseSharedManager dbMrg0 = (GridCacheDatabaseSharedManager) ig0.context().cache().context().database();
+        GridCacheDatabaseSharedManager dbMrg1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
 
-        newIgnite.cluster().setBaselineTopology(2);
-
-        // Await fully exchange complete.
-        awaitExchange(newIgnite);
-
-        CacheGroupContext grpCtx = newIgnite.cachex(DEFAULT_CACHE_NAME).context().group();
-
-        assertFalse(grpCtx.localWalEnabled());
+        dbMrg0.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
+        dbMrg1.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
 
         stopGrid(1);
-        stopGrid(0);
 
-        newIgnite = startGrid(1);
+        for (int k = 2500; k < 5000; k++)
+            cache.put(k, k);
 
-        newIgnite.cluster().active(true);
+        ig1 = startGrid(1);
 
-        newIgnite.cluster().setBaselineTopology(newIgnite.cluster().nodes());
+        awaitExchange(ig1);
 
-        cache = newIgnite.cache(DEFAULT_CACHE_NAME);
+        stopAllGrids(false);
 
-        Collection<Integer> lostParts = cache.lostPartitions();
+        ig1 = startGrid(1);
+        ig1.cluster().state(ClusterState.ACTIVE);
 
-        Set<Integer> keys = new TreeSet<>();
+        ig1.resetLostPartitions(Arrays.asList(DEFAULT_CACHE_NAME));
 
-        for (int k = 0; k < keysCnt; k++) {
-            // Skip lost partitions.
-            if (lostParts.contains(newIgnite.affinity(DEFAULT_CACHE_NAME).partition(k)))
-                continue;
+        awaitExchange(ig1);
 
-            keys.add(k);
-        }
+        cache = ig1.cache(DEFAULT_CACHE_NAME);
 
-        for (Integer k : keys)
-            assertFalse("k=" + k + ", v=" + cache.get(k), cache.containsKey(k));
+        for (int k = 0; k < 2500; k++)
+            assertTrue(cache.containsKey(k));
 
-        assertFalse(cache.containsKeys(keys));
+        for (int k = 2500; k < 5000; k++)
+            assertFalse(cache.containsKey(k));
     }
 
     /**

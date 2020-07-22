@@ -346,6 +346,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     /** {@inheritDoc} */
     @Override public void beginRecover() {
         for (Integer grpDescId : idxCacheStores.keySet()) {
+            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] inspecting grpDesc: " + grpDescId);
+
             CacheGroupDescriptor desc = cctx.cache().cacheGroupDescriptor(grpDescId);
 
             if (desc != null && desc.persistenceEnabled()) {
