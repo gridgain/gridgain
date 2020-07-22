@@ -818,6 +818,8 @@ namespace ignite
             SharedPointer<compute::ComputeTaskHolder> task0 =
                 StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(handle));
 
+            registry.Release(handle);
+
             compute::ComputeTaskHolder* task = task0.Get();
 
             task->JobResultSuccess(reader);
@@ -841,6 +843,8 @@ namespace ignite
 
             SharedPointer<compute::ComputeTaskHolder> task0 =
                 StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(handle));
+
+            registry.Release(handle);
 
             compute::ComputeTaskHolder* task = task0.Get();
 
@@ -886,6 +890,8 @@ namespace ignite
             SharedPointer<compute::ComputeJobHolder> job0 =
                 StaticPointerCast<compute::ComputeJobHolder>(registry.Get(handle));
 
+            registry.Release(handle);
+
             compute::ComputeJobHolder* job = job0.Get();
 
             if (!job)
@@ -894,17 +900,7 @@ namespace ignite
                     "Job is not registred for handle", "handle", handle);
             }
 
-            try {
-                job->ExecuteRemote(this, writer);
-            }
-            catch (...)
-            {
-                registry.Release(handle);
-
-                throw;
-            }
-
-            registry.Release(handle);
+            job->ExecuteRemote(this, writer);
 
             outStream.Synchronize();
 
