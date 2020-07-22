@@ -478,11 +478,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
         }
     }
 
-    @Test
-    public void test() {
-
-    }
-
     /**
      * Check that you could remove and update type when metadata store under load.
      *
