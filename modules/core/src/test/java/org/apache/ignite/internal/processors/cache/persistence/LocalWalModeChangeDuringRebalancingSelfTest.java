@@ -546,12 +546,43 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     }
 
     /**
-     * Test case scenario
+     * Node doesn't delete consistent PDS when WAL was turned off automatically (disable WAL during rebalancing feature).
+     * <p>
+     * Test scenario:
+     * <ol>
+     *     <li>
+     *         Two server nodes are started, cluster is activated, baseline is set. 2500 keys are put into cache.
+     *     </li>
+     *     <li>
+     *         Checkpoint is started and finished on both nodes.
+     *     </li>
+     *     <li>
+     *         Node n1 is stopped, another 2500 keys are put into the same cache.
+     *     </li>
+     *     <li>
+     *         Node n1 is started back so rebalancing is triggered from n0 to n1. WAL is turned off on n1 automatically.
+     *     </li>
+     *     <li>
+     *         Both nodes are stopped without checkpoint.
+     *     </li>
+     *     <li>
+     *         Node n1 is started and activated. Lost partitions are reset.
+     *     </li>
+     *     <li>
+     *         First 2500 keys are found in cache thus PDS wasn't removed on restart.
+     *     </li>
+     *     <li>
+     *         Second 2500 keys are not found in cache as WAL was disabled during rebalancing
+     *         and no checkpoint was triggered.
+     *     </li>
+     * </ol>
+     * </p>
+     *
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testDataClearedAfterRestartWithDisabledWal() throws Exception {
+    public void testConsistentPdsIsNotClearedAfterRestartWithDisabledWal() throws Exception {
         dfltCacheBackupCnt = 1;
 
         IgniteEx ig0 = startGrid(0);
@@ -596,6 +627,43 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         for (int k = 2500; k < 5000; k++)
             assertFalse(cache.containsKey(k));
+    }
+
+    /**
+     * Test is opposite to {@link #testConsistentPdsIsNotClearedAfterRestartWithDisabledWal()}
+     *
+     * <p>
+     * Test scenario:
+     * <ol>
+     *
+     * </ol>
+     * </p>
+     * @throws Exception
+     */
+    @Test
+    public void testPdsWithBrokenBinaryConsistencyIsClearedAfterRestartWithDisabledWal() throws Exception {
+        dfltCacheBackupCnt = 1;
+
+        IgniteEx ig0 = startGrid(0);
+        IgniteEx ig1 = startGrid(1);
+
+        ig1.configuration().getWorkDirectory();
+
+        ig0.cluster().baselineAutoAdjustEnabled(false);
+        ig0.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = ig0.cache(DEFAULT_CACHE_NAME);
+
+        for (int k = 0; k < 2500; k++)
+            cache.put(k, k);
+
+        GridCacheDatabaseSharedManager dbMrg0 = (GridCacheDatabaseSharedManager) ig0.context().cache().context().database();
+        GridCacheDatabaseSharedManager dbMrg1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
+
+        dbMrg0.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
+        dbMrg1.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
+
+        stopAllGrids(false);
     }
 
     /**
