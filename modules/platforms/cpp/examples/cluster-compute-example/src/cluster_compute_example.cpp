@@ -133,7 +133,7 @@ int main()
 
         // Waiting the compute jobs to complete.
         std::cout << std::endl;
-        std::cout << ">>> Waiting all compute jobs done, before shutting down the cluster, press 'Enter to continue ..." << std::endl;
+        std::cout << ">>> Example finished. Press 'Enter to stop cluster nodes ..." << std::endl;
         std::cout << std::endl;
         std::cin.get();
 
@@ -149,10 +149,6 @@ int main()
 
         return err.GetCode();
     }
-
-    std::cout << std::endl;
-    std::cout << ">>> Example finished, press 'Enter' to exit ..." << std::endl;
-    std::cout << std::endl;
 
     std::cin.get();
 
