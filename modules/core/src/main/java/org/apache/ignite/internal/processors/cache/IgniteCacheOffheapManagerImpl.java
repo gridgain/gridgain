@@ -2615,9 +2615,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
-                String grpName = cctx.group().cacheOrGroupName();
-                boolean res = cctx.shared().database().checkpointLockIsHeldByThread();
-
                 CacheDataRow oldRow = dataTree.remove(new SearchRow(cacheId, key));
 
                 finishRemove(cctx, key, oldRow);

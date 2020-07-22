@@ -1201,7 +1201,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         finally {
             cctx.database().checkpointReadUnlock();
         }
-
     }
 
     /**
