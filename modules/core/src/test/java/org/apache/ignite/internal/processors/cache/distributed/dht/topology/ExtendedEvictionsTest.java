@@ -1,5 +1,11 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
@@ -23,11 +29,37 @@ public class ExtendedEvictionsTest extends AbstractPartitionClearingTest {
 
     @Test
     public void testCacheGroupRestartDuringEviction_2() throws Exception {
+        AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
+
         testOperationDuringEviction(false, 1, new Runnable() {
             @Override public void run() {
-                // No-op.
+                doSleep(1000); // Wait a bit to give some time for partition state message to process on crd.
+
+                IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
+                    @Override public void run() {
+                        grid(0).destroyCache(DEFAULT_CACHE_NAME);
+                    }
+                });
+
+                doSleep(500);
+
+                assertFalse(fut.isDone()); // Cache stop should be blocked by concurrent eviction.
+
+                ref.set(fut);
             }
         });
+
+        assertTrue(ref.get().isDone());
+
+        PartitionsEvictManager mgr = grid(0).context().cache().context().evict();
+
+        Map evictionGroupsMap = U.field(mgr, "evictionGroupsMap");
+
+        assertEquals(1, evictionGroupsMap.size());
+
+        IgniteCache<Object, Object> cache = grid(0).getOrCreateCache(cacheConfiguration());
+
+        assertEquals(0, evictionGroupsMap.size());
     }
 
     public void testNodeStopDuringEviction() {

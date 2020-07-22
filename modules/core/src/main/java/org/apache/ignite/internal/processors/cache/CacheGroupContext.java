@@ -1115,6 +1115,8 @@ public class CacheGroupContext {
             initializeIO();
 
             ctx.affinity().onCacheGroupCreated(this);
+
+            ctx.evict().onCacheGroupStarted(this);
         }
     }
 

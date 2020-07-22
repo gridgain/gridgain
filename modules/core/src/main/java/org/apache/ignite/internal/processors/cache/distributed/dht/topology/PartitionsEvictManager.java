@@ -30,6 +30,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
@@ -102,6 +103,15 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
     /** */
     private final ReadWriteLock busyLock = new ReentrantReadWriteLock();
+
+    /**
+     * Callback on cache group start.
+     *
+     * @param grp group.
+     */
+    public void onCacheGroupStarted(CacheGroupContext grp) {
+        evictionGroupsMap.remove(grp.groupId());
+    }
 
     /**
      * Stops eviction process for group.
@@ -351,7 +361,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final Map<Integer, IgniteInternalFuture<?>> partsEvictFutures = new ConcurrentHashMap<>();
 
         /** Stop exception. */
-        private volatile Exception stopEx;
+        private AtomicReference<Exception> stopExRef = new AtomicReference<>();
 
         /** Total partition to evict. */
         private AtomicInteger totalTasks = new AtomicInteger();
@@ -360,7 +370,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private int taskInProgress;
 
         /** */
-        private ReadWriteLock stopLock = new ReentrantReadWriteLock();
+        private ReadWriteLock busyLock = new ReentrantReadWriteLock();
 
         /**
          * @param grp Group context.
@@ -397,7 +407,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** {@inheritDoc} */
         @Override public boolean shouldStop() {
-            return stopEx != null;
+            return stopExRef.get() != null;
         }
 
         /**
@@ -405,9 +415,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          */
         @SuppressWarnings("LockAcquiredButNotSafelyReleased")
         void stop(Exception ex) {
-            stopEx = ex;
+            // Prevent concurrent stop.
+            if (!stopExRef.compareAndSet(null, ex))
+                return;
 
-            stopLock.writeLock().lock();
+            busyLock.writeLock().lock();
         }
 
         /**
@@ -493,8 +505,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** {@inheritDoc} */
         @Override public void run() {
-            if (!grpEvictionCtx.stopLock.readLock().tryLock()) {
-                finishFut.onDone(grpEvictionCtx.stopEx);
+            if (!grpEvictionCtx.busyLock.readLock().tryLock()) {
+                finishFut.onDone(grpEvictionCtx.stopExRef.get());
 
                 return;
             }
@@ -529,7 +541,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 }
             }
             finally {
-                grpEvictionCtx.stopLock.readLock().unlock();
+                grpEvictionCtx.busyLock.readLock().unlock();
             }
         }
     }

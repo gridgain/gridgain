@@ -143,10 +143,7 @@ public class AbstractPartitionClearingTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange(true, true, null);
 
-        IgniteCache<Object, Object> cache = g0.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).
-            setCacheMode(CacheMode.PARTITIONED).
-            setBackups(1).
-            setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024)));
+        IgniteCache<Object, Object> cache = g0.getOrCreateCache(cacheConfiguration());
 
         List<Integer> allEvicting = evictingPartitionsAfterJoin(g0, cache, 1024);
         int p0 = allEvicting.get(0);
@@ -174,5 +171,15 @@ public class AbstractPartitionClearingTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange(true, true, null);
         assertPartitionsSame(idleVerify(g0, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     *
+     */
+    protected CacheConfiguration cacheConfiguration() {
+        return new CacheConfiguration<>(DEFAULT_CACHE_NAME).
+            setCacheMode(CacheMode.PARTITIONED).
+            setBackups(1).
+            setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024));
     }
 }
