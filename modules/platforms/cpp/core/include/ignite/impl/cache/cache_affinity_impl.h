@@ -264,7 +264,7 @@ namespace ignite
                  * @return Map of nodes to keys or empty map if there are no alive nodes for this cache.
                  */
                 template<typename TK>
-                std::map<ignite::cluster::ClusterNode, std::list<TK> > MapKeysToNodes(const std::list<TK>& keys)
+                std::map<ignite::cluster::ClusterNode, std::vector<TK> > MapKeysToNodes(const std::vector<TK>& keys)
                 {
                     common::concurrent::SharedPointer<interop::InteropMemory> memIn = GetEnvironment().AllocateMemory();
                     common::concurrent::SharedPointer<interop::InteropMemory> memOut = GetEnvironment().AllocateMemory();
@@ -272,7 +272,7 @@ namespace ignite
                     binary::BinaryWriterImpl writer(&out, GetEnvironment().GetTypeManager());
 
                     writer.WriteInt32(static_cast<int32_t>(keys.size()));
-                    for (typename std::list<TK>::const_iterator it = keys.begin(); it != keys.end(); ++it)
+                    for (typename std::vector<TK>::const_iterator it = keys.begin(); it != keys.end(); ++it)
                         writer.WriteObject<TK>(*it);
 
                     out.Synchronize();
@@ -284,17 +284,17 @@ namespace ignite
                     interop::InteropInputStream inStream(memOut.Get());
                     binary::BinaryReaderImpl reader(&inStream);
 
-                    std::map<ignite::cluster::ClusterNode, std::list<TK> > ret;
+                    std::map<ignite::cluster::ClusterNode, std::vector<TK> > ret;
 
                     int32_t cnt = reader.ReadInt32();
                     for (int32_t i = 0; i < cnt; i++)
                     {
-                        std::list<TK> val;
+                        std::vector<TK> val;
 
                         ignite::cluster::ClusterNode key(GetEnvironment().GetNode(reader.ReadGuid()));
                         reader.ReadCollection<TK>(std::back_inserter(val));
 
-                        ret.insert(std::pair<ignite::cluster::ClusterNode, std::list<TK> >(key, val));
+                        ret.insert(std::pair<ignite::cluster::ClusterNode, std::vector<TK> >(key, val));
                     }
 
                     return ret;

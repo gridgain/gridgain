@@ -114,20 +114,24 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityGetAffinityKey)
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityMapKeysToNodes)
 {
-    std::list<int32_t> keys;
+    std::vector<int32_t> keys;
+
+	keys.reserve(10000);
+
     for (int i = 1; i < 10000; i++)
         keys.push_back(i);
 
-    std::map<ClusterNode, std::list<int32_t> > map = affinity.MapKeysToNodes(keys);
+    std::map<ClusterNode, std::vector<int32_t> > map = affinity.MapKeysToNodes(keys);
 
     BOOST_REQUIRE(map.size() == 1);
 
-    for (std::list<int>::iterator it = keys.begin(); it != keys.end(); ++it)
+    for (std::vector<int>::iterator it = keys.begin(); it != keys.end(); ++it)
     {
         ClusterNode clusterNode = affinity.MapKeyToNode(*it);
         BOOST_REQUIRE(map.find(clusterNode) != map.end());
 
-        std::list<int32_t> nodeKeys = map[clusterNode];
+        std::vector<int32_t> nodeKeys = map[clusterNode];
+
         BOOST_REQUIRE(nodeKeys.size() > 0);
         BOOST_REQUIRE(std::find(nodeKeys.begin(), nodeKeys.end(), *it) != nodeKeys.end());
     }

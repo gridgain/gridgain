@@ -167,7 +167,7 @@ namespace ignite
              * @param keys Keys to map to nodes.
              * @return Map of nodes to keys or empty map if there are no alive nodes for this cache.
              */
-            std::map<cluster::ClusterNode, std::list<K> > MapKeysToNodes(const std::list<K>& keys)
+            std::map<cluster::ClusterNode, std::vector<K> > MapKeysToNodes(const std::vector<K>& keys)
             {
                 return impl.Get()->MapKeysToNodes(keys);
             }
