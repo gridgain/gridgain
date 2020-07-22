@@ -120,6 +120,10 @@ import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
  * Used when persistence enabled.
  */
 public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl implements DbCheckpointListener {
+    /** Margin for historical rebalance on atomic cache. */
+    public final long walAtomicCacheMargin = IgniteSystemProperties.getLong(
+        IgniteSystemProperties.WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE, 5);
+
     /**
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind
      * if there is nothing to clean yet.
@@ -1046,12 +1050,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
 
-        FileWALPointer minPtr = (FileWALPointer)database.checkpointHistory().searchEarliestWalPointer(grp.groupId(), partsCounters);
+        FileWALPointer minPtr = (FileWALPointer)database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
+            partsCounters, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
 
         try {
             WALIterator it = grp.shared().wal().replay(minPtr);
 
-            WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, it);
+            WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, partsCounters, it);
 
             // Add historical partitions which are unabled to reserve to missing set.
             missing.addAll(iterator.missingParts);
@@ -1242,7 +1247,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param grp Cache context.
          * @param walIt WAL iterator.
          */
-        private WALHistoricalIterator(IgniteLogger log, CacheGroupContext grp, CachePartitionPartialCountersMap partMap,
+        private WALHistoricalIterator(
+            IgniteLogger log,
+            CacheGroupContext grp,
+            CachePartitionPartialCountersMap partMap,
+            Map<Integer, Long> updatedPartCntr,
             WALIterator walIt) {
             this.log = log;
             this.grp = grp;
@@ -1253,8 +1262,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             rebalancedCntrs = new long[partMap.size()];
 
-            for (int i = 0; i < rebalancedCntrs.length; i++)
-                rebalancedCntrs[i] = partMap.initialUpdateCounterAt(i);
+            for (int i = 0; i < rebalancedCntrs.length; i++) {
+                int p = partMap.partitionAt(i);
+
+                rebalancedCntrs[i] = updatedPartCntr.get(p);
+
+                partMap.setInitialUpdateCounterAt(i, rebalancedCntrs[i]);
+            }
 
             reservePartitions();
 
@@ -1664,6 +1678,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         private volatile long nextStoreCleanTimeNanos;
 
         /** */
+        private GridQueryRowCacheCleaner rowCacheCleaner;
+
+        /**
+         * Mutex used to synchronise publication of initialized delegate link and actions that should change
+         * the delegate's state, so the delegate will not be in obsolete state.
+         */
+        private final Object delegatePublicationMux = new Object();
+
+        /** */
         private PartitionMetaStorage<SimpleDataRow> partStorage;
 
         /** */
@@ -1914,7 +1937,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         pageMem.releasePage(grpId, partMetaId, partMetaPage);
                     }
 
-                    delegate = delegate0;
+                    synchronized (delegatePublicationMux) {
+                        delegate0.setRowCacheCleaner(rowCacheCleaner);
+
+                        delegate = delegate0;
+                    }
                 }
                 catch (Throwable ex) {
                     U.error(log, "Unhandled exception during page store initialization. All further operations will " +
@@ -2307,6 +2334,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** {@inheritDoc} */
         @Override public void setRowCacheCleaner(GridQueryRowCacheCleaner rowCacheCleaner) {
             try {
+                synchronized (delegatePublicationMux) {
+                    this.rowCacheCleaner = rowCacheCleaner;
+                }
+
                 CacheDataStore delegate0 = init0(true);
 
                 if (delegate0 != null)

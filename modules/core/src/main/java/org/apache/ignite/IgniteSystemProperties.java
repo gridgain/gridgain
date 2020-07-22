@@ -16,13 +16,13 @@
 
 package org.apache.ignite;
 
-import javax.net.ssl.HostnameVerifier;
 import java.io.Serializable;
 import java.lang.management.RuntimeMXBean;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -776,6 +776,16 @@ public final class IgniteSystemProperties {
      * WAL rebalance threshold.
      */
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
+
+    /**
+     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
+     * It is intended for prevent  partition divergence due to reordering in WAL.
+     * <p>
+     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
+     *
+     */
+    public static final String WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE =
+        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE";
 
     /** Ignite page memory concurrency level. */
     public static final String IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL = "IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL";
