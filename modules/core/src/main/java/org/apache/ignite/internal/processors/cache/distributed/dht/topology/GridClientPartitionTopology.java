@@ -1222,9 +1222,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onEvicted(GridDhtLocalPartition part, boolean updateSeq) {
-        assert updateSeq || lock.isWriteLockedByCurrentThread();
-
+    @Override public void onEvicted(GridDhtLocalPartition part) {
         lock.writeLock().lock();
 
         try {
@@ -1233,7 +1231,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
             assert part.state() == EVICTED;
 
-            long seq = updateSeq ? this.updateSeq.incrementAndGet() : this.updateSeq.get();
+            long seq = updateSeq.incrementAndGet();
 
             updateLocal(part.id(), cctx.localNodeId(), part.state(), seq);
 

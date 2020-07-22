@@ -458,28 +458,19 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Update topology on partition eviction and optionally refresh partition map.
+     * Update topology on partition eviction and refresh a partition map.
      *
      * @param part Evicted partition.
-     * @param updateSeq {@code True} to refresh partition maps.
      */
-    public void onPartitionEvicted(GridDhtLocalPartition part, boolean updateSeq) {
+    public void onPartitionEvicted(GridDhtLocalPartition part) {
         if (!enterBusy())
             return;
 
         try {
-            top.onEvicted(part, updateSeq);
+            top.onEvicted(part);
 
             if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
                 grp.addUnloadEvent(part.id());
-
-            if (updateSeq) {
-                if (log.isDebugEnabled())
-                    log.debug("Partitions have been scheduled to resend [reason=" +
-                        "Eviction [grp" + grp.cacheOrGroupName() + " " + part.id() + "]");
-
-                ctx.exchange().scheduleResendPartitions();
-            }
         }
         finally {
             leaveBusy();

@@ -166,13 +166,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * reservation is released. */
     private volatile long delayedRentingTopVer;
 
-    /** Set if topology update sequence should be updated on partition destroy. */
-    private boolean updateSeqOnDestroy;
-
     /** */
     private volatile IgniteInternalFuture<?> clearFut;
 
-    private AtomicBoolean clearing = new AtomicBoolean();
+    /** */
+    private final AtomicBoolean clearing = new AtomicBoolean();
 
     /**
      * @param ctx Context.
@@ -712,9 +710,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         (clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING))
             .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut) {
-                    clearFut = null;
-
-                    if (evictionRequested)
+                    if (state() == EVICTED) // A partition cannot be reused after eviction.
                         rent.onDone(fut.error());
                     else
                         clearing.set(false);
@@ -800,7 +796,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * <p>
      * Should be called by partition eviction manager to avoid deadlocks.
      */
-    public void destroy() {
+    private void destroy() {
         assert state() == EVICTED : this;
         assert evictGuard.get() == -1;
 
@@ -808,9 +804,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         destroyCacheDataStore();
 
-        rent.onDone();
-
-        ((GridDhtPreloader)grp.preloader()).onPartitionEvicted(this, updateSeqOnDestroy);
+        ((GridDhtPreloader)grp.preloader()).onPartitionEvicted(this);
 
         clearDeferredDeletes();
     }
@@ -819,8 +813,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Awaits completion of partition destroy process in case of {@code EVICTED} partition state.
      */
     public void awaitDestroy() {
-        if (state() != EVICTED)
-            return;
+        assert state() == EVICTED : this;
 
         final long timeout = 10_000;
 
@@ -837,18 +830,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 throw new IgniteException("Failed to await partition destroy " + this, e);
             }
         }
-    }
-
-    /**
-     * Adds listener on {@link #clearFuture} finish.
-     *
-     * @param lsnr Listener.
-     */
-    public void onClearFinished(IgniteInClosure<? super IgniteInternalFuture<?>> lsnr) {
-        if (clearFut != null)
-            clearFut.listen(lsnr);
-        else
-            lsnr.apply(new GridFinishedFuture<>());
     }
 
     /**
@@ -1065,7 +1046,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return Number of rows cleared from page memory.
      * @throws NodeStoppingException If node stopping.
      */
-    private long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
+    protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
         long order = ctx.versions().localOrder();
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
@@ -1155,7 +1136,20 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             finishEviction();
 
-            if (state() == EVICTED) {
+            // TODO eliminate concurrent destory for same partition.
+            if (state() == EVICTED && markForDestroy()) {
+                if (forceTestCheckpointOnEviction) {
+                    if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
+                        ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
+
+                        log.warning("Forced checkpoint by test reasons for partition: " + this);
+
+                        partWhereTestCheckpointEnforced = id;
+                    }
+                }
+
+                destroy();
+
                 List<GridDhtLocalPartition> parts = grp.topology().localPartitions();
 
                 int renting = 0;
@@ -1165,19 +1159,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         renting++;
                 }
 
-                // Refresh partitions when all evicted.
+                // Refresh partitions when all is evicted.
                 if (renting == 0)
                     ctx.exchange().scheduleResendPartitions();
-            }
-
-            if (forceTestCheckpointOnEviction) {
-                if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
-                    ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
-
-                    log.warning("Forced checkpoint by test reasons for partition: " + this);
-
-                    partWhereTestCheckpointEnforced = id;
-                }
             }
         }
         catch (NodeStoppingException e) {

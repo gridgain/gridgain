@@ -386,9 +386,8 @@ public interface GridDhtPartitionTopology {
 
     /**
      * @param part Evicted partition.
-     * @param updateSeq Update sequence increment flag.
      */
-    public void onEvicted(GridDhtLocalPartition part, boolean updateSeq);
+    public void onEvicted(GridDhtLocalPartition part);
 
     /**
      * @param nodeId Node to get partitions for.

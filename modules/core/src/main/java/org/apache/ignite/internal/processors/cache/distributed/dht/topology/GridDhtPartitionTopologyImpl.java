@@ -2832,7 +2832,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onEvicted(GridDhtLocalPartition part, boolean updateSeq) {
+    @Override public void onEvicted(GridDhtLocalPartition part) {
         ctx.database().checkpointReadLock();
 
         try {
@@ -2844,7 +2844,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 assert part.state() == EVICTED;
 
-                long seq = updateSeq ? this.updateSeq.incrementAndGet() : this.updateSeq.get();
+                long seq = this.updateSeq.incrementAndGet();
 
                 assert lastTopChangeVer.initialized() : lastTopChangeVer;
 
