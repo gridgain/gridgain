@@ -48,7 +48,7 @@ public class HistogramMetric extends AbstractMetric implements ObjectMetric<long
      * @param x Value.
      */
     public void value(long x) {
-        assert x >= 0;
+        assert x >= 0 : "x has an illegal value: " + x;
 
         HistogramHolder h = holder;
 

@@ -231,6 +231,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGE_STATS_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_ASCII;
@@ -1365,6 +1366,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         // Start starvation checker if enabled.
         boolean starveCheck = !isDaemon() && !"0".equals(intervalStr);
 
+        boolean enableStats = IgniteSystemProperties.getBoolean(IGNITE_MESSAGE_STATS_ENABLED);
+
         if (starveCheck) {
             final long interval = F.isEmpty(intervalStr) ? PERIODIC_STARVATION_CHECK_FREQ : Long.parseLong(intervalStr);
 
@@ -1399,6 +1402,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                     if (stripedExecSvc != null)
                         stripedExecSvc.detectStarvation();
+
+                    if (enableStats)
+                        ctx.io().dumpProcessedMessagesStats();
                 }
 
                 /**

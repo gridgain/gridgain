@@ -94,6 +94,9 @@ public enum IgniteFeatures {
     /** Support of cluster ID and tag. */
     CLUSTER_ID_AND_TAG(16),
 
+    /** Aggregation of message profiling data. */
+    MESSAGE_PROFILING_AGGREGATION(17),
+
     /** LRT system and user time dump settings.  */
     LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
 

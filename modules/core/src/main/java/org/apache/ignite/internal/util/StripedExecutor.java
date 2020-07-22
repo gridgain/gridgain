@@ -38,6 +38,9 @@ import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.communication.TraceRunnable;
+import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -45,7 +48,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.util.worker.GridWorkerListener;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.thread.IgniteThread;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.IntStream.range;
@@ -469,7 +474,7 @@ public class StripedExecutor implements ExecutorService {
     /**
      * Stripe.
      */
-    private abstract static class Stripe extends GridWorker {
+    public abstract static class Stripe extends GridWorker {
         /** */
         private final String igniteInstanceName;
 
@@ -600,7 +605,12 @@ public class StripedExecutor implements ExecutorService {
         /**
          * @return Queue size.
          */
-        abstract int queueSize();
+        public abstract int queueSize();
+
+        /**
+         * @return Head of stripe queue.
+         */
+        public abstract Runnable head();
 
         /**
          * @return Stripe's queue to string presentation.
@@ -614,6 +624,31 @@ public class StripedExecutor implements ExecutorService {
     }
 
     /**
+     *
+     */
+    public abstract static class StripeAwareRunnable extends TraceRunnable {
+        /**
+         * @param tracing Tracing processor.
+         * @param spanType Type of new span.
+         */
+        public StripeAwareRunnable(Tracing tracing, SpanType spanType) {
+            super(tracing, spanType);
+        }
+
+        /**
+         *
+         * @return
+         */
+        public abstract Message message();
+
+        /**
+         * Called when message is assigned to stripe before enqueuing.
+         * @param stripe Stripe.
+         */
+        public abstract void assign(Stripe stripe);
+    }
+
+    /**
      * Stripe.
      */
     private static class StripeConcurrentQueue extends Stripe {
@@ -623,7 +658,7 @@ public class StripedExecutor implements ExecutorService {
                 IgniteSystemProperties.IGNITE_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD, 4);
 
         /** Queue. */
-        private final Queue<Runnable> queue;
+        private final FastSizeDeque<Runnable> queue;
 
         /** */
         @GridToStringExclude
@@ -678,7 +713,7 @@ public class StripedExecutor implements ExecutorService {
 
             this.others = others;
 
-            this.queue = others == null ? new ConcurrentLinkedQueue<Runnable>() : new ConcurrentLinkedDeque<Runnable>();
+            this.queue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());;
         }
 
         /** {@inheritDoc} */
@@ -731,7 +766,18 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
+        @Override public Runnable head() {
+            return queue.peek();
+        }
+
+        /** {@inheritDoc} */
         @Override void execute(Runnable cmd) {
+            if (cmd instanceof StripeAwareRunnable) {
+                StripeAwareRunnable msgRunnable = (StripeAwareRunnable)cmd;
+
+                msgRunnable.assign(this);
+            }
+
             queue.add(cmd);
 
             if (parked)
@@ -751,8 +797,8 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
-        @Override int queueSize() {
-            return queue.size();
+        @Override public int queueSize() {
+            return queue.sizex();
         }
 
         /** {@inheritDoc} */
@@ -808,8 +854,13 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
-        @Override int queueSize() {
+        @Override public int queueSize() {
             return queue.size();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Runnable head() {
+            return queue.peek();
         }
 
         /** {@inheritDoc} */
@@ -865,8 +916,13 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
-        @Override int queueSize() {
+        @Override public int queueSize() {
             return queue.size();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Runnable head() {
+            return queue.peek();
         }
 
         /** {@inheritDoc} */

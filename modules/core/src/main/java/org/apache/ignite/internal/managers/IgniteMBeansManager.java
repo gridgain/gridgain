@@ -26,6 +26,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.ClusterLocalNodeMetricsMXBeanImpl;
 import org.apache.ignite.internal.ClusterMetricsMXBeanImpl;
+import org.apache.ignite.internal.DiagnosticMXBeanImpl;
 import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.StripedExecutorMXBeanAdapter;
@@ -43,6 +44,7 @@ import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.mxbean.BaselineAutoAdjustMXBean;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
 import org.apache.ignite.mxbean.DataStorageMXBean;
+import org.apache.ignite.mxbean.DiagnosticMXBean;
 import org.apache.ignite.mxbean.FailureHandlingMxBean;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
@@ -159,6 +161,9 @@ public class IgniteMBeansManager {
             registerMBean("Baseline", baselineAutoAdjustMXBean.getClass().getSimpleName(), baselineAutoAdjustMXBean,
                 BaselineAutoAdjustMXBean.class);
         }
+
+        DiagnosticMXBean diagnosticMXBean = new DiagnosticMXBeanImpl(ctx);
+        registerMBean("Diagnostic", diagnosticMXBean.getClass().getSimpleName(), diagnosticMXBean, DiagnosticMXBean.class);
 
         // Executors
         registerExecutorMBean("GridUtilityCacheExecutor", utilityCachePool);

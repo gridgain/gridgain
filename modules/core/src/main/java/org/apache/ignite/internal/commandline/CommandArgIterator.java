@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.NotNull;
 
@@ -81,6 +82,23 @@ public class CommandArgIterator {
             return argsIt.next();
 
         throw new IllegalArgumentException(err);
+    }
+
+    /**
+     * Extracts next UUID argument.
+     *
+     * @param argName Argument name.
+     * @return UUID.
+     */
+    public UUID nextUUIDArg(String argName) {
+        String str = nextArg("Expecting " + argName);
+
+        try {
+            return UUID.fromString(str);
+        }
+        catch (IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Invalid value for UUID argument " + argName + ": " + str);
+        }
     }
 
     /**

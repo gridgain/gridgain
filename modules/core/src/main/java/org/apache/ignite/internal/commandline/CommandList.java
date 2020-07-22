@@ -69,6 +69,9 @@ public enum CommandList {
     SHUTDOWN_POLICY("--shutdown-policy", new ShutdownPolicyCommand()),
 
     /** */
+    STATISTICS("--stats", new Statistics()),
+
+    /** */
     METADATA("--meta", new MetadataCommand());
 
     /** Private values copy so there's no need in cloning it every time. */

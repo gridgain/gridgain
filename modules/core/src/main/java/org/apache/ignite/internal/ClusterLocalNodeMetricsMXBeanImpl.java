@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
 

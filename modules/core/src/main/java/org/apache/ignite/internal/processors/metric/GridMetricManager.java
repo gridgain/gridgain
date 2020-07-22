@@ -39,12 +39,15 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
+import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -53,7 +56,10 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_HISTOGRAM_THRESHOLDS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.SEPARATOR;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.splitRegistryAndMetricName;
 
 /**
  * This manager should provide {@link ReadOnlyMetricRegistry} for each configured {@link MetricExporterSpi}.
@@ -150,6 +156,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Daemon thread count metric name. */
     public static final String DAEMON_THREAD_CNT = "DaemonThreadCount";
 
+    /** System metrics prefix. */
+    public static final String DIAGNOSTIC_METRICS = "diagnostic";
+
     /** PME duration metric name. */
     public static final String PME_DURATION = "Duration";
 
@@ -201,6 +210,12 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Nonheap memory metrics. */
     private final MemoryUsageMetrics nonHeap;
 
+    /** Distributed metrics configuration. */
+    private DistributedMetricsConfiguration distributedMetricsConfiguration;
+
+    /** Monitoring registry. */
+    private MetricRegistry mreg;
+
     /**
      * @param ctx Kernal context.
      */
@@ -228,6 +243,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         sysreg.register(DAEMON_THREAD_CNT, threads::getDaemonThreadCount, null);
         sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
         sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
+
+        distributedMetricsConfiguration = new DistributedMetricsConfiguration(ctx.internalSubscriptionProcessor(), log);
 
         MetricRegistry pmeReg = registry(PME_METRICS);
 
@@ -666,4 +683,20 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             max.value(usage.getMax());
         }
     }
+
+    public @Nullable Metric metricByFullName(String metricFullName) {
+        IgnitePair<String> names = splitRegistryAndMetricName(metricFullName);
+
+        if (names.get1() == null)
+            return null;
+
+        MetricRegistry registry = registry(names.get1());
+
+        return registry == null ? null : registry.findMetric(names.get1());
+    }
+
+    public DistributedMetricsConfiguration distributedMetricsConfiguration() {
+        return distributedMetricsConfiguration;
+    }
 }
+

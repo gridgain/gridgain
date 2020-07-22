@@ -57,6 +57,7 @@ import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.CommandList;
 import org.apache.ignite.internal.commandline.CommonArgParser;
+import org.apache.ignite.internal.commandline.StatisticsCommandArg;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
@@ -99,6 +100,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IN
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
+import static org.apache.ignite.internal.commandline.CommandList.STATISTICS;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
 import static org.apache.ignite.internal.commandline.CommandList.METADATA;
 import static org.apache.ignite.internal.commandline.CommandList.TRACING_CONFIGURATION;
@@ -108,6 +110,7 @@ import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.ADD;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg.StatisticsType.PROCESSING;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.testframework.GridTestUtils.LOCAL_DATETIME_REGEXP;
@@ -1759,5 +1762,28 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         execute("--help");
 
         consumer.accept(testOut.toString());
+    }
+
+    @Test
+    public void testMessageStat() {
+        boolean autoConfirmation = this.autoConfirmation;
+
+        try {
+            this.autoConfirmation = false;
+
+            execute(
+                STATISTICS.text(),
+                StatisticsCommandArg.NODE.toString(),
+                crd.localNode().id().toString(),
+                StatisticsCommandArg.STATS.toString(),
+                PROCESSING.toString()
+            );
+        }
+        catch (Throwable e) {
+            throw e;
+        }
+        finally {
+            this.autoConfirmation = autoConfirmation;
+        }
     }
 }
