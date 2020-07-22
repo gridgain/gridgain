@@ -36,19 +36,18 @@ namespace ignite
                 mem(&mem),
                 start(start),
                 idRslvr(0),
-                metaMgr(metaMgr)
+                metaMgr(metaMgr),
+                binary(false)
             {
                 if (idRslvr)
                     this->idRslvr = idRslvr->Clone();
 
-                while (true)
+                int8_t hdr = BinaryUtils::ReadInt8(mem, this->start);
+
+                if (hdr == IGNITE_TYPE_BINARY)
                 {
-                    int8_t hdr = BinaryUtils::ReadInt8(mem, this->start);
+                    binary = true;
 
-                    if (hdr != IGNITE_TYPE_BINARY)
-                        break;
-
-                    // Total length of binary object.
                     int32_t portLen = BinaryUtils::ReadInt32(mem, this->start + 1);
                     int32_t portOff = BinaryUtils::ReadInt32(mem, this->start + 5 + portLen);
 

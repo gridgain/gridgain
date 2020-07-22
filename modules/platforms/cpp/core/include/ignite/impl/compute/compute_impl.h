@@ -52,9 +52,9 @@ namespace ignite
 
                         UNICAST = 5,
 
-                        OP_AFFINITY_CALL = 13,
+                        AFFINITY_CALL = 13,
 
-                        OP_AFFINITY_RUN = 14,
+                        AFFINITY_RUN = 14,
                     };
                 };
 
@@ -89,7 +89,7 @@ namespace ignite
                     typedef ComputeJobHolderImpl<F, R> JobType;
                     typedef SingleJobComputeTaskHolder<F, R> TaskType;
 
-                    return PerformAffinityTask<R, K, F, JobType, TaskType>(cacheName, key, func, Operation::OP_AFFINITY_CALL);
+                    return PerformAffinityTask<R, K, F, JobType, TaskType>(cacheName, key, func, Operation::AFFINITY_CALL);
                 }
 
                 /**
@@ -112,7 +112,7 @@ namespace ignite
                     typedef ComputeJobHolderImpl<F, void> JobType;
                     typedef SingleJobComputeTaskHolder<F, void> TaskType;
 
-                    return PerformAffinityTask<void, K, F, JobType, TaskType>(cacheName, key, action, Operation::OP_AFFINITY_RUN);
+                    return PerformAffinityTask<void, K, F, JobType, TaskType>(cacheName, key, action, Operation::AFFINITY_RUN);
                 }
 
                 /**

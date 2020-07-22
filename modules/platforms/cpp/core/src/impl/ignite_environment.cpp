@@ -677,7 +677,9 @@ namespace ignite
             BinaryReaderImpl reader(&inStream);
 
             int64_t taskHandle = reader.ReadInt64();
-            int64_t jobHandle = reader.ReadInt64();
+
+            // Job Handle.
+            reader.ReadInt64();
 
             // Node GUID
             reader.ReadGuid();
@@ -690,17 +692,13 @@ namespace ignite
 
             compute::ComputeTaskHolder* task = task0.Get();
 
-            if (task)
-                return task->JobResultRemote(reader);
-
             if (!task)
             {
                 IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
                     "Task is not registred for handle", "taskHandle", taskHandle);
             }
 
-            IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
-                "Job is not registred for handle", "jobHandle", jobHandle);
+            return task->JobResultRemote(reader);
         }
 
         void IgniteEnvironment::ProcessorReleaseStart()
