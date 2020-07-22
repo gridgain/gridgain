@@ -265,7 +265,7 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
 
         // Just to exclude indexing module
         excluded.add("indexing");
-        excluded.add("gridgain");
+//        excluded.add("gridgain");
 
         return excluded;
     }

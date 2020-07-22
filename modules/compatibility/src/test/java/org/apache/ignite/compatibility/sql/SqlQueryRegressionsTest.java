@@ -48,6 +48,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -72,13 +73,25 @@ import org.junit.Test;
 public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /**
      * You may wanted to set this seed to particular value in case you will need to troubleshoot particular run. If it
-     * set to the value different than 0, it will be used in random generator, otherwise generator will be initialized
-     * with random seed.
+     * set to the some value (not {@code null}), it will be used in random generator, otherwise generator will be
+     * initialized with random seed.
      */
-    private static final int SEED = 0;
+    private static final Integer SEED = null;
 
-    /** Ignite version. */
-    private static final String IGNITE_VERSION = "2.8.1";
+    /** */
+    private static final String BASE_VERSION_PARAM = "BASE_VERSION";
+
+    /** */
+    private static final String BASE_IS_IGNITE_PARAM = "BASE_IS_IGNITE";
+
+    /** */
+    private static final String SEED_PARAM = "SEED";
+
+    /** */
+    private static final String DEFAULT_BASE_VERSION = "8.7.22";
+
+    /** */
+    private static final boolean DEFAULT_BASE_IS_IGNITE = false;
 
     /** */
     private static final int OLD_JDBC_PORT = 10800;
@@ -123,24 +136,27 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         MODEL_FACTORIES.stream().map(ModelFactory::queryEntity).map(Table::new).forEach(SCHEMA::addTable);
     }
 
+    /** */
+    private boolean baseIsIgnite;
+
+    /** */
+    private String ver;
+
+    /** */
+    private int seed;
+
     /** {@inheritDoc} */
     @Override protected Collection<Dependency> getDependencies(String igniteVer) {
-        Collection<Dependency> dependencies = super.getDependencies(igniteVer);
+        Collection<Dependency> dependencies = new ArrayList<>();
 
-        dependencies.add(new Dependency("indexing", "ignite-indexing", false));
+        dependencies.add(new Dependency("core", groupId(), "ignite-core", igniteVer, false));
+        dependencies.add(new Dependency("core", groupId(), "ignite-core", igniteVer, true));
+        dependencies.add(new Dependency("indexing", groupId(), "ignite-indexing", igniteVer, false));
 
-        dependencies.add(new Dependency("h2", "com.h2database", "h2", "1.4.197", false));
+        if (baseIsIgnite)
+            dependencies.add(new Dependency("h2", "com.h2database", "h2", "1.4.197", false));
 
         return dependencies;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected Set<String> getExcluded(String ver, Collection<Dependency> dependencies) {
-        Set<String> excluded = super.getExcluded(ver, dependencies);
-
-        excluded.add("h2");
-
-        return excluded;
     }
 
     /** {@inheritDoc} */
@@ -155,12 +171,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      */
     @Test
     public void testSqlPerformanceRegressions() throws Exception {
+        initParam();
+
         try {
-            final int seed = SEED == 0 ? ThreadLocalRandom.current().nextInt() : SEED;
-
-            if (log.isInfoEnabled())
-                log.info("Chosen random seed=" + seed);
-
             Supplier<String> qrySupplier = new RandomQuerySupplier(SCHEMA, seed);
 
             startOldAndNewClusters(seed);
@@ -209,9 +222,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      */
     public void startOldAndNewClusters(int seed) throws Exception {
         // Old cluster.
-        startGrid(2, IGNITE_VERSION, new NodeConfigurationClosure("0"),
+        startGrid(2, ver, new NodeConfigurationClosure("0"),
             ignite -> createTablesAndPopulateData(ignite, seed));
-        startGrid(3, IGNITE_VERSION, new NodeConfigurationClosure("1"));
+        startGrid(3, ver, new NodeConfigurationClosure("1"));
 
         // New cluster
         Ignite ignite = IgnitionEx.start(prepareNodeConfig(
@@ -220,6 +233,25 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
             getConfiguration(getTestIgniteInstanceName(1)), NEW_VER_FINDER, NEW_JDBC_PORT, "1"));
 
         createTablesAndPopulateData(ignite, seed);
+    }
+
+    /** */
+    private void initParam() {
+        String verParam = System.getProperty(BASE_VERSION_PARAM);
+        String baseIsIgniteParam = System.getProperty(BASE_IS_IGNITE_PARAM);
+        String seedParam = System.getProperty(SEED_PARAM);
+
+        ver = !F.isEmpty(verParam) ? verParam : DEFAULT_BASE_VERSION;
+        baseIsIgnite = !F.isEmpty(baseIsIgniteParam) ? Boolean.parseBoolean(baseIsIgniteParam) : DEFAULT_BASE_IS_IGNITE;
+        seed = SEED != null ? SEED : !F.isEmpty(seedParam) ? Integer.parseInt(seedParam) : ThreadLocalRandom.current().nextInt();
+
+        if (log.isInfoEnabled()) {
+            log.info("Test was started with params:\n"
+                + "\tseed=" + seed + "\n"
+                + "\tversion=" + ver + "\n"
+                + "\tbaseIsIgnite=" + baseIsIgnite + "\n"
+            );
+        }
     }
 
     /**
@@ -256,6 +288,11 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static void createTablesAndPopulateData(Ignite ignite, int seed) {
         for (ModelFactory mdlFactory : MODEL_FACTORIES)
             createAndPopulateTable(ignite, mdlFactory, seed);
+    }
+
+    /** */
+    private String groupId(){
+        return baseIsIgnite ? "org.apache.ignite" : "org.gridgain";
     }
 
     /** */
