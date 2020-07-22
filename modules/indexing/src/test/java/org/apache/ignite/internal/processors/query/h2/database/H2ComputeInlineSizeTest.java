@@ -34,7 +34,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
      * Test to check calculation of the default size for {@link StringInlineIndexColumn}.
      *
      * Steps:
-     * 1) Call {}{@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn}.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(java.util.List, int, int)} function for {@link StringInlineIndexColumn}.
      * 2) Check that computed size is equal to default length for variable types.
      */
     @Test

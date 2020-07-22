@@ -126,7 +126,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
                     if (m.find())
                         // if column has defined length we use it as default + 3 bytes for the inner info of the variable type
-                        sizeInc = Integer.parseInt(String.valueOf(m.group(1).subSequence(0, m.group(1).length()))) + 3;
+                        sizeInc = Integer.parseInt(m.group(1)) + 3;
                 }
             }
 
