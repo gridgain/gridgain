@@ -504,7 +504,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
                         rent();
                     else if (getPartState(state) == RENTING) // If was reserved in renting state continue clearing.
-                        clearAsync0();
+                        clearAsync();
                 }
 
                 return;
@@ -665,8 +665,16 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         GridDhtPartitionState partState = getPartState(state0);
 
-        if (partState == RENTING || partState == EVICTED)
+        if (partState == EVICTED)
             return rent;
+
+        if (partState == RENTING) {
+            // If for some reason a partition has stuck in renting state try restart clearing.
+            if (!clearing.get())
+                clearAsync();
+
+            return rent;
+        }
 
         // Store current topology version to check on partition release.
         delayedRentingTopVer = ctx.exchange().readyAffinityVersion().topologyVersion();
@@ -676,7 +684,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             // Evict asynchronously, as the 'rent' method may be called
             // from within write locks on local partition.
-            clearAsync0();
+            clearAsync();
         }
 
         return rent;
@@ -685,10 +693,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Starts clearing process asynchronously if it's requested and not running at the moment.
      * Method may finish clearing process ahead of time if partition is empty and doesn't have reservations.
-     *
-     * {@link GridDhtPreloader#onPartitionEvicted(GridDhtLocalPartition, boolean) onPartitionEvicted}.
      */
-    private IgniteInternalFuture<?> clearAsync0() {
+    public IgniteInternalFuture<?> clearAsync() {
         // Method expected to be called from exchange worker or rebalancing thread when rebalancing is done.
         long state = this.state.get();
 
@@ -718,15 +724,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             });
 
         return clearFut;
-    }
-
-    /**
-     * Initiates single clear process if partition is in MOVING state or continues cleaning for RENTING state.
-     * For RENTING partitions tries to evict and destroy a partition after clearing.
-     * @return Current future if a clearing is already in progress or finished future if a clearing is not required.
-     */
-    public IgniteInternalFuture<?> clearAsync() {
-        return clearAsync0();
     }
 
     /**
@@ -802,34 +799,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         destroyCacheDataStore();
 
+        // Operates under topology write lock.
         ((GridDhtPreloader)grp.preloader()).onPartitionEvicted(this);
 
         clearDeferredDeletes();
     }
-
-    /**
-     * Awaits completion of partition destroy process in case of {@code EVICTED} partition state.
-     */
-    public void awaitDestroy() {
-        assert state() == EVICTED : this;
-
-        final long timeout = 10_000;
-
-        for (;;) {
-            try {
-                rent.get(timeout);
-
-                break;
-            }
-            catch (IgniteFutureTimeoutCheckedException ignored) {
-                U.warn(log, "Failed to await partition destroy within timeout " + this);
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException("Failed to await partition destroy " + this, e);
-            }
-        }
-    }
-
     /**
      * @return {@code True} if clearing process is running at the moment on the partition.
      */

@@ -36,6 +36,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -911,7 +912,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             // Make sure that after eviction partition is destroyed.
             if (loc != null) {
-                loc.awaitDestroy();
+                awaitDestroy(loc);
 
                 recreate = true;
             }
@@ -944,6 +945,37 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         return loc;
     }
 
+    /**
+     * Awaits completion of partition destroy process in case of {@code EVICTED} partition state.
+     */
+    @SuppressWarnings("LockAcquiredButNotSafelyReleased")
+    private void awaitDestroy(GridDhtLocalPartition part) {
+        assert part.state() == EVICTED : this;
+        assert lock.isWriteLockedByCurrentThread();
+
+        final long timeout = 10_000;
+
+        lock.writeLock().unlock();
+
+        try {
+            for (; ; ) {
+                try {
+                    part.rent().get(timeout);
+
+                    break;
+                } catch (IgniteFutureTimeoutCheckedException ignored) {
+                    U.warn(log, "Failed to await partition destroy within timeout " + this);
+                } catch (IgniteCheckedException e) {
+                    throw new IgniteException("Failed to await partition destroy " + this, e);
+                }
+            }
+        }
+        finally {
+            lock.writeLock().lock();
+        }
+    }
+
+
     /** {@inheritDoc} */
     @Override public GridDhtLocalPartition forceCreatePartition(int p) throws IgniteCheckedException {
         lock.writeLock().lock();
@@ -957,7 +989,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (part.state() != EVICTED)
                     return part;
                 else {
-                    part.awaitDestroy();
+                    awaitDestroy(part);
 
                     recreate = true;
                 }
@@ -1019,7 +1051,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 if (loc != null && state == EVICTED) {
                     // Make sure that after eviction partition is destroyed.
-                    loc.awaitDestroy();
+                    awaitDestroy(loc);
 
                     recreate = true;
 

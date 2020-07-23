@@ -521,7 +521,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                 // Resubmit a partition if clearing was unsuccessful due to partition reservation.
                 if (!success)
-                    evictPartitionAsync(grpEvictionCtx.grp, part, reason);
+                    part.clearAsync();
             }
             catch (Throwable ex) {
                 finishFut.onDone(ex);
