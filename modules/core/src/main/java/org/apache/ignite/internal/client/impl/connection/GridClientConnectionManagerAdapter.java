@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 import org.apache.ignite.IgniteCheckedException;
@@ -50,7 +49,6 @@ import org.apache.ignite.internal.client.impl.GridClientThreadFactory;
 import org.apache.ignite.internal.client.marshaller.GridClientMarshaller;
 import org.apache.ignite.internal.client.marshaller.optimized.GridClientZipOptimizedMarshaller;
 import org.apache.ignite.internal.client.util.GridClientStripedLock;
-import org.apache.ignite.internal.client.util.GridClientUtils;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
@@ -67,7 +65,6 @@ import org.apache.ignite.logger.java.JavaLogger;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.logging.Level.INFO;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.client.impl.connection.GridClientConnectionCloseReason.CLIENT_CLOSED;
 import static org.apache.ignite.internal.client.impl.connection.GridClientConnectionCloseReason.FAILED;
@@ -83,7 +80,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
     private static final int INIT_RETRY_INTERVAL = 1000;
 
     /** Class logger. */
-    private final Logger log;
+    private final IgniteLogger log;
 
     /** All local enabled MACs. */
     private final Collection<String> macs;
@@ -156,7 +153,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
         this.routers = new ArrayList<>(routers);
         this.top = top;
 
-        log = Logger.getLogger(getClass().getName());
+        log = new JavaLogger(Logger.getLogger(getClass().getName()));
 
         executor = cfg.getExecutorService() != null ? cfg.getExecutorService() :
             Executors.newCachedThreadPool(new GridClientThreadFactory("exec", true));
@@ -415,7 +412,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
             catch (Exception e) {
                 if (cause == null)
                     cause = e;
-                else if (log.isLoggable(INFO))
+                else if (log.isInfoEnabled())
                     log.info("Unable to connect to grid node [srvAddr=" + srv + ", msg=" + e.getMessage() + ']');
             }
         }
@@ -512,8 +509,8 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
     /** {@inheritDoc} */
     @Override public void terminateConnection(GridClientConnection conn, GridClientNode node, Throwable e) {
-        if (log.isLoggable(Level.FINE))
-            log.fine("Connection with remote node was terminated [node=" + node + ", srvAddr=" +
+        if (log.isDebugEnabled())
+            log.debug("Connection with remote node was terminated [node=" + node + ", srvAddr=" +
                 conn.serverAddress() + ", errMsg=" + e.getMessage() + ']');
 
         closeIdle();
@@ -548,9 +545,9 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
             conn.close(CLIENT_CLOSED, waitCompletion);
 
         if (pingExecutor != null)
-            GridClientUtils.shutdownNow(GridClientConnectionManager.class, pingExecutor, log);
+            U.shutdownNow(GridClientConnectionManager.class, pingExecutor, log);
 
-        GridClientUtils.shutdownNow(GridClientConnectionManager.class, executor, log);
+        U.shutdownNow(GridClientConnectionManager.class, executor, log);
 
         if (srv != null)
             srv.stop();
@@ -593,25 +590,25 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
      */
     private static class NioListener implements GridNioServerListener {
         /** */
-        private final Logger log;
+        private final IgniteLogger log;
 
         /**
          * @param log Logger.
          */
-        private NioListener(Logger log) {
+        private NioListener(IgniteLogger log) {
             this.log = log;
         }
 
         /** {@inheritDoc} */
         @Override public void onConnected(GridNioSession ses) {
-            if (log.isLoggable(Level.FINE))
-                log.fine("Session connected: " + ses);
+            if (log.isDebugEnabled())
+                log.debug("Session connected: " + ses);
         }
 
         /** {@inheritDoc} */
         @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
-            if (log.isLoggable(Level.FINE))
-                log.fine("Session disconnected: " + ses);
+            if (log.isDebugEnabled())
+                log.debug("Session disconnected: " + ses);
 
             GridClientFutureAdapter<Boolean> handshakeFut =
                 ses.removeMeta(GridClientNioTcpConnection.SES_META_HANDSHAKE);
@@ -654,7 +651,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                         conn.handleResponse((GridClientMessage)msg);
                     }
                     catch (IOException e) {
-                        log.log(Level.SEVERE, "Failed to parse response.", e);
+                        log.error("Failed to parse response.", e);
                     }
                 }
             }
@@ -685,16 +682,16 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
         /** {@inheritDoc} */
         @Override public void onSessionWriteTimeout(GridNioSession ses) {
-            if (log.isLoggable(Level.FINE))
-                log.fine("Closing NIO session because of write timeout.");
+            if (log.isDebugEnabled())
+                log.debug("Closing NIO session because of write timeout.");
 
             ses.close();
         }
 
         /** {@inheritDoc} */
         @Override public void onSessionIdleTimeout(GridNioSession ses) {
-            if (log.isLoggable(Level.FINE))
-                log.fine("Closing NIO session because of idle timeout.");
+            if (log.isDebugEnabled())
+                log.debug("Closing NIO session because of idle timeout.");
 
             ses.close();
         }
