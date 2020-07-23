@@ -51,6 +51,7 @@ public abstract class AbstractInlineIndexColumn implements InlineIndexColumn {
      */
     protected AbstractInlineIndexColumn(Column col, int type, short size) {
         assert col.getType().getValueType() == type : "columnType=" + col.getType().getValueType() + ", type=" + type;
+        assert size != 0;
 
         this.col = col;
         this.type = type;
@@ -88,6 +89,11 @@ public abstract class AbstractInlineIndexColumn implements InlineIndexColumn {
             return size + 1;
         else
             return (PageUtils.getShort(pageAddr, off + 1) & 0x7FFF) + 3;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String columnSql() {
+        return col.getOriginalSQL();
     }
 
     /**
