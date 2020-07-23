@@ -1335,7 +1335,7 @@ public class GridDhtPartitionDemander {
                                 @Override public void apply(IgniteInternalFuture<?> fut) {
                                     int remaining = waitCnt.decrementAndGet();
 
-                                    updateMetrics(remaining);
+                                    updateClearingPartitionsMetric(remaining);
 
                                     if (fut.error() != null) {
                                         tryCancel();
@@ -1343,7 +1343,7 @@ public class GridDhtPartitionDemander {
                                         log.error("Failed to wait for a partition clearing, cancelling rebalancing for " +
                                             "a group [grp=" + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
 
-                                        updateMetrics(0);
+                                        updateClearingPartitionsMetric(0);
 
                                         return;
                                     }
@@ -1358,7 +1358,12 @@ public class GridDhtPartitionDemander {
                         }
 
                         if (fullSetSize > 0)
-                            updateMetrics(fullSetSize);
+                            updateClearingPartitionsMetric(fullSetSize);
+                        else if (!e.getValue().partitions().historicalSet().isEmpty()) {
+                            ctx.kernalContext().closure().runLocalSafe(() -> {
+                                requestPartitions0(supplierNode, parts, d);
+                            });
+                        }
                     }
                     else {
                         ctx.kernalContext().closure().runLocalSafe(() -> {
@@ -1370,14 +1375,14 @@ public class GridDhtPartitionDemander {
         }
 
         /**
-         * @param rebalancing Rebalancing partitions.
+         * @param clearing Clearing partitions.
          */
-        private void updateMetrics(int rebalancing) {
+        private void updateClearingPartitionsMetric(int clearing) {
             for (GridCacheContext cctx : grp.caches()) {
                 if (cctx.statisticsEnabled()) {
                     final CacheMetricsImpl metrics = cctx.cache().metrics0();
 
-                    metrics.rebalanceClearingPartitions(rebalancing);
+                    metrics.rebalanceClearingPartitions(clearing);
                 }
             }
         }
