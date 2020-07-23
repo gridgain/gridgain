@@ -864,6 +864,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 consistencyCheck();
 
+                /** Increment order for subsequent eviction, see {@link #onEvicted(GridDhtLocalPartition)} */
+                if (changed)
+                    this.updateSeq.incrementAndGet();
+
                 if (log.isTraceEnabled()) {
                     log.trace("Partition states after afterExchange [grp=" + grp.cacheOrGroupName()
                         + ", exchVer=" + exchFut.exchangeId() + ", states=" + dumpPartitionStates() + ']');
@@ -1778,6 +1782,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "Full map update [grp" + grp.cacheOrGroupName() + "]");
 
                     ctx.exchange().scheduleResendPartitions();
+
+                    /** Increment order for subsequent eviction, see {@link #onEvicted(GridDhtLocalPartition)} */
+                    this.updateSeq.incrementAndGet();
                 }
 
                 return changed;
@@ -2052,6 +2059,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "Single map update [grp" + grp.cacheOrGroupName() + "]");
 
                     ctx.exchange().scheduleResendPartitions();
+
+                    /** Increment order for subsequent eviction, see {@link #onEvicted(GridDhtLocalPartition)} */
+                    if (changed)
+                        this.updateSeq.incrementAndGet();
                 }
 
                 return changed;
@@ -2579,6 +2590,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      */
     @SuppressWarnings("unchecked")
     private boolean checkEvictions(long updateSeq, AffinityAssignment aff) {
+        assert lock.isWriteLockedByCurrentThread();
+
         if (!ctx.kernalContext().state().evictionsAllowed())
             return false;
 
@@ -2653,38 +2666,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
             }
         }
-        // Partition state is sent after all renting partitions are evicted.
-
-        // After all rents are finished resend partitions.
-//        if (!rentingFutures.isEmpty()) {
-//            final AtomicInteger rentingPartitions = new AtomicInteger(rentingFutures.size());
-//
-//            IgniteInClosure c = new IgniteInClosure() {
-//                @Override public void apply(Object o) {
-//                    int remaining = rentingPartitions.decrementAndGet();
-//
-//                    if (remaining == 0) {
-//                        lock.writeLock().lock();
-//
-//                        try {
-//                            GridDhtPartitionTopologyImpl.this.updateSeq.incrementAndGet();
-//
-//                            if (log.isDebugEnabled())
-//                                log.debug("Partitions have been scheduled to resend [reason=" +
-//                                    "Evictions are done [grp=" + grp.cacheOrGroupName() + "]");
-//
-//                            ctx.exchange().scheduleResendPartitions();
-//                        }
-//                        finally {
-//                            lock.writeLock().unlock();
-//                        }
-//                    }
-//                }
-//            };
-//
-//            for (IgniteInternalFuture<?> rentingFuture : rentingFutures)
-//                rentingFuture.listen(c);
-//        }
 
         return hasEvictedPartitions;
     }
@@ -2876,11 +2857,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 assert part.state() == EVICTED;
 
-                long seq = this.updateSeq.incrementAndGet();
-
                 assert lastTopChangeVer.initialized() : lastTopChangeVer;
 
-                updateLocal(part.id(), part.state(), seq, lastTopChangeVer);
+                // Do not increment order because it was already incremented.
+                updateLocal(part.id(), part.state(), updateSeq.get(), lastTopChangeVer);
 
                 consistencyCheck();
             }
