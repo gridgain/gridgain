@@ -647,7 +647,11 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ig0 = startGrid(0);
         IgniteEx ig1 = startGrid(1);
 
-        ig1.configuration().getWorkDirectory();
+        String ig1Folder = ig1.context().pdsFolderResolver().resolveFolders().folderName();
+        File dbDir = U.resolveWorkDirectory(ig1.configuration().getWorkDirectory(), "db", false);
+
+        File ig1LfsDir = new File(dbDir, ig1Folder);
+        File ig1CpDir = new File(ig1LfsDir, "cp");
 
         ig0.cluster().baselineAutoAdjustEnabled(false);
         ig0.cluster().state(ClusterState.ACTIVE);
@@ -663,7 +667,31 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         dbMrg0.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
         dbMrg1.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
 
+        stopGrid(1);
+
+        for (int k = 2500; k < 5000; k++)
+            cache.put(k, k);
+
+        ig1 = startGrid(1);
+
+        awaitExchange(ig1);
+
         stopAllGrids(false);
+
+        File[] cpMarkers = ig1CpDir.listFiles();
+
+        for (File cpMark : cpMarkers) {
+            if (cpMark.getName().contains("-END"))
+                cpMark.delete();
+        }
+
+        ig1 = startGrid(1);
+        ig1.cluster().state(ClusterState.ACTIVE);
+
+        cache = ig1.cache(DEFAULT_CACHE_NAME);
+
+        for (int k = 0; k < 2500; k++)
+            assertFalse(cache.containsKey(k));
     }
 
     /**

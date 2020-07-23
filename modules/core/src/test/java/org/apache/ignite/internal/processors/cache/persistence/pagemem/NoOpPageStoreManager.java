@@ -210,11 +210,6 @@ public class NoOpPageStoreManager implements IgnitePageStoreManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void beforeCacheGroupStart(CacheGroupDescriptor grpDesc) {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
     @Override public void onActivate(GridKernalContext kctx) {
         // No-op.
     }
