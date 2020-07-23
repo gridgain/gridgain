@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -80,13 +79,11 @@ import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.GridLeanSet;
-import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
-import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CIX1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -110,10 +107,10 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOO
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
-import static org.apache.ignite.transactions.TransactionState.PREPARED;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_DHT_PREPARE;
+import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
+import static org.apache.ignite.transactions.TransactionState.PREPARED;
 
 /**
  *
@@ -213,9 +210,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /** Keys that should be locked. */
     @GridToStringInclude
     private final Set<IgniteTxKey> lockKeys = new HashSet<>();
-
-    /** Force keys future for correct transforms. */
-    private IgniteInternalFuture<?> forceKeysFut;
 
     /** Locks ready flag. */
     private volatile boolean locksReady;
@@ -720,29 +714,11 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                     return true; // Should not proceed with prepare if tx is already timed out.
             }
 
-            if (forceKeysFut == null || (forceKeysFut.isDone() && forceKeysFut.error() == null))
-                try {
-                    prepare0();
-                }
-                catch (IgniteTxRollbackCheckedException e) {
-                    onError(e);
-                }
-            else {
-                forceKeysFut.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> f) {
-                        try {
-                            f.get();
-
-                            prepare0();
-                        }
-                        catch (IgniteCheckedException e) {
-                            onError(e);
-                        }
-                        finally {
-                            cctx.txContextReset();
-                        }
-                    }
-                });
+            try {
+                prepare0();
+            }
+            catch (IgniteTxRollbackCheckedException e) {
+                onError(e);
             }
 
             return true;
@@ -1089,20 +1065,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             boolean ser = tx.serializable() && tx.optimistic();
 
-            if (!F.isEmpty(req.writes()) || (ser && !F.isEmpty(req.reads()))) {
-                Map<Integer, Collection<KeyCacheObject>> forceKeys = null;
-
-                for (IgniteTxEntry entry : req.writes())
-                    forceKeys = checkNeedRebalanceKeys(entry, forceKeys);
-
-                if (ser) {
-                    for (IgniteTxEntry entry : req.reads())
-                        forceKeys = checkNeedRebalanceKeys(entry, forceKeys);
-                }
-
-                forceKeysFut = forceRebalanceKeys(forceKeys);
-            }
-
             readyLocks();
 
             // Start timeout tracking after 'readyLocks' to avoid race with timeout processing.
@@ -1133,78 +1095,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         }
 
         return Boolean.TRUE.equals(node.attribute(ATTR_VALIDATE_CACHE_REQUESTS));
-    }
-
-    /**
-     * Checks if this transaction needs previous value for the given tx entry. Will use passed in map to store
-     * required key or will create new map if passed in map is {@code null}.
-     *
-     * @param e TX entry.
-     * @param map Map with needed preload keys.
-     * @return Map if it was created.
-     */
-    private Map<Integer, Collection<KeyCacheObject>> checkNeedRebalanceKeys(
-        IgniteTxEntry e,
-        Map<Integer, Collection<KeyCacheObject>> map
-    ) {
-        if (retVal ||
-            !F.isEmpty(e.entryProcessors()) ||
-            !F.isEmpty(e.filters()) ||
-            e.entryReadVersion() != null) {
-            if (map == null)
-                map = new HashMap<>();
-
-            Collection<KeyCacheObject> keys = map.get(e.cacheId());
-
-            if (keys == null) {
-                keys = new ArrayList<>();
-
-                map.put(e.cacheId(), keys);
-            }
-
-            keys.add(e.key());
-        }
-
-        return map;
-    }
-
-    /**
-     * @param keysMap Keys to request.
-     * @return Keys request future.
-     */
-    private IgniteInternalFuture<Object> forceRebalanceKeys(Map<Integer, Collection<KeyCacheObject>> keysMap) {
-        if (F.isEmpty(keysMap))
-            return null;
-
-        GridCompoundFuture<Object, Object> compFut = null;
-        IgniteInternalFuture<Object> lastForceFut = null;
-
-        for (Map.Entry<Integer, Collection<KeyCacheObject>> entry : keysMap.entrySet()) {
-            if (lastForceFut != null && compFut == null) {
-                compFut = new GridCompoundFuture();
-
-                compFut.add(lastForceFut);
-            }
-
-            int cacheId = entry.getKey();
-
-            Collection<KeyCacheObject> keys = entry.getValue();
-
-            GridCacheContext ctx = cctx.cacheContext(cacheId);
-
-            lastForceFut = ctx.group().preloader().request(ctx, keys, tx.topologyVersion());
-
-            if (compFut != null && lastForceFut != null)
-                compFut.add(lastForceFut);
-        }
-
-        if (compFut != null) {
-            compFut.markInitialized();
-
-            return compFut;
-        }
-        else
-            return lastForceFut;
     }
 
     /**

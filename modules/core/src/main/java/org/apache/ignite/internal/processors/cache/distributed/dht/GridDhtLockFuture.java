@@ -45,7 +45,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheMappedVersion;
@@ -58,7 +57,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccUpdateVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.dr.GridDrType;
@@ -866,6 +864,10 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
             if (log.isDebugEnabled())
                 log.debug("Mapping entry for DHT lock future: " + this);
 
+            // This all should go away after GG-19461.
+            if (tx != null)
+                return;
+
             // Assign keys to primary nodes.
             for (GridDhtCacheEntry entry : entries) {
                 try {
@@ -964,43 +966,13 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                             for (ListIterator<GridDhtCacheEntry> it = dhtMapping.listIterator(); it.hasNext(); ) {
                                 GridDhtCacheEntry e = it.next();
 
-                                boolean needVal = false;
-
                                 try {
                                     // Must unswap entry so that isNewLocked returns correct value.
                                     e.unswap(false);
 
-                                    needVal = e.isNewLocked();
-
-                                    if (needVal) {
-                                        List<ClusterNode> owners = cctx.topology().owners(e.partition(),
-                                            tx != null ? tx.topologyVersion() : cctx.affinity().affinityTopologyVersion());
-
-                                        // Do not preload if local node is partition owner.
-                                        if (owners.contains(cctx.localNode()))
-                                            needVal = false;
-                                    }
-
-                                    // Skip entry if it is not new and is not present in updated mapping.
-                                    if (tx != null && !needVal)
-                                        continue;
-
                                     boolean invalidateRdr = e.readerId(n.id()) != null;
 
                                     req.addDhtKey(e.key(), invalidateRdr, cctx);
-
-                                    if (needVal) {
-                                        // Mark last added key as needed to be preloaded.
-                                        req.markLastKeyForPreload();
-
-                                        if (tx != null) {
-                                            IgniteTxEntry txEntry = tx.entry(e.txKey());
-
-                                            // NOOP entries will be sent to backups on prepare step.
-                                            if (txEntry.op() == GridCacheOperation.READ)
-                                                txEntry.op(GridCacheOperation.NOOP);
-                                        }
-                                    }
 
                                     GridCacheMvccCandidate added = e.candidate(lockVer);
 

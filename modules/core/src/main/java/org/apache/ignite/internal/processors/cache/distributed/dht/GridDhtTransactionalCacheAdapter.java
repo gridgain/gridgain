@@ -31,7 +31,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
@@ -50,7 +49,6 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCa
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -198,13 +196,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             new MessageHandler<GridDhtForceKeysRequest>() {
                 @Override public void onMessage(ClusterNode node, GridDhtForceKeysRequest msg) {
                     processForceKeysRequest(node, msg);
-                }
-            });
-
-        ctx.io().addCacheHandler(ctx.cacheId(), GridDhtForceKeysResponse.class,
-            new MessageHandler<GridDhtForceKeysResponse>() {
-                @Override public void onMessage(ClusterNode node, GridDhtForceKeysResponse msg) {
-                    processForceKeyResponse(node, msg);
                 }
             });
 
@@ -475,45 +466,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 ", node=" + nodeId + ']');
         }
 
-        IgniteInternalFuture<Object> keyFut = F.isEmpty(req.keys()) ? null :
-            ctx.group().preloader().request(ctx, req.keys(), req.topologyVersion());
-
-        if (keyFut == null || keyFut.isDone()) {
-            if (keyFut != null) {
-                try {
-                    keyFut.get();
-                }
-                catch (NodeStoppingException ignored) {
-                    return;
-                }
-                catch (IgniteCheckedException e) {
-                    onForceKeysError(nodeId, req, e);
-
-                    return;
-                }
-            }
-
-            processDhtLockRequest0(nodeId, req);
-        }
-        else {
-            keyFut.listen(new CI1<IgniteInternalFuture<Object>>() {
-                @Override public void apply(IgniteInternalFuture<Object> fut) {
-                    try {
-                        fut.get();
-                    }
-                    catch (NodeStoppingException ignored) {
-                        return;
-                    }
-                    catch (IgniteCheckedException e) {
-                        onForceKeysError(nodeId, req, e);
-
-                        return;
-                    }
-
-                    processDhtLockRequest0(nodeId, req);
-                }
-            });
-        }
+        processDhtLockRequest0(nodeId, req);
     }
 
     /**
