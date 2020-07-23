@@ -864,10 +864,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 consistencyCheck();
 
-                /** Increment order for subsequent eviction, see {@link #onEvicted(GridDhtLocalPartition)} */
-                if (changed)
-                    this.updateSeq.incrementAndGet();
-
                 if (log.isTraceEnabled()) {
                     log.trace("Partition states after afterExchange [grp=" + grp.cacheOrGroupName()
                         + ", exchVer=" + exchFut.exchangeId() + ", states=" + dumpPartitionStates() + ']');
@@ -915,11 +911,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             boolean recreate = false;
 
             // Make sure that after eviction partition is destroyed.
-            if (loc != null) {
-                awaitDestroy(loc);
-
+            if (loc != null)
                 recreate = true;
-            }
 
             locParts.set(p, loc = partFactory.create(ctx, grp, p, false));
 
@@ -992,11 +985,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (part != null) {
                 if (part.state() != EVICTED)
                     return part;
-                else {
-                    awaitDestroy(part);
-
+                else
                     recreate = true;
-                }
             }
 
             part = partFactory.create(ctx, grp, p, true);
@@ -1054,9 +1044,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 boolean recreate = false;
 
                 if (loc != null && state == EVICTED) {
-                    // Make sure that after eviction partition is destroyed.
-                    awaitDestroy(loc);
-
                     recreate = true;
 
                     locParts.set(p, loc = null);
@@ -1782,9 +1769,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "Full map update [grp" + grp.cacheOrGroupName() + "]");
 
                     ctx.exchange().scheduleResendPartitions();
-
-                    /** Increment order for subsequent eviction, see {@link #onEvicted(GridDhtLocalPartition)} */
-                    this.updateSeq.incrementAndGet();
                 }
 
                 return changed;
@@ -2059,10 +2043,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "Single map update [grp" + grp.cacheOrGroupName() + "]");
 
                     ctx.exchange().scheduleResendPartitions();
-
-                    /** Increment order for subsequent eviction, see {@link #onEvicted(GridDhtLocalPartition)} */
-                    if (changed)
-                        this.updateSeq.incrementAndGet();
                 }
 
                 return changed;
@@ -2845,7 +2825,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onEvicted(GridDhtLocalPartition part) {
+    @Override public boolean tryEvict(GridDhtLocalPartition part) {
         ctx.database().checkpointReadLock();
 
         try {
@@ -2853,16 +2833,42 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             try {
                 if (stopping)
-                    return;
+                    return false;
 
-                assert part.state() == EVICTED;
+                part.finishEviction();
+
+                if (part.state() != EVICTED)
+                    return false;
+
+                long seq = this.updateSeq.incrementAndGet();
 
                 assert lastTopChangeVer.initialized() : lastTopChangeVer;
 
-                // Do not increment order because it was already incremented.
-                updateLocal(part.id(), part.state(), updateSeq.get(), lastTopChangeVer);
+                updateLocal(part.id(), part.state(), seq, lastTopChangeVer);
 
                 consistencyCheck();
+
+                // Write lock protects from concurrent partition creation.
+                grp.onPartitionEvicted(part.id());
+
+                part.destroyCacheDataStore();
+
+                part.clearDeferredDeletes();
+
+                List<GridDhtLocalPartition> parts = localPartitions();
+
+                int renting = 0;
+
+                for (GridDhtLocalPartition part0 : parts) {
+                    if (part0.state() == RENTING)
+                        renting++;
+                }
+
+                // Refresh partitions when all is evicted and local map is updated.
+                if (renting == 0)
+                    ctx.exchange().scheduleResendPartitions();
+
+                return true;
             }
             finally {
                 lock.writeLock().unlock();

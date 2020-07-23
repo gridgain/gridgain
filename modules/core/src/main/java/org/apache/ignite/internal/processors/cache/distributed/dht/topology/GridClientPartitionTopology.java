@@ -1222,12 +1222,12 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onEvicted(GridDhtLocalPartition part) {
+    @Override public boolean tryEvict(GridDhtLocalPartition part) {
         lock.writeLock().lock();
 
         try {
             if (stopping)
-                return;
+                return false;
 
             assert part.state() == EVICTED;
 
@@ -1236,6 +1236,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             updateLocal(part.id(), cctx.localNodeId(), part.state(), seq);
 
             consistencyCheck();
+
+            return true;
         }
         finally {
             lock.writeLock().unlock();

@@ -448,10 +448,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             return;
 
         try {
-            top.onEvicted(part);
-
-            if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
-                grp.addUnloadEvent(part.id());
+            if (top.tryEvict(part)) {
+                if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
+                    grp.addUnloadEvent(part.id());
+            }
         }
         finally {
             leaveBusy();

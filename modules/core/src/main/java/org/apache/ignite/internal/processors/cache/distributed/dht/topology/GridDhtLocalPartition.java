@@ -771,7 +771,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Moves partition state to {@code EVICTED} if possible.
      * and initiates partition destroy process after successful moving partition state to {@code EVICTED} state.
      */
-    private void finishEviction() {
+    public void finishEviction() {
         long state0 = this.state.get();
 
         GridDhtPartitionState state = getPartState(state0);
@@ -792,17 +792,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Should be called by partition eviction manager to avoid deadlocks.
      */
     private void destroy() {
-        assert state() == EVICTED : this;
-        assert evictGuard.get() == -1;
-
-        grp.onPartitionEvicted(id);
-
-        destroyCacheDataStore();
+//        assert state() == EVICTED : this;
+//        assert evictGuard.get() == -1;
 
         // Operates under topology write lock.
         ((GridDhtPreloader)grp.preloader()).onPartitionEvicted(this);
-
-        clearDeferredDeletes();
     }
     /**
      * @return {@code True} if clearing process is running at the moment on the partition.
@@ -844,7 +838,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Release created data store for this partition.
      */
-    private void destroyCacheDataStore() {
+    public void destroyCacheDataStore() {
         try {
             grp.offheap().destroyCacheDataStore(dataStore());
         }
@@ -1116,25 +1110,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
             }
 
-            finishEviction();
-
-            // TODO eliminate concurrent destory for same partition.
-            if (state() == EVICTED && markForDestroy()) {
-                destroy();
-
-                List<GridDhtLocalPartition> parts = grp.topology().localPartitions();
-
-                int renting = 0;
-
-                for (GridDhtLocalPartition part : parts) {
-                    if (part.state() == RENTING)
-                        renting++;
-                }
-
-                // Refresh partitions when all is evicted and local map is updated.
-                if (renting == 0)
-                    ctx.exchange().scheduleResendPartitions();
-            }
+            destroy();
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())
@@ -1211,7 +1187,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Removes all deferred delete requests from {@code rmvQueue}.
      */
-    private void clearDeferredDeletes() {
+    public void clearDeferredDeletes() {
         for (RemovedEntryHolder e : rmvQueue)
             removeVersionedEntry(e.cacheId(), e.key(), e.version());
     }

@@ -386,8 +386,9 @@ public interface GridDhtPartitionTopology {
 
     /**
      * @param part Evicted partition.
+     * @return {@code True} if a partition was destroyed by this call.
      */
-    public void onEvicted(GridDhtLocalPartition part);
+    public boolean tryEvict(GridDhtLocalPartition part);
 
     /**
      * @param nodeId Node to get partitions for.
