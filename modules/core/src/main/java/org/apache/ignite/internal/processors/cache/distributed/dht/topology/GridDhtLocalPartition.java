@@ -773,8 +773,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Moves partition state to {@code EVICTED} if possible.
      * and initiates partition destroy process after successful moving partition state to {@code EVICTED} state.
-     *
-     * @param updateSeq If {@code true} increment update sequence on cache group topology after successful eviction.
      */
     private void finishEviction() {
         long state0 = this.state.get();
@@ -1134,20 +1132,20 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
             }
 
+            if (forceTestCheckpointOnEviction) {
+                if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
+                    ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
+
+                    log.warning("Forced checkpoint by test reasons for partition: " + this);
+
+                    partWhereTestCheckpointEnforced = id;
+                }
+            }
+
             finishEviction();
 
             // TODO eliminate concurrent destory for same partition.
             if (state() == EVICTED && markForDestroy()) {
-                if (forceTestCheckpointOnEviction) {
-                    if (partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
-                        ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
-
-                        log.warning("Forced checkpoint by test reasons for partition: " + this);
-
-                        partWhereTestCheckpointEnforced = id;
-                    }
-                }
-
                 destroy();
 
                 List<GridDhtLocalPartition> parts = grp.topology().localPartitions();
@@ -1159,7 +1157,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         renting++;
                 }
 
-                // Refresh partitions when all is evicted.
+                // Refresh partitions when all is evicted and local map is updated.
                 if (renting == 0)
                     ctx.exchange().scheduleResendPartitions();
             }
