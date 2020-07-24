@@ -44,6 +44,11 @@ namespace Apache.Ignite.Core
         long TotalAllocatedSize { get; }
 
         /// <summary>
+        /// Gets a total number of pages used for storing the data.
+        /// </summary>
+        long TotalUsedSize { get; }
+
+        /// <summary>
         /// Gets the allocation rate, in pages per second.
         /// </summary>
         float AllocationRate { get; }
