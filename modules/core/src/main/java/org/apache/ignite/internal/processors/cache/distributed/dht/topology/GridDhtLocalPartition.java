@@ -290,7 +290,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             return hld;
 
         CacheMapHolder old = cacheMaps.putIfAbsent(cctx.cacheIdBoxed(), hld = ctx.kernalContext().resource().resolve(
-            new CacheMapHolder(grp.singleCacheContext(), createEntriesMap())));
+            new CacheMapHolder(cctx, createEntriesMap())));
 
         if (old != null)
             hld = old;
