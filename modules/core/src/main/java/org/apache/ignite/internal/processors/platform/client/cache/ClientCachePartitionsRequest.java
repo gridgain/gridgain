@@ -76,11 +76,10 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (cacheDesc == null)
                 continue;
 
-            ClientCachePartitionMapping mapping = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
-
-            // Cache already processed.
-            if (mapping == null)
+            if (fillGroup(groups, cacheGroupIds, cacheDesc))
                 continue;
+
+            ClientCachePartitionMapping mapping = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
 
             // Mapping is new and is not contained in the current list.
             CacheObjectBinaryProcessorImpl proc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
@@ -98,10 +97,38 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (!cacheDesc.cacheType().userCache())
                 continue;
 
+            if (fillGroup(groups, cacheGroupIds, cacheDesc))
+                continue;
+
             processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
         }
 
         return new ClientCachePartitionsResponse(requestId(), groups, affinityVer);
+    }
+
+    /**
+     * Get the cache group and if it exists add cache description to it.
+     *
+     * @param groups
+     * @param cacheGroupIds
+     * @param cacheDesc
+     * @return {@code true} if group already exists.
+     */
+    private static boolean fillGroup(List<ClientCachePartitionAwarenessGroup> groups,
+                                     Map<Integer, ClientCachePartitionAwarenessGroup> cacheGroupIds,
+                                     DynamicCacheDescriptor cacheDesc) {
+        int cacheGroupId = cacheDesc.groupId();
+
+        ClientCachePartitionAwarenessGroup group = cacheGroupIds.get(cacheGroupId);
+        if (group != null) {
+            // Cache group is found. It means that cache belongs to one of cache groups with known mapping.
+            // Just adding our cache to this group here.
+            group.addCache(cacheDesc);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -123,15 +150,6 @@ public class ClientCachePartitionsRequest extends ClientRequest {
         int cacheGroupId = cacheDesc.groupId();
         int cacheId = cacheDesc.cacheId();
 
-        ClientCachePartitionAwarenessGroup group = cacheGroupIds.get(cacheGroupId);
-        if (group != null) {
-            // Cache group is found. It means that cache belongs to one of cache groups with known mapping.
-            // Just adding our cache to this group here.
-            group.addCache(cacheDesc);
-
-            return null;
-        }
-
         AffinityAssignment assignment = getCacheAssignment(ctx, affinityVer, cacheId);
 
         // If assignment is not available for the cache for required affinity version, ignore the cache.
@@ -142,7 +160,7 @@ public class ClientCachePartitionsRequest extends ClientRequest {
         if (isApplicable(cacheDesc.cacheConfiguration()))
             mapping = new ClientCachePartitionMapping(cacheId, assignment);
 
-        group = getCompatibleGroup(groups, mapping);
+        ClientCachePartitionAwarenessGroup group = getCompatibleGroup(groups, mapping);
         if (group != null) {
             group.addCache(cacheDesc);
             cacheGroupIds.put(cacheGroupId, group);
