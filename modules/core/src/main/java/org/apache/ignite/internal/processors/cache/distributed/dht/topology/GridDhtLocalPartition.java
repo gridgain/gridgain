@@ -194,7 +194,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             cacheMaps = new IntRWHashMap<>();
         }
         else {
-            singleCacheEntryMap = new CacheMapHolder(grp.singleCacheContext(), createEntriesMap());
+            singleCacheEntryMap = ctx.kernalContext().resource().resolve(
+                new CacheMapHolder(grp.singleCacheContext(), createEntriesMap()));
+
             cacheMaps = null;
         }
 
@@ -287,7 +289,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (hld != null)
             return hld;
 
-        CacheMapHolder old = cacheMaps.putIfAbsent(cctx.cacheIdBoxed(), hld = new CacheMapHolder(cctx, createEntriesMap()));
+        CacheMapHolder old = cacheMaps.putIfAbsent(cctx.cacheIdBoxed(), hld = ctx.kernalContext().resource().resolve(
+            new CacheMapHolder(grp.singleCacheContext(), createEntriesMap())));
 
         if (old != null)
             hld = old;
