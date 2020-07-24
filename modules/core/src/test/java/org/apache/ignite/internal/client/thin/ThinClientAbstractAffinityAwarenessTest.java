@@ -129,6 +129,8 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         super.afterTest();
 
         opsQueue.clear();
+
+        client.close();
     }
 
     /**
