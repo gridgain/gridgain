@@ -716,7 +716,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         (clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING))
             .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut) {
-                    if (state() == EVICTED) // A partition cannot be reused after eviction.
+                    if (state() == EVICTED) // A partition cannot be reused after the eviction.
                         rent.onDone(fut.error());
                     else
                         clearing.set(false);
@@ -803,36 +803,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     public boolean isClearing() {
         return clearing.get();
-    }
-
-    /**
-     * Tries to start partition clear process {@link GridDhtLocalPartition#clearAll(EvictionContext)}).
-     * Only one thread is allowed to do such process concurrently.
-     * At the end of clearing method completes {@code clearFuture}.
-     * Should not be called directly.
-     * TODO remove method.
-     *
-     * @param evictionCtx Eviction context.
-     *
-     * @return {@code false} if clearing is not started due to existing reservations.
-     * @throws Exception If failed.
-     */
-    public boolean tryClear(EvictionContext evictionCtx) throws Exception {
-        long state = this.state.get();
-
-        // TODO prevent reservations while clearing condition.
-        if (getReservations(state) != 0 || groupReserved())
-            return false;
-
-        //if (addEvicting()) {
-        long clearedEntities = clearAll(evictionCtx);
-
-        if (log.isDebugEnabled())
-            log.debug("Partition has been cleared [grp=" + grp.cacheOrGroupName()
-                + ", p=" + id + ", state=" + state() + ", clearedCnt=" + clearedEntities + "]");
-        //}
-
-        return true;
     }
 
     /**

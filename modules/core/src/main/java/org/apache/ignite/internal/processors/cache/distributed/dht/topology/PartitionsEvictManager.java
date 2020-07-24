@@ -512,16 +512,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
 
             try {
-                // TODO get rid, should be always success.
-                boolean success = part.tryClear(grpEvictionCtx);
+                long clearedEntities = part.clearAll(grpEvictionCtx);
 
-                // Complete eviction future before schedule new to prevent deadlock with
-                // simultaneous eviction stopping and scheduling new eviction.
+                if (log.isDebugEnabled()) {
+                    log.debug("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
+                        "part=" + part.id() + ", cleared=" + clearedEntities + ']');
+                }
+
                 finishFut.onDone();
-
-                // Resubmit a partition if clearing was unsuccessful due to partition reservation.
-                if (!success)
-                    part.clearAsync();
             }
             catch (Throwable ex) {
                 finishFut.onDone(ex);

@@ -1333,20 +1333,20 @@ public class GridDhtPartitionDemander {
 
                             part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                                 @Override public void apply(IgniteInternalFuture<?> fut) {
-                                    int remaining = waitCnt.decrementAndGet();
-
-                                    updateClearingPartitionsMetric(remaining);
-
                                     if (fut.error() != null) {
                                         tryCancel();
 
-                                        log.error("Failed to wait for a partition clearing, cancelling rebalancing for " +
+                                        log.error("Failed to clear a partition, cancelling rebalancing for " +
                                             "a group [grp=" + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
 
                                         updateClearingPartitionsMetric(0);
 
                                         return;
                                     }
+
+                                    int remaining = waitCnt.decrementAndGet();
+
+                                    updateClearingPartitionsMetric(remaining);
 
                                     if (remaining == 0) {
                                         ctx.kernalContext().closure().runLocalSafe(() -> {

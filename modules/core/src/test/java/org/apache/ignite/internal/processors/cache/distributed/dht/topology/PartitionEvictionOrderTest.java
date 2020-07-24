@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
@@ -131,10 +132,10 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
                     GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
 
                     top.partitionFactory((ctx, grp, id, recovery) -> new GridDhtLocalPartition(ctx, grp, id, recovery) {
-                        @Override public boolean tryClear(EvictionContext evictionCtx) throws Exception {
+                        @Override public long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
                             evictionOrder.add(new T2<>(grp.groupId(), id));
 
-                            return super.tryClear(evictionCtx);
+                            return super.clearAll(evictionCtx);
                         }
                     });
                 }
