@@ -345,14 +345,25 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** {@inheritDoc} */
     @Override public void beginRecover() {
-        for (Integer grpDescId : idxCacheStores.keySet()) {
-            System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] inspecting grpDesc: " + grpDescId);
+        checkAndCleanupCacheFiles();
 
+        for (CacheStoreHolder holder : idxCacheStores.values()) {
+            holder.idxStore.beginRecover();
+
+            for (PageStore partStore : holder.partStores)
+                partStore.beginRecover();
+        }
+    }
+
+    /**
+     * Checks caches' settings and for all caches with disabled WAL cleans up cache files
+     * including partition and index files.
+     */
+    private void checkAndCleanupCacheFiles() {
+        for (Integer grpDescId : idxCacheStores.keySet()) {
             CacheGroupDescriptor desc = cctx.cache().cacheGroupDescriptor(grpDescId);
 
             if (desc != null && desc.persistenceEnabled()) {
-                System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] looking for deleting");
-
                 boolean localEnabled = cctx.database().walEnabled(grpDescId, true);
                 boolean globalEnabled = cctx.database().walEnabled(grpDescId, false);
 
@@ -361,21 +372,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
                     assert dir.exists();
 
-                    boolean res = IgniteUtils.delete(dir);
-
-                    assert res;
+                    for (File file : dir.listFiles())
+                        assert IgniteUtils.delete(file) : "Failed to cleanup file: " + file.getName();
 
                     if (!globalEnabled)
                         desc.walEnabled(false);
                 }
             }
-        }
-
-        for (CacheStoreHolder holder : idxCacheStores.values()) {
-            holder.idxStore.beginRecover();
-
-            for (PageStore partStore : holder.partStores)
-                partStore.beginRecover();
         }
     }
 
@@ -1205,27 +1208,6 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 "(partition has not been created) [grpId=" + grpId + ", partId=" + partId + ']');
 
         return store;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void beforeCacheGroupStart(CacheGroupDescriptor grpDesc) {
-//        if (grpDesc.persistenceEnabled()) {
-//            boolean localEnabled = cctx.database().walEnabled(grpDesc.groupId(), true);
-//            boolean globalEnabled = cctx.database().walEnabled(grpDesc.groupId(), false);
-//
-//            if (!localEnabled || !globalEnabled) {
-//                File dir = cacheWorkDir(grpDesc.config());
-//
-//                assert dir.exists();
-//
-//                boolean res = IgniteUtils.delete(dir);
-//
-//                assert res;
-//
-//                if (!globalEnabled)
-//                    grpDesc.walEnabled(false);
-//            }
-//        }
     }
 
     /**
