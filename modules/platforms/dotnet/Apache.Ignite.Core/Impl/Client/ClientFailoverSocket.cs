@@ -553,6 +553,12 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 // Count partitions to avoid reallocating array.
                 int maxPartNum = 0;
+
+                if (grp.PartitionMap == null)
+                {
+                    continue;
+                }
+                
                 foreach (var partMap in grp.PartitionMap)
                 {
                     foreach (var part in partMap.Value)

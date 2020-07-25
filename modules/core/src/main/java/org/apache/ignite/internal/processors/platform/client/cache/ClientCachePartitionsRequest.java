@@ -76,7 +76,7 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (cacheDesc == null)
                 continue;
 
-            if (fillGroup(groups, cacheGroupIds, cacheDesc))
+            if (fillGroup(cacheGroupIds, cacheDesc))
                 continue;
 
             ClientCachePartitionMapping mapping = processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
@@ -97,7 +97,7 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             if (!cacheDesc.cacheType().userCache())
                 continue;
 
-            if (fillGroup(groups, cacheGroupIds, cacheDesc))
+            if (fillGroup(cacheGroupIds, cacheDesc))
                 continue;
 
             processCache(ctx, groups, cacheGroupIds, affinityVer, cacheDesc);
@@ -109,13 +109,11 @@ public class ClientCachePartitionsRequest extends ClientRequest {
     /**
      * Get the cache group and if it exists add cache description to it.
      *
-     * @param groups
      * @param cacheGroupIds
      * @param cacheDesc
      * @return {@code true} if group already exists.
      */
-    private static boolean fillGroup(List<ClientCachePartitionAwarenessGroup> groups,
-                                     Map<Integer, ClientCachePartitionAwarenessGroup> cacheGroupIds,
+    private static boolean fillGroup(Map<Integer, ClientCachePartitionAwarenessGroup> cacheGroupIds,
                                      DynamicCacheDescriptor cacheDesc) {
         int cacheGroupId = cacheDesc.groupId();
 
