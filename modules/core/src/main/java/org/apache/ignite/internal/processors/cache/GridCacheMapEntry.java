@@ -1737,9 +1737,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 }
             }
 
-            removeValue();
-
             update(null, 0, 0, newVer, true);
+
+            removeValue();
 
             if (cctx.deferredDelete() && !detached() && !isInternal()) {
                 if (!deletedUnlocked()) {
@@ -4304,7 +4304,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         UpdateClosure c = new UpdateClosure(this, val, ver, expireTime, pred);
 
-        cctx.offheap().invoke(cctx, key, localPartition(), c);
+        GridDhtLocalPartition part = localPartition();
+        cctx.offheap().invoke(cctx, key, part, c);
+        part.onInvoke(key, ver);
 
         return c;
     }
@@ -4466,7 +4468,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert lock.isHeldByCurrentThread();
 
         // Removals are possible from RENTING partition on clearing/evicting.
-        cctx.offheap().remove(cctx, key, partition(), localPartition());
+        GridDhtLocalPartition part = localPartition();
+        part.onRemove(key, ver);
+        cctx.offheap().remove(cctx, key, partition(), part);
     }
 
     /** {@inheritDoc} */

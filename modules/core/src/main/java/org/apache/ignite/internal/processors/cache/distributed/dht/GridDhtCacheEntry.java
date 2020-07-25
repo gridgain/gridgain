@@ -671,13 +671,13 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
                     ']');
             }
 
+            // Give to GC.
+            update(null, 0L, 0L, ver, true);
+
             if (cctx.mvccEnabled())
                 cctx.offheap().mvccRemoveAll(this);
             else
                 removeValue();
-
-            // Give to GC.
-            update(null, 0L, 0L, ver, true);
 
             if (cctx.store().isLocal())
                 cctx.store().remove(null, key);

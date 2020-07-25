@@ -3824,8 +3824,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             timeBag.finishGlobalStage("Collect update counters and create affinity messages");
 
-            validatePartitionsState();
-
             if (firstDiscoEvt.type() == EVT_DISCOVERY_CUSTOM_EVT) {
                 assert firstDiscoEvt instanceof DiscoveryCustomEvent;
 
@@ -3855,6 +3853,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 assignPartitionsStates(true);
             else if (exchCtx.events().hasServerLeft())
                 assignPartitionsStates(false);
+
+            validatePartitionsState();
 
             // Recalculate new affinity based on partitions availability.
             if (!exchCtx.mergeExchanges() && forceAffReassignment) {

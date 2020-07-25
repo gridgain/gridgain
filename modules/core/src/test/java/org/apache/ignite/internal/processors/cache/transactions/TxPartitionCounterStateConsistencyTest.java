@@ -104,6 +104,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setFailureDetectionTimeout(1000000L);
+
         if (customDiscoSpi != null) {
             cfg.setDiscoverySpi(customDiscoSpi);
 
@@ -296,7 +298,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertFalse(backups.contains(prim));
 
-        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
+        long stop = U.currentTimeMillis() + 30_000 * 2;
 
         long seed = System.nanoTime();
 
