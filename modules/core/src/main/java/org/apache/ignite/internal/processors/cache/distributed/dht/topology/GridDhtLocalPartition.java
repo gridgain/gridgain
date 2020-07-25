@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -64,9 +63,6 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.T3;
-import org.apache.ignite.internal.util.typedef.T4;
-import org.apache.ignite.internal.util.typedef.T5;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -641,6 +637,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 "Only partitions in state OWNING or RENTING can be moved to MOVING state";
 
             if (casState(state, MOVING)) {
+                // The state is switched under global topology lock, safe to record version here.
                 clearVer = ctx.versions().localOrder();
 
                 break;
@@ -990,10 +987,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         return store.fullSize();
     }
 
-    public void logEvent(int type, KeyCacheObject key, GridCacheVersion ver) {
-        tmp.add(new T5<>(type, key == null ? null : key.value(group().cacheObjectContext(), false), ver, fullSize(), Thread.currentThread().getName()));
-    }
-
     /**
      * Removes all entries and rows from this partition.
      *
@@ -1003,9 +996,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
         long order = clearVer;
 
-        GridCacheVersion clearVer = ctx.versions().last();
-
-        logEvent(2, null, clearVer);
+        GridCacheVersion clearVer = ctx.versions().startVersion();
 
         GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(clearVer);
 
@@ -1109,8 +1100,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to get iterator for evicted partition: " + id, e);
         }
-
-        logEvent(3, null, clearVer);
 
         return cleared;
     }
@@ -1359,19 +1348,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     public void beforeApplyBatch(boolean last) {
         // No-op.
-    }
-
-    private ConcurrentLinkedQueue tmp = new ConcurrentLinkedQueue();
-
-    public void onInvoke(KeyCacheObject key, GridCacheVersion ver) {
-        logEvent(0, key, ver);
-    }
-
-    public void onRemove(KeyCacheObject key, GridCacheVersion ver) {
-        if (ver.order() == 0)
-            System.out.println();
-
-        logEvent(1, key, ver);
     }
 
     /**

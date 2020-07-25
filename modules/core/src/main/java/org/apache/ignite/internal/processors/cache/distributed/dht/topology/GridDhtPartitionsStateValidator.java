@@ -16,36 +16,24 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashSet;
-import java.util.HashMap;
 import java.util.AbstractMap;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Collections;
-import java.util.function.Function;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.Ignition;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgnitePair;
-import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
@@ -138,58 +126,6 @@ public class GridDhtPartitionsStateValidator {
         if (error.length() > 0) {
             Set<Integer> parts = new HashSet<>(resUpdCnt.keySet());
             parts.addAll(resSize.keySet());
-
-            if (!resSize.isEmpty()) {
-                Map.Entry<Integer, Map<UUID, Long>> next = resSize.entrySet().iterator().next();
-
-                Map<UUID, List<Object>> store = new HashMap<>();
-
-                Map<UUID, Long> value = next.getValue();
-
-                for (UUID uuid : value.keySet()) {
-                    IgniteEx ignite = (IgniteEx) Ignition.ignite(uuid);
-                    GridDhtLocalPartition part =
-                        ignite.context().cache().cacheGroup(CU.cacheId("default")).topology().localPartition(next.getKey());
-
-                    try (GridCursor<? extends CacheDataRow> cursor = part.dataStore().cursor()) {
-                        while (cursor.next()) {
-                            CacheDataRow row = cursor.get();
-
-                            Object key = row.key().value(part.group().cacheObjectContext(), false);
-                            Object value0 = row.value().value(part.group().cacheObjectContext(), false);
-
-                            store.computeIfAbsent(uuid, new Function<UUID, List<Object>>() {
-                                @Override public List<Object> apply(UUID uuid) {
-                                    return new ArrayList<>();
-                                }
-                            }).add(new T2<>(key, value0));
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                List<Object> common = null;
-
-                Map<UUID, List<Object>> diff = new HashMap<>();
-
-                for (Map.Entry<UUID, List<Object>> e0 : store.entrySet()) {
-                    if (common == null)
-                        common = new ArrayList<>(e0.getValue());
-                    else
-                        common.retainAll(e0.getValue());
-                }
-
-                for (Map.Entry<UUID, List<Object>> e0 : store.entrySet()) {
-                    List<Object> tmp = new ArrayList<>(e0.getValue());
-                    tmp.removeAll(common);
-
-                    diff.put(e0.getKey(), tmp);
-                }
-
-                //System.out.println();
-                int i = 0;
-            }
 
             invalidParts.putIfAbsent(top.groupId(), parts);
 

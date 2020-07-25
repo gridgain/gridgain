@@ -3854,6 +3854,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             else if (exchCtx.events().hasServerLeft())
                 assignPartitionsStates(false);
 
+            // Validation should happen after resetting owners to avoid false desync reporting.
             validatePartitionsState();
 
             // Recalculate new affinity based on partitions availability.
