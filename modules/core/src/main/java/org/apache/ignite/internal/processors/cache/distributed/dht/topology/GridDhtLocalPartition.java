@@ -33,7 +33,6 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
@@ -86,9 +85,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.Checkpoint
 
 /**
  * Key partition.
- *
- * TODO: RENTING -> MOVING prohibited if moved to evicted, should be RENTING -> EVICTED -> MOVING.
- * TODO: send part states after last RENTING -> EVICTED.
  */
 public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements Comparable<GridDhtLocalPartition>, GridReservable {
     /** */
@@ -121,10 +117,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** State. 32 bits - size, 16 bits - reservations, 13 bits - reserved, 3 bits - GridDhtPartitionState. */
     @GridToStringExclude
     private final AtomicLong state = new AtomicLong((long)MOVING.ordinal() << 32);
-
-    /** Evict guard. Must be CASed to -1 only when partition state is EVICTED. */
-    @GridToStringExclude
-    private final AtomicInteger evictGuard = new AtomicInteger();
 
     /** Rent future. */
     @GridToStringExclude
@@ -244,8 +236,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 + ", p=" + id + ", state=" + state() + "]");
 
         clearVer = ctx.versions().localOrder();
-
-        logEvent(4, null, new GridCacheVersion(0, clearVer, 0, 0));
     }
 
     /**
@@ -758,27 +748,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * @return {@code True} if evicting thread was added.
-     */
-    private boolean addEvicting() {
-        return evictGuard.compareAndSet(0, 1);
-    }
-
-    /**
-     * Clears evicting flag.
-     */
-    private void clearEvicting() {
-        evictGuard.set(0);
-    }
-
-    /**
-     * @return {@code True} if partition is marked for destroy.
-     */
-    public boolean markForDestroy() {
-        return evictGuard.compareAndSet(0, -1);
-    }
-
-    /**
      * Moves partition state to {@code EVICTED} if possible.
      * and initiates partition destroy process after successful moving partition state to {@code EVICTED} state.
      */
@@ -786,9 +755,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         long state0 = this.state.get();
 
         GridDhtPartitionState state = getPartState(state0);
-
-        // TODO ???
-        //assert state != EVICTED : this;
 
         // Some entries still might be present in partition cache maps due to concurrent updates on backup nodes,
         // but it's safe to finish eviction because no physical updates are possible.
@@ -798,34 +764,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Destroys partition data store and invokes appropriate callbacks.
-     * <p>
-     * Should be called by partition eviction manager to avoid deadlocks.
-     */
-    private void destroy() {
-//        assert state() == EVICTED : this;
-//        assert evictGuard.get() == -1;
-
-        // Operates under topology write lock.
-        ((GridDhtPreloader)grp.preloader()).onPartitionEvicted(this);
-    }
-    /**
      * @return {@code True} if clearing process is running at the moment on the partition.
      */
     public boolean isClearing() {
         return clearing.get();
-    }
-
-    /**
-     * Release created data store for this partition.
-     */
-    public void destroyCacheDataStore() {
-        try {
-            grp.offheap().destroyCacheDataStore(dataStore());
-        }
-        catch (IgniteCheckedException e) {
-            log.error("Unable to destroy cache data store on partition eviction [id=" + id + "]", e);
-        }
     }
 
     /**
@@ -1089,7 +1031,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
             }
 
-            destroy();
+            // Attempt to destroy.
+            ((GridDhtPreloader)grp.preloader()).tryEvictPartition(this);
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())

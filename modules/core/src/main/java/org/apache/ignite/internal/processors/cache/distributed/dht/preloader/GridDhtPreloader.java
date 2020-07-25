@@ -439,11 +439,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Update topology on partition eviction and refresh a partition map.
-     *
      * @param part Evicted partition.
      */
-    public void onPartitionEvicted(GridDhtLocalPartition part) {
+    public void tryEvictPartition(GridDhtLocalPartition part) {
         if (!enterBusy())
             return;
 

@@ -2851,7 +2851,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 // Write lock protects from concurrent partition creation.
                 grp.onPartitionEvicted(part.id());
 
-                part.destroyCacheDataStore();
+                try {
+                    grp.offheap().destroyCacheDataStore(part.dataStore());
+                }
+                catch (IgniteCheckedException e) {
+                    log.error("Unable to destroy cache data store on partition eviction [id=" + part.id() + "]", e);
+                }
 
                 part.clearDeferredDeletes();
 
