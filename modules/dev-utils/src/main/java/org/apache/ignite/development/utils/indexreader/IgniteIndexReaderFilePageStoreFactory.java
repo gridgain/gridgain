@@ -18,6 +18,7 @@ package org.apache.ignite.development.utils.indexreader;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
@@ -41,10 +42,11 @@ public interface IgniteIndexReaderFilePageStoreFactory {
      *
      * @param partId Partition ID.
      * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
+     * @param errors errors while reading partition.
      * @return New instance of {@link FilePageStore} or {@code null}.
      * @throws IgniteCheckedException If there are errors when creating {@link FilePageStore}.
      */
-    @Nullable FilePageStore createFilePageStore(int partId, byte type) throws IgniteCheckedException;
+    @Nullable FilePageStore createFilePageStore(int partId, byte type, List<Throwable> errors) throws IgniteCheckedException;
 
     /**
      * Creating new {@link FilePageStore} and initializing it.
@@ -52,14 +54,16 @@ public interface IgniteIndexReaderFilePageStoreFactory {
      *
      * @param partId Partition ID.
      * @param type Data type, can be {@link PageIdAllocator#FLAG_IDX} or {@link PageIdAllocator#FLAG_DATA}.
+     * @param errors errors while reading partition.
      * @return New instance of {@link FilePageStore} or {@code null}.
      * @throws IgniteCheckedException If there are errors when creating or initializing {@link FilePageStore}.
      */
     @Nullable default FilePageStore createFilePageStoreWithEnsure(
         int partId,
-        byte type
+        byte type,
+        List<Throwable> errors
     ) throws IgniteCheckedException {
-        FilePageStore filePageStore = createFilePageStore(partId, type);
+        FilePageStore filePageStore = createFilePageStore(partId, type, errors);
 
         if (nonNull(filePageStore))
             filePageStore.ensure();

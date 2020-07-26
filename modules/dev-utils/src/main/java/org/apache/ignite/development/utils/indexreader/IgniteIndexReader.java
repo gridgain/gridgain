@@ -193,6 +193,12 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Partitions page stores, may contains {@code null}. */
     @Nullable private final FilePageStore[] partStores;
 
+    /** Map of errors, pageId -> set of exceptions. */
+    private final Map<Long, List<Throwable>> partStoresErrors = new HashMap<>();
+
+    /** */
+    private final List<Throwable> idxStoreErrors = new ArrayList<>();
+    
     /** Check cache data tree in partition files and it's consistency with indexes. */
     private final boolean checkParts;
 
@@ -234,7 +240,7 @@ public class IgniteIndexReader implements AutoCloseable {
         outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
         outErrStream = outStream;
 
-        idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX);
+        idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX, idxStoreErrors);
 
         if (isNull(idxStore))
             throw new IgniteCheckedException(INDEX_FILE_NAME + " file not found");
@@ -243,8 +249,14 @@ public class IgniteIndexReader implements AutoCloseable {
 
         partStores = new FilePageStore[partCnt];
 
-        for (int i = 0; i < partCnt; i++)
-            partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA);
+        for (int i = 0; i < partCnt; i++) {
+            List<Throwable> errors = new ArrayList<>();
+            
+            partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA, errors);
+
+            if (!errors.isEmpty())
+                partStoresErrors.put((long)i, errors);
+        }
     }
 
     /**
@@ -437,6 +449,8 @@ public class IgniteIndexReader implements AutoCloseable {
             throw new IgniteException(INDEX_FILE_NAME + " scan problem", e);
         }
 
+        printFileReadingErrors();
+
         if (treeInfo.get() == null)
             printErr("No tree meta info found.");
         else {
@@ -488,6 +502,20 @@ public class IgniteIndexReader implements AutoCloseable {
                 checkPartsErrors.values().stream().mapToInt(List::size).sum() + ", total problem partitions: " +
                 checkPartsErrors.size()
             );
+        }
+    }
+
+    /** */
+    private void printFileReadingErrors() {
+        if (!idxStoreErrors.isEmpty()) {
+            printErr("Errors detected while reading " + INDEX_FILE_NAME);
+
+            idxStoreErrors.forEach(err -> printErr(err.getMessage()));
+        }
+
+        if (!partStoresErrors.isEmpty()) {
+            printErrors("", "Errors detected while reading partition files:", "",
+                "Partition id: %s, exceptions: ", false, partStoresErrors);
         }
     }
 
