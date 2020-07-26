@@ -913,7 +913,7 @@ public class GridDhtPartitionDemander {
         try {
             GridCacheEntryEx cached = null;
 
-            while(true) {
+            while (true) {
                 try {
                     cached = cctx.cache().entryEx(entry.key(), topVer);
 
