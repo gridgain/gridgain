@@ -496,7 +496,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (this.state.compareAndSet(state, newState)) {
                 // If no more reservations try to continue delayed renting.
                 if (reservations == 0) {
-                    if (delayedRentingTopVer != 0 && // TODO not needed
+                    if (delayedRentingTopVer != 0 &&
                         // Prevents delayed renting on topology which expects ownership.
                         delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
                         rent();
@@ -710,9 +710,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (!clearing.compareAndSet(false, true))
             return clearFut;
 
-        // TODO add assertion for rebalance future.
-        //assert grp.preloader().rebalanceFuture().isDone() : grp.preloader().rebalanceFuture();
-
         // Evict partition asynchronously to avoid deadlocks.
         (clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING))
             .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -749,7 +746,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Moves partition state to {@code EVICTED} if possible.
-     * and initiates partition destroy process after successful moving partition state to {@code EVICTED} state.
      */
     public void finishEviction() {
         long state0 = this.state.get();
@@ -963,7 +959,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // This is required because normal updates are possible to moving partition which is currently cleared.
                     // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
-                    // Partition state can be switched from RENTING to MOVING during clearing.
+                    // Partition state can be switched from RENTING to MOVING and vice versa during clearing.
                     if (state() == MOVING && row.version().order() > order)
                         continue;
 

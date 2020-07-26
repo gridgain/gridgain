@@ -942,37 +942,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         return loc;
     }
 
-    /**
-     * Awaits completion of partition destroy process in case of {@code EVICTED} partition state.
-     */
-    @SuppressWarnings("LockAcquiredButNotSafelyReleased")
-    private void awaitDestroy(GridDhtLocalPartition part) {
-        assert part.state() == EVICTED : this;
-        assert lock.isWriteLockedByCurrentThread();
-
-        final long timeout = 10_000;
-
-        lock.writeLock().unlock();
-
-        try {
-            for (; ; ) {
-                try {
-                    part.rent().get(timeout);
-
-                    break;
-                } catch (IgniteFutureTimeoutCheckedException ignored) {
-                    U.warn(log, "Failed to await partition destroy within timeout " + this);
-                } catch (IgniteCheckedException e) {
-                    throw new IgniteException("Failed to await partition destroy " + this, e);
-                }
-            }
-        }
-        finally {
-            lock.writeLock().lock();
-        }
-    }
-
-
     /** {@inheritDoc} */
     @Override public GridDhtLocalPartition forceCreatePartition(int p) throws IgniteCheckedException {
         lock.writeLock().lock();
