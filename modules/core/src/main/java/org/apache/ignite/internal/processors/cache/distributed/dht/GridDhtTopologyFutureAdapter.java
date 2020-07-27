@@ -26,7 +26,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,7 +33,6 @@ import static java.lang.String.format;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
-import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  *
@@ -98,10 +96,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         CacheGroupContext grp = cctx.group();
 
-        DataRegion dataReg = grp.dataRegion();
-
-        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name()) && (cctx.kernalContext().clientNode() ||
-            (dataReg != null && !VOLATILE_DATA_REGION_NAME.equals(dataReg.config().getName())))) {
+        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name())) {
             return new CacheInvalidStateException(new IgniteClusterReadOnlyException(
                 format(CLUSTER_READ_ONLY_ERROR_MSG, grp.name(), cctx.name())
             ));
