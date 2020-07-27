@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Impl
         public long TotalAllocatedSize { get; private set; }
 
         /** <inheritdoc /> */
-        public long TotalUsedPages { get; private set; }
+        public long TotalUsedSize { get; private set; }
 
         /** <inheritdoc /> */
         public float AllocationRate { get; private set; }
