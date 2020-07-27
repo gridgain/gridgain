@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
 #include <boost/test/unit_test.hpp>
 #include <boost/chrono.hpp>
 #include <boost/thread.hpp>
@@ -116,20 +114,24 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityGetAffinityKey)
 
 BOOST_AUTO_TEST_CASE(IgniteAffinityMapKeysToNodes)
 {
-    std::list<int32_t> keys;
+    std::vector<int32_t> keys;
+
+	keys.reserve(10000);
+
     for (int i = 1; i < 10000; i++)
         keys.push_back(i);
 
-    std::map<ClusterNode, std::list<int32_t> > map = affinity.MapKeysToNodes(keys);
+    std::map<ClusterNode, std::vector<int32_t> > map = affinity.MapKeysToNodes(keys);
 
     BOOST_REQUIRE(map.size() == 1);
 
-    for (std::list<int>::iterator it = keys.begin(); it != keys.end(); ++it)
+    for (std::vector<int>::iterator it = keys.begin(); it != keys.end(); ++it)
     {
         ClusterNode clusterNode = affinity.MapKeyToNode(*it);
         BOOST_REQUIRE(map.find(clusterNode) != map.end());
 
-        std::list<int32_t> nodeKeys = map[clusterNode];
+        std::vector<int32_t> nodeKeys = map[clusterNode];
+
         BOOST_REQUIRE(nodeKeys.size() > 0);
         BOOST_REQUIRE(std::find(nodeKeys.begin(), nodeKeys.end(), *it) != nodeKeys.end());
     }
@@ -158,27 +160,34 @@ BOOST_AUTO_TEST_CASE(IgniteAffinityMapPartitionsToNodes)
 
     Ignite node1 = MakeNode("AffinityNode3");
 
-    std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
 
-    BOOST_REQUIRE(nodes.size() == 3);
-
-    std::vector<int32_t> primary = affinity.GetPrimaryPartitions(nodes[0]);
-    std::vector<int32_t> primary0 = affinity.GetPrimaryPartitions(nodes[1]);
-
-    std::sort(primary.begin(), primary.end());
-    std::sort(primary0.begin(), primary0.end());
-
-    BOOST_REQUIRE(primary != primary0);
-
-    primary.insert(primary.end(), primary0.begin(), primary0.end());
-    std::map<int32_t, ClusterNode> map = affinity.MapPartitionsToNodes(primary);
-    for (std::map<int32_t, ClusterNode>::const_iterator it = map.begin(); it != map.end(); ++it)
+    WITH_STABLE_TOPOLOGY_BEGIN(node0)
     {
-        std::vector<cluster::ClusterNode> nodes = affinity.MapPartitionToPrimaryAndBackups(it->first);
-        BOOST_REQUIRE(nodes.front().GetId() == it->second.GetId());
+        std::vector<ClusterNode> nodes = node.GetCluster().AsClusterGroup().GetNodes();
+
+        CHECK_TOPOLOGY_STABLE(node1)
+        BOOST_REQUIRE(nodes.size() == 3);
+
+        std::vector<int32_t> primary = affinity.GetPrimaryPartitions(nodes[0]);
+        std::vector<int32_t> primary0 = affinity.GetPrimaryPartitions(nodes[1]);
+
+        std::sort(primary.begin(), primary.end());
+        std::sort(primary0.begin(), primary0.end());
+
+        CHECK_TOPOLOGY_STABLE(node1)
+        BOOST_REQUIRE(primary != primary0);
+
+        primary.insert(primary.end(), primary0.begin(), primary0.end());
+        std::map<int32_t, ClusterNode> map = affinity.MapPartitionsToNodes(primary);
+        for (std::map<int32_t, ClusterNode>::const_iterator it = map.begin(); it != map.end(); ++it)
+        {
+            std::vector<cluster::ClusterNode> nodes = affinity.MapPartitionToPrimaryAndBackups(it->first);
+
+            CHECK_TOPOLOGY_STABLE(node1)
+            BOOST_REQUIRE(nodes.front().GetId() == it->second.GetId());
+        }
     }
+    WITH_STABLE_TOPOLOGY_END
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API

@@ -994,10 +994,19 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         // No-op.
     }
 
-        /**
-         * @param fut Partition exchange future.
-         */
+    /**
+     * @param fut Partition exchange future.
+     */
     public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture fut) {
+        // No-op.
+    }
+
+    /**
+     * Performs indexes rebuild for all cache contexts from {@code contexts}.
+     *
+     * @param contexts List of cache contexts.
+     */
+    public void forceRebuildIndexes(Collection<GridCacheContext> contexts) {
         // No-op.
     }
 

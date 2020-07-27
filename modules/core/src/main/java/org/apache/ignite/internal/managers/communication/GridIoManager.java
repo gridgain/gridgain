@@ -51,8 +51,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
@@ -69,10 +71,12 @@ import org.apache.ignite.internal.managers.discovery.CustomEventListener;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.pool.PoolProcessor;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
@@ -110,6 +114,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionRequestor;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -121,7 +126,9 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_COMM_SYSTEM;
 import static org.apache.ignite.internal.GridTopic.TOPIC_COMM_USER;
 import static org.apache.ignite.internal.GridTopic.TOPIC_IO_TEST;
 import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSOR;
+import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSOR_V2;
 import static org.apache.ignite.internal.IgniteFeatures.INVERSE_TCP_CONNECTION;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.AFFINITY_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.DATA_STREAMER_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.IDX_POOL;
@@ -1150,7 +1157,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     assert obj != null;
 
-                    invokeListener(msg.policy(), lsnr, nodeId, obj, secSubj(msg));
+                    invokeListener(msg.policy(), lsnr, nodeId, obj, secCtx(msg));
                 }
                 finally {
                     threadProcessingMessage(false, null);
@@ -1319,7 +1326,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         assert obj != null;
 
-        invokeListener(msg.policy(), lsnr, nodeId, obj, secSubj(msg));
+        invokeListener(msg.policy(), lsnr, nodeId, obj, secCtx(msg));
     }
 
     /**
@@ -1683,9 +1690,15 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param lsnr Listener.
      * @param nodeId Node ID.
      * @param msg Message.
-     * @param secCtxMsg Security subject that will be used to open a security session.
+     * @param secCtx Optional security context.
      */
-    private void invokeListener(Byte plc, GridMessageListener lsnr, UUID nodeId, Object msg, @Nullable T2<UUID, SecurityContext> secCtxMsg) {
+    private void invokeListener(
+        Byte plc,
+        GridMessageListener lsnr,
+        UUID nodeId,
+        Object msg,
+        @Nullable T2<UUID, SecurityContext> secCtx
+    ) {
         MTC.span().addLog(() -> "Invoke listener");
 
         Byte oldPlc = CUR_PLC.get();
@@ -1695,10 +1708,17 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (change)
             CUR_PLC.set(plc);
 
-        SecurityContext secCtx = secCtxMsg != null ? secCtxMsg.get2() : null;
-        UUID newSecSubjId = secCtxMsg != null && secCtxMsg.get1() != null ? secCtxMsg.get1() : nodeId;
+        SecurityContext secCtx0 = null;
+        UUID subjId = nodeId;
 
-        try (OperationSecurityContext s = secCtx != null ? ctx.security().withContext(secCtx) : ctx.security().withContext(newSecSubjId)) {
+        if (secCtx != null) {
+            secCtx0 = secCtx.get2();
+            subjId = secCtx.get1();
+        }
+
+        IgniteSecurity sec = ctx.security();
+
+        try (OperationSecurityContext ignored = secCtx0 != null ? sec.withContext(secCtx0) : sec.withContext(subjId)) {
             lsnr.onMessage(nodeId, msg, plc);
         }
         finally {
@@ -1842,19 +1862,23 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         int connIdx
     ) throws IgniteCheckedException {
         if (ctx.security().enabled() &&
-            IgniteFeatures.allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
-            UUID secSubjId = null;
+            !(msg instanceof GridDhtPartitionsAbstractMessage) && !(msg instanceof GridJobExecuteResponse)) {
+            // We don't need enabled v1 to enable v2.
+            boolean v2 = allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR_V2);
 
-            SecurityContext secCtx = ctx.security().securityContext();
-            UUID curSecSubjId = secCtx.subject().id();
+            if (v2 || allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
+                SecurityContext secCtx = ctx.security().securityContext();
+                UUID subjId = secCtx.subject().id();
 
-            if (!locNodeId.equals(curSecSubjId))
-                secSubjId = curSecSubjId;
+                byte[] serSubj = null;
 
-            //Network optimization
-            byte[] secSubject = secSubjId != null && ctx.discovery().node(secSubjId) == null ? U.marshal(marsh, secCtx) : null;
+                // Skip sending serialized subject if all nodes support IGNITE_SECURITY_PROCESSOR_V2 and state=ACTIVE.
+                if (!v2 || ctx.state().clusterState().state() == ClusterState.INACTIVE)
+                    serSubj = !locNodeId.equals(subjId) ? U.marshal(marsh, secCtx) : null;
 
-            return new GridIoSecurityAwareMessage(secSubjId, secSubject, plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout, connIdx);
+                return new GridIoSecurityAwareMessage(subjId, serSubj, plc, topic, topicOrd, msg, ordered, timeout,
+                    skipOnTimeout, connIdx);
+            }
         }
 
         return new GridIoMessage(plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout, connIdx);
@@ -2989,7 +3013,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                         MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(fmc.message));
 
-                        invokeListener(plc, lsnr, nodeId, mc.message.message(), secSubj(mc.message));
+                        invokeListener(plc, lsnr, nodeId, mc.message.message(), secCtx(mc.message));
                     }
                     finally {
                         if (mc.closure != null)
@@ -3420,17 +3444,18 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /**
      * @param msg Communication message.
-     * @return A pair that represents a security subject id and security context. The returned value can be {@code null}
-     * in case of security context is not enabled.
+     * @return A pair that represents a security subject id and security context. The returned value is {@code null}
+     * if security is not enabled.
      */
-    private T2<UUID, SecurityContext> secSubj(GridIoMessage msg) {
+    private @Nullable T2<UUID, SecurityContext> secCtx(GridIoMessage msg) {
         if (ctx.security().enabled() && msg instanceof GridIoSecurityAwareMessage) {
             GridIoSecurityAwareMessage secMsg = (GridIoSecurityAwareMessage)msg;
 
             SecurityContext secCtx = null;
 
             try {
-                secCtx = secMsg.getSecCtx() != null ? U.unmarshal(marsh, secMsg.getSecCtx(), U.resolveClassLoader(ctx.config())) : null;
+                secCtx = secMsg.secCtx() != null ?
+                    U.unmarshal(marsh, secMsg.secCtx(), U.resolveClassLoader(ctx.config())) : null;
             }
             catch (IgniteCheckedException e) {
                 log.error("Security context unmarshaled with error.", e);
@@ -3469,7 +3494,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         /**
          * Executor service to send special communication message.
          */
-        private ExecutorService responseSendService = Executors.newCachedThreadPool();
+        private ExecutorService responseSendService = Executors
+            .newCachedThreadPool(new IgniteThreadFactory(ctx.igniteInstanceName(), "io-send-service"));
 
         /**
          * Discovery event listener (works only on client nodes for now) notified when

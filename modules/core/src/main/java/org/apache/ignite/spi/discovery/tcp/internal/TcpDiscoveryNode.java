@@ -59,7 +59,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTE
 public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements IgniteClusterNode,
     Comparable<TcpDiscoveryNode>, Externalizable {
     /** */
-    public static final ThreadLocal<Boolean> RESOLVE_ADDRESSES = ThreadLocal.withInitial(() -> true);
+    public static final ThreadLocal<Boolean> RESOLVE_ADDRESSES = ThreadLocal.withInitial(() -> false);
 
     /** */
     private static final long serialVersionUID = 0L;
