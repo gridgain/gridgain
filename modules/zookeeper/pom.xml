@@ -34,7 +34,7 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <netty.version>4.1.44.Final</netty.version>
+        <netty.version>4.1.51.Final</netty.version>
     </properties>
 
     <dependencies>
