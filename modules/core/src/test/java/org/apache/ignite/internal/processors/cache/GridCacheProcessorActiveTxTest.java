@@ -39,8 +39,6 @@ import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
     /**
      * Format for displaying the cache name(s) and operation.
-     *
-     * @see GridCacheProcessor#CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT
      */
     private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG =
         getFieldValue(GridCacheProcessor.class, "CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT");

@@ -3436,40 +3436,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
      *
      * @param opName Operation name.
-     * @param cfgs Stored cache configurations.
-     * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
-     */
-    private void checkReadOnlyState(String opName, Collection<StoredCacheData> cfgs) {
-        IgniteOutClosure<String> cacheNameClo = null;
-        IgniteOutClosure<String> cacheGrpNameClo = null;
-
-        if (!F.isEmpty(cfgs)) {
-            if (cfgs.size() == 1) {
-                CacheConfiguration cfg = cfgs.iterator().next().config();
-
-                cacheNameClo = cfg::getName;
-                cacheGrpNameClo = cfg::getGroupName;
-            }
-            else {
-                cacheNameClo = () -> cfgs.stream()
-                    .map(StoredCacheData::config)
-                    .map(CacheConfiguration::getName)
-                    .collect(Collectors.toList()).toString();
-
-                cacheGrpNameClo = () -> cfgs.stream()
-                    .map(StoredCacheData::config)
-                    .map(CacheConfiguration::getGroupName)
-                    .collect(Collectors.toList()).toString();
-            }
-        }
-
-        checkReadOnlyState(opName, cacheGrpNameClo, cacheNameClo);
-    }
-
-    /**
-     * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
-     *
-     * @param opName Operation name.
      * @param cfgs Cache configurations.
      * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
      */
