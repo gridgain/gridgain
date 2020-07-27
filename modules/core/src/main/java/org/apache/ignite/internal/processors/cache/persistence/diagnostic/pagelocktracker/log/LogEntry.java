@@ -14,16 +14,29 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory;
+/**
+ * Log entry.
+ */
+public class LogEntry {
+    /** */
+    public final long pageId;
 
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_STACK;
+    /** */
+    public final int structureId;
 
-/** */
-public class HeapArrayLockStackTest extends PageLockStackTest {
-    /** {@inheritDoc} */
-    @Override protected LockStack createLockStackTracer(String name) {
-        return (LockStack)PageLockTrackerFactory.create(HEAP_STACK, name);
+    /** */
+    public final int operation;
+
+    /** */
+    public final int holdedLocks;
+
+    /** */
+    LogEntry(long pageId, int structureId, int operation, int holdedLock) {
+        this.pageId = pageId;
+        this.structureId = structureId;
+        this.operation = operation;
+        this.holdedLocks = holdedLock;
     }
 }

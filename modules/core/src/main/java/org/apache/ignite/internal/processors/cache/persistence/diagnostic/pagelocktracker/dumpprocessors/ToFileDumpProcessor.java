@@ -50,7 +50,7 @@ public class ToFileDumpProcessor {
 
             File file = new File(dir, PREFIX_NAME + name + "_" + DATE_FMT.format(new Date(pageLockDump.time())));
 
-            return saveToFile(ToStringDumpProcessor.toStringDump(pageLockDump), file);
+            return saveToFile(ToStringDumpHelper.toStringDump(pageLockDump), file);
         }
         catch (IOException e) {
             throw new IgniteCheckedException(e);

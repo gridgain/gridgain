@@ -16,30 +16,36 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToStringDumpHelper;
 
-/**
- * Base page lock tracker structures dump.
- */
-public abstract class PageLockDump {
+/** */
+class ThreadPageLockState {
+    /** */
+    public final long threadId;
 
     /** */
-    public final long time;
+    public final String threadName;
 
     /** */
-    protected PageLockDump(long time) {
-        this.time = time;
-    }
+    public final Thread.State state;
 
-    /**
-     * @return Dump creation time.
-     */
-    public long time() {
-        return time;
-    }
+    /** */
+    public final PageLockDump pageLockDump;
 
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return ToStringDumpHelper.toStringDump(this);
+    /** */
+    public final InvalidContext<? extends PageLockDump> invalidContext;
+
+    /** */
+    public ThreadPageLockState(
+        long threadId,
+        String threadName,
+        Thread.State state,
+        PageLockDump pageLockDump,
+        InvalidContext<? extends PageLockDump> invalidContext
+    ) {
+        this.threadId = threadId;
+        this.threadName = threadName;
+        this.state = state;
+        this.pageLockDump = pageLockDump;
+        this.invalidContext = invalidContext;
     }
 }

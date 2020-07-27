@@ -32,11 +32,4 @@ public interface DumpSupported<T extends PageLockDump> {
      * Create dump.
      */
     T dump();
-
-    /**
-     * Create dump async.
-     *
-     * @return Ignite future.
-     */
-    IgniteFuture<T> dumpSync();
 }

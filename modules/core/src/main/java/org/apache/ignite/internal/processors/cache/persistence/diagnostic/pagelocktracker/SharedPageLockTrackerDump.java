@@ -16,25 +16,28 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log.PageLockLogSnapshot;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.PageLockStackSnapshot;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Dump processor.
+ *
  */
-public interface DumpProcessor {
-    /**
-     * @param snapshot Process lock log snapshot.
-     */
-    void processDump(PageLockLogSnapshot snapshot);
+public class SharedPageLockTrackerDump extends PageLockDump {
 
-    /**
-     * @param snapshot Process lock stack snapshot.
-     */
-    void processDump(PageLockStackSnapshot snapshot);
+    /** */
+    public final Map<Integer, String> structureIdToStrcutureName;
 
-    /**
-     * @param snapshot Process lock thread dump snapshot.
-     */
-    void processDump(ThreadPageLocksDumpLock snapshot);
+    /** */
+    public final List<ThreadPageLockState> threadPageLockStates;
+
+    /** */
+    public SharedPageLockTrackerDump(
+        long time,
+        Map<Integer, String> structureIdToStrcutureName,
+        List<ThreadPageLockState> threadPageLockStates
+    ) {
+        super(time);
+        this.structureIdToStrcutureName = structureIdToStrcutureName;
+        this.threadPageLockStates = threadPageLockStates;
+    }
 }

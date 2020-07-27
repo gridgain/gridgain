@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockDump;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.After;
@@ -63,7 +63,7 @@ public class ToFileDumpProcessorTest {
 
         System.out.println("IGNITE_HOME:" + igHome);
 
-        PageLockTracker pageLockTracker = LockTrackerFactory.create("test");
+        PageLockTracker pageLockTracker = PageLockTrackerFactory.create("test");
 
         pageLockTracker.onBeforeReadLock(1, 2, 3);
         pageLockTracker.onReadLock(1, 2, 3, 4);
@@ -72,7 +72,7 @@ public class ToFileDumpProcessorTest {
 
         Assert.assertNotNull(pageLockDump);
 
-        String expDumpStr = ToStringDumpProcessor.toStringDump(pageLockDump);
+        String expDumpStr = ToStringDumpHelper.toStringDump(pageLockDump);
 
         String filePath = ToFileDumpProcessor.toFileDump(pageLockDump, file = new File(igHome), "test");
 

@@ -16,30 +16,42 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToStringDumpHelper;
+import java.util.Objects;
 
 /**
- * Base page lock tracker structures dump.
+ *
  */
-public abstract class PageLockDump {
+class PageLockThreadState {
+    /** */
+    final long threadOpCnt;
 
     /** */
-    public final long time;
+    final long heldLockCnt;
 
     /** */
-    protected PageLockDump(long time) {
-        this.time = time;
-    }
+    final Thread thread;
 
-    /**
-     * @return Dump creation time.
-     */
-    public long time() {
-        return time;
+    /** */
+    PageLockThreadState(long threadOpCnt, long heldLockCnt, Thread thread) {
+        this.threadOpCnt = threadOpCnt;
+        this.heldLockCnt = heldLockCnt;
+        this.thread = thread;
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {
-        return ToStringDumpHelper.toStringDump(this);
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        PageLockThreadState state = (PageLockThreadState)o;
+        return threadOpCnt == state.threadOpCnt &&
+            heldLockCnt == state.heldLockCnt &&
+            Objects.equals(thread, state.thread);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(threadOpCnt, heldLockCnt, thread);
     }
 }
