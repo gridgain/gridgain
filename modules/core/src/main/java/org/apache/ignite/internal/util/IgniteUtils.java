@@ -2880,7 +2880,7 @@ public abstract class IgniteUtils {
      * ...
      * byte[] data = {10, 20, 30, 40, 50, 60, 70, 80, 90};
      *
-     * U.byteArray2String(data, "0x%02X", ",0x%02X")
+     * byteArray2String(data, "0x%02X", ",0x%02X")
      * ...
      * </pre>
      * the result will be:
@@ -11981,7 +11981,7 @@ public abstract class IgniteUtils {
         if (size == -1)
             return null;
         else {
-            Map<String, String> map = U.newHashMap(size);
+            Map<String, String> map = newHashMap(size);
 
             for (int i = 0; i < size; i++)
                 map.put(readUTF(in), readUTF(in));
