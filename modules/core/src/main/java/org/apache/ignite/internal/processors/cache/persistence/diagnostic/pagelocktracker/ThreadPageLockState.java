@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagel
 
 
 /** */
-class ThreadPageLockState {
+public class ThreadPageLockState {
     /** */
     public final long threadId;
 

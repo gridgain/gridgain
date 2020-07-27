@@ -135,24 +135,22 @@ class ToStringDumpProcessor {
     }
 
     /** */
-    void processDump(PageLockDump pageLockDump, boolean trim) {
-        if (pageLockDump instanceof SharedPageLockTrackerDump)
-            processDump((SharedPageLockTrackerDump)pageLockDump);
-        else if (pageLockDump instanceof PageLockStackSnapshot)
-            processDump((PageLockStackSnapshot)pageLockDump);
+    void processDump(PageLockDump pageLockDump, ThreadPageLockState threadState) {
+        if (pageLockDump instanceof PageLockStackSnapshot)
+            processDump((PageLockStackSnapshot)pageLockDump, threadState);
         else if (pageLockDump instanceof PageLockLogSnapshot)
-            processDump((PageLockLogSnapshot)pageLockDump, trim);
+            processDump((PageLockLogSnapshot)pageLockDump, threadState);
     }
 
     /** */
     void processDump(PageLockDump pageLockDump) {
-        processDump(pageLockDump, false);
+        processDump(pageLockDump, null);
     }
 
     /**
      * @param snapshot Process lock log snapshot.
      */
-    private void processDump(PageLockLogSnapshot snapshot, boolean trim) {
+    private void processDump(PageLockLogSnapshot snapshot, ThreadPageLockState threadState) {
         Map<Long, LockState> holdetLocks = new LinkedHashMap<>();
 
         SB logLocksStr = new SB();
@@ -206,8 +204,13 @@ class ToStringDumpProcessor {
                 + ", flags=" + hexInt(flag(nextOpPageId)) + "]" + U.nl());
         }
 
-        if (trim && holdetLocks.isEmpty())
-            return;
+        if (threadState != null) {
+            if (holdetLocks.isEmpty()
+                && logLocksStr.length() == 0)
+                return;
+
+            appendThreadInfo(sb, threadState);
+        }
 
         sb.append(lockedPagesInfo(holdetLocks)).append(U.nl());
 
@@ -223,7 +226,7 @@ class ToStringDumpProcessor {
     /**
      * @param snapshot Process lock stack snapshot.
      */
-    private void processDump(PageLockStackSnapshot snapshot) {
+    private void processDump(PageLockStackSnapshot snapshot, ThreadPageLockState threadState) {
         int headIdx = snapshot.headIdx;
         PageMetaInfoStore pageIdLocksStack = snapshot.pageIdLocksStack;
         long nextOpPageId = snapshot.nextOpPageId;
@@ -275,6 +278,13 @@ class ToStringDumpProcessor {
             }
         }
 
+        if (threadState != null) {
+            if (holdedLocks.isEmpty())
+                return;
+
+            appendThreadInfo(sb, threadState);
+        }
+
         sb.append(lockedPagesInfo(holdedLocks)).append(U.nl());
 
         sb.append("Locked pages stack: ").append(snapshot.name)
@@ -289,7 +299,7 @@ class ToStringDumpProcessor {
     /**
      * @param snapshot Process lock thread dump snapshot.
      */
-    private void processDump(SharedPageLockTrackerDump snapshot) {
+    void processDump(SharedPageLockTrackerDump snapshot) {
         sb.append("Page locks dump:").append(U.nl()).append(U.nl());
 
         List<ThreadPageLockState> threadPageLockStates = new ArrayList<>(snapshot.threadPageLockStates);
@@ -298,10 +308,6 @@ class ToStringDumpProcessor {
         threadPageLockStates.sort(Comparator.comparing(state -> state.threadName));
 
         for (ThreadPageLockState ths : threadPageLockStates) {
-            sb.append("Thread=[name=").append(ths.threadName)
-                .append(", id=").append(ths.threadId)
-                .append("], state=").append(ths.state)
-                .append(U.nl());
 
             PageLockDump pageLockDump0;
 
@@ -313,9 +319,17 @@ class ToStringDumpProcessor {
                 pageLockDump0 = ths.invalidContext.dump;
             }
 
-            processDump(pageLockDump0, true);
+            processDump(pageLockDump0, ths);
 
             sb.append(U.nl());
         }
+    }
+
+    /** */
+    private static void appendThreadInfo(StringBuilder sb, ThreadPageLockState ths) {
+        sb.append("Thread=[name=").append(ths.threadName)
+            .append(", id=").append(ths.threadId)
+            .append("], state=").append(ths.state)
+            .append(U.nl());
     }
 }

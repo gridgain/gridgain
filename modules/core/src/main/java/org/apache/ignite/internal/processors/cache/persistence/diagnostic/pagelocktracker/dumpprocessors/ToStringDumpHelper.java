@@ -36,21 +36,24 @@ public class ToStringDumpHelper {
     public static String toStringDump(PageLockDump pageLockDump) {
         StringBuilder sb = new StringBuilder();
 
-        ToStringDumpProcessor proc = new ToStringDumpProcessor(sb, strucutreIdMapFunc(pageLockDump));
+        ToStringDumpProcessor proc = new ToStringDumpProcessor(sb, String::valueOf);
 
         proc.processDump(pageLockDump);
 
         return sb.toString();
     }
 
-    /** */
-    private static Function<Integer, String> strucutreIdMapFunc(PageLockDump pageLockDump) {
-        if (pageLockDump instanceof SharedPageLockTrackerDump) {
-            SharedPageLockTrackerDump dump = (SharedPageLockTrackerDump)pageLockDump;
+    /**
+     * @param pageLockDump Dump.
+     * @return String representation of dump.
+     */
+    public static String toStringDump(SharedPageLockTrackerDump pageLockDump) {
+        StringBuilder sb = new StringBuilder();
 
-            return dump.structureIdToStrcutureName::get;
-        }
-        else
-            return String::valueOf;
+        ToStringDumpProcessor proc = new ToStringDumpProcessor(sb, pageLockDump.structureIdToStrcutureName::get);
+
+        proc.processDump(pageLockDump);
+
+        return sb.toString();
     }
 }

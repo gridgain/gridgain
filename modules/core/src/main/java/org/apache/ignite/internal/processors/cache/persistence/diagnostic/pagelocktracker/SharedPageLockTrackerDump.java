@@ -18,11 +18,12 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagel
 
 import java.util.List;
 import java.util.Map;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToStringDumpHelper;
 
 /**
  *
  */
-public class SharedPageLockTrackerDump extends PageLockDump {
+public class SharedPageLockTrackerDump {
 
     /** */
     public final Map<Integer, String> structureIdToStrcutureName;
@@ -31,13 +32,21 @@ public class SharedPageLockTrackerDump extends PageLockDump {
     public final List<ThreadPageLockState> threadPageLockStates;
 
     /** */
+    public final long time;
+
+    /** */
     public SharedPageLockTrackerDump(
         long time,
         Map<Integer, String> structureIdToStrcutureName,
         List<ThreadPageLockState> threadPageLockStates
     ) {
-        super(time);
+        this.time = time;
         this.structureIdToStrcutureName = structureIdToStrcutureName;
         this.threadPageLockStates = threadPageLockStates;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return ToStringDumpHelper.toStringDump(this);
     }
 }
