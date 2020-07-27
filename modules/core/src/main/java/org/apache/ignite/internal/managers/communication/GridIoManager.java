@@ -68,7 +68,6 @@ import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.discovery.CustomEventListener;
-import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
@@ -147,6 +146,7 @@ import static org.apache.ignite.internal.processors.tracing.MTC.support;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_ORDERED_PROCESS;
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_REGULAR_PROCESS;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
+import static org.apache.ignite.internal.util.IgniteUtils.SRVS_NODES_FILTER;
 import static org.apache.ignite.internal.util.nio.GridNioBackPressureControl.threadProcessingMessage;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_PAIRED_CONN;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
@@ -1844,7 +1844,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (!IgniteFeatures.nodeSupports(ctx, node, INVERSE_TCP_CONNECTION))
             return false;
 
-        return IgniteFeatures.allNodesSupport(ctx, INVERSE_TCP_CONNECTION, IgniteDiscoverySpi.SRV_NODES);
+        return IgniteFeatures.allNodesSupport(ctx, INVERSE_TCP_CONNECTION, SRVS_NODES_FILTER);
     }
 
     /**

@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -35,6 +36,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.index.Index;
@@ -42,6 +44,8 @@ import org.h2.result.SortOrder;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.ignite.internal.util.IgniteUtils.SRVS_NODES_FILTER;
 
 /**
  * Information about table in database.
@@ -326,14 +330,32 @@ public class H2TableDescriptor {
             if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                for (String keyName : type.primaryKeyFields()) {
-                    GridQueryProperty prop = type.property(keyName);
+                GridCacheContext ctx = cacheInfo.cacheContext();
 
-                    assert prop.key() : keyName + " is not a key field";
+                // Without this check in heterogeneous cluster can obtain hard to describe sql query performance
+                // execution.
+                if (IgniteFeatures.allNodesSupports(ctx.kernalContext(), F.view(ctx.discovery().remoteNodes(), SRVS_NODES_FILTER),
+                    IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                    for (String keyName : type.primaryKeyFields()) {
+                        GridQueryProperty prop = type.property(keyName);
 
-                    Column col = tbl.getColumn(prop.name());
+                        assert prop.key() : keyName + " is not a key field";
 
-                    keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
+                        Column col = tbl.getColumn(prop.name());
+
+                        keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
+                    }
+                }
+                else {
+                    for (String propName : type.fields().keySet()) {
+                        GridQueryProperty prop = type.property(propName);
+
+                        if (prop.key()) {
+                            Column col = tbl.getColumn(propName);
+
+                            keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));
+                        }
+                    }
                 }
 
                 // If key is object but the user has not specified any particular columns,

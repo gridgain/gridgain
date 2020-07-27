@@ -22,11 +22,11 @@ import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
+import static org.apache.ignite.internal.util.IgniteUtils.SRVS_NODES_FILTER;
 
 /**
  * API for distributed data storage. Gives the ability to store configuration data (or any other data)
@@ -39,7 +39,7 @@ public interface ReadableDistributedMetaStorage {
      * @see IgniteFeatures#DISTRIBUTED_METASTORAGE
      */
     public static boolean isSupported(GridKernalContext ctx) {
-        return IgniteFeatures.allNodesSupport(ctx, DISTRIBUTED_METASTORAGE, IgniteDiscoverySpi.SRV_NODES);
+        return IgniteFeatures.allNodesSupport(ctx, DISTRIBUTED_METASTORAGE, SRVS_NODES_FILTER);
     }
 
     /**

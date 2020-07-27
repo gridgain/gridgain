@@ -96,6 +96,7 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.internal.util.IgniteUtils.SRVS_NODES_FILTER;
 
 /**
  *
@@ -170,9 +171,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * No values should be stored in metastorage nor passed in joining node discovery data.
      */
     private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
-
-    /** */
-    private final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
 
     /**
      * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
