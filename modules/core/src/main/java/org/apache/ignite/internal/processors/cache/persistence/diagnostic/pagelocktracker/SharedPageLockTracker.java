@@ -44,9 +44,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.diagnostic
  *
  */
 public class SharedPageLockTracker implements PageLockListener {
-    /**
-     *
-     */
+    /** */
     private static final long OVERHEAD_SIZE = 16 + (8 * 8) + (4 * 3);
 
     /** */
@@ -190,7 +188,7 @@ public class SharedPageLockTracker implements PageLockListener {
      * Creates dump.
      */
     public synchronized SharedPageLockTrackerDump dump() {
-        Collection<PageLockTracker<? extends PageLockDump>> trackers = threadStacks.values();
+        Collection<PageLockTracker<?>> trackers = threadStacks.values();
         List<ThreadPageLockState> threadPageLockStates = new ArrayList<>(threadStacks.size());
 
         for (PageLockTracker tracker : trackers) {
@@ -200,7 +198,7 @@ public class SharedPageLockTracker implements PageLockListener {
             assert acquired;
         }
 
-        for (Map.Entry<Long, PageLockTracker<? extends PageLockDump>> entry : threadStacks.entrySet()) {
+        for (Map.Entry<Long, PageLockTracker<?>> entry : threadStacks.entrySet()) {
             Long threadId = entry.getKey();
             Thread thread = threadIdToThreadRef.get(threadId);
 
@@ -236,7 +234,7 @@ public class SharedPageLockTracker implements PageLockListener {
         List<ThreadPageLockState> threadPageLockStates0 = Collections.unmodifiableList(threadPageLockStates);
 
         // Get first thread dump time or current time is threadStates is empty.
-        long time = !threadPageLockStates.isEmpty() ? threadPageLockStates.get(0).pageLockDump.time() : System.currentTimeMillis();
+        long time = !threadPageLockStates.isEmpty() ? threadPageLockStates.get(0).pageLockDump.time : System.currentTimeMillis();
 
         return new SharedPageLockTrackerDump(time, idToStructureName0, threadPageLockStates0);
     }

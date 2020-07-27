@@ -23,19 +23,39 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
  */
 public abstract class PageLockDump {
 
-    /** */
+    /** Page lock log name. */
+    public final String name;
+
+    /** Dump creation time. */
     public final long time;
 
-    /** */
-    protected PageLockDump(long time) {
-        this.time = time;
-    }
+    /** Head position. */
+    public final int headIdx;
 
-    /**
-     * @return Dump creation time.
-     */
-    public long time() {
-        return time;
+    /** Next operation. */
+    public final int nextOp;
+
+    /** Next data structure. */
+    public final int nextOpStructureId;
+
+    /** Next page id. */
+    public final long nextOpPageId;
+
+    /** */
+    protected PageLockDump(
+        String name,
+        long time,
+        int headIdx,
+        int nextOp,
+        int nextOpStructureId,
+        long nextOpPageId
+    ) {
+        this.name = name;
+        this.time = time;
+        this.headIdx = headIdx;
+        this.nextOp = nextOp;
+        this.nextOpStructureId = nextOpStructureId;
+        this.nextOpPageId = nextOpPageId;
     }
 
     /** {@inheritDoc} */

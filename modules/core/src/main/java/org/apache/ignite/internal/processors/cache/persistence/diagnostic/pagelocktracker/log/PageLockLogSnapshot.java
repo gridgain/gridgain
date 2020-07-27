@@ -23,23 +23,9 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
  * Page lock log snapshot.
  */
 public class PageLockLogSnapshot extends PageLockDump {
-    /** Page lock log name. */
-    public final String name;
-
-    /** Head position. */
-    public final int headIdx;
 
     /** List of log entries. */
     public final List<LogEntry> locklog;
-
-    /** Next operation. */
-    public final int nextOp;
-
-    /** Next data structure. */
-    public final int nextOpStructureId;
-
-    /** Next page id. */
-    public final long nextOpPageId;
 
     /**
      *
@@ -53,12 +39,7 @@ public class PageLockLogSnapshot extends PageLockDump {
         int nextOpStructureId,
         long nextOpPageId
     ) {
-        super(time);
-        this.name = name;
-        this.headIdx = headIdx;
+        super(name, time, headIdx, nextOp, nextOpStructureId, nextOpPageId);
         this.locklog = locklog;
-        this.nextOp = nextOp;
-        this.nextOpStructureId = nextOpStructureId;
-        this.nextOpPageId = nextOpPageId;
     }
 }
