@@ -102,7 +102,7 @@ packages
 /modules/platforms/cpp/thin-client-test/ignite-thin-client-tests
 
 #CMake temp files
-/modules/platforms/cpp/**/cmake-build**
+/modules/platforms/cpp/**/cmake-build*
 
 #Files related to ML manual-runnable tests
 /modules/ml/src/test/resources/manualrun/trees/columntrees.manualrun.properties
