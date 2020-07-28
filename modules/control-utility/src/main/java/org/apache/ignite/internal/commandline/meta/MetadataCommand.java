@@ -1,4 +1,20 @@
 /*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -34,6 +50,8 @@ import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsLis
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.LIST;
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.REMOVE;
 import static org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList.UPDATE;
+import static org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs.TYPE_ID;
+import static org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs.TYPE_NAME;
 
 /**
  *
@@ -63,8 +81,8 @@ public class MetadataCommand implements Command<Object> {
                 "(the type must be specified by type name or by type identifier):",
             METADATA,
             DETAILS.toString(),
-            optional(MetadataTypeArgs.TYPE_ID, "<typeId>"),
-            optional(MetadataTypeArgs.TYPE_NAME, "<typeName>")
+            optional(TYPE_ID, "<typeId>"),
+            optional(TYPE_NAME, "<typeName>")
         );
 
         usage(log, "Remove the metadata of the specified type " +
@@ -73,8 +91,8 @@ public class MetadataCommand implements Command<Object> {
                 "If the file name isn't specified the output file name is: '<typeId>.bin'",
             METADATA,
             REMOVE.toString(),
-            optional(MetadataTypeArgs.TYPE_ID, "<typeId>"),
-            optional(MetadataTypeArgs.TYPE_NAME, "<typeName>"),
+            optional(TYPE_ID, "<typeId>"),
+            optional(TYPE_NAME, "<typeName>"),
             optional(MetadataRemoveCommand.OUT_FILE_NAME, "<fileName>")
         );
 
@@ -127,5 +145,37 @@ public class MetadataCommand implements Command<Object> {
     /** {@inheritDoc} */
     @Override public Object arg() {
         return delegate.arg();
+    }
+
+    /**
+     * @param argIter Command line arguments iterator.
+     * @return Metadata type argument.
+     */
+    public static MetadataTypeArgs parseArgs(CommandArgIterator argIter) {
+        String typeName = null;
+        Integer typeId = null;
+
+        while (argIter.hasNextSubArg() && typeName == null && typeId == null) {
+            String optName = argIter.nextArg("Expecting " + TYPE_NAME + " or " + TYPE_ID);
+
+            switch (optName) {
+                case TYPE_NAME:
+                    typeName = argIter.nextArg("type name");
+
+                    break;
+
+                case TYPE_ID:
+                    typeId = argIter.nextIntArg("typeId");
+
+                    break;
+            }
+        }
+
+        if (typeName == null && typeId == null) {
+            throw new IllegalArgumentException("Type to remove is not specified. " +
+                "Please add one of the options: --typeName <type_name> or --typeId <type_id>");
+        }
+
+        return new MetadataTypeArgs(typeName, typeId);
     }
 }

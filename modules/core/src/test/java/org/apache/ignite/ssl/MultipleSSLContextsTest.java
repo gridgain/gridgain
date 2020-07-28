@@ -34,12 +34,9 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 
 /**
  * Test SSL configuration, where certificates for nodes, connectors and client connectors are signed using different
@@ -223,23 +220,6 @@ public class MultipleSSLContextsTest extends GridCommonAbstractTest {
             if (cache != null)
                 cache.destroy();
         }
-    }
-
-    /**
-     * Checks that control.sh script can connect to the cluster, that has SSL enabled.
-     */
-    @Test
-    public void testConnector() {
-        CommandHandler hnd = new CommandHandler();
-
-        int exitCode = hnd.execute(Arrays.asList(
-            "--state",
-            "--keystore", GridTestUtils.keyStorePath("connectorClient"),
-            "--keystore-password", GridTestUtils.keyStorePassword(),
-            "--truststore", GridTestUtils.keyStorePath("trustthree"),
-            "--truststore-password", GridTestUtils.keyStorePassword()));
-
-        assertEquals(EXIT_CODE_OK, exitCode);
     }
 
     /**
