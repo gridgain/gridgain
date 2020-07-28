@@ -350,7 +350,7 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      * - checks that type removed.
      * - creates new types with the same names but different field names
      * - restores removed types from the file
-     * - checks all types sucessfully merged.
+     * - checks all types successfully merged.
      */
     @Test
     public void testTypeMergedAfterRemoveUpdate() {
@@ -533,17 +533,6 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     }
 
     /**
-     * Repeats {@code cons} {@code cnt} times.
-     *
-     * @param cnt Count.
-     * @param cons Cons.
-     */
-    private void repeat(int cnt, Consumer<Integer> cons) {
-        for (int i = 0; i < cnt; i++)
-            cons.accept(i);
-    }
-
-    /**
      * Checks metadata list/details behaviour after a type removing.
      *
      * Steps:
@@ -579,6 +568,17 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
         finally {
             Files.deleteIfExists(typeFile);
         }
+    }
+
+    /**
+     * Repeats {@code cons} {@code cnt} times.
+     *
+     * @param cnt Count.
+     * @param cons Cons.
+     */
+    private void repeat(int cnt, Consumer<Integer> cons) {
+        for (int i = 0; i < cnt; i++)
+            cons.accept(i);
     }
 
     /**
