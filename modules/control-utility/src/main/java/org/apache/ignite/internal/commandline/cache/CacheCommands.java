@@ -42,6 +42,9 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALI
  * High-level "cache" command implementation.
  */
 public class CacheCommands implements Command<CacheSubcommands> {
+    /** Empty group name. */
+    public static final String EMPTY_GROUP_NAME = "no_group";
+
     /** */
     protected static final String NODE_ID = "nodeId";
 

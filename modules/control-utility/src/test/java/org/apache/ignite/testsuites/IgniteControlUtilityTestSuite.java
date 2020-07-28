@@ -20,8 +20,21 @@ import org.apache.ignite.events.IgniteControlUtilityBaselineEventsLocalTest;
 import org.apache.ignite.events.IgniteControlUtilityBaselineEventsRemoteTest;
 import org.apache.ignite.internal.commandline.CommandHandlerParsingTest;
 import org.apache.ignite.internal.processors.security.GridCommandHandlerSslWithSecurityTest;
+import org.apache.ignite.util.GridCommandHandlerBrokenIndexTest;
+import org.apache.ignite.util.GridCommandHandlerCheckIndexesInlineSizeTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassWithSSLTest;
+import org.apache.ignite.util.GridCommandHandlerGetCacheSizeTest;
+import org.apache.ignite.util.GridCommandHandlerIndexForceRebuildTest;
+import org.apache.ignite.util.GridCommandHandlerIndexListTest;
+import org.apache.ignite.util.GridCommandHandlerIndexRebuildStatusTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingCheckSizeTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingClusterByClassTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingClusterByClassWithSSLTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingTest;
+import org.apache.ignite.util.GridCommandHandlerIndexingWithSSLTest;
+import org.apache.ignite.util.GridCommandHandlerInterruptCommandTest;
+import org.apache.ignite.util.GridCommandHandlerMetadataTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicPersistentTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationCommonTest;
@@ -68,6 +81,20 @@ import org.junit.runners.Suite;
 
     IgniteControlUtilityBaselineEventsLocalTest.class,
     IgniteControlUtilityBaselineEventsRemoteTest.class,
+
+    GridCommandHandlerBrokenIndexTest.class,
+    GridCommandHandlerIndexingTest.class,
+    GridCommandHandlerIndexingWithSSLTest.class,
+    GridCommandHandlerIndexingClusterByClassTest.class,
+    GridCommandHandlerIndexingClusterByClassWithSSLTest.class,
+    GridCommandHandlerIndexingCheckSizeTest.class,
+    GridCommandHandlerIndexForceRebuildTest.class,
+    GridCommandHandlerIndexListTest.class,
+    GridCommandHandlerIndexRebuildStatusTest.class,
+    GridCommandHandlerCheckIndexesInlineSizeTest.class,
+    GridCommandHandlerInterruptCommandTest.class,
+    GridCommandHandlerMetadataTest.class,
+    GridCommandHandlerGetCacheSizeTest.class,
 })
 public class IgniteControlUtilityTestSuite {
 }
