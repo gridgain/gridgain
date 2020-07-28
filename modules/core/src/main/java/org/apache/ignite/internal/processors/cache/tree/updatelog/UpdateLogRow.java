@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.tree;
+package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -31,17 +31,17 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class UpdateLogRow {
     /** Cache ID. */
     @GridToStringInclude
-    public int cacheId;
+    int cacheId;
 
-    /** Expire time. */
+    /** Update counter. */
     @GridToStringInclude
-    public long updateCntr;
+    long updateCntr;
 
     /** Link. */
     @GridToStringInclude
-    public long link;
+    long link;
 
-    /** */
+    /** Materialized row. */
     private CacheDataRowAdapter rowData;
 
     /**
@@ -75,6 +75,20 @@ public class UpdateLogRow {
     public UpdateLogRow(int cacheId, long updateCntr) {
         this.cacheId = cacheId;
         this.updateCntr = updateCntr;
+    }
+
+    /**
+     * @return Row link.
+     */
+    public long link() {
+        return link;
+    }
+
+    /**
+     * @return Cache ID.
+     */
+    public int cacheId() {
+        return cacheId;
     }
 
     /**

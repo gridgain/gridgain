@@ -14,34 +14,34 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.tree;
+package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 
 /**
  *
  */
-public final class CacheIdAwareUpdateLogInnerIO extends AbstractUpdateLogInnerIO {
+public final class UpdateLogLeafIO extends AbstractUpdateLogLeafIO {
     /** */
-    public static final IOVersions<CacheIdAwareUpdateLogInnerIO> VERSIONS = new IOVersions<>(
-        new CacheIdAwareUpdateLogInnerIO(1)
+    public static final IOVersions<UpdateLogLeafIO> VERSIONS = new IOVersions<>(
+        new UpdateLogLeafIO(1)
     );
 
     /**
      * @param ver Page format version.
      */
-    private CacheIdAwareUpdateLogInnerIO(int ver) {
-        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER & 0xFFFF, ver, true, 20);
+    private UpdateLogLeafIO(int ver) {
+        super(T_UPDATE_LOG_REF_LEAF & 0xFFFF, ver, 16);
     }
 
     /** {@inheritDoc} */
     @Override public int getCacheId(long pageAddr, int idx) {
-        return PageUtils.getInt(pageAddr, offset(idx) + 16);
+        return CU.UNDEFINED_CACHE_ID;
     }
 
     /** {@inheritDoc} */
     @Override protected boolean storeCacheId() {
-        return true;
+        return false;
     }
 }

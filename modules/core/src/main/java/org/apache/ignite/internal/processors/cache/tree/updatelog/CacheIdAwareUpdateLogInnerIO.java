@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.tree;
+package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
@@ -22,17 +22,17 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersion
 /**
  *
  */
-public final class CacheIdAwareUpdateLogLeafIO extends AbstractUpdateLogLeafIO {
+public final class CacheIdAwareUpdateLogInnerIO extends AbstractUpdateLogInnerIO {
     /** */
-    public static final IOVersions<CacheIdAwareUpdateLogLeafIO> VERSIONS = new IOVersions<>(
-        new CacheIdAwareUpdateLogLeafIO(1)
+    public static final IOVersions<CacheIdAwareUpdateLogInnerIO> VERSIONS = new IOVersions<>(
+        new CacheIdAwareUpdateLogInnerIO(1)
     );
 
     /**
      * @param ver Page format version.
      */
-    private CacheIdAwareUpdateLogLeafIO(int ver) {
-        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF & 0xFFFF, ver, 20);
+    private CacheIdAwareUpdateLogInnerIO(int ver) {
+        super(T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER & 0xFFFF, ver, true, 20);
     }
 
     /** {@inheritDoc} */

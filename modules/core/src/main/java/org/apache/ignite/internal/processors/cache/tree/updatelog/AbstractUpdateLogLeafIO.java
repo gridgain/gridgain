@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.tree;
+package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO;
+import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
 /**
@@ -52,7 +53,8 @@ public abstract class AbstractUpdateLogLeafIO extends BPlusLeafIO<UpdateLogRow> 
     }
 
     /** {@inheritDoc} */
-    @Override public void store(long dstPageAddr,
+    @Override public void store(
+        long dstPageAddr,
         int dstIdx,
         BPlusIO<UpdateLogRow> srcIo,
         long srcPageAddr,
@@ -60,9 +62,9 @@ public abstract class AbstractUpdateLogLeafIO extends BPlusLeafIO<UpdateLogRow> 
         int dstOff = offset(dstIdx);
 
         long link = ((UpdateLogRowIO)srcIo).getLink(srcPageAddr, srcIdx);
-        long expireTime = ((UpdateLogRowIO)srcIo).getUpdateCounter(srcPageAddr, srcIdx);
+        long updCntr = ((UpdateLogRowIO)srcIo).getUpdateCounter(srcPageAddr, srcIdx);
 
-        PageUtils.putLong(dstPageAddr, dstOff, expireTime);
+        PageUtils.putLong(dstPageAddr, dstOff, updCntr);
         PageUtils.putLong(dstPageAddr, dstOff + 8, link);
 
         if (storeCacheId()) {

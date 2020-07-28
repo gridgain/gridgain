@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.tree;
+package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageMemory;
@@ -104,8 +104,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         cmp = Long.compare(updCntr, row.updateCntr);
 
-        if (cmp == 0 && row.link != 0)
-            assert io.getLink(pageAddr, idx) == row.link;
+        assert cmp == 0 && row.link != 0 && io.getLink(pageAddr, idx) == row.link;
 
         return cmp;
     }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.tree;
+package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
@@ -28,10 +28,10 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
  */
 public abstract class AbstractUpdateLogInnerIO extends BPlusInnerIO<UpdateLogRow> implements UpdateLogRowIO {
     /**
-     * @param type Page type.
-     * @param ver Page format version.
+     * @param type      Page type.
+     * @param ver       Page format version.
      * @param canGetRow If we can get full row from this page.
-     * @param itemSize Single item size on page.
+     * @param itemSize  Single item size on page.
      */
     AbstractUpdateLogInnerIO(int type, int ver, boolean canGetRow, int itemSize) {
         super(type, ver, canGetRow, itemSize);
@@ -53,21 +53,23 @@ public abstract class AbstractUpdateLogInnerIO extends BPlusInnerIO<UpdateLogRow
     }
 
     /** {@inheritDoc} */
-    @Override public void store(long dstPageAddr,
+    @Override public void store(
+        long dstPageAddr,
         int dstIdx,
         BPlusIO<UpdateLogRow> srcIo,
         long srcPageAddr,
-        int srcIdx) throws IgniteCheckedException {
+        int srcIdx
+    ) throws IgniteCheckedException {
         int dstOff = offset(dstIdx);
 
-        long link = ((PendingRowIO)srcIo).getLink(srcPageAddr, srcIdx);
-        long expireTime = ((PendingRowIO)srcIo).getExpireTime(srcPageAddr, srcIdx);
+        long link = ((UpdateLogRowIO)srcIo).getLink(srcPageAddr, srcIdx);
+        long updCntr = ((UpdateLogRowIO)srcIo).getUpdateCounter(srcPageAddr, srcIdx);
 
-        PageUtils.putLong(dstPageAddr, dstOff, expireTime);
+        PageUtils.putLong(dstPageAddr, dstOff, updCntr);
         PageUtils.putLong(dstPageAddr, dstOff + 8, link);
 
         if (storeCacheId()) {
-            int cacheId = ((PendingRowIO)srcIo).getCacheId(srcPageAddr, srcIdx);
+            int cacheId = ((UpdateLogRowIO)srcIo).getCacheId(srcPageAddr, srcIdx);
 
             assert cacheId != CU.UNDEFINED_CACHE_ID;
 

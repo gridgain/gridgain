@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IndexPageType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
@@ -39,20 +36,24 @@ import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.CacheIdAwarePendingEntryInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.CacheIdAwarePendingEntryLeafIO;
-import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareUpdateLogInnerIO;
-import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareUpdateLogLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.DataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.DataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntryInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntryLeafIO;
-import org.apache.ignite.internal.processors.cache.tree.UpdateLogInnerIO;
-import org.apache.ignite.internal.processors.cache.tree.UpdateLogLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataLeafIO;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.CacheIdAwareUpdateLogInnerIO;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.CacheIdAwareUpdateLogLeafIO;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogInnerIO;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogLeafIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base format for all the page types.
@@ -113,16 +114,16 @@ public abstract class PageIO {
     public static final short MAX_PAYLOAD_SIZE = 2048;
 
     /** */
-    private static final List<IOVersions<? extends BPlusInnerIO<?>>> h2ExtraInnerIOs = new ArrayList<>(MAX_PAYLOAD_SIZE);
+    private static final List<IOVersions<? extends BPlusInnerIO<?>>> H2_EXTRA_INNER_IOS = new ArrayList<>(MAX_PAYLOAD_SIZE);
 
     /** */
-    private static final List<IOVersions<? extends BPlusLeafIO<?>>> h2ExtraLeafIOs = new ArrayList<>(MAX_PAYLOAD_SIZE);
+    private static final List<IOVersions<? extends BPlusLeafIO<?>>> H2_EXTRA_LEAF_IOS = new ArrayList<>(MAX_PAYLOAD_SIZE);
 
     /** */
-    private static final List<IOVersions<? extends BPlusInnerIO<?>>> h2ExtraMvccInnerIOs = new ArrayList<>(MAX_PAYLOAD_SIZE);
+    private static final List<IOVersions<? extends BPlusInnerIO<?>>> H2_EXTRA_MVCC_INNER_IOS = new ArrayList<>(MAX_PAYLOAD_SIZE);
 
     /** */
-    private static final List<IOVersions<? extends BPlusLeafIO<?>>> h2ExtraMvccLeafIOs = new ArrayList<>(MAX_PAYLOAD_SIZE);
+    private static final List<IOVersions<? extends BPlusLeafIO<?>>> H2_EXTRA_MVCC_LEAF_IOS = new ArrayList<>(MAX_PAYLOAD_SIZE);
 
     /** */
     public static final int TYPE_OFF = 0;
@@ -541,7 +542,7 @@ public abstract class PageIO {
      * @param innerExtIOs Extra versions.
      */
     public static void registerH2ExtraInner(IOVersions<? extends BPlusInnerIO<?>> innerExtIOs, boolean mvcc) {
-        List<IOVersions<? extends BPlusInnerIO<?>>> ios = mvcc ? h2ExtraMvccInnerIOs : h2ExtraInnerIOs;
+        List<IOVersions<? extends BPlusInnerIO<?>>> ios = mvcc ? H2_EXTRA_MVCC_INNER_IOS : H2_EXTRA_INNER_IOS;
 
         ios.add(innerExtIOs);
     }
@@ -552,7 +553,7 @@ public abstract class PageIO {
      * @param leafExtIOs Extra versions.
      */
     public static void registerH2ExtraLeaf(IOVersions<? extends BPlusLeafIO<?>> leafExtIOs, boolean mvcc) {
-        List<IOVersions<? extends BPlusLeafIO<?>>> ios = mvcc ? h2ExtraMvccLeafIOs : h2ExtraLeafIOs;
+        List<IOVersions<? extends BPlusLeafIO<?>>> ios = mvcc ? H2_EXTRA_MVCC_LEAF_IOS : H2_EXTRA_LEAF_IOS;
 
         ios.add(leafExtIOs);
     }
@@ -562,7 +563,7 @@ public abstract class PageIO {
      * @return IOVersions for given idx.
      */
     public static IOVersions<? extends BPlusInnerIO<?>> getInnerVersions(int idx, boolean mvcc) {
-        List<IOVersions<? extends BPlusInnerIO<?>>> ios = mvcc ? h2ExtraMvccInnerIOs : h2ExtraInnerIOs;
+        List<IOVersions<? extends BPlusInnerIO<?>>> ios = mvcc ? H2_EXTRA_MVCC_INNER_IOS : H2_EXTRA_INNER_IOS;
 
         return ios.get(idx);
     }
@@ -572,7 +573,7 @@ public abstract class PageIO {
      * @return IOVersions for given idx.
      */
     public static IOVersions<? extends BPlusLeafIO<?>> getLeafVersions(int idx, boolean mvcc) {
-        List<IOVersions<? extends BPlusLeafIO<?>>> ios = mvcc ? h2ExtraMvccLeafIOs : h2ExtraLeafIOs;
+        List<IOVersions<? extends BPlusLeafIO<?>>> ios = mvcc ? H2_EXTRA_MVCC_LEAF_IOS : H2_EXTRA_LEAF_IOS;
 
         return ios.get(idx);
     }
@@ -730,16 +731,16 @@ public abstract class PageIO {
         short type0 = (short) type;
 
         if (type0 >= T_H2_EX_REF_LEAF_START && type0 <= T_H2_EX_REF_LEAF_END)
-            return (Q)h2ExtraLeafIOs.get(type0 - T_H2_EX_REF_LEAF_START).forVersion(ver);
+            return (Q)H2_EXTRA_LEAF_IOS.get(type0 - T_H2_EX_REF_LEAF_START).forVersion(ver);
 
         if (type0 >= T_H2_EX_REF_INNER_START && type0 <= T_H2_EX_REF_INNER_END)
-            return (Q)h2ExtraInnerIOs.get(type0 - T_H2_EX_REF_INNER_START).forVersion(ver);
+            return (Q)H2_EXTRA_INNER_IOS.get(type0 - T_H2_EX_REF_INNER_START).forVersion(ver);
 
         if (type0 >= T_H2_EX_REF_MVCC_LEAF_START && type0 <= T_H2_EX_REF_MVCC_LEAF_END)
-            return (Q)h2ExtraMvccLeafIOs.get(type0 - T_H2_EX_REF_MVCC_LEAF_START).forVersion(ver);
+            return (Q)H2_EXTRA_MVCC_LEAF_IOS.get(type0 - T_H2_EX_REF_MVCC_LEAF_START).forVersion(ver);
 
         if (type0 >= T_H2_EX_REF_MVCC_INNER_START && type0 <= T_H2_EX_REF_MVCC_INNER_END)
-            return (Q)h2ExtraMvccInnerIOs.get(type0 - T_H2_EX_REF_MVCC_INNER_START).forVersion(ver);
+            return (Q)H2_EXTRA_MVCC_INNER_IOS.get(type0 - T_H2_EX_REF_MVCC_INNER_START).forVersion(ver);
 
         switch (type0) {
             case T_UPDATE_LOG_REF_INNER:
