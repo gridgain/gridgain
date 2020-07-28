@@ -656,6 +656,16 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         GridContinuousHandler hnd, int bufSize, long interval, boolean autoUnsubscribe) {
 
         try {
+            if (ctx.clientNode()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Do not register continuous routine, the local node is client [" +
+                        "routineId=" + routineId +
+                        ", srcNodeId=" + srcNodeId + ']');
+                }
+
+                return;
+            }
+
             if (nodeFilter != null)
                 ctx.resource().injectGeneric(nodeFilter);
 
@@ -1362,7 +1372,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
      * @param req Start request.
      */
     private void processStartRequest(ClusterNode node, StartRoutineDiscoveryMessage req) {
-        if (node.id().equals(ctx.localNodeId()))
+        if (node.id().equals(ctx.localNodeId()) || ctx.clientNode())
             return;
 
         UUID routineId = req.routineId();
@@ -1517,7 +1527,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         // Should not use marshaller and send messages from discovery thread.
         ctx.getSystemExecutorService().execute(new Runnable() {
             @Override public void run() {
-                if (snd.id().equals(ctx.localNodeId())) {
+                if (snd.id().equals(ctx.localNodeId()) || ctx.clientNode()) {
                     StartFuture fut = startFuts.get(msg.routineId());
 
                     if (fut != null)
