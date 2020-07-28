@@ -332,8 +332,8 @@ public class H2TableDescriptor {
             else {
                 // SPECIFIED_SEQ_PK_KEYS check guarantee that request running on heterogeneous (RU) cluster can
                 // perform equally on all nodes.
-                if (IgniteFeatures.allNodesSupports(idx.kernalContext(), F.view(idx.kernalContext().discovery().remoteNodes(),
-                    SRVS_NODES_FILTER), IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                if (!idx.kernalContext().recoveryMode() && IgniteFeatures.allNodesSupports(idx.kernalContext(),
+                    F.view(idx.kernalContext().discovery().remoteNodes(), SRVS_NODES_FILTER), IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
                     for (String keyName : type.primaryKeyFields()) {
                         GridQueryProperty prop = type.property(keyName);
 
