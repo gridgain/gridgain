@@ -330,12 +330,10 @@ public class H2TableDescriptor {
             if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                GridCacheContext ctx = cacheInfo.cacheContext();
-
-                // Without this check in heterogeneous cluster can obtain hard to describe sql query performance
-                // execution.
-                if (IgniteFeatures.allNodesSupports(ctx.kernalContext(), F.view(ctx.discovery().remoteNodes(), SRVS_NODES_FILTER),
-                    IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                // SPECIFIED_SEQ_PK_KEYS check guarantee that request running on heterogeneous (RU) cluster can
+                // perform equally on all nodes.
+                if (IgniteFeatures.allNodesSupports(idx.kernalContext(), F.view(idx.kernalContext().discovery().remoteNodes(),
+                    SRVS_NODES_FILTER), IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
                     for (String keyName : type.primaryKeyFields()) {
                         GridQueryProperty prop = type.property(keyName);
 
