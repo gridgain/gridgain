@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-import org.apache.ignite.lang.IgniteFuture;
-
 /**
  * Interface for all page lock tracker entries which support dumping.
  */

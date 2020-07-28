@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-
 /** */
 public class ThreadPageLockState {
     /** */
