@@ -120,6 +120,7 @@ import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
@@ -1952,10 +1953,11 @@ public final class GridTestUtils {
      *
      * @param cond Condition to wait for.
      * @param timeout Max time to wait in milliseconds.
+     * @param checkInterval Time interval between two consecutive condition checks.
      * @return {@code true} if condition was achieved, {@code false} otherwise.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
      */
-    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout, long checkInterval) throws IgniteInterruptedCheckedException {
         long curTime = U.currentTimeMillis();
         long endTime = curTime + timeout;
 
@@ -1966,12 +1968,25 @@ public final class GridTestUtils {
             if (cond.apply())
                 return true;
 
-            U.sleep(DFLT_BUSYWAIT_SLEEP_INTERVAL);
+            if (checkInterval > 0)
+                U.sleep(checkInterval);
 
             curTime = U.currentTimeMillis();
         }
 
         return false;
+    }
+
+    /**
+     * Waits for condition, polling in busy wait loop.
+     *
+     * @param cond Condition to wait for.
+     * @param timeout Max time to wait in milliseconds.
+     * @return {@code true} if condition was achieved, {@code false} otherwise.
+     * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
+     */
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+        return waitForCondition(cond, timeout, DFLT_BUSYWAIT_SLEEP_INTERVAL);
     }
 
     /**
@@ -2218,6 +2233,17 @@ public final class GridTestUtils {
      */
     public static String apacheIgniteTestPath() {
         return System.getProperty("IGNITE_TEST_PATH", U.getIgniteHome() + "/target/ignite");
+    }
+
+    /**
+     * Deletes index.bin for all cach groups for given {@code igniteInstanceName}
+     */
+    public static void deleteIndexBin(String igniteInstanceName) throws IgniteCheckedException {
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
+        for (File grp : new File(workDir, U.maskForFileName(igniteInstanceName)).listFiles()) {
+            new File(grp, "index.bin").delete();
+        }
     }
 
     /**

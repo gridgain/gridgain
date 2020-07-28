@@ -582,18 +582,19 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
 
     /**
-     * Return a policy of shutdown or default walue {@link IgniteConfiguration.DFLT_SHUTDOWN_POLICY}
-     * if property is not set.
+     * Returns a policy of shutdown or default value {@code IgniteConfiguration.DFLT_SHUTDOWN_POLICY}
+     * if the property is not set.
      *
      * @return Shutdown policy.
      */
     public ShutdownPolicy shutdownPolicy();
 
     /**
-     * Set a shutdown policy on a cluster.
+     * Sets a shutdown policy on a cluster.
+     * If a policy is specified here the value will override static configuration on
+     * {@link IgniteConfiguration#setShutdownPolicy(ShutdownPolicy)} and persists to cluster meta storage.
      *
-     * @param shutdownPolicy Shutdown policy.
-     * @return True if the policy has been set, false otherwise.
+     * @param policy Shutdown policy.
      */
     public void shutdownPolicy(ShutdownPolicy policy);
 }

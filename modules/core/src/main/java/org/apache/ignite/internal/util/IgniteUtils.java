@@ -266,6 +266,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiOrderSupport;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
@@ -2130,7 +2131,8 @@ public abstract class IgniteUtils {
 
         Collection<Future<?>> futs = new ArrayList<>(addrs.size());
 
-        ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, addrs.size()));
+        ExecutorService executor = Executors.newFixedThreadPool(Math.min(10, addrs.size()),
+            new IgniteThreadFactory("utils", "reachable"));
 
         try {
             for (final InetAddress addr : addrs) {
@@ -9055,7 +9057,7 @@ public abstract class IgniteUtils {
 
         if (cls == null) {
             if (clsFilter != null && !clsFilter.apply(clsName))
-                throw new RuntimeException("Deserialization of class " + clsName + " is disallowed.");
+                throw new ClassNotFoundException("Deserialization of class " + clsName + " is disallowed.");
 
             // Avoid class caching inside Class.forName
             if (ldr instanceof CacheClassLoaderMarker)
@@ -12321,5 +12323,28 @@ public abstract class IgniteUtils {
         IgniteCompute compute = kctx.grid().compute(grp);
 
         compute.broadcast(job);
+    }
+
+    /**
+     * @param configuration Ignite configuration.
+     * @return Whether persistence is enabled.
+     */
+    public static boolean persistenceEnabled(IgniteConfiguration configuration) {
+        if (configuration.getDataStorageConfiguration() != null) {
+            DataStorageConfiguration dsCfg = configuration.getDataStorageConfiguration();
+            if (dsCfg.getDefaultDataRegionConfiguration() != null && dsCfg.getDefaultDataRegionConfiguration().isPersistenceEnabled())
+                return true;
+
+            DataRegionConfiguration[] regions = dsCfg.getDataRegionConfigurations();
+
+            if (regions != null) {
+                for (DataRegionConfiguration region : regions) {
+                    if (region.isPersistenceEnabled())
+                        return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

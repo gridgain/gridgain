@@ -1140,7 +1140,7 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Get shutdown policy.
+     * Gets shutdown policy.
      * If policy was not set default policy will be return {@link IgniteCluster.DEFAULT_SHUTDOWN_POLICY}.
      *
      * @return Shutdown policy.
@@ -1150,8 +1150,8 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Set shutdown policy.
-     * If passed null through parameter, policy will be set as default.
+     * Sets shutdown policy.
+     * If {@code null} is passed as a parameter, policy will be set as default.
      *
      * @param shutdownPolicy Shutdown policy.
      * @return {@code this} for chaining.

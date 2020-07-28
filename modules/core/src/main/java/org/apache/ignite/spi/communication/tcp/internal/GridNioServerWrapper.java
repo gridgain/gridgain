@@ -314,8 +314,8 @@ public class GridNioServerWrapper {
 
         if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
             if (node.isClient() && forceClientToServerConnections(node)) {
-                String msg = "Failed to connect to node " + node.id() +
-                    " because it is started in virtualized environment; inverse connection will be requested.";
+                String msg = "Failed to connect to node " + node.id() + " because it is started" +
+                    " in 'forceClientToServerConnections' mode; inverse connection will be requested.";
 
                 throw new NodeUnreachableException(msg);
             }
