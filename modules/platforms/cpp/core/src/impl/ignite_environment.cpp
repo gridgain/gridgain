@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -58,12 +58,17 @@ namespace ignite
                 CONTINUOUS_QUERY_FILTER_CREATE = 19,
                 CONTINUOUS_QUERY_FILTER_APPLY = 20,
                 CONTINUOUS_QUERY_FILTER_RELEASE = 21,
+                FUTURE_OBJECT_RESULT = 32,
+                FUTURE_NULL_RESULT = 33,
+                FUTURE_ERROR = 34,
                 REALLOC = 36,
                 NODE_INFO = 48,
                 ON_START = 49,
                 ON_STOP = 50,
                 COMPUTE_TASK_LOCAL_JOB_RESULT = 60,
                 COMPUTE_JOB_EXECUTE_LOCAL = 61,
+                COMPUTE_OUT_FUNC_EXECUTE = 74,
+                COMPUTE_ACTION_EXECUTE = 75,
             };
         };
 
@@ -90,8 +95,6 @@ namespace ignite
             };
         };
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
         typedef SharedPointer<impl::cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
 
         /*
@@ -99,8 +102,6 @@ namespace ignite
          */
         class ClusterNodesHolder
         {
-            typedef common::concurrent::SharedPointer<impl::cluster::ClusterNodeImpl> SP_ClusterNodeImpl;
-
             CriticalSection nodesLock;
             std::map<Guid, SP_ClusterNodeImpl> nodes;
 
@@ -111,14 +112,12 @@ namespace ignite
                 // No-op.
             }
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
             void AddNode(SP_ClusterNodeImpl node)
             {
                 CsLockGuard mtx(nodesLock);
 
                 nodes.insert(std::pair<Guid, SP_ClusterNodeImpl>(node.Get()->GetId(), node));
             }
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
             SP_ClusterNodeImpl GetLocalNode()
             {
@@ -143,12 +142,9 @@ namespace ignite
             }
         };
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
-
-
         /**
          * InLongOutLong callback.
-         *
+         * 
          * @param target Target environment.
          * @param type Operation type.
          * @param val Value.
@@ -163,7 +159,6 @@ namespace ignite
 
             switch (type)
             {
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
                 case OperationCallback::NODE_INFO:
                 {
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
@@ -174,7 +169,6 @@ namespace ignite
                     env->Get()->nodes.Get()->AddNode(node);
                     break;
                 }
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
                 case OperationCallback::ON_STOP:
                 {
@@ -254,6 +248,26 @@ namespace ignite
                 case OperationCallback::CONTINUOUS_QUERY_FILTER_RELEASE:
                 {
                     // No-op.
+
+                    break;
+                }
+
+                case OperationCallback::COMPUTE_ACTION_EXECUTE:
+                case OperationCallback::COMPUTE_OUT_FUNC_EXECUTE:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
+
+                    res = env->Get()->OnComputeFuncExecute(mem);
+
+                    break;
+                }
+
+                case OperationCallback::FUTURE_NULL_RESULT:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->AllocateMemory();
+
+                    env->Get()->OnFutureResult(val, mem);
+
                     break;
                 }
 
@@ -277,7 +291,7 @@ namespace ignite
 
         /**
          * InLongOutLong callback.
-         *
+         * 
          * @param target Target environment.
          * @param type Operation type.
          * @param val1 Value1.
@@ -285,7 +299,7 @@ namespace ignite
          * @param val3 Value3.
          * @param arg Object arg.
          */
-        long long IGNITE_CALL InLongLongLongObjectOutLong(void* target, int type, long long val1, long long val2,
+        long long IGNITE_CALL InLongLongLongObjectOutLong(void* target, int type, long long val1, long long val2, 
             long long val3, void* arg)
         {
             int64_t res = 0;
@@ -330,6 +344,24 @@ namespace ignite
                     break;
                 }
 
+                case OperationCallback::FUTURE_OBJECT_RESULT:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val2);
+
+                    env->Get()->OnFutureResult(val1, mem);
+
+                    break;
+                }
+
+                case OperationCallback::FUTURE_ERROR:
+                {
+                    SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val2);
+
+                    env->Get()->OnFutureError(val1, mem);
+
+                    break;
+                }
+
                 default:
                 {
                     break;
@@ -350,9 +382,7 @@ namespace ignite
             metaUpdater(0),
             binding(),
             moduleMgr(),
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
             nodes(new ClusterNodesHolder()),
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
             ignite(NULL)
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
@@ -475,8 +505,6 @@ namespace ignite
             return metaUpdater;
         }
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
         IgniteEnvironment::SP_ClusterNodeImpl IgniteEnvironment::GetLocalNode()
         {
             return nodes.Get()->GetLocalNode();
@@ -486,8 +514,6 @@ namespace ignite
         {
             return nodes.Get()->GetNode(Id);
         }
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
         SharedPointer<IgniteBindingImpl> IgniteEnvironment::GetBinding() const
         {
@@ -651,7 +677,9 @@ namespace ignite
             BinaryReaderImpl reader(&inStream);
 
             int64_t taskHandle = reader.ReadInt64();
-            int64_t jobHandle = reader.ReadInt64();
+
+            // Job Handle.
+            reader.ReadInt64();
 
             // Node GUID
             reader.ReadGuid();
@@ -659,18 +687,10 @@ namespace ignite
             // Cancel flag
             reader.ReadBool();
 
-            SharedPointer<compute::ComputeJobHolder> job0 =
-                StaticPointerCast<compute::ComputeJobHolder>(registry.Get(jobHandle));
-
-            compute::ComputeJobHolder* job = job0.Get();
-
             SharedPointer<compute::ComputeTaskHolder> task0 =
                 StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(taskHandle));
 
             compute::ComputeTaskHolder* task = task0.Get();
-
-            if (task && job)
-                return task->JobResultRemote(*job, reader);
 
             if (!task)
             {
@@ -678,8 +698,7 @@ namespace ignite
                     "Task is not registred for handle", "taskHandle", taskHandle);
             }
 
-            IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
-                "Job is not registred for handle", "jobHandle", jobHandle);
+            return task->JobResultRemote(reader);
         }
 
         void IgniteEnvironment::ProcessorReleaseStart()
@@ -787,6 +806,103 @@ namespace ignite
             bool res = filter->ReadAndProcessEvent(rawReader);
 
             return res ? 1 : 0;
+        }
+
+        int64_t IgniteEnvironment::OnFutureResult(int64_t handle, SharedPointer<InteropMemory>& mem)
+        {
+            InteropInputStream inStream(mem.Get());
+            BinaryReaderImpl reader(&inStream);
+
+            SharedPointer<compute::ComputeTaskHolder> task0 =
+                StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(handle));
+
+            registry.Release(handle);
+
+            compute::ComputeTaskHolder* task = task0.Get();
+
+            task->JobResultSuccess(reader);
+            task->Reduce();
+
+            return 1;
+        }
+
+        int64_t IgniteEnvironment::OnFutureError(int64_t handle, SharedPointer<InteropMemory>& mem)
+        {
+            InteropInputStream inStream(mem.Get());
+            BinaryReaderImpl reader(&inStream);
+            BinaryRawReader rawReader(&reader);
+
+            rawReader.ReadString();
+            rawReader.ReadString();
+
+            std::string errStr = rawReader.ReadString();
+
+            IgniteError err(IgniteError::IGNITE_ERR_GENERIC, errStr.c_str());
+
+            SharedPointer<compute::ComputeTaskHolder> task0 =
+                StaticPointerCast<compute::ComputeTaskHolder>(registry.Get(handle));
+
+            registry.Release(handle);
+
+            compute::ComputeTaskHolder* task = task0.Get();
+
+            task->JobResultError(err);
+            task->Reduce();
+
+            return 1;
+        }
+
+        int64_t IgniteEnvironment::OnComputeFuncExecute(SharedPointer<InteropMemory>& mem)
+        {
+            InteropInputStream inStream(mem.Get());
+            BinaryReaderImpl reader(&inStream);
+
+            InteropOutputStream outStream(mem.Get());
+            BinaryWriterImpl writer(&outStream, GetTypeManager());
+
+            bool local = reader.ReadBool();
+
+            int64_t handle = -1;
+
+            if (local)
+            {
+                handle = reader.ReadInt64();
+            }
+            else
+            {
+                bool invoked = false;
+
+                BinaryObjectImpl func(*mem.Get(), inStream.Position(), 0, 0);
+                int32_t jobTypeId = func.GetTypeId();
+
+                handle = binding.Get()->InvokeCallback(invoked,
+                    IgniteBindingImpl::CallbackType::COMPUTE_JOB_CREATE, jobTypeId, reader, writer);
+
+                if (!invoked)
+                {
+                    IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
+                        "Compute function is not registred", "jobTypeId", jobTypeId);
+                }
+            }
+
+            SharedPointer<compute::ComputeJobHolder> job0 =
+                StaticPointerCast<compute::ComputeJobHolder>(registry.Get(handle));
+
+            registry.Release(handle);
+
+            compute::ComputeJobHolder* job = job0.Get();
+
+            if (!job)
+            {
+                IGNITE_ERROR_FORMATTED_1(IgniteError::IGNITE_ERR_COMPUTE_USER_UNDECLARED_EXCEPTION,
+                    "Job is not registred for handle", "handle", handle);
+            }
+
+            job->ExecuteRemote(this, writer);
+
+            outStream.Synchronize();
+
+            return 1;
         }
 
         void IgniteEnvironment::CacheInvokeCallback(SharedPointer<InteropMemory>& mem)

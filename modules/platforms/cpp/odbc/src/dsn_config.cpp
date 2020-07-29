@@ -71,10 +71,8 @@ namespace ignite
 
             std::string res(buf.GetData());
 
-            if (res == unique)
-                return val;
-
-            val.SetValue(res);
+            if (res != unique)
+                val.SetValue(res);
 
             return val;
         }
@@ -103,7 +101,7 @@ namespace ignite
             return res;
         }
 
-        void ReadDsnConfiguration(const char* dsn, Configuration& config)
+        void ReadDsnConfiguration(const char* dsn, Configuration& config, diagnostic::DiagnosticRecordStorage* diag)
         {
             SettableValue<std::string> address = ReadDsnString(dsn, ConnectionStringParser::Key::address);
 
@@ -111,7 +109,7 @@ namespace ignite
             {
                 std::vector<EndPoint> endPoints;
 
-                ParseAddress(address.GetValue(), endPoints, 0);
+                ParseAddress(address.GetValue(), endPoints, diag);
 
                 config.SetAddresses(endPoints);
             }

@@ -612,7 +612,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Return supplier.
+     * Returns supplier.
      *
      * @return Supplier.
      * */

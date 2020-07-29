@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexEntryEvictTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexGetSelfTest;
+import org.apache.ignite.internal.processors.cache.GridCacheSqlDdlClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.cache.GridIndexingWithNoopSwapSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheConfigurationPrimitiveTypesSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
@@ -46,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfT
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPartitionedSelfTest;
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
+import org.apache.ignite.internal.processors.query.h2.database.H2ComputeInlineSizeTest;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnTest;
 import org.apache.ignite.internal.visor.VisorQueryTaskSelfTest;
 import org.junit.runner.RunWith;
@@ -57,6 +59,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     InlineIndexColumnTest.class,
+    H2ComputeInlineSizeTest.class,
 
     GridIndexingWithNoopSwapSelfTest.class,
     GridCacheOffHeapSelfTest.class,
@@ -94,6 +97,7 @@ import org.junit.runners.Suite;
     BinaryTypeRegistrationTest.class,
 
     ClusterReadOnlyModeSqlTest.class,
+    GridCacheSqlDdlClusterReadOnlyModeTest.class,
 
     ClusterReadOnlyModeDoesNotBreakSqlSelectTest.class,
 
