@@ -31,15 +31,15 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class UpdateLogRow {
     /** Cache ID. */
     @GridToStringInclude
-    int cacheId;
+    final int cacheId;
 
     /** Update counter. */
     @GridToStringInclude
-    long updateCntr;
+    final long updCntr;
 
     /** Link. */
     @GridToStringInclude
-    long link;
+    final long link;
 
     /** Materialized row. */
     private CacheDataRowAdapter rowData;
@@ -51,30 +51,29 @@ public class UpdateLogRow {
      * @param cacheId Cache ID.
      */
     public UpdateLogRow(int cacheId) {
-        this.cacheId = cacheId;
+        this(cacheId, 0);
     }
 
     /**
      * @param cacheId    Cache ID.
-     * @param updateCntr Update counter.
+     * @param updCntr Update counter.
      * @param link       Data row link.
      */
-    public UpdateLogRow(int cacheId, long updateCntr, long link) {
-        assert updateCntr > 0;
+    public UpdateLogRow(int cacheId, long updCntr) {
+        this(cacheId, updCntr, 0L);
+    }
+
+    /**
+     * @param cacheId    Cache ID.
+     * @param updCntr Update counter.
+     * @param link       Data row link.
+     */
+    public UpdateLogRow(int cacheId, long updCntr, long link) {
+        assert updCntr > 0;
 
         this.cacheId = cacheId;
-        this.updateCntr = updateCntr;
+        this.updCntr = updCntr;
         this.link = link;
-    }
-
-    /**
-     * @param cacheId    Cache ID.
-     * @param updateCntr Update counter.
-     * @param link       Data row link.
-     */
-    public UpdateLogRow(int cacheId, long updateCntr) {
-        this.cacheId = cacheId;
-        this.updateCntr = updateCntr;
     }
 
     /**
@@ -89,6 +88,10 @@ public class UpdateLogRow {
      */
     public int cacheId() {
         return cacheId;
+    }
+
+    public long updateCounter() {
+        return updCntr;
     }
 
     /**

@@ -90,7 +90,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
             if (cmp != 0)
                 return cmp;
 
-            if (row.updateCntr == 0 && row.link == 0) {
+            if (row.updCntr == 0 && row.link == 0) {
                 // A search row with a cache ID only is used as a cache bound.
                 // The found position will be shifted until the exact cache bound is found;
                 // See for details:
@@ -102,7 +102,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         long updCntr = io.getUpdateCounter(pageAddr, idx);
 
-        cmp = Long.compare(updCntr, row.updateCntr);
+        cmp = Long.compare(updCntr, row.updCntr);
 
         assert cmp == 0 && row.link != 0 && io.getLink(pageAddr, idx) == row.link;
 
