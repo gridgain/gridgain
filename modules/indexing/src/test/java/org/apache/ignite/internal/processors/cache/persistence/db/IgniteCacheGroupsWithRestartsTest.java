@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;

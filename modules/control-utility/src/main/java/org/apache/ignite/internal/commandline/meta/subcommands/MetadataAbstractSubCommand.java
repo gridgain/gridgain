@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal.commandline.meta.subcommands;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.util.Collection;
