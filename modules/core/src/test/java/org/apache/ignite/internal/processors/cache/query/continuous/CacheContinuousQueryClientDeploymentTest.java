@@ -29,6 +29,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -72,6 +73,7 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testDeploymentToNewClient() throws Exception {
         startGrid(0);
 
@@ -83,7 +85,10 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
             .setLocalListener(evts -> {
                 // No-op.
             })
-            .setRemoteFilter(evt -> true);
+            .setRemoteFilter(evt -> {
+                System.out.println("REMOTE FILTER!!!");
+                return true;
+            });
 
         cache.query(qry);
 
@@ -107,6 +112,7 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testDeploymentToExistingClient() throws Exception {
         startGrid(0);
 

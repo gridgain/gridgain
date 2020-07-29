@@ -655,22 +655,14 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     private void registerHandlerOnJoin(UUID srcNodeId, UUID routineId, IgnitePredicate<ClusterNode> nodeFilter,
         GridContinuousHandler hnd, int bufSize, long interval, boolean autoUnsubscribe) {
 
+        boolean hndRegistered = false;
+
         try {
-            if (ctx.clientNode()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Do not register continuous routine, the local node is client [" +
-                        "routineId=" + routineId +
-                        ", srcNodeId=" + srcNodeId + ']');
-                }
-
-                return;
-            }
-
             if (nodeFilter != null)
                 ctx.resource().injectGeneric(nodeFilter);
 
             if (nodeFilter == null || nodeFilter.apply(ctx.discovery().localNode())) {
-                    registerHandler(srcNodeId,
+                hndRegistered = registerHandler(srcNodeId,
                         routineId,
                         hnd,
                         bufSize,
@@ -694,7 +686,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
         }
 
-        if (ctx.config().isPeerClassLoadingEnabled()) {
+        if (hndRegistered && ctx.config().isPeerClassLoadingEnabled()) {
             // Peer class loading cannot be performed before a node joins, so we delay the deployment.
             // Run the deployment task in the system pool to avoid blocking of the discovery thread.
             ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
@@ -1372,7 +1364,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
      * @param req Start request.
      */
     private void processStartRequest(ClusterNode node, StartRoutineDiscoveryMessage req) {
-        if (node.id().equals(ctx.localNodeId()) || ctx.clientNode())
+        if (node.id().equals(ctx.localNodeId()))
             return;
 
         UUID routineId = req.routineId();
@@ -1414,8 +1406,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
                     data.p2pUnmarshal(marsh, U.resolveClassLoader(dep.classLoader(), ctx.config()));
                 }
-
-                hnd.p2pUnmarshal(node.id(), ctx);
             }
         }
         catch (IgniteCheckedException e) {
@@ -1450,9 +1440,13 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                     ctx.resource().injectGeneric(prjPred);
 
                 if ((prjPred == null || prjPred.apply(ctx.discovery().node(ctx.localNodeId()))) &&
-                    !locInfos.containsKey(routineId))
+                    !locInfos.containsKey(routineId)) {
+                    if (ctx.config().isPeerClassLoadingEnabled())
+                        hnd.p2pUnmarshal(node.id(), ctx);
+
                     registerHandler(node.id(), routineId, hnd, data.bufferSize(), data.interval(),
                         data.autoUnsubscribe(), false);
+                }
 
                 if (!data.autoUnsubscribe())
                     // Register routine locally.
@@ -1527,7 +1521,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         // Should not use marshaller and send messages from discovery thread.
         ctx.getSystemExecutorService().execute(new Runnable() {
             @Override public void run() {
-                if (snd.id().equals(ctx.localNodeId()) || ctx.clientNode()) {
+                if (snd.id().equals(ctx.localNodeId())) {
                     StartFuture fut = startFuts.get(msg.routineId());
 
                     if (fut != null)
