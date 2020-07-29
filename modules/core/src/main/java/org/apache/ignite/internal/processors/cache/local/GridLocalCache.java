@@ -376,6 +376,8 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
             Set<GridCacheEntryEx> newLocalEntries = null;
 
+            ctx.shared().database().checkpointReadLock();
+
             try {
                 int keysSize = keys.size();
 
@@ -694,6 +696,9 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             }
             catch (IgniteCheckedException e) {
                 return new GridFinishedFuture<>(e);
+            }
+            finally {
+                ctx.shared().database().checkpointReadUnlock();
             }
         }
         else {

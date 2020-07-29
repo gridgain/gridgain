@@ -162,6 +162,9 @@ public enum IgniteFeatures {
     /** New security processor with a security context support. */
     IGNITE_SECURITY_PROCESSOR_V2(41),
 
+    /** Force rebuild, list or request indexes rebuild status from control script. */
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
+
     /** Snapshots without PME. */
     EXCHANGELESS_SNAPSHOT(43);
 

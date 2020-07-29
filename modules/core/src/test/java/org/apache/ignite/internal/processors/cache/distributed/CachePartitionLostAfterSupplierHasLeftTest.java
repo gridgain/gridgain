@@ -106,11 +106,11 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
      * {@inheritDoc}
      */
     @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /**

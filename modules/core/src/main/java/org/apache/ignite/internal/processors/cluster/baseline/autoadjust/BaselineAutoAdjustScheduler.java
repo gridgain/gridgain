@@ -87,6 +87,14 @@ class BaselineAutoAdjustScheduler {
     }
 
     /**
+     * @param data Baseline data for adjust.
+     * @return {@code true} If baseline auto-adjust shouldn't be executed for given data.
+     */
+    boolean isExecutionExpired(BaselineAutoAdjustData data) {
+        return baselineAutoAdjustExecutor.isExecutionExpired(data);
+    }
+
+    /**
      * Timeout object of baseline auto-adjust operation. This object able executing several times: some first times for
      * logging of expecting auto-adjust and last time for baseline adjust.
      */
