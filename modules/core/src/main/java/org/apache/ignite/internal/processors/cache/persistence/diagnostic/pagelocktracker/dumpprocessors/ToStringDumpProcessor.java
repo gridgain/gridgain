@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.IntFunction;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockDump;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageMetaInfoStore;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.ThreadPageLockState;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTrackerDump;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.ThreadPageLockState;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log.LogEntry;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log.PageLockLogSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.PageLockStackSnapshot;
@@ -50,19 +50,19 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 class ToStringDumpProcessor {
 
     /** */
-    private final Function<Integer, String> strucutreIdMapFunc;
+    private final IntFunction<String> strucutreIdMapFunc;
 
     /** */
     private final StringBuilder sb;
 
     /** */
-    ToStringDumpProcessor(StringBuilder sb, Function<Integer, String> strucutreIdMapFunc) {
+    ToStringDumpProcessor(StringBuilder sb, IntFunction<String> strucutreIdMapFunc) {
         this.sb = sb;
         this.strucutreIdMapFunc = strucutreIdMapFunc;
     }
 
     /** Helper class for track lock/unlock count. */
-    class LockState {
+    private static class LockState {
         int readlock;
 
         int writelock;

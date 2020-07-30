@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
  * Base page lock tracker structures dump.
  */
 public abstract class PageLockDump {
-
     /** Page lock log name. */
     public final String name;
 
