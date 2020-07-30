@@ -27,10 +27,12 @@ import org.apache.ignite.internal.processors.cache.CacheQueryAfterDynamicCacheSt
 import org.apache.ignite.internal.processors.cache.CacheQueryFilterExpiredTest;
 import org.apache.ignite.internal.processors.cache.CacheRandomOperationsMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
+import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeDoesNotBreakSqlSelectTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexEntryEvictTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexGetSelfTest;
+import org.apache.ignite.internal.processors.cache.GridCacheSqlDdlClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.cache.GridIndexingWithNoopSwapSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheConfigurationPrimitiveTypesSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
@@ -41,9 +43,11 @@ import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExce
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
+import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPartitionedSelfTest;
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
+import org.apache.ignite.internal.processors.query.h2.database.H2ComputeInlineSizeTest;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnTest;
 import org.apache.ignite.internal.visor.VisorQueryTaskSelfTest;
 import org.junit.runner.RunWith;
@@ -55,6 +59,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     InlineIndexColumnTest.class,
+    H2ComputeInlineSizeTest.class,
 
     GridIndexingWithNoopSwapSelfTest.class,
     GridCacheOffHeapSelfTest.class,
@@ -63,6 +68,7 @@ import org.junit.runners.Suite;
     CacheTtlTransactionalPartitionedSelfTest.class,
     CacheTtlAtomicLocalSelfTest.class,
     CacheTtlAtomicPartitionedSelfTest.class,
+    CacheTtlReadOnlyModeSelfTest.class,
 
     GridCacheOffheapIndexGetSelfTest.class,
     GridCacheOffheapIndexEntryEvictTest.class,
@@ -91,6 +97,9 @@ import org.junit.runners.Suite;
     BinaryTypeRegistrationTest.class,
 
     ClusterReadOnlyModeSqlTest.class,
+    GridCacheSqlDdlClusterReadOnlyModeTest.class,
+
+    ClusterReadOnlyModeDoesNotBreakSqlSelectTest.class,
 
     CacheGroupMetricsWithIndexTest.class,
 

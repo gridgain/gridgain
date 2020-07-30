@@ -222,7 +222,10 @@ public abstract class WALRecord {
         BTREE_META_PAGE_INIT_ROOT_V3(59, PHYSICAL),
 
         /** Record that indicates that "corrupted" flag should be removed from tracking page. */
-        TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL);
+        TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
+
+        /** Atomic out-of-order update. */
+        OUT_OF_ORDER_UPDATE(62, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

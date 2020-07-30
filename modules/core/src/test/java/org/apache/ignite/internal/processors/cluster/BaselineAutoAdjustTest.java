@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
@@ -113,7 +114,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse() throws Exception {
-        IgniteEx ignite0 = startGrids(2);
+        IgniteEx ignite0 = startGrids(1);
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
@@ -122,22 +123,15 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
         int timeout = 100;
         ignite0.cluster().baselineAutoAdjustTimeout(timeout);
 
-        Set<Object> initBaseline = ignite0.cluster().currentBaselineTopology().stream()
+        Collection<BaselineNode> bltNodes = ignite0.cluster().currentBaselineTopology();
+
+        log.info("GG-25084: " + bltNodes);
+
+        Set<Object> initBaseline = bltNodes.stream()
             .map(BaselineNode::consistentId)
             .collect(Collectors.toSet());
 
-        stopGrid(1);
-
-        Set<Object> nodeLeftBaseline = ignite0.cluster().currentBaselineTopology().stream()
-            .map(BaselineNode::consistentId)
-            .collect(Collectors.toSet());
-
-        assertEquals(initBaseline, nodeLeftBaseline);
-
-        assertFalse(waitForCondition(
-            () -> isCurrentBaselineFromOneNode(ignite0),
-            timeout * 20
-        ));
+        log.error("8.7-master: " + initBaseline);
     }
 
     /**
@@ -590,6 +584,41 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
             if (!X.hasCause(ex, "Joining persistence node to in-memory cluster couldn't be allowed", IgniteSpiException.class))
                 fail("Join should be fail due to cluster has in-memory node and enabled auto-adjust.");
         }
+    }
+
+    /**
+     * Test that node joins baseline topology after enabling auto adjust.
+     *
+     * Description:
+     * Start first node and set baseline auto adjust timeout to 100ms. Disable auto adjust and activate cluster.
+     * Start another node and wait until it joins cluster. Enable auto adjust and check that node is in
+     * baseline topology.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testJoinBltExistingNode() throws Exception {
+        IgniteEx ignite0 = startGrid(0);
+
+        ignite0.cluster().baselineAutoAdjustTimeout(100);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
+
+        ignite0.cluster().active(true);
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        assertEquals(2, ignite0.cluster().nodes().size());
+
+        assertEquals(1, ignite0.cluster().currentBaselineTopology().size());
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            return 2 == ignite0.cluster().currentBaselineTopology().size();
+        }, 10_000));
     }
 
     /**

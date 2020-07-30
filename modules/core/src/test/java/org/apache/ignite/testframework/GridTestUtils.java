@@ -78,6 +78,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -119,6 +120,7 @@ import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
@@ -451,18 +453,18 @@ public final class GridTestUtils {
     }
 
     /**
-     * Checks that collection {@param col} contains string {@param str}. Logs collection, string
+     * Checks that collection {@param col} contains element {@param elem}. Logs collection, element
      * and throws {@link java.lang.AssertionError}, if not.
      *
      * @param log Logger (optional).
      * @param col Collection.
-     * @param str String.
+     * @param elem Element.
      */
-    public static <C extends Collection<String>> void assertContains(@Nullable IgniteLogger log, C col, String str) {
+    public static <C extends Collection<T>, T> void assertContains(@Nullable IgniteLogger log, C col, T elem) {
         try {
-            assertTrue(col.contains(str));
+            assertTrue(col.contains(elem));
         } catch (AssertionError e) {
-            U.warn(log, String.format("Collection does not contain string: '%s':", str));
+            U.warn(log, String.format("Collection does not contain: '%s':", elem));
             U.warn(log, "Collection:");
             U.warn(log, col);
 
@@ -471,18 +473,18 @@ public final class GridTestUtils {
     }
 
     /**
-     * Checks that collection {@param col} doesn't contains string {@param str}. Logs collection, string
+     * Checks that collection {@param col} doesn't contains element {@param str}. Logs collection, element
      * and throws {@link java.lang.AssertionError}, if contains.
      *
      * @param log Logger (optional).
      * @param col Collection.
-     * @param str String.
+     * @param elem Element.
      */
-    public static <C extends Collection<String>> void assertNotContains(@Nullable IgniteLogger log, C col, String str) {
+    public static <C extends Collection<T>, T> void assertNotContains(@Nullable IgniteLogger log, C col, T elem) {
         try {
-            assertFalse(col.contains(str));
+            assertFalse(col.contains(elem));
         } catch (AssertionError e) {
-            U.warn(log, String.format("Collection contain string: '%s' but shouldn't:", str));
+            U.warn(log, String.format("Collection contain element: '%s' but shouldn't:", elem));
             U.warn(log, "Collection:");
             U.warn(log, col);
 
@@ -1951,10 +1953,11 @@ public final class GridTestUtils {
      *
      * @param cond Condition to wait for.
      * @param timeout Max time to wait in milliseconds.
+     * @param checkInterval Time interval between two consecutive condition checks.
      * @return {@code true} if condition was achieved, {@code false} otherwise.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
      */
-    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout, long checkInterval) throws IgniteInterruptedCheckedException {
         long curTime = U.currentTimeMillis();
         long endTime = curTime + timeout;
 
@@ -1965,12 +1968,25 @@ public final class GridTestUtils {
             if (cond.apply())
                 return true;
 
-            U.sleep(DFLT_BUSYWAIT_SLEEP_INTERVAL);
+            if (checkInterval > 0)
+                U.sleep(checkInterval);
 
             curTime = U.currentTimeMillis();
         }
 
         return false;
+    }
+
+    /**
+     * Waits for condition, polling in busy wait loop.
+     *
+     * @param cond Condition to wait for.
+     * @param timeout Max time to wait in milliseconds.
+     * @return {@code true} if condition was achieved, {@code false} otherwise.
+     * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
+     */
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+        return waitForCondition(cond, timeout, DFLT_BUSYWAIT_SLEEP_INTERVAL);
     }
 
     /**
@@ -2220,6 +2236,17 @@ public final class GridTestUtils {
     }
 
     /**
+     * Deletes index.bin for all cach groups for given {@code igniteInstanceName}
+     */
+    public static void deleteIndexBin(String igniteInstanceName) throws IgniteCheckedException {
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
+        for (File grp : new File(workDir, U.maskForFileName(igniteInstanceName)).listFiles()) {
+            new File(grp, "index.bin").delete();
+        }
+    }
+
+    /**
      * {@link Class#getSimpleName()} does not return outer class name prefix for inner classes, for example,
      * getSimpleName() returns "RegularDiscovery" instead of "GridDiscoveryManagerSelfTest$RegularDiscovery"
      * This method return correct simple name for inner classes.
@@ -2298,6 +2325,26 @@ public final class GridTestUtils {
     public static void mergeExchangeWaitVersion(Ignite node, long topVer, List mergedEvts) {
         ((IgniteEx)node).context().cache().context().exchange().mergeExchangesTestWaitVersion(
             new AffinityTopologyVersion(topVer, 0), mergedEvts);
+    }
+
+    /**
+     * Checks that {@code state} is active.
+     *
+     * @param state Passed cluster state.
+     * @see ClusterState#active(ClusterState)
+     */
+    public static void assertActive(ClusterState state) {
+        assertTrue(state + " isn't active state", ClusterState.active(state));
+    }
+
+    /**
+     * Checks that {@code state} isn't active.
+     *
+     * @param state Passed cluster state.
+     * @see ClusterState#active(ClusterState)
+     */
+    public static void assertInactive(ClusterState state) {
+        assertFalse(state + " isn't inactive state", ClusterState.active(state));
     }
 
     /** Test parameters scale factor util. */

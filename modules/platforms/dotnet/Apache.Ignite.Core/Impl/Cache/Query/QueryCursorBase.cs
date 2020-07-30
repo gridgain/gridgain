@@ -40,6 +40,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         /** Read func. */
         private readonly Func<BinaryReader, T> _readFunc;
+        
+        /** Lock object. */
+        private readonly object _syncRoot = new object();
 
         /** Whether "GetAll" was called. */
         private bool _getAllCalled;
@@ -92,14 +95,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
                                                     "method has already been called.");
 
-            ThrowIfDisposed();
+            lock (_syncRoot)
+            {
+                ThrowIfDisposed();
 
-            var res = GetAllInternal();
+                var res = GetAllInternal();
 
-            _getAllCalled = true;
-            _hasNext = false;
+                _getAllCalled = true;
+                _hasNext = false;
 
-            return res;
+                return res;
+            }
         }
 
         #region Public IEnumerable methods
@@ -147,13 +153,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 ThrowIfDisposed();
 
-                if (_batchPos == BatchPosBeforeHead)
-                    throw new InvalidOperationException("MoveNext has not been called.");
-                
-                if (_batch == null)
-                    throw new InvalidOperationException("Previous call to MoveNext returned false.");
+                lock (_syncRoot)
+                {
+                    if (_batchPos == BatchPosBeforeHead)
+                        throw new InvalidOperationException("MoveNext has not been called.");
 
-                return _batch[_batchPos];
+                    if (_batch == null)
+                        throw new InvalidOperationException("Previous call to MoveNext returned false.");
+
+                    return _batch[_batchPos];
+                }
             }
         }
 
@@ -168,22 +177,25 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             ThrowIfDisposed();
 
-            if (_batch == null)
+            lock (_syncRoot)
             {
-                if (_batchPos == BatchPosBeforeHead)
-                    // Standing before head, let's get batch and advance position.
-                    RequestBatch();
-            }
-            else
-            {
-                _batchPos++;
+                if (_batch == null)
+                {
+                    if (_batchPos == BatchPosBeforeHead)
+                        // Standing before head, let's get batch and advance position.
+                        RequestBatch();
+                }
+                else
+                {
+                    _batchPos++;
 
-                if (_batch.Length == _batchPos)
-                    // Reached batch end => request another.
-                    RequestBatch();
-            }
+                    if (_batch.Length == _batchPos)
+                        // Reached batch end => request another.
+                        RequestBatch();
+                }
 
-            return _batch != null;
+                return _batch != null;
+            }
         }
 
         /** <inheritdoc /> */
@@ -204,9 +216,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </summary>
         private void RequestBatch()
         {
-            _batch = _hasNext ? GetBatch() : null;
+            lock (_syncRoot)
+            {
+                ThrowIfDisposed();
+                
+                _batch = _hasNext ? GetBatch() : null;
 
-            _batchPos = 0;
+                _batchPos = 0;
+            }
         }
 
         /// <summary>
@@ -244,28 +261,31 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             var size = reader.ReadInt();
 
-            if (size == 0)
+            lock (_syncRoot)
             {
-                _hasNext = false;
-                return null;
+                if (size == 0)
+                {
+                    _hasNext = false;
+                    return null;
+                }
+
+                var res = new T[size];
+
+                for (var i = 0; i < size; i++)
+                {
+                    res[i] = _readFunc(reader);
+                }
+
+                _hasNext = stream.ReadBool();
+
+                return res;
             }
-
-            var res = new T[size];
-
-            for (var i = 0; i < size; i++)
-            {
-                res[i] = _readFunc(reader);
-            }
-
-            _hasNext = stream.ReadBool();
-
-            return res;
         }
 
         /** <inheritdoc /> */
         public void Dispose()
         {
-            lock (this)
+            lock (_syncRoot)
             {
                 if (_disposed)
                 {

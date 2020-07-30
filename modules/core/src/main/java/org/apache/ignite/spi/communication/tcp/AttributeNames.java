@@ -43,8 +43,8 @@ public class AttributeNames {
     /** Port. */
     private final String port;
 
-    /** */
-    private final String environmentType;
+    /** Force client to server connections flag. */
+    private final String forceClientToSrvConnections;
 
     /**
      * @param pairedConn Paired connection.
@@ -53,7 +53,7 @@ public class AttributeNames {
      * @param hostNames Host names.
      * @param extAttrs Externalizable attributes.
      * @param port Port.
-     * @param environmentType Environment type.
+     * @param forceClientToSrvConnections Force client to server connections flag.
      */
     public AttributeNames(
         String pairedConn,
@@ -62,14 +62,15 @@ public class AttributeNames {
         String hostNames,
         String extAttrs,
         String port,
-        String environmentType) {
+        String forceClientToSrvConnections
+    ) {
         this.pairedConn = pairedConn;
         this.shmemPort = shmemPort;
         this.addrs = addrs;
         this.hostNames = hostNames;
         this.extAttrs = extAttrs;
         this.port = port;
-        this.environmentType = environmentType;
+        this.forceClientToSrvConnections = forceClientToSrvConnections;
     }
 
     /**
@@ -115,9 +116,9 @@ public class AttributeNames {
     }
 
     /**
-     * @return Environment type.
+     * @return Force client to server connections flag.
      */
-    public String environmentType() {
-        return environmentType;
+    public String forceClientToServerConnections() {
+        return forceClientToSrvConnections;
     }
 }

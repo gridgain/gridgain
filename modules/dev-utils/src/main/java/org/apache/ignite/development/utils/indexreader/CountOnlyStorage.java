@@ -24,7 +24,7 @@ import java.util.Iterator;
  */
 class CountOnlyStorage<T> implements ItemStorage<T> {
     /** */
-    private long size = 0;
+    private long size;
 
     /** {@inheritDoc} */
     @Override public void add(T item) {

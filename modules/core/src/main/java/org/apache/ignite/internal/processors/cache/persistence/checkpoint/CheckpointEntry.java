@@ -217,9 +217,9 @@ public class CheckpointEntry {
         }
 
         /**
-         * Return size of this group state.
+         * Returns number of partitions.
          *
-         * @return Size of an internal indexes array fro this group state.
+         * @return Number of partitions.
          */
         public int size() {
             return idx;

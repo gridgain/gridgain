@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthe
 import org.apache.ignite.internal.processors.rest.client.message.GridClientAuthenticationRequestV2;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
@@ -52,6 +53,7 @@ import org.apache.ignite.internal.processors.rest.protocols.tcp.redis.GridRedisN
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestClusterStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
@@ -78,6 +80,8 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_R
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_ACTIVATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_CURRENT_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_DEACTIVATE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_SET_STATE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.EXE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NOOP;
@@ -478,6 +482,22 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             else {
                 restChangeReq.active(req.active());
                 restChangeReq.command(req.active() ? CLUSTER_ACTIVATE : CLUSTER_DEACTIVATE);
+            }
+
+            restReq = restChangeReq;
+        }
+        else if (msg instanceof GridClientClusterStateRequest) {
+            GridClientClusterStateRequest req = (GridClientClusterStateRequest)msg;
+
+            GridRestClusterStateRequest restChangeReq = new GridRestClusterStateRequest();
+
+            if (req.isReqCurrentState()) {
+                restChangeReq.reqCurrentMode();
+                restChangeReq.command(CLUSTER_STATE);
+            }
+            else {
+                restChangeReq.state(req.state());
+                restChangeReq.command(CLUSTER_SET_STATE);
             }
 
             restReq = restChangeReq;

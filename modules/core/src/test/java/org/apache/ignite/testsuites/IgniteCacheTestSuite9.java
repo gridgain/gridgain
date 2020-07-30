@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimar
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCacheWriteSynchronizationModesMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.HistoricalRebalanceRemovesConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.PartitionUpdateCounterTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxDataConsistencyOnCommitFailureTest;
@@ -146,6 +147,8 @@ public class IgniteCacheTestSuite9 {
 
         // Grid Cache Version generation coverage.
         GridTestUtils.addTestIfNeeded(suite, GridCacheVersionGenerationWithCacheStorageTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, HistoricalRebalanceRemovesConsistencyTest.class, ignoredTests);
 
         return suite;
     }

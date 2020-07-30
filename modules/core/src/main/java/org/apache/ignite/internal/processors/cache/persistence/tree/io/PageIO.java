@@ -254,6 +254,9 @@ public abstract class PageIO {
     /** */
     public static final short T_DATA_PART = 32;
 
+    /** */
+    public static final short T_MARKER_PAGE = 33;
+
     /** Index for payload == 1. */
     public static final short T_H2_EX_REF_LEAF_START = 10_000;
 
@@ -674,6 +677,9 @@ public abstract class PageIO {
 
             case T_DATA_PART:
                 return (Q)SimpleDataPageIO.VERSIONS.forVersion(ver);
+
+            case T_MARKER_PAGE:
+                return (Q)MarkerPageIO.VERSIONS.forVersion(ver);
 
             default:
                 if (testIO != null) {
