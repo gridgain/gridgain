@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -119,15 +120,13 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     }};
 
     /** Model factories. */
-    private static final List<ModelFactory> MODEL_FACTORIES = new ArrayList<ModelFactory>() {
-        {
-            add(new Person.Factory());
-            add(new Department.Factory());
-            add(new Country.Factory());
-            add(new City.Factory());
-            add(new Company.Factory());
-        }
-    };
+    private static final List<ModelFactory> MODEL_FACTORIES = Arrays.asList(
+        new Person.Factory(),
+        new Department.Factory(),
+        new Country.Factory(),
+        new City.Factory(),
+        new Company.Factory()
+    );
 
     /** */
     private static final Schema SCHEMA = new Schema();

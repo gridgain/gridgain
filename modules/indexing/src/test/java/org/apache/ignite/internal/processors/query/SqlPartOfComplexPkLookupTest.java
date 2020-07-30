@@ -74,18 +74,6 @@ public class SqlPartOfComplexPkLookupTest extends GridCommonAbstractTest {
         checkPartialPkLookup(cache);
     }
 
-    @Test
-    public void test() throws Exception {
-        IgniteEx ign = startGrid(0);
-
-        IgniteCache<Object, Object> cache = ign.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        cache.query(new SqlFieldsQuery("create table Person (id Int, city_id Int, name VarChar, primary key (id, city_id)) WITH \"cache_name=Person,key_type=" + TestPk.class.getName() + "\"")).getAll();
-        cache.query(new SqlFieldsQuery("insert into Person (id, city_id, name)  values(1, 2, 'John Doe')")).getAll();
-
-        assertEquals("John Doe", ign.cache("Person").get(new TestPk(1, 3)));
-    }
-
     /** */
     private void checkPartialPkLookup(IgniteCache<Object, Object> cache) {
         assertTrue(cache.query(new SqlFieldsQuery("SELECT name FROM Person WHERE id = 1 and city_id is null")).getAll()
