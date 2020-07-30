@@ -156,6 +156,8 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
 
         if (baseIsIgnite)
             dependencies.add(new Dependency("h2", "com.h2database", "h2", "1.4.197", false));
+        else
+            dependencies.add(new Dependency("h2", groupId(), "ignite-h2", igniteVer, false));
 
         return dependencies;
     }
