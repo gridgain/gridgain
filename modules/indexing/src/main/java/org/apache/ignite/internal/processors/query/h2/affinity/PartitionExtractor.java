@@ -394,7 +394,7 @@ public class PartitionExtractor {
             PartitionAffinityFunctionType.RENDEZVOUS : PartitionAffinityFunctionType.CUSTOM;
 
         boolean hasNodeFilter = ccfg.getNodeFilter() != null &&
-            !(ccfg.getNodeFilter() instanceof CacheConfiguration.IgniteAllNodesPredicate);
+            !(ccfg.getNodeFilter() instanceof CacheConfiguration.IgniteServerNodesPredicate);
 
         return new PartitionTableAffinityDescriptor(
             aff,

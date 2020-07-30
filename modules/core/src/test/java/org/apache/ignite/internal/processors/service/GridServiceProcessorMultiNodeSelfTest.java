@@ -275,7 +275,7 @@ public class GridServiceProcessorMultiNodeSelfTest extends GridServiceProcessorA
 
             ServiceConfiguration srvcCfg = new ServiceConfiguration();
 
-            srvcCfg.setNodeFilter(new CacheConfiguration.IgniteAllNodesPredicate());
+            srvcCfg.setNodeFilter(new CacheConfiguration.IgniteServerNodesPredicate());
             srvcCfg.setName(name);
             srvcCfg.setMaxPerNodeCount(1);
             srvcCfg.setService(new DummyService());

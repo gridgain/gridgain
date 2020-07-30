@@ -162,7 +162,7 @@ public abstract class SqlAbstractLocalSystemView extends SqlAbstractSystemView {
     @Nullable protected static String nodeFilter(CacheConfiguration<?, ?> ccfg) {
         IgnitePredicate<ClusterNode> nodeFilter = ccfg.getNodeFilter();
 
-        if (nodeFilter instanceof CacheConfiguration.IgniteAllNodesPredicate)
+        if (nodeFilter instanceof CacheConfiguration.IgniteServerNodesPredicate)
             nodeFilter = null;
 
         return toStringSafe(nodeFilter);

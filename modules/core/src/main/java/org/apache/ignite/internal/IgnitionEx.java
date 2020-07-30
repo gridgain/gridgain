@@ -2607,7 +2607,7 @@ public class IgnitionEx {
             cache.setRebalanceMode(SYNC);
             cache.setWriteSynchronizationMode(FULL_SYNC);
             cache.setAffinity(new RendezvousAffinityFunction(false, 100));
-            cache.setNodeFilter(CacheConfiguration.ALL_NODES);
+            cache.setNodeFilter(CacheConfiguration.SERVER_NODES);
             cache.setRebalanceOrder(-2); //Prior to user caches.
             cache.setCopyOnRead(false);
 

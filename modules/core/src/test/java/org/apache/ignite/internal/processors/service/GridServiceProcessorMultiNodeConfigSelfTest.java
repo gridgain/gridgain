@@ -92,7 +92,7 @@ public class GridServiceProcessorMultiNodeConfigSelfTest extends GridServiceProc
 
         cfg.setName(NODE_SINGLE);
         cfg.setMaxPerNodeCount(1);
-        cfg.setNodeFilter(new CacheConfiguration.IgniteAllNodesPredicate());
+        cfg.setNodeFilter(new CacheConfiguration.IgniteServerNodesPredicate());
         cfg.setService(new DummyService());
 
         cfgs.add(cfg);

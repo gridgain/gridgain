@@ -1718,7 +1718,7 @@ public class GridCacheUtils {
             cfg.setCacheMode(DFLT_CACHE_MODE);
 
         if (cfg.getNodeFilter() == null)
-            cfg.setNodeFilter(CacheConfiguration.ALL_NODES);
+            cfg.setNodeFilter(CacheConfiguration.SERVER_NODES);
 
         if (cfg.getAffinity() == null) {
             if (cfg.getCacheMode() == PARTITIONED) {

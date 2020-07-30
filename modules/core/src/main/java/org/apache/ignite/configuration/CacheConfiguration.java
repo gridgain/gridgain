@@ -177,8 +177,11 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Default value for 'readFromBackup' flag. */
     public static final boolean DFLT_READ_FROM_BACKUP = true;
 
-    /** Filter that accepts all nodes. */
-    public static final IgnitePredicate<ClusterNode> ALL_NODES = new IgniteAllNodesPredicate();
+//    /** Filter that accepts all nodes. */
+//    public static final IgnitePredicate<ClusterNode> ALL_NODES = new IgniteAllNodesPredicate();
+
+    /** Filter that accepts server nodes. */
+    public static final IgnitePredicate<ClusterNode> SERVER_NODES = new IgniteServerNodesPredicate();
 
     /** Default timeout after which long query warning will be printed. */
     @Deprecated
@@ -2389,16 +2392,39 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         return S.toString(CacheConfiguration.class, this);
     }
 
+//    /**
+//     *  Filter that accepts all nodes.
+//     */
+//    public static class IgniteAllNodesPredicate implements IgnitePredicate<ClusterNode> {
+//        /** */
+//        private static final long serialVersionUID = 0L;
+//
+//        /** {@inheritDoc} */
+//        @Override public boolean apply(ClusterNode node) {
+//            return true;
+//        }
+//
+//        /** {@inheritDoc} */
+//        @Override public boolean equals(Object obj) {
+//            return obj != null && obj.getClass().equals(this.getClass());
+//        }
+//
+//        /** {@inheritDoc} */
+//        @Override public String toString() {
+//            return "IgniteAllNodesPredicate []";
+//        }
+//    }
+
     /**
-     *  Filter that accepts all nodes.
+     *  Filter that accepts server nodes.
      */
-    public static class IgniteAllNodesPredicate implements IgnitePredicate<ClusterNode> {
+    public static class IgniteServerNodesPredicate implements IgnitePredicate<ClusterNode> {
         /** */
         private static final long serialVersionUID = 0L;
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode node) {
-            return true;
+            return !node.isClient();
         }
 
         /** {@inheritDoc} */
@@ -2408,7 +2434,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "IgniteAllNodesPredicate []";
+            return "IgniteServerNodesPredicate []";
         }
     }
 }

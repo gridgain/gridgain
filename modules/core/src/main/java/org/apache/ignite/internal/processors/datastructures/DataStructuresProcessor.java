@@ -916,7 +916,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         ccfg.setRebalanceMode(SYNC);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setCacheMode(cfg.getCacheMode());
-        ccfg.setNodeFilter(CacheConfiguration.ALL_NODES);
+        ccfg.setNodeFilter(CacheConfiguration.SERVER_NODES);
         ccfg.setAffinity(cfg.getAffinity());
         ccfg.setDataRegionName(dataRegionName);
 
@@ -1003,9 +1003,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
             IgnitePredicate<ClusterNode> cacheNodeFilter = cache.context().group().nodeFilter();
 
             String clsName1 = cacheNodeFilter != null ? cacheNodeFilter.getClass().getName() :
-                CacheConfiguration.IgniteAllNodesPredicate.class.getName();
+                CacheConfiguration.IgniteServerNodesPredicate.class.getName();
             String clsName2 = cfg.getNodeFilter() != null ? cfg.getNodeFilter().getClass().getName() :
-                CacheConfiguration.IgniteAllNodesPredicate.class.getName();
+                CacheConfiguration.IgniteServerNodesPredicate.class.getName();
 
             if (!clsName1.equals(clsName2))
                 throw new IgniteCheckedException("Could not add collection to group " + grpName +

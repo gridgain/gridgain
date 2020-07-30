@@ -206,7 +206,7 @@ public class ClientCachePartitionsRequest extends ClientRequest {
             return false;
 
         IgnitePredicate filter = ccfg.getNodeFilter();
-        boolean hasNodeFilter = filter != null && !(filter instanceof CacheConfiguration.IgniteAllNodesPredicate);
+        boolean hasNodeFilter = filter != null && !(filter instanceof CacheConfiguration.IgniteServerNodesPredicate);
 
         // We cannot be sure that two caches are co-located if custom node filter is present.
         // Note that technically we may try to compare two filters. However, this adds unnecessary complexity

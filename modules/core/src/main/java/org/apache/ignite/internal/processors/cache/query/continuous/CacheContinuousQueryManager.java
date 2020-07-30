@@ -745,7 +745,7 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         hnd.localOnly(locOnly);
 
         IgnitePredicate<ClusterNode> pred = (loc || cctx.config().getCacheMode() == CacheMode.LOCAL) ?
-            F.nodeForNodeId(cctx.localNodeId()) : new IgniteServerNodesPredicate(cctx.group().nodeFilter());
+            F.nodeForNodeId(cctx.localNodeId()) : cctx.group().nodeFilter();
 
         assert pred != null : cctx.config();
 
@@ -1397,38 +1397,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(CacheEntryEventImpl.class, this);
-        }
-    }
-
-    /**
-     *  Filter that accepts server nodes.
-     */
-    private static class IgniteServerNodesPredicate implements IgnitePredicate<ClusterNode> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        private final IgnitePredicate<ClusterNode> pred;
-
-        /**
-         * @param pred Additional predicate
-         */
-        IgniteServerNodesPredicate(IgnitePredicate<ClusterNode> pred) {
-            this.pred = pred;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean apply(ClusterNode node) {
-            return pred.apply(node) && !node.isClient();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object obj) {
-            return obj != null && obj.getClass().equals(this.getClass());
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "IgniteServerNodesPredicate []";
         }
     }
 }
