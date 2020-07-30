@@ -655,20 +655,39 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     private void registerHandlerOnJoin(UUID srcNodeId, UUID routineId, IgnitePredicate<ClusterNode> nodeFilter,
         GridContinuousHandler hnd, int bufSize, long interval, boolean autoUnsubscribe) {
 
-        boolean hndRegistered = false;
-
         try {
             if (nodeFilter != null)
                 ctx.resource().injectGeneric(nodeFilter);
 
             if (nodeFilter == null || nodeFilter.apply(ctx.discovery().localNode())) {
-                hndRegistered = registerHandler(srcNodeId,
+                registerHandler(srcNodeId,
                         routineId,
                         hnd,
                         bufSize,
                         interval,
                         autoUnsubscribe,
                         false);
+
+                if (ctx.config().isPeerClassLoadingEnabled()) {
+                    // Peer class loading cannot be performed before a node joins, so we delay the deployment.
+                    // Run the deployment task in the system pool to avoid blocking of the discovery thread.
+                    ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                        @Override public void run() {
+                            try {
+                                hnd.p2pUnmarshal(srcNodeId, ctx);
+                            }
+                            catch (IgniteCheckedException | IgniteException e) {
+                                U.error(log, "Failed to unmarshal continuous routine handler [" +
+                                    "routineId=" + routineId +
+                                    ", srcNodeId=" + srcNodeId + ']', e);
+
+                                ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+
+                                unregisterHandler(routineId, hnd, false);
+                            }
+                        }
+                    }));
+                }
             }
             else {
                 if (log.isDebugEnabled()) {
@@ -684,27 +703,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                 ", srcNodeId=" + srcNodeId + ']', e);
 
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-        }
-
-        if (hndRegistered && ctx.config().isPeerClassLoadingEnabled()) {
-            // Peer class loading cannot be performed before a node joins, so we delay the deployment.
-            // Run the deployment task in the system pool to avoid blocking of the discovery thread.
-            ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
-                @Override public void run() {
-                    try {
-                        hnd.p2pUnmarshal(srcNodeId, ctx);
-                    }
-                    catch (IgniteCheckedException | IgniteException e) {
-                        U.error(log, "Failed to unmarshal continuous routine handler [" +
-                            "routineId=" + routineId +
-                            ", srcNodeId=" + srcNodeId + ']', e);
-
-                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-
-                        unregisterHandler(routineId, hnd, false);
-                    }
-                }
-            }));
         }
     }
 
