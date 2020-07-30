@@ -135,7 +135,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         MODEL_FACTORIES.stream().map(ModelFactory::queryEntity).map(Table::new).forEach(SCHEMA::addTable);
     }
 
-    /** */
+    /**
+     * {@code true} if base is Ignite, {@code false} if it is GG
+     */
     private boolean baseIsIgnite;
 
     /** */

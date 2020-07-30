@@ -16,14 +16,13 @@
 
 package org.apache.ignite.compatibility.sql.model;
 
-import java.util.Random;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static java.util.Collections.singletonList;
-import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
+import static org.apache.ignite.testframework.GridTestUtils.randomString;
 
 /**
  * Country model.
@@ -64,7 +63,7 @@ public class Country {
     }
 
     /** */
-    public static class Factory implements ModelFactory {
+    public static class Factory extends AbstractModelFactory<Country> {
         /** */
         private static final String TABLE_NAME = "country";
 
@@ -72,27 +71,16 @@ public class Country {
         public static final int COUNTRY_CNT = 50;
 
         /** */
-        private Random rnd;
-
-        /** */
-        private final QueryEntity qryEntity;
-
-        /** */
         public Factory() {
-            rnd = new Random();
-
-            qryEntity = new QueryEntity(Long.class, Country.class)
-                .setKeyFieldName("id")
-                .addQueryField("id", Long.class.getName(), null)
-                .setIndexes(
-                    singletonList(new QueryIndex(singletonList("name"), QueryIndexType.SORTED))
-                )
-                .setTableName(TABLE_NAME);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void init(int seed) {
-            rnd = new Random(seed);
+            super(
+                new QueryEntity(Long.class, Country.class)
+                    .setKeyFieldName("id")
+                    .addQueryField("id", Long.class.getName(), null)
+                    .setIndexes(
+                        singletonList(new QueryIndex(singletonList("name"), QueryIndexType.SORTED))
+                    )
+                    .setTableName(TABLE_NAME)
+            );
         }
 
         /** {@inheritDoc} */
@@ -102,11 +90,6 @@ public class Country {
                 randomString(rnd, 3, 3), // phone code
                 rnd.nextInt(1_000) // population
             );
-        }
-
-        /** {@inheritDoc} */
-        @Override public QueryEntity queryEntity() {
-            return qryEntity;
         }
 
         /** {@inheritDoc} */

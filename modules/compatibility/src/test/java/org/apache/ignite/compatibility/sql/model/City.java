@@ -17,7 +17,6 @@
 package org.apache.ignite.compatibility.sql.model;
 
 import java.util.Arrays;
-import java.util.Random;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -25,7 +24,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.compatibility.sql.model.Country.Factory.COUNTRY_CNT;
-import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
+import static org.apache.ignite.testframework.GridTestUtils.randomString;
 
 /**
  * City model.
@@ -76,7 +75,7 @@ public class City {
     }
 
     /** */
-    public static class Factory implements ModelFactory {
+    public static class Factory extends AbstractModelFactory<City> {
         /** */
         private static final String TABLE_NAME = "city";
 
@@ -84,27 +83,16 @@ public class City {
         public static final int CITY_CNT = 100;
 
         /** */
-        private Random rnd;
-
-        /** */
-        private final QueryEntity qryEntity;
-
-        /** */
         public Factory() {
-            rnd = new Random();
-
-            qryEntity = new QueryEntity(Long.class, City.class)
-                .setKeyFieldName("id")
-                .addQueryField("id", Long.class.getName(), null)
-                .setIndexes(
-                    singletonList(new QueryIndex(Arrays.asList("countryId", "zipCode"), QueryIndexType.SORTED))
-                )
-                .setTableName(TABLE_NAME);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void init(int seed) {
-            rnd = new Random(seed);
+            super(
+                new QueryEntity(Long.class, City.class)
+                    .setKeyFieldName("id")
+                    .addQueryField("id", Long.class.getName(), null)
+                    .setIndexes(
+                        singletonList(new QueryIndex(Arrays.asList("countryId", "zipCode"), QueryIndexType.SORTED))
+                    )
+                    .setTableName(TABLE_NAME)
+            );
         }
 
         /** {@inheritDoc} */
@@ -115,11 +103,6 @@ public class City {
                 rnd.nextInt(COUNTRY_CNT), // country id
                 rnd.nextInt(1_000) // population
             );
-        }
-
-        /** {@inheritDoc} */
-        @Override public QueryEntity queryEntity() {
-            return qryEntity;
         }
 
         /** {@inheritDoc} */

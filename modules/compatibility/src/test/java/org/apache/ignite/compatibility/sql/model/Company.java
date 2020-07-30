@@ -18,14 +18,13 @@ package org.apache.ignite.compatibility.sql.model;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Random;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static org.apache.ignite.compatibility.sql.model.City.Factory.CITY_CNT;
-import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
+import static org.apache.ignite.testframework.GridTestUtils.randomString;
 
 /**
  * Company model.
@@ -76,7 +75,7 @@ public class Company {
     }
 
     /** */
-    public static class Factory implements ModelFactory {
+    public static class Factory extends AbstractModelFactory<Company> {
         /** */
         private static final String TABLE_NAME = "company";
 
@@ -84,28 +83,17 @@ public class Company {
         public static final int COMPANY_CNT = 500;
 
         /** */
-        private Random rnd;
-
-        /** */
-        private final QueryEntity qryEntity;
-
-        /** */
         public Factory() {
-            rnd = new Random();
-
-            qryEntity = new QueryEntity(Long.class, Company.class)
-                .setKeyFieldName("id")
-                .addQueryField("id", Long.class.getName(), null)
-                .setIndexes(Arrays.asList(
-                    new QueryIndex(Collections.singletonList("name"), QueryIndexType.SORTED),
-                    new QueryIndex(Arrays.asList("cityId", "addr"), QueryIndexType.SORTED)
-                ))
-                .setTableName(TABLE_NAME);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void init(int seed) {
-            rnd = new Random(seed);
+            super(
+                new QueryEntity(Long.class, Company.class)
+                    .setKeyFieldName("id")
+                    .addQueryField("id", Long.class.getName(), null)
+                    .setIndexes(Arrays.asList(
+                        new QueryIndex(Collections.singletonList("name"), QueryIndexType.SORTED),
+                        new QueryIndex(Arrays.asList("cityId", "addr"), QueryIndexType.SORTED)
+                    ))
+                    .setTableName(TABLE_NAME)
+            );
         }
 
         /** {@inheritDoc} */
@@ -116,11 +104,6 @@ public class Company {
                 rnd.nextInt(1_000), // head count
                 rnd.nextInt(CITY_CNT) // city id
             );
-        }
-
-        /** {@inheritDoc} */
-        @Override public QueryEntity queryEntity() {
-            return qryEntity;
         }
 
         /** {@inheritDoc} */

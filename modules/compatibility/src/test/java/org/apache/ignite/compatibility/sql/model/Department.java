@@ -17,7 +17,6 @@
 package org.apache.ignite.compatibility.sql.model;
 
 import java.util.Arrays;
-import java.util.Random;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -25,7 +24,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static org.apache.ignite.compatibility.sql.model.City.Factory.CITY_CNT;
 import static org.apache.ignite.compatibility.sql.model.Company.Factory.COMPANY_CNT;
-import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
+import static org.apache.ignite.testframework.GridTestUtils.randomString;
 
 /**
  * Department model.
@@ -76,7 +75,7 @@ public class Department {
     }
 
     /** */
-    public static class Factory implements ModelFactory {
+    public static class Factory extends AbstractModelFactory<Department> {
         /** */
         private static final String TABLE_NAME = "department";
 
@@ -84,28 +83,17 @@ public class Department {
         public static final int DEPS_CNT = 1000;
 
         /** */
-        private Random rnd;
-
-        /** */
-        private final QueryEntity qryEntity;
-
-        /** */
         public Factory() {
-            rnd = new Random();
-
-            qryEntity = new QueryEntity(Long.class, Department.class)
-                .setKeyFieldName("id")
-                .addQueryField("id", Long.class.getName(), null)
-                .setIndexes(Arrays.asList(
+            super(
+                new QueryEntity(Long.class, Department.class)
+                    .setKeyFieldName("id")
+                    .addQueryField("id", Long.class.getName(), null)
+                    .setIndexes(Arrays.asList(
                         new QueryIndex("companyId", QueryIndexType.SORTED),
                         new QueryIndex(Arrays.asList("cityId", "headCnt"), QueryIndexType.SORTED)
-                ))
-                .setTableName(TABLE_NAME);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void init(int seed) {
-            rnd = new Random(seed);
+                    ))
+                    .setTableName(TABLE_NAME)
+            );
         }
 
         /** {@inheritDoc} */
@@ -116,11 +104,6 @@ public class Department {
                 rnd.nextInt(CITY_CNT), // city id
                 rnd.nextInt(COMPANY_CNT) // company id
             );
-        }
-
-        /** {@inheritDoc} */
-        @Override public QueryEntity queryEntity() {
-            return qryEntity;
         }
 
         /** {@inheritDoc} */

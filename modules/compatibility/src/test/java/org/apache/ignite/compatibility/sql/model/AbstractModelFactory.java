@@ -16,24 +16,35 @@
 
 package org.apache.ignite.compatibility.sql.model;
 
+import java.util.Random;
 import org.apache.ignite.cache.QueryEntity;
 
 /**
- * Factory for model.
+ * Abstract factory for model.
  */
-public interface ModelFactory<T> {
-    /** Inits factory with a random seed. */
-    public void init(int seed);
+public abstract class AbstractModelFactory<T> implements ModelFactory<T> {
+    /** */
+    protected final QueryEntity qryEntity;
 
-    /** Creates random model objects. */
-    public T createRandom();
+    /** */
+    protected Random rnd;
 
-    /** Returns model's query entity. */
-    public QueryEntity queryEntity();
+    /**
+     * @param qryEntity Query entity.
+     */
+    protected AbstractModelFactory(QueryEntity qryEntity) {
+        this.qryEntity = qryEntity;
 
-    /** Returns model's table name. */
-    public String tableName();
+        rnd= new Random();
+    }
 
-    /** Returns number of model instances. */
-    public int count();
+    /** {@inheritDoc} */
+    @Override public void init(int seed) {
+        rnd = new Random(seed);
+    }
+
+    /** {@inheritDoc} */
+    @Override public QueryEntity queryEntity() {
+        return qryEntity;
+    }
 }

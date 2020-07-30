@@ -127,7 +127,7 @@ public class RandomQuerySupplier implements Supplier<String> {
             TableRef tbl = tbls0.get(rnd.nextInt(tbls0.size()));
 
             cond = new BiCondition(
-                rndColumn(tbl),
+                rndNumericColumn(tbl),
                 new Const(Integer.toString(rnd.nextInt(100))),
                 Operator.EQUALS
             );
@@ -140,7 +140,7 @@ public class RandomQuerySupplier implements Supplier<String> {
 
             cond = new BiCondition(
                 cond,
-                new BiCondition(rndColumn(left), rndColumn(right), Operator.EQUALS),
+                new BiCondition(rndNumericColumn(left), rndNumericColumn(right), Operator.EQUALS),
                 Operator.AND
             );
         }
@@ -188,7 +188,7 @@ public class RandomQuerySupplier implements Supplier<String> {
             TableRef rightTbl = tbls.get(i);
 
             from = new InnerJoin(from, rightTbl,
-                new BiCondition(rndColumn(rndScopeTable(rndQryCtx)), rndColumn(rightTbl), Operator.EQUALS));
+                new BiCondition(rndNumericColumn(rndScopeTable(rndQryCtx)), rndNumericColumn(rightTbl), Operator.EQUALS));
 
             rndQryCtx.addScopeTable(rightTbl); // add a table to the scope AFTER we created the join condition
         }
@@ -217,9 +217,9 @@ public class RandomQuerySupplier implements Supplier<String> {
      * Returns random column from provided table.
      *
      * @param tbl Table.
-     * @return Random column.
+     * @return Random column of numeric type.
      */
-    private ColumnRef rndColumn(TableRef tbl) {
+    private ColumnRef rndNumericColumn(TableRef tbl) {
         // for now we could work only with numeric columns
         List<ColumnRef> numCols = tbl.cols().stream()
             .filter(col -> Number.class.isAssignableFrom(col.typeClass()))

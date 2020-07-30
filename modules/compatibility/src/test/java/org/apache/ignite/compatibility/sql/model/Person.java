@@ -17,7 +17,6 @@
 package org.apache.ignite.compatibility.sql.model;
 
 import java.util.Collections;
-import java.util.Random;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -25,7 +24,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static org.apache.ignite.compatibility.sql.model.City.Factory.CITY_CNT;
 import static org.apache.ignite.compatibility.sql.model.Department.Factory.DEPS_CNT;
-import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
+import static org.apache.ignite.testframework.GridTestUtils.randomString;
 
 /**
  * Person model.
@@ -86,7 +85,7 @@ public class Person {
     }
 
     /** */
-    public static class Factory implements ModelFactory {
+    public static class Factory extends AbstractModelFactory<Person> {
         /** */
         private static final String TABLE_NAME = "person";
 
@@ -94,27 +93,16 @@ public class Person {
         private static final int PERSON_CNT = 10_000;
 
         /** */
-        private Random rnd;
-
-        /** */
-        private final QueryEntity qryEntity;
-
-        /** */
         public Factory() {
-            rnd = new Random();
-
-            qryEntity = new QueryEntity(Long.class, Person.class)
-                .setKeyFieldName("id")
-                .addQueryField("id", Long.class.getName(), null)
-                .setIndexes(
-                    Collections.singleton(new QueryIndex("depId", QueryIndexType.SORTED))
-                )
-                .setTableName(TABLE_NAME);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void init(int seed) {
-            rnd = new Random(seed);
+            super(
+                new QueryEntity(Long.class, Person.class)
+                    .setKeyFieldName("id")
+                    .addQueryField("id", Long.class.getName(), null)
+                    .setIndexes(
+                        Collections.singleton(new QueryIndex("depId", QueryIndexType.SORTED))
+                    )
+                    .setTableName(TABLE_NAME)
+            );
         }
 
         /** {@inheritDoc} */
@@ -126,11 +114,6 @@ public class Person {
                 rnd.nextInt(CITY_CNT), // cityId
                 randomString(rnd, 0, 10) // position
             );
-        }
-
-        /** {@inheritDoc} */
-        @Override public QueryEntity queryEntity() {
-            return qryEntity;
         }
 
         /** {@inheritDoc} */
