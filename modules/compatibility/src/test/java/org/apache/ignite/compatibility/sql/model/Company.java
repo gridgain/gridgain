@@ -24,7 +24,7 @@ import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static org.apache.ignite.compatibility.sql.model.City.Factory.CITY_CNT;
-import static org.apache.ignite.testframework.GridTestUtils.randomString;
+import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
 
 /**
  * Company model.

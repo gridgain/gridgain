@@ -24,7 +24,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.compatibility.sql.model.Country.Factory.COUNTRY_CNT;
-import static org.apache.ignite.testframework.GridTestUtils.randomString;
+import static org.apache.ignite.compatibility.sql.model.ModelUtil.randomString;
 
 /**
  * City model.
