@@ -69,8 +69,6 @@ public class UpdateLogRow {
      * @param link       Data row link.
      */
     public UpdateLogRow(int cacheId, long updCntr, long link) {
-        assert updCntr > 0;
-
         this.cacheId = cacheId;
         this.updCntr = updCntr;
         this.link = link;
