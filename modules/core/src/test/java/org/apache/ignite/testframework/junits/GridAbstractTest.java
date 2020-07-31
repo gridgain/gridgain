@@ -977,7 +977,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Started grid.
      * @throws Exception If anything failed.
      */
-    protected IgniteEx startGrid(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
+    protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
         return startGrid(getTestIgniteInstanceName(idx), cfgOp);
     }
 
