@@ -1315,9 +1315,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * Resolves throttling policy according to the settings.
      */
     @NotNull private PageMemoryImpl.ThrottlingPolicy resolveThrottlingPolicy() {
-        PageMemoryImpl.ThrottlingPolicy plc = persistenceCfg.isWriteThrottlingEnabled()
-            ? PageMemoryImpl.ThrottlingPolicy.SPEED_BASED
-            : PageMemoryImpl.ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
+        PageMemoryImpl.ThrottlingPolicy plc = PageMemoryImpl.ThrottlingPolicy.SPEED_BASED;
 
         if (throttlingPlcOverride != null) {
             try {
