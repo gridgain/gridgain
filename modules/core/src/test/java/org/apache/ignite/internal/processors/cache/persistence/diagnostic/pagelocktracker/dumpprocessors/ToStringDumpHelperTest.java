@@ -16,20 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors;
 
-import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.StandardOpenOption;
+import java.lang.reflect.Field;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockDump;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTrackerDump;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.ThreadPageLockState;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
-
-import static java.nio.file.Paths.get;
 
 /**
  * Unit tests for {@link ToStringDumpHelper}.
@@ -43,15 +37,24 @@ public class ToStringDumpHelperTest extends GridCommonAbstractTest {
 
         pageLockTracker.onReadLock(1, 2, 3, 4);
 
+        pageLockTracker.onReadUnlock(1, 2, 3, 4);
+
         Thread asyncLockUnlock = new Thread(() -> {
             pageLockTracker.onReadLock(4, 32, 1, 64);
-
-            pageLockTracker.onReadUnlock(4, 32, 1, 64);
         }, "async-lock-unlock");
         asyncLockUnlock.start();
         asyncLockUnlock.join();
+        long threadIdInLog = asyncLockUnlock.getId();
 
         SharedPageLockTrackerDump pageLockDump = pageLockTracker.dump();
+
+        // hack to have same timestamp in test
+        Field timeField = PageLockDump.class.getDeclaredField("time");
+        timeField.setAccessible(true);
+
+        for (ThreadPageLockState state : pageLockDump.threadPageLockStates) {
+            timeField.setLong(state.pageLockDump, 1596173397167L);
+        }
 
         assertNotNull(pageLockDump);
 
@@ -59,8 +62,17 @@ public class ToStringDumpHelperTest extends GridCommonAbstractTest {
 
         System.out.println("Dump saved:" + dumpStr);
 
-        assertFalse(dumpStr.contains("Thread=[name=async-lock-unlock"));
+        String expectedLog = "Page locks dump:" +
+            U.nl() +
+            U.nl() +
+            "Thread=[name=async-lock-unlock, id=" + threadIdInLog + "], state=TERMINATED" + U.nl() +
+            "Locked pages = [32[0000000000000020](r=1|w=0)]\n" +
+            "Locked pages log: name=async-lock-unlock time=(1596173397167, 2020-07-31 08:29:57.167)" + U.nl() +
+            "L=1 -> Read lock pageId=32, structureId=null [pageIdHex=0000000000000020, partId=0, pageIdx=32, flags=00000000]" + U.nl() +
+            U.nl() +
+            U.nl() +
+            U.nl();
 
-        assertTrue(dumpStr.contains("Locked pages = [2[0000000000000002](r=1|w=0)]"));
+        assertEquals(expectedLog, dumpStr);
     }
 }
