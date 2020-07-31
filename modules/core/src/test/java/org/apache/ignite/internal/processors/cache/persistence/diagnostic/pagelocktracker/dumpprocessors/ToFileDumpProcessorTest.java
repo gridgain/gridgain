@@ -67,6 +67,8 @@ public class ToFileDumpProcessorTest {
         pageLockTracker.onBeforeReadLock(1, 2, 3);
         pageLockTracker.onReadLock(1, 2, 3, 4);
 
+        pageLockTracker.onReadLock(1, 2, 3, 4);
+
         SharedPageLockTrackerDump pageLockDump = pageLockTracker.dump();
 
         Assert.assertNotNull(pageLockDump);
