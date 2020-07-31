@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -2135,59 +2134,57 @@ public class PageMemoryImpl implements PageMemoryEx {
         /**
          * Prepares a page removal for page replacement, if needed.
          *
-         * @param elected Candidates for replacement.
+         * @param fullPageId Candidate page full ID.
+         * @param absPtr Absolute pointer of the page to evict.
          * @param saveDirtyPage implementation to save dirty page to persistent storage.
          * @return {@code True} if it is ok to replace this page, {@code false} if another page should be selected.
          * @throws IgniteCheckedException If failed to write page to the underlying store during eviction.
          */
-        private @Nullable PageWithAttrHolder preparePageRemoval(
-            Set<PageWithAttrHolder> elected,
-            PageStoreWriter saveDirtyPage
-        ) throws IgniteCheckedException {
+        private boolean preparePageRemoval(FullPageId fullPageId, long absPtr, PageStoreWriter saveDirtyPage) throws IgniteCheckedException {
             assert writeLock().isHeldByCurrentThread();
 
-            for (PageWithAttrHolder candidate : elected) {
-                // Do not evict cache meta pages.
-                if (candidate.fullId.pageId() == storeMgr.metaPageId(candidate.fullId.groupId()))
-                    continue;
+            // Do not evict cache meta pages.
+            if (fullPageId.pageId() == storeMgr.metaPageId(fullPageId.groupId()))
+                return false;
 
-                clearRowCache(candidate.fullId, candidate.absAddr);
+            if (PageHeader.isAcquired(absPtr))
+                return false;
 
-                if (candidate.dirty) {
-                    CheckpointPages checkpointPages = this.checkpointPages;
-                    // Can evict a dirty page only if should be written by a checkpoint.
-                    // These pages does not have tmp buffer.
-                    if (checkpointPages != null && checkpointPages.allowToSave(candidate.fullId)) {
-                        assert storeMgr != null;
+            clearRowCache(fullPageId, absPtr);
 
-                        memMetrics.updatePageReplaceRate(U.currentTimeMillis() - candidate.ts);
+            if (isDirty(absPtr)) {
+                CheckpointPages checkpointPages = this.checkpointPages;
+                // Can evict a dirty page only if should be written by a checkpoint.
+                // These pages does not have tmp buffer.
+                if (checkpointPages != null && checkpointPages.allowToSave(fullPageId)) {
+                    assert storeMgr != null;
 
-                        saveDirtyPage.writePage(
-                            candidate.fullId,
-                            wrapPointer(candidate.absAddr + PAGE_OVERHEAD, pageSize()),
-                            partGeneration(
-                                candidate.fullId.groupId(),
-                                PageIdUtils.partId(candidate.fullId.pageId())
-                            )
-                        );
+                    memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
 
-                        setDirty(candidate.fullId, candidate.absAddr, false, true);
+                    saveDirtyPage.writePage(
+                        fullPageId,
+                        wrapPointer(absPtr + PAGE_OVERHEAD, pageSize()),
+                        partGeneration(
+                            fullPageId.groupId(),
+                            PageIdUtils.partId(fullPageId.pageId())
+                        )
+                    );
 
-                        checkpointPages.markAsSaved(candidate.fullId);
+                    setDirty(fullPageId, absPtr, false, true);
 
-                        return candidate;
-                    }
+                    checkpointPages.markAsSaved(fullPageId);
 
-                    return null;
-                } else {
-                    memMetrics.updatePageReplaceRate(U.currentTimeMillis() - candidate.ts);
-
-                    // Page was not modified, ok to evict.
-                    return candidate;
+                    return true;
                 }
-            }
 
-            return null;
+                return false;
+            }
+            else {
+                memMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
+
+                // Page was not modified, ok to evict.
+                return true;
+            }
         }
 
         /**
@@ -2282,13 +2279,18 @@ public class PageMemoryImpl implements PageMemoryEx {
             // every time the same page may be found.
             Set<Long> ignored = null;
 
+            long relRmvAddr = INVALID_REL_PTR;
+
             int iterations = 0;
 
-            Set<PageWithAttrHolder> electedPages = new TreeSet<>();
-
-            boolean found = false;
-
             while (true) {
+                long cleanAddr = INVALID_REL_PTR;
+                long cleanTs = Long.MAX_VALUE;
+                long dirtyAddr = INVALID_REL_PTR;
+                long dirtyTs = Long.MAX_VALUE;
+                long metaAddr = INVALID_REL_PTR;
+                long metaTs = Long.MAX_VALUE;
+
                 for (int i = 0; i < RANDOM_PAGES_EVICT_NUM; i++) {
                     ++iterations;
 
@@ -2321,34 +2323,63 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     boolean pinned = PageHeader.isAcquired(absPageAddr);
 
-                    if (pinned || ignored != null && ignored.contains(rndAddr) ||
-                        fullId.pageId() == storeMgr.metaPageId(fullId.groupId()) ||
-                        !electedPages.add(new PageWithAttrHolder(absPageAddr, rndAddr, fullId))) {
+                    final boolean skip = ignored != null && ignored.contains(rndAddr);
 
+                    final boolean dirty = isDirty(absPageAddr);
+
+                    CheckpointPages checkpointPages = this.checkpointPages;
+
+                    if (relRmvAddr == rndAddr || pinned || skip ||
+                        fullId.pageId() == storeMgr.metaPageId(fullId.groupId()) ||
+                        (dirty && (checkpointPages == null || !checkpointPages.contains(fullId)))
+                    ) {
                         i--;
 
                         continue;
                     }
 
-                    if (!found)
-                        found = rndAddr != INVALID_REL_PTR;
+                    final long pageTs = PageHeader.readTimestamp(absPageAddr);
+
+                    final boolean storMeta = isStoreMetadataPage(absPageAddr);
+
+                    if (pageTs < cleanTs && !dirty && !storMeta) {
+                        cleanAddr = rndAddr;
+
+                        cleanTs = pageTs;
+                    }
+                    else if (pageTs < dirtyTs && dirty && !storMeta) {
+                        dirtyAddr = rndAddr;
+
+                        dirtyTs = pageTs;
+                    }
+                    else if (pageTs < metaTs && storMeta) {
+                        metaAddr = rndAddr;
+
+                        metaTs = pageTs;
+                    }
+
+                    if (cleanAddr != INVALID_REL_PTR)
+                        relRmvAddr = cleanAddr;
+                    else if (dirtyAddr != INVALID_REL_PTR)
+                        relRmvAddr = dirtyAddr;
+                    else
+                        relRmvAddr = metaAddr;
                 }
 
-                if (!found)
+                if (relRmvAddr == INVALID_REL_PTR)
                     return tryToFindSequentially(cap, saveDirtyPage);
 
-                PageWithAttrHolder removed = preparePageRemoval(electedPages, saveDirtyPage);
+                final long absRmvAddr = absolute(relRmvAddr);
 
-                if (removed == null) {
+                final FullPageId fullPageId = PageHeader.fullPageId(absRmvAddr);
+
+                if (!preparePageRemoval(fullPageId, absRmvAddr, saveDirtyPage)) {
                     if (iterations > 10) {
                         if (ignored == null)
                             ignored = new HashSet<>();
 
-                        for (PageWithAttrHolder p : electedPages)
-                            ignored.add(p.relAddr);
+                        ignored.add(relRmvAddr);
                     }
-
-                    electedPages.clear();
 
                     if (iterations > pool.pages() * FULL_SCAN_THRESHOLD)
                         return tryToFindSequentially(cap, saveDirtyPage);
@@ -2357,11 +2388,33 @@ public class PageMemoryImpl implements PageMemoryEx {
                 }
 
                 loadedPages.remove(
-                    removed.fullId.groupId(),
-                    removed.fullId.effectivePageId()
+                    fullPageId.groupId(),
+                    fullPageId.effectivePageId()
                 );
 
-                return removed.relAddr;
+                return relRmvAddr;
+            }
+        }
+
+        /**
+         * @param absPageAddr Absolute page address
+         * @return {@code True} if page is related to partition metadata, which is loaded in saveStoreMetadata().
+         */
+        private boolean isStoreMetadataPage(long absPageAddr) {
+            try {
+                long dataAddr = absPageAddr + PAGE_OVERHEAD;
+
+                int type = PageIO.getType(dataAddr);
+                int ver = PageIO.getVersion(dataAddr);
+
+                PageIO io = PageIO.getPageIO(type, ver);
+
+                return io instanceof PagePartitionMetaIO
+                    || io instanceof PagesListMetaIO
+                    || io instanceof PagePartitionCountersIO;
+            }
+            catch (IgniteCheckedException ignored) {
+                return false;
             }
         }
 
@@ -2406,12 +2459,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 final FullPageId fullPageId = PageHeader.fullPageId(absEvictAddr);
 
-                PageWithAttrHolder removeCandidate = new PageWithAttrHolder(absPageAddr, addr, fullPageId);
-
-                @Nullable PageWithAttrHolder replaced =
-                    preparePageRemoval(Collections.singleton(removeCandidate), saveDirtyPage);
-
-                if (replaced != null) {
+                if (preparePageRemoval(fullPageId, absEvictAddr, saveDirtyPage)) {
                     loadedPages.remove(
                         fullPageId.groupId(),
                         fullPageId.effectivePageId()
@@ -2639,126 +2687,6 @@ public class PageMemoryImpl implements PageMemoryEx {
             }
             catch (Throwable e) {
                 doneFut.onDone(e);
-            }
-        }
-    }
-
-    /** Replace candidate attr holder. */
-    protected static class PageWithAttrHolder implements Comparable<PageWithAttrHolder> {
-        /** Timestamp. */
-        protected final long ts;
-
-        /** Absolute pointer. */
-        protected final long absAddr;
-
-        /** Relative pointer. */
-        private final long relAddr;
-
-        /** Earlier precalculated page id.*/
-        private final FullPageId fullId;
-
-        /** Page is dirty flag. */
-        protected final boolean dirty;
-
-        /** Page with meta info flag. */
-        protected final boolean meta;
-
-        /**
-         * Constructor. For test purpose only !!! We still can`n mock static methods.
-         *
-         * @param absAddr Absolute pointer.
-         * @param relAddr Relative pointer.
-         * @param fullId Full page id.
-         * @param ts Timestamp.
-         * @param dirty Dirty flag.
-         * @param meta Meta flag.
-         */
-        protected PageWithAttrHolder(
-            long absAddr,
-            long relAddr,
-            FullPageId fullId,
-            long ts,
-            boolean dirty,
-            boolean meta
-        ) {
-            this.relAddr = relAddr;
-            this.absAddr = absAddr;
-            this.ts = ts;
-            this.fullId = fullId;
-            this.dirty = dirty;
-            this.meta = meta;
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param absAddr Absolute pointer.
-         * @param relAddr Relative pointer.
-         * @param fullId Full page id.
-         */
-        PageWithAttrHolder(long absAddr, long relAddr, FullPageId fullId) {
-            this.relAddr = relAddr;
-            this.absAddr = absAddr;
-            this.ts = PageHeader.readTimestamp(absAddr);
-            this.fullId = fullId;
-            this.dirty = isDirty(absAddr);
-            this.meta = isStoreMetadataPage(absAddr);
-        }
-
-        /** {@inheritDoc} */
-        @Override public int compareTo(@NotNull PageWithAttrHolder pageIn) {
-            if (meta && pageIn.meta)
-                return Long.compare(ts, pageIn.ts);
-
-            if (meta || pageIn.meta)
-                return meta ? 1 : -1;
-
-            if (dirty == pageIn.dirty)
-                return Long.compare(ts, pageIn.ts);
-
-            return dirty ? 1 : -1;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (!(o instanceof PageWithAttrHolder))
-                return false;
-
-            return absAddr == ((PageWithAttrHolder) o).absAddr;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return (int)(absAddr ^ (absAddr >>> 32));
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "absAddr=" + absAddr + " ts=" + ts + " dirty=" + dirty + " meta=" + meta;
-        }
-
-        /**
-         * @param absPageAddr Absolute page address
-         * @return {@code True} if page is related to partition metadata, which is loaded in saveStoreMetadata().
-         */
-        private boolean isStoreMetadataPage(long absPageAddr) {
-            try {
-                long dataAddr = absPageAddr + PAGE_OVERHEAD;
-
-                int type = PageIO.getType(dataAddr);
-                int ver = PageIO.getVersion(dataAddr);
-
-                if (type == 0)
-                    return false;  // Skip. Most likely page has been allocated recently and is not initialized yet.
-
-                PageIO io = PageIO.getPageIO(type, ver);
-
-                return io instanceof PagePartitionMetaIO
-                    || io instanceof PagesListMetaIO
-                    || io instanceof PagePartitionCountersIO;
-            }
-            catch (IgniteCheckedException ignored) {
-                return false;
             }
         }
     }
