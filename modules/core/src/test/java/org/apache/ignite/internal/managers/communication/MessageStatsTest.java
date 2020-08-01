@@ -18,7 +18,6 @@ package org.apache.ignite.internal.managers.communication;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -26,7 +25,8 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.DiagnosticMXBeanImpl;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareResponse;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.mxbean.DiagnosticMXBean;
@@ -36,16 +36,20 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.MessageOrderLogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGE_STATS_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STAT_TOO_LONG_PROCESSING;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STAT_TOO_LONG_WAITING;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.util.lang.GridFunc.t;
+import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 
 /**
  *
@@ -58,13 +62,27 @@ public class MessageStatsTest extends GridCommonAbstractTest {
     private static final String CLIENT = "client";
 
     /** */
-    private LogListener slowMsgLogListener = LogListener.matches("Slow message").build();
+    private static final int LONG_WAIT_TEST_THRESHOLD = 10;
 
     /** */
-    private final ListeningTestLogger testLog = new ListeningTestLogger(false, log());
+    private static final int LONG_PROC_TEST_THRESHOLD = 200;
 
     /** */
-    private volatile boolean slowPrepare = false;
+    private final LogListener slowMsgLogListener = LogListener.matches("Slow message").build();
+
+    /** */
+    private final LogListener slowMsgLongWaitLogListener =
+        new MessageOrderLogListener(".*?Slow message: enqueueTs=[0-9 -:]{19}, waitTime=[0-9]{2,4}[.]{1}[0-9]{1,3}, procTime=[0-9]{1,3}[.]{1}[0-9]{1,3}, messageId=[0-9a-f]{1,8}, queueSzBefore=[0-9]{1,3}, headMessageId=(null|[0-9a-f]{1,8}), queueSzAfter=[0-9]{1,3}, message=.*");
+
+    /** */
+    private final LogListener slowMsgLongProcLogListener =
+        new MessageOrderLogListener(".*?Slow message: enqueueTs=[0-9 -:]{19}, waitTime=[0-9]{1,3}[.]{1}[0-9]{1,3}, procTime=[0-9]{3,4}[.]{1}[0-9]{1,3}, messageId=[0-9a-f]{1,8}, queueSzBefore=[0-9]{1,3}, headMessageId=(null|[0-9a-f]{1,8}), queueSzAfter=[0-9]{1,3}, message=.*");
+
+    /** */
+    private final ListeningTestLogger testLog = new ListeningTestLogger(log(), slowMsgLogListener, slowMsgLongProcLogListener, slowMsgLongWaitLogListener);
+
+    /** */
+    public boolean slowPrepare = false;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -80,14 +98,17 @@ public class MessageStatsTest extends GridCommonAbstractTest {
             ccfg.setBackups(1);
             ccfg.setWriteSynchronizationMode(FULL_SYNC);
 
-            cfg.setCacheConfiguration(ccfg);
+            CacheConfiguration atomic = new CacheConfiguration(DEFAULT_CACHE_NAME)
+                .setAtomicityMode(ATOMIC)
+                .setBackups(1)
+                .setWriteSynchronizationMode(FULL_SYNC);
+
+            cfg.setCacheConfiguration(ccfg, atomic);
         }
 
         cfg.setMetricExporterSpi(new JmxMetricExporterSpi());
 
         cfg.setCommunicationSpi(new TestCommunicationSpi());
-
-        testLog.registerListener(slowMsgLogListener);
 
         cfg.setGridLogger(testLog);
 
@@ -104,7 +125,7 @@ public class MessageStatsTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testStats() throws Exception {
-        IgniteEx ignite = startGrids(2);
+       /* IgniteEx ignite = startGrids(2);
 
         DiagnosticMXBean mxBean =
             getMxBean(ignite.name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class);
@@ -140,7 +161,7 @@ public class MessageStatsTest extends GridCommonAbstractTest {
 
         ignite.context().io().dumpProcessedMessagesStats();
 
-        assertTrue(slowMsgLogListener.check());
+        assertTrue(slowMsgLogListener.check());*/
     }
 
     /**
@@ -255,6 +276,137 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         testJmx(IGNITE_STAT_TOO_LONG_WAITING, "10", 2, 2, t(true, afterStart), t(false, set20), t(true, afterSet));
     }
 
+    private void imitateLongProcessing(IgniteEx ignite) throws Exception {
+        slowPrepare = true;
+
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
+
+        try {
+            for (int i = 0; i < 10; i++) {
+                int j = i;
+
+                doInTransaction(ignite, () -> {
+                    Integer a = cache.get(j);
+
+                    if (a == null)
+                        a = 0;
+
+                    cache.put(j, a + 1);
+
+                    return null;
+                });
+            }
+        }
+        finally {
+            slowPrepare = false;
+        }
+    }
+
+    private void imitateLongWaiting(IgniteEx ignite) throws Exception {
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
+
+        int procCnt = Runtime.getRuntime().availableProcessors();
+
+        runMultiThreadedAsync(() -> {
+            try {
+                for (int i = 0; i < 300; i++) {
+                    int j = i;
+
+                    doInTransaction(ignite, () -> {
+                        Integer p = cache.get(j);
+
+                        if (p == null)
+                            p = 0;
+
+                        cache.put(j, p + 1);
+
+                        return null;
+                    });
+                }
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+        }, procCnt * 5, "txAsyncLoad").get();
+    }
+
+    private void testLogWarningsWithJmxSettings(IgniteEx ignite,
+        DiagnosticMXBean mxBean,
+        long tooLongWaiting,
+        long tooLongProcessing
+    ) throws Exception {
+        mxBean.setDiagnosticMessageStatTooLongWaiting(tooLongWaiting);
+        mxBean.setDiagnosticMessageStatTooLongProcessing(tooLongProcessing);
+
+        imitateLongWaiting(ignite);
+
+        imitateLongProcessing(ignite);
+
+        slowMsgLongWaitLogListener.reset();
+        slowMsgLongProcLogListener.reset();
+
+        for (int i = 0; i < 3; i++)
+            ignite.context().io().dumpProcessedMessagesStats();
+
+        assertEquals(tooLongWaiting != 0 && tooLongWaiting != Integer.MAX_VALUE, slowMsgLongWaitLogListener.check());
+        assertEquals(tooLongProcessing != 0 && tooLongProcessing != Integer.MAX_VALUE, slowMsgLongProcLogListener.check());
+    }
+
+    @Test
+    public void testLogWarnings() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        DiagnosticMXBean mxBean = getMxBean(ignite.name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class);
+
+        mxBean.setDiagnosticMessageStatsEnabled(true);
+
+        testLogWarningsWithJmxSettings(ignite, mxBean, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        testLogWarningsWithJmxSettings(ignite, mxBean, LONG_WAIT_TEST_THRESHOLD, Integer.MAX_VALUE);
+        testLogWarningsWithJmxSettings(ignite, mxBean, Integer.MAX_VALUE, LONG_PROC_TEST_THRESHOLD);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "3000")
+    public void testLogWarningsOnTimeout() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        DiagnosticMXBean mxBean = getMxBean(ignite.name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class);
+
+        mxBean.setDiagnosticMessageStatTooLongWaiting(LONG_WAIT_TEST_THRESHOLD);
+
+        mxBean.setDiagnosticMessageStatTooLongProcessing(LONG_PROC_TEST_THRESHOLD);
+
+        // Check that there are warnings in log.
+        mxBean.setDiagnosticMessageStatsEnabled(true);
+
+        slowMsgLongWaitLogListener.reset();
+        slowMsgLongProcLogListener.reset();
+
+        imitateLongWaiting(ignite);
+
+        imitateLongProcessing(ignite);
+
+        doSleep(3100);
+
+        assertTrue(slowMsgLongWaitLogListener.check());
+        assertTrue(slowMsgLongProcLogListener.check());
+
+        // Check that there are no warnings in log if diagnostincs is disabled.
+        mxBean.setDiagnosticMessageStatsEnabled(false);
+
+        slowMsgLongWaitLogListener.reset();
+        slowMsgLongProcLogListener.reset();
+
+        imitateLongWaiting(ignite);
+
+        imitateLongProcessing(ignite);
+
+        doSleep(3100);
+
+        assertFalse(slowMsgLongWaitLogListener.check());
+        assertFalse(slowMsgLongProcLogListener.check());
+    }
+
     /**
      *
      */
@@ -265,8 +417,8 @@ public class MessageStatsTest extends GridCommonAbstractTest {
             if (msg instanceof GridIoMessage) {
                 Object msg0 = ((GridIoMessage)msg).message();
 
-                if (slowPrepare && msg0 instanceof GridNearTxPrepareRequest)
-                    doSleep(500);
+                if (slowPrepare && (msg0 instanceof GridDhtTxPrepareRequest || msg0 instanceof GridDhtTxPrepareResponse))
+                    doSleep(LONG_PROC_TEST_THRESHOLD + 10);
             }
 
             super.sendMessage(node, msg, ackClosure);

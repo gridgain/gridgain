@@ -36,13 +36,11 @@ import static org.apache.ignite.internal.util.IgniteUtils.checkRange;
 public class DistributedMetricsConfiguration {
     private final boolean defaultDiagnosticMessageStatsEnabled = getBoolean(IGNITE_MESSAGE_STATS_ENABLED, true);
 
-    private final long defaultDiagnosticMessageStatsTooLongProcessing = TimeUnit.MILLISECONDS.toNanos(
-            checkRange(0, Long.MAX_VALUE, getLong(IGNITE_STAT_TOO_LONG_PROCESSING, 250), IGNITE_STAT_TOO_LONG_PROCESSING)
-        );
+    private final long defaultDiagnosticMessageStatsTooLongProcessing =
+            checkRange(0, Long.MAX_VALUE, getLong(IGNITE_STAT_TOO_LONG_PROCESSING, 250), IGNITE_STAT_TOO_LONG_PROCESSING);
 
-    private final long defaultDiagnosticMessageStatsTooLongWaiting = TimeUnit.MILLISECONDS.toNanos(
-            checkRange(0, Long.MAX_VALUE, getLong(IGNITE_STAT_TOO_LONG_WAITING, 250), IGNITE_STAT_TOO_LONG_WAITING)
-        );
+    private final long defaultDiagnosticMessageStatsTooLongWaiting =
+            checkRange(0, Long.MAX_VALUE, getLong(IGNITE_STAT_TOO_LONG_WAITING, 250), IGNITE_STAT_TOO_LONG_WAITING);
 
     private final IgniteLogger log;
 
@@ -84,17 +82,14 @@ public class DistributedMetricsConfiguration {
     }
 
     public long diagnosticMessageStatTooLongProcessing() {
-        return TimeUnit.NANOSECONDS.toMillis(
-            diagnosticMessageStatTooLongProcessing.getOrDefault(defaultDiagnosticMessageStatsTooLongProcessing)
-        );
+        return diagnosticMessageStatTooLongProcessing.getOrDefault(defaultDiagnosticMessageStatsTooLongProcessing);
     }
 
     public void diagnosticMessageStatTooLongProcessing(long diagnosticMessageStatTooLongProcessing) {
         try {
-            this.diagnosticMessageStatTooLongProcessing
-                .propagate(TimeUnit.MILLISECONDS.toNanos(
-                    checkRange(0, Long.MAX_VALUE, diagnosticMessageStatTooLongProcessing, IGNITE_STAT_TOO_LONG_PROCESSING)
-                ));
+            this.diagnosticMessageStatTooLongProcessing.propagate(
+                checkRange(0, Long.MAX_VALUE, diagnosticMessageStatTooLongProcessing, IGNITE_STAT_TOO_LONG_PROCESSING)
+            );
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -102,16 +97,14 @@ public class DistributedMetricsConfiguration {
     }
 
     public long diagnosticMessageStatTooLongWaiting() {
-        return TimeUnit.NANOSECONDS.toMillis(
-            diagnosticMessageStatTooLongWaiting.getOrDefault(defaultDiagnosticMessageStatsTooLongWaiting)
-        );
+        return diagnosticMessageStatTooLongWaiting.getOrDefault(defaultDiagnosticMessageStatsTooLongWaiting);
     }
 
     public void diagnosticMessageStatTooLongWaiting(long diagnosticMessageStatTooLongWaiting) {
         try {
-            this.diagnosticMessageStatTooLongWaiting.propagate(TimeUnit.MILLISECONDS.toNanos(
+            this.diagnosticMessageStatTooLongWaiting.propagate(
                 checkRange(0, Long.MAX_VALUE, diagnosticMessageStatTooLongWaiting, IGNITE_STAT_TOO_LONG_WAITING)
-            ));
+            );
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

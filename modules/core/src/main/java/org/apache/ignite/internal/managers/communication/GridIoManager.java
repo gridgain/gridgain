@@ -57,6 +57,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -118,6 +119,7 @@ import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.WarningsGroup;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgnitePair;
@@ -153,6 +155,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.time.Instant.ofEpochMilli;
 import static java.util.Arrays.asList;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_WARN_LIMIT;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -281,6 +284,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         GridNearAtomicSingleUpdateRequest.class,
         GridNearAtomicUpdateResponse.class
     )));
+
+    /** */
+    private final int SLOW_MSG_WARN_LIMIT = IgniteSystemProperties.getInteger(IGNITE_DIAGNOSTIC_WARN_LIMIT, 10);
 
     /** Listeners by topic. */
     private final ConcurrentMap<Object, GridMessageListener> lsnrMap = new ConcurrentHashMap<>();
@@ -1564,13 +1570,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         long procTime = finishProc - startProc;
         long waitTime = startProc - startWait;
 
+        long procTimeMs = procTime / 1_000_000;
+        long waitTimeMs = waitTime / 1_000_000;
+
         MsgMetricBundle metricBundle = msgMetrics.get(msgTypeName);
 
-        metricBundle.processingTime.value(procTime);
-        metricBundle.queueWaitingTime.value(waitTime);
+        metricBundle.processingTime.value(procTimeMs);
+        metricBundle.queueWaitingTime.value(waitTimeMs);
 
-        metricBundle.totalProcessingTime.add(procTime);
-        metricBundle.totalQueueWaitingTime.add(waitTime);
+        metricBundle.totalProcessingTime.add(procTimeMs);
+        metricBundle.totalQueueWaitingTime.add(waitTimeMs);
 
         ProcessMessageStatsClosure<Message> clo = handlers.get(msg0.getClass().getSimpleName());
 
@@ -1583,8 +1592,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
         }
 
-        if (procTime > metricsConfiguration.diagnosticMessageStatTooLongProcessing()
-            || waitTime > metricsConfiguration.diagnosticMessageStatTooLongWaiting()) {
+        if (procTimeMs > metricsConfiguration.diagnosticMessageStatTooLongProcessing()
+            || waitTimeMs > metricsConfiguration.diagnosticMessageStatTooLongWaiting()) {
             List<ProcStat> slowMsgs = locSlowMsgHolder.get();
 
             if (slowMsgs == null) {
@@ -1601,7 +1610,12 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** */
     public void dumpProcessedMessagesStats() {
+        if (!metricsConfiguration.diagnosticMessageStatsEnabled())
+            return;
+
         ZoneId sysZoneId = ZoneId.systemDefault();
+
+        WarningsGroup warnings = new WarningsGroup("First %d slow messages [total=%d]", log, SLOW_MSG_WARN_LIMIT);
 
         for (Map.Entry<Thread, List<ProcStat>> entry : sharedSlowMsgs.entrySet()) {
             List<ProcStat> list = entry.getValue();
@@ -1615,15 +1629,17 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
 
             for (ProcStat stat : copyList)
-                U.warn(log, slowMsgWarning(stat, sysZoneId));
+                warnings.add(slowMsgWarning(stat, sysZoneId));
         }
+
+        warnings.printToLog();
     }
 
     /** */
     private String slowMsgWarning(ProcStat stat, ZoneId sysZoneId) {
         GridStringBuilder sb = new GridStringBuilder();
 
-        sb.a("Slow message: ").
+        sb.a(">>> Slow message: ").
             a("enqueueTs=").
             a(LocalDateTime.ofInstant(ofEpochMilli(stat.enqueueTimestamp()), sysZoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).
             a(", waitTime=").
@@ -1639,8 +1655,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             a(", queueSzAfter=").
             a(stat.sizeAfter()).
             a(", message=").
-            a(stat.message().toString().replace("\n", " ")).
-            a(U.nl());
+            a(stat.message().toString().replace("\n", " "));
 
         return sb.toString();
     }

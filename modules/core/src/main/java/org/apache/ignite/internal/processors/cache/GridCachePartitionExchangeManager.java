@@ -126,6 +126,7 @@ import org.apache.ignite.internal.util.GridListSet;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.WarningsGroup;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -3885,82 +3886,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(AffinityReadyFuture.class, this, super.toString());
-        }
-    }
-
-    /**
-     * Class to print only limited number of warnings.
-     */
-    private static class WarningsGroup {
-        /** */
-        private final IgniteLogger log;
-
-        /** */
-        private final int warningsLimit;
-
-        /** */
-        private final String title;
-
-        /** */
-        private final List<String> messages = new ArrayList<>();
-
-        /** */
-        private int warningsTotal = 0;
-
-        /**
-         * @param log Target logger.
-         * @param warningsLimit Warnings limit.
-         */
-        private WarningsGroup(String title, IgniteLogger log, int warningsLimit) {
-            this.title = title;
-
-            this.log = log;
-
-            this.warningsLimit = warningsLimit;
-        }
-
-        /**
-         * @param msg Warning message.
-         * @return {@code true} if message is added to list.
-         */
-        private boolean add(String msg) {
-            boolean added = false;
-
-            if (canAddMessage()) {
-                messages.add(msg);
-
-                added = true;
-            }
-
-            warningsTotal++;
-
-            return added;
-        }
-
-        /**
-         * @return {@code true} if messages list size less than limit.
-         */
-        private boolean canAddMessage() {
-            return warningsTotal < warningsLimit;
-        }
-
-        /**
-         * Increase total number of warnings.
-         */
-        private void incTotal() {
-            warningsTotal++;
-        }
-
-        /**
-         * Print warnings block title and messages.
-         */
-        private void printToLog() {
-            if (warningsTotal > 0) {
-                U.warn(log, String.format(title, warningsLimit, warningsTotal));
-
-                for (String message : messages)
-                    U.warn(log, message);
-            }
         }
     }
 

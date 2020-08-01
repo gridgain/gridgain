@@ -1366,8 +1366,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         // Start starvation checker if enabled.
         boolean starveCheck = !isDaemon() && !"0".equals(intervalStr);
 
-        boolean enableStats = IgniteSystemProperties.getBoolean(IGNITE_MESSAGE_STATS_ENABLED);
-
         if (starveCheck) {
             final long interval = F.isEmpty(intervalStr) ? PERIODIC_STARVATION_CHECK_FREQ : Long.parseLong(intervalStr);
 
@@ -1403,8 +1401,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     if (stripedExecSvc != null)
                         stripedExecSvc.detectStarvation();
 
-                    if (enableStats)
-                        ctx.io().dumpProcessedMessagesStats();
+                    ctx.io().dumpProcessedMessagesStats();
                 }
 
                 /**

@@ -126,7 +126,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Transaction metrics prefix. */
     public static final String TX_METRICS = "tx";
 
-    /** System metrics prefix. */
+    /** Diagnostic metrics prefix. */
     public static final String DIAGNOSTIC_METRICS = "diagnostic";
 
     /** GC CPU load metric name. */
@@ -155,9 +155,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
     /** Daemon thread count metric name. */
     public static final String DAEMON_THREAD_CNT = "DaemonThreadCount";
-
-    /** System metrics prefix. */
-    public static final String DIAGNOSTIC_METRICS = "diagnostic";
 
     /** PME duration metric name. */
     public static final String PME_DURATION = "Duration";
