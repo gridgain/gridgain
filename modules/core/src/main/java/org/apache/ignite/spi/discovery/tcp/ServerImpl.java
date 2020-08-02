@@ -5619,6 +5619,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 boolean aliveCheck = clientNode.isClientAlive();
 
                                 if (!aliveCheck && isLocalNodeCoordinator()) {
+                                    System.out.println("!!!Here we are = " + msg);
                                     boolean failedNode;
 
                                     synchronized (mux) {

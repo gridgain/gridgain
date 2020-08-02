@@ -944,8 +944,8 @@ public abstract class IgniteUtils {
 
                 ServiceLoader<PluginProvider> ldr = ServiceLoader.load(PluginProvider.class);
 
-                for (PluginProvider provider : ldr)
-                    providers.add(provider);
+//                for (PluginProvider provider : ldr)
+//                    providers.add(provider);
 
                 return providers;
             }
