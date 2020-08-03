@@ -3830,7 +3830,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 assert firstDiscoEvt instanceof DiscoveryCustomEvent;
 
                 if (activateCluster() || changedBaseline())
-                    assignPartitionsStates(true);
+                    assignPartitionsStates(true, false);
 
                 DiscoveryCustomMessage discoveryCustomMessage = ((DiscoveryCustomEvent) firstDiscoEvt).customMessage();
 
@@ -3841,20 +3841,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (!F.isEmpty(caches))
                             resetLostPartitions(caches);
 
-                        assignPartitionsStates(true);
+                        assignPartitionsStates(true, true);
                     }
                 }
+//                grpDesc.groupId()
+//                exchActions.cacheGroupsToStart().stream().map(x -> x.descriptor().groupId()).collect(Collectors.toList())
                 else if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage
                         && ((SnapshotDiscoveryMessage)discoveryCustomMessage).needAssignPartitions()) {
                     markAffinityReassign();
 
-                    assignPartitionsStates(true);
+                    assignPartitionsStates(true, false);
                 }
             }
             else if (exchCtx.events().hasServerJoin())
-                assignPartitionsStates(true);
+                assignPartitionsStates(true, false);
             else if (exchCtx.events().hasServerLeft())
-                assignPartitionsStates(false);
+                assignPartitionsStates(false, false);
 
             // Recalculate new affinity based on partitions availability.
             if (!exchCtx.mergeExchanges() && forceAffReassignment) {
@@ -4150,7 +4152,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /**
      * @param resetOwners True if reset partitions state needed, false otherwise.
      */
-    private void assignPartitionsStates(boolean resetOwners) {
+    private void assignPartitionsStates(boolean resetOwners, boolean resetOwnersForStartedCacheGroupsOnly) {
         Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
             new ConcurrentHashMap<>() : null;
 
@@ -4171,10 +4173,24 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
                     }
-                    else if (resetOwners)
+//                    else if (resetOwners)
+//                        assignPartitionSizes(top);
+                    else if (resetOwners && !resetOwnersForStartedCacheGroupsOnly)
+                        assignPartitionSizes(top);
+                    else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
+                        !exchActions.cacheGroupsToStart().isEmpty() &&
+                        exchActions.cacheGroupsToStart().stream()
+                            .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
                         assignPartitionSizes(top);
 
                     return null;
+//                                        else if (resetOwners && !resetOwnersForStartedCacheGroupsOnly)
+//                        assignPartitionSizes(top);
+//                    else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
+//                        !exchActions.cacheGroupsToStart().isEmpty() &&
+//                        exchActions.cacheGroupsToStart().stream()
+//                            .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
+//                        assignPartitionSizes(top);
                 }
             );
         }
