@@ -2219,6 +2219,7 @@ class ClusterCachesInfo {
         Map<String, Integer> caches = Collections.singletonMap(startedCacheCfg.getName(), cacheId);
 
         boolean persistent = resolvePersistentFlag(exchActions, startedCacheCfg);
+        boolean walGloballyEnabled = ctx.cache().context().database().walEnabled(grpId, false);
 
         CacheGroupDescriptor grpDesc = new CacheGroupDescriptor(
             startedCacheCfg,
@@ -2229,7 +2230,7 @@ class ClusterCachesInfo {
             deploymentId,
             caches,
             persistent,
-            persistent,
+            walGloballyEnabled,
             null,
             cacheCfgEnrichment
         );
