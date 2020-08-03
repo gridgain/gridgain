@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query;
+package org.apache.ignite.internal.processors.query.timeout;
 
 import java.util.Collections;
 import java.util.Map;

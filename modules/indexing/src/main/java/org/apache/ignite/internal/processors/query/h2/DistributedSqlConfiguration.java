@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.configuration.distributed.Distribut
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.h2.util.DateTimeUtils;
 
@@ -60,12 +61,19 @@ public class DistributedSqlConfiguration {
         "CANCEL_SESSION"
     }).collect(Collectors.toSet());
 
+    /** Default value of the default query timeout. */
+    public static final long DFLT_QRY_TIMEOUT = 0;
+
     /** Disabled SQL functions. */
     private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
         = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
     /** Value of cluster time zone. */
     private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sql.timeZone");
+
+    /** Query timeout. */
+    private final SimpleDistributedProperty<Long> dfltQueryTimeout
+        = new SimpleDistributedProperty<>("sql.defaultQueryTimeout");
 
     /** Context. */
     private final GridKernalContext ctx;
@@ -84,13 +92,14 @@ public class DistributedSqlConfiguration {
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
                     disabledSqlFuncs.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
+                    dfltQueryTimeout.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
 
                     timeZone.addListener((name, oldTz, newTz) -> {
                         if (!Objects.equals(oldTz, newTz))
                             DateTimeUtils.setTimeZone(newTz);
                     });
 
-                    dispatcher.registerProperties(disabledSqlFuncs, timeZone);
+                    dispatcher.registerProperties(disabledSqlFuncs, timeZone, dfltQueryTimeout);
                 }
 
                 @Override public void onReadyToWrite() {
@@ -101,13 +110,19 @@ public class DistributedSqlConfiguration {
                             log);
 
                         setTimeZoneDefault(log);
+
+                        setDefaultValue(
+                            dfltQueryTimeout,
+                            ctx.config().getSqlConfiguration().getDefaultQueryTimeout(),
+                            log);
                     }
                     else {
                         log.warning("Distributed metastorage is not supported. " +
                             "All distributed SQL configuration parameters are unavailable.");
 
-                        // Set disabled functions to default.
+                        // Set properties to default.
                         disabledSqlFuncs.localUpdate(null);
+                        dfltQueryTimeout.localUpdate(ctx.config().getSqlConfiguration().getDefaultQueryTimeout());
                     }
                 }
             }
@@ -180,5 +195,31 @@ public class DistributedSqlConfiguration {
     public GridFutureAdapter<?> updateTimeZone(TimeZone tz)
         throws IgniteCheckedException {
         return timeZone.propagateAsync(tz);
+    }
+
+    /**
+     * @return Disabled SQL functions.
+     */
+    public long defaultQueryTimeout() {
+        Long t = dfltQueryTimeout.get();
+
+        return t != null ? t : DFLT_QRY_TIMEOUT;
+    }
+
+    /**
+     * @param timeout Default query timeout.
+     * @throws IgniteCheckedException if failed.
+     */
+    public GridFutureAdapter<?> defaultQueryTimeout(long timeout)
+        throws IgniteCheckedException {
+        A.ensure(timeout >= 0 && timeout <= Integer.MAX_VALUE,
+            "default query timeout value should be valid Integer.");
+
+        return dfltQueryTimeout.propagateAsync(timeout);
+    }
+
+    /** */
+    public void listenDefaultQueryTimeout(DistributePropertyListener<Long> lsnr) {
+        dfltQueryTimeout.addListener(lsnr);
     }
 }

@@ -24,6 +24,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.query.timeout.TimedQueryHelper;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 

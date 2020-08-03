@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query;
+package org.apache.ignite.internal.processors.query.timeout;
 
+import org.apache.ignite.internal.processors.query.DefaultQueryTimeoutConfigurationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -28,6 +29,7 @@ import org.junit.runners.Suite;
     DefaultQueryTimeoutThickJavaTest.class,
     DefaultQueryTimeoutThickJavaLazyTest.class,
     DefaultQueryTimeoutThickJavaUpdateTest.class,
+    DefaultQueryTimeoutThickJavaUpdateLazyTest.class,
     DefaultQueryTimeoutThinJavaTest.class,
     DefaultQueryTimeoutThinJdbcTest.class
 })

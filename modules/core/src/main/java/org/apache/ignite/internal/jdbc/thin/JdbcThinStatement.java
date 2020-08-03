@@ -227,8 +227,16 @@ public class JdbcThinStatement implements Statement {
             return;
         }
 
-        JdbcQueryExecuteRequest req = new JdbcQueryExecuteRequest(stmtType, schema, pageSize,
-            maxRows, conn.getAutoCommit(), explicitTimeout, sql, args == null ? null : args.toArray(new Object[args.size()]));
+        JdbcQueryExecuteRequest req = new JdbcQueryExecuteRequest(
+            stmtType,
+            schema,
+            pageSize,
+            maxRows,
+            conn.getAutoCommit(),
+            explicitTimeout,
+            sql,
+            args == null ? null : args.toArray(new Object[args.size()])
+        );
 
         JdbcResultWithIo resWithIo = conn.sendRequest(req, this, null);
 

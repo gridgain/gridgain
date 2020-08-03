@@ -14,32 +14,35 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query;
+package org.apache.ignite.internal.processors.query.timeout;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.client.IgniteClient;
-import org.apache.ignite.configuration.ClientConfiguration;
-import org.apache.ignite.internal.client.thin.ClientServerError;
-import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinStatement;
+import org.apache.ignite.internal.processors.query.timeout.AbstractDefaultQueryTimeoutTest;
 import org.apache.ignite.internal.util.typedef.X;
 
 /**
- * TODO: broken tests should pass after supporting thin java client compatibility for default query timeout
+ *
  */
-public class DefaultQueryTimeoutThinJavaTest extends AbstractDefaultQueryTimeoutTest {
+public class DefaultQueryTimeoutThinJdbcTest extends AbstractDefaultQueryTimeoutTest {
     /** {@inheritDoc} */
     @Override protected void executeQuery(String sql) throws Exception {
-        try (IgniteClient cli = G.startClient(new ClientConfiguration().setAddresses("127.0.0.1"))) {
-            cli.query(new SqlFieldsQuery(sql)).getAll();
+        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
+            conn.createStatement().executeQuery(sql);
         }
     }
 
     /** {@inheritDoc} */
     @Override protected void executeQuery(String sql, long timeout) throws Exception {
-        try (IgniteClient cli = G.startClient(new ClientConfiguration().setAddresses("127.0.0.1"))) {
-            cli.query(new SqlFieldsQuery(sql).setTimeout((int)timeout, TimeUnit.MILLISECONDS)).getAll();
+        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
+            JdbcThinStatement stmt = (JdbcThinStatement)conn.createStatement();
+
+            stmt.timeout((int)timeout);
+
+            stmt.executeQuery(sql);
         }
     }
 
@@ -51,7 +54,7 @@ public class DefaultQueryTimeoutThinJavaTest extends AbstractDefaultQueryTimeout
             fail("Exception is expected");
         }
         catch (Exception e) {
-            assertTrue(X.hasCause(e, "The query was cancelled while executing", ClientServerError.class));
+            assertTrue(X.hasCause(e, "The query was cancelled while executing", SQLException.class));
         }
     }
 }

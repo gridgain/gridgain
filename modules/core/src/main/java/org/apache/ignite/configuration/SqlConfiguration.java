@@ -277,7 +277,9 @@ public class SqlConfiguration {
      * is a default value)
      *
      * @return Default query timeout.
+     * @deprecated Since 8.7.26. Please use distributed default query timeout.
      */
+    @Deprecated
     public long getDefaultQueryTimeout() {
         return dfltQryTimeout;
     }
@@ -289,7 +291,9 @@ public class SqlConfiguration {
      *
      * @param dfltQryTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
+     * @deprecated Since 8.7.26. Please use distributed default query timeout.
      */
+    @Deprecated
     public SqlConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
         A.ensure(dfltQryTimeout >= 0 && dfltQryTimeout <= Integer.MAX_VALUE,
             "default query timeout value should be valid Integer.");

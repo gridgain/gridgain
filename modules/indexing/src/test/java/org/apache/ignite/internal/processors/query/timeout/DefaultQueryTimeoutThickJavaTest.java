@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query;
+package org.apache.ignite.internal.processors.query.timeout;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.timeout.AbstractDefaultQueryTimeoutTest;
 import org.apache.ignite.testframework.GridTestUtils;
 
 /**
