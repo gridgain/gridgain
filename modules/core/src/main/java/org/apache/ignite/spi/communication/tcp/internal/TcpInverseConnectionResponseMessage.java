@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.nio.ByteBuffer;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
@@ -29,7 +28,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
  * The main purpose of this message is to communicate back to server node connection index of a thread waiting for
  * establishing of communication connection.
  */
-public class TcpInverseConnectionResponseMessage implements Message {
+public class TcpInverseConnectionResponseMessage implements TcpConnectionIndexAwareMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -46,7 +45,7 @@ public class TcpInverseConnectionResponseMessage implements Message {
     }
 
     /** */
-    public int connectionIndex() {
+    @Override public int connectionIndex() {
         return connIdx;
     }
 
