@@ -275,7 +275,7 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestFairLockGuaranteesOrder()
         {
-            const int count = 50;
+            const int count = 20;
 
             var cfg = new LockConfiguration
             {
@@ -308,7 +308,7 @@ namespace Apache.Ignite.Core.Tests
 
                 evt.WaitOne();
 
-                Thread.Sleep(50);
+                Thread.Sleep(100);
 
                 threads[i] = thread;
             }
