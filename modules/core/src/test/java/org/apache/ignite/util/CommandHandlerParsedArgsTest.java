@@ -75,9 +75,9 @@ public class CommandHandlerParsedArgsTest {
         excludeCaches.add("zxc");
 
         idleVerifyExpectedMap.put(DUMP, null);
-        idleVerifyExpectedMap.put(SKIP_ZEROS, null);
+        idleVerifyExpectedMap.put(SKIP_ZEROS, false);
         idleVerifyExpectedMap.put(EXCLUDE_CACHES, excludeCaches);
-        idleVerifyExpectedMap.put(CHECK_CRC, null);
+        idleVerifyExpectedMap.put(CHECK_CRC, true);
         idleVerifyExpectedMap.put(CACHE_FILTER, "rtybvc");
 
         statsCommandParamParser = new CommandParametersParser<>(
@@ -92,7 +92,7 @@ public class CommandHandlerParsedArgsTest {
             IdleVerifyCommandArg.class,
             asList(
                 optionalArg(DUMP, "", Boolean.class, () -> null),
-                optionalArg(SKIP_ZEROS, "", Boolean.class, () -> null),
+                optionalArg(SKIP_ZEROS, "", Boolean.class, () -> false),
                 optionalArg(EXCLUDE_CACHES, "", Set.class, () -> null),
                 optionalArg(CHECK_CRC, "", Boolean.class, () -> null),
                 optionalArg(CACHE_FILTER, "", String.class, () -> null)
@@ -161,7 +161,7 @@ public class CommandHandlerParsedArgsTest {
         test(
             idleVerifyCommandParamParser,
             idleVerifyExpectedMap,
-            CACHE_FILTER.toString(), "rtybvc", DUMP.toString(), EXCLUDE_CACHES.toString(), "asd,zxc", CHECK_CRC.toString(), SKIP_ZEROS.toString()
+            CACHE_FILTER.toString(), "rtybvc", EXCLUDE_CACHES.toString(), "asd,zxc", CHECK_CRC.toString()
         );
     }
 

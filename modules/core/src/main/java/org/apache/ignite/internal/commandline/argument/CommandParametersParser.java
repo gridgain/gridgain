@@ -18,11 +18,13 @@ package org.apache.ignite.internal.commandline.argument;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.util.GridStringBuilder;
 
 import static org.apache.ignite.internal.commandline.argument.CommandArgUtils.of;
 import static org.apache.ignite.internal.commandline.argument.CommandArgUtils.ofString;
@@ -37,7 +39,7 @@ public class CommandParametersParser<E extends Enum<E> & CommandArg> {
     public CommandParametersParser(Class<E> parametersEnum, List<CommandParameter<E, ? extends Object>> parametersList) {
         this.parametersEnum = parametersEnum;
 
-        Map<String, CommandParameter<E, ? extends Object>> parametersMap = new HashMap<>();
+        Map<String, CommandParameter<E, ? extends Object>> parametersMap = new LinkedHashMap<>();
         Set<CommandParameter<E, ? extends Object>> neededObligatoryParams = new HashSet<>();
 
         for (CommandParameter<E, ? extends Object> param : parametersList) {
@@ -99,6 +101,11 @@ public class CommandParametersParser<E extends Enum<E> & CommandArg> {
 
                         break;
 
+                    case "Boolean":
+                        val = true;
+
+                        break;
+
                     default:
                         if (param.valueType().isEnum())
                             val = ofString(argIter.nextArg(arg.argName()), (Class) param.valueType());
@@ -121,5 +128,35 @@ public class CommandParametersParser<E extends Enum<E> & CommandArg> {
 
     public String[] paramUsageStrings() {
         return transform(parametersMap.values(), CommandParameter::usage).toArray(EMPTY_STRING_ARRAY);
+    }
+
+    /**
+     * Returns help text.
+     *
+     * @return Help text.
+     */
+    public String helpText() {
+        GridStringBuilder sb = new GridStringBuilder("Usage: ");
+
+        for (CommandParameter param : parametersMap.values())
+            sb.a(param.usage()).a(" ");
+
+        for (CommandParameter param : parametersMap.values()) {
+            Object dfltVal = null;
+
+            try {
+                dfltVal = param.defaultValueSupplier().get();
+            }
+            catch (Exception ignored) {
+                /* No op. */
+            }
+
+            sb.a("\n\n").a(param.parameterName()).a(": ").a(param.help());
+
+            if (param.isOptional())
+                sb.a(" Default value: ").a(dfltVal);
+        }
+
+        return sb.toString();
     }
 }

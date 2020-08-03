@@ -50,8 +50,10 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.development.utils.ProgressPrinter;
 import org.apache.ignite.development.utils.StringBuilderOutputStream;
-import org.apache.ignite.development.utils.arguments.CLIArgument;
-import org.apache.ignite.development.utils.arguments.CLIArgumentParser;
+import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.argument.CommandParametersParser;
+import org.apache.ignite.internal.commandline.argument.ParsedParameters;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
@@ -100,8 +102,6 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
-import static org.apache.ignite.development.utils.arguments.CLIArgument.optionalArg;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.CHECK_PARTS;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST_FILE;
@@ -112,6 +112,8 @@ import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_STORE_VER;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PART_CNT;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.TRANSFORM;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -1440,77 +1442,78 @@ public class IgniteIndexReader implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         System.out.println("THIS UTILITY MUST BE LAUNCHED ON PERSISTENT STORE WHICH IS NOT UNDER RUNNING GRID!");
 
-        AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
+        AtomicReference<ParsedParameters<Args>> parsedParamsRef = new AtomicReference<>();
 
-        List<CLIArgument> argsConfiguration = asList(
-            mandatoryArg(
-                    DIR.arg(),
+        CommandParametersParser<Args> parser = new CommandParametersParser<>(
+            Args.class,
+            asList(
+                mandatoryArg(
+                    DIR,
                     "partition directory, where " + INDEX_FILE_NAME + " and (optionally) partition files are located.",
                     String.class
-            ),
-            optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
-            optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
-            optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
-            optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
-                "without spaces, other index trees will be skipped.", String[].class, () -> null),
-            optionalArg(DEST_FILE.arg(),
+                ),
+                optionalArg(PART_CNT, "full partitions count in cache group.", Integer.class, () -> 0),
+                optionalArg(PAGE_SIZE, "page size.", Integer.class, () -> 4096),
+                optionalArg(PAGE_STORE_VER, "page store version.", Integer.class, () -> 2),
+                optionalArg(INDEXES, "you can specify index tree names that will be processed, separated by comma " +
+                    "without spaces, other index trees will be skipped.", String[].class, () -> null),
+                optionalArg(DEST_FILE,
                     "file to print the report to (by default report is printed to console).", String.class, () -> null),
-            optionalArg(TRANSFORM.arg(), "if specified, this utility assumes that all *.bin files " +
-                "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
-                " directory.", Boolean.class, () -> false),
-            optionalArg(DEST.arg(),
-                "directory where to put files transformed from snapshot (needed if you use --transform).",
-                String.class,
-                () -> {
-                    if (parserRef.get().get(TRANSFORM.arg()))
-                        throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
-                    else
-                        return null;
-                }
-            ),
-            optionalArg(FILE_MASK.arg(),
+                optionalArg(TRANSFORM, "if specified, this utility assumes that all *.bin files " +
+                    "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
+                    " directory.", Boolean.class, () -> false),
+                optionalArg(DEST,
+                    "directory where to put files transformed from snapshot (needed if you use --transform).",
+                    String.class,
+                    () -> {
+                        if (parsedParamsRef.get().get(TRANSFORM.argName()))
+                            throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
+                        else
+                            return null;
+                    }
+                ),
+                optionalArg(FILE_MASK,
                     "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
-            optionalArg(CHECK_PARTS.arg(),
+                optionalArg(CHECK_PARTS,
                     "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
+            )
         );
 
-        CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
-
-        parserRef.set(p);
-
         if (args.length == 0) {
-            System.out.println(p.usage());
+            System.out.println(parser.helpText());
 
             return;
         }
 
-        p.parse(asList(args).iterator());
+        ParsedParameters<Args> p = parser.parse(new CommandArgIterator(asList(args).iterator(), null));
 
-        String destFile = p.get(DEST_FILE.arg());
+        parsedParamsRef.set(p);
+
+        String destFile = p.get(DEST_FILE.argName());
 
         OutputStream destStream = isNull(destFile) ? null : new FileOutputStream(destFile);
 
-        String dir = p.get(DIR.arg());
+        String dir = p.get(DIR.argName());
 
-        int pageSize = p.get(PAGE_SIZE.arg());
+        int pageSize = p.get(PAGE_SIZE.argName());
 
         IgniteIndexReaderFilePageStoreFactory filePageStoreFactory = new IgniteIndexReaderFilePageStoreFactoryImpl(
             new File(dir),
             pageSize,
-            p.get(PAGE_STORE_VER.arg())
+            p.get(PAGE_STORE_VER.argName())
         );
 
-        if (p.get(TRANSFORM.arg())) {
+        if (p.get(TRANSFORM.argName())) {
             try (IgniteIndexReader reader = new IgniteIndexReader(pageSize, destStream)) {
-                reader.transform(dir, p.get(DEST.arg()), p.get(FILE_MASK.arg()), filePageStoreFactory);
+                reader.transform(dir, p.get(DEST.argName()), p.get(FILE_MASK.argName()), filePageStoreFactory);
             }
         }
         else {
             try (IgniteIndexReader reader = new IgniteIndexReader(
                 pageSize,
-                p.get(PART_CNT.arg()),
-                p.get(INDEXES.arg()),
-                p.get(CHECK_PARTS.arg()),
+                p.get(PART_CNT.argName()),
+                p.get(INDEXES.argName()),
+                p.get(CHECK_PARTS.argName()),
                 destStream,
                 filePageStoreFactory
             )) {
@@ -1522,7 +1525,7 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Enum of possible utility arguments.
      */
-    public enum Args {
+    public enum Args implements CommandArg {
         /** */
         DIR("--dir"),
         /** */
@@ -1554,8 +1557,8 @@ public class IgniteIndexReader implements AutoCloseable {
             this.arg = arg;
         }
 
-        /** */
-        public String arg() {
+        /** {@inheritDoc} */
+        @Override public String argName() {
             return arg;
         }
     }
