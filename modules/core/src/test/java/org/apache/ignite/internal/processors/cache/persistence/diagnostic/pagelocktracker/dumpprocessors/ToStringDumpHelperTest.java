@@ -29,6 +29,8 @@ import org.junit.Test;
  * Unit tests for {@link ToStringDumpHelper}.
  */
 public class ToStringDumpHelperTest extends GridCommonAbstractTest {
+    /** */
+    private static final long TIME = 1596173397167L;
 
     /** */
     @Test
@@ -50,18 +52,18 @@ public class ToStringDumpHelperTest extends GridCommonAbstractTest {
 
         // Hack to have same timestamp in test.
         for (ThreadPageLockState state : pageLockDump.threadPageLockStates)
-            GridTestUtils.setFieldValue(state.pageLockDump, PageLockDump.class, "time", 1596173397167L);
+            GridTestUtils.setFieldValue(state.pageLockDump, PageLockDump.class, "time", TIME);
 
         assertNotNull(pageLockDump);
 
         String dumpStr = ToStringDumpHelper.toStringDump(pageLockDump);
 
-        String expectedLog = "Page locks dump:" +
-            U.nl() +
+        String expectedLog = "Page locks dump:" + U.nl() +
             U.nl() +
             "Thread=[name=async-lock-unlock, id=" + threadIdInLog + "], state=TERMINATED" + U.nl() +
-            "Locked pages = [32[0000000000000020](r=1|w=0)]\n" +
-            "Locked pages log: name=async-lock-unlock time=(1596173397167, 2020-07-31 08:29:57.167)" + U.nl() +
+            "Locked pages = [32[0000000000000020](r=1|w=0)]" + U.nl() +
+            "Locked pages log: name=async-lock-unlock time=(1596173397167, " +
+            ToStringDumpHelper.DATE_FMT.format(new java.util.Date(TIME)) + ")" + U.nl() +
             "L=1 -> Read lock pageId=32, structureId=null [pageIdHex=0000000000000020, partId=0, pageIdx=32, flags=00000000]" + U.nl() +
             U.nl() +
             U.nl() +
