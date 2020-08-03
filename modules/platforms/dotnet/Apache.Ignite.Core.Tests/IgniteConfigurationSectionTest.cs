@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#if !NETCOREAPP
 namespace Apache.Ignite.Core.Tests
 {
     using System.Configuration;
@@ -82,7 +83,7 @@ namespace Apache.Ignite.Core.Tests
             var ex = Assert.Throws<ConfigurationErrorsException>(() =>
                 Ignition.StartFromApplicationConfiguration("igniteConfiguration111"));
 
-            Assert.AreEqual("Could not find IgniteConfigurationSection with name 'igniteConfiguration111'", 
+            Assert.AreEqual("Could not find IgniteConfigurationSection with name 'igniteConfiguration111'",
                 ex.Message);
 
 
@@ -107,8 +108,8 @@ namespace Apache.Ignite.Core.Tests
 
             Assert.AreEqual("Could not find IgniteConfigurationSection with name 'igniteConfiguration' " +
                             "in file 'custom_app.config'", ex.Message);
-            
-            
+
+
             // Missing section body in custom file.
             ex = Assert.Throws<ConfigurationErrorsException>(() =>
                 Ignition.StartFromApplicationConfiguration("igniteConfigurationMissing", "custom_app.config"));
@@ -119,3 +120,4 @@ namespace Apache.Ignite.Core.Tests
         }
     }
 }
+#endif

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Client
+#if !NETCOREAPP
+namespace Apache.Ignite.Core.Tests.Client.Compatibility
 {
     using System;
     using System.Linq;
@@ -27,7 +28,7 @@ namespace Apache.Ignite.Core.Tests.Client
     /// <summary>
     /// Tests thin client compatibility with reconnect.
     /// </summary>
-    [Category(TestUtils.CategoryIntensive)]    
+    [Category(TestUtils.CategoryIntensive)]
     public class ClientReconnectCompatibilityTest
     {
         /// <summary>
@@ -42,7 +43,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 EnablePartitionAwareness = true,
                 Logger = new ListLogger(new ConsoleLogger {MinLevel = LogLevel.Trace})
             };
-            
+
             try
             {
                 using (StartNewServer())
@@ -105,3 +106,4 @@ namespace Apache.Ignite.Core.Tests.Client
         }
     }
 }
+#endif

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,19 +14,29 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.DotNetCore.Common
+namespace Apache.Ignite.Core.Tests.Client.Cache
 {
+    using System.Threading.Tasks;
+    using Apache.Ignite.Core.Tests.Client;
+    using NUnit.Framework;
+
     /// <summary>
-    /// Test runner.
+    /// Tests cache operations with async/await.
     /// </summary>
-    internal class TestRunner
+    public class CacheTestAsyncAwait : ClientTestBase
     {
         /// <summary>
-        /// Console entry point.
+        /// Tests that async continuations are executed on a ThreadPool thread, not on response handler thread.
         /// </summary>
-        private static void Main(string[] args)
+        [Test]
+        public async Task TestAsyncAwaitContinuationIsExecutedOnThreadPool()
         {
-            new IgnitionStartTest().TestIgniteStartsFromAppConfig();
+            var cache = GetClientCache<int>();
+            await cache.PutAsync(1, 1).ConfigureAwait(false);
+
+            // This causes deadlock if async continuation is executed on response handler thread.
+            cache.PutAsync(2, 2).Wait();
+            Assert.AreEqual(2, cache.Get(2));
         }
     }
 }
