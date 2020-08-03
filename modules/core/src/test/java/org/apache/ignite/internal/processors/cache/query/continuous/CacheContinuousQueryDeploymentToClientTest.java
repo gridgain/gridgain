@@ -17,7 +17,10 @@
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
 import java.util.Map;
+import javax.cache.configuration.Factory;
+import javax.cache.event.CacheEntryEventFilter;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.AbstractContinuousQuery;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -29,13 +32,14 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /**
  * Tests for continuous query deployment to client nodes.
  */
-public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstractTest {
+public class CacheContinuousQueryDeploymentToClientTest extends GridCommonAbstractTest {
     /** */
     private static TcpDiscoveryIpFinder ipFinder = new TcpDiscoveryVmIpFinder(true);
 
@@ -73,7 +77,6 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
-    @Ignore
     public void testDeploymentToNewClient() throws Exception {
         startGrid(0);
 
@@ -81,14 +84,11 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
 
         IgniteCache<Integer, String> cache = client1.cache(CACHE_NAME);
 
-        ContinuousQuery<Integer, String> qry = new ContinuousQuery<Integer, String>()
+        AbstractContinuousQuery<Integer, String> qry = new ContinuousQuery<Integer, String>()
             .setLocalListener(evts -> {
                 // No-op.
             })
-            .setRemoteFilter(evt -> {
-                System.out.println("REMOTE FILTER!!!");
-                return true;
-            });
+            .setRemoteFilterFactory((Factory<CacheEntryEventFilter<Integer, String>>)() -> evt -> true);
 
         cache.query(qry);
 
@@ -96,8 +96,8 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
 
         GridContinuousProcessor proc = client2.context().continuous();
 
-        assertEquals(1, ((Map)U.field(proc, "locInfos")).size());
-        assertEquals(0, ((Map)U.field(proc, "rmtInfos")).size());
+        assertInfosMap(U.field(proc, "locInfos"));
+        assertInfosMap(U.field(proc, "rmtInfos"));
         assertEquals(0, ((Map)U.field(proc, "startFuts")).size());
         assertEquals(0, ((Map)U.field(proc, "stopFuts")).size());
         assertEquals(0, ((Map)U.field(proc, "bufCheckThreads")).size());
@@ -112,7 +112,6 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
-    @Ignore
     public void testDeploymentToExistingClient() throws Exception {
         startGrid(0);
 
@@ -122,20 +121,35 @@ public class CacheContinuousQueryClientDeploymentTest extends GridCommonAbstract
 
         IgniteEx client2 = startClientGrid(2);
 
-        ContinuousQuery<Integer, String> qry = new ContinuousQuery<Integer, String>()
+        AbstractContinuousQuery<Integer, String> qry = new ContinuousQuery<Integer, String>()
             .setLocalListener(evts -> {
                 // No-op.
             })
-            .setRemoteFilter(evt -> true);
+            .setRemoteFilterFactory((Factory<CacheEntryEventFilter<Integer, String>>)() -> evt -> true);
 
         cache.query(qry);
 
         GridContinuousProcessor proc = client2.context().continuous();
 
-        assertEquals(1, ((Map)U.field(proc, "locInfos")).size());
-        assertEquals(0, ((Map)U.field(proc, "rmtInfos")).size());
+        assertInfosMap(U.field(proc, "locInfos"));
+        assertInfosMap(U.field(proc, "rmtInfos"));
         assertEquals(0, ((Map)U.field(proc, "startFuts")).size());
         assertEquals(0, ((Map)U.field(proc, "stopFuts")).size());
         assertEquals(0, ((Map)U.field(proc, "bufCheckThreads")).size());
+    }
+
+    /**
+     * @param infos Infos map
+     */
+    private void assertInfosMap(Map infos) {
+        assertEquals(1, infos.size());
+
+        Object info = infos.values().iterator().next();
+
+        CacheContinuousQueryHandler hnd = U.field(info, "hnd");
+
+        assertEquals(UTILITY_CACHE_NAME, hnd.cacheName());
+
+        assertEquals(true, (boolean)U.field(hnd, "internal"));
     }
 }

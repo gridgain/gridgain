@@ -1444,6 +1444,18 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
                     registerHandler(node.id(), routineId, hnd, data.bufferSize(), data.interval(),
                         data.autoUnsubscribe(), false);
+
+                    // Load partition counters.
+                    if (hnd.isQuery()) {
+                        GridCacheProcessor proc = ctx.cache();
+
+                        if (proc != null) {
+                            GridCacheAdapter cache = ctx.cache().internalCache(hnd.cacheName());
+
+                            if (cache != null && !cache.isLocal() && cache.context().userCache())
+                                req.addUpdateCounters(ctx.localNodeId(), hnd.updateCounters());
+                        }
+                    }
                 }
 
                 if (!data.autoUnsubscribe())
@@ -1455,18 +1467,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                 err = e;
 
                 U.error(log, "Failed to register handler [nodeId=" + node.id() + ", routineId=" + routineId + ']', e);
-            }
-        }
-
-        // Load partition counters.
-        if (hnd.isQuery()) {
-            GridCacheProcessor proc = ctx.cache();
-
-            if (proc != null) {
-                GridCacheAdapter cache = ctx.cache().internalCache(hnd.cacheName());
-
-                if (cache != null && !cache.isLocal() && cache.context().userCache())
-                    req.addUpdateCounters(ctx.localNodeId(), hnd.updateCounters());
             }
         }
 
