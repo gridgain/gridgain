@@ -1163,10 +1163,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private void removeObsolete(IgniteInternalTx tx) {
         Collection<IgniteTxEntry> entries = tx.local() ? tx.allEntries() : tx.writeEntries();
 
-        for (IgniteTxEntry entry : entries) {
-            cctx.database().checkpointReadLock();
+        if (F.isEmpty(entries))
+            return;
 
-            try {
+        cctx.database().checkpointReadLock();
+
+        try {
+            for (IgniteTxEntry entry : entries) {
                 GridCacheEntryEx cached = entry.cached();
 
                 GridCacheContext cacheCtx = entry.context();
@@ -1194,9 +1197,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     U.error(log, "Failed to remove obsolete entry from cache: " + cached, e);
                 }
             }
-            finally {
-                cctx.database().checkpointReadUnlock();
-            }
+        }
+        finally {
+            cctx.database().checkpointReadUnlock();
         }
     }
 
@@ -2760,11 +2763,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Enables pending transactions tracker.
      * Also enables transaction wal logging, if it was disabled.
      */
-    public void trackPendingTxs() {
+    public void trackPendingTxs(boolean logTxRecords) {
         pendingTracker.enable();
 
-        if (!logTxRecords) {
-            logTxRecords = true;
+        if (logTxRecords && !this.logTxRecords) {
+            this.logTxRecords = true;
 
             U.warn(log, "Transaction wal logging is enabled, because pending transaction tracker is enabled.");
         }
@@ -2827,24 +2830,32 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             record = new TxRecord(tx.state(), tx.nearXidVersion(), tx.writeVersion(), nodes);
 
         try {
-            WALPointer ptr = cctx.wal().log(record);
-
-            TransactionState txState = tx.state();
-
-            if (txState == PREPARED)
-                cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
-            else if (txState == ROLLED_BACK)
-                cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
-            else
-                cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
-
-            return ptr;
+            return cctx.wal().log(record);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to log TxRecord: " + record, e);
 
             throw new IgniteException("Failed to log TxRecord: " + record, e);
         }
+    }
+
+    /**
+     * Tracks transaction state.
+     *
+     * @param tx Transaction.
+     */
+    void trackTransaction(IgniteTxAdapter tx) {
+        if (!cctx.tm().pendingTxsTracker().enabled())
+            return;
+
+        TransactionState txState = tx.state();
+
+        if (txState == PREPARED)
+            cctx.tm().pendingTxsTracker().onTxPrepared(tx.nearXidVersion());
+        else if (txState == ROLLED_BACK)
+            cctx.tm().pendingTxsTracker().onTxRolledBack(tx.nearXidVersion());
+        else
+            cctx.tm().pendingTxsTracker().onTxCommitted(tx.nearXidVersion());
     }
 
     /**

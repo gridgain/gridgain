@@ -30,6 +30,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
+import org.apache.ignite.internal.pagemem.wal.record.OutOfOrderDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
@@ -126,6 +127,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MVCC_DATA_PAGE_TX_STATE_HINT_UPDATED_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MVCC_DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MVCC_TX_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.OUT_OF_ORDER_UPDATE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PAGES_LIST_ADD_PAGE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PAGES_LIST_INIT_NEW_PAGE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PAGES_LIST_REMOVE_PAGE;
@@ -217,6 +219,7 @@ public class RecordUtils {
             put(MVCC_DATA_RECORD, RecordUtils::buildMvccDataRecord);
             put(MVCC_TX_RECORD, RecordUtils::buildMvccTxRecord);
             put(CONSISTENT_CUT, RecordUtils::buildConsistentCutRecord);
+            put(OUT_OF_ORDER_UPDATE, RecordUtils::buildOutOfOrderRecord);
         }};
 
     /** **/
@@ -563,6 +566,11 @@ public class RecordUtils {
     /** **/
     public static ConsistentCutRecord buildConsistentCutRecord() {
         return new ConsistentCutRecord();
+    }
+
+    /** **/
+    public static OutOfOrderDataRecord buildOutOfOrderRecord() {
+        return new OutOfOrderDataRecord(Collections.emptyList());
     }
 
     /**

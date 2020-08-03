@@ -807,7 +807,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
-            checkOutput(output, 19, 22, 0, 2, false);
+            checkOutput(output, 19, 23, 0, 2, false);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);
@@ -837,7 +837,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
-            checkOutput(output, 19, 22, 0, 0, true);
+            checkOutput(output, 19, 23, 0, 0, true);
 
             for (int i = 0; i < CREATED_TABLES_CNT; i++)
                 checkIdxs(output, TableInfo.generate(i), true);

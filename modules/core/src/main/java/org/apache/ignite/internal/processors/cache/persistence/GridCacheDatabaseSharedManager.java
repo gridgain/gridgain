@@ -126,6 +126,7 @@ import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
@@ -1488,6 +1489,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             );
 
             fut.timeBag().finishGlobalStage("Restore partition states");
+
+            cctx.exchange().exchangerBlockingSectionBegin();
+
+            try {
+                List<PartitionsExchangeAware> exchangeAwareComponents = cctx.exchange().exchangeAwareComponents();
+
+                for (PartitionsExchangeAware comp : exchangeAwareComponents)
+                    comp.onPartitionStatesRestored(fut);
+            }
+            finally {
+                cctx.exchange().exchangerBlockingSectionEnd();
+            }
         }
 
         if (cctx.kernalContext().query().moduleEnabled()) {
@@ -1523,6 +1536,21 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture exchangeFut) {
+        rebuildIndexes(cctx.cacheContexts(), (cacheCtx) -> cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()));
+    }
+
+    /** {@inheritDoc} */
+    @Override public void forceRebuildIndexes(Collection<GridCacheContext> contexts) {
+        contexts.forEach(ctx -> prepareIndexRebuildFuture(ctx.cacheId()));
+
+        rebuildIndexes(contexts, (cacheCtx) -> true);
+    }
+
+    /**
+     * @param contexts Collection of cache contexts for which indexes should be rebuilt.
+     * @param rebuildCond Condition that should be met for indexes to be rebuilt for specific cache.
+     */
+    private void rebuildIndexes(Collection<GridCacheContext> contexts, Predicate<GridCacheContext> rebuildCond) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
         if (!qryProc.moduleEnabled())
@@ -1530,8 +1558,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         GridCompoundFuture allCacheIdxsCompoundFut = null;
 
-        for (GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
-            if (!cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()))
+        for (GridCacheContext cacheCtx : contexts) {
+            if (!rebuildCond.test(cacheCtx))
                 continue;
 
             int cacheId = cacheCtx.cacheId();
@@ -4159,10 +4187,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 tracker.onListenersExecuteEnd();
 
-                if (curr.nextSnapshot())
-                    snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), ctx0.partitionStatMap());
-
                 fillCacheGroupState(cpRec);
+
+                if (curr.nextSnapshot())
+                    snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), cpRec, ctx0.partitionStatMap());
 
                 // There are allowable to replace pages only after checkpoint entry was stored to disk.
                 cpPagesHolder = beginAllCheckpoints(curr.futureFor(MARKER_STORED_TO_DISK));
