@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -52,7 +53,7 @@ public class CheckpointEntry {
     private final UUID cpId;
 
     /** State of groups and partitions snapshotted at the checkpoint begin. */
-    private volatile SoftReference<GroupStateLazyStore> grpStateLazyStore;
+    private volatile Supplier<GroupStateLazyStore> grpStateLazyStore;
 
     /**
      * Checkpoint entry constructor.
@@ -73,7 +74,28 @@ public class CheckpointEntry {
         this.cpTs = cpTs;
         this.cpMark = cpMark;
         this.cpId = cpId;
-        this.grpStateLazyStore = new SoftReference<>(new GroupStateLazyStore(cacheGrpStates));
+
+        GroupStateLazyStore store = new GroupStateLazyStore(cacheGrpStates);
+
+        if (cacheGrpStates == null) {
+            SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
+
+            grpStateLazyStore = softRef::get;
+        }
+        else
+            grpStateLazyStore = () -> store;
+    }
+
+    /** */
+    public void releaseGroupStateMemory() {
+        GroupStateLazyStore store = grpStateLazyStore.get();
+
+        if (store == null)
+            store = new GroupStateLazyStore();
+
+        SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
+
+        grpStateLazyStore = softRef::get;
     }
 
     /**
@@ -118,7 +140,9 @@ public class CheckpointEntry {
         if (store == null || IgniteSystemProperties.getBoolean(IGNITE_DISABLE_GRP_STATE_LAZY_STORE, false)) {
             store = new GroupStateLazyStore();
 
-            grpStateLazyStore = new SoftReference<>(store);
+            SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
+
+            grpStateLazyStore = softRef::get;
         }
 
         store.initIfNeeded(cctx, cpMark);
