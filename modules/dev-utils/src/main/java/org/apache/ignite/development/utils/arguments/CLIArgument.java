@@ -48,7 +48,7 @@ public class CLIArgument<T> {
     }
 
     /** */
-    public CLIArgument(String name, String usage, boolean isOptional, Class<T> type, Supplier<T> dfltValSupplier) {
+    private CLIArgument(String name, String usage, boolean isOptional, Class<T> type, Supplier<T> dfltValSupplier) {
         this.name = name;
         this.usage = usage;
         this.isOptional = isOptional;
@@ -62,12 +62,12 @@ public class CLIArgument<T> {
     }
 
     /** */
-    public String usage() {
+    public String help() {
         return usage;
     }
 
     /** */
-    public boolean optional() {
+    public boolean isOptional() {
         return isOptional;
     }
 

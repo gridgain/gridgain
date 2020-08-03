@@ -15,36 +15,51 @@
  */
 package org.apache.ignite.internal.commandline.argument;
 
+import java.util.function.Supplier;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 
-public class CommandParameter<E extends Enum<E> & CommandArg> {
+public class CommandParameter<E extends Enum<E> & CommandArg, T> {
     private final E parameter;
-
-    private final Class valueType;
 
     private final boolean isOptional;
 
-    public CommandParameter(E parameter, boolean isOptional) {
-        this(parameter, null, isOptional);
-    }
+    private final String help;
 
-    public CommandParameter(E parameter, Class valueType) {
-        this(parameter, valueType, false);
-    }
+    private final Class<T> valueType;
 
-    public CommandParameter(E parameter, Class valueType, boolean isOptional) {
+    private Supplier<T> dfltValSupplier;
+
+    public CommandParameter(E parameter, String help, boolean isOptional, Class valueType, Supplier<T> dfltValSupplier) {
         this.parameter = parameter;
-        this.valueType = valueType;
+        this.help = help;
         this.isOptional = isOptional;
+        this.valueType = valueType;
+        this.dfltValSupplier = dfltValSupplier;
     }
 
-    public E commandArgType() {
+    /** */
+    public static <E extends Enum<E> & CommandArg, T> CommandParameter<E, T> optionalArg(
+        E parameter, String help, Class<T> type, Supplier<T> dfltValSupplier) {
+        return new CommandParameter<E, T>(parameter, help, true, type, dfltValSupplier);
+    }
+
+    /** */
+    public static <E extends Enum<E> & CommandArg, T> CommandParameter<E, T> mandatoryArg(
+        E parameter, String usage, Class<T> type) {
+        return new CommandParameter<E, T>(parameter, usage, false, type, null);
+    }
+
+    public E parameter() {
         return parameter;
     }
 
-    public Class valueType() {
+    public String parameterName() {
+        return parameter.argName();
+    }
+
+    public Class<T> valueType() {
         return valueType;
     }
 
@@ -56,7 +71,16 @@ public class CommandParameter<E extends Enum<E> & CommandArg> {
         return S.toString(CommandParameter.class, this);
     }
 
+    public String help() {
+        return help;
+    }
+
     public String usage() {
         return isOptional ? optional(parameter.argName()) : parameter.argName();
+    }
+
+    /** */
+    public Supplier<T> defaultValueSupplier() {
+        return dfltValSupplier;
     }
 }

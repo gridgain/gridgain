@@ -15,34 +15,38 @@
  */
 package org.apache.ignite.internal.commandline;
 
-import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.LongStream;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.commandline.argument.CommandParameter;
-import org.apache.ignite.internal.commandline.argument.CommandParameterConfig;
+import org.apache.ignite.internal.commandline.argument.CommandParametersParser;
+import org.apache.ignite.internal.commandline.argument.ParsedParameters;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTask;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTaskResult;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.commandline.CommandList.STATISTICS;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.NODE;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.STATS;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
-import static org.apache.ignite.internal.commandline.argument.CommandArgUtils.parseArgs;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
 
 /**
  *
  */
 public class Statistics implements Command<MessageStatsTaskArg> {
     /** */
-    private static final CommandParameterConfig<StatisticsCommandArg> STATS_PARAMS = new CommandParameterConfig<>(
-        new CommandParameter(NODE, UUID.class, true),
-        new CommandParameter(STATS, MessageStatsTaskArg.StatisticsType.class)
+    private static final CommandParametersParser<StatisticsCommandArg> STATS_PARAMS_PARSER = new CommandParametersParser<>(
+        StatisticsCommandArg.class,
+        asList(
+            optionalArg(NODE, "", UUID.class, () -> null),
+            mandatoryArg(STATS, "", MessageStatsTaskArg.StatisticsType.class)
+        )
     );
 
     /** */
@@ -116,7 +120,7 @@ public class Statistics implements Command<MessageStatsTaskArg> {
         GridStringBuilder sb = new GridStringBuilder("%40s");
 
         for (int i = 1; i < REPORT_LEADING_COLUMNS.length - 1; i++)
-            sb.a("%15s");
+            sb.a("%16s");
 
         if (caption)
             sb.a("%18s");
@@ -138,20 +142,17 @@ public class Statistics implements Command<MessageStatsTaskArg> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Prints requested node or cluster metrics or statistics.", STATISTICS, STATS_PARAMS.optionsUsage());
+        Command.usage(logger, "Prints requested node or cluster metrics or statistics.",
+            STATISTICS, STATS_PARAMS_PARSER.paramUsageStrings());
     }
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIterator) {
-        Map<StatisticsCommandArg, Object> parsedArgs = parseArgs(
-            argIterator,
-            StatisticsCommandArg.class,
-            STATS_PARAMS
-        );
+        ParsedParameters<StatisticsCommandArg> parsedParams = STATS_PARAMS_PARSER.parse(argIterator);
 
         arg = new MessageStatsTaskArg(
-            (UUID) parsedArgs.get(NODE),
-            (MessageStatsTaskArg.StatisticsType)parsedArgs.get(STATS)
+            parsedParams.get(NODE.argName()),
+            parsedParams.get(STATS.argName())
         );
     }
 

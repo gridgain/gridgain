@@ -51,7 +51,7 @@ public class CLIArgumentParser {
      */
     public void parse(Iterator<String> argsIter) {
         Set<String> obligatoryArgs =
-            argConfiguration.values().stream().filter(a -> !a.optional()).map(CLIArgument::name).collect(toSet());
+            argConfiguration.values().stream().filter(a -> !a.isOptional()).map(CLIArgument::name).collect(toSet());
 
         while (argsIter.hasNext()) {
             String arg = argsIter.next();
@@ -149,9 +149,9 @@ public class CLIArgumentParser {
                 /* No op. */
             }
 
-            sb.a("\n\n").a(arg.name()).a(": ").a(arg.usage());
+            sb.a("\n\n").a(arg.name()).a(": ").a(arg.help());
 
-            if (arg.optional())
+            if (arg.isOptional())
                 sb.a(" Default value: ").a(dfltVal);
         }
 
@@ -160,7 +160,7 @@ public class CLIArgumentParser {
 
     /** */
     private String argNameForUsage(CLIArgument arg) {
-        if (arg.optional())
+        if (arg.isOptional())
             return "[" + arg.name() + "]";
         else
             return arg.name();

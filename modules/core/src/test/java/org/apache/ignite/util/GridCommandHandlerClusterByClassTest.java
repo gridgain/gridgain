@@ -46,6 +46,7 @@ import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -63,6 +64,8 @@ import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicUpdateResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetResponse;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -110,14 +113,17 @@ import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.ADD;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_MEASURED_TYPES;
 import static org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg.StatisticsType.PROCESSING;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
+import static org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg.StatisticsType.QUEUE_WAITING;
 import static org.apache.ignite.testframework.GridTestUtils.LOCAL_DATETIME_REGEXP;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertMatches;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.readResource;
+import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -1762,28 +1768,5 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         execute("--help");
 
         consumer.accept(testOut.toString());
-    }
-
-    @Test
-    public void testMessageStat() {
-        boolean autoConfirmation = this.autoConfirmation;
-
-        try {
-            this.autoConfirmation = false;
-
-            execute(
-                STATISTICS.text(),
-                StatisticsCommandArg.NODE.toString(),
-                crd.localNode().id().toString(),
-                StatisticsCommandArg.STATS.toString(),
-                PROCESSING.toString()
-            );
-        }
-        catch (Throwable e) {
-            throw e;
-        }
-        finally {
-            this.autoConfirmation = autoConfirmation;
-        }
     }
 }

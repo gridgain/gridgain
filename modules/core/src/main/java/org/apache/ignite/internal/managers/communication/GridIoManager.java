@@ -582,7 +582,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         Map<String, MsgMetricBundle> msgMetrics = new HashMap<>();
 
-        for (Class msgType : GridIoManager.MSG_MEASURED_TYPES) {
+        for (Class msgType : MSG_MEASURED_TYPES) {
             String msgTypeName = msgType.getSimpleName();
 
             MsgMetricBundle metricBundle = new MsgMetricBundle(

@@ -187,7 +187,7 @@ public class MessageStatsTask extends VisorMultiNodeTask<MessageStatsTaskArg, Me
             }
 
             if (regSimpleName == null)
-                return null;
+                throw new IgniteException("Unknown statistics type: " + statsType);
             else
                 return metricName(
                     DIAGNOSTIC_METRICS,

@@ -381,6 +381,9 @@ public abstract class IgniteUtils {
     /** Correct Mbean cache name pattern. */
     private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
 
+    /** Empty Strings array in order ot use list.toArray() */
+    public static final String[] EMPTY_STRING_ARRAY = new String[] { };
+
     /** Project home directory. */
     private static volatile GridTuple<String> ggHome;
 

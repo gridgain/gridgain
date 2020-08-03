@@ -25,8 +25,8 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.StatisticsCommandArg;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
-import org.apache.ignite.internal.commandline.argument.CommandParameter;
-import org.apache.ignite.internal.commandline.argument.CommandParameterConfig;
+import org.apache.ignite.internal.commandline.argument.CommandParametersParser;
+import org.apache.ignite.internal.commandline.argument.ParsedParameters;
 import org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg;
 import org.junit.Test;
@@ -34,7 +34,8 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.NODE;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.STATS;
-import static org.apache.ignite.internal.commandline.argument.CommandArgUtils.parseArgs;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CACHE_FILTER;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CHECK_CRC;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.DUMP;
@@ -55,10 +56,10 @@ public class CommandHandlerParsedArgsTest {
     private static final Map<IdleVerifyCommandArg, Object> idleVerifyExpectedMap;
 
     /** */
-    private static final CommandParameterConfig<StatisticsCommandArg> statsCommandParamCfg;
+    private static final CommandParametersParser<StatisticsCommandArg> statsCommandParamParser;
 
     /** */
-    private static final CommandParameterConfig<IdleVerifyCommandArg> idleVerifyCommandParamCfg;
+    private static final CommandParametersParser<IdleVerifyCommandArg> idleVerifyCommandParamParser;
 
     static {
         statsExpectedMap = new HashMap<>();
@@ -79,17 +80,23 @@ public class CommandHandlerParsedArgsTest {
         idleVerifyExpectedMap.put(CHECK_CRC, null);
         idleVerifyExpectedMap.put(CACHE_FILTER, "rtybvc");
 
-        statsCommandParamCfg = new CommandParameterConfig<StatisticsCommandArg>(
-            new CommandParameter(NODE, UUID.class, true),
-            new CommandParameter(STATS, MessageStatsTaskArg.StatisticsType.class)
+        statsCommandParamParser = new CommandParametersParser<>(
+            StatisticsCommandArg.class,
+            asList(
+                optionalArg(NODE, "", UUID.class, () -> null),
+                mandatoryArg(STATS, "", MessageStatsTaskArg.StatisticsType.class)
+            )
         );
 
-        idleVerifyCommandParamCfg = new CommandParameterConfig<IdleVerifyCommandArg>(
-            new CommandParameter(DUMP, true),
-            new CommandParameter(SKIP_ZEROS, true),
-            new CommandParameter(EXCLUDE_CACHES, Set.class, true),
-            new CommandParameter(CHECK_CRC, true),
-            new CommandParameter(CACHE_FILTER, String.class, true)
+        idleVerifyCommandParamParser = new CommandParametersParser<>(
+            IdleVerifyCommandArg.class,
+            asList(
+                optionalArg(DUMP, "", Boolean.class, () -> null),
+                optionalArg(SKIP_ZEROS, "", Boolean.class, () -> null),
+                optionalArg(EXCLUDE_CACHES, "", Set.class, () -> null),
+                optionalArg(CHECK_CRC, "", Boolean.class, () -> null),
+                optionalArg(CACHE_FILTER, "", String.class, () -> null)
+            )
         );
     }
 
@@ -97,8 +104,7 @@ public class CommandHandlerParsedArgsTest {
     @Test
     public void testParseStats() {
         test(
-            statsCommandParamCfg,
-            StatisticsCommandArg.class,
+            statsCommandParamParser,
             statsExpectedMap,
             NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", STATS.toString(), PROCESSING.toString()
         );
@@ -110,8 +116,7 @@ public class CommandHandlerParsedArgsTest {
         assertThrows(
             null,
             () -> test(
-                statsCommandParamCfg,
-                StatisticsCommandArg.class,
+                statsCommandParamParser,
                 statsExpectedMap,
                 NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d"
             ),
@@ -122,12 +127,26 @@ public class CommandHandlerParsedArgsTest {
 
     /** */
     @Test
+    public void testParseStatsWithInvalidEnumValue() {
+        assertThrows(
+            null,
+            () -> test(
+                statsCommandParamParser,
+                statsExpectedMap,
+                NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", STATS.toString(), "invalid_enum"
+            ),
+            IllegalArgumentException.class,
+            null
+        );
+    }
+
+    /** */
+    @Test
     public void testParseStatsUnknownArg() {
         assertThrows(
             null,
             () -> test(
-                statsCommandParamCfg,
-                StatisticsCommandArg.class,
+                statsCommandParamParser,
                 statsExpectedMap,
                 NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", STATS.toString(), PROCESSING.toString(), "--unknown"
             ),
@@ -140,8 +159,7 @@ public class CommandHandlerParsedArgsTest {
     @Test
     public void testParseIdleVerify() {
         test(
-            idleVerifyCommandParamCfg,
-            IdleVerifyCommandArg.class,
+            idleVerifyCommandParamParser,
             idleVerifyExpectedMap,
             CACHE_FILTER.toString(), "rtybvc", DUMP.toString(), EXCLUDE_CACHES.toString(), "asd,zxc", CHECK_CRC.toString(), SKIP_ZEROS.toString()
         );
@@ -151,31 +169,26 @@ public class CommandHandlerParsedArgsTest {
     @Test
     public void testParseIdleVerifyWithoutOptionalParams() {
         test(
-            idleVerifyCommandParamCfg,
-            IdleVerifyCommandArg.class,
+            idleVerifyCommandParamParser,
             new HashMap<>()
         );
     }
 
     /**
-     * @param params Parameters configuration.
-     * @param argCls Argument class.
+     * @param paramsParser Parameters parser.
      * @param expectedMap Expected parse result.
      * @param args Arguments array.
      * @param <E> Argument enum.
      */
     private <E extends Enum<E> & CommandArg> void test(
-        CommandParameterConfig<E> params,
-        Class<E> argCls,
+        CommandParametersParser<E> paramsParser,
         Map<E, Object> expectedMap,
         String... args
     ) {
         CommandArgIterator iter = new CommandArgIterator(asList(args).iterator(), Collections.emptySet());
 
-        Map<E, Object> parseResult = parseArgs(iter, argCls, params);
+        ParsedParameters<E> parseResult = paramsParser.parse(iter);
 
-        assertEquals(expectedMap.size(), parseResult.size());
-
-        expectedMap.forEach((k, v) -> assertEquals(v, parseResult.get(k)));
+        expectedMap.forEach((k, v) -> assertEquals(v, parseResult.get(k.argName())));
     }
 }
