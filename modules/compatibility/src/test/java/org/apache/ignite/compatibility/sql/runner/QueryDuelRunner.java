@@ -53,7 +53,12 @@ class QueryDuelRunner {
         this.targetConn = targetConn;
     }
 
-    /** {@inheritDoc} */
+
+    /**
+     * @param qry Query.
+     * @param successCnt Success count.
+     * @param attemptsCnt Attempts count.
+     */
     QueryDuelResult run(String qry, int successCnt, int attemptsCnt) {
         List<Long> baseExecTimes = new ArrayList<>(attemptsCnt);
         List<Long> targetExecTimes = new ArrayList<>(attemptsCnt);
@@ -173,7 +178,7 @@ class QueryDuelRunner {
             this.rsSize = rsSize;
             this.execTime = execTime;
 
-            err =  null;
+            err = null;
         }
 
         /**

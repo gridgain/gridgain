@@ -35,7 +35,7 @@ public abstract class AbstractModelFactory<T> implements ModelFactory<T> {
     protected AbstractModelFactory(QueryEntity qryEntity) {
         this.qryEntity = qryEntity;
 
-        rnd= new Random();
+        rnd = new Random();
     }
 
     /** {@inheritDoc} */

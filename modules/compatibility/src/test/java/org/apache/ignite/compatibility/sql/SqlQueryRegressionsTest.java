@@ -311,7 +311,7 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     }
 
     /** */
-    private String groupId(){
+    private String groupId() {
         return baseIsIgnite ? "org.apache.ignite" : "org.gridgain";
     }
 

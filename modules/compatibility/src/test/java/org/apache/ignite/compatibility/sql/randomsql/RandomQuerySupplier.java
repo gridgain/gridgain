@@ -86,7 +86,7 @@ public class RandomQuerySupplier implements Supplier<String> {
     private List<TableRef> rndTables(Schema schema) {
         int tblCnt = 1;
 
-        for (int i = 0 ; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             if (rndWithRatio(2))
                 tblCnt++;
         }
