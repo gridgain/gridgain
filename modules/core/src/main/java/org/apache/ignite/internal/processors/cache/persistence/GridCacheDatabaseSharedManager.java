@@ -1839,9 +1839,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             earliestValidCheckpoints = checkpointHistoryResult.earliestValidCheckpoints();
 
-            reservedForExchange = checkpointHistoryResult.reservedCheckoint() == null ?
-                null :
-                checkpointHistoryResult.reservedCheckoint().checkpointMark();
+            if (checkpointHistoryResult.reservedCheckoint() != null)
+                reservedForExchange = checkpointHistoryResult.reservedCheckoint().checkpointMark();
         }
         finally {
             checkpointReadUnlock();
@@ -1999,8 +1998,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         releaseHistForPreloadingLock.lock();
 
         try {
-            if (reservedForPreloading != null)
+            if (reservedForPreloading != null) {
                 cctx.wal().release(reservedForPreloading);
+
+                reservedForPreloading = null;
+            }
         }
         catch (IgniteCheckedException ex) {
             U.error(log, "Could not release WAL reservation", ex);
