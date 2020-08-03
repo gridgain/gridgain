@@ -15,6 +15,7 @@ import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.PluginConfiguration;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -45,6 +46,11 @@ public class IgniteClientWithContinuousQuery {
         cfg.setPeerClassLoadingEnabled(true);
         cfg.setPluginConfigurations(new PluginConfiguration() {
         });
+
+        // Optional transaction configuration. Configure TM lookup here.
+        TransactionConfiguration txCfg = new TransactionConfiguration();
+
+        cfg.setTransactionConfiguration(txCfg);
 
         TcpDiscoverySpi spi = new TcpDiscoverySpi();
 
