@@ -90,8 +90,7 @@ public class CheckpointEntry {
     public void releaseGroupStateMemory() {
         GroupStateLazyStore store = grpStateLazyStore.get();
 
-        if (store == null)
-            store = new GroupStateLazyStore();
+        assert store != null;
 
         SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
 
