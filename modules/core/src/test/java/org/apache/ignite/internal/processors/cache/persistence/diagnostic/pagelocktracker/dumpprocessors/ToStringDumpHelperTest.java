@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors;
 
-import java.lang.reflect.Field;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockDump;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTrackerDump;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.ThreadPageLockState;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -48,19 +48,13 @@ public class ToStringDumpHelperTest extends GridCommonAbstractTest {
 
         SharedPageLockTrackerDump pageLockDump = pageLockTracker.dump();
 
-        // hack to have same timestamp in test
-        Field timeField = PageLockDump.class.getDeclaredField("time");
-        timeField.setAccessible(true);
-
-        for (ThreadPageLockState state : pageLockDump.threadPageLockStates) {
-            timeField.setLong(state.pageLockDump, 1596173397167L);
-        }
+        // Hack to have same timestamp in test.
+        for (ThreadPageLockState state : pageLockDump.threadPageLockStates)
+            GridTestUtils.setFieldValue(state.pageLockDump, PageLockDump.class, "time", 1596173397167L);
 
         assertNotNull(pageLockDump);
 
         String dumpStr = ToStringDumpHelper.toStringDump(pageLockDump);
-
-        System.out.println("Dump saved:" + dumpStr);
 
         String expectedLog = "Page locks dump:" +
             U.nl() +
