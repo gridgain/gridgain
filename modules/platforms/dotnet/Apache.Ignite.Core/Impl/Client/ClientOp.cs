@@ -62,6 +62,8 @@ namespace Apache.Ignite.Core.Impl.Client
         QuerySqlCursorGetPage = 2003,
         QuerySqlFields = 2004,
         QuerySqlFieldsCursorGetPage = 2005,
+        QueryContinuous = 2006,
+        QueryContinuousEventNotification = 2007,
 
         // Metadata.
         BinaryTypeNameGet = 3000,
@@ -77,7 +79,7 @@ namespace Apache.Ignite.Core.Impl.Client
         ClusterGroupGetNodeIds = 5100,
         ClusterGroupGetNodesInfo = 5101,
         ClusterGroupGetNodesEndpoints = 5102,
-        
+
         // Compute.
         ComputeTaskExecute = 6000,
         ComputeTaskFinished = 6001

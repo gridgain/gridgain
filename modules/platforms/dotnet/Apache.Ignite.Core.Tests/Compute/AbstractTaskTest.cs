@@ -79,13 +79,11 @@ namespace Apache.Ignite.Core.Tests.Compute
         [TestFixtureSetUp]
         public void InitClient()
         {
-            TestUtils.KillProcesses();
-
             if (_fork)
             {
-                Grid1 = Ignition.Start(GetConfiguration("config\\compute\\compute-standalone.xml"));
+                Grid1 = Ignition.Start(GetConfiguration("Config/Compute/compute-standalone.xml"));
 
-                _proc2 = Fork("config\\compute\\compute-standalone.xml");
+                _proc2 = Fork("Config/Compute/compute-standalone.xml");
 
                 while (true)
                 {
@@ -98,7 +96,7 @@ namespace Apache.Ignite.Core.Tests.Compute
                         break;
                 }
 
-                _proc3 = Fork("config\\compute\\compute-standalone.xml");
+                _proc3 = Fork("Config/Compute/compute-standalone.xml");
 
                 while (true)
                 {
@@ -113,9 +111,9 @@ namespace Apache.Ignite.Core.Tests.Compute
             }
             else
             {
-                Grid1 = Ignition.Start(GetConfiguration("config\\compute\\compute-grid1.xml"));
-                _grid2 = Ignition.Start(GetConfiguration("config\\compute\\compute-grid2.xml"));
-                _grid3 = Ignition.Start(GetConfiguration("config\\compute\\compute-grid3.xml"));
+                Grid1 = Ignition.Start(GetConfiguration("Config/Compute/compute-grid1.xml"));
+                _grid2 = Ignition.Start(GetConfiguration("Config/Compute/compute-grid2.xml"));
+                _grid3 = Ignition.Start(GetConfiguration("Config/Compute/compute-grid3.xml"));
             }
         }
 
@@ -129,7 +127,11 @@ namespace Apache.Ignite.Core.Tests.Compute
         public void StopClient()
         {
             Ignition.StopAll(true);
-            IgniteProcess.KillAll();
+
+            if (_fork)
+            {
+                IgniteProcess.KillAll();
+            }
         }
 
         /// <summary>

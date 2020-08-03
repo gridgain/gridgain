@@ -17,8 +17,6 @@
 #ifndef _IGNITE_IMPL_CLUSTER_CLUSTER_NODE_IMPL
 #define _IGNITE_IMPL_CLUSTER_CLUSTER_NODE_IMPL
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
 #include <ignite/common/utils.h>
 #include <ignite/common/concurrent.h>
 
@@ -236,5 +234,4 @@ namespace ignite
     }
 }
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 #endif //_IGNITE_IMPL_CLUSTER_CLUSTER_NODE_IMPL

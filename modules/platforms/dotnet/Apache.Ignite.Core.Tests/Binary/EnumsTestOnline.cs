@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// <summary>
     /// Enums test with Ignite running.
     /// </summary>
+    [TestFixture]
     public class EnumsTestOnline : EnumsTest
     {
         /// <summary>

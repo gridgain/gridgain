@@ -74,6 +74,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 Assert.AreEqual(test, res);
         }
 
+#if !NETCOREAPP
         /// <summary>
         /// Tests the old serialization mode.
         /// </summary>
@@ -86,5 +87,6 @@ namespace Apache.Ignite.Core.Tests.Binary
                 TestUtils.RunTestInNewProcess(GetType().FullName, "TestOldMode");
             }
         }
+#endif
     }
 }
