@@ -39,9 +39,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-core</artifactId>
-            <version>2.4.0</version>
+            <version>8.7.9</version>
         </dependency>
     </dependencies>
 
