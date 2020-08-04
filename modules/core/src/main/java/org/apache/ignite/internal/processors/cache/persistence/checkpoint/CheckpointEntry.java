@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -53,7 +52,7 @@ public class CheckpointEntry {
     private final UUID cpId;
 
     /** State of groups and partitions snapshotted at the checkpoint begin. */
-    private volatile Supplier<GroupStateLazyStore> grpStateLazyStore;
+    private volatile SoftReference<GroupStateLazyStore> grpStateLazyStore;
 
     /**
      * Checkpoint entry constructor.
@@ -74,27 +73,7 @@ public class CheckpointEntry {
         this.cpTs = cpTs;
         this.cpMark = cpMark;
         this.cpId = cpId;
-
-        GroupStateLazyStore store = new GroupStateLazyStore(cacheGrpStates);
-
-        if (cacheGrpStates == null) {
-            SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
-
-            grpStateLazyStore = softRef::get;
-        }
-        else
-            grpStateLazyStore = () -> store;
-    }
-
-    /** */
-    public void releaseGroupStateMemory() {
-        GroupStateLazyStore store = grpStateLazyStore.get();
-
-        assert store != null;
-
-        SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
-
-        grpStateLazyStore = softRef::get;
+        this.grpStateLazyStore = new SoftReference<>(new GroupStateLazyStore(cacheGrpStates));
     }
 
     /**
@@ -139,9 +118,7 @@ public class CheckpointEntry {
         if (store == null || IgniteSystemProperties.getBoolean(IGNITE_DISABLE_GRP_STATE_LAZY_STORE, false)) {
             store = new GroupStateLazyStore();
 
-            SoftReference<GroupStateLazyStore> softRef = new SoftReference<>(store);
-
-            grpStateLazyStore = softRef::get;
+            grpStateLazyStore = new SoftReference<>(store);
         }
 
         store.initIfNeeded(cctx, cpMark);

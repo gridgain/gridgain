@@ -285,6 +285,13 @@ public class CheckpointHistory {
     }
 
     /**
+     * @return {@code true} if there is space for next checkpoint.
+     */
+    public boolean hasSpace() {
+        return isWalTruncationEnabled || histMap.size() + 1 <= maxCpHistMemSize;
+    }
+
+    /**
      * Clears checkpoint history after WAL truncation.
      *
      * @return List of checkpoint entries removed from history.
