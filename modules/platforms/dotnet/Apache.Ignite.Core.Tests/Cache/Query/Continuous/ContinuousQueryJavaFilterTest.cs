@@ -54,7 +54,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
 
         /** */
         private IIgnite _ignite;
-        
+
         /** */
         private string _javaNodeName;
 
