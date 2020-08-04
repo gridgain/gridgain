@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// ReSharper disable NonReadonlyMemberInGetHashCode
 namespace Apache.Ignite.Core.Tests.Binary
 {
     using System;

@@ -188,7 +188,7 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                Logger = new ListLogger(new ConsoleLogger()),
+                Logger = new ListLogger(new TestUtils.TestContextLogger()),
                 SpringConfigUrl = _enableSsl ? Path.Combine("Config", "Client", "server-with-ssl.xml") : null
             };
         }

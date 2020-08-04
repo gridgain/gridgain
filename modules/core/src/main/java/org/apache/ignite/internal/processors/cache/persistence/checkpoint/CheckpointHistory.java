@@ -309,7 +309,7 @@ public class CheckpointHistory {
         List<CheckpointEntry> removed = new ArrayList<>();
 
         for (Iterator<Map.Entry<Long, CheckpointEntry>> iterator = histMap.entrySet().iterator();
-                iterator.hasNext() && removed.size() < countToRemove; ) {
+            iterator.hasNext() && removed.size() < countToRemove; ) {
             Map.Entry<Long, CheckpointEntry> entry = iterator.next();
 
             CheckpointEntry checkpoint = entry.getValue();
@@ -385,7 +385,7 @@ public class CheckpointHistory {
      *
      * @return Checkpoint count to be deleted.
      */
-     private int checkpointCountUntilDeleteByArchiveSize() {
+    private int checkpointCountUntilDeleteByArchiveSize() {
         long absFileIdxToDel = cctx.wal().maxArchivedSegmentToDelete();
 
         if (absFileIdxToDel < 0)
@@ -679,21 +679,21 @@ public class CheckpointHistory {
      *
      * @param groupsAndPartitions Groups and partitions to find and reserve earliest valid checkpoint.
      *
-     * @return Map (groupId, Reason (the reason why reservation cannot be made deeper): Map
-     * (partitionId, earliest valid checkpoint to history search)).
+     * @return Checkpoint history reult: Map (groupId, Reason (the reason why reservation cannot be made deeper): Map
+     * (partitionId, earliest valid checkpoint to history search)) and reserved checkpoint.
      */
-    public Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
+    public CheckpointHistoryResult searchAndReserveCheckpoints(
         final Map<Integer, Set<Integer>> groupsAndPartitions
     ) {
         if (F.isEmpty(groupsAndPartitions))
-            return Collections.emptyMap();
+            return new CheckpointHistoryResult(Collections.emptyMap(), null);
 
         final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
 
         CheckpointEntry oldestCpForReservation = null;
 
         synchronized (earliestCp) {
-            CheckpointEntry oldestHistoryCpEntry = firstCheckpoint();
+            CheckpointEntry oldestHistCpEntry = firstCheckpoint();
 
             for (Integer grpId : groupsAndPartitions.keySet()) {
                 CheckpointEntry oldestGrpCpEntry = null;
@@ -715,7 +715,7 @@ public class CheckpointHistory {
                         .get2().put(part, cpEntry);
                 }
 
-                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistoryCpEntry)
+                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistCpEntry)
                     res.computeIfAbsent(grpId, (partCpMap) ->
                         new T2<>(ReservationReason.CHECKPOINT_NOT_APPLICABLE, null))
                         .set1(ReservationReason.CHECKPOINT_NOT_APPLICABLE);
@@ -731,7 +731,7 @@ public class CheckpointHistory {
             }
         }
 
-        return res;
+        return new CheckpointHistoryResult(res, oldestCpForReservation);
     }
 
     /**
