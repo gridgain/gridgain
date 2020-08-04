@@ -883,6 +883,9 @@ cfg.socketSendBuffer(sockSndBuf);
         try {
             IgniteBiTuple<Collection<String>, Collection<String>> addrs = U.resolveLocalAddresses(cfg.localHost());
 
+            if (cfg.localPort() != -1 && addrs.get1().isEmpty() && addrs.get2().isEmpty())
+                throw new IgniteCheckedException("No network addresses found (is networking enabled?).");
+
             Collection<InetSocketAddress> extAddrs = cfg.addrRslvr() == null ? null :
                 U.resolveAddresses(cfg.addrRslvr(), F.flat(Arrays.asList(addrs.get1(), addrs.get2())), cfg.boundTcpPort());
 
