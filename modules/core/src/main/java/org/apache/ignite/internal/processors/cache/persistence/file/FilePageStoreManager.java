@@ -374,9 +374,6 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
                     for (File file : dir.listFiles())
                         assert IgniteUtils.delete(file) : "Failed to cleanup file: " + file.getName();
-
-                    if (!globalEnabled)
-                        desc.walEnabled(false);
                 }
             }
         }
