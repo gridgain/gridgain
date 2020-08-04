@@ -808,10 +808,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         Session ses = session(conn);
 
-        if (timeoutMillis > 0)
+        if (timeoutMillis >= 0)
             ses.setQueryTimeout(timeoutMillis);
         else
-            ses.setQueryTimeout(0);
+            ses.setQueryTimeout((int)distrCfg.defaultQueryTimeout());
 
         try {
             return stmt.executeQuery();
@@ -1645,10 +1645,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             fldsQry.setArgs(params);
 
         fldsQry.setEnforceJoinOrder(U.isFlagSet(flags, GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER));
-        fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
         fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
+
+        if (timeout >= 0)
+            fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
 
         boolean loc = true;
 
@@ -1688,8 +1690,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
             .setLazy(fldsQry.isLazy());
+
+        if (fldsQry.getTimeout() >= 0)
+            selectFieldsQry.setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
 
         QueryCursorImpl<List<?>> cur;
 
@@ -3009,13 +3013,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
             .setLocal(qryDesc.local())
             .setPageSize(qryParams.pageSize())
-            .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
             .setMaxMemory(qryParams.maxMemory())
             // On no MVCC mode we cannot use lazy mode when UPDATE query contains updated columns
             // in WHERE condition because it may be cause of update one entry several times
             // (when index for such columns is selected for scan):
             // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
             .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
+
+        if (qryParams.timeout() >= 0)
+            selectFieldsQry.setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS);
 
         Iterable<List<?>> cur;
 
@@ -3150,10 +3156,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
-                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
                         // In MVCC mode we can use lazy mode always (when is set up) without dependency on
                         // updated columns and WHERE condition.
                         .setLazy(qryParams.lazy());
+
+                    if (qryParams.timeout() >= 0)
+                        selectFieldsQry.setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS);
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryId,

@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.timeout;
 
-import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutThickJavaTest;
-
 /**
  *
  */

@@ -17,11 +17,13 @@
 package org.apache.ignite.internal.processors.query.timeout;
 
 import java.util.concurrent.Callable;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.SqlConfiguration;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -29,9 +31,6 @@ import org.junit.Test;
  *
  */
 public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
-    /** Default query timeout. */
-    private long defaultQueryTimeout;
-
     /** Update query. */
     private final boolean updateQuery;
 
@@ -43,14 +42,6 @@ public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCo
     /** */
     protected AbstractDefaultQueryTimeoutTest(boolean updateQuery) {
         this.updateQuery = updateQuery;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setSqlConfiguration(new SqlConfiguration()
-                .setDefaultQueryTimeout(defaultQueryTimeout)
-            );
     }
 
     /** {@inheritDoc} */
@@ -129,9 +120,9 @@ public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCo
     /** */
     @Test
     public void testConcurrent() throws Exception {
-        defaultQueryTimeout = 1000;
-
         IgniteEx ign = startGrid(0);
+
+        setDefaultQueryTimeout(1000L);
 
         prepareQueryExecution();
 
@@ -173,9 +164,9 @@ public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCo
     /** */
     private void checkQuery0(long execTime, Long explicitTimeout, long defaultTimeout, boolean expectCancelled)
         throws Exception {
-        defaultQueryTimeout = defaultTimeout;
-
         startGrid(0);
+
+        setDefaultQueryTimeout(defaultTimeout);
 
         prepareQueryExecution();
 
@@ -212,4 +203,19 @@ public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCo
 
     /** */
     protected abstract void assertQueryCancelled(Callable<?> c);
+
+    /** */
+    private void setDefaultQueryTimeout(final long timeout) throws IgniteCheckedException {
+        ((IgniteH2Indexing)grid(0).context().query().getIndexing()).distributedConfiguration().defaultQueryTimeout(timeout);
+
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            for (Ignite ign : G.allGrids()) {
+                if (((IgniteH2Indexing)((IgniteEx)ign).context().query().getIndexing())
+                    .distributedConfiguration().defaultQueryTimeout() != timeout)
+                    return false;
+            }
+
+            return true;
+        }, 2000L));
+    }
 }

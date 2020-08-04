@@ -162,17 +162,10 @@ public class QueryParser {
             maxMem = qry0.getMaxMemory();
         }
 
-        int timeout;
-
-        if (qry.getTimeout() >= 0)
-            timeout = qry.getTimeout();
-        else
-            timeout = (int)idx.kernalContext().config().getSqlConfiguration().getDefaultQueryTimeout();
-
         return new QueryParameters(
             qry.getArgs(),
             qry.getPartitions(),
-            timeout,
+            qry.getTimeout(),
             qry.isLazy(),
             qry.getPageSize(),
             maxMem,

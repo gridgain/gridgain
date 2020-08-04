@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.timeout;
 
-import org.apache.ignite.internal.processors.query.DefaultQueryTimeoutConfigurationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
