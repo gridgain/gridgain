@@ -521,6 +521,7 @@ public abstract class IgniteUtils {
     /** Cached local host address to make sure that every time the same local host is returned. */
     private static InetAddress locHost;
 
+    /** Supplier of network interfaces. Could be used for tests purposes, must not be changed in production code. */
     public static InterfaceSupplier INTERFACE_SUPPLIER = NetworkInterface::getNetworkInterfaces;
 
     /** */
@@ -12348,9 +12349,10 @@ public abstract class IgniteUtils {
         return false;
     }
 
+    /** Explicit class for {@code Supplier<Enumeration<NetworkInterface>>}. */
+    @FunctionalInterface
     public interface InterfaceSupplier {
-
+        /** Return collection of local network interfaces. */
         Enumeration<NetworkInterface> getInterfaces() throws SocketException;
-
     }
 }
