@@ -226,13 +226,13 @@ public interface DataRegionMetrics {
      *
      * @return Total offheap size in bytes.
      */
-    @Deprecated
     public long getOffHeapSize();
 
     /**
      * Total used offheap size in bytes.
      *
      * @return Total used offheap size in bytes.
+     * @deprecated Metric is redundant, it's effectively equals to {@link #getPhysicalMemorySize()} value.
      */
     @Deprecated
     public long getOffheapUsedSize();
