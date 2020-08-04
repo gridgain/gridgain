@@ -4216,7 +4216,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         cpRec,
                         CheckpointEntryType.START);
 
-                    cpHist.addCheckpoint(cp);
+                    cpHist.addCheckpoint(cp, cpRec.cacheGroupStates());
 
                     cp.releaseGroupStateMemory();
                 }

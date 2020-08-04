@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.Checkpoint;
@@ -174,9 +175,10 @@ public class CheckpointHistory {
      * is not finished yet.
      *
      * @param entry Entry to add.
+     * @param cacheGrpStates
      */
-    public void addCheckpoint(CheckpointEntry entry) {
-        addCpToEarliestCpMap(entry);
+    public void addCheckpoint(CheckpointEntry entry, Map<Integer, CacheState> cacheGrpStates) {
+        addCpToEarliestCpMap(entry, cacheGrpStates);
 
         histMap.put(entry.timestamp(), entry);
     }
@@ -211,7 +213,7 @@ public class CheckpointHistory {
                     iter.remove();
             }
 
-            addCpToEarliestCpMap(entry);
+            addCpToEarliestCpMap(entry, null);
         }
         catch (IgniteCheckedException ex) {
             U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
@@ -240,21 +242,38 @@ public class CheckpointHistory {
      * Add last checkpoint to map of the earliest checkpoints.
      *
      * @param entry Checkpoint entry.
+     * @param cacheGrpStates
      */
-    private void addCpToEarliestCpMap(CheckpointEntry entry) {
+    private void addCpToEarliestCpMap(CheckpointEntry entry, Map<Integer, CacheState> cacheGrpStates) {
         try {
-            Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
+            if (cacheGrpStates != null) {
+                for (Integer grpId : cacheGrpStates.keySet()) {
+                    CacheState cacheState = cacheGrpStates.get(grpId);
 
-            for (Integer grpId : states.keySet()) {
-                CheckpointEntry.GroupState grpState = states.get(grpId);
+                    for (int pIdx = 0; pIdx < cacheState.size(); pIdx++) {
+                        int part = cacheState.partitionByIndex(pIdx);
 
-                for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
-                    int part = grpState.getPartitionByIndex(pIdx);
+                        GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
 
-                    GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
+                        if (!earliestCp.containsKey(grpPartKey))
+                            earliestCp.put(grpPartKey, entry);
+                    }
+                }
+            }
+            else {
+                Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
 
-                    if (!earliestCp.containsKey(grpPartKey))
-                        earliestCp.put(grpPartKey, entry);
+                for (Integer grpId : states.keySet()) {
+                    CheckpointEntry.GroupState grpState = states.get(grpId);
+
+                    for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
+                        int part = grpState.getPartitionByIndex(pIdx);
+
+                        GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
+
+                        if (!earliestCp.containsKey(grpPartKey))
+                            earliestCp.put(grpPartKey, entry);
+                    }
                 }
             }
         }
