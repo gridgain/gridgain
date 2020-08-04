@@ -102,6 +102,7 @@ function Make-Dir([string]$dirPath) {
 
 function Exec([string]$command) {
     try {
+        # TODO: Error Handling does not work here! Make sure that the script fails if the command fails!
         iex "& $command"
     } catch {
         echo "Command failed: $command"
