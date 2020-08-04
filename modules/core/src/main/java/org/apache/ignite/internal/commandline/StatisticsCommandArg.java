@@ -22,7 +22,7 @@ import org.apache.ignite.internal.commandline.argument.CommandArg;
  */
 public enum StatisticsCommandArg implements CommandArg {
     /** */
-    STATS("--stats"),
+    TYPE("--type"),
 
     /** */
     NODE("--node");

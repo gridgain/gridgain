@@ -33,7 +33,7 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.NODE;
-import static org.apache.ignite.internal.commandline.StatisticsCommandArg.STATS;
+import static org.apache.ignite.internal.commandline.StatisticsCommandArg.TYPE;
 import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
 import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CACHE_FILTER;
@@ -65,7 +65,7 @@ public class CommandHandlerParsedArgsTest {
         statsExpectedMap = new HashMap<>();
 
         statsExpectedMap.put(NODE, UUID.fromString("b63321ab-c8ec-4826-a586-af286166450d"));
-        statsExpectedMap.put(STATS, PROCESSING);
+        statsExpectedMap.put(TYPE, PROCESSING);
 
         idleVerifyExpectedMap = new HashMap<>();
 
@@ -84,7 +84,7 @@ public class CommandHandlerParsedArgsTest {
             StatisticsCommandArg.class,
             asList(
                 optionalArg(NODE, "", UUID.class, () -> null),
-                mandatoryArg(STATS, "", MessageStatsTaskArg.StatisticsType.class)
+                mandatoryArg(TYPE, "", MessageStatsTaskArg.StatisticsType.class)
             )
         );
 
@@ -106,7 +106,7 @@ public class CommandHandlerParsedArgsTest {
         test(
             statsCommandParamParser,
             statsExpectedMap,
-            NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", STATS.toString(), PROCESSING.toString()
+            NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", TYPE.toString(), PROCESSING.toString()
         );
     }
 
@@ -133,7 +133,7 @@ public class CommandHandlerParsedArgsTest {
             () -> test(
                 statsCommandParamParser,
                 statsExpectedMap,
-                NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", STATS.toString(), "invalid_enum"
+                NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", TYPE.toString(), "invalid_enum"
             ),
             IllegalArgumentException.class,
             null
@@ -148,7 +148,7 @@ public class CommandHandlerParsedArgsTest {
             () -> test(
                 statsCommandParamParser,
                 statsExpectedMap,
-                NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", STATS.toString(), PROCESSING.toString(), "--unknown"
+                NODE.toString(), "b63321ab-c8ec-4826-a586-af286166450d", TYPE.toString(), PROCESSING.toString(), "--unknown"
             ),
             IgniteException.class,
             null

@@ -63,9 +63,7 @@ public class MessageStatsTask extends VisorMultiNodeTask<MessageStatsTaskArg, Me
 
     /** {@inheritDoc} */
     @Override protected Collection<UUID> jobNodes(VisorTaskArgument<MessageStatsTaskArg> arg) {
-        IgnitePredicate<ClusterNode> pred = node ->
-            nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), MESSAGE_PROFILING_AGGREGATION)
-            && (taskArg.nodeId() == null || taskArg.nodeId().equals(node.id()));
+        IgnitePredicate<ClusterNode> pred = node -> taskArg.nodeId() == null || taskArg.nodeId().equals(node.id());
 
         return transform(ignite.cluster().forServers().forPredicate(pred).nodes(), ClusterNode::id);
     }

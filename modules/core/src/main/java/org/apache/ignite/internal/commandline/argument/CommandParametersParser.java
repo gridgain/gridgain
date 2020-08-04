@@ -67,7 +67,7 @@ public class CommandParametersParser<E extends Enum<E> & CommandArg> {
             E arg = of(str, parametersEnum);
 
             if (arg == null)
-                throw new IgniteException("Unexpected parameter: " + arg);
+                throw new IgniteException("Unexpected parameter [arg=" + arg + ", argNum=" + argIter.getArgsHaveBeenRead() + "]");
 
             CommandParameter<E, ? extends Object> param = parametersMap.get(arg.argName());
 

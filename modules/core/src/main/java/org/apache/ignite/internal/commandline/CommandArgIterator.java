@@ -34,6 +34,9 @@ public class CommandArgIterator {
     /** */
     private String peekedArg;
 
+    /** */
+    private int argsHaveBeenRead = 0;
+
     /**
      * Set of common arguments names and high level command name set.
      */
@@ -78,8 +81,11 @@ public class CommandArgIterator {
             return res;
         }
 
-        if (argsIt.hasNext())
+        if (argsIt.hasNext()) {
+            argsHaveBeenRead++;
+
             return argsIt.next();
+        }
 
         throw new IllegalArgumentException(err);
     }
@@ -213,6 +219,13 @@ public class CommandArgIterator {
             namesSet.add(name.trim());
         }
         return namesSet;
+    }
+
+    /**
+     * @return Args count that have been already read.
+     */
+    public int getArgsHaveBeenRead() {
+        return argsHaveBeenRead;
     }
 
     /**

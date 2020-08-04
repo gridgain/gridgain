@@ -15,23 +15,28 @@
  */
 package org.apache.ignite.internal.commandline;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.LongStream;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.argument.CommandParametersParser;
 import org.apache.ignite.internal.commandline.argument.ParsedParameters;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTask;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg;
 import org.apache.ignite.internal.visor.statistics.MessageStatsTaskResult;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandList.STATISTICS;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.NODE;
-import static org.apache.ignite.internal.commandline.StatisticsCommandArg.STATS;
+import static org.apache.ignite.internal.commandline.StatisticsCommandArg.TYPE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
 import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
@@ -45,7 +50,7 @@ public class Statistics implements Command<MessageStatsTaskArg> {
         StatisticsCommandArg.class,
         asList(
             optionalArg(NODE, "", UUID.class, () -> null),
-            mandatoryArg(STATS, "", MessageStatsTaskArg.StatisticsType.class)
+            mandatoryArg(TYPE, "", MessageStatsTaskArg.StatisticsType.class)
         )
     );
 
@@ -63,13 +68,27 @@ public class Statistics implements Command<MessageStatsTaskArg> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+        MessageStatsTaskResult res;
+
         try (GridClient client = Command.startClient(clientCfg)) {
-            MessageStatsTaskResult res = executeTask(client, MessageStatsTask.class, arg, clientCfg);
+            List<GridClientNode> unsupportingSrvNodes = client.compute().nodes().stream()
+                .filter(node -> !node.isClient())
+                .filter(node -> !node.supports(IgniteFeatures.MESSAGE_PROFILING_AGGREGATION))
+                .collect(toList());
+
+            if (!unsupportingSrvNodes.isEmpty()) {
+                for (GridClientNode node : unsupportingSrvNodes)
+                    logger.warning("Command '" + STATISTICS + "' was cancelled because it's not supported by node: " + node);
+
+                throw new VisorIllegalStateException("There are server nodes that don't support '" + STATISTICS + "' command.");
+            }
+
+            res = executeTask(client, MessageStatsTask.class, arg, clientCfg);
 
             printReport(arg.statisticsType().toString(), res, logger);
         }
 
-        return null;
+        return res;
     }
 
     private void printReport(String taskName, MessageStatsTaskResult taskResult, Logger log) {
@@ -152,7 +171,7 @@ public class Statistics implements Command<MessageStatsTaskArg> {
 
         arg = new MessageStatsTaskArg(
             parsedParams.get(NODE.argName()),
-            parsedParams.get(STATS.argName())
+            parsedParams.get(TYPE.argName())
         );
     }
 

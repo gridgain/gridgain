@@ -19,14 +19,18 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import javax.management.DynamicMBean;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.StatisticsCommandArg;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicUpdateResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetResponse;
+import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
@@ -34,7 +38,12 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IN
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandList.STATISTICS;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.DIAGNOSTICS_MESSAGES;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_MEASURED_TYPES;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_STAT_TOTAL_PROCESSING_TIME;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_STAT_TOTAL_QUEUE_WAITING_TIME;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.DIAGNOSTIC_METRICS;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg.StatisticsType.PROCESSING;
 import static org.apache.ignite.internal.visor.statistics.MessageStatsTaskArg.StatisticsType.QUEUE_WAITING;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
@@ -50,6 +59,12 @@ public class GridCommandHandlerMessageStatisticsTest extends GridCommandHandlerC
         GridNearSingleGetResponse.class,
         GridNearAtomicUpdateResponse.class
     ));
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setMetricExporterSpi(new JmxMetricExporterSpi());
+    }
 
     private void imitateLoad() throws Exception {
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
@@ -97,33 +112,33 @@ public class GridCommandHandlerMessageStatisticsTest extends GridCommandHandlerC
         try {
             this.autoConfirmation = false;
 
-            callStatisticsCommand(PROCESSING.toString(), ignite.localNode().id().toString(), EXIT_CODE_OK);
-            callStatisticsCommand(QUEUE_WAITING.toString(), ignite.localNode().id().toString(), EXIT_CODE_OK);
+            callStatisticsCommand(PROCESSING.toString(), ignite, ignite.localNode().id().toString(), EXIT_CODE_OK);
+            callStatisticsCommand(QUEUE_WAITING.toString(), ignite, ignite.localNode().id().toString(), EXIT_CODE_OK);
 
-            callStatisticsCommand(PROCESSING.toString(), grid(1).localNode().id().toString(), EXIT_CODE_OK);
-            callStatisticsCommand(QUEUE_WAITING.toString(), grid(1).localNode().id().toString(), EXIT_CODE_OK);
+            callStatisticsCommand(PROCESSING.toString(), grid(1), grid(1).localNode().id().toString(), EXIT_CODE_OK);
+            callStatisticsCommand(QUEUE_WAITING.toString(), grid(1), grid(1).localNode().id().toString(), EXIT_CODE_OK);
 
-            callStatisticsCommand(PROCESSING.toString(), null, EXIT_CODE_OK);
-            callStatisticsCommand(QUEUE_WAITING.toString(), null, EXIT_CODE_OK);
+            callStatisticsCommand(PROCESSING.toString(), null, null, EXIT_CODE_OK);
+            callStatisticsCommand(QUEUE_WAITING.toString(), null, null, EXIT_CODE_OK);
 
-            callStatisticsCommand(PROCESSING.toString(), "qwe1", EXIT_CODE_INVALID_ARGUMENTS);
-            callStatisticsCommand(QUEUE_WAITING.toString(), "qwe1", EXIT_CODE_INVALID_ARGUMENTS);
+            callStatisticsCommand(PROCESSING.toString(), null, "qwe1", EXIT_CODE_INVALID_ARGUMENTS);
+            callStatisticsCommand(QUEUE_WAITING.toString(), null, "qwe1", EXIT_CODE_INVALID_ARGUMENTS);
 
-            callStatisticsCommand(null, ignite.localNode().id().toString(), EXIT_CODE_UNEXPECTED_ERROR);
-            callStatisticsCommand("qwe1", ignite.localNode().id().toString(), EXIT_CODE_INVALID_ARGUMENTS);
+            callStatisticsCommand(null, ignite, ignite.localNode().id().toString(), EXIT_CODE_UNEXPECTED_ERROR);
+            callStatisticsCommand("qwe1", ignite, ignite.localNode().id().toString(), EXIT_CODE_INVALID_ARGUMENTS);
         }
         finally {
             this.autoConfirmation = autoConfirmation;
         }
     }
 
-    private String callStatisticsCommand(String statisticsType, String nodeId, int expectedExitCode) {
+    private String callStatisticsCommand(String statisticsType, Ignite node, String nodeId, int expectedExitCode) throws Exception {
         List<String> args = new LinkedList<>();
 
         args.add(STATISTICS.text());
 
         if (statisticsType != null) {
-            args.add(StatisticsCommandArg.STATS.toString());
+            args.add(StatisticsCommandArg.TYPE.toString());
             args.add(statisticsType);
         }
 
@@ -137,7 +152,7 @@ public class GridCommandHandlerMessageStatisticsTest extends GridCommandHandlerC
         if (expectedExitCode == EXIT_CODE_OK) {
             String out = testOut.toString();
 
-            checkOutput(out, statisticsType);
+            checkOutput(out, statisticsType, node);
 
             return out;
         }
@@ -145,15 +160,23 @@ public class GridCommandHandlerMessageStatisticsTest extends GridCommandHandlerC
         return null;
     }
 
-    private void checkOutput(String out, String statisticsType) {
+    private void checkOutput(String out, String statisticsType, Ignite node) throws Exception {
         assertContains(log, out, "Statistics report [" + statisticsType + "]");
 
         assertMatches(log, out, ".*?Message[ ]+Total Total time \\(ms\\)[ ]+Avg \\(ms\\)[ ]+<= 1[ ]+<= 5[ ]+<= 10[ ]+<= 30[ ]+<= 50[ ]+<= 100[ ]+<= 250[ ]+<= 500[ ]+<= 750[ ]+<= 1000[ ]+> 1000.*");
 
+        DynamicMBean mBean = node == null ? null : metricRegistry(
+            node.name(),
+            DIAGNOSTIC_METRICS,
+            metricName(DIAGNOSTICS_MESSAGES, statisticsType.equals(PROCESSING.toString()) ? MSG_STAT_TOTAL_PROCESSING_TIME : MSG_STAT_TOTAL_QUEUE_WAITING_TIME)
+        );
+
         for (Class cls : MSG_MEASURED_TYPES) {
+            String totalTime = mBean == null ? "[0-9]{1,5}" : String.valueOf(mBean.getAttribute(cls.getSimpleName()));
+
             // Checking that histograms for atomic gets and updates have some values, for tother types of messages they are empty.
             if (ATOMIC_UPDATE_MSGS.contains(cls))
-                assertMatches(log, out, ".*?" + cls.getSimpleName() + "[ ]+[0-9]{2,5}[ ]+[0-9]{1,5}[ ]+[0-9]{1,5}\\.[0-9]{3}[ ]+[0-9]{2,5}[ ]+[0-9]{1,3}[ ]+[0-9]{1,3}[ ]+[0-9]{1,2}[ ]+[0-9]{1,2}[ ]+[0-9]{1}[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0.*");
+                assertMatches(log, out, ".*?" + cls.getSimpleName() + "[ ]+[0-9]{2,5}[ ]+" + totalTime + "[ ]+[0-9]{1,5}\\.[0-9]{3}[ ]+[0-9]{2,5}[ ]+[0-9]{1,3}[ ]+[0-9]{1,3}[ ]+[0-9]{1,2}[ ]+[0-9]{1,2}[ ]+[0-9]{1}[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0.*");
             else
                 assertMatches(log, out, ".*?" + cls.getSimpleName() + "[ ]+0[ ]+0[ ]+0\\.000[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0.*");
         }
