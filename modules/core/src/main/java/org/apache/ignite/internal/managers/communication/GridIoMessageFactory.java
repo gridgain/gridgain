@@ -371,9 +371,10 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register(GridQueryKillResponse.TYPE_CODE, GridQueryKillResponse::new);
         factory.register(GridIoSecurityAwareMessage.TYPE_CODE, GridIoSecurityAwareMessage::new);
         factory.register((short)175, TcpInverseConnectionResponseMessage::new);
+        // [176] - Incremental DR
 
         // [-3..119] [124..129] [-23..-28] [-36..-55] - this
-        // [120..123] - DR
+        // [120..123] [176] - DR
         // [-4..-22, -30..-35] - SQL
         // [2048..2053] - Snapshots
     }
