@@ -251,6 +251,9 @@ public class CheckpointHistory {
                 for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
                     int part = grpState.getPartitionByIndex(pIdx);
 
+                    assert entry.partitionCounter(cctx, grpId, part) != null
+                        : "Counter is null for grp " + grpId + " in cp " + entry.checkpointId();
+
                     GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
 
                     if (!earliestCp.containsKey(grpPartKey))
@@ -346,8 +349,13 @@ public class CheckpointHistory {
             while (iter.hasNext()) {
                 Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp = iter.next();
 
-                if (grpPartPerCp.getValue() == deletedCpEntry)
+                if (grpPartPerCp.getValue() == deletedCpEntry) {
+
+                    assert oldestCpInHistory.partitionCounter(cctx, grpPartPerCp.getKey().getGroupId(), grpPartPerCp.getKey().getPartitionId()) != null
+                        : "Counter is null for grp " + grpPartPerCp.getKey().getGroupId() + " in cp " + oldestCpInHistory.checkpointId();
+
                     grpPartPerCp.setValue(oldestCpInHistory);
+                }
             }
         }
 
