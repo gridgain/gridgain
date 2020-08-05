@@ -50,6 +50,9 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertMatches;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 
+/**
+ * Tests for message statistics report in {@link org.apache.ignite.internal.commandline.CommandHandler}.
+ */
 public class GridCommandHandlerMessageStatisticsTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     private static final int NODES_CNT = 2;
 
@@ -176,7 +179,7 @@ public class GridCommandHandlerMessageStatisticsTest extends GridCommandHandlerC
 
             // Checking that histograms for atomic gets and updates have some values, for tother types of messages they are empty.
             if (ATOMIC_UPDATE_MSGS.contains(cls))
-                assertMatches(log, out, ".*?" + cls.getSimpleName() + "[ ]+[0-9]{2,5}[ ]+" + totalTime + "[ ]+[0-9]{1,5}\\.[0-9]{3}[ ]+[0-9]{2,5}[ ]+[0-9]{1,3}[ ]+[0-9]{1,3}[ ]+[0-9]{1,2}[ ]+[0-9]{1,2}[ ]+[0-9]{1}[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0.*");
+                assertMatches(log, out, ".*?" + cls.getSimpleName() + "[ ]+[0-9]{2,5}[ ]+" + totalTime + "[ ]+[0-9]{1,5}\\.[0-9]{3}[ ]+[0-9]{2,5}[ ]+[0-9]{1,3}[ ]+[0-9]{1,3}[ ]+[0-9]{1,3}[ ]+[0-9]{1,2}[ ]+[0-9]{1}[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0.*");
             else
                 assertMatches(log, out, ".*?" + cls.getSimpleName() + "[ ]+0[ ]+0[ ]+0\\.000[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0[ ]+0.*");
         }

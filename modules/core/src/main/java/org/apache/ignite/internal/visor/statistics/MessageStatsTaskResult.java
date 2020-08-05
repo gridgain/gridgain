@@ -23,7 +23,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 
 /**
- *
+ * Result of {@link MessageStatsTask}.
  */
 public class MessageStatsTaskResult extends VisorDataTransferObject {
     /** */

@@ -58,6 +58,12 @@ public class MetricUtils {
         return new MetricName(grp, beanName);
     }
 
+    /**
+     * Splits registry and metric name.
+     *
+     * @param metricFullName Full name.
+     * @return String pair, first is registry name, second is metric name.
+     */
     public static IgnitePair<String> splitRegistryAndMetricName(String metricFullName) {
         int idx = metricFullName.lastIndexOf(SEPARATOR);
 

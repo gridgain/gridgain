@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.metric;
 
-import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -33,24 +32,41 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty.detachedLongProperty;
 import static org.apache.ignite.internal.util.IgniteUtils.checkRange;
 
-public class DistributedMetricsConfiguration {
+/**
+ * Metrics distributed configuration.
+ */
+public class MetricsDistributedConfiguration {
+    /** */
     private final boolean defaultDiagnosticMessageStatsEnabled = getBoolean(IGNITE_MESSAGE_STATS_ENABLED, true);
 
+    /** */
     private final long defaultDiagnosticMessageStatsTooLongProcessing =
             checkRange(0, Long.MAX_VALUE, getLong(IGNITE_STAT_TOO_LONG_PROCESSING, 250), IGNITE_STAT_TOO_LONG_PROCESSING);
 
+    /** */
     private final long defaultDiagnosticMessageStatsTooLongWaiting =
             checkRange(0, Long.MAX_VALUE, getLong(IGNITE_STAT_TOO_LONG_WAITING, 250), IGNITE_STAT_TOO_LONG_WAITING);
 
+    /** */
     private final IgniteLogger log;
 
+    /**
+     * Whether diagnostics of messages is enabled.
+     */
     private final DistributedBooleanProperty diagnosticMessageStatsEnabled = detachedBooleanProperty("diagnosticMessageStatsEnabled");
 
+    /**
+     * Long message processing threshold.
+     */
     private final DistributedLongProperty diagnosticMessageStatTooLongProcessing = detachedLongProperty("diagnosticMessageStatTooLongProcessing");
 
+    /**
+     * Long message queue waiting threshold.
+     */
     private final DistributedLongProperty diagnosticMessageStatTooLongWaiting = detachedLongProperty("diagnosticMessageStatTooLongWaiting");
 
-    public DistributedMetricsConfiguration(GridInternalSubscriptionProcessor subscriptionProcessor, IgniteLogger log) {
+    /** */
+    public MetricsDistributedConfiguration(GridInternalSubscriptionProcessor subscriptionProcessor, IgniteLogger log) {
         this.log = log;
 
         subscriptionProcessor.registerDistributedConfigurationListener(dispatcher -> {
@@ -64,14 +80,17 @@ public class DistributedMetricsConfiguration {
         });
     }
 
+    /** */
     private <T> void updateListener(String key, T oldVal, T newVal) {
         log.info(format("Metric distributed property '%s' was changed, oldVal: '%s', newVal: '%s'", key, oldVal, newVal));
     }
 
+    /** */
     public boolean diagnosticMessageStatsEnabled() {
         return diagnosticMessageStatsEnabled.getOrDefault(defaultDiagnosticMessageStatsEnabled);
     }
 
+    /** */
     public void diagnosticMessageStatsEnabled(boolean diagnosticMessageStatsEnabled) {
         try {
             this.diagnosticMessageStatsEnabled.propagate(diagnosticMessageStatsEnabled);
@@ -81,10 +100,12 @@ public class DistributedMetricsConfiguration {
         }
     }
 
+    /** */
     public long diagnosticMessageStatTooLongProcessing() {
         return diagnosticMessageStatTooLongProcessing.getOrDefault(defaultDiagnosticMessageStatsTooLongProcessing);
     }
 
+    /** */
     public void diagnosticMessageStatTooLongProcessing(long diagnosticMessageStatTooLongProcessing) {
         try {
             this.diagnosticMessageStatTooLongProcessing.propagate(
@@ -96,10 +117,12 @@ public class DistributedMetricsConfiguration {
         }
     }
 
+    /** */
     public long diagnosticMessageStatTooLongWaiting() {
         return diagnosticMessageStatTooLongWaiting.getOrDefault(defaultDiagnosticMessageStatsTooLongWaiting);
     }
 
+    /** */
     public void diagnosticMessageStatTooLongWaiting(long diagnosticMessageStatTooLongWaiting) {
         try {
             this.diagnosticMessageStatTooLongWaiting.propagate(

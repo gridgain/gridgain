@@ -39,7 +39,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
-import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
@@ -56,8 +55,6 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
-import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_HISTOGRAM_THRESHOLDS;
-import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.SEPARATOR;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.splitRegistryAndMetricName;
 
@@ -208,10 +205,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     private final MemoryUsageMetrics nonHeap;
 
     /** Distributed metrics configuration. */
-    private DistributedMetricsConfiguration distributedMetricsConfiguration;
-
-    /** Monitoring registry. */
-    private MetricRegistry mreg;
+    private MetricsDistributedConfiguration metricsDistributedConfiguration;
 
     /**
      * @param ctx Kernal context.
@@ -241,7 +235,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         sysreg.register("CurrentThreadCpuTime", threads::getCurrentThreadCpuTime, null);
         sysreg.register("CurrentThreadUserTime", threads::getCurrentThreadUserTime, null);
 
-        distributedMetricsConfiguration = new DistributedMetricsConfiguration(ctx.internalSubscriptionProcessor(), log);
+        metricsDistributedConfiguration = new MetricsDistributedConfiguration(ctx.internalSubscriptionProcessor(), log);
 
         MetricRegistry pmeReg = registry(PME_METRICS);
 
@@ -681,19 +675,11 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         }
     }
 
-    public @Nullable Metric metricByFullName(String metricFullName) {
-        IgnitePair<String> names = splitRegistryAndMetricName(metricFullName);
-
-        if (names.get1() == null)
-            return null;
-
-        MetricRegistry registry = registry(names.get1());
-
-        return registry == null ? null : registry.findMetric(names.get1());
-    }
-
-    public DistributedMetricsConfiguration distributedMetricsConfiguration() {
-        return distributedMetricsConfiguration;
+    /**
+     * @return Metrics distributed configuration.
+     */
+    public MetricsDistributedConfiguration metricsDistributedConfiguration() {
+        return metricsDistributedConfiguration;
     }
 }
 

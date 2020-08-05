@@ -24,7 +24,7 @@ import org.apache.ignite.internal.visor.VisorDataTransferObject;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *
+ * Arguments for {@link MessageStatsTask}.
  */
 public class MessageStatsTaskArg extends VisorDataTransferObject {
     /** */
@@ -69,7 +69,7 @@ public class MessageStatsTaskArg extends VisorDataTransferObject {
     }
 
     /**
-     *
+     * Statistic types.
      */
     public enum StatisticsType {
         /** */
@@ -83,14 +83,17 @@ public class MessageStatsTaskArg extends VisorDataTransferObject {
         /** Enumerated values. */
         private static final StatisticsType[] VALS = values();
 
+        /** */
         StatisticsType(String name) {
             this.name = name;
         }
 
+        /** {@inheritDoc} */
         @Override public String toString() {
             return name;
         }
 
+        /** {@inheritDoc} */
         @Nullable public static StatisticsType fromOrdinal(int ord) {
             return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
         }

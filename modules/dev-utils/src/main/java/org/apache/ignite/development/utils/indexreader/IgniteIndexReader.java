@@ -112,8 +112,8 @@ import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_STORE_VER;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PART_CNT;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.TRANSFORM;
-import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
-import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryParam;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalParam;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -1447,22 +1447,22 @@ public class IgniteIndexReader implements AutoCloseable {
         CommandParametersParser<Args> parser = new CommandParametersParser<>(
             Args.class,
             asList(
-                mandatoryArg(
+                mandatoryParam(
                     DIR,
                     "partition directory, where " + INDEX_FILE_NAME + " and (optionally) partition files are located.",
                     String.class
                 ),
-                optionalArg(PART_CNT, "full partitions count in cache group.", Integer.class, () -> 0),
-                optionalArg(PAGE_SIZE, "page size.", Integer.class, () -> 4096),
-                optionalArg(PAGE_STORE_VER, "page store version.", Integer.class, () -> 2),
-                optionalArg(INDEXES, "you can specify index tree names that will be processed, separated by comma " +
+                optionalParam(PART_CNT, "full partitions count in cache group.", Integer.class, () -> 0),
+                optionalParam(PAGE_SIZE, "page size.", Integer.class, () -> 4096),
+                optionalParam(PAGE_STORE_VER, "page store version.", Integer.class, () -> 2),
+                optionalParam(INDEXES, "you can specify index tree names that will be processed, separated by comma " +
                     "without spaces, other index trees will be skipped.", String[].class, () -> null),
-                optionalArg(DEST_FILE,
+                optionalParam(DEST_FILE,
                     "file to print the report to (by default report is printed to console).", String.class, () -> null),
-                optionalArg(TRANSFORM, "if specified, this utility assumes that all *.bin files " +
+                optionalParam(TRANSFORM, "if specified, this utility assumes that all *.bin files " +
                     "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
                     " directory.", Boolean.class, () -> false),
-                optionalArg(DEST,
+                optionalParam(DEST,
                     "directory where to put files transformed from snapshot (needed if you use --transform).",
                     String.class,
                     () -> {
@@ -1472,9 +1472,9 @@ public class IgniteIndexReader implements AutoCloseable {
                             return null;
                     }
                 ),
-                optionalArg(FILE_MASK,
+                optionalParam(FILE_MASK,
                     "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
-                optionalArg(CHECK_PARTS,
+                optionalParam(CHECK_PARTS,
                     "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
             )
         );

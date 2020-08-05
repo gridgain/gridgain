@@ -34,32 +34,32 @@ public class DiagnosticMXBeanImpl implements DiagnosticMXBean {
 
     /** {@inheritDoc} */
     @Override public boolean getDiagnosticMessageStatsEnabled() {
-        return ctx.metric().distributedMetricsConfiguration().diagnosticMessageStatsEnabled();
+        return ctx.metric().metricsDistributedConfiguration().diagnosticMessageStatsEnabled();
     }
 
     /** {@inheritDoc} */
     @Override public void setDiagnosticMessageStatsEnabled(boolean enabled) {
-        ctx.metric().distributedMetricsConfiguration().diagnosticMessageStatsEnabled(enabled);
+        ctx.metric().metricsDistributedConfiguration().diagnosticMessageStatsEnabled(enabled);
     }
 
     /** {@inheritDoc} */
     @Override public long getDiagnosticMessageStatTooLongProcessing() {
-        return ctx.metric().distributedMetricsConfiguration().diagnosticMessageStatTooLongProcessing();
+        return ctx.metric().metricsDistributedConfiguration().diagnosticMessageStatTooLongProcessing();
     }
 
     /** {@inheritDoc} */
     @Override public void setDiagnosticMessageStatTooLongProcessing(long val) {
-        ctx.metric().distributedMetricsConfiguration().diagnosticMessageStatTooLongProcessing(val);
+        ctx.metric().metricsDistributedConfiguration().diagnosticMessageStatTooLongProcessing(val);
     }
 
     /** {@inheritDoc} */
     @Override public long getDiagnosticMessageStatTooLongWaiting() {
-        return ctx.metric().distributedMetricsConfiguration().diagnosticMessageStatTooLongWaiting();
+        return ctx.metric().metricsDistributedConfiguration().diagnosticMessageStatTooLongWaiting();
     }
 
     /** {@inheritDoc} */
     @Override public void setDiagnosticMessageStatTooLongWaiting(long val) {
-        ctx.metric().distributedMetricsConfiguration().diagnosticMessageStatTooLongWaiting(val);
+        ctx.metric().metricsDistributedConfiguration().diagnosticMessageStatTooLongWaiting(val);
     }
 
     /** {@inheritDoc} */

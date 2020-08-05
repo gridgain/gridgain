@@ -34,8 +34,8 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.NODE;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.TYPE;
-import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
-import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryParam;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalParam;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CACHE_FILTER;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.CHECK_CRC;
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.DUMP;
@@ -46,7 +46,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.assertEquals;
 
 /**
- *
+ * Tests for {@link CommandParametersParser}.
  */
 public class CommandHandlerParsedArgsTest {
     /** */
@@ -83,19 +83,19 @@ public class CommandHandlerParsedArgsTest {
         statsCommandParamParser = new CommandParametersParser<>(
             StatisticsCommandArg.class,
             asList(
-                optionalArg(NODE, "", UUID.class, () -> null),
-                mandatoryArg(TYPE, "", MessageStatsTaskArg.StatisticsType.class)
+                optionalParam(NODE, "", UUID.class, () -> null),
+                mandatoryParam(TYPE, "", MessageStatsTaskArg.StatisticsType.class)
             )
         );
 
         idleVerifyCommandParamParser = new CommandParametersParser<>(
             IdleVerifyCommandArg.class,
             asList(
-                optionalArg(DUMP, "", Boolean.class, () -> null),
-                optionalArg(SKIP_ZEROS, "", Boolean.class, () -> false),
-                optionalArg(EXCLUDE_CACHES, "", Set.class, () -> null),
-                optionalArg(CHECK_CRC, "", Boolean.class, () -> null),
-                optionalArg(CACHE_FILTER, "", String.class, () -> null)
+                optionalParam(DUMP, "", Boolean.class, () -> null),
+                optionalParam(SKIP_ZEROS, "", Boolean.class, () -> false),
+                optionalParam(EXCLUDE_CACHES, "", Set.class, () -> null),
+                optionalParam(CHECK_CRC, "", Boolean.class, () -> null),
+                optionalParam(CACHE_FILTER, "", String.class, () -> null)
             )
         );
     }

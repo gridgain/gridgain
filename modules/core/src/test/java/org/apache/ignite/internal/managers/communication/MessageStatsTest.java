@@ -52,7 +52,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 
 /**
- *
+ * Test for checking message statistics, JMX settings and log warnings.
  */
 public class MessageStatsTest extends GridCommonAbstractTest {
     /** */

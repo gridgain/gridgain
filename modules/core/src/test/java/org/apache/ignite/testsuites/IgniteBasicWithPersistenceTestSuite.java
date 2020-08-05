@@ -64,7 +64,6 @@ import org.junit.runners.Suite;
     GridCommandHandlerClusterByClassTest.class,
     GridCommandHandlerClusterByClassWithSSLTest.class,
     GridCommandHandlerSslTest.class,
-    CommandHandlerParsedArgsTest.class,
     GridCommandHandlerRUTest.class,
     GridInternalTaskUnusedWalSegmentsTest.class,
 

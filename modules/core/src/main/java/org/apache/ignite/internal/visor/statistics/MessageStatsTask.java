@@ -36,9 +36,6 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.IgniteFeatures.MESSAGE_PROFILING_AGGREGATION;
-import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.DIAGNOSTICS_MESSAGES;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_STAT_PROCESSING_TIME;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.MSG_STAT_QUEUE_WAITING_TIME;
@@ -49,7 +46,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.spli
 import static org.apache.ignite.internal.util.lang.GridFunc.transform;
 
 /**
- *
+ * Task that collects message statistics.
  */
 @GridInternal
 public class MessageStatsTask extends VisorMultiNodeTask<MessageStatsTaskArg, MessageStatsTaskResult, MessageStatsTaskResult> {
@@ -102,6 +99,13 @@ public class MessageStatsTask extends VisorMultiNodeTask<MessageStatsTaskArg, Me
         return new MessageStatsTaskResult(monotonicMap, bounds.get(), histogramsMap);
     }
 
+    /**
+     * Adds data from given histogram values to reduced histogram map.
+     *
+     * @param reducedMap Map of reduced histograms.
+     * @param name Histogram name.
+     * @param histogramValues Values to add.
+     */
     private void addToReducedHistogram(
         Map<String, long[]> reducedMap,
         String name,
@@ -110,16 +114,17 @@ public class MessageStatsTask extends VisorMultiNodeTask<MessageStatsTaskArg, Me
         long[] reduced = reducedMap.computeIfAbsent(name, k -> new long[histogramValues.length]);
 
         for (int i = 0; i < reduced.length; i++) {
-            if (i >= histogramValues.length)
-                //this should never happen
+            if (i >= histogramValues.length) {
+                // This should never happen.
                 throw new IgniteException("Received different histograms from nodes, can't reduce");
+            }
 
             reduced[i] += histogramValues[i];
         }
     }
 
     /**
-     *
+     * Job that collects message statistics.
      */
     public static class MessageStatsJob extends VisorJob<MessageStatsTaskArg, MessageStatsTaskResult> {
         /** */
@@ -170,6 +175,11 @@ public class MessageStatsTask extends VisorMultiNodeTask<MessageStatsTaskArg, Me
             return new MessageStatsTaskResult(monotonicMap, bounds.get(), histogramsMap);
         }
 
+        /**
+         * @param statsType Statistic type.
+         * @param findMonotonic Whether to find monotonic metrics registry.
+         * @return Registry name.
+         */
         private String registryName(MessageStatsTaskArg.StatisticsType statsType, boolean findMonotonic) {
             String regSimpleName = null;
 

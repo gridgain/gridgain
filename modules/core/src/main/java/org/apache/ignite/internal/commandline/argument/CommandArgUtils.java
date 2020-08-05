@@ -16,17 +16,7 @@
 
 package org.apache.ignite.internal.commandline.argument;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_STRING_ARRAY;
-import static org.apache.ignite.internal.util.lang.GridFunc.transform;
 
 /**
  * Utility class for control.sh arguments.
@@ -48,6 +38,13 @@ public class CommandArgUtils {
         return null;
     }
 
+    /**
+     * Converts String to Enum.
+     * @param text String to convert.
+     * @param enumClass Enum.
+     * @param <T> Enum type.
+     * @return Enum value.
+     */
     public static <T extends Enum> @Nullable T ofString(String text, Class<T> enumClass) {
         for (T e : enumClass.getEnumConstants()) {
             if (e.toString().equalsIgnoreCase(text))

@@ -18,7 +18,7 @@ package org.apache.ignite.internal.commandline;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 
 /**
- *
+ * Enum for {@link Statistics} command arguments.
  */
 public enum StatisticsCommandArg implements CommandArg {
     /** */

@@ -67,5 +67,4 @@ public interface DiagnosticMXBean {
      */
     @MXBeanDescription("Sets the time threshold for messages to consider them as long waiting in queue for procesing.")
     public void setDiagnosticMessageStatTooLongWaiting(long val);
-
 }

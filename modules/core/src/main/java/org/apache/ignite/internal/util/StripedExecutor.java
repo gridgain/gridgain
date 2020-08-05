@@ -624,7 +624,7 @@ public class StripedExecutor implements ExecutorService {
     }
 
     /**
-     *
+     * Stripe aware runnable.
      */
     public abstract static class StripeAwareRunnable extends TraceRunnable {
         /**
@@ -636,13 +636,13 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /**
-         *
-         * @return
+         * @return Message.
          */
         public abstract Message message();
 
         /**
          * Called when message is assigned to stripe before enqueuing.
+         *
          * @param stripe Stripe.
          */
         public abstract void assign(Stripe stripe);

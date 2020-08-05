@@ -101,7 +101,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFi
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
-import org.apache.ignite.internal.processors.metric.DistributedMetricsConfiguration;
+import org.apache.ignite.internal.processors.metric.MetricsDistributedConfiguration;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
@@ -251,14 +251,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private static final ThreadLocal<Byte> CUR_PLC = new ThreadLocal<>();
 
     /** */
-    private static final String[][] MSG_METRICS_DESCRIPTION = new String[][] {
-        new String[] { MSG_STAT_PROCESSING_TIME, "Message processing time" },
-        new String[] { MSG_STAT_QUEUE_WAITING_TIME, "Message queue waiting time" },
-        new String[] { MSG_STAT_QUEUE_SIZE_BEFORE, "Message queue size before" },
-        new String[] { MSG_STAT_QUEUE_SIZE_AFTER, "Message queue size after" }
-    };
-
-    /** */
     public static final long[] MSG_HISTOGRAM_THRESHOLDS = new long[] {1, 5, 10, 30, 50, 100, 250, 500, 750, 1000};
 
     /** */
@@ -359,7 +351,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private static final IgniteRunnable NOOP = () -> {};
 
     /** Initialized from single thread when grid starts, accessed from many. */
-    private final Map<String, ProcessMessageStatsClosure<Message>> handlers = new HashMap<>();
+    private final Map<String, IgniteInClosure<Message>> handlers = new HashMap<>();
 
     /** */
     private volatile MetricRegistry msgProcessingTimeHistogramsRegistry;
@@ -380,7 +372,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private final Map<Thread, List<ProcStat>> sharedSlowMsgs = new ConcurrentHashMap<>();
 
     /** */
-    private final DistributedMetricsConfiguration metricsConfiguration;
+    private final MetricsDistributedConfiguration metricsConfiguration;
 
     /** */
     private Map<String, MsgMetricBundle> msgMetrics;
@@ -420,7 +412,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
 
-        metricsConfiguration = ctx.metric().distributedMetricsConfiguration();
+        metricsConfiguration = ctx.metric().metricsDistributedConfiguration();
     }
 
     /**
@@ -569,7 +561,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         registerMetricsForMessages();
     }
 
-    /** */
+    /**
+     * Registers metrics for messages diagnostic.
+     */
     private void registerMetricsForMessages() {
         msgProcessingTimeHistogramsRegistry =
             ctx.metric().registry(metricName(DIAGNOSTIC_METRICS, DIAGNOSTICS_MESSAGES, MSG_STAT_PROCESSING_TIME));
@@ -1372,14 +1366,21 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         final long enqueueTs = U.currentTimeMillis();
 
         StripedExecutor.StripeAwareRunnable c = new StripedExecutor.StripeAwareRunnable(ctx.tracing(), COMMUNICATION_REGULAR_PROCESS) {
+            /** Stripe which runnable was assigned to. */
             private @Nullable StripedExecutor.Stripe stripe;
+
+            /** */
             private int beforeQueueSize = -1;
+
+            /** */
             private @Nullable Message head;
 
+            /** {@inheritDoc} */
             @Override public Message message() {
                 return msg.message();
             }
 
+            /** {@inheritDoc} */
             @Override public void assign(StripedExecutor.Stripe stripe) {
                 this.stripe = stripe;
 
@@ -1388,12 +1389,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 head = head();
             }
 
+            /**
+             * @return Head of the stripe.
+             */
             public Message head() {
                 StripedExecutor.StripeAwareRunnable head = (StripedExecutor.StripeAwareRunnable)stripe.head();
 
                 return head == null ? null : head.message();
             }
 
+            /** {@inheritDoc} */
             @Override public void execute() {
                 try {
                     MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
@@ -1581,7 +1586,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         metricBundle.totalProcessingTime.add(procTimeMs);
         metricBundle.totalQueueWaitingTime.add(waitTimeMs);
 
-        ProcessMessageStatsClosure<Message> clo = handlers.get(msg0.getClass().getSimpleName());
+        IgniteInClosure<Message> clo = handlers.get(msg0.getClass().getSimpleName());
 
         if (clo != null) {
             try {
@@ -1623,16 +1628,19 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         for (Map.Entry<Thread, List<ProcStat>> entry : sharedSlowMsgs.entrySet()) {
             List<ProcStat> list = entry.getValue();
 
-            List<ProcStat> copyList;
+            List<ProcStat> copyList = null;
 
             synchronized (list) {
-                copyList = new ArrayList<>(list);
+                if (warnings.canAddMessage())
+                    copyList = new ArrayList<>(list);
 
                 list.clear();
             }
 
-            for (ProcStat stat : copyList)
-                warnings.add(slowMsgWarning(stat, sysZoneId));
+            if (warnings.canAddMessage()) {
+                for (ProcStat stat : copyList)
+                    warnings.add(slowMsgWarning(stat, sysZoneId));
+            }
         }
 
         warnings.printToLog();
@@ -1644,21 +1652,21 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         sb.a(">>> Slow message: ").
             a("enqueueTs=").
-            a(LocalDateTime.ofInstant(ofEpochMilli(stat.enqueueTimestamp()), sysZoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).
+            a(LocalDateTime.ofInstant(ofEpochMilli(stat.enqueueTs), sysZoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).
             a(", waitTime=").
-            a(stat.waitTime() / 1000 / 1000.).
+            a(stat.waitTime / 1000 / 1000.).
             a(", procTime=").
-            a(stat.processTime() / 1000 / 1000.).
+            a(stat.procTime / 1000 / 1000.).
             a(", messageId=").
-            a(U.hexInt(stat.message().hashCode())).
+            a(U.hexInt(stat.msg.hashCode())).
             a(", queueSzBefore=").
-            a(stat.sizeBefore()).
+            a(stat.sizeBefore).
             a(", headMessageId=").
             a(stat.headHash()).
             a(", queueSzAfter=").
-            a(stat.sizeAfter()).
+            a(stat.sizeAfter).
             a(", message=").
-            a(stat.message().toString().replace("\n", " "));
+            a(stat.msg.toString().replace("\n", " "));
 
         return sb.toString();
     }
@@ -3808,42 +3816,54 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param msgCls Message class.
      * @param clo Closure.
      */
-    public <T extends Message> void addStatHandler(Class<T> msgCls, ProcessMessageStatsClosure<T> clo) {
-        handlers.put(msgCls.getSimpleName(), (ProcessMessageStatsClosure<Message>) clo);
+    public <T extends Message> void addStatHandler(Class<T> msgCls, IgniteInClosure<T> clo) {
+        handlers.put(msgCls.getSimpleName(), (IgniteInClosure<Message>)clo);
     }
 
     /** */
-    private Metric getMsgMetric(
-        MetricRegistry registry,
-        Class<? extends Message> cls
-    ) {
-        return (HistogramMetric)
-            registry.findMetric(cls.getSimpleName());
+    private Metric getMsgMetric(MetricRegistry registry, Class<? extends Message> cls) {
+        return registry.findMetric(cls.getSimpleName());
     }
 
+    /**
+     * Returns corresponding monotonic registry name for histogram registry name.
+     *
+     * @param histogramRegistryName Histogram registry name.
+     * @return Monotonic registry name.
+     */
     public static String monotonicRegistryName(String histogramRegistryName) {
-        return "total" + new GridStringBuilder()
+        return new GridStringBuilder()
+            .a("total")
             .a(Character.toUpperCase(histogramRegistryName.charAt(0)))
             .a(histogramRegistryName.substring(1))
             .toString();
     }
 
     /** */
-    public interface ProcessMessageStatsClosure<T extends Message> {
-        /** */
-        void apply(T msg);
-    }
+    private static class ProcStat {
+        /** Enqueue timestamp. */
+        final long enqueueTs;
 
-    /** */
-    public static class ProcStat {
-        long enqueueTs;
-        long waitTime;
-        long procTime;
-        Message msg;
-        int sizeBefore;
-        Message head;
-        int sizeAfter;
-        Object ctx;
+        /** Waiting time in queue. */
+        final long waitTime;
+
+        /** Processing time. */
+        final long procTime;
+
+        /** Message. */
+        final Message msg;
+
+        /** Queue size before. */
+        final int sizeBefore;
+
+        /** Stripe head in the moment of enqueuing. */
+        final Message head;
+
+        /** Queue size after. */
+        final int sizeAfter;
+
+        /** Context. */
+        final Object ctx;
 
         public ProcStat(long enqueueTs, long waitTime, long procTime, Message msg, int sizeBefore,
             Message head, int sizeAfter, Object ctx) {
@@ -3858,66 +3878,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
 
         /**
-         * @return Enqueue timestamp.
-         */
-        public long enqueueTimestamp() {
-            return enqueueTs;
-        }
-
-        /**
-         * @return Wait time in queue.
-         */
-        public long waitTime() {
-            return waitTime;
-        }
-
-        /**
-         * @return Process time.
-         */
-        public long processTime() {
-            return procTime;
-        }
-
-        /**
-         * @return Message.
-         */
-        public Message message() {
-            return msg;
-        }
-
-        /**
-         * @return Size before.
-         */
-        public int sizeBefore() {
-            return sizeBefore;
-        }
-
-        /**
-         * @return Head.
-         */
-        public Message head() {
-            return head;
-        }
-
-        /**
          * @return Head hash.
          */
         public String headHash() {
             return head == null ? "null" : U.hexInt(head.hashCode());
-        }
-
-        /**
-         * @return Size after.
-         */
-        public int sizeAfter() {
-            return sizeAfter;
-        }
-
-        /**
-         * @return Context.
-         */
-        public Object context() {
-            return ctx;
         }
     }
 

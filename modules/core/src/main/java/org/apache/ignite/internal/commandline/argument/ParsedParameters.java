@@ -19,8 +19,9 @@ import java.util.Map;
 import org.apache.ignite.IgniteException;
 
 /**
+ * Parsed CLI parameters.
  *
- * @param <E>
+ * @param <E> Enum which parameters belong to.
  */
 public class ParsedParameters<E extends Enum<E> & CommandArg> {
     /** */

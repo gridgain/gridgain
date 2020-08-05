@@ -31,11 +31,22 @@ import static org.apache.ignite.internal.commandline.argument.CommandArgUtils.of
 import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_STRING_ARRAY;
 import static org.apache.ignite.internal.util.lang.GridFunc.transform;
 
+/**
+ * Parser for command line parameters.
+ *
+ * @param <E> Enum which parameters belong to.
+ */
 public class CommandParametersParser<E extends Enum<E> & CommandArg> {
+    /** */
     private final Class<E> parametersEnum;
+
+    /** */
     private final Map<String, CommandParameter<E, ? extends Object>> parametersMap;
+
+    /** */
     private final Set<CommandParameter<E, ? extends Object>> neededObligatoryParams;
 
+    /** */
     public CommandParametersParser(Class<E> parametersEnum, List<CommandParameter<E, ? extends Object>> parametersList) {
         this.parametersEnum = parametersEnum;
 
@@ -53,6 +64,12 @@ public class CommandParametersParser<E extends Enum<E> & CommandArg> {
         this.neededObligatoryParams = Collections.unmodifiableSet(neededObligatoryParams);
     }
 
+    /**
+     * Parses arguments from iterator.
+     *
+     * @param argIter Args iterator.
+     * @return Parsed parameters.
+     */
     public ParsedParameters<E> parse(CommandArgIterator argIter) {
         Set<CommandParameter<E, ? extends Object>> neededObligatoryParams = new HashSet<>(this.neededObligatoryParams);
 
@@ -126,13 +143,14 @@ public class CommandParametersParser<E extends Enum<E> & CommandArg> {
         return new ParsedParameters<>(parametersMap, res);
     }
 
+    /**
+     * @return Usage string for all possible parameters.
+     */
     public String[] paramUsageStrings() {
         return transform(parametersMap.values(), CommandParameter::usage).toArray(EMPTY_STRING_ARRAY);
     }
 
     /**
-     * Returns help text.
-     *
      * @return Help text.
      */
     public String helpText() {

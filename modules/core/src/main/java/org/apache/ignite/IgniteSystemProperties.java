@@ -840,16 +840,13 @@ public final class IgniteSystemProperties {
             "IGNITE_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD";
 
     /** Enables message processing stats. */
-    public static final String IGNITE_MESSAGE_STATS_ENABLED =
-        "IGNITE_MESSAGE_STATS_ENABLED";
+    public static final String IGNITE_MESSAGE_STATS_ENABLED = "IGNITE_MESSAGE_STATS_ENABLED";
 
     /** Define threshold for too long processing. */
-    public static final String IGNITE_STAT_TOO_LONG_PROCESSING =
-        "IGNITE_STAT_TOO_LONG_PROCESSING";
+    public static final String IGNITE_STAT_TOO_LONG_PROCESSING = "IGNITE_STAT_TOO_LONG_PROCESSING";
 
     /** Define threshold for too long waiting in queue. */
-    public static final String IGNITE_STAT_TOO_LONG_WAITING =
-        "IGNITE_STAT_TOO_LONG_WAITING";
+    public static final String IGNITE_STAT_TOO_LONG_WAITING = "IGNITE_STAT_TOO_LONG_WAITING";
 
     /**
      * If this property is set, then Ignite will use Async File IO factory by default.

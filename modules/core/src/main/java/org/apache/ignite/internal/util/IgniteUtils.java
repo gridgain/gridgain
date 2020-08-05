@@ -12402,7 +12402,7 @@ public abstract class IgniteUtils {
         if (val < low || val > high) {
             throw new IgniteException(
                 new GridStringBuilder("Value ")
-                    .a(valName == null ? "" : valName + " ")
+                    .a(valName == null ? "" : valName)
                     .a(" must be within the range [").a(low).a(",").a(high).a("]").a(" but received: ").a((val))
                     .toString()
             );

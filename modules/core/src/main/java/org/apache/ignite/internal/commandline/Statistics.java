@@ -38,19 +38,21 @@ import static org.apache.ignite.internal.commandline.CommandList.STATISTICS;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.NODE;
 import static org.apache.ignite.internal.commandline.StatisticsCommandArg.TYPE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
-import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryArg;
-import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalArg;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.mandatoryParam;
+import static org.apache.ignite.internal.commandline.argument.CommandParameter.optionalParam;
 
 /**
- *
+ * Statistics command ("--stats").
  */
 public class Statistics implements Command<MessageStatsTaskArg> {
-    /** */
+    /**
+     * Parser for this command's arguments.
+     */
     private static final CommandParametersParser<StatisticsCommandArg> STATS_PARAMS_PARSER = new CommandParametersParser<>(
         StatisticsCommandArg.class,
         asList(
-            optionalArg(NODE, "", UUID.class, () -> null),
-            mandatoryArg(TYPE, "", MessageStatsTaskArg.StatisticsType.class)
+            optionalParam(NODE, "", UUID.class, () -> null),
+            mandatoryParam(TYPE, "", MessageStatsTaskArg.StatisticsType.class)
         )
     );
 
@@ -61,7 +63,6 @@ public class Statistics implements Command<MessageStatsTaskArg> {
         "Total time (ms)",
         "Avg (ms)"
     };
-
 
     /** */
     private MessageStatsTaskArg arg;
@@ -91,6 +92,13 @@ public class Statistics implements Command<MessageStatsTaskArg> {
         return res;
     }
 
+    /**
+     * Prints statistics report to log.
+     *
+     * @param taskName Task name.
+     * @param taskResult Result to print.
+     * @param log Logger.
+     */
     private void printReport(String taskName, MessageStatsTaskResult taskResult, Logger log) {
         if (taskResult.histograms().isEmpty()) {
             log.info("No data for given metrics was found.");
