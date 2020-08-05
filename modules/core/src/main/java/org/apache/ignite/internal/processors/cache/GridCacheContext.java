@@ -74,7 +74,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTransactionalCache;
-import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
+import org.apache.ignite.internal.processors.cache.dr.GridCacheReplicationManager;
 import org.apache.ignite.internal.processors.cache.jta.CacheJtaManagerAdapter;
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
@@ -186,7 +186,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     private CacheCompressionManager compressMgr;
 
     /** Replication manager. */
-    private GridCacheDrManager drMgr;
+    private GridCacheReplicationManager drMgr;
 
     /** Conflict resolver manager. */
     private CacheConflictResolutionManager rslvrMgr;
@@ -343,7 +343,7 @@ public class GridCacheContext<K, V> implements Externalizable {
         CacheContinuousQueryManager contQryMgr,
         CacheDataStructuresManager dataStructuresMgr,
         GridCacheTtlManager ttlMgr,
-        GridCacheDrManager drMgr,
+        GridCacheReplicationManager drMgr,
         CacheConflictResolutionManager<K, V> rslvrMgr,
         CachePluginManager pluginMgr,
         GridCacheAffinityManager affMgr,
@@ -1167,7 +1167,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     /**
      * @return DR manager.
      */
-    public GridCacheDrManager dr() {
+    public GridCacheReplicationManager dr() {
         return drMgr;
     }
 
