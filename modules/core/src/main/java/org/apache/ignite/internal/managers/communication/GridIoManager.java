@@ -1414,7 +1414,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     try {
                         processRegularMessage0(msg, nodeId);
 
-                        writeMessageMetrics(msg,
+                        if (metricsConfiguration.diagnosticMessageStatsEnabled()) {
+                            writeMessageMetrics(msg,
                                 startWait,
                                 startProc,
                                 System.nanoTime(),
@@ -1422,7 +1423,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                                 beforeQueueSize,
                                 head,
                                 stripe == null ? -1 : stripe.queueSize()
-                        );
+                            );
+                        }
                     }
                     finally {
                         MarshallerUtils.jobSenderVersion(null);
