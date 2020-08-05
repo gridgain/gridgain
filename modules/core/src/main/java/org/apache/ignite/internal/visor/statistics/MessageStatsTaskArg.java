@@ -93,7 +93,7 @@ public class MessageStatsTaskArg extends VisorDataTransferObject {
             return name;
         }
 
-        /** {@inheritDoc} */
+        /** */
         @Nullable public static StatisticsType fromOrdinal(int ord) {
             return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
         }

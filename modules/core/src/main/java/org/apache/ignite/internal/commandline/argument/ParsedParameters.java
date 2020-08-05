@@ -28,7 +28,7 @@ public class ParsedParameters<E extends Enum<E> & CommandArg> {
     private final Map<String, CommandParameter<E, ? extends Object>> parametersMap;
 
     /** */
-    private final Map<E,  ? extends Object> parsedParams;
+    private final Map<E, ? extends Object> parsedParams;
 
     /** */
     public ParsedParameters(

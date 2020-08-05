@@ -59,7 +59,7 @@ public class MessageStatsTaskResult extends VisorDataTransferObject {
     }
 
     /** */
-    public Map <String, Long> monotonicMetric() {
+    public Map<String, Long> monotonicMetric() {
         return monotonicMetric;
     }
 
