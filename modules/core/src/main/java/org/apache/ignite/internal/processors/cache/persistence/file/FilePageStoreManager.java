@@ -32,10 +32,12 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.StandardCopyOption;
 import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,7 +78,6 @@ import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCa
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridStripedReadWriteLock;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -345,7 +346,16 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** {@inheritDoc} */
     @Override public void beginRecover() {
-        checkAndCleanupCacheFiles();
+        List<String> groupsWithWalDisabled = checkCachesWithDisabledWal();
+
+        if (!groupsWithWalDisabled.isEmpty()) {
+            String errorMsg = "Cache groups with potentially corrupted partition files found. " +
+                "Cleanup cache group folders and restart the node: " + groupsWithWalDisabled;
+
+            log.warning(errorMsg);
+
+            throw new IgniteException(errorMsg);
+        }
 
         for (CacheStoreHolder holder : idxCacheStores.values()) {
             holder.idxStore.beginRecover();
@@ -356,10 +366,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /**
-     * Checks caches' settings and for all caches with disabled WAL cleans up cache files
-     * including partition and index files.
+     * Checks cache groups' settings and returns groups names with disabled WAL.
+     *
+     * @return List of cache groups names that had WAL disabled before node stop.
      */
-    private void checkAndCleanupCacheFiles() {
+    private List<String> checkCachesWithDisabledWal() {
+        List<String> groupsWithDisabledWal = new ArrayList<>();
+
         for (Integer grpDescId : idxCacheStores.keySet()) {
             CacheGroupDescriptor desc = cctx.cache().cacheGroupDescriptor(grpDescId);
 
@@ -370,13 +383,18 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 if (!localEnabled || !globalEnabled) {
                     File dir = cacheWorkDir(desc.config());
 
-                    assert dir.exists();
-
-                    for (File file : dir.listFiles())
-                        assert IgniteUtils.delete(file) : "Failed to cleanup file: " + file.getName();
+                    if (Arrays.stream(
+                        dir.listFiles())
+                        .filter(f -> !f.getName().equals(CACHE_DATA_FILENAME))
+                        .count() > 0)
+                    {
+                        groupsWithDisabledWal.add(desc.cacheOrGroupName());
+                    }
                 }
             }
         }
+
+        return groupsWithDisabledWal;
     }
 
     /** {@inheritDoc} */

@@ -64,6 +64,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -635,7 +636,31 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
      * <p>
      * Test scenario:
      * <ol>
-     *
+     *      <li>
+     *          Two server nodes are started, cluster is activated, baseline is set. 2500 keys are put into cache.
+     *      </li>
+     *      <li>
+     *          Checkpoint is started and finished on both nodes.
+     *      </li>
+     *      <li>
+     *          Node n1 is stopped, another 2500 keys are put into the same cache.
+     *      </li>
+     *      <li>
+     *          Node n1 is started back so rebalancing is triggered from n0 to n1. WAL is turned off on n1 automatically.
+     *      </li>
+     *      <li>
+     *          Both nodes are stopped without checkpoint.
+     *      </li>
+     *      <li>
+     *          CP END marker for the first checkpoint is removed on node n1 so node will think it crushed during checkpoint
+     *          on the next restart.
+     *      </li>
+     *      <li>
+     *          Node n1 fails to start as it sees potentially corrupted files of one cache. Manual action is required.
+     *      </li>
+     *      <li>
+     *          Cache files are cleaned up manually on node n1 and it starts successfully.
+     *      </li>
      * </ol>
      * </p>
      * @throws Exception
@@ -684,6 +709,12 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
             if (cpMark.getName().contains("-END"))
                 cpMark.delete();
         }
+
+        assertThrows(null, () -> startGrid(1), Exception.class, null);
+        File defaultCacheDir = new File(ig1LfsDir, "cache-" + DEFAULT_CACHE_NAME);
+
+        for (File file : defaultCacheDir.listFiles())
+            file.delete();
 
         ig1 = startGrid(1);
         ig1.cluster().state(ClusterState.ACTIVE);

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
@@ -24,10 +25,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteClientReconnectAbstractTest;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.junit.Ignore;
@@ -70,6 +74,8 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
     @Test
     public void testCacheCleanup() throws Exception {
         Ignite srv = startGrid(config(SRV_1, false, false));
+
+        File cacheToClean = cacheDir(srv, CACHE_NAME_2);
 
         srv.cluster().state(ClusterState.ACTIVE);
 
@@ -117,6 +123,8 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         stopAllGrids(true);
 
+        cleanCacheDir(cacheToClean);
+
         srv = startGrid(config(SRV_1, false, false));
 
         srv.cluster().state(ClusterState.ACTIVE);
@@ -129,6 +137,24 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         assertEquals(30, cache1.size());
         assertEquals(0, cache2.size());
+    }
+
+    /** */
+    private File cacheDir(Ignite ig, String cacheName) throws IgniteCheckedException {
+        String igFolder = ((IgniteEx)ig).context().pdsFolderResolver().resolveFolders().folderName();
+        File dbDir = U.resolveWorkDirectory(ig.configuration().getWorkDirectory(), "db", false);
+
+        File igPdsFolder = new File(dbDir, igFolder);
+
+        return new File(igPdsFolder, "cache-" + cacheName);
+    }
+
+    /** */
+    private void cleanCacheDir(File cacheDir) {
+        for (File f : cacheDir.listFiles()) {
+            if (!f.getName().endsWith(".dat"))
+                f.delete();
+        }
     }
 
     /**
@@ -172,7 +198,9 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
         }
 
         // Start other nodes.
-        startGrid(config(SRV_2, false, false));
+        IgniteEx ig2 = startGrid(config(SRV_2, false, false));
+
+        File ig2CacheDir = cacheDir(ig2, CACHE_NAME);
 
         if (crdFiltered)
             srv.cluster().disableWal(CACHE_NAME);
@@ -194,6 +222,8 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
             srv.cluster().enableWal(CACHE_NAME);
             assertForAllNodes(CACHE_NAME, true);
         }
+
+        cleanCacheDir(ig2CacheDir);
 
         // Start other nodes again.
         startGrid(config(SRV_2, false, false));
@@ -267,7 +297,12 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
                         victimName = SRV_2;
 
                     try {
+                        File cacheDir = cacheDir(grid(victimName), CACHE_NAME);
+
                         stopGrid(victimName);
+
+                        cleanCacheDir(cacheDir);
+
                         startGrid(config(victimName, false, false));
 
                         Thread.sleep(200);
