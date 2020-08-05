@@ -240,20 +240,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** */
     public static final String MSG_STAT_TOTAL_QUEUE_WAITING_TIME = monotonicRegistryName(MSG_STAT_QUEUE_WAITING_TIME);
 
-    /** */
-    public static final String MSG_STAT_QUEUE_SIZE_BEFORE = "queueSizeBefore";
-
-    /** */
-    public static final String MSG_STAT_QUEUE_SIZE_AFTER = "queueSizeAfter";
-
-
     /** Current IO policy. */
     private static final ThreadLocal<Byte> CUR_PLC = new ThreadLocal<>();
 
     /** */
     public static final long[] MSG_HISTOGRAM_THRESHOLDS = new long[] {1, 5, 10, 30, 50, 100, 250, 500, 750, 1000};
 
-    /** */
+    /** Types of messages that are measured with diagnostic metrics. */
     public static final Set<Class> MSG_MEASURED_TYPES = Collections.unmodifiableSet(new HashSet(asList(
         GridNearSingleGetRequest.class,
         GridNearSingleGetResponse.class,
@@ -277,7 +270,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         GridNearAtomicUpdateResponse.class
     )));
 
-    /** */
+    /** Limit of warnings count that will be printed in log at once. */
     private final int SLOW_MSG_WARN_LIMIT = IgniteSystemProperties.getInteger(IGNITE_DIAGNOSTIC_WARN_LIMIT, 10);
 
     /** Listeners by topic. */
@@ -353,16 +346,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** Initialized from single thread when grid starts, accessed from many. */
     private final Map<String, IgniteInClosure<Message>> handlers = new HashMap<>();
 
-    /** */
+    /** Registry for histograms of message processing time, see {@link #MSG_MEASURED_TYPES}. */
     private volatile MetricRegistry msgProcessingTimeHistogramsRegistry;
 
-    /** */
+    /** Registry for metrics of message total processing time, see {@link #MSG_MEASURED_TYPES}. */
     private volatile MetricRegistry msgTotalProcessingTimeRegistry;
 
-    /** */
+    /** Registry for histograms of message queue waiting time, see {@link #MSG_MEASURED_TYPES}. */
     private volatile MetricRegistry msgQueueWaitingTimeHistogramsRegistry;
 
-    /** */
+    /** Registry for metrics of message total queue waiting time, see {@link #MSG_MEASURED_TYPES}. */
     private volatile MetricRegistry msgTotalQueueWaitingTimeRegistry;
 
     /** */
@@ -371,7 +364,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** */
     private final Map<Thread, List<ProcStat>> sharedSlowMsgs = new ConcurrentHashMap<>();
 
-    /** */
+    /** Distributed configuration for metrics. */
     private final MetricsDistributedConfiguration metricsConfiguration;
 
     /** */
