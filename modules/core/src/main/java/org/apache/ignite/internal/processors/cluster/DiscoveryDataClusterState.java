@@ -229,7 +229,7 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return {@code True} if transition is baseline change.
      */
     public boolean baselineChanging() {
-        return transition() && prevState != null && prevState.active() && active();
+        return transition() && prevState != null && prevState.state() == state();
     }
 
     /**

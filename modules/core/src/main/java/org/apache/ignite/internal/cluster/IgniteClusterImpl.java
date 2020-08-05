@@ -50,6 +50,7 @@ import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -405,7 +406,14 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         guard();
 
         try {
-            BaselineTopology blt = ctx.state().clusterState().baselineTopology();
+            DiscoveryDataClusterState state = ctx.state().clusterState();
+
+            BaselineTopology blt;
+
+            if (state.baselineChanging())
+                blt = state.previousBaselineTopology();
+            else
+                blt = state.baselineTopology();
 
             return blt != null ? blt.currentBaseline() : null;
         }
