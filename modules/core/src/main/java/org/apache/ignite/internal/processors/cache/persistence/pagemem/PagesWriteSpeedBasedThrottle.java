@@ -84,6 +84,9 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** Threads set. Contains identifiers of all threads which were marking pages for current checkpoint. */
     private final GridConcurrentHashSet<Long> threadIds = new GridConcurrentHashSet<>();
 
+    /** Threads set. Contains threads which is currently parked because of throttling. */
+    private final GridConcurrentHashSet<Thread> parkedThreads = new GridConcurrentHashSet<>();
+
     /**
      * Used for calculating speed of marking pages dirty.
      * Value from past 750-1000 millis only.
@@ -241,7 +244,14 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
                 + " for timeout(ms)=" + (throttleParkTimeNs / 1_000_000));
         }
 
-        LockSupport.parkNanos(throttleParkTimeNs);
+        parkedThreads.add(Thread.currentThread());
+
+        try {
+            LockSupport.parkNanos(throttleParkTimeNs);
+        }
+        finally {
+            parkedThreads.remove(Thread.currentThread());
+        }
     }
 
     /**
@@ -466,6 +476,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         speedCpWrite.finishInterval();
         speedMarkAndAvgParkTime.finishInterval();
         threadIds.clear();
+        parkedThreads.forEach(LockSupport::unpark);
     }
 
     /**
@@ -525,12 +536,19 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (speed <= 0)
             return 0;
 
-        long timeForOnePage = calcDelayTime(speed, threadIds.size(), 1);
+        long timeForOnePage = calcDelayTime(speed, parkedThreads.size(), 1);
 
         if (timeForOnePage == 0)
             return 0;
 
         return 1.0 * throttleParkTime() / timeForOnePage;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean shouldThrottle() {
+        int checkpointBufLimit = (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD);
+
+        return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit;
     }
 
     /**
