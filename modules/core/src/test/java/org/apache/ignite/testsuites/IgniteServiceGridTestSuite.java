@@ -20,7 +20,9 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.ComputeJobCancelWithServiceSelfTest;
 import org.apache.ignite.internal.processors.service.ClosureServiceClientsNodesTest;
 import org.apache.ignite.internal.processors.service.GridServiceClientNodeTest;
+import org.apache.ignite.internal.processors.service.GridServiceClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.service.GridServiceContinuousQueryRedeployTest;
+import org.apache.ignite.internal.processors.service.GridServiceDeployClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.service.GridServiceDeploymentCompoundFutureSelfTest;
 import org.apache.ignite.internal.processors.service.GridServiceDeploymentExceptionPropagationTest;
 import org.apache.ignite.internal.processors.service.GridServicePackagePrivateSelfTest;
@@ -113,6 +115,8 @@ import org.junit.runners.Suite;
     ServiceInfoSelfTest.class,
     ServiceDeploymentProcessIdSelfTest.class,
     ServiceHotRedeploymentViaDeploymentSpiTest.class,
+    GridServiceDeployClusterReadOnlyModeTest.class,
+    GridServiceClusterReadOnlyModeTest.class,
 })
 public class IgniteServiceGridTestSuite {
     /** Old service grid property. */

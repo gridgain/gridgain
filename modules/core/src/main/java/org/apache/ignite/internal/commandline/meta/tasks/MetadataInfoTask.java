@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
+import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataDetailsCommand;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataListCommand;
@@ -82,8 +83,12 @@ public class MetadataInfoTask extends VisorMultiNodeTask<MetadataTypeArgs, Metad
                 // returns specified metadata
                 int typeId = arg.typeId(ignite.context());
 
-                return new MetadataListResult(Collections.singleton(
-                    ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata(typeId)));
+                BinaryMetadata binMeta = ((CacheObjectBinaryProcessorImpl)ignite.context().cacheObjects()).binaryMetadata(typeId);
+
+                if (binMeta == null)
+                    throw new IgniteException("Failed to get metadata, type not found: " + typeId);
+
+                return new MetadataListResult(Collections.singleton(binMeta));
             }
         }
     }

@@ -94,8 +94,6 @@ namespace ignite
                  */
                 SP_ClusterGroupImpl ForClientNodes(std::string cacheName);
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
                 /**
                  * Get a cluster group of nodes started in client mode.
                  *
@@ -205,16 +203,12 @@ namespace ignite
                  */
                 SP_ClusterGroupImpl ForRemotes();
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
-
                 /**
                  * Creates a cluster group of nodes started in server mode.
                  *
                  * @return Pointer to cluster group of nodes started in server mode.
                  */
                 SP_ClusterGroupImpl ForServers();
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
                 /**
                  * Get cluster group with one youngest node in the current cluster group.
@@ -270,8 +264,6 @@ namespace ignite
                  */
                 std::vector<ignite::cluster::ClusterNode> GetNodes();
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
-
                 /**
                  * Get compute instance over this cluster group.
                  *
@@ -279,16 +271,12 @@ namespace ignite
                  */
                 SP_ComputeImpl GetCompute();
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
                 /**
                  * Get compute instance over specified cluster group.
                  *
                  * @return Pointer to compute instance.
                  */
                 SP_ComputeImpl GetCompute(ignite::cluster::ClusterGroup grp);
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
                 /**
                  * Check if the Ignite grid is active.
@@ -304,8 +292,6 @@ namespace ignite
                  *    deactivation process.
                  */
                 void SetActive(bool active);
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
                 /**
                  * Disable write-ahead logging for specified cache.
@@ -375,12 +361,8 @@ namespace ignite
                  */
                 int64_t GetTopologyVersion();
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
-
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(ClusterGroupImpl);
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
                 /**
                  * Get cluster group without cluster nodes.
@@ -398,8 +380,6 @@ namespace ignite
                  */
                 SP_ClusterGroupImpl ForCacheNodes(std::string name, int32_t op);
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
-
                 /**
                  * Make cluster group using java reference and
                  * internal state of this cluster group.
@@ -416,16 +396,12 @@ namespace ignite
                  */
                 SP_ComputeImpl InternalGetCompute();
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
                 /**
                  * Read cluster nodes from stream.
                  *
                  * @return Pointer to container of cluster nodes.
                  */
                 SP_ClusterNodes ReadNodes(binary::BinaryReaderImpl& reader);
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
                 /**
                  * Set predicate holder for given cluster group.

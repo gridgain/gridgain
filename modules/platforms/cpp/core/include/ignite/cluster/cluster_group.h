@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
+ /**
+  * @file
+  * Declares ignite::cluster::ClusterGroup class.
+  */
+
 #ifndef _IGNITE_CLUSTER_CLUSTER_GROUP
 #define _IGNITE_CLUSTER_CLUSTER_GROUP
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
-/**
- * @file
- * Declares ignite::cluster::ClusterGroup class.
- */
 
 #include <ignite/cluster/cluster_node.h>
 
@@ -243,7 +241,5 @@ namespace ignite
         };
     }
 }
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
 #endif //_IGNITE_CLUSTER_CLUSTER_GROUP

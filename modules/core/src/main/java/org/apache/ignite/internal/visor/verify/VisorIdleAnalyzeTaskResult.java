@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.internal.processors.cache.verify.PartitionEntryHashRecord;
 import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecord;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
@@ -35,6 +36,7 @@ public class VisorIdleAnalyzeTaskResult extends VisorDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Results. */
+    @GridToStringInclude
     private Map<PartitionHashRecord, List<PartitionEntryHashRecord>> divergedEntries;
 
     /**
