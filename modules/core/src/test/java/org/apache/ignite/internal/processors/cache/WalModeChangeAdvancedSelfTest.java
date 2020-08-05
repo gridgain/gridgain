@@ -31,6 +31,8 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteClientReconnectAbstractTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
@@ -39,6 +41,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
 /**
  * Concurrent and advanced tests for WAL state change.
@@ -67,6 +70,59 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
     }
 
     /**
+     * Verifies that node with consistent partitions (fully synchronized with disk on a previous checkpoint)
+     * starts successfully even if WAL for that cache group is globally disabled.
+     *
+     * <p>
+     *     Test scenario:
+     * </p>
+     * <ol>
+     *     <li>
+     *         Start a cluster from one server node, activate cluster.
+     *     </li>
+     *     <li>
+     *         Create new cache. Disable WAL for the cache and put some data to it.
+     *     </li>
+     *     <li>
+     *         Trigger checkpoint and wait for it finish. Restart node.
+     *     </li>
+     *     <li>
+     *         Verify that node starts successfully and data is presented in the cache.
+     *     </li>
+     * </ol>
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConsistentDataPreserved() throws Exception {
+        Ignite srv = startGrid(config(SRV_1, false, false));
+
+        srv.cluster().state(ACTIVE);
+
+        IgniteCache cache1 = srv.getOrCreateCache(cacheConfig(CACHE_NAME, PARTITIONED, TRANSACTIONAL));
+
+        srv.cluster().disableWal(CACHE_NAME);
+
+        for (int i = 0; i < 10; i++)
+            cache1.put(i, i);
+
+        GridCacheDatabaseSharedManager dbMrg0 = (GridCacheDatabaseSharedManager) ((IgniteEx)srv).context().cache().context().database();
+
+        dbMrg0.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
+
+        stopGrid(SRV_1);
+
+        srv = startGrid(config(SRV_1, false, false));
+
+        assertForAllNodes(CACHE_NAME, false);
+
+        cache1 = srv.cache(CACHE_NAME);
+
+        for (int i = 0; i < 10; i++)
+            assertNotNull(cache1.get(i));
+    }
+
+    /**
      * Test cache cleanup on restart.
      *
      * @throws Exception If failed.
@@ -77,7 +133,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         File cacheToClean = cacheDir(srv, CACHE_NAME_2);
 
-        srv.cluster().state(ClusterState.ACTIVE);
+        srv.cluster().state(ACTIVE);
 
         IgniteCache cache1 = srv.getOrCreateCache(cacheConfig(CACHE_NAME, PARTITIONED, TRANSACTIONAL));
         IgniteCache cache2 = srv.getOrCreateCache(cacheConfig(CACHE_NAME_2, PARTITIONED, TRANSACTIONAL));
@@ -127,7 +183,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         srv = startGrid(config(SRV_1, false, false));
 
-        srv.cluster().state(ClusterState.ACTIVE);
+        srv.cluster().state(ACTIVE);
 
         cache1 = srv.cache(CACHE_NAME);
         cache2 = srv.cache(CACHE_NAME_2);
@@ -187,7 +243,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
         // Start node and disable WAL.
         Ignite srv = startGrid(config(SRV_1, false, crdFiltered));
 
-        srv.cluster().active(true);
+        srv.cluster().state(ACTIVE);
 
         srv.getOrCreateCache(cacheConfig(PARTITIONED));
         assertForAllNodes(CACHE_NAME, true);
@@ -273,7 +329,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         Ignite cli = startGrid(config(CLI, true, false));
 
-        cli.cluster().active(true);
+        cli.cluster().state(ACTIVE);
 
         cli.getOrCreateCache(cacheConfig(PARTITIONED));
 
@@ -347,7 +403,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
         final Ignite srv = startGrid(config(SRV_1, false, false));
         Ignite cli = startGrid(config(CLI, true, false));
 
-        cli.cluster().active(true);
+        cli.cluster().state(ACTIVE);
 
         cli.getOrCreateCache(cacheConfig(PARTITIONED));
 
@@ -406,7 +462,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
         final Ignite srv = startGrid(config(SRV_1, false, false));
         Ignite cli = startGrid(config(CLI, true, false));
 
-        cli.cluster().active(true);
+        cli.cluster().state(ACTIVE);
 
         srv.createCache(cacheConfig(PARTITIONED));
 
@@ -472,7 +528,7 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
         final Ignite cacheCli = startGrid(config(CLI_2, true, false));
 
-        cacheCli.cluster().active(true);
+        cacheCli.cluster().state(ACTIVE);
 
         final IgniteCache cache = cacheCli.getOrCreateCache(cacheConfig(PARTITIONED));
 

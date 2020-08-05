@@ -64,6 +64,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
@@ -256,7 +257,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ignite = startGrids(3);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
@@ -338,7 +339,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ignite = startGrids(3);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         ignite.cluster().setBaselineTopology(3);
 
@@ -393,7 +394,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ignite = startGrids(3);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
@@ -436,7 +437,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         Ignite ignite = startGrids(nodeCnt);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(REPL_CACHE);
 
@@ -507,7 +508,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ignite = startGrids(3);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
@@ -590,7 +591,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ig1 = startGrid(1);
 
         ig0.cluster().baselineAutoAdjustEnabled(false);
-        ig0.cluster().state(ClusterState.ACTIVE);
+        ig0.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
@@ -615,7 +616,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         stopAllGrids(false);
 
         ig1 = startGrid(1);
-        ig1.cluster().state(ClusterState.ACTIVE);
+        ig1.cluster().state(ACTIVE);
 
         ig1.resetLostPartitions(Arrays.asList(DEFAULT_CACHE_NAME));
 
@@ -679,7 +680,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         File ig1CpDir = new File(ig1LfsDir, "cp");
 
         ig0.cluster().baselineAutoAdjustEnabled(false);
-        ig0.cluster().state(ClusterState.ACTIVE);
+        ig0.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
@@ -717,7 +718,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
             file.delete();
 
         ig1 = startGrid(1);
-        ig1.cluster().state(ClusterState.ACTIVE);
+        ig1.cluster().state(ACTIVE);
 
         cache = ig1.cache(DEFAULT_CACHE_NAME);
 
@@ -733,7 +734,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         IgniteEx ignite = startGrids(4);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
