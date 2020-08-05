@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#if (!NETCOREAPP)
 namespace Apache.Ignite.Core.Tests
 {
     using System;
@@ -42,7 +43,7 @@ namespace Apache.Ignite.Core.Tests
             if (args.Length == 1 && args[0] == "-basicTests")
             {
                 RunBasicTests();
-                
+
                 return;
             }
 
@@ -111,7 +112,7 @@ namespace Apache.Ignite.Core.Tests
                 "-run:" + string.Join(",", testClass.Select(x => x.FullName)),
                 Assembly.GetAssembly(typeof(TestRunner)).Location
             };
-            
+
             return Runner.Main(args.ToArray());
         }
 
@@ -131,3 +132,21 @@ namespace Apache.Ignite.Core.Tests
         }
     }
 }
+#else
+namespace Apache.Ignite.Core.Tests
+{
+    /// <summary>
+    /// Test runner.
+    /// </summary>
+    internal static class TestRunner
+    {
+        /// <summary>
+        /// Console entry point.
+        /// </summary>
+        private static void Main()
+        {
+            new IgniteStartStopTest().TestStartDefault();
+        }
+    }
+}
+#endif

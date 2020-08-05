@@ -44,19 +44,18 @@ namespace Apache.Ignite.Core.Tests.Cache
 
         /** Cache name: dummy. */
         private const string CacheDummy = "dummy";
-        
+
         /// <summary>
         /// Set up routine.
         /// </summary>
         [SetUp]
         public void SetUp()
         {
-            TestUtils.KillProcesses();
             Ignition.StopAll(true);
 
-            Ignition.Start(CreateConfiguration(GridData, @"config/dynamic/dynamic-data.xml"));
-            Ignition.Start(CreateConfiguration(GridDataNoCfg, @"config/dynamic/dynamic-data-no-cfg.xml"));
-            Ignition.Start(CreateConfiguration(GridClient, @"config/dynamic/dynamic-client.xml"));
+            Ignition.Start(CreateConfiguration(GridData, @"Config/Dynamic/dynamic-data.xml"));
+            Ignition.Start(CreateConfiguration(GridDataNoCfg, @"Config/Dynamic/dynamic-data-no-cfg.xml"));
+            Ignition.Start(CreateConfiguration(GridClient, @"Config/Dynamic/dynamic-client.xml"));
         }
 
         /// <summary>
@@ -132,7 +131,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var cacheData = Ignition.GetIgnite(GridData).GetCache<DynamicTestKey, DynamicTestValue>(cacheName);
 
-            var cacheDataNoCfg = 
+            var cacheDataNoCfg =
                 Ignition.GetIgnite(GridDataNoCfg).GetCache<DynamicTestKey, DynamicTestValue>(cacheName);
 
             var cacheClient = Ignition.GetIgnite(GridClient).GetCache<DynamicTestKey, DynamicTestValue>(cacheName);
@@ -198,6 +197,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             /** <inheritdoc /> */
             public override int GetHashCode()
             {
+                // ReSharper disable once NonReadonlyMemberInGetHashCode
                 return Id;
             }
         }
@@ -232,6 +232,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             /** <inheritdoc /> */
             public override int GetHashCode()
             {
+                // ReSharper disable once NonReadonlyMemberInGetHashCode
                 return Id;
             }
         }
