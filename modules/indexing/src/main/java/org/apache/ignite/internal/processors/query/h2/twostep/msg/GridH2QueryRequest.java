@@ -169,6 +169,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** */
     private boolean explicitTimeout;
+
     /**
      * Required by {@link Externalizable}
      */
