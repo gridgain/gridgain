@@ -1592,8 +1592,11 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
         }
 
-        if (procTimeMs > metricsConfiguration.diagnosticMessageStatTooLongProcessing()
-            || waitTimeMs > metricsConfiguration.diagnosticMessageStatTooLongWaiting()) {
+        long tooLongProcessingThreshold = metricsConfiguration.diagnosticMessageStatTooLongProcessing();
+        long tooLongQueueWaitingThreshold = metricsConfiguration.diagnosticMessageStatTooLongWaiting();
+
+        if ((tooLongProcessingThreshold > 0 && procTimeMs > tooLongProcessingThreshold)
+            || (tooLongQueueWaitingThreshold > 0 && waitTimeMs > tooLongQueueWaitingThreshold)) {
             List<ProcStat> slowMsgs = locSlowMsgHolder.get();
 
             if (slowMsgs == null) {

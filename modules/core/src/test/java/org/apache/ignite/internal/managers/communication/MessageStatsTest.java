@@ -45,10 +45,10 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_MESSAGE_STATS_ENAB
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STAT_TOO_LONG_PROCESSING;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STAT_TOO_LONG_WAITING;
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.util.lang.GridFunc.t;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 
 /**
@@ -92,18 +92,12 @@ public class MessageStatsTest extends GridCommonAbstractTest {
             cfg.setClientMode(true);
         }
         else {
-            CacheConfiguration ccfg = new CacheConfiguration(CACHE_NAME);
-
-            ccfg.setAtomicityMode(TRANSACTIONAL);
-            ccfg.setBackups(1);
-            ccfg.setWriteSynchronizationMode(FULL_SYNC);
-
-            CacheConfiguration atomic = new CacheConfiguration(DEFAULT_CACHE_NAME)
-                .setAtomicityMode(ATOMIC)
-                .setBackups(1)
-                .setWriteSynchronizationMode(FULL_SYNC);
-
-            cfg.setCacheConfiguration(ccfg, atomic);
+            cfg.setCacheConfiguration(
+                new CacheConfiguration(CACHE_NAME)
+                    .setAtomicityMode(TRANSACTIONAL)
+                    .setBackups(1)
+                    .setWriteSynchronizationMode(FULL_SYNC)
+            );
         }
 
         cfg.setMetricExporterSpi(new JmxMetricExporterSpi());
@@ -122,56 +116,35 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /** */
-    @Test
-    public void testStats() throws Exception {
-       /* IgniteEx ignite = startGrids(2);
+    /**
+     * @param nodeCnt Total node count.
+     * @param checks List of checks, see {@link #testJmx(String, String, int, int, IgniteBiTuple[])} for description.
+     * @throws Exception If failed.
+     */
+    private void doChecks(int nodeCnt, IgniteBiTuple<Boolean, Consumer<DiagnosticMXBean>>... checks) throws Exception {
+        List<DiagnosticMXBean> diagnosticMXBeans = new LinkedList<>();
 
-        DiagnosticMXBean mxBean =
-            getMxBean(ignite.name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class);
+        for (int i = 0; i < nodeCnt; i++)
+            diagnosticMXBeans.add(getMxBean(grid(0).name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class));
 
-        assertTrue(mxBean.getDiagnosticMessageStatsEnabled());
+        DiagnosticMXBean nodeMxBean = diagnosticMXBeans.get(0);
 
-        int testTooLongProcessing = 3725;
-
-        mxBean.setDiagnosticMessageStatTooLongProcessing(testTooLongProcessing);
-
-        Ignite newSrv = startGrid();
-
-        DiagnosticMXBean newSrvMxBean =
-            getMxBean(newSrv.name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class);
-
-        assertEquals(testTooLongProcessing, newSrvMxBean.getDiagnosticMessageStatTooLongProcessing());
-
-        mxBean.setDiagnosticMessageStatTooLongProcessing(250);
-
-        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
-
-        cache.put(1, 1);
-
-        slowPrepare = true;
-
-        doInTransaction(ignite, () -> {
-            cache.put(1, cache.get(1) + 1);
-
-            return null;
-        });
-
-        slowPrepare = false;
-
-        ignite.context().io().dumpProcessedMessagesStats();
-
-        assertTrue(slowMsgLogListener.check());*/
+        for (IgniteBiTuple<Boolean, Consumer<DiagnosticMXBean>> check : checks) {
+            if (check.get1()) {
+                for (DiagnosticMXBean mxBean : diagnosticMXBeans)
+                    check.get2().accept(mxBean);
+            } else
+                check.get2().accept(nodeMxBean);
+        }
     }
 
     /**
-     *
-     *
-     * @param sysProperty
-     * @param sysPropertyVal
-     * @param srvCnt
-     * @param clientCnt
-     * @param checks
+     * @param sysProperty System property to set for this test.
+     * @param sysPropertyVal System property value.
+     * @param srvCnt Count of servers.
+     * @param clientCnt Count of clients.
+     * @param checks List of checks, which are tuples of {@code Boolean} and {@code Consumer<DiagnosticMXBean>}.
+     *               Boolean value means whether we should do this check for mxBeans from every node.
      * @throws Exception If failed.
      */
     private void testJmx(
@@ -194,20 +167,13 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         for (int i = 0; i < clientCnt; i++)
             startGrid(CLIENT + i);
 
-        List<DiagnosticMXBean> diagnosticMXBeans = new LinkedList<>();
+        doChecks(srvCnt + clientCnt, checks);
 
-        for (int i = 0; i < srvCnt + clientCnt; i++)
-            diagnosticMXBeans.add(getMxBean(grid(0).name(), "Diagnostic", DiagnosticMXBean.class, DiagnosticMXBeanImpl.class));
+        startGrid((srvCnt++) + clientCnt);
+        startGrid(srvCnt + (clientCnt++));
 
-        DiagnosticMXBean nodeMxBean = diagnosticMXBeans.get(0);
-
-        for (IgniteBiTuple<Boolean, Consumer<DiagnosticMXBean>> check : checks) {
-            if (check.get1()) {
-                for (DiagnosticMXBean mxBean : diagnosticMXBeans)
-                    check.get2().accept(mxBean);
-            } else
-                check.get2().accept(nodeMxBean);
-        }
+        // Do last check after starting new nodes, for all nodes.
+        doChecks(srvCnt + clientCnt, t(true, checks[checks.length - 1].get2()));
 
         if (oldVal == null)
             System.clearProperty(sysProperty);
@@ -241,9 +207,19 @@ public class MessageStatsTest extends GridCommonAbstractTest {
     public void testJmxStatsTooLongProcessingOneNode() throws Exception {
         Consumer<DiagnosticMXBean> afterStart = mxBean -> assertEquals(10, mxBean.getDiagnosticMessageStatTooLongProcessing());
         Consumer<DiagnosticMXBean> set20 = mxBean -> mxBean.setDiagnosticMessageStatTooLongProcessing(20);
-        Consumer<DiagnosticMXBean> afterSet = mxBean -> assertEquals(20, mxBean.getDiagnosticMessageStatTooLongProcessing());
+        Consumer<DiagnosticMXBean> shouldBe20 = mxBean -> assertEquals(20, mxBean.getDiagnosticMessageStatTooLongProcessing());
+        Consumer<DiagnosticMXBean> setZero = mxBean -> mxBean.setDiagnosticMessageStatTooLongProcessing(0);
+        Consumer<DiagnosticMXBean> checkZero = mxBean -> assertEquals(0, mxBean.getDiagnosticMessageStatTooLongProcessing());
+        Consumer<DiagnosticMXBean> setMinus1 = mxBean -> assertThrows(log, () -> mxBean.setDiagnosticMessageStatTooLongProcessing(-1), IgniteException.class, null);
 
-        testJmx(IGNITE_STAT_TOO_LONG_PROCESSING, "10", 1, 0, t(false, afterStart), t(false, set20), t(false, afterSet));
+        testJmx(IGNITE_STAT_TOO_LONG_PROCESSING, "10", 1, 0,
+            t(false, afterStart),
+            t(false, set20),
+            t(true, shouldBe20),
+            t(false, setZero),
+            t(true, checkZero),
+            t(false, setMinus1)
+        );
     }
 
     /** */
@@ -251,9 +227,9 @@ public class MessageStatsTest extends GridCommonAbstractTest {
     public void testJmxStatsTooLongProcessingMultipleNode() throws Exception {
         Consumer<DiagnosticMXBean> afterStart = mxBean -> assertEquals(10, mxBean.getDiagnosticMessageStatTooLongProcessing());
         Consumer<DiagnosticMXBean> set20 = mxBean -> mxBean.setDiagnosticMessageStatTooLongProcessing(20);
-        Consumer<DiagnosticMXBean> afterSet = mxBean -> assertEquals(20, mxBean.getDiagnosticMessageStatTooLongProcessing());
+        Consumer<DiagnosticMXBean> shouldBe20 = mxBean -> assertEquals(20, mxBean.getDiagnosticMessageStatTooLongProcessing());
 
-        testJmx(IGNITE_STAT_TOO_LONG_PROCESSING, "10", 2, 2, t(true, afterStart), t(false, set20), t(true, afterSet));
+        testJmx(IGNITE_STAT_TOO_LONG_PROCESSING, "10", 2, 2, t(true, afterStart), t(false, set20), t(true, shouldBe20));
     }
 
     /** */
@@ -261,9 +237,19 @@ public class MessageStatsTest extends GridCommonAbstractTest {
     public void testJmxStatsTooLongWaitingOneNode() throws Exception {
         Consumer<DiagnosticMXBean> afterStart = mxBean -> assertEquals(10, mxBean.getDiagnosticMessageStatTooLongWaiting());
         Consumer<DiagnosticMXBean> set20 = mxBean -> mxBean.setDiagnosticMessageStatTooLongWaiting(20);
-        Consumer<DiagnosticMXBean> afterSet = mxBean -> assertEquals(20, mxBean.getDiagnosticMessageStatTooLongWaiting());
+        Consumer<DiagnosticMXBean> shouldBe20 = mxBean -> assertEquals(20, mxBean.getDiagnosticMessageStatTooLongWaiting());
+        Consumer<DiagnosticMXBean> setZero = mxBean -> mxBean.setDiagnosticMessageStatTooLongWaiting(0);
+        Consumer<DiagnosticMXBean> checkZero = mxBean -> assertEquals(0, mxBean.getDiagnosticMessageStatTooLongWaiting());
+        Consumer<DiagnosticMXBean> setMinus1 = mxBean -> assertThrows(log, () -> mxBean.setDiagnosticMessageStatTooLongWaiting(-1), IgniteException.class, null);
 
-        testJmx(IGNITE_STAT_TOO_LONG_WAITING, "10", 1, 0, t(false, afterStart), t(false, set20), t(false, afterSet));
+        testJmx(IGNITE_STAT_TOO_LONG_WAITING, "10", 1, 0,
+            t(false, afterStart),
+            t(false, set20),
+            t(true, shouldBe20),
+            t(false, setZero),
+            t(true, checkZero),
+            t(false, setMinus1)
+        );
     }
 
     /** */
@@ -276,6 +262,12 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         testJmx(IGNITE_STAT_TOO_LONG_WAITING, "10", 2, 2, t(true, afterStart), t(false, set20), t(true, afterSet));
     }
 
+    /**
+     * Imitates long processing of some messages.
+     *
+     * @param ignite Node.
+     * @throws Exception If failed.
+     */
     private void imitateLongProcessing(IgniteEx ignite) throws Exception {
         slowPrepare = true;
 
@@ -302,6 +294,12 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         }
     }
 
+    /**
+     * Imitates long queue waiting of some messages.
+     *
+     * @param ignite Node.
+     * @throws Exception If failed.
+     */
     private void imitateLongWaiting(IgniteEx ignite) throws Exception {
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
 
@@ -330,6 +328,15 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         }, procCnt * 5, "txAsyncLoad").get();
     }
 
+    /**
+     * Tests the presence of long warnings with given JMX settings. Printing of warnings is called manually.
+     *
+     * @param ignite Ignite node.
+     * @param mxBean JMX bean.
+     * @param tooLongWaiting Long waiting threshold.
+     * @param tooLongProcessing Long processing threshold.
+     * @throws Exception If failed.
+     */
     private void testLogWarningsWithJmxSettings(IgniteEx ignite,
         DiagnosticMXBean mxBean,
         long tooLongWaiting,
@@ -352,6 +359,7 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         assertEquals(tooLongProcessing != 0 && tooLongProcessing != Integer.MAX_VALUE, slowMsgLongProcLogListener.check());
     }
 
+    /** */
     @Test
     public void testLogWarnings() throws Exception {
         IgniteEx ignite = startGrids(3);
@@ -365,6 +373,7 @@ public class MessageStatsTest extends GridCommonAbstractTest {
         testLogWarningsWithJmxSettings(ignite, mxBean, Integer.MAX_VALUE, LONG_PROC_TEST_THRESHOLD);
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "3000")
     public void testLogWarningsOnTimeout() throws Exception {
@@ -408,7 +417,7 @@ public class MessageStatsTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * Test communication SPI that can delay some types of messages.
      */
     private class TestCommunicationSpi extends TcpCommunicationSpi {
         /** {@inheritDoc} */
