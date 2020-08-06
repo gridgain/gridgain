@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -646,7 +647,11 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         // Check that the value was actually persisted to the storage.
 
-        startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
+
+        awaitPartitionMapExchange();
+
+        assertSame(ignite0.cluster().state(), ClusterState.ACTIVE);
 
         assertEquals("value", metastorage(0).read(longKey));
 
