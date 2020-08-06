@@ -117,6 +117,9 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     /** Empty plugin processor. */
     private IgnitePluginProcessor pluginProc;
 
+    /** Subscription processor. */
+    private GridInternalSubscriptionProcessor subscriptionProcessor;
+
     /** Metrics manager. */
     private final GridMetricManager metricMgr;
 
@@ -154,6 +157,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
         this.marshallerCtx = new MarshallerContextImpl(null, null);
         this.cfg = prepareIgniteConfiguration();
+        this.subscriptionProcessor = new GridInternalSubscriptionProcessor(this);
         this.metricMgr = new GridMetricManager(this);
 
         // Fake folder provided to perform processor startup on empty folder.
@@ -660,7 +664,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
     /** {@inheritDoc} */
     @Override public GridInternalSubscriptionProcessor internalSubscriptionProcessor() {
-        return null;
+        return subscriptionProcessor;
     }
 
     /** {@inheritDoc} */
