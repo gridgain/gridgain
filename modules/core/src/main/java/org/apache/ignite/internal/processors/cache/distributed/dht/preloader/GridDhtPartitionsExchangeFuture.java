@@ -4173,13 +4173,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 //                        boolean needToResetOwners = resetOwners
                         List<SupplyPartitionInfo> list = null;
                         if (!resetOwnersForStartedCacheGroupsOnly)
-                            assignPartitionStates(top, resetOwners);
+                            list = assignPartitionStates(top, resetOwners);
                         else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
                             exchActions.cacheGroupsToStart().stream()
                                 .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
-                            assignPartitionStates(top, true);
+                            list = assignPartitionStates(top, true);
                         else
-                            assignPartitionStates(top, false);
+                            list = assignPartitionStates(top, false);
 
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
