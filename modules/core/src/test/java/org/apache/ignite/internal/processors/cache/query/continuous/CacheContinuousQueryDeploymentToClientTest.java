@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,11 +52,7 @@ public class CacheContinuousQueryDeploymentToClientTest extends GridCommonAbstra
 
         cfg.setPeerClassLoadingEnabled(true);
 
-        cfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(ipFinder));
-
         cfg.setCacheConfiguration(new CacheConfiguration<>(CACHE_NAME));
-
-        ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
 
         return cfg;
     }
@@ -98,9 +94,9 @@ public class CacheContinuousQueryDeploymentToClientTest extends GridCommonAbstra
 
         assertInfosMap(U.field(proc, "locInfos"));
         assertInfosMap(U.field(proc, "rmtInfos"));
-        assertEquals(0, ((Map)U.field(proc, "startFuts")).size());
-        assertEquals(0, ((Map)U.field(proc, "stopFuts")).size());
-        assertEquals(0, ((Map)U.field(proc, "bufCheckThreads")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "startFuts")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "stopFuts")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "bufCheckThreads")).size());
     }
 
     /**
@@ -133,15 +129,15 @@ public class CacheContinuousQueryDeploymentToClientTest extends GridCommonAbstra
 
         assertInfosMap(U.field(proc, "locInfos"));
         assertInfosMap(U.field(proc, "rmtInfos"));
-        assertEquals(0, ((Map)U.field(proc, "startFuts")).size());
-        assertEquals(0, ((Map)U.field(proc, "stopFuts")).size());
-        assertEquals(0, ((Map)U.field(proc, "bufCheckThreads")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "startFuts")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "stopFuts")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "bufCheckThreads")).size());
     }
 
     /**
      * @param infos Infos map
      */
-    private void assertInfosMap(Map infos) {
+    private void assertInfosMap(Map<?, ?> infos) {
         assertEquals(1, infos.size());
 
         Object info = infos.values().iterator().next();
