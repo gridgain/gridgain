@@ -17,7 +17,6 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.IgniteVersionUtilsSelfTest;
-import org.apache.ignite.internal.commandline.CommandHandlerParsingTest;
 import org.apache.ignite.internal.pagemem.impl.PageIdUtilsSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheUtilsSelfTest;
 import org.apache.ignite.internal.util.GridArraysSelfTest;
@@ -118,9 +117,6 @@ import org.junit.runners.Suite;
 
     //dbx
     PageIdUtilsSelfTest.class,
-
-    // control.sh
-    CommandHandlerParsingTest.class
 })
 public class IgniteUtilSelfTestSuite {
 }
