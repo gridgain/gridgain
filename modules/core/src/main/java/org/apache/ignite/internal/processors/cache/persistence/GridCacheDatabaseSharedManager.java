@@ -3468,9 +3468,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Map<Integer, CacheState> cacheGrpStates = null;
 
-        // Do not hold groups state in-memory if there is no space in the checkpoint history to prevent possible OOM.
-        // In this case the actual group states will be readed from WAL by demand.
-        if (rec != null && cpHist.hasSpace())
+        if (rec != null)
             cacheGrpStates = rec.cacheGroupStates();
 
         return new CheckpointEntry(cpTs, ptr, cpId, cacheGrpStates);
@@ -4230,7 +4228,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         cpRec,
                         CheckpointEntryType.START);
 
-                    cpHist.addCheckpoint(cp);
+                    cpHist.addCheckpoint(cp, cpRec.cacheGroupStates());
                 }
 
                 curr.transitTo(PAGE_SNAPSHOT_TAKEN);
