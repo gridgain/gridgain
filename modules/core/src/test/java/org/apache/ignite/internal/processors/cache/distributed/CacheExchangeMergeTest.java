@@ -1472,11 +1472,15 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         List<Future<?>> futs = new ArrayList<>();
 
+        int range = 200;
+
         for (final String cacheName : cacheNames) {
             final IgniteCache<Object, Object> cache = node.cache(cacheName);
 
             futs.add(executor.submit(new Runnable() {
                 @Override public void run() {
+                    info("Start for node: " + node.name() + " cache " + cacheName + " thread " + Thread.currentThread().getName());
+
                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
                     assertNotNull("No cache [node=" + node.name() +
@@ -1489,21 +1493,21 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                             ", order=" + node.cluster().localNode().order() +
                             ", cache=" + cacheName + ']';
 
-                    for (int i = 0; i < 5; i++) {
-                        Integer key = rnd.nextInt(20_000);
+                    for (int i = 0; i < 50; i++) {
+                        Integer key = rnd.nextInt(range);
 
                         cache.put(key, i);
 
                         Object val = cache.get(key);
 
-                        assertEquals(err, i, val);
+                        assertEquals(err + " for key " + key, i, val);
                     }
 
                     for (int i = 0; i < 5; i++) {
                         Map<Integer, Integer> map = new TreeMap<>();
 
                         for (int j = 0; j < 10; j++) {
-                            Integer key = rnd.nextInt(20_000);
+                            Integer key = rnd.nextInt(range);
 
                             map.put(key, i);
                         }
@@ -1513,15 +1517,17 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                         Map<Object, Object> res = cache.getAll(map.keySet());
 
                         for (Map.Entry<Integer, Integer> e : map.entrySet())
-                            assertEquals(err, e.getValue(), res.get(e.getKey()));
+                            assertEquals(err + " for keys " + res.keySet(), e.getValue(), res.get(e.getKey()));
                     }
 
                     if (atomicityMode(cache) == TRANSACTIONAL) {
                         for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
                             for (TransactionIsolation isolation : TransactionIsolation.values())
-                                checkNodeCaches(err, node, cache, concurrency, isolation);
+                                checkNodeCaches(err, node, cache, concurrency, isolation, range);
                         }
                     }
+
+                    info("Stop for node: " + node.name() + " cache " + cacheName + " thread " + Thread.currentThread().getName());
                 }
             }));
         }
@@ -1542,7 +1548,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         Ignite node,
         IgniteCache<Object, Object> cache,
         TransactionConcurrency concurrency,
-        TransactionIsolation isolation) {
+        TransactionIsolation isolation,
+        int range) {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
         Map<Object, Object> map = new HashMap<>();
@@ -1550,7 +1557,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         try {
             try (Transaction tx = node.transactions().txStart(concurrency, isolation)) {
                 for (int i = 0; i < 5; i++) {
-                    Integer key = rnd.nextInt(20_000);
+                    Integer key = rnd.nextInt(range);
 
                     cache.put(key, i);
 
