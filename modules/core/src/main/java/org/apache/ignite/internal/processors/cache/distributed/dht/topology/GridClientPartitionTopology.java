@@ -848,7 +848,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
             consistencyCheck();
 
-            this.lostParts = lostParts;
+            if (exchangeVer != null)
+                this.lostParts = lostParts == null ? null : new TreeSet<>(lostParts);
 
             if (log.isDebugEnabled())
                 log.debug("Partition map after full update: " + fullMapString());
@@ -1216,7 +1217,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void ownMoving(AffinityTopologyVersion rebFinishedTopVer) {
+    @Override public void ownMoving() {
         // No-op
     }
 

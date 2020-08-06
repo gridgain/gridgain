@@ -21,11 +21,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
@@ -44,7 +47,8 @@ import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
  * Processor that is responsible for durable background tasks that are executed on local node
  * and should be continued even after node restart.
  */
-public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
+public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener,
+        DbCheckpointListener {
     /** Prefix for metastorage keys for durable background tasks. */
     private static final String STORE_DURABLE_BACKGROUND_TASK_PREFIX = "durable-background-task-";
 
@@ -71,7 +75,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      *
      *  @see #onStateChangeFinish(ChangeGlobalStateFinishMessage)
      */
-    private volatile boolean banStartingNewTasks = false;
+    private volatile boolean forbidStartingNewTasks;
 
     /**
      * @param ctx Kernal context.
@@ -87,7 +91,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
         assert durableBackgroundTasks != null;
 
         for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
-            if (startedTasks.add(task.shortName()))
+            if (!task.isCompleted() && startedTasks.add(task.shortName()))
                 asyncDurableBackgroundTaskExecute(task);
         }
     }
@@ -109,16 +113,16 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
             @Override protected void body() {
                 try {
-                    if (banStartingNewTasks)
+                    if (forbidStartingNewTasks)
                         return;
 
                     log.info("Executing durable background task: " + task.shortName());
 
                     task.execute(ctx);
 
-                    log.info("Execution of durable background task completed: " + task.shortName());
+                    task.complete();
 
-                    removeDurableBackgroundTask(task);
+                    log.info("Execution of durable background task completed: " + task.shortName());
                 }
                 catch (Throwable e) {
                     log.error("Could not execute durable background task: " + task.shortName(), e);
@@ -148,7 +152,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        banStartingNewTasks = true;
+        forbidStartingNewTasks = true;
 
         awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
     }
@@ -162,8 +166,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param msg Message.
      */
     public void onStateChange(ChangeGlobalStateMessage msg) {
-        if (!msg.activate()) {
-            banStartingNewTasks = true;
+        if (msg.state() == ClusterState.INACTIVE) {
+            forbidStartingNewTasks = true;
 
             awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
         }
@@ -173,8 +177,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param msg Message.
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
-        if (msg.clusterActive()) {
-            banStartingNewTasks = false;
+        if (msg.state() != ClusterState.INACTIVE) {
+            forbidStartingNewTasks = false;
 
             asyncDurableBackgroundTasksExecution();
         }
@@ -211,6 +215,8 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
                 throw new IgniteException("Failed to read key from durable background tasks storage.", e);
             }
         }
+
+        ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).addCheckpointListener(this);
 
         this.metastorage = metastorage;
     }
@@ -301,5 +307,23 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
             addDurableBackgroundTask(task);
 
         asyncDurableBackgroundTaskExecute(task);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onMarkCheckpointBegin(Context ctx) {
+        for (DurableBackgroundTask task : durableBackgroundTasks.values()) {
+            if (task.isCompleted())
+                removeDurableBackgroundTask(task);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onCheckpointBegin(Context ctx) {
+        /* No op. */
+    }
+
+    /** {@inheritDoc} */
+    @Override public void beforeCheckpointBegin(Context ctx) {
+        /* No op. */
     }
 }

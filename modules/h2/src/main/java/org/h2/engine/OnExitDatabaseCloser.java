@@ -107,6 +107,7 @@ class OnExitDatabaseCloser extends Thread {
     }
 
     private OnExitDatabaseCloser() {
+        super("db-closer");
     }
 
     @Override

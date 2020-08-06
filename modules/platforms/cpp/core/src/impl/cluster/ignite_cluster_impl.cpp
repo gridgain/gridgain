@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
 #include "ignite/cluster/cluster_group.h"
 
 #include "ignite/impl/cluster/ignite_cluster_impl.h"
@@ -108,5 +106,3 @@ namespace ignite
         }
     }
 }
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API

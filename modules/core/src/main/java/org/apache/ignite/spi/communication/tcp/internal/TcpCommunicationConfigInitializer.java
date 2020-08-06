@@ -42,7 +42,6 @@ import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.AddressResolver;
-import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -54,6 +53,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.IgniteSpiAdapter;
@@ -63,14 +63,15 @@ import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ENVIRONMENT_TYPE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_EXT_ADDRS;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_FORCE_CLIENT_SERVER_CONNECTIONS;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_HOST_NAMES;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_PAIRED_CONN;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_PORT;
@@ -796,6 +797,30 @@ cfg.socketSendBuffer(sockSndBuf);
     }
 
     /**
+     * @return Force client to server connections flag.
+     *
+     * @see #setForceClientToServerConnections(boolean)
+     */
+    @IgniteExperimental
+    public boolean forceClientToServerConnections() {
+        return cfg.forceClientToServerConnections();
+    }
+
+    /**
+     * Applicable for clients only. Sets PSI in the mode when server node cannot open TCP connection to the current
+     * node. Possile reasons for that may be specific network configurations or security rules.
+     * In this mode, when server needs the connection with client, it uses {@link DiscoverySpi} protocol to notify
+     * client about it. After that client opens the required connection from its side.
+     */
+    @IgniteExperimental
+    @IgniteSpiConfiguration(optional = true)
+    public TcpCommunicationSpi setForceClientToServerConnections(boolean forceClientToSrvConnections) {
+        cfg.forceClientToServerConnections(forceClientToSrvConnections);
+
+        return (TcpCommunicationSpi) this;
+    }
+
+    /**
      * @return Bound TCP server port.
      */
     public int boundPort() {
@@ -843,12 +868,11 @@ cfg.socketSendBuffer(sockSndBuf);
                 "Specified 'unackedMsgsBufSize' is too low, it should be at least 'ackSndThreshold * 5'.");
         }
 
-        EnvironmentType envType = ignite.configuration().getEnvironmentType();
+        boolean forceClientToSrvConnections = cfg.forceClientToServerConnections();
 
-        if (cfg.usePairedConnections()) {
-            if (envType == EnvironmentType.VIRTUALIZED)
-                throw new IgniteSpiException("Node using paired connections " +
-                    "is not allowed to start in virtualized environment.");
+        if (cfg.usePairedConnections() && forceClientToSrvConnections) {
+            throw new IgniteSpiException("Node using paired connections " +
+                "is not allowed to start in forced client to server connections mode.");
         }
 
         // Set local node attributes.
@@ -870,7 +894,7 @@ cfg.socketSendBuffer(sockSndBuf);
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), cfg.boundTcpShmemPort() >= 0 ? cfg.boundTcpShmemPort() : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);
             res.put(createSpiAttributeName(ATTR_PAIRED_CONN), cfg.usePairedConnections());
-            res.put(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE), envType.toString());
+            res.put(createSpiAttributeName(ATTR_FORCE_CLIENT_SERVER_CONNECTIONS), forceClientToSrvConnections);
 
             return res;
         }

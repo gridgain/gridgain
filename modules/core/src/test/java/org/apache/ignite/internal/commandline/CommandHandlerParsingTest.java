@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
@@ -53,6 +54,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTA
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
+import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
@@ -69,6 +71,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -79,6 +82,9 @@ import static org.junit.Assert.fail;
 public class CommandHandlerParsingTest {
     /** */
     @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
+
+    /** */
+    private static final String INVALID_REGEX = "[]";
 
     /** */
     @Rule public final TestRule methodRule = new SystemPropertiesRule();
@@ -335,6 +341,26 @@ public class CommandHandlerParsingTest {
     }
 
     /**
+     * Tets checks a parser of shutdown policy command.
+     */
+    @Test
+    public void testParseShutdownPolicyParameters() {
+        ConnectionAndSslParameters args = parseArgs(asList(SHUTDOWN_POLICY.text()));
+
+        assertEquals(SHUTDOWN_POLICY.command(), args.command());
+
+        assertNull(((ShutdownPolicyCommand)args.command()).arg().getShutdown());
+
+        for (ShutdownPolicy policy : ShutdownPolicy.values()) {
+            args = parseArgs(asList(SHUTDOWN_POLICY.text(), String.valueOf(policy)));
+
+            assertEquals(SHUTDOWN_POLICY.command(), args.command());
+
+            assertSame(policy, ((ShutdownPolicyCommand)args.command()).arg().getShutdown());
+        }
+    }
+
+    /**
      * Tests that the auto confirmation flag was correctly parsed.
      */
     @Test
@@ -545,6 +571,137 @@ public class CommandHandlerParsingTest {
             () -> parseArgs(asList("--cache", "idle_verify", "--check-crc", "ignite-sys-cache")),
             IllegalArgumentException.class,
             "idle_verify with --check-crc not allowed for `ignite-sys-cache` cache."
+        );
+    }
+
+    /** */
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void testIndexForceRebuildWrongArgs() {
+        String nodeId = UUID.randomUUID().toString();
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id")),
+            IllegalArgumentException.class,
+            "Failed to read node id."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names")),
+            IllegalArgumentException.class,
+            "Expected comma-separated list of cache names."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names")),
+            IllegalArgumentException.class,
+            "Expected comma-separated list of cache group names."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames", "--cache-names", "someNames")),
+            IllegalArgumentException.class,
+            "Either --group-names or --cache-names must be specified."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "someNames", "--cache-names", "someMoreNames")),
+            IllegalArgumentException.class,
+            "--cache-names arg specified twice."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames", "--group-names", "someMoreNames")),
+            IllegalArgumentException.class,
+            "--group-names arg specified twice."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "--some-other-arg")),
+            IllegalArgumentException.class,
+            "--group-names not specified."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "--some-other-arg")),
+            IllegalArgumentException.class,
+            "--cache-names not specified."
+        );
+    }
+
+    /** */
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void testIndexListWrongArgs() {
+        String nodeId = UUID.randomUUID().toString();
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id")),
+            IllegalArgumentException.class,
+            "Failed to read node id."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--group-name")),
+            IllegalArgumentException.class,
+            "Failed to read group name regex."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--group-name", INVALID_REGEX)),
+            IllegalArgumentException.class,
+            "Invalid group name regex: " + INVALID_REGEX
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--cache-name")),
+            IllegalArgumentException.class,
+            "Failed to read cache name regex."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--cache-name", INVALID_REGEX)),
+            IllegalArgumentException.class,
+            "Invalid cache name regex: " + INVALID_REGEX
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--index-name")),
+            IllegalArgumentException.class,
+            "Failed to read index name regex."
+        );
+
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id", nodeId, "--index-name", INVALID_REGEX)),
+            IllegalArgumentException.class,
+            "Invalid index name regex: " + INVALID_REGEX
+        );
+    }
+
+    /** */
+    @SuppressWarnings("ThrowableNotThrown")
+    @Test
+    public void testIndexRebuildStatusWrongArgs() {
+        GridTestUtils.assertThrows(
+            null,
+            () -> parseArgs(asList("--cache", "indexes_list", "--node-id")),
+            IllegalArgumentException.class,
+            "Failed to read node id."
         );
     }
 
@@ -898,6 +1055,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
-            cmd == CommandList.SET_STATE;
+            cmd == CommandList.SET_STATE ||
+            cmd == CommandList.METADATA;
     }
 }
