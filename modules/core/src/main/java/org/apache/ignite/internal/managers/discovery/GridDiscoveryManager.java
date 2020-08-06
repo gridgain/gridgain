@@ -189,7 +189,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     public static final String NODES_SYS_VIEW_DESC = "Cluster nodes";
 
     /** Discovery cached history size. */
-    private static final int DISCOVERY_HISTORY_SIZE = getInteger(IGNITE_DISCOVERY_HISTORY_SIZE, 500);
+    private final int DISCOVERY_HISTORY_SIZE = getInteger(IGNITE_DISCOVERY_HISTORY_SIZE, 500);
 
     /** Predicate filtering out daemon nodes. */
     private static final IgnitePredicate<ClusterNode> FILTER_NOT_DAEMON = new P1<ClusterNode>() {
