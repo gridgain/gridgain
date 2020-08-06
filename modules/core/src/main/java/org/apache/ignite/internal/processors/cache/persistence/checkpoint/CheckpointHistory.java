@@ -213,7 +213,7 @@ public class CheckpointHistory {
                     iter.remove();
             }
 
-            addCpGroupStatesToEarliestCpMap(entry, entry.groupState(cctx));
+            addCpGroupStatesToEarliestCpMap(entry, states);
         }
         catch (IgniteCheckedException ex) {
             U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
