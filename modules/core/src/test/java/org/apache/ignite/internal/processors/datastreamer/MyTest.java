@@ -139,6 +139,9 @@ public class MyTest extends GridCommonAbstractTest {
 
         System.out.println("grpIds: " + MySpi.rebGrpIds);
 
+//        grpIds: [1251687456]
+//          [ignite-sys-cache -2100569601, testCache1 1251687457, testCache0 1251687456]
+
         System.out.println(ignite(0).context().cache().caches().stream().map(cache -> cache.name() + " " + CU.cacheId(cache.name())).collect(Collectors.toList()));
     }
 

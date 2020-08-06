@@ -4170,7 +4170,16 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         : cctx.exchange().clientTopology(grpDesc.groupId(), events().discoveryCache());
 
                     if (CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
-                        List<SupplyPartitionInfo> list = assignPartitionStates(top, resetOwners);
+//                        boolean needToResetOwners = resetOwners
+                        List<SupplyPartitionInfo> list = null;
+                        if (!resetOwnersForStartedCacheGroupsOnly)
+                            assignPartitionStates(top, resetOwners);
+                        else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
+                            exchActions.cacheGroupsToStart().stream()
+                                .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
+                            assignPartitionStates(top, true);
+                        else
+                            assignPartitionStates(top, false);
 
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
@@ -4185,13 +4194,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 //                        assignPartitionSizes(top);
 
                     return null;
-//                                        else if (resetOwners && !resetOwnersForStartedCacheGroupsOnly)
-//                        assignPartitionSizes(top);
-//                    else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
-//                        !exchActions.cacheGroupsToStart().isEmpty() &&
-//                        exchActions.cacheGroupsToStart().stream()
-//                            .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
-//                        assignPartitionSizes(top);
+
+//                    if (CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
+//                        List<SupplyPartitionInfo> list = assignPartitionStates(top, resetOwners);
+//
+//                        if (supplyInfoMap != null && !F.isEmpty(list))
+//                            supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
+//                    }
+
                 }
             );
         }
