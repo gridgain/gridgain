@@ -4161,6 +4161,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 cctx.kernalContext().getSystemExecutorService(),
                 nonLocalCacheGroupDescriptors(),
                 grpDesc -> {
+                    System.out.println(resetOwnersForStartedCacheGroupsOnly);
+
                     CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpDesc.groupId());
 
                     GridDhtPartitionTopology top = grpCtx != null
@@ -4173,15 +4175,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
                     }
-//                    else if (resetOwners)
+                    else if (resetOwners)
+                        assignPartitionSizes(top);
+//                    else if (resetOwners && !resetOwnersForStartedCacheGroupsOnly)
 //                        assignPartitionSizes(top);
-                    else if (resetOwners && !resetOwnersForStartedCacheGroupsOnly)
-                        assignPartitionSizes(top);
-                    else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
-                        !exchActions.cacheGroupsToStart().isEmpty() &&
-                        exchActions.cacheGroupsToStart().stream()
-                            .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
-                        assignPartitionSizes(top);
+//                    else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
+//                        exchActions.cacheGroupsToStart().stream()
+//                            .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
+//                        assignPartitionSizes(top);
 
                     return null;
 //                                        else if (resetOwners && !resetOwnersForStartedCacheGroupsOnly)

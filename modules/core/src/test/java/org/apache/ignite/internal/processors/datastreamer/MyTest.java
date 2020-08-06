@@ -24,23 +24,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -48,6 +52,8 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 
 /**
  * Tests for {@code IgniteDataStreamerImpl}.
@@ -61,7 +67,7 @@ public class MyTest extends GridCommonAbstractTest {
 
 //    private static final String GROUP_2 = "testGroup2";
 
-    private static final int nodeCount = 3;
+    private static final int nodeCount = 2;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -90,11 +96,11 @@ public class MyTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        DataStorageConfiguration dsConfig = new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(100L * 1024 * 1024)
-                .setPersistenceEnabled(true));
+//        DataStorageConfiguration dsConfig = new DataStorageConfiguration()
+//            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(100L * 1024 * 1024)
+//                .setPersistenceEnabled(true));
 //
-        cfg.setDataStorageConfiguration(dsConfig);
+//        cfg.setDataStorageConfiguration(dsConfig);
 
         cfg.setCommunicationSpi(new MySpi());
 
@@ -124,124 +130,186 @@ public class MyTest extends GridCommonAbstractTest {
 
         Ignite g0 = grid(0);
 
-        g0.active(true);
+//        g0.active(true);
 
-        IgniteEx client1 = startClientGrid(nodeCount);
+//        IgniteEx client1 = startClientGrid(nodeCount);
 
-        IgniteEx client2 = startClientGrid(nodeCount + 1);
+//        IgniteEx client2 = startClientGrid(nodeCount + 1);
+//
+//        IgniteEx client3 = startClientGrid(nodeCount + 2);
 
-        IgniteEx client3 = startClientGrid(nodeCount + 2);
-
-        client1.createCache(getCacheConfiguration(0));
+        g0.createCache(getCacheConfiguration(0));
 
         awaitPartitionMapExchange();
 
-        Map<String, IgniteInternalFuture<Boolean>> rebalanceFutures1 = getAllRebalanceFutures(grid(0));
+//        Map<String, IgniteInternalFuture<Boolean>> rebalanceFutures1 = getAllRebalanceFutures(grid(0));
 
-        AtomicBoolean doLoad = new AtomicBoolean(true);
+//        AtomicBoolean doLoad = new AtomicBoolean(true);
 
-        IgniteInternalFuture<IgniteFuture> fut = GridTestUtils.runAsync(() -> {
-//            Map<Integer, Integer> map = new HashMap<>();
+
+//        GridCacheContext<Object, Object> cacheCtx = grid(1).cachex(CACHE_NAME + 0).context();
 //
-//            int counter = 0;
+//        grid(1).cache(CACHE_NAME + 0).put(1, 1);
 //
-//            for (int i = counter; i < Long.MAX_VALUE; i++)
-//                map.put(i, i);
+//        System.out.println("qw" + grid(1).cache(CACHE_NAME + 0).get(1));
 //
-//            IgniteDataStreamer<Integer, Integer> streamer = client.dataStreamer(CACHE_NAME + 0);
+//        doSleep(1000);
+//
+//        assert(null != grid(1).cache(CACHE_NAME + 0).get(1));
+//
+//        corruptDataEntry(cacheCtx, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
+
+//        Map<Integer, Integer> map = new HashMap<>();
+//
+//        for (int i = 0; i < 200_000; i++)
+//            map.put(i, i);
+
+        IgniteCache<Object, Object> cache0 = g0.cache(CACHE_NAME + 0);
+
+        for (int i = 0; i < 100; i++)
+            cache0.put(i, i);
+
+        awaitPartitionMapExchange();
+
+        GridCacheContext<Object, Object> cacheCtx0 = grid(0).cachex(CACHE_NAME + 0).context();
+//        GridCacheContext<Object, Object> cacheCtx1 = grid(1).cachex(CACHE_NAME + 0).context();
+//        GridCacheContext<Object, Object> cacheCtx2 = grid(2).cachex(CACHE_NAME + 0).context();
+
+        corruptDataEntry(cacheCtx0, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
+        corruptDataEntry(cacheCtx0, 2, true, false, new GridCacheVersion(0, 5, 0), "broken");
+        corruptDataEntry(cacheCtx0, 3, true, true, new GridCacheVersion(0, 0, 4), "broken");
+        corruptDataEntry(cacheCtx0, 4, true, false, new GridCacheVersion(0, 0, 0), "broken");
+        corruptDataEntry(cacheCtx0, 4, true, false, new GridCacheVersion(0, 0, 0), "broken");
+        corruptDataEntry(cacheCtx0, 4, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//
+//        corruptDataEntry(cacheCtx1, 1+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//        corruptDataEntry(cacheCtx1, 2+10, true, false, new GridCacheVersion(0, 5, 0), "broken");
+//        corruptDataEntry(cacheCtx1, 3+10, true, true, new GridCacheVersion(0, 0, 4), "broken");
+//        corruptDataEntry(cacheCtx1, 4+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//        corruptDataEntry(cacheCtx1, 4+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//        corruptDataEntry(cacheCtx1, 4+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//
+//        corruptDataEntry(cacheCtx2, 1+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//        corruptDataEntry(cacheCtx2, 2+20, true, false, new GridCacheVersion(0, 5, 0), "broken");
+//        corruptDataEntry(cacheCtx2, 3+20, true, true, new GridCacheVersion(0, 0, 4), "broken");
+//        corruptDataEntry(cacheCtx2, 4+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//        corruptDataEntry(cacheCtx2, 4+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
+//        corruptDataEntry(cacheCtx2, 4+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
+
+//        IgniteInternalFuture<IgniteFuture> fut = GridTestUtils.runAsync(() -> {
+//            IgniteDataStreamer<Integer, Integer> streamer = g0.dataStreamer(CACHE_NAME + 0);
 //
 //            streamer.allowOverwrite(false);
 //
 //            streamer.addData(map);
 //
-            IgniteDataStreamer<Integer, Integer> streamer = client1.dataStreamer(CACHE_NAME + 0);
+//            System.out.println("qe" + grid(1).cache(CACHE_NAME + 0).get(1));
+//
+//            IgniteDataStreamer<Integer, Integer> streamer = client1.dataStreamer(CACHE_NAME + 0);
+//
+//            streamer.allowOverwrite(false);
+//
+////            streamer.perNodeBufferSize();
+//
+////            System.out.println("dfg1");
+//
+//            for (int i = 0; i < Integer.MAX_VALUE; i++) {
+//                streamer.addData(i, i);
+//                if (!doLoad.get())
+//                    break;
+////                System.out.println("dfg3");
+//            }
+//
+////            System.out.println("dfg2");
 
-            streamer.allowOverwrite(false);
+//            return null;
+//        });
 
-            streamer.perNodeBufferSize(50);
-
-            for (int i = 0; i < Integer.MAX_VALUE; i++) {
-                streamer.addData(i, i);
+//        IgniteInternalFuture<IgniteFuture> fut1 = GridTestUtils.runAsync(() -> {
+////            Map<Integer, Integer> map = new HashMap<>();
+////
+////            for (int i = 0; i < 200_000; i++)
+////                map.put(i, i);
+////
+////            IgniteDataStreamer<Integer, Integer> streamer = client2.dataStreamer(CACHE_NAME + 0);
+////
+////            streamer.allowOverwrite(false);
+////
+////            streamer.addData(map);
+//            IgniteDataStreamer<Integer, Integer> streamer = client2.dataStreamer(CACHE_NAME + 0);
+//
+//            streamer.allowOverwrite(false);
+//
+//            streamer.perNodeBufferSize(10);
+//
+//            for (int i = 0; i < Integer.MAX_VALUE; i++) {
+//                streamer.addData(i, i);
 //                streamer.flush();
-                if (!doLoad.get())
-                    break;
-            }
+//                if (!doLoad.get())
+//                    break;
+//            }
+//
+//            return null;
+//        });
 
-            return null;
-        });
-
-        IgniteInternalFuture<IgniteFuture> fut1 = GridTestUtils.runAsync(() -> {
-//            Map<Integer, Integer> map = new HashMap<>();
-//
-//            int counter = 0;
-//
-//            for (int i = counter; i < Long.MAX_VALUE; i++)
-//                map.put(i, i);
-//
-//            IgniteDataStreamer<Integer, Integer> streamer = client.dataStreamer(CACHE_NAME + 0);
-//
-//            streamer.allowOverwrite(false);
-//
-//            streamer.addData(map);
-//
-            IgniteDataStreamer<Integer, Integer> streamer = client2.dataStreamer(CACHE_NAME + 0);
-
-            streamer.allowOverwrite(false);
-
-            streamer.perNodeBufferSize(50);
-
-            for (int i = 0; i < Integer.MAX_VALUE; i++) {
-                streamer.addData(i, i);
-//                streamer.flush();
-                if (!doLoad.get())
-                    break;
-            }
-
-            return null;
-        });
-
-        IgniteInternalFuture<IgniteFuture> fut2 = GridTestUtils.runAsync(() -> {
-//            Map<Integer, Integer> map = new HashMap<>();
-//
-//            int counter = 0;
-//
-//            for (int i = counter; i < Long.MAX_VALUE; i++)
-//                map.put(i, i);
-//
-//            IgniteDataStreamer<Integer, Integer> streamer = client.dataStreamer(CACHE_NAME + 0);
+//        IgniteInternalFuture<IgniteFuture> fut2 = GridTestUtils.runAsync(() -> {
+////            Map<Integer, Integer> map = new HashMap<>();
+////
+////            for (int i = 0; i < 200_000; i++)
+////                map.put(i, i);
+////
+////            IgniteDataStreamer<Integer, Integer> streamer = client3.dataStreamer(CACHE_NAME + 0);
+////
+////            streamer.allowOverwrite(false);
+////
+////            streamer.addData(map);
+//            IgniteDataStreamer<Integer, Integer> streamer = grid(2).dataStreamer(CACHE_NAME + 0);
 //
 //            streamer.allowOverwrite(false);
 //
-//            streamer.addData(map);
+//            streamer.perNodeBufferSize(9);
 //
-            IgniteDataStreamer<Integer, Integer> streamer = client3.dataStreamer(CACHE_NAME + 0);
+//            for (int i = Integer.MAX_VALUE; i > 0; i--) {
+//                streamer.addData(i, i);
+////                streamer.flush();
+//                if (!doLoad.get())
+//                    break;
+//            }
+//
+//            return null;
+//        });
 
-            streamer.allowOverwrite(false);
+//        doSleep(10000);
 
-            streamer.perNodeBufferSize(1);
+//        grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+//            /** {@inheritDoc} */
+//            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+//                doSleep(200);
+//            }
+//        });
+//
+//        doSleep(200);
 
-            for (int i = Integer.MAX_VALUE; i > 0; i--) {
-                streamer.addData(i, i);
-                streamer.flush();
-                if (!doLoad.get())
-                    break;
-            }
+//        GridCacheContext<Object, Object> cacheCtx = grid(1).cachex(CACHE_NAME + 0).context();
+//
+//        System.out.println("qw" + grid(1).cache(CACHE_NAME + 0).get(1));
+//
+//        doSleep(1000);
+//
+//        assert(null != grid(1).cache(CACHE_NAME + 0).get(1));
+//
+//        corruptDataEntry(cacheCtx, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-            return null;
-        });
+//        for (int i = 1; i < 11; i++)
+            g0.createCache(getCacheConfiguration(1));
 
-        doSleep(1000);
+//        doSleep(1000);
 
-        for (int i = 1; i < 11; i++)
-            client2.createCache(getCacheConfiguration(i));
+//        Map<String, IgniteInternalFuture<Boolean>> rebalanceFutures2 = getAllRebalanceFutures(grid(0));
 
-        doSleep(500);
-
-        Map<String, IgniteInternalFuture<Boolean>> rebalanceFutures2 = getAllRebalanceFutures(grid(0));
-
-        assert(!fut.isDone());
-        assert(!fut1.isDone());
-        assert(!fut2.isDone());
+//        assert(!fut.isDone());
+//        assert(!fut1.isDone());
+//        assert(!fut2.isDone());
 
         System.out.println();
         doSleep(1000);
@@ -257,20 +325,23 @@ public class MyTest extends GridCommonAbstractTest {
 //
 //        awaitPartitionMapExchange();
 
-        System.out.println();
+//        startGrid(3);
+//        awaitPartitionMapExchange();
 
-        doLoad.set(false);
+        System.out.println("qr" + MySpi.allRebalances());
+
+//        doLoad.set(false);
 //        streamer.close();
 //        ((MySpi) grid(0).configuration().getCommunicationSpi())
     //        MySpi.allRebalances()
-        //...569601 - id кеш группы для системного кеша, ...274243 - для кешгруппы0, ...274244 - для кешгруппы1, ...274245 - для кешгруппы2
+        //...569601 - id кеш группы системного кеша, ...274243 - кешгруппы0, ...274244 - для кешгруппы1, ...274245 - кешгруппы2
     }
 
     private CacheConfiguration<Object, Object> getCacheConfiguration(int idx) {
         return new CacheConfiguration<>(CACHE_NAME + idx)
             .setGroupName(GROUP_NAME + idx)
-            .setBackups(2)
-            .setAffinity(new RendezvousAffinityFunction().setPartitions(32));
+            .setBackups(1)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(8));
     }
 
 //    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -322,6 +393,8 @@ public class MyTest extends GridCommonAbstractTest {
         /** Lock object. */
         private static final Object mux = new Object();
 
+        private static final AtomicInteger i = new AtomicInteger(0);
+
         /**
          * @param grpId Group ID.
          * @return Set of topology versions where WAL history has been used for rebalance.
@@ -352,7 +425,11 @@ public class MyTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public void sendMessage(
+
             ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
+//            if (i.incrementAndGet() / 5 == 0) {
+//                doSleep(100);
+//            }
 
             if (((GridIoMessage)msg).message() instanceof GridDhtPartitionDemandMessage) {
                 GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage) ((GridIoMessage)msg).message();
