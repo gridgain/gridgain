@@ -16,22 +16,15 @@
 
 package org.apache.ignite.internal.processors.datastreamer;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -41,17 +34,18 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 
@@ -96,30 +90,14 @@ public class MyTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-//        DataStorageConfiguration dsConfig = new DataStorageConfiguration()
-//            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(100L * 1024 * 1024)
-//                .setPersistenceEnabled(true));
-//
-//        cfg.setDataStorageConfiguration(dsConfig);
-
         cfg.setCommunicationSpi(new MySpi());
+
+        cfg.setDataStorageConfiguration(new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+            new DataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(200 * 1024 * 1024)
+        ));
 
         return cfg;
     }
-
-//    /** {@inheritDoc} */
-//    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-//        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-//
-//        cfg.setCommunicationSpi(new StaleTopologyCommunicationSpi());
-//
-//        if (cnt < MAX_CACHE_COUNT)
-//            cfg.setCacheConfiguration(cacheConfiguration());
-//
-//        cnt++;
-//
-//        return cfg;
-//    }
 
     /**
      * @throws Exception If failed.
@@ -130,39 +108,11 @@ public class MyTest extends GridCommonAbstractTest {
 
         Ignite g0 = grid(0);
 
-//        g0.active(true);
-
-//        IgniteEx client1 = startClientGrid(nodeCount);
-
-//        IgniteEx client2 = startClientGrid(nodeCount + 1);
-//
-//        IgniteEx client3 = startClientGrid(nodeCount + 2);
+        g0.cluster().state(ClusterState.ACTIVE);
 
         g0.createCache(getCacheConfiguration(0));
 
         awaitPartitionMapExchange();
-
-//        Map<String, IgniteInternalFuture<Boolean>> rebalanceFutures1 = getAllRebalanceFutures(grid(0));
-
-//        AtomicBoolean doLoad = new AtomicBoolean(true);
-
-
-//        GridCacheContext<Object, Object> cacheCtx = grid(1).cachex(CACHE_NAME + 0).context();
-//
-//        grid(1).cache(CACHE_NAME + 0).put(1, 1);
-//
-//        System.out.println("qw" + grid(1).cache(CACHE_NAME + 0).get(1));
-//
-//        doSleep(1000);
-//
-//        assert(null != grid(1).cache(CACHE_NAME + 0).get(1));
-//
-//        corruptDataEntry(cacheCtx, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
-
-//        Map<Integer, Integer> map = new HashMap<>();
-//
-//        for (int i = 0; i < 200_000; i++)
-//            map.put(i, i);
 
         IgniteCache<Object, Object> cache0 = g0.cache(CACHE_NAME + 0);
 
@@ -172,8 +122,6 @@ public class MyTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
 
         GridCacheContext<Object, Object> cacheCtx0 = grid(0).cachex(CACHE_NAME + 0).context();
-//        GridCacheContext<Object, Object> cacheCtx1 = grid(1).cachex(CACHE_NAME + 0).context();
-//        GridCacheContext<Object, Object> cacheCtx2 = grid(2).cachex(CACHE_NAME + 0).context();
 
         corruptDataEntry(cacheCtx0, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
         corruptDataEntry(cacheCtx0, 2, true, false, new GridCacheVersion(0, 5, 0), "broken");
@@ -181,165 +129,21 @@ public class MyTest extends GridCommonAbstractTest {
         corruptDataEntry(cacheCtx0, 4, true, false, new GridCacheVersion(0, 0, 0), "broken");
         corruptDataEntry(cacheCtx0, 4, true, false, new GridCacheVersion(0, 0, 0), "broken");
         corruptDataEntry(cacheCtx0, 4, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//
-//        corruptDataEntry(cacheCtx1, 1+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//        corruptDataEntry(cacheCtx1, 2+10, true, false, new GridCacheVersion(0, 5, 0), "broken");
-//        corruptDataEntry(cacheCtx1, 3+10, true, true, new GridCacheVersion(0, 0, 4), "broken");
-//        corruptDataEntry(cacheCtx1, 4+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//        corruptDataEntry(cacheCtx1, 4+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//        corruptDataEntry(cacheCtx1, 4+10, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//
-//        corruptDataEntry(cacheCtx2, 1+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//        corruptDataEntry(cacheCtx2, 2+20, true, false, new GridCacheVersion(0, 5, 0), "broken");
-//        corruptDataEntry(cacheCtx2, 3+20, true, true, new GridCacheVersion(0, 0, 4), "broken");
-//        corruptDataEntry(cacheCtx2, 4+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//        corruptDataEntry(cacheCtx2, 4+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
-//        corruptDataEntry(cacheCtx2, 4+20, true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-//        IgniteInternalFuture<IgniteFuture> fut = GridTestUtils.runAsync(() -> {
-//            IgniteDataStreamer<Integer, Integer> streamer = g0.dataStreamer(CACHE_NAME + 0);
-//
-//            streamer.allowOverwrite(false);
-//
-//            streamer.addData(map);
-//
-//            System.out.println("qe" + grid(1).cache(CACHE_NAME + 0).get(1));
-//
-//            IgniteDataStreamer<Integer, Integer> streamer = client1.dataStreamer(CACHE_NAME + 0);
-//
-//            streamer.allowOverwrite(false);
-//
-////            streamer.perNodeBufferSize();
-//
-////            System.out.println("dfg1");
-//
-//            for (int i = 0; i < Integer.MAX_VALUE; i++) {
-//                streamer.addData(i, i);
-//                if (!doLoad.get())
-//                    break;
-////                System.out.println("dfg3");
-//            }
-//
-////            System.out.println("dfg2");
-
-//            return null;
-//        });
-
-//        IgniteInternalFuture<IgniteFuture> fut1 = GridTestUtils.runAsync(() -> {
-////            Map<Integer, Integer> map = new HashMap<>();
-////
-////            for (int i = 0; i < 200_000; i++)
-////                map.put(i, i);
-////
-////            IgniteDataStreamer<Integer, Integer> streamer = client2.dataStreamer(CACHE_NAME + 0);
-////
-////            streamer.allowOverwrite(false);
-////
-////            streamer.addData(map);
-//            IgniteDataStreamer<Integer, Integer> streamer = client2.dataStreamer(CACHE_NAME + 0);
-//
-//            streamer.allowOverwrite(false);
-//
-//            streamer.perNodeBufferSize(10);
-//
-//            for (int i = 0; i < Integer.MAX_VALUE; i++) {
-//                streamer.addData(i, i);
-//                streamer.flush();
-//                if (!doLoad.get())
-//                    break;
-//            }
-//
-//            return null;
-//        });
-
-//        IgniteInternalFuture<IgniteFuture> fut2 = GridTestUtils.runAsync(() -> {
-////            Map<Integer, Integer> map = new HashMap<>();
-////
-////            for (int i = 0; i < 200_000; i++)
-////                map.put(i, i);
-////
-////            IgniteDataStreamer<Integer, Integer> streamer = client3.dataStreamer(CACHE_NAME + 0);
-////
-////            streamer.allowOverwrite(false);
-////
-////            streamer.addData(map);
-//            IgniteDataStreamer<Integer, Integer> streamer = grid(2).dataStreamer(CACHE_NAME + 0);
-//
-//            streamer.allowOverwrite(false);
-//
-//            streamer.perNodeBufferSize(9);
-//
-//            for (int i = Integer.MAX_VALUE; i > 0; i--) {
-//                streamer.addData(i, i);
-////                streamer.flush();
-//                if (!doLoad.get())
-//                    break;
-//            }
-//
-//            return null;
-//        });
-
-//        doSleep(10000);
-
-//        grid(1).context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-//            /** {@inheritDoc} */
-//            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-//                doSleep(200);
-//            }
-//        });
-//
-//        doSleep(200);
-
-//        GridCacheContext<Object, Object> cacheCtx = grid(1).cachex(CACHE_NAME + 0).context();
-//
-//        System.out.println("qw" + grid(1).cache(CACHE_NAME + 0).get(1));
-//
-//        doSleep(1000);
-//
-//        assert(null != grid(1).cache(CACHE_NAME + 0).get(1));
-//
-//        corruptDataEntry(cacheCtx, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
-
-//        for (int i = 1; i < 11; i++)
             g0.createCache(getCacheConfiguration(1));
 
-//        doSleep(1000);
+        awaitPartitionMapExchange(true, true, null);
 
-//        Map<String, IgniteInternalFuture<Boolean>> rebalanceFutures2 = getAllRebalanceFutures(grid(0));
-
-//        assert(!fut.isDone());
-//        assert(!fut1.isDone());
-//        assert(!fut2.isDone());
-
-        System.out.println();
-        doSleep(1000);
-
-//        stopGrid(2);
-//        awaitPartitionMapExchange();
-//        startGrid(2);
-//        awaitPartitionMapExchange();
-
-//        stopGrid(3);
-//        awaitPartitionMapExchange();
-//        startGrid(3);
-//
-//        awaitPartitionMapExchange();
-
-//        startGrid(3);
-//        awaitPartitionMapExchange();
 
         System.out.println("qr" + MySpi.allRebalances());
 
-//        doLoad.set(false);
-//        streamer.close();
-//        ((MySpi) grid(0).configuration().getCommunicationSpi())
-    //        MySpi.allRebalances()
-        //...569601 - id кеш группы системного кеша, ...274243 - кешгруппы0, ...274244 - для кешгруппы1, ...274245 - кешгруппы2
+        System.out.println("grpIds: " + MySpi.rebGrpIds);
+
+        System.out.println(ignite(0).context().cache().caches().stream().map(cache -> cache.name() + " " + CU.cacheId(cache.name())).collect(Collectors.toList()));
     }
 
     private CacheConfiguration<Object, Object> getCacheConfiguration(int idx) {
         return new CacheConfiguration<>(CACHE_NAME + idx)
-            .setGroupName(GROUP_NAME + idx)
             .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction().setPartitions(8));
     }
@@ -387,6 +191,8 @@ public class MyTest extends GridCommonAbstractTest {
     public static class MySpi extends TestRecordingCommunicationSpi {
         /** (Group ID, Set of topology versions). */
         private static final Map<Integer, Set<Long>> topVers = new HashMap<>();
+
+        public static final Set<Integer> rebGrpIds = new HashSet<>();
 
         public static final List<Message> msgs = new ArrayList<>();
 
@@ -451,6 +257,8 @@ public class MyTest extends GridCommonAbstractTest {
                 long topVer = supplyMsg.topologyVersion().topologyVersion();
 
                 synchronized (mux) {
+                    rebGrpIds.add(supplyMsg.groupId());
+
                     topVers.computeIfAbsent(grpId, v -> new HashSet<>()).add(topVer);
                 }
             }
