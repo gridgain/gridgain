@@ -2233,7 +2233,7 @@ class ClusterCachesInfo {
             deploymentId,
             caches,
             persistent,
-            walGloballyEnabled,
+            ctx.clientNode() ? persistent : walGloballyEnabled,
             null,
             cacheCfgEnrichment
         );
