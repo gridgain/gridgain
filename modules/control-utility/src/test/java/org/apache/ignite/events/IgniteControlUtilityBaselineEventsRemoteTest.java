@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
+package org.apache.ignite.events;
 
-import org.apache.ignite.internal.processors.cache.StartCachesInParallelTest;
-import org.apache.ignite.internal.processors.cache.index.IoStatisticsBasicIndexSelfTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.lang.IgnitePredicate;
 
-/**
- * Cache tests using indexing.
- */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    StartCachesInParallelTest.class,
-    IoStatisticsBasicIndexSelfTest.class
-})
-public class IgniteCacheWithIndexingAndPersistenceTestSuite {
+/** */
+public class IgniteControlUtilityBaselineEventsRemoteTest extends IgniteControlUtilityBaselineEventsTest {
+    /** {@inheritDoc} */
+    @Override protected void listen(IgniteEx ignite, IgnitePredicate<Event> lsnr, int... types) {
+        ignite.events(ignite.cluster().forRemotes()).remoteListen((uuid, t) -> lsnr.apply(t), t -> true, types);
+    }
 }

@@ -16,18 +16,27 @@
 
 package org.apache.ignite.testsuites;
 
-import org.apache.ignite.internal.processors.cache.StartCachesInParallelTest;
-import org.apache.ignite.internal.processors.cache.index.IoStatisticsBasicIndexSelfTest;
+import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpiTestConfigurator;
+import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
+import org.apache.ignite.util.GridCommandHandlerTest;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Cache tests using indexing.
+ * Regular Ignite tests executed with {@link org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpi}.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    StartCachesInParallelTest.class,
-    IoStatisticsBasicIndexSelfTest.class
+    GridCommandHandlerTest.class,
+    GridCommandHandlerClusterByClassTest.class
 })
-public class IgniteCacheWithIndexingAndPersistenceTestSuite {
+public class ZookeeperIgniteControlUtilityTestSuite {
+    /**
+     * @throws Exception Thrown in case of the failure.
+     */
+    @BeforeClass
+    public static void init() throws Exception {
+        ZookeeperDiscoverySpiTestConfigurator.initTestSuite();
+    }
 }

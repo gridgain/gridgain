@@ -1,4 +1,20 @@
 /*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -23,11 +39,11 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME_SECOND;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
@@ -198,7 +214,7 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
      */
     @Test
     public void testEmptyGroupFilter() {
-        checkGroup(EMPTY_GROUP_NAME, EMPTY_GROUP_NAME, 4);
+        checkGroup(CacheCommands.EMPTY_GROUP_NAME, CacheCommands.EMPTY_GROUP_NAME, 4);
     }
 
     /** */
