@@ -370,7 +370,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                             assertTrue(cmd + " " + arg, output.contains(arg.toString()));
             }
             else
-                assertContains(log, output, CommandHandler.UTILITY_NAME);
+                assertContains(log, output, UTILITY_NAME);
         }
 
         checkHelp(output, "org.apache.ignite.util/" + getClass().getSimpleName() + "_cache_help.output");
