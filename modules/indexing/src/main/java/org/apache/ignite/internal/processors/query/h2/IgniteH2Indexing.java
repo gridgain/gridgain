@@ -1649,8 +1649,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fldsQry.setLocal(true);
         fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
 
-        if (timeout >= 0)
-            fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
+        QueryUtils.copyQueryTimeout(fldsQry, timeout, TimeUnit.MILLISECONDS);
 
         boolean loc = true;
 
@@ -1692,8 +1691,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setPageSize(fldsQry.getPageSize())
             .setLazy(fldsQry.isLazy());
 
-        if (fldsQry.getTimeout() >= 0)
-            selectFieldsQry.setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
+        QueryUtils.copyQueryTimeout(selectFieldsQry, fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
 
         QueryCursorImpl<List<?>> cur;
 
