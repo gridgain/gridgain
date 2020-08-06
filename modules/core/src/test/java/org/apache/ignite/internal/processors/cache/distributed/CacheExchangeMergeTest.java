@@ -885,7 +885,12 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
             for (Ignite allGrid : G.allGrids()) {
                 TestRecordingCommunicationSpi.spi(allGrid).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                     @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                        return msg instanceof GridDhtPartitionDemandMessage;
+                        if (msg instanceof GridDhtPartitionDemandMessage)
+                            return true;
+
+                        info("Msg: " + msg.getClass().getSimpleName() + " to node " + clusterNode.consistentId());
+
+                        return false;
                     }
                 });
             }
@@ -1500,7 +1505,18 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
                         Object val = cache.get(key);
 
-                        assertEquals(err + " for key " + key, i, val);
+                        if (val == null) {
+                            try {
+                                Thread.sleep(100);
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+
+                            info("Value is null for key " + key + " in cache " + cacheName + ", but actual " + cache.get(key));
+
+                            assertEquals(err + " for key " + key, i, val);
+                        }
                     }
 
                     for (int i = 0; i < 5; i++) {
