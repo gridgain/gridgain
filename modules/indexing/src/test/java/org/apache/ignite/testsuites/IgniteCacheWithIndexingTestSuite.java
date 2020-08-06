@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexEntryEvictTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexGetSelfTest;
+import org.apache.ignite.internal.processors.cache.GridCacheSqlDdlClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.cache.GridIndexingWithNoopSwapSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheConfigurationPrimitiveTypesSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
@@ -96,6 +97,7 @@ import org.junit.runners.Suite;
     BinaryTypeRegistrationTest.class,
 
     ClusterReadOnlyModeSqlTest.class,
+    GridCacheSqlDdlClusterReadOnlyModeTest.class,
 
     ClusterReadOnlyModeDoesNotBreakSqlSelectTest.class,
 

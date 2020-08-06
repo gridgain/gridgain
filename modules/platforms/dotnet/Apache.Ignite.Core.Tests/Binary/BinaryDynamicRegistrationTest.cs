@@ -17,7 +17,11 @@
 // ReSharper disable UnusedAutoPropertyAccessor.Local
 namespace Apache.Ignite.Core.Tests.Binary
 {
+#if !NETCOREAPP
     extern alias ExamplesDll;
+    using Apache.Ignite.ExamplesDll.Binary;
+    using ExamplesAccount = ExamplesDll::Apache.Ignite.ExamplesDll.Binary.Account;
+#endif
 
     using System;
     using System.Collections;
@@ -34,10 +38,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Tests.Compute;
-    using Apache.Ignite.ExamplesDll.Binary;
     using NUnit.Framework;
-
-    using ExamplesAccount = ExamplesDll::Apache.Ignite.ExamplesDll.Binary.Account;
 
     /// <summary>
     /// Tests the dynamic type registration.
@@ -296,7 +297,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         /// <summary>
-        /// Tests interop scenario: Java and .NET exchange an object with the same type id, 
+        /// Tests interop scenario: Java and .NET exchange an object with the same type id,
         /// but marshaller cache contains different entries for different platforms for the same id.
         /// </summary>
         [Test]
@@ -338,6 +339,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             }
         }
 
+#if !NETCOREAPP
         /// <summary>
         /// Tests that types with same FullName from different assemblies are mapped to each other.
         /// </summary>
@@ -359,6 +361,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 }
             }
         }
+#endif
 
         /// <summary>
         /// Tests registration in multiple threads.
@@ -375,7 +378,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 var bin = ignite.GetBinary();
                 Func<Type, IBinaryObjectBuilder> getBuilder = x =>
                     useTypeName ? bin.GetBuilder(x.FullName) : bin.GetBuilder(x);
-                    
+
                 var types = new[] { typeof(Foo), typeof(Bar), typeof(Bin) };
 
                 foreach (var type in types)
@@ -443,12 +446,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             // Test compute.
             var serverNodeCount = ignite1.GetCluster().ForServers().GetNodes().Count;
 
-            var res = ignite1.GetCompute().Broadcast(new CompFn<DateTime>(() => DateTime.Now));
-            Assert.AreEqual(serverNodeCount, res.Count);
+            var res0 = ignite1.GetCompute().Broadcast(new CompDateTimeFn());
+            Assert.AreEqual(serverNodeCount, res0.Count);
+
+#if !NETCOREAPP // Serializing delegates is not supported on this platform
+            var res1 = ignite1.GetCompute().Broadcast(new CompFn<DateTime>(() => DateTime.Now));
+            Assert.AreEqual(serverNodeCount, res1.Count);
 
             // Variable capture.
             var res2 = ignite1.GetCompute().Broadcast(new CompFn<string>(() => bar0.Str));
             Assert.AreEqual(Enumerable.Repeat(bar0.Str, serverNodeCount), res2);
+#endif
         }
 
         /// <summary>
@@ -559,6 +567,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             }
         }
 
+#if !NETCOREAPP // Serializing delegates is not supported on this platform
         private class CompFn<T> : IComputeFunc<T>
         {
             private readonly Func<T> _func;
@@ -573,9 +582,19 @@ namespace Apache.Ignite.Core.Tests.Binary
                 return _func();
             }
         }
+#endif
+
+        private class CompDateTimeFn : IComputeFunc<DateTime>
+        {
+            public DateTime Invoke()
+            {
+                return DateTime.UtcNow;
+            }
+        }
     }
 }
 
+#if !NETCOREAPP
 namespace Apache.Ignite.ExamplesDll.Binary
 {
     /// <summary>
@@ -588,3 +607,4 @@ namespace Apache.Ignite.ExamplesDll.Binary
         public decimal Balance { get; set; }
     }
 }
+#endif

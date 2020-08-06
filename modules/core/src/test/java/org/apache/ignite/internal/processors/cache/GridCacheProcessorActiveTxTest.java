@@ -30,12 +30,19 @@ import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
  * Tests that verify the execution of GridCacheProcessor operations
  * in active transactions.
  */
 public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
+    /**
+     * Format for displaying the cache name(s) and operation.
+     */
+    private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG =
+        getFieldValue(GridCacheProcessor.class, "CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT");
+
     /** Node. */
     private static IgniteEx NODE;
 
@@ -184,7 +191,7 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
     /**
      * Performing an operation in an active transaction with a check that an
      * exception will be thrown with a format
-     * {@link GridCacheProcessor#CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT} message.
+     * {@link #CHECK_EMPTY_TRANSACTIONS_ERROR_MSG} message.
      *
      * @param runnableX Operation in an active transaction.
      * @param cacheName Cache name for the exception message.
@@ -200,7 +207,7 @@ public class GridCacheProcessorActiveTxTest extends GridCommonAbstractTest {
                 log,
                 runnableX,
                 IgniteException.class,
-                format(GridCacheProcessor.CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, operation)
+                format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG, cacheName, operation)
             );
         }
 

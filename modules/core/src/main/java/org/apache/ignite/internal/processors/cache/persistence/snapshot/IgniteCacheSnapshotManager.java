@@ -99,6 +99,11 @@ public class IgniteCacheSnapshotManager<T extends SnapshotOperation> extends Gri
         return false;
     }
 
+    /** Returns {@code True} if restore or repair oparation is currently processed. */
+    public boolean restoreOrRecoveryInProgress() {
+        return false;
+    }
+
     /**
      *
      */
