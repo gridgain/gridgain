@@ -1386,9 +1386,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
              * @return Head of the stripe.
              */
             public Message head() {
-                StripedExecutor.StripeAwareRunnable head = (StripedExecutor.StripeAwareRunnable)stripe.head();
+                //StripedExecutor.StripeAwareRunnable head = (StripedExecutor.StripeAwareRunnable)stripe.head();
 
-                return head == null ? null : head.message();
+                //return head == null ? null : head.message();
+                return null;
             }
 
             /** {@inheritDoc} */
