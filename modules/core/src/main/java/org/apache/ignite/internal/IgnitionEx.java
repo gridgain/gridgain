@@ -2532,7 +2532,7 @@ public class IgnitionEx {
                     Class<?> log4jCls;
 
                     try {
-                        log4jCls = Class.forName("org.apache.ignite.logger.log4j.Log4JLogger");
+                        log4jCls = Class.forName("org.apache.ignite.logger.Log4J2Logger");
                     }
                     catch (ClassNotFoundException | NoClassDefFoundError ignored) {
                         log4jCls = null;
@@ -2540,13 +2540,13 @@ public class IgnitionEx {
 
                     if (log4jCls != null) {
                         try {
-                            URL url = U.resolveIgniteUrl("config/ignite-log4j.xml");
+                            URL url = U.resolveIgniteUrl("config/ignite-log4j2.xml");
 
                             if (url == null) {
-                                File cfgFile = new File("config/ignite-log4j.xml");
+                                File cfgFile = new File("config/ignite-log4j2.xml");
 
                                 if (!cfgFile.exists())
-                                    cfgFile = new File("../config/ignite-log4j.xml");
+                                    cfgFile = new File("../config/ignite-log4j2.xml");
 
                                 if (cfgFile.exists()) {
                                     try {
