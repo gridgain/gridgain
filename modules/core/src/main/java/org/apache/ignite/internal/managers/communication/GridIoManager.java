@@ -1607,7 +1607,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
 
             synchronized (slowMsgs) {
-                slowMsgs.add(new ProcStat(enqueueTs, waitTime, procTime, msg0, queueSizeBefore, head, queueSizeAfter, ctx));
+                if (slowMsgs.size() <= SLOW_MSG_WARN_LIMIT)
+                    slowMsgs.add(new ProcStat(enqueueTs, waitTime, procTime, msg0, queueSizeBefore, head, queueSizeAfter, ctx));
             }
         }
     }
