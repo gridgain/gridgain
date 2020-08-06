@@ -2532,7 +2532,7 @@ public class IgnitionEx {
                     Class<?> log4jCls;
 
                     try {
-                        log4jCls = Class.forName("org.apache.ignite.logger.Log4J2Logger");
+                        log4jCls = Class.forName("org.apache.ignite.logger.log4j2.Log4J2Logger");
                     }
                     catch (ClassNotFoundException | NoClassDefFoundError ignored) {
                         log4jCls = null;

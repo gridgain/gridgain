@@ -46,6 +46,7 @@ import org.apache.logging.log4j.core.config.AppenderControl;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONSOLE_APPENDER;
@@ -274,6 +275,17 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
             return path;
 
         return path.replace('/', File.separatorChar);
+    }
+
+    /**
+     * Checks if Log4j is already configured within this VM or not.
+     *
+     * @return {@code True} if log4j was already configured, {@code false} otherwise.
+     */
+    public static boolean isConfigured() {
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+
+        return ctx.getConfiguration().getAppenders().size() > 1;
     }
 
     /**
