@@ -55,6 +55,7 @@ import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
+import static org.apache.ignite.internal.commandline.CommandList.STATISTICS;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
@@ -1056,6 +1057,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
-            cmd == CommandList.METADATA;
+            cmd == CommandList.METADATA ||
+            cmd == CommandList.STATISTICS;
     }
 }
