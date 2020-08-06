@@ -536,7 +536,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (speed <= 0)
             return 0;
 
-        long timeForOnePage = calcDelayTime(speed, parkedThreads.size(), 1);
+        long timeForOnePage = calcDelayTime(speed, threadIds.size(), 1);
 
         if (timeForOnePage == 0)
             return 0;
