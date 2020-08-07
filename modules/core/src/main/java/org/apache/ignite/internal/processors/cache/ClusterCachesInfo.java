@@ -2221,7 +2221,10 @@ class ClusterCachesInfo {
         boolean persistent = resolvePersistentFlag(exchActions, startedCacheCfg);
         boolean walGloballyEnabled = false;
 
-        if (persistent)
+        // client nodes cannot read wal enabled/disabled status so they should use default one
+        if (ctx.clientNode())
+            walGloballyEnabled = persistent;
+        else if (persistent)
             walGloballyEnabled = ctx.cache().context().database().walEnabled(grpId, false);
 
         CacheGroupDescriptor grpDesc = new CacheGroupDescriptor(
@@ -2233,7 +2236,7 @@ class ClusterCachesInfo {
             deploymentId,
             caches,
             persistent,
-            ctx.clientNode() ? persistent : walGloballyEnabled,
+            walGloballyEnabled,
             null,
             cacheCfgEnrichment
         );
