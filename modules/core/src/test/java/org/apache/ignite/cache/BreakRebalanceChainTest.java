@@ -79,6 +79,7 @@ public class BreakRebalanceChainTest extends GridCommonAbstractTest {
         }
     }
 
+
     /**
      * @throws Exception If failed.
      */
