@@ -72,11 +72,11 @@ public class MessageStatsTest extends GridCommonAbstractTest {
 
     /** */
     private final LogListener slowMsgLongWaitLogListener =
-        new MessageOrderLogListener(".*?Slow message: enqueueTs=[0-9 -:]{19}, waitTime=[0-9]{2,4}[.]{1}[0-9]{1,3}, procTime=[0-9]{1,3}[.]{1}[0-9]{1,3}, messageId=[0-9a-f]{1,8}, queueSzBefore=[0-9]{1,3}, headMessageId=(null|[0-9a-f]{1,8}), queueSzAfter=[0-9]{1,3}, message=.*");
+        new MessageOrderLogListener(".*?Slow message: enqueueTs=[0-9 -:]{19}, waitTime=[0-9]{2,4}[.]{1}[0-9]{1,3}, procTime=[0-9]{1,3}[.]{1}[0-9]{1,3}, messageId=[0-9a-f]{1,8}, queueSzBefore=[0-9]{1,3}, queueSzAfter=[0-9]{1,3}, message=.*");
 
     /** */
     private final LogListener slowMsgLongProcLogListener =
-        new MessageOrderLogListener(".*?Slow message: enqueueTs=[0-9 -:]{19}, waitTime=[0-9]{1,3}[.]{1}[0-9]{1,3}, procTime=[0-9]{3,4}[.]{1}[0-9]{1,3}, messageId=[0-9a-f]{1,8}, queueSzBefore=[0-9]{1,3}, headMessageId=(null|[0-9a-f]{1,8}), queueSzAfter=[0-9]{1,3}, message=.*");
+        new MessageOrderLogListener(".*?Slow message: enqueueTs=[0-9 -:]{19}, waitTime=[0-9]{1,3}[.]{1}[0-9]{1,3}, procTime=[0-9]{3,4}[.]{1}[0-9]{1,3}, messageId=[0-9a-f]{1,8}, queueSzBefore=[0-9]{1,3}, queueSzAfter=[0-9]{1,3}, message=.*");
 
     /** */
     private final ListeningTestLogger testLog = new ListeningTestLogger(log(), slowMsgLogListener, slowMsgLongProcLogListener, slowMsgLongWaitLogListener);
