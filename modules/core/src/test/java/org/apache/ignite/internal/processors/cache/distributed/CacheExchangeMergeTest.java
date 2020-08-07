@@ -18,16 +18,13 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -67,20 +64,14 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleRequest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetResponse;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -650,7 +641,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         for (Ignite node : nodes) {
             List<GridDhtPartitionsExchangeFuture> exchFuts =
-                    ((IgniteEx)node).context().cache().context().exchange().exchangeFutures();
+                ((IgniteEx)node).context().cache().context().exchange().exchangeFutures();
 
             assertTrue("Unexpected size: " + exchFuts.size(), !exchFuts.isEmpty() && exchFuts.size() <= histSize);
         }
@@ -876,8 +867,6 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         mergeServersFail1(true, true, 7);
     }
 
-    private static Set<IgniteUuid> c6FutIds = Collections.newSetFromMap(new ConcurrentHashMap<IgniteUuid, Boolean>());
-
     /**
      * @param waitRebalance Wait for rebalance end before start tested topology change.
      * @param delayRebalance Delay rebalancing before checking caches.
@@ -896,47 +885,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
             for (Ignite allGrid : G.allGrids()) {
                 TestRecordingCommunicationSpi.spi(allGrid).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                     @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                        if (msg instanceof GridDhtPartitionDemandMessage)
-                            return true;
-
-                        if (msg instanceof GridNearTxPrepareRequest) {
-                            GridNearTxPrepareRequest putReq = (GridNearTxPrepareRequest)msg;
-
-                            if (!F.isEmpty(putReq.writes())) {
-                                int cacheId = putReq.writes().iterator().next().cacheId();
-
-                                if (cacheId == CU.cacheId("c6")) {
-                                    c6FutIds.add(putReq.futureId());
-
-                                    info("GridNearTxPrepareRequest for cahce c6 by key " + putReq.writes().iterator().next().key()
-                                        + " to node " + clusterNode.consistentId());
-                                }
-                            }
-                        }
-                        else if (msg instanceof GridNearTxPrepareResponse) {
-                            GridNearTxPrepareResponse putResp = (GridNearTxPrepareResponse)msg;
-
-                            if (c6FutIds.remove(putResp.futureId())) {
-                                info("GridNearTxPrepareResponse for cahce c6"
-                                    + " to node " + clusterNode.consistentId());
-                            }
-                        }
-                        else if (msg instanceof GridNearSingleGetRequest) {
-                            GridNearSingleGetRequest getReq = (GridNearSingleGetRequest)msg;
-
-                            if (getReq.cacheId() == CU.cacheId("c6"))
-                                info("GridNearSingleGetRequest for cahce c6 by key " + getReq.key()
-                                    + " to node " + clusterNode.consistentId());
-                        }
-                        else if (msg instanceof GridNearSingleGetResponse) {
-                            GridNearSingleGetResponse getResp = (GridNearSingleGetResponse)msg;
-
-                            if (getResp.cacheId() == CU.cacheId("c6"))
-                                info("GridNearSingleGetResponse for cahce c6"
-                                    + " to node " + clusterNode.consistentId());
-                        }
-
-                        return false;
+                        return msg instanceof GridDhtPartitionDemandMessage;
                     }
                 });
             }
@@ -954,7 +903,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         if (mergeTopVer == 7) {
             waitForReadyTopology(grid(0).cachex(cacheNames[0]).context().topology(),
-                    new AffinityTopologyVersion(7, 0));
+                new AffinityTopologyVersion(7, 0));
         }
 
         stopGrid(getTestIgniteInstanceName(2), true, false);
@@ -977,7 +926,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         checkCaches0();
 
         assertTrue("Unexpected number of merged disco events: " + mergedEvts.size(),
-                mergedEvts.size() == mergeTopVer - 6);
+            mergedEvts.size() == mergeTopVer - 6);
 
         for (DiscoveryEvent discoEvt : mergedEvts) {
             ClusterNode evtNode = discoEvt.eventNode();
@@ -1523,53 +1472,38 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         List<Future<?>> futs = new ArrayList<>();
 
-        int range = 200;
-
         for (final String cacheName : cacheNames) {
             final IgniteCache<Object, Object> cache = node.cache(cacheName);
 
             futs.add(executor.submit(new Runnable() {
                 @Override public void run() {
-                    info("Start for node: " + node.name() + " cache " + cacheName + " thread " + Thread.currentThread().getName());
-
                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
                     assertNotNull("No cache [node=" + node.name() +
-                            ", client=" + node.configuration().isClientMode() +
-                            ", order=" + node.cluster().localNode().order() +
-                            ", cache=" + cacheName + ']', cache);
+                        ", client=" + node.configuration().isClientMode() +
+                        ", order=" + node.cluster().localNode().order() +
+                        ", cache=" + cacheName + ']', cache);
 
                     String err = "Invalid value [node=" + node.name() +
-                            ", client=" + node.configuration().isClientMode() +
-                            ", order=" + node.cluster().localNode().order() +
-                            ", cache=" + cacheName + ']';
+                        ", client=" + node.configuration().isClientMode() +
+                        ", order=" + node.cluster().localNode().order() +
+                        ", cache=" + cacheName + ']';
 
-                    for (int i = 0; i < 50; i++) {
-                        Integer key = rnd.nextInt(range);
+                    for (int i = 0; i < 5; i++) {
+                        Integer key = rnd.nextInt(20_000);
 
                         cache.put(key, i);
 
                         Object val = cache.get(key);
 
-                        if (val == null) {
-                            try {
-                                Thread.sleep(100);
-                            }
-                            catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-
-                            info("Value is null for key " + key + " in cache " + cacheName + ", but actual " + cache.get(key));
-
-                            assertEquals(err + " for key " + key, i, val);
-                        }
+                        assertEquals(err, i, val);
                     }
 
                     for (int i = 0; i < 5; i++) {
                         Map<Integer, Integer> map = new TreeMap<>();
 
                         for (int j = 0; j < 10; j++) {
-                            Integer key = rnd.nextInt(range);
+                            Integer key = rnd.nextInt(20_000);
 
                             map.put(key, i);
                         }
@@ -1579,17 +1513,15 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                         Map<Object, Object> res = cache.getAll(map.keySet());
 
                         for (Map.Entry<Integer, Integer> e : map.entrySet())
-                            assertEquals(err + " for keys " + res.keySet(), e.getValue(), res.get(e.getKey()));
+                            assertEquals(err, e.getValue(), res.get(e.getKey()));
                     }
 
                     if (atomicityMode(cache) == TRANSACTIONAL) {
                         for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
                             for (TransactionIsolation isolation : TransactionIsolation.values())
-                                checkNodeCaches(err, node, cache, concurrency, isolation, range);
+                                checkNodeCaches(err, node, cache, concurrency, isolation);
                         }
                     }
-
-                    info("Stop for node: " + node.name() + " cache " + cacheName + " thread " + Thread.currentThread().getName());
                 }
             }));
         }
@@ -1610,8 +1542,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         Ignite node,
         IgniteCache<Object, Object> cache,
         TransactionConcurrency concurrency,
-        TransactionIsolation isolation,
-        int range) {
+        TransactionIsolation isolation) {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
         Map<Object, Object> map = new HashMap<>();
@@ -1619,7 +1550,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         try {
             try (Transaction tx = node.transactions().txStart(concurrency, isolation)) {
                 for (int i = 0; i < 5; i++) {
-                    Integer key = rnd.nextInt(range);
+                    Integer key = rnd.nextInt(20_000);
 
                     cache.put(key, i);
 
