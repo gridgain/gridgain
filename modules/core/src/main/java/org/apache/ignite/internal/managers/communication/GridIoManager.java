@@ -1365,9 +1365,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             /** */
             private int beforeQueueSize = -1;
 
-            /** */
-            private @Nullable Message head;
-
             /** {@inheritDoc} */
             @Override public Message message() {
                 return msg.message();
@@ -1378,18 +1375,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 this.stripe = stripe;
 
                 beforeQueueSize = stripe.queueSize();
-
-                head = head();
-            }
-
-            /**
-             * @return Head of the stripe.
-             */
-            public Message head() {
-                //StripedExecutor.StripeAwareRunnable head = (StripedExecutor.StripeAwareRunnable)stripe.head();
-
-                //return head == null ? null : head.message();
-                return null;
             }
 
             /** {@inheritDoc} */
@@ -1422,7 +1407,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                                 System.nanoTime(),
                                 enqueueTs,
                                 beforeQueueSize,
-                                head,
                                 stripe == null ? -1 : stripe.queueSize()
                             );
                         }
@@ -1550,7 +1534,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param finishProc Finish processing timestamp.
      * @param enqueueTs enqueue UNIX timestamp (10ms resolution)
      * @param queueSizeBefore queue size before adding message to stripe queue.
-     * @param head queue head before adding message to stripe queue.
      * @param queueSizeAfter queue size after finishing message processing.
      */
     private void writeMessageMetrics(GridIoMessage msg,
@@ -1559,7 +1542,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         long finishProc,
         long enqueueTs,
         int queueSizeBefore,
-        Message head,
         int queueSizeAfter) {
         Message msg0 = msg.message();
 
@@ -1608,7 +1590,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
             synchronized (slowMsgs) {
                 if (slowMsgs.size() <= SLOW_MSG_WARN_LIMIT)
-                    slowMsgs.add(new ProcStat(enqueueTs, waitTime, procTime, msg0, queueSizeBefore, head, queueSizeAfter, ctx));
+                    slowMsgs.add(new ProcStat(enqueueTs, waitTime, procTime, msg0, queueSizeBefore, queueSizeAfter, ctx));
             }
         }
     }
@@ -1647,23 +1629,21 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     private String slowMsgWarning(ProcStat stat, ZoneId sysZoneId) {
         GridStringBuilder sb = new GridStringBuilder();
 
-        sb.a(">>> Slow message: ").
-            a("enqueueTs=").
-            a(LocalDateTime.ofInstant(ofEpochMilli(stat.enqueueTs), sysZoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).
-            a(", waitTime=").
-            a(stat.waitTime / 1000 / 1000.).
-            a(", procTime=").
-            a(stat.procTime / 1000 / 1000.).
-            a(", messageId=").
-            a(U.hexInt(stat.msg.hashCode())).
-            a(", queueSzBefore=").
-            a(stat.sizeBefore).
-            a(", headMessageId=").
-            a(stat.headHash()).
-            a(", queueSzAfter=").
-            a(stat.sizeAfter).
-            a(", message=").
-            a(stat.msg.toString().replace("\n", " "));
+        sb.a(">>> Slow message: ")
+            .a("enqueueTs=")
+            .a(LocalDateTime.ofInstant(ofEpochMilli(stat.enqueueTs), sysZoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+            .a(", waitTime=")
+            .a(stat.waitTime / 1000 / 1000.)
+            .a(", procTime=")
+            .a(stat.procTime / 1000 / 1000.)
+            .a(", messageId=")
+            .a(U.hexInt(stat.msg.hashCode()))
+            .a(", queueSzBefore=")
+            .a(stat.sizeBefore)
+            .a(", queueSzAfter=")
+            .a(stat.sizeAfter)
+            .a(", message=")
+            .a(stat.msg.toString().replace("\n", " "));
 
         return sb.toString();
     }
@@ -3853,9 +3833,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         /** Queue size before. */
         final int sizeBefore;
 
-        /** Stripe head in the moment of enqueuing. */
-        final Message head;
-
         /** Queue size after. */
         final int sizeAfter;
 
@@ -3863,22 +3840,14 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         final Object ctx;
 
         public ProcStat(long enqueueTs, long waitTime, long procTime, Message msg, int sizeBefore,
-            Message head, int sizeAfter, Object ctx) {
+            int sizeAfter, Object ctx) {
             this.waitTime = waitTime;
             this.enqueueTs = enqueueTs;
             this.procTime = procTime;
             this.msg = msg;
             this.sizeBefore = sizeBefore;
-            this.head = head;
             this.sizeAfter = sizeAfter;
             this.ctx = ctx;
-        }
-
-        /**
-         * @return Head hash.
-         */
-        public String headHash() {
-            return head == null ? "null" : U.hexInt(head.hashCode());
         }
     }
 

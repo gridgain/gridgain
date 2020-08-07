@@ -608,11 +608,6 @@ public class StripedExecutor implements ExecutorService {
         public abstract int queueSize();
 
         /**
-         * @return Head of stripe queue.
-         */
-        public abstract Runnable head();
-
-        /**
          * @return Stripe's queue to string presentation.
          */
         abstract String queueToString();
@@ -766,11 +761,6 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
-        @Override public Runnable head() {
-            return queue.peek();
-        }
-
-        /** {@inheritDoc} */
         @Override void execute(Runnable cmd) {
             if (cmd instanceof StripeAwareRunnable) {
                 StripeAwareRunnable msgRunnable = (StripeAwareRunnable)cmd;
@@ -859,11 +849,6 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
-        @Override public Runnable head() {
-            return queue.peek();
-        }
-
-        /** {@inheritDoc} */
         @Override String queueToString() {
             return String.valueOf(queue);
         }
@@ -918,11 +903,6 @@ public class StripedExecutor implements ExecutorService {
         /** {@inheritDoc} */
         @Override public int queueSize() {
             return queue.size();
-        }
-
-        /** {@inheritDoc} */
-        @Override public Runnable head() {
-            return queue.peek();
         }
 
         /** {@inheritDoc} */
