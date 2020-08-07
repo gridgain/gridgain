@@ -113,7 +113,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
     }
 
     /** {@inheritDoc} */
-    @Override public boolean onNodeLeft(UUID nodeId) {
+    @Override public synchronized boolean onNodeLeft(UUID nodeId) {
         boolean found = false;
 
         for (IgniteInternalFuture<?> fut : futures()) {
@@ -149,8 +149,15 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
             }
 
             if (X.hasCause(e, ClusterTopologyCheckedException.class) || X.hasCause(e, ClusterTopologyException.class)) {
-                if (tx.onePhaseCommit())
+                if (tx.onePhaseCommit()) {
                     tx.markForBackupCheck();
+
+                    if (discoThread) {
+                        onComplete();
+
+                        return;
+                    }
+                }
             }
 
             if (ERR_UPD.compareAndSet(this, null, e))
@@ -484,7 +491,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
      * @param m Mapping.
      * @param mappings Queue of mappings.
      */
-    private void proceedPrepare(GridDistributedTxMapping m, @Nullable final Queue<GridDistributedTxMapping> mappings) {
+    private synchronized void proceedPrepare(GridDistributedTxMapping m, @Nullable final Queue<GridDistributedTxMapping> mappings) {
         if (isDone())
             return;
 
