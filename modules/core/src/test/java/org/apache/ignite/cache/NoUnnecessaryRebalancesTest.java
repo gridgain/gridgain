@@ -47,7 +47,7 @@ import org.junit.Test;
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 
 /**
- * Tests for {@code IgniteDataStreamerImpl}.
+ * Tests check that unnecessary rebalances doesn't happen
  */
 public class NoUnnecessaryRebalancesTest extends GridCommonAbstractTest {
     /** */
