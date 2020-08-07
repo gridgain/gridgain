@@ -18,13 +18,16 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -64,14 +67,20 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -867,6 +876,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         mergeServersFail1(true, true, 7);
     }
 
+    private static Set<IgniteUuid> c6FutIds = Collections.newSetFromMap(new ConcurrentHashMap<IgniteUuid, Boolean>());
+
     /**
      * @param waitRebalance Wait for rebalance end before start tested topology change.
      * @param delayRebalance Delay rebalancing before checking caches.
@@ -888,7 +899,42 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                         if (msg instanceof GridDhtPartitionDemandMessage)
                             return true;
 
-                        info("Msg: " + msg.getClass().getSimpleName() + " to node " + clusterNode.consistentId());
+                        if (msg instanceof GridNearTxPrepareRequest) {
+                            GridNearTxPrepareRequest putReq = (GridNearTxPrepareRequest)msg;
+
+                            if (!F.isEmpty(putReq.writes())) {
+                                int cacheId = putReq.writes().iterator().next().cacheId();
+
+                                if (cacheId == CU.cacheId("c6")) {
+                                    c6FutIds.add(putReq.futureId());
+
+                                    info("GridNearTxPrepareRequest for cahce c6 by key " + putReq.writes().iterator().next().key()
+                                        + " to node " + clusterNode.consistentId());
+                                }
+                            }
+                        }
+                        else if (msg instanceof GridNearTxPrepareResponse) {
+                            GridNearTxPrepareResponse putResp = (GridNearTxPrepareResponse)msg;
+
+                            if (c6FutIds.remove(putResp.futureId())) {
+                                info("GridNearTxPrepareResponse for cahce c6"
+                                    + " to node " + clusterNode.consistentId());
+                            }
+                        }
+                        else if (msg instanceof GridNearSingleGetRequest) {
+                            GridNearSingleGetRequest getReq = (GridNearSingleGetRequest)msg;
+
+                            if (getReq.cacheId() == CU.cacheId("c6"))
+                                info("GridNearSingleGetRequest for cahce c6 by key " + getReq.key()
+                                    + " to node " + clusterNode.consistentId());
+                        }
+                        else if (msg instanceof GridNearSingleGetResponse) {
+                            GridNearSingleGetResponse getResp = (GridNearSingleGetResponse)msg;
+
+                            if (getResp.cacheId() == CU.cacheId("c6"))
+                                info("GridNearSingleGetResponse for cahce c6"
+                                    + " to node " + clusterNode.consistentId());
+                        }
 
                         return false;
                     }
