@@ -4170,13 +4170,15 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         : cctx.exchange().clientTopology(grpDesc.groupId(), events().discoveryCache());
 
                     if (CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
-//                        boolean needToResetOwners = resetOwners
-                        List<SupplyPartitionInfo> list = null;
+                        List<SupplyPartitionInfo> list;
+
                         if (!resetOwnersForStartedCacheGroupsOnly)
                             list = assignPartitionStates(top, resetOwners);
                         else if (resetOwners && resetOwnersForStartedCacheGroupsOnly &&
-                            exchActions.cacheGroupsToStart().stream()
-                                .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()))
+                            (exchActions.cacheGroupsToStart().stream()
+                                .anyMatch(grp -> grp.descriptor().groupId() == grpDesc.groupId()) ||
+                                exchActions.cachesToResetLostPartitions().stream()
+                                    .anyMatch(cacheName -> CU.cacheId(cacheName) == grpDesc.groupId())))
                             list = assignPartitionStates(top, true);
                         else
                             list = assignPartitionStates(top, false);
