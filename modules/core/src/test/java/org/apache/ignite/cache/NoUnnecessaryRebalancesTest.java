@@ -18,9 +18,7 @@ package org.apache.ignite.cache;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -104,10 +102,6 @@ public class NoUnnecessaryRebalancesTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange(true, true, null);
 
         Assert.assertFalse(SpecialSpi.rebGrpIds.contains(CU.cacheId(CACHE_NAME + 0)));
-
-        List<Integer> grpIds = ignite(0).context().cache().caches().stream().map(cache -> CU.cacheId(cache.name())).collect(Collectors.toList());
-
-        assert grpIds.contains(CU.cacheId(CACHE_NAME + 0));
     }
 
     /** */
