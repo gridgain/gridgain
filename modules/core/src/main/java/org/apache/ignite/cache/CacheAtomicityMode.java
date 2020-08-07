@@ -127,6 +127,7 @@ public enum CacheAtomicityMode {
     /** Enumerated values. */
     private static final CacheAtomicityMode[] VALS = values();
 
+
     /**
      * Efficiently gets enumerated value from its ordinal.
      *
