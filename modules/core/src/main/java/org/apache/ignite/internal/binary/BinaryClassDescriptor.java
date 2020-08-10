@@ -786,7 +786,7 @@ public class BinaryClassDescriptor {
 
                                     schemaReg.addSchema(newSchema.schemaId(), newSchema);
 
-                                    if (!registered) {
+                                    if (userType) {
                                         BinaryMetadata meta = new BinaryMetadata(typeId, typeName, collector.meta(),
                                             affKeyFieldName, Collections.singleton(newSchema), false, null);
 
