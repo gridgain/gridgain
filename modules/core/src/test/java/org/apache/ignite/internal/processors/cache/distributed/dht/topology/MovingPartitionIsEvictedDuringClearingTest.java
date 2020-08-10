@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
@@ -88,8 +89,9 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
 
         final int evictingPart = evictingPartitionsAfterJoin(grid(2), grid(2).cache(DEFAULT_CACHE_NAME), 1).get(0);
 
-        final int cnt = 1_000;
-        final int delta = 100;
+        final int cnt = 1_100;
+        final int delta = 2_000;
+        final int rmv = 1_500;
 
         loadDataToPartition(evictingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, cnt, 0, 3);
 
@@ -98,6 +100,12 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
         stopGrid(2);
 
         loadDataToPartition(evictingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, delta, cnt, 3);
+
+        // Removal required for triggering full rebalancing.
+        List<Integer> clearKeys = partitionKeys(grid(0).cache(DEFAULT_CACHE_NAME), evictingPart, rmv, cnt);
+
+        for (Integer clearKey : clearKeys)
+            grid(0).cache(DEFAULT_CACHE_NAME).remove(clearKey);
 
         CountDownLatch lock = new CountDownLatch(1);
         CountDownLatch unlock = new CountDownLatch(1);
@@ -140,14 +148,14 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
         // Partition will remaing in renting state until next exchange.
         assertEquals(RENTING, g2.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(evictingPart).state());
 
-        validadate(cnt + delta);
+        validadate(cnt + delta - rmv);
 
         stopGrid(2);
         startGrid(2);
 
         awaitPartitionMapExchange(true, true, null);
 
-        validadate(cnt + delta);
+        validadate(cnt + delta - rmv);
     }
 
     /**

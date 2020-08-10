@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
@@ -88,8 +89,9 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
 
         final int clearingPart = 0;
 
-        final int cnt = 5_000;
-        final int delta = 100;
+        final int cnt = 1_100;
+        final int delta = 2_000;
+        final int rmv = 1_500;
 
         loadDataToPartition(clearingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, cnt, 0, 3);
 
@@ -98,6 +100,12 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
         stopGrid(2);
 
         loadDataToPartition(clearingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, delta, cnt, 3);
+
+        // Removal required for triggering full rebalancing.
+        List<Integer> clearKeys = partitionKeys(grid(0).cache(DEFAULT_CACHE_NAME), clearingPart, rmv, cnt);
+
+        for (Integer clearKey : clearKeys)
+            grid(0).cache(DEFAULT_CACHE_NAME).remove(clearKey);
 
         CountDownLatch lock = new CountDownLatch(1);
         CountDownLatch unlock = new CountDownLatch(1);
@@ -147,6 +155,6 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
         assertPartitionsSame(idleVerify(grid(2), DEFAULT_CACHE_NAME));
 
         for (Ignite grid : G.allGrids())
-            assertEquals(cnt + delta, grid.cache(DEFAULT_CACHE_NAME).size());
+            assertEquals(cnt + delta - rmv, grid.cache(DEFAULT_CACHE_NAME).size());
     }
 }
