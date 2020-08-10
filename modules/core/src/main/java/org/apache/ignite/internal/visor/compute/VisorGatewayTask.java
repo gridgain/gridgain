@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -429,17 +428,8 @@ public class VisorGatewayTask implements ComputeTask<Object[], Object> {
 
                         nids = Collections.singletonList(crd.id());
                     }
-                    else if (VisorOneNodeTask.class.isAssignableFrom(taskCls)) {
-                        if (ignite.localNode().isClient()) {
-                            List<ClusterNode> srvrs = new ArrayList<>(ignite.cluster().forServers().nodes());
-
-                            int idx = ThreadLocalRandom.current().nextInt(srvrs.size());
-
-                            nids = Collections.singletonList(srvrs.get(idx).id());
-                        }
-                        else
-                            nids = Collections.singletonList(ignite.localNode().id());
-                    }
+                    else if (VisorOneNodeTask.class.isAssignableFrom(taskCls))
+                        nids = Collections.singletonList(ignite.localNode().id());
                     else {
                         Collection<ClusterNode> nodes = ignite.cluster().nodes();
 
