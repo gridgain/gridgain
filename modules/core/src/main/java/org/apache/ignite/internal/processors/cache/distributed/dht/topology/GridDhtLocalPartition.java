@@ -714,7 +714,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         (clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING))
             .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut) {
-                    if (state() == EVICTED) // A partition cannot be reused after the eviction.
+                    // A partition cannot be reused after the eviction, not necessary to reset clearing state.
+                    if (state() == EVICTED)
                         rent.onDone(fut.error());
                     else
                         clearing.set(false);

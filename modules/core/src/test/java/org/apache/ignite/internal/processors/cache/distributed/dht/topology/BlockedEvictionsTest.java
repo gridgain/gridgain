@@ -67,7 +67,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         if (persistence) {
             DataStorageConfiguration dsCfg = new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024);
-            dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(persistence);
+            dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(persistence).setMaxSize(100 * 1024 * 1024);
             cfg.setDataStorageConfiguration(dsCfg);
         }
 

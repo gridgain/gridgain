@@ -1340,8 +1340,8 @@ public class GridDhtPartitionDemander {
                                     if (fut.error() != null) {
                                         tryCancel();
 
-                                        log.error("Failed to clear a partition, cancelling rebalancing for " +
-                                            "a group [grp=" + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
+                                        log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
+                                            + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
 
                                         updateClearingPartitionsMetric(0);
 
