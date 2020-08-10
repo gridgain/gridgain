@@ -30,11 +30,11 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- *
+ * Extends a DHT partition adding extended blocking capabilities on clearing.
  */
 class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     /** */
-    static final int TIMEOUT = 300_000;
+    static final int TIMEOUT = 30_000;
 
     /** */
     private boolean delayed;
@@ -105,7 +105,7 @@ class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     }
 
     /** */
-    private void sync() {
+    protected void sync() {
         lock.countDown();
 
         try {

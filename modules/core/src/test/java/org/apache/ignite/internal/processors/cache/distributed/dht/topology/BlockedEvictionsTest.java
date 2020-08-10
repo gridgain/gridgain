@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
@@ -43,9 +41,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
@@ -227,45 +222,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
                     top.partitionFactory(new GridDhtPartitionTopologyImpl.PartitionFactory() {
                         @Override public GridDhtLocalPartition create(GridCacheSharedContext ctx, CacheGroupContext grp, int id, boolean recovery) {
-                            return new GridDhtLocalPartition(ctx, grp, id, recovery) {
-                                private boolean delayed;
-
-                                @Override public IgniteInternalFuture<?> rent() {
-                                    if (mode == 0)
-                                        sync();
-
-                                    return super.rent();
-                                }
-
-                                @Override protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-                                    EvictionContext spied = Mockito.spy(evictionCtx);
-
-                                    Mockito.doAnswer(new Answer() {
-                                        @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                                            if (!delayed && mode == 1) {
-                                                sync();
-
-                                                delayed = true;
-                                            }
-
-                                            return invocation.callRealMethod();
-                                        }
-                                    }).when(spied).shouldStop();
-
-                                    return super.clearAll(spied);
-                                }
-
+                            return new GridDhtLocalPartitionSyncEviction(ctx, grp, id, recovery, mode, l1, l2) {
                                 /** */
-                                private void sync() {
-                                    if (holder.get() == id) {
-                                        l1.countDown();
-
-                                        try {
-                                            assertTrue("Failed to wait for lock release", U.await(l2, 30_000, TimeUnit.MILLISECONDS));
-                                        } catch (IgniteInterruptedCheckedException e) {
-                                            fail(X.getFullStackTrace(e));
-                                        }
-                                    }
+                                @Override protected void sync() {
+                                    if (holder.get() == id)
+                                        super.sync();
                                 }
                             };
                         }

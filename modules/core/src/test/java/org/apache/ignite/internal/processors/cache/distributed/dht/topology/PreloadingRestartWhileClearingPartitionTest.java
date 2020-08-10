@@ -121,7 +121,7 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
             }
         });
 
-        assertTrue(U.await(lock, 30_000, TimeUnit.MILLISECONDS));
+        assertTrue(U.await(lock, GridDhtLocalPartitionSyncEviction.TIMEOUT, TimeUnit.MILLISECONDS));
 
         // Stop supplier for clearingPart.
         GridCacheContext<Object, Object> ctx = g2.cachex(DEFAULT_CACHE_NAME).context();
@@ -148,13 +148,5 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
 
         for (Ignite grid : G.allGrids())
             assertEquals(cnt + delta, grid.cache(DEFAULT_CACHE_NAME).size());
-    }
-
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000;
-    }
-
-    @Override protected long getPartitionMapExchangeTimeout() {
-        return getTestTimeout();
     }
 }

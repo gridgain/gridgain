@@ -146,7 +146,7 @@ public class RentingPartitionIsOwnedDuringEvictionTest extends GridCommonAbstrac
                 @Override public boolean apply() {
                     return evicting.state() == RENTING || evicting.state() == EVICTED;
                 }
-            }, 30_000);
+            }, GridDhtLocalPartitionSyncEviction.TIMEOUT);
 
             if (!res)
                 fail("Failed to wait for eviction " + evicting);

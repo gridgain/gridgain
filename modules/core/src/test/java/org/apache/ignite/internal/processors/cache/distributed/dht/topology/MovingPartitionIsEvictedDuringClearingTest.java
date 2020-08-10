@@ -34,16 +34,19 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+
 /**
+ * Tests a scenario when a clearing partition is attempted to evict after call to
+ * {@link GridDhtPartitionTopology#tryEvict(GridDhtLocalPartition)}.
  *
+ * Such a scenario can leave a partition in RENTING state until the next exchange, but it's look acceptable.
  */
 @WithSystemProperty(key = "IGNITE_PRELOAD_RESEND_TIMEOUT", value = "0")
 public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setFailureDetectionTimeout(1000000L);
 
         cfg.setConsistentId(igniteInstanceName);
 
@@ -132,19 +135,28 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
         // Finish clearing.
         unlock.countDown();
 
+        awaitPartitionMapExchange();
+
+        // Partition will remaing in renting state until next exchange.
+        assertEquals(RENTING, g2.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(evictingPart).state());
+
+        validadate(cnt + delta);
+
+        stopGrid(2);
+        startGrid(2);
+
         awaitPartitionMapExchange(true, true, null);
 
+        validadate(cnt + delta);
+    }
+
+    /**
+     * @param size Size.
+     */
+    private void validadate(int size) {
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
 
         for (Ignite grid : G.allGrids())
-            assertEquals(cnt + delta, grid.cache(DEFAULT_CACHE_NAME).size());
-    }
-
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 100000L;
-    }
-
-    @Override protected long getPartitionMapExchangeTimeout() {
-        return getTestTimeout();
+            assertEquals(size, grid.cache(DEFAULT_CACHE_NAME).size());
     }
 }
