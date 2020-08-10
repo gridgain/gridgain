@@ -16,6 +16,8 @@
 
 package org.apache.ignite.testframework.junits.common;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
 import junit.framework.AssertionFailedError;
+import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -110,6 +113,9 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
+import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
+import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
+import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
@@ -120,6 +126,9 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
+import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTask;
+import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskArg;
+import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskResult;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskV2;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -2028,6 +2037,47 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
+     * Call this method in order to save persistent storage of failed test as TC build artifact.
+     * Artifact will appear after adding <code>workDirArtifactsToAnalyze => persistent_storage.zip</code>
+     * to "Artifact paths:" property of the build configuration.
+     *
+     * @param subfolderName Subfolder name in the artifact folder to distinguish stored persistent dirs.
+     *                      For example, test name can be passed here.
+     * @throws Exception If copy failed.
+     */
+    protected void saveWorkDirAsTcArtifact(String subfolderName) throws Exception {
+        assertTrue("Grids are not stopped", F.isEmpty(G.allGrids()));
+
+        String tmpCheckoutDirPath = System.getProperty("teamcity.build.checkoutDir");
+
+        if (F.isEmpty(tmpCheckoutDirPath)) {
+            log.error("Failed to copy work directory to temporary checkout folder " +
+                "[subfolderName=" + subfolderName + "]: -Dteamcity.build.checkoutDir property is not set");
+
+            return;
+        }
+
+        File dst = new File(tmpCheckoutDirPath);
+        dst = new File(dst, "workDirArtifactsToAnalyze");
+        dst = new File(dst, subfolderName);
+
+        File src = new File(U.defaultWorkDirectory());
+
+        try {
+            FileUtils.copyDirectory(src, dst);
+        }
+        catch (IOException e) {
+            log.error("Failed to copy work directory to temporary checkout folder " +
+                "[subfolderName=" + subfolderName + ", src=" + src + ", dst=" + dst + ']', e);
+
+            return;
+        }
+
+        log.info("Successfully copied work directory to temporary checkout folder " +
+            "[subfolderName=" + subfolderName + ", src=" + src + ", dst=" + dst + ']');
+    }
+
+    /**
      *
      */
     protected void cleanPersistenceDir() throws Exception {
@@ -2485,11 +2535,43 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     protected void assertPartitionsSame(IdleVerifyResultV2 res) throws AssertionFailedError {
         if (res.hasConflicts()) {
+            printDivergedKeyAfterUnsuccessfulIdleVerify(res);
+
             StringBuilder b = new StringBuilder();
 
             res.print(b::append);
 
             fail(b.toString());
+        }
+    }
+
+    /**
+     * Call this method to find and log first diverged key after unsuccessful idle_verify check.
+     * @param res Result of idle_verify.
+     */
+    protected void printDivergedKeyAfterUnsuccessfulIdleVerify(IdleVerifyResultV2 res) {
+        if (res.hasConflicts()) {
+            Map<PartitionKeyV2, List<PartitionHashRecordV2>> conflicts = res.hashConflicts();
+
+            if (F.isEmpty(conflicts))
+                conflicts = res.counterConflicts();
+
+            PartitionKeyV2 partKeyV2 = conflicts.keySet().iterator().next();
+
+            VisorIdleAnalyzeTaskArg taskArg = new VisorIdleAnalyzeTaskArg(new PartitionKey(
+                partKeyV2.groupId(), partKeyV2.partitionId(), partKeyV2.groupName()));
+
+            Ignite node = G.allGrids().stream()
+                .filter(ig -> !ig.cluster().localNode().isClient())
+                .findAny()
+                .orElseThrow(() -> new AssertionError("No server node found to execute analyze task"));
+
+            VisorIdleAnalyzeTaskResult analyzeRes = node.compute().execute(
+                VisorIdleAnalyzeTask.class.getName(),
+                new VisorTaskArgument<>(node.cluster().localNode().id(), taskArg, false)
+            );
+
+            log.error("Idle analyze result: " + analyzeRes.toString());
         }
     }
 

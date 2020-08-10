@@ -84,7 +84,7 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     private final ExecutorService asyncRunner = Executors.newSingleThreadExecutor(
         new ThreadFactory() {
             @Override public Thread newThread(@NotNull Runnable r) {
-                return new Thread(r, "thin-client-channel-async-runner");
+                return new Thread(r, ASYNC_RUNNER_THREAD_NAME);
             }
         }
     );
@@ -156,6 +156,8 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
 
         for (ClientChannelHolder hld : channels)
             hld.closeChannel();
+
+        asyncRunner.shutdown();
     }
 
     /**

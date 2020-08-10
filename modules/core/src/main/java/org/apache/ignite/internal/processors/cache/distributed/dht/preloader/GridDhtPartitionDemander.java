@@ -926,10 +926,10 @@ public class GridDhtPartitionDemander {
                         if (cached.initialValue(
                             entry.value(),
                             entry.version(),
-                            cctx.mvccEnabled() ? ((MvccVersionAware) entry).mvccVersion() : null,
-                            cctx.mvccEnabled() ? ((MvccUpdateVersionAware) entry).newMvccVersion() : null,
-                            cctx.mvccEnabled() ? ((MvccVersionAware) entry).mvccTxState() : TxState.NA,
-                            cctx.mvccEnabled() ? ((MvccUpdateVersionAware) entry).newMvccTxState() : TxState.NA,
+                            cctx.mvccEnabled() ? ((MvccVersionAware)entry).mvccVersion() : null,
+                            cctx.mvccEnabled() ? ((MvccUpdateVersionAware)entry).newMvccVersion() : null,
+                            cctx.mvccEnabled() ? ((MvccVersionAware)entry).mvccTxState() : TxState.NA,
+                            cctx.mvccEnabled() ? ((MvccUpdateVersionAware)entry).newMvccTxState() : TxState.NA,
                             entry.ttl(),
                             entry.expireTime(),
                             true,
@@ -959,7 +959,7 @@ public class GridDhtPartitionDemander {
                 }
                 catch (GridCacheEntryRemovedException ignored) {
                     if (log.isTraceEnabled())
-                        log.trace("Entry has been concurrently removed while rebalancing (will ignore) [key=" +
+                        log.trace("Entry has been concurrently removed while rebalancing (will retry) [key=" +
                             cached.key() + ", part=" + p + ']');
                 }
                 catch (GridDhtInvalidPartitionException ignored) {
