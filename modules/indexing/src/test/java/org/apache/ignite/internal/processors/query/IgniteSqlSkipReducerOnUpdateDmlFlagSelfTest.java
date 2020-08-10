@@ -233,7 +233,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "UPDATE \"trade\".Trade t SET qty = ? " +
             "WHERE accountId IN (SELECT p._key FROM \"acc\".Account p WHERE depo < ?)";
 
-        checkUpdate(client.cache(CACHE_TRADE), trades,  new SqlFieldsQuery(text).setArgs(0, 0));
+        checkUpdate(client.cache(CACHE_TRADE), trades, new SqlFieldsQuery(text).setArgs(0, 0));
     }
 
     /**
