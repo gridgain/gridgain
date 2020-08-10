@@ -30,12 +30,14 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
  *
  */
+@WithSystemProperty(key = "IGNITE_PRELOAD_RESEND_TIMEOUT", value = "0")
 public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -83,7 +85,7 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
 
         final int evictingPart = evictingPartitionsAfterJoin(grid(2), grid(2).cache(DEFAULT_CACHE_NAME), 1).get(0);
 
-        final int cnt = 5_000;
+        final int cnt = 1_000;
         final int delta = 100;
 
         loadDataToPartition(evictingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, cnt, 0, 3);
@@ -122,8 +124,12 @@ public class MovingPartitionIsEvictedDuringClearingTest extends GridCommonAbstra
 
         resetBaselineTopology();
 
-        doSleep(2000);
+        awaitPartitionMapExchange();
 
+        // Give some time for partition state messages to process.
+        doSleep(3_000);
+
+        // Finish clearing.
         unlock.countDown();
 
         awaitPartitionMapExchange(true, true, null);

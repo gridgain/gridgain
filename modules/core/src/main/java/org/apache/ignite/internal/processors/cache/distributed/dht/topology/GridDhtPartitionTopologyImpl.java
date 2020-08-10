@@ -36,7 +36,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
-import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -846,7 +845,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     changed = true;
 
                                     if (log.isDebugEnabled()) {
-                                        log.debug("Evicting " + state + " partition (it does not belong to affinity) [" +
+                                        log.debug("Evicting MOVING partition (it does not belong to affinity) [" +
                                             "grp=" + grp.cacheOrGroupName() + ", p=" + locPart.id() + ']');
                                     }
                                 }
