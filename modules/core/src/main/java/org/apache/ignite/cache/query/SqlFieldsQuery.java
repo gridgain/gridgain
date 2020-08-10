@@ -209,7 +209,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     }
 
     /**
-     * Sets server side update flag.
+     * Switches update mode on server side.
      * <p>
      * By default, when processing DML command, Ignite first fetches all affected intermediate rows for analysis to the
      * node which initiated the query and only then forms batches of updated values to be sent to remote nodes.
@@ -217,7 +217,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
      * network delays and memory usage on initiating node. Use this flag as hint for Ignite to do all intermediate rows
      * analysis and updates in place on corresponding remote data nodes.
      * <p>
-     * There are limitations to what DML command can be optimized this way. The command containing LIMIT, OFFSET,
+     * <b>IMPORTANT NOTE</b>: There are limitations to what DML command can be optimized this way. The command containing LIMIT, OFFSET,
      * DISTINCT, ORDER BY, GROUP BY, sub-query or UNION will be processed the usual way despite this flag setting.
      * <p>
      * Defaults to {@code false}, meaning that intermediate results will be fetched to initiating node first.
