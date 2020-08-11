@@ -136,7 +136,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     @Override public void onMarkDirty(boolean isPageInCheckpoint) {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
-        CheckpointProgress progress = cpProgress.apply();
+        CheckpointProgress progress = null;
 
         AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 

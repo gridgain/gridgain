@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -67,10 +68,10 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
@@ -1636,6 +1637,24 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /**
+     * @param pageId Page ID.
+     * @return Page relative pointer.
+     */
+    private long borrowOrAllocateCheckpointFreePage(long pageId) {
+        long relPtr;
+
+        do {
+            relPtr = checkpointPool.borrowOrAllocateFreePage(PageIdUtils.tag(pageId));
+
+            if(relPtr == PageMemoryImpl.INVALID_REL_PTR)
+                LockSupport.parkNanos(500_000);
+        }
+        while (relPtr == PageMemoryImpl.INVALID_REL_PTR && started);
+
+        return relPtr;
+    }
+
+    /**
      * @param absPtr Absolute pointer.
      * @return Pointer to the page write buffer.
      */
@@ -1644,7 +1663,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         // Create a buffer copy if the page is scheduled for a checkpoint.
         if (isInCheckpoint(fullId) && PageHeader.tempBufferPointer(absPtr) == INVALID_REL_PTR) {
-            long tmpRelPtr = checkpointPool.borrowOrAllocateFreePage(PageIdUtils.tag(fullId.pageId()));
+            long tmpRelPtr = borrowOrAllocateCheckpointFreePage(fullId.pageId());
 
             if (tmpRelPtr == INVALID_REL_PTR) {
                 rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);

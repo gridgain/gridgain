@@ -87,6 +87,9 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
         boolean shouldThrottle = false;
 
+        if(!shouldThrottle)
+            return;
+
         if (isPageInCheckpoint)
             shouldThrottle = shouldThrottle();
 
