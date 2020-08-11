@@ -528,6 +528,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /**
      * Measurement shows how much throttling time is involved into average marking time.
+     *
      * @return metric started from 0.0 and showing how much throttling is involved into current marking process.
      */
     public double throttleWeight() {
@@ -542,6 +543,15 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             return 0;
 
         return 1.0 * throttleParkTime() / timeForOnePage;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void tryWakeupThrottledThreads() {
+        if (!shouldThrottle()) {
+            exponentialBackoffCntr.set(0);
+
+            parkedThreads.forEach(LockSupport::unpark);
+        }
     }
 
     /** {@inheritDoc} */
