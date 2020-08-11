@@ -137,6 +137,11 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
+    @Override public boolean p2pMarshalled() {
+        return super.p2pMarshalled() || rmtFilterFactoryDep != null;
+    }
+
+    /** {@inheritDoc} */
     @Override public GridContinuousHandler clone() {
         return super.clone();
     }

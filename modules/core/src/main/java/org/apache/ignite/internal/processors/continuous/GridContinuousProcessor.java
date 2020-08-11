@@ -430,24 +430,38 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         }
 
         if (!joiningNodeId.equals(ctx.localNodeId()) || !locInfos.isEmpty()) {
-            if (ctx.config().isPeerClassLoadingEnabled()) {
-                startRoutinesOnJoin(locInfos);
+            Map<UUID, LocalRoutineInfo> locInfos0;
 
-                return null;
-            }
+            if (ctx.config().isPeerClassLoadingEnabled()) {
+                locInfos0 = U.newHashMap(locInfos.size());
+
+                for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
+                    LocalRoutineInfo locInfo = e.getValue();
+
+                    if (CacheContinuousQueryHandler.class.isAssignableFrom(locInfo.handler().getClass())) {
+                        CacheContinuousQueryHandler hnd = (CacheContinuousQueryHandler)locInfo.handler();
+
+                        if (hnd.p2pMarshalled()) {
+                            startRoutineOnJoin(hnd, locInfo.bufSize, locInfo.interval, locInfo.autoUnsubscribe, locInfo.prjPred);
+
+                            continue;
+                        }
+                    }
+
+                    locInfos0.put(e.getKey(), e.getValue());
+                }
+            } else
+                locInfos0 = copyLocalInfos(locInfos);
 
             Map<UUID, Map<UUID, LocalRoutineInfo>> clientInfos0 = copyClientInfos(clientInfos);
 
-            if (joiningNodeId.equals(ctx.localNodeId()) && ctx.discovery().localNode().isClient()) {
-                Map<UUID, LocalRoutineInfo> infos = copyLocalInfos(locInfos);
-
-                clientInfos0.put(ctx.localNodeId(), infos);
-            }
+            if (joiningNodeId.equals(ctx.localNodeId()) && ctx.discovery().localNode().isClient())
+                clientInfos0.put(ctx.localNodeId(), locInfos0);
 
             DiscoveryData data = new DiscoveryData(ctx.localNodeId(), clientInfos0);
 
             // Collect listeners information (will be sent to joining node during discovery process).
-            for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
+            for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos0.entrySet()) {
                 UUID routineId = e.getKey();
                 LocalRoutineInfo info = e.getValue();
 
@@ -500,32 +514,34 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @param locInfos Locale infos.
+     * @param hnd Handler.
+     * @param bufSize Buffer size.
+     * @param interval Time interval.
+     * @param autoUnsubscribe Automatic unsubscribe flag.
+     * @param prjPred Projection predicate.
      */
-    private void startRoutinesOnJoin(Map<UUID, LocalRoutineInfo> locInfos) {
-        for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
-            LocalRoutineInfo locRoutineInfo = e.getValue();
-
-            GridContinuousHandler hnd = locRoutineInfo.handler().clone();
-
-            ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
-                @Override public void run() {
-                    try {
-                        startRoutine(
-                            hnd,
-                            false,
-                            locRoutineInfo.bufSize,
-                            locRoutineInfo.interval,
-                            locRoutineInfo.autoUnsubscribe,
-                            locRoutineInfo.prjPred
-                        );
-                    }
-                    catch (IgniteCheckedException | IgniteException e) {
-                        log.warning("Failed to start continuous query.", e);
-                    }
+    private void startRoutineOnJoin(CacheContinuousQueryHandler hnd,
+        int bufSize,
+        long interval,
+        boolean autoUnsubscribe,
+        @Nullable IgnitePredicate<ClusterNode> prjPred) {
+        ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
+            @Override public void run() {
+                try {
+                    startRoutine(
+                        hnd.clone(),
+                        false,
+                        bufSize,
+                        interval,
+                        autoUnsubscribe,
+                        prjPred
+                    );
                 }
-            }));
-        }
+                catch (IgniteCheckedException | IgniteException e) {
+                    log.warning("Failed to start continuous query.", e);
+                }
+            }
+        }));
     }
 
     /** {@inheritDoc} */

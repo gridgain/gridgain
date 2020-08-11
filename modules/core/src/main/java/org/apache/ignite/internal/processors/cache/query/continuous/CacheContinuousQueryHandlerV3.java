@@ -161,6 +161,11 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
+    @Override public boolean p2pMarshalled() {
+        return super.p2pMarshalled() || rmtTransFactoryDep != null;
+    }
+
+    /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         super.writeExternal(out);
 

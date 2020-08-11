@@ -1294,6 +1294,13 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     }
 
     /**
+     * @return Whether the handler was marshalled for peer class loading.
+     */
+    public boolean p2pMarshalled() {
+        return rmtFilterDep != null;
+    }
+
+    /**
      * @param depObj Deployable object to unmarshal.
      * @param nodeId Sender node Id.
      * @param ctx Kernal context.
