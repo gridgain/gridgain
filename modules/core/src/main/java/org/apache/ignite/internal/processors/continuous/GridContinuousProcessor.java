@@ -430,6 +430,12 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         }
 
         if (!joiningNodeId.equals(ctx.localNodeId()) || !locInfos.isEmpty()) {
+            if (ctx.config().isPeerClassLoadingEnabled()) {
+                startRoutinesOnJoin(locInfos);
+
+                return null;
+            }
+
             Map<UUID, Map<UUID, LocalRoutineInfo>> clientInfos0 = copyClientInfos(clientInfos);
 
             if (joiningNodeId.equals(ctx.localNodeId()) && ctx.discovery().localNode().isClient()) {
@@ -491,6 +497,35 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             res.put(e.getKey(), e.getValue());
 
         return res;
+    }
+
+    /**
+     * @param locInfos Locale infos.
+     */
+    private void startRoutinesOnJoin(Map<UUID, LocalRoutineInfo> locInfos) {
+        for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
+            LocalRoutineInfo locRoutineInfo = e.getValue();
+
+            GridContinuousHandler hnd = locRoutineInfo.handler().clone();
+
+            ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                @Override public void run() {
+                    try {
+                        startRoutine(
+                            hnd,
+                            false,
+                            locRoutineInfo.bufSize,
+                            locRoutineInfo.interval,
+                            locRoutineInfo.autoUnsubscribe,
+                            locRoutineInfo.prjPred
+                        );
+                    }
+                    catch (IgniteCheckedException | IgniteException e) {
+                        log.warning("Failed to start continuous query.", e);
+                    }
+                }
+            }));
+        }
     }
 
     /** {@inheritDoc} */
