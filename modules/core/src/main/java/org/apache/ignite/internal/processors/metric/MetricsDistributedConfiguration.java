@@ -37,7 +37,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.checkRange;
  */
 public class MetricsDistributedConfiguration {
     /** */
-    private final boolean defaultDiagnosticMessageStatsEnabled = getBoolean(IGNITE_MESSAGE_STATS_ENABLED, true);
+    private final boolean defaultDiagnosticMessageStatsEnabled = getBoolean(IGNITE_MESSAGE_STATS_ENABLED, false);
 
     /** */
     private final long defaultDiagnosticMessageStatsTooLongProcessing =
