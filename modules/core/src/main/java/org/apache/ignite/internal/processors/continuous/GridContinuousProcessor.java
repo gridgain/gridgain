@@ -430,28 +430,10 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         }
 
         if (!joiningNodeId.equals(ctx.localNodeId()) || !locInfos.isEmpty()) {
-            Map<UUID, LocalRoutineInfo> locInfos0;
+            Map<UUID, LocalRoutineInfo> locInfos0 = copyLocalInfos(locInfos);
 
-            if (ctx.config().isPeerClassLoadingEnabled()) {
-                locInfos0 = U.newHashMap(locInfos.size());
-
-                for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
-                    LocalRoutineInfo locInfo = e.getValue();
-
-                    if (CacheContinuousQueryHandler.class.isAssignableFrom(locInfo.handler().getClass())) {
-                        CacheContinuousQueryHandler hnd = (CacheContinuousQueryHandler)locInfo.handler();
-
-                        if (hnd.p2pMarshalled()) {
-                            startRoutineOnJoin(hnd, locInfo.bufSize, locInfo.interval, locInfo.autoUnsubscribe, locInfo.prjPred);
-
-                            continue;
-                        }
-                    }
-
-                    locInfos0.put(e.getKey(), e.getValue());
-                }
-            } else
-                locInfos0 = copyLocalInfos(locInfos);
+            if (locInfos0.isEmpty())
+                return null;
 
             Map<UUID, Map<UUID, LocalRoutineInfo>> clientInfos0 = copyClientInfos(clientInfos);
 
@@ -507,41 +489,35 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     private Map<UUID, LocalRoutineInfo> copyLocalInfos(Map<UUID, LocalRoutineInfo> locInfos) {
         Map<UUID, LocalRoutineInfo> res = U.newHashMap(locInfos.size());
 
-        for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet())
+        for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
+            if (ctx.config().isPeerClassLoadingEnabled() &&
+                e.getValue().handler() instanceof CacheContinuousQueryHandler &&
+                ((CacheContinuousQueryHandler)e.getValue().handler()).p2pMarshalled()) {
+                ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        try {
+                            startRoutine(
+                                e.getValue().handler().clone(),
+                                false,
+                                e.getValue().bufSize,
+                                e.getValue().interval,
+                                e.getValue().autoUnsubscribe,
+                                e.getValue().prjPred
+                            );
+                        }
+                        catch (IgniteCheckedException | IgniteException e) {
+                            log.warning("Failed to start continuous query.", e);
+                        }
+                    }
+                }));
+
+                continue;
+            }
+
             res.put(e.getKey(), e.getValue());
+        }
 
         return res;
-    }
-
-    /**
-     * @param hnd Handler.
-     * @param bufSize Buffer size.
-     * @param interval Time interval.
-     * @param autoUnsubscribe Automatic unsubscribe flag.
-     * @param prjPred Projection predicate.
-     */
-    private void startRoutineOnJoin(CacheContinuousQueryHandler hnd,
-        int bufSize,
-        long interval,
-        boolean autoUnsubscribe,
-        @Nullable IgnitePredicate<ClusterNode> prjPred) {
-        ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
-            @Override public void run() {
-                try {
-                    startRoutine(
-                        hnd.clone(),
-                        false,
-                        bufSize,
-                        interval,
-                        autoUnsubscribe,
-                        prjPred
-                    );
-                }
-                catch (IgniteCheckedException | IgniteException e) {
-                    log.warning("Failed to start continuous query.", e);
-                }
-            }
-        }));
     }
 
     /** {@inheritDoc} */
