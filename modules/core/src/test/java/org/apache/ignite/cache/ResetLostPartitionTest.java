@@ -67,17 +67,16 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        super.afterTest();
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName)
-            .setCommunicationSpi(new TestRecordingCommunicationSpi());
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 

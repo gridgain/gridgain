@@ -16,16 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
-import java.util.UUID;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashSet;
-import java.util.HashMap;
 import java.util.AbstractMap;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;

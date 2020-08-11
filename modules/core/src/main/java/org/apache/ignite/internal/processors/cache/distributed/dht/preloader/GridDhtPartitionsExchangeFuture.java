@@ -180,7 +180,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private static final boolean SKIP_PARTITION_SIZE_VALIDATION = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SKIP_PARTITION_SIZE_VALIDATION);
 
     /** */
-    private static final String DISTRIBUTED_LATCH_ID = "exchange";
+    public static final String DISTRIBUTED_LATCH_ID = "exchange";
 
     /** */
     @GridToStringExclude
@@ -2531,7 +2531,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
 
                 if (changedAffinity())
-                    cctx.walState().disableGroupDurabilityForPreloading(res, this);
+                    cctx.walState().disableGroupDurabilityForPreloading(this);
             }
         }
         catch (Throwable t) {
@@ -3862,8 +3862,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             timeBag.finishGlobalStage("Collect update counters and create affinity messages");
 
-            validatePartitionsState();
-
             if (firstDiscoEvt.type() == EVT_DISCOVERY_CUSTOM_EVT) {
                 assert firstDiscoEvt instanceof DiscoveryCustomEvent;
 
@@ -3899,6 +3897,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 assignPartitionsStates(null);
             else if (exchCtx.events().hasServerLeft())
                 assignPartitionsStates(emptySet());
+
+            // Validation should happen after resetting owners to avoid false desync reporting.
+            validatePartitionsState();
 
             // Recalculate new affinity based on partitions availability.
             if (!exchCtx.mergeExchanges() && forceAffReassignment) {
