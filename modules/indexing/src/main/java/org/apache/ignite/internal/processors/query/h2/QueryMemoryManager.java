@@ -87,6 +87,9 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /** Global memory quota. */
     private volatile long globalQuota;
 
+    /** Global memory quota in G/M as originally specified. */
+    private String globalQuotaInOriginalNotation;
+
     /**
      * Default query memory limit.
      *
@@ -94,6 +97,9 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * treated as separate Map query.
      */
     private volatile long qryQuota;
+
+    /** Query memory limit in Gb/Mb as originally specified. */
+    private volatile String qryQuotaInOriginalNotation;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -222,6 +228,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public synchronized void setGlobalQuota(String newGlobalQuota) {
         long globalQuota0 = U.parseBytes(newGlobalQuota);
+        globalQuotaInOriginalNotation = newGlobalQuota;
         long heapSize = Runtime.getRuntime().maxMemory();
 
         A.ensure(
@@ -248,6 +255,8 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         return String.valueOf(globalQuota);
     }
 
+    public String getGlobalQuotaInOriginalNotation() { return globalQuotaInOriginalNotation; }
+
     /**
      * Sets new per-query quota.
      *
@@ -255,6 +264,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public synchronized void setQueryQuota(String newQryQuota) {
         long qryQuota0 = U.parseBytes(newQryQuota);
+        qryQuotaInOriginalNotation = newQryQuota;
 
         A.ensure(qryQuota0 >= 0, "Sql query memory quota must be >= 0: quotaSize=" + qryQuota0);
 
@@ -278,6 +288,8 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     public String getQueryQuotaString() {
         return String.valueOf(qryQuota);
     }
+
+    public String getQueryQuotaStrinInOriginalNotation() { return qryQuotaInOriginalNotation; }
 
     /**
      * Sets offloading enabled flag.
