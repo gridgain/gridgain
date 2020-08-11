@@ -21,6 +21,8 @@ import java.util.Arrays;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.examples.ml.util.SerializableDoubleConsumer;
+import org.apache.ignite.examples.ml.util.SerializableFunction;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -120,14 +122,19 @@ public class Step_8_CV_with_Param_Grid_and_metrics {
                 CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
                     = new CrossValidation<>();
 
+                SerializableDoubleConsumer maxDeep = trainerCV::withMaxDeep;
+                SerializableDoubleConsumer minImpurityDecrease = trainerCV::withMinImpurityDecrease;
+
                 ParamGrid paramGrid = new ParamGrid()
-                    .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 10.0})
-                    .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[] {0.0, 0.25, 0.5});
+                    .addHyperParam("maxDeep", maxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 10.0})
+                    .addHyperParam("minImpurityDecrease", minImpurityDecrease, new Double[] {0.0, 0.25, 0.5});
+
+                SerializableFunction<BinaryClassificationMetricValues, Double> acc = m -> m.accuracy();
 
                 BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
                     .withNegativeClsLb(0.0)
                     .withPositiveClsLb(1.0)
-                    .withMetric(BinaryClassificationMetricValues::accuracy);
+                    .withMetric(acc);
 
                 scoreCalculator
                     .withIgnite(ignite)
