@@ -99,6 +99,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionStateValidationException;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -130,6 +131,8 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptySet;
+import static java.util.stream.Stream.concat;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT;
@@ -1244,7 +1247,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         top.update(null,
                             clientTop.partitionMap(true),
                             clientTop.fullUpdateCounters(),
-                            Collections.emptySet(),
+                            emptySet(),
                             null,
                             null,
                             null,
@@ -3478,7 +3481,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     ) {
         Map<Integer, Map<Integer, Long>> partHistReserved0 = partHistReserved;
 
-        Map<Integer, Long> localReserved = partHistReserved0 != null ? partHistReserved0.get(top.groupId()) : null;
+        int grpId = top.groupId();
+
+        Map<Integer, Long> localReserved = partHistReserved0 != null ? partHistReserved0.get(grpId) : null;
 
         List<SupplyPartitionInfo> list = new ArrayList<>();
 
@@ -3503,33 +3508,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 Long localHistCntr = localReserved.get(p);
 
                 if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
-                    Long ceilingMinReserved = nonMaxCntrs.ceiling(localHistCntr);
-
-                    if (ceilingMinReserved != null) {
-                        partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, ceilingMinReserved);
-
-                        haveHistory.add(p);
-                    }
-
-                    if (deepestReserved.get2() > localHistCntr)
-                        deepestReserved.set(cctx.localNodeId(), localHistCntr);
+                    findCounterForReservation(grpId, p, maxCntr, localHistCntr, maxCntrObj.size, cctx.localNodeId(),
+                        nonMaxCntrs, haveHistory, deepestReserved);
                 }
             }
 
             for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e0 : msgs.entrySet()) {
-                Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
+                Long histCntr = e0.getValue().partitionHistoryCounters(grpId).get(p);
 
                 if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
-                    Long ceilingMinReserved = nonMaxCntrs.ceiling(histCntr);
-
-                    if (ceilingMinReserved != null) {
-                        partHistSuppliers.put(e0.getKey(), top.groupId(), p, ceilingMinReserved);
-
-                        haveHistory.add(p);
-                    }
-
-                    if (deepestReserved.get2() > histCntr)
-                        deepestReserved.set(e0.getKey(), histCntr);
+                    findCounterForReservation(grpId, p, maxCntr, histCntr, maxCntrObj.size, e0.getKey(),
+                        nonMaxCntrs, haveHistory, deepestReserved);
                 }
             }
 
@@ -3545,6 +3534,55 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         return list;
+    }
+
+    /**
+     * Finds a historical counter in WAL of partition owner node, so that WAL interval from the historical counter
+     * to a max counter contains lesser updates that full partition size.
+     * If all conditions for ownerId to become a historical supplier are matched, it is added to partHistSuppliers map.
+     *
+     * @param grpId Id of cache group.
+     * @param p Partition Id.
+     * @param maxOwnerCntr Counter of owning partition.
+     * @param ownerReservedHistCntr Min counter which can be reserved for this partition.
+     * @param ownerSize Size of owned partition.
+     * @param ownerId Owner node id.
+     * @param nonMaxCntrs Sorted set of non max counters.
+     * @param haveHistory Modifiable collection for partitions that will be rebalanced historically.
+     * @param deepestReserved The Deepest reservation per node id.
+     */
+    private void findCounterForReservation(
+        int grpId,
+        int p,
+        long maxOwnerCntr,
+        Long ownerReservedHistCntr,
+        long ownerSize,
+        UUID ownerId,
+        NavigableSet<Long> nonMaxCntrs,
+        Set<Integer> haveHistory,
+        T2<UUID, Long> deepestReserved
+    ) {
+        boolean preferWalRebalance = ((GridCacheDatabaseSharedManager)cctx.database()).preferWalRebalance();
+
+        while (!nonMaxCntrs.isEmpty()) {
+            Long ceilingMinReserved = nonMaxCntrs.ceiling(ownerReservedHistCntr);
+
+            if (ceilingMinReserved == null)
+                break;
+
+            if (preferWalRebalance || maxOwnerCntr - ceilingMinReserved < ownerSize) {
+                partHistSuppliers.put(ownerId, grpId, p, ceilingMinReserved);
+
+                haveHistory.add(p);
+
+                break;
+            }
+
+            nonMaxCntrs = nonMaxCntrs.tailSet(ceilingMinReserved, false);
+        }
+
+        if (deepestReserved.get2() > ownerReservedHistCntr)
+            deepestReserved.set(ownerId, ownerReservedHistCntr);
     }
 
     /**
@@ -3830,7 +3868,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 assert firstDiscoEvt instanceof DiscoveryCustomEvent;
 
                 if (activateCluster() || changedBaseline())
-                    assignPartitionsStates(true);
+                    assignPartitionsStates(null);
 
                 DiscoveryCustomMessage discoveryCustomMessage = ((DiscoveryCustomEvent) firstDiscoEvt).customMessage();
 
@@ -3841,20 +3879,26 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (!F.isEmpty(caches))
                             resetLostPartitions(caches);
 
-                        assignPartitionsStates(true);
+                        Set<Integer> cacheGroupsToResetOwners = concat(exchActions.cacheGroupsToStart().stream()
+                                .map(grp -> grp.descriptor().groupId()),
+                            exchActions.cachesToResetLostPartitions().stream()
+                                .map(CU::cacheId))
+                            .collect(Collectors.toSet());
+
+                        assignPartitionsStates(cacheGroupsToResetOwners);
                     }
                 }
                 else if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage
                         && ((SnapshotDiscoveryMessage)discoveryCustomMessage).needAssignPartitions()) {
                     markAffinityReassign();
 
-                    assignPartitionsStates(true);
+                    assignPartitionsStates(null);
                 }
             }
             else if (exchCtx.events().hasServerJoin())
-                assignPartitionsStates(true);
+                assignPartitionsStates(null);
             else if (exchCtx.events().hasServerLeft())
-                assignPartitionsStates(false);
+                assignPartitionsStates(emptySet());
 
             // Recalculate new affinity based on partitions availability.
             if (!exchCtx.mergeExchanges() && forceAffReassignment) {
@@ -4148,9 +4192,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
-     * @param resetOwners True if reset partitions state needed, false otherwise.
+     * @param cacheGroupsToResetOwners Set of cache groups which need to reset partitions state,
+     *                                 null if reset partitions state for all cache groups needed
      */
-    private void assignPartitionsStates(boolean resetOwners) {
+    private void assignPartitionsStates(Set<Integer> cacheGroupsToResetOwners) {
         Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
             new ConcurrentHashMap<>() : null;
 
@@ -4166,12 +4211,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         : cctx.exchange().clientTopology(grpDesc.groupId(), events().discoveryCache());
 
                     if (CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
-                        List<SupplyPartitionInfo> list = assignPartitionStates(top, resetOwners);
+                        List<SupplyPartitionInfo> list;
+
+                        if (cacheGroupsToResetOwners == null || cacheGroupsToResetOwners.contains(grpDesc.groupId()))
+                            list = assignPartitionStates(top, true);
+                        else
+                            list = assignPartitionStates(top, false);
 
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
                     }
-                    else if (resetOwners)
+                    else if (cacheGroupsToResetOwners == null)
                         assignPartitionSizes(top);
 
                     return null;
@@ -4206,7 +4256,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             }
 
             if (hasPartitionToLog(supplyInfoMap, true)) {
-                log.info("Partitions were reserved, but maximum available counter is greater than demanded: [" +
+                log.info("Partitions were reserved, but maximum available counter is greater than demanded " +
+                    "or WAL contains too many updates: [" +
                     supplyInfoMap.entrySet().stream().map(entry ->
                         "[grp=" + entry.getKey() + ' ' +
                             entry.getValue().stream().filter(SupplyPartitionInfo::isHistoryReserved).map(info ->
@@ -4434,6 +4485,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                 }
 
                                 crd = node; // Do not allow to process FullMessage from old coordinator.
+
+                                processNonLocalCoordinatorChange(crd, node);
                             }
                             else {
                                 if (log.isInfoEnabled()) {
@@ -5112,38 +5165,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             }
                         }
                         else {
-                            if (crdChanged) {
-                                for (Map.Entry<ClusterNode, GridDhtPartitionsFullMessage> m : fullMsgs.entrySet()) {
-                                    if (crd0.equals(m.getKey())) {
-                                        if (log.isInfoEnabled()) {
-                                            log.info("Coordinator changed, process pending full message [" +
-                                                "ver=" + initialVersion() +
-                                                ", crd=" + node.id() +
-                                                ", pendingMsgNode=" + m.getKey() + ']');
-                                        }
-
-                                        processFullMessage(true, m.getKey(), m.getValue());
-
-                                        if (isDone())
-                                            return;
-                                    }
-                                }
-
-                                if (log.isInfoEnabled()) {
-                                    log.info("Coordinator changed, send partitions to new coordinator [" +
-                                        "ver=" + initialVersion() +
-                                        ", crd=" + node.id() +
-                                        ", newCrd=" + crd0.id() + ']');
-                                }
-
-                                final ClusterNode newCrd = crd0;
-
-                                cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
-                                    @Override public void run() {
-                                        sendPartitions(newCrd);
-                                    }
-                                });
-                            }
+                            if (crdChanged && processNonLocalCoordinatorChange(crd0, node))
+                                return;
                         }
                     }
                     catch (IgniteCheckedException e) {
@@ -5594,6 +5617,48 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         synchronized (mux) {
             clearingPartitions.computeIfAbsent(grp.groupId(), k -> new HashSet()).add(part);
         }
+    }
+
+    /**
+     * Process coordinator change on non local node.
+     *
+     * @param crd New coordinator.
+     * @param node Left node.
+     * @return {@code true} if exchange {@code isDone}
+     */
+    private boolean processNonLocalCoordinatorChange(ClusterNode crd, ClusterNode node) {
+        for (Map.Entry<ClusterNode, GridDhtPartitionsFullMessage> m : fullMsgs.entrySet()) {
+            if (crd.equals(m.getKey())) {
+                if (log.isInfoEnabled()) {
+                    log.info("Coordinator changed, process pending full message [" +
+                        "ver=" + initialVersion() +
+                        ", crd=" + node.id() +
+                        ", pendingMsgNode=" + m.getKey() + ']');
+                }
+
+                processFullMessage(true, m.getKey(), m.getValue());
+
+                if (isDone())
+                    return true;
+            }
+        }
+
+        if (log.isInfoEnabled()) {
+            log.info("Coordinator changed, send partitions to new coordinator [" +
+                "ver=" + initialVersion() +
+                ", crd=" + node.id() +
+                ", newCrd=" + crd.id() + ']');
+        }
+
+        final ClusterNode newCrd = crd;
+
+        cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+            @Override public void run() {
+                sendPartitions(newCrd);
+            }
+        });
+
+        return false;
     }
 
     /**

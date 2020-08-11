@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
         /** */
         private IIgnite _client;
-        
+
         /** */
         private volatile CacheEvent _lastEvent;
 
@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             };
 
             _grid = Ignition.Start(cfg);
-            
+
             var clientCfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 ClientMode = true,
@@ -99,7 +99,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Update entry.
             cache[1] = 2;
-            Assert.True(TestUtils.WaitForCondition(() => nearCache[1] == 2, 300));
+            TestUtils.WaitForTrueCondition(() => nearCache[1] == 2);
 
             // Update through near.
             nearCache[1] = 3;
@@ -107,7 +107,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Remove.
             cache.Remove(1);
-            Assert.True(TestUtils.WaitForCondition(() => !nearCache.ContainsKey(1), 300));
+            TestUtils.WaitForTrueCondition(() => !nearCache.ContainsKey(1));
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             cache[1] = 1;
             Assert.AreEqual(1, cache[1]);
 
-            var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName), 
+            var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName),
                 new NearCacheConfiguration());
 
             Assert.AreEqual(1, cache2[1]);
