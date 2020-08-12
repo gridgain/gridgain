@@ -27,6 +27,9 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -37,25 +40,67 @@ import org.h2.value.Value;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
-public class SqlStatisticsManager {
+public class SqlStatisticsManager implements MetastorageLifecycleListener {
+
+    private final static String META_SEPARATOR = ".";
+    private final static String META_STAT_PREFIX = "data_stats";
+    private final static String META_TABLE_STAT_PREX = META_STAT_PREFIX + "_tbl";
+    private final static String META_PART_STAT_PREX = META_STAT_PREFIX + "_part";
+
     private final Map<QueryTable, Map<Integer, TablePartitionStatistics>> partitionedTblStats = new ConcurrentHashMap<>();
 
     private final Map<QueryTable, TableStatistics> locTblStats = new ConcurrentHashMap<>();
 
     private final GridKernalContext ctx;
+    private ReadWriteMetastorage metastore;
 
     public SqlStatisticsManager(GridKernalContext ctx) {
         this.ctx = ctx;
+        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
+    }
+
+    public void onReadyForRead(ReadOnlyMetastorage metastorage) throws IgniteCheckedException {
+        metastorage.iterate(META_TABLE_STAT_PREX, (key, stat) -> {
+            System.out.println(key + stat);
+        },true);
+    }
+
+    public void onReadyForReadWrite(ReadWriteMetastorage metastorage) throws IgniteCheckedException {
+        this.metastore = metastorage;
     }
 
     public TableStatistics localTableStatistic(String schema, String tblName) {
         return locTblStats.get(new QueryTable(schema, tblName));
     }
 
-    public void collectTableStatistics(GridH2Table tbl) throws IgniteCheckedException {
+    public TableStatistics getLocalStatistics(QueryTable tbl) {
+        return locTblStats.get(tbl);
+    }
+
+    private Column[] filterColumns(Column[] columns, String ... colNames) {
+        if (colNames == null || colNames.length == 0) {
+            return columns;
+        }
+        List<Column> resultList = new ArrayList<>(colNames.length);
+
+        for(String colName : colNames)
+            for(Column col : columns)
+
+                if (colName.equals(col.getName())) {
+                    resultList.add(col);
+                    break;
+                }
+
+
+        return resultList.toArray(new Column[resultList.size()]);
+    }
+
+    public void collectTableStatistics(GridH2Table tbl, String ... colNames) throws IgniteCheckedException {
         assert tbl != null;
 
         GridH2RowDescriptor desc = tbl.rowDescriptor();
+
+        Column[] selectedColumns = filterColumns(tbl.getColumns(), colNames);
 
         List<TablePartitionStatistics> tblPartStats = new ArrayList<>();
 
@@ -72,13 +117,15 @@ public class SqlStatisticsManager {
 
                 long rowsCnt = 0;
 
-                List<ColumnStatisticsCollector> colStatsCollected = new ArrayList<>(tbl.getColumns().length);
+                List<ColumnStatisticsCollector> colStatsCollected = new ArrayList<>(selectedColumns.length);
 
-                for (Column col : tbl.getColumns())
+                for (Column col : selectedColumns)
                     colStatsCollected.add(new ColumnStatisticsCollector(col, tbl::compareValues));
 
-                for (CacheDataRow row : tbl.cacheContext().offheap().partitionIterator(locPart.id())) {
-                    // TODO: verify that row belongs to the table
+                for (CacheDataRow row : tbl.cacheContext().offheap().cachePartitionIterator(tbl.cacheId(), locPart.id(),
+                        null, true)) {
+                    // TODO: verify that row belongs to the table, possibly its better to use table scan index here
+                    // tbl.getScanIndex(null)...
 
                     rowsCnt++;
 
@@ -94,6 +141,7 @@ public class SqlStatisticsManager {
                 Map<String, ColumnStatistics> colStats = colStatsCollected.stream().collect(Collectors.toMap(
                     csc -> csc.col().getName(), csc -> csc.finish(rowsCnt0)
                 ));
+
 
                 tblPartStats.add(new TablePartitionStatistics(locPart.id(), true, rowsCnt, colStats));
             }
@@ -114,6 +162,11 @@ public class SqlStatisticsManager {
     }
 
     private void aggregateLocalStatistics(GridH2Table tbl) {
+        if (tbl.cacheInfo().affinityNode()) {
+            tbl.getScanIndex(null);
+        }
+
+
         QueryTable tblId = tbl.identifier();
 
         if (!partitionedTblStats.containsKey(tblId))
@@ -147,7 +200,11 @@ public class SqlStatisticsManager {
         locTblStats.put(tblId, tblStats);
 
         tbl.tableStatistics(tblStats);
+        //if (metastore != null)
+            //TODO metastore.write(getMetaKey(tblId.schema(), tblId.table()), tblStats);
     }
+
+
 
     private static class ColumnStatisticsAggregator {
         private final Comparator<Value> cmp;
@@ -184,4 +241,25 @@ public class SqlStatisticsManager {
             return new ColumnStatistics(min, max, nulls, selectivity / statsProcessed);
         }
     }
+
+    private String getTblName(String metaKey) {
+        int idx = metaKey.lastIndexOf(META_SEPARATOR) + 1;
+
+        assert idx < metaKey.length();
+
+        return metaKey.substring(idx);
+    }
+
+    private String getSchemaName(String metaKey) {
+        int schemaIdx = metaKey.indexOf(META_SEPARATOR) + 1;
+        int tableIdx = metaKey.lastIndexOf(META_SEPARATOR);
+
+        return metaKey.substring(schemaIdx, tableIdx);
+
+    }
+
+    private String getMetaKey(String schema, String tblName) {
+        return META_TABLE_STAT_PREX + META_SEPARATOR + schema + META_SEPARATOR + tblName;
+    }
+
 }
