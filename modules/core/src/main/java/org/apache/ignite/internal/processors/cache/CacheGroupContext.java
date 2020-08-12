@@ -837,19 +837,11 @@ public class CacheGroupContext {
     void stopGroup() {
         offheapMgr.stop();
 
-        try {
-            U.sleep(100000);
-        } catch (IgniteInterruptedCheckedException e) {
-            e.printStackTrace();
-        }
-
         if (isRecoveryMode())
             return;
 
         IgniteCheckedException err =
             new IgniteCheckedException("Failed to wait for topology update, cache (or node) is stopping.");
-
-        ctx.evict().onCacheGroupStopped(this);
 
         aff.cancelFutures(err);
 
@@ -1108,9 +1100,9 @@ public class CacheGroupContext {
         }
 
         try {
-            offheapMgr = persistenceEnabled
+            offheapMgr = ctx.kernalContext().resource().resolve(persistenceEnabled
                 ? new GridCacheOffheapManager()
-                : new IgniteCacheOffheapManagerImpl();
+                : new IgniteCacheOffheapManagerImpl());
         }
         catch (Exception e) {
             throw new IgniteCheckedException("Failed to initialize offheap manager", e);
