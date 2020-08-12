@@ -479,6 +479,9 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             || evt.type() == EVT_NODE_LEFT
             || evt.type() == EVT_NODE_JOINED;
 
+        if (!mvccEnabled)
+            return;
+
         UUID nodeId = evt.eventNode().id();
         AffinityTopologyVersion topVer = discoCache.version();
         List<ClusterNode> nodes = discoCache.allNodes();

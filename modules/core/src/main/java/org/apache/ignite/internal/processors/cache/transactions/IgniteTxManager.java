@@ -3207,6 +3207,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 // Null means that recovery voting is not needed.
                 GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut =
                     node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null
+                        && cctx.kernalContext().coordinators().mvccEnabled()
                     ? new GridCompoundFuture<>() : null;
 
                 for (final IgniteInternalTx tx : activeTransactions()) {
