@@ -1354,12 +1354,37 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         final byte plc,
         final IgniteRunnable msgC
     ) throws IgniteCheckedException {
-        Runnable c = new TraceRunnable(ctx.tracing(), COMMUNICATION_REGULAR_PROCESS) {
+        final long startWait = System.nanoTime();
+
+        final long enqueueTs = U.currentTimeMillis();
+
+        StripedExecutor.StripeAwareRunnable c = new StripedExecutor.StripeAwareRunnable(ctx.tracing(), COMMUNICATION_REGULAR_PROCESS) {
+            /** Stripe which runnable was assigned to. */
+            private @Nullable StripedExecutor.Stripe stripe;
+
+            /** */
+            private int beforeQueueSize = -1;
+
+            /** {@inheritDoc} */
+            @Override public Message message() {
+                return msg.message();
+            }
+
+            /** {@inheritDoc} */
+            @Override public void assign(StripedExecutor.Stripe stripe) {
+                this.stripe = stripe;
+
+                beforeQueueSize = stripe.queueSize();
+            }
+
+            /** {@inheritDoc} */
             @Override public void execute() {
                 try {
                     MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                     threadProcessingMessage(true, msgC);
+
+                    long startProc = System.nanoTime();
 
                     // The classes which use TransientSerializable must set a version of a node to ThreadLocal via
                     // MarshallerUtils.jobSenderVersion(node.version()) that created a serializable object.
@@ -1374,6 +1399,17 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     try {
                         processRegularMessage0(msg, nodeId);
+
+                        if (metricsConfiguration.diagnosticMessageStatsEnabled()) {
+                            writeMessageMetrics(msg,
+                                startWait,
+                                startProc,
+                                System.nanoTime(),
+                                enqueueTs,
+                                beforeQueueSize,
+                                stripe == null ? -1 : stripe.queueSize()
+                            );
+                        }
                     }
                     finally {
                         MarshallerUtils.jobSenderVersion(null);
