@@ -155,7 +155,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
 
         final String[] args = {
             "walDir=" + wal.getAbsolutePath(),
-            "binaryMetadataFileStoreDir=non_existing_path"
+            "binaryMetadataDir=non_existing_path"
         };
 
         IgniteWalConverterArguments.parse(System.out, args);
@@ -167,7 +167,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testIncorrectMarshallerMappingFileStoreDir() throws Exception {
+    public void testIncorrectMarshallerMappingDir() throws Exception {
         expectedEx.expect(IllegalArgumentException.class);
         expectedEx.expectMessage("Incorrect path to dir with marshaller files: non_existing_path");
 
@@ -176,7 +176,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
 
         final String[] args = {
             "walDir=" + wal.getAbsolutePath(),
-            "marshallerMappingFileStoreDir=non_existing_path"
+            "marshallerMappingDir=non_existing_path"
         };
 
         IgniteWalConverterArguments.parse(System.out, args);
@@ -295,14 +295,14 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
     @Test
     public void testIncorrectProcessSensitiveData() throws Exception {
         expectedEx.expect(IllegalArgumentException.class);
-        expectedEx.expectMessage("Unknown processSensitiveData: unknown. Supported: ");
+        expectedEx.expectMessage("Unknown includeSensitive: unknown. Supported: ");
 
         final File wal = File.createTempFile("wal", "");
         wal.deleteOnExit();
 
         final String[] args = {
             "walDir=" + wal.getAbsolutePath(),
-            "processSensitiveData=unknown"
+            "includeSensitive=unknown"
         };
 
         IgniteWalConverterArguments.parse(System.out, args);
@@ -367,14 +367,14 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         final IgniteWalConverterArguments parseArgs = IgniteWalConverterArguments.parse(System.out, args);
 
         Assert.assertEquals(4096, parseArgs.getPageSize());
-        Assert.assertNull(parseArgs.getBinaryMetadataFileStoreDir());
-        Assert.assertNull(parseArgs.getMarshallerMappingFileStoreDir());
+        Assert.assertNull(parseArgs.getBinaryMetadataDir());
+        Assert.assertNull(parseArgs.getMarshallerMappingDir());
         Assert.assertTrue(parseArgs.isKeepBinary());
         Assert.assertTrue(parseArgs.getRecordTypes().isEmpty());
         Assert.assertNull(parseArgs.getFromTime());
         Assert.assertNull(parseArgs.getToTime());
-        Assert.assertNull(parseArgs.getRecordContainsText());
-        Assert.assertEquals(ProcessSensitiveData.SHOW, parseArgs.getProcessSensitiveData());
+        Assert.assertNull(parseArgs.hasText());
+        Assert.assertEquals(ProcessSensitiveData.SHOW, parseArgs.includeSensitive());
         Assert.assertFalse(parseArgs.isPrintStat());
         Assert.assertFalse(parseArgs.isSkipCrc());
     }
@@ -400,14 +400,14 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
             "walDir=" + wal.getAbsolutePath(),
             "walArchiveDir=" + walArchive.getAbsolutePath(),
             "pageSize=2048",
-            "binaryMetadataFileStoreDir=" + binaryMetadataDir.getAbsolutePath(),
-            "marshallerMappingFileStoreDir=" + marshallerDir.getAbsolutePath(),
+            "binaryMetadataDir=" + binaryMetadataDir.getAbsolutePath(),
+            "marshallerMappingDir=" + marshallerDir.getAbsolutePath(),
             "keepBinary=false",
             "recordTypes=DATA_RECORD,TX_RECORD",
             "walTimeFromMillis=1575158400000",
             "walTimeToMillis=1577836740999",
-            "recordContainsText=search string",
-            "processSensitiveData=MD5",
+            "hasText=search string",
+            "includeSensitive=MD5",
             "printStat=true",
             "skipCrc=true"};
 
@@ -415,15 +415,15 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         Assert.assertEquals(wal, parseArgs.getWalDir());
         Assert.assertEquals(walArchive, parseArgs.getWalArchiveDir());
         Assert.assertEquals(2048, parseArgs.getPageSize());
-        Assert.assertEquals(binaryMetadataDir, parseArgs.getBinaryMetadataFileStoreDir());
-        Assert.assertEquals(marshallerDir, parseArgs.getMarshallerMappingFileStoreDir());
+        Assert.assertEquals(binaryMetadataDir, parseArgs.getBinaryMetadataDir());
+        Assert.assertEquals(marshallerDir, parseArgs.getMarshallerMappingDir());
         Assert.assertFalse(parseArgs.isKeepBinary());
         Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.DATA_RECORD));
         Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.TX_RECORD));
         Assert.assertEquals(1575158400000L, (long)parseArgs.getFromTime());
         Assert.assertEquals(1577836740999L, (long)parseArgs.getToTime());
-        Assert.assertEquals("search string", parseArgs.getRecordContainsText());
-        Assert.assertEquals(ProcessSensitiveData.MD5, parseArgs.getProcessSensitiveData());
+        Assert.assertEquals("search string", parseArgs.hasText());
+        Assert.assertEquals(ProcessSensitiveData.MD5, parseArgs.includeSensitive());
         Assert.assertTrue(parseArgs.isPrintStat());
         Assert.assertTrue(parseArgs.isSkipCrc());
     }

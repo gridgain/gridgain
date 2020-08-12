@@ -245,7 +245,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         args.add("pageSize=" + pageSize);
         args.add("walDir=" + walDirPath);
         if (processSensitiveData != null)
-            args.add("processSensitiveData=" + processSensitiveData.name());
+            args.add("includeSensitive=" + processSensitiveData.name());
 
         IgniteWalConverter.main(args.toArray(new String[args.size()]));
 
