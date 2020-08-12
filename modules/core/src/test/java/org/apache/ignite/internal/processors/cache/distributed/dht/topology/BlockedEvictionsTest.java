@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -199,6 +200,65 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         }
 
         waitForTopology(2);
+    }
+
+    @Test
+    public void testDuringClear() throws Exception {
+        AtomicInteger holder = new AtomicInteger();
+
+        CountDownLatch l1 = new CountDownLatch(1);
+        CountDownLatch l2 = new CountDownLatch(1);
+
+        IgniteEx g0 = startGrid(0, new DependencyResolver() {
+            @Override public <T> T resolve(T instance) {
+                if (instance instanceof GridDhtPartitionTopologyImpl) {
+                    GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
+
+                    top.partitionFactory(new GridDhtPartitionTopologyImpl.PartitionFactory() {
+                        @Override public GridDhtLocalPartition create(GridCacheSharedContext ctx, CacheGroupContext grp, int id, boolean recovery) {
+                            return new GridDhtLocalPartitionSyncEviction(ctx, grp, id, recovery, 3, l1, l2) {
+                                /** */
+                                @Override protected void sync() {
+                                    if (holder.get() == id)
+                                        super.sync();
+                                }
+                            };
+                        }
+                    });
+                }
+
+                return instance;
+            }
+        });
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        IgniteCache<Object, Object> cache = g0.getOrCreateCache(cacheConfiguration());
+
+        int p0 = evictingPartitionsAfterJoin(g0, cache, 1).get(0);
+        holder.set(p0);
+
+        loadDataToPartition(p0, g0.name(), DEFAULT_CACHE_NAME, 5_000, 0, 3);
+
+        startGrid(2);
+
+        U.awaitQuiet(l1);
+
+        IgniteInternalFuture<Void> fut = runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                g0.close();
+
+                return null;
+            }
+        });
+
+        doSleep(1000);
+
+        l2.countDown();
+
+        fut.get();
     }
 
     /**

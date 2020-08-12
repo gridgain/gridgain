@@ -82,19 +82,24 @@ class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
 
     /** {@inheritDoc} */
     @Override protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        EvictionContext spied = Mockito.spy(evictionCtx);
+        EvictionContext spied = mode == 1 ? Mockito.spy(evictionCtx) : evictionCtx;
 
-        Mockito.doAnswer(new Answer() {
-            @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                if (!delayed && mode == 1) {
-                    sync();
+        if (mode == 3)
+            sync();
 
-                    delayed = true;
+        if (mode == 1) {
+            Mockito.doAnswer(new Answer() {
+                @Override public Object answer(InvocationOnMock invocation) throws Throwable {
+                    if (!delayed) {
+                        sync();
+
+                        delayed = true;
+                    }
+
+                    return invocation.callRealMethod();
                 }
-
-                return invocation.callRealMethod();
-            }
-        }).when(spied).shouldStop();
+            }).when(spied).shouldStop();
+        }
 
         long cnt = super.clearAll(spied);
 
