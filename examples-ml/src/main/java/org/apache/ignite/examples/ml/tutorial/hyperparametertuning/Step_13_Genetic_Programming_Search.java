@@ -22,6 +22,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.examples.ml.tutorial.TitanicUtils;
+import org.apache.ignite.examples.ml.util.SerializableDoubleConsumer;
+import org.apache.ignite.examples.ml.util.SerializableFunction;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
@@ -71,6 +73,9 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
 public class Step_13_Genetic_Programming_Search {
     /** Run example. */
     public static void main(String[] args) {
+        System.out.println();
+        System.out.println(">>> Tutorial step 13 (Genetic Programming) example started.");
+
         try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
@@ -121,16 +126,22 @@ public class Step_13_Genetic_Programming_Search {
                 CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
                     = new CrossValidation<>();
 
+                SerializableDoubleConsumer maxDeep = trainerCV::withMaxDeep;
+                SerializableDoubleConsumer minImpurityDecrease = trainerCV::withMinImpurityDecrease;
+                SerializableDoubleConsumer p = normalizationTrainer::withP;
+
                 ParamGrid paramGrid = new ParamGrid()
                     .withParameterSearchStrategy(new EvolutionOptimizationStrategy())
-                    .addHyperParam("p", normalizationTrainer::withP, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
-                    .addHyperParam("maxDeep", trainerCV::withMaxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
-                    .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
+                    .addHyperParam("p", p, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
+                    .addHyperParam("maxDeep", maxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
+                    .addHyperParam("minImpurityDecrease", minImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
+
+                SerializableFunction<BinaryClassificationMetricValues, Double> acc = m -> m.accuracy();
 
                 BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
                     .withNegativeClsLb(0.0)
                     .withPositiveClsLb(1.0)
-                    .withMetric(BinaryClassificationMetricValues::accuracy);
+                    .withMetric(acc);
 
                 scoreCalculator
                     .withIgnite(ignite)
@@ -182,11 +193,13 @@ public class Step_13_Genetic_Programming_Search {
                 System.out.println("\n>>> Accuracy " + accuracy);
                 System.out.println("\n>>> Test Error " + (1 - accuracy));
 
-                System.out.println(">>> Tutorial step 8 (cross-validation with param grid) example started.");
-            } catch (FileNotFoundException e) {
+                System.out.println(">>> Tutorial step 13 (Genetic Programming) example completed.");
+            }
+            catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
-        } finally {
+        }
+        finally {
             System.out.flush();
         }
     }

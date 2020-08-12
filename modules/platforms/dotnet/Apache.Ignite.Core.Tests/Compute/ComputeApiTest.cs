@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Threading;
@@ -82,12 +83,10 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// </summary>
         protected virtual Tuple<string, string, string> GetConfigs()
         {
-            return Tuple.Create(
-                "Config\\Compute\\compute-grid1.xml",
-                "Config\\Compute\\compute-grid2.xml",
-                "Config\\Compute\\compute-grid3.xml");
-        }
+            var path = Path.Combine("Config", "Compute", "compute-grid");
 
+            return Tuple.Create(path + "1.xml", path + "2.xml", path + "3.xml");
+        }
 
         /// <summary>
         /// Gets the thin client configuration.
@@ -256,7 +255,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             var cluster = _grid1.GetCluster();
 
             Assert.IsTrue(cluster.GetNodes().Select(node => node.Id).All(cluster.PingNode));
-            
+
             Assert.IsFalse(cluster.PingNode(Guid.NewGuid()));
         }
 
@@ -267,7 +266,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         public void TestTopologyVersion()
         {
             var cluster = _grid1.GetCluster();
-            
+
             var topVer = cluster.TopologyVersion;
 
             Ignition.Stop(_grid3.Name, true);
@@ -313,7 +312,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                 Assert.IsTrue(top.All(nodes.Contains));
             }
-            finally 
+            finally
             {
                 _grid2 = Ignition.Start(Configuration(GetConfigs().Item2));
             }
@@ -411,7 +410,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             var nodes = _grid1.GetCluster().GetNodes().Take(2).ToArray();
 
             var callCount = 0;
-            
+
             Func<IClusterNode, IClusterNode> nodeSelector = node =>
             {
                 callCount++;
@@ -427,7 +426,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             var projection = _grid1.GetCluster().ForNodes(nodes.Select(nodeSelector));
             Assert.AreEqual(2, projection.GetNodes().Count);
             Assert.AreEqual(2, callCount);
-            
+
             projection = _grid1.GetCluster().ForNodeIds(nodes.Select(idSelector));
             Assert.AreEqual(2, projection.GetNodes().Count);
             Assert.AreEqual(4, callCount);
@@ -582,7 +581,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             var nodeId = _grid1.GetCluster().ForAttribute("my_attr", "value1").GetNodes().Single().Id;
             Assert.AreEqual(nodeId, clientPrj.GetNode().Id);
         }
-        
+
         /// <summary>
         /// Test for cache/data/client projections.
         /// </summary>
@@ -598,7 +597,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             Assert.IsTrue(nodes.Contains(prjCache.GetNodes().ElementAt(0)));
             Assert.IsTrue(nodes.Contains(prjCache.GetNodes().ElementAt(1)));
-            
+
             // Data nodes.
             IClusterGroup prjData = _grid1.GetCluster().ForDataNodes("cache1");
 
@@ -769,7 +768,7 @@ namespace Apache.Ignite.Core.Tests.Compute
                     ReservedPartition = aff.GetPartition(primaryKey),
                     CacheNames = new[] {cacheName}
                 };
-                
+
                 _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
                 Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
 
@@ -873,9 +872,9 @@ namespace Apache.Ignite.Core.Tests.Compute
             var node = local
                 ? _grid1.GetCluster().GetLocalNode()
                 : _grid2.GetCluster().GetLocalNode();
-            
+
             var aff = _grid1.GetAffinity(cacheNames[0]);
-            
+
             // Wait for some partitions to be assigned to the node.
             TestUtils.WaitForTrueCondition(() => aff.GetPrimaryPartitions(node).Any());
             var part = aff.GetPrimaryPartitions(node).First();
@@ -889,11 +888,11 @@ namespace Apache.Ignite.Core.Tests.Compute
             var action = async
                 ? (Action) (() => _grid1.GetCompute().AffinityRunAsync(cacheNames, part, computeAction).Wait())
                 : () => _grid1.GetCompute().AffinityRun(cacheNames, part, computeAction);
-            
+
             // Good case.
             action();
             Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
-            
+
             // Exception in user code.
             computeAction.ShouldThrow = true;
             var aex = Assert.Throws<AggregateException>(() => action());
@@ -911,7 +910,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             [Values(true, false)] bool keyOrPart)
         {
             var compute = _grid1.GetCompute();
-            
+
             Action<CancellationToken> action = token =>
             {
                 if (callOrRun)
@@ -940,7 +939,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             // Not cancelled.
             Assert.DoesNotThrow(() => action(CancellationToken.None));
-            
+
             // Cancelled.
             var ex = Assert.Throws<AggregateException>(() => action(new CancellationToken(true)));
             Assert.IsInstanceOf<TaskCanceledException>(ex.GetInnermostException());
@@ -983,7 +982,7 @@ namespace Apache.Ignite.Core.Tests.Compute
                 _grid1.GetCluster().ForLocal().GetCompute().Broadcast(new ExceptionalComputeAction()));
 
             Assert.IsNotNull(ex.InnerException);
-            Assert.AreEqual("Compute job has failed on local node, examine InnerException for details.", 
+            Assert.AreEqual("Compute job has failed on local node, examine InnerException for details.",
                 ex.InnerException.Message);
             Assert.IsNotNull(ex.InnerException.InnerException);
             Assert.AreEqual(ExceptionalComputeAction.ErrorText, ex.InnerException.InnerException.Message);
@@ -1161,11 +1160,11 @@ namespace Apache.Ignite.Core.Tests.Compute
         public static Guid LastNodeId;
 
         public Guid Id { get; set; }
-        
+
         public int? ReservedPartition { get; set; }
-        
+
         public ICollection<string> CacheNames { get; set; }
-        
+
         public bool ShouldThrow { get; set; }
 
         public ComputeAction()
@@ -1236,7 +1235,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
     interface INestedComputeFunc : IComputeFunc<int>
     {
-        
+
     }
 
     [Serializable]
