@@ -16,18 +16,35 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-/**
- * Interface for all page lock tracker entries which support dumping.
- */
-public interface DumpSupported<T extends PageLockDump> {
+/** */
+public class ThreadPageLockState {
     /** */
-    boolean acquireSafePoint();
+    public final long threadId;
 
     /** */
-    boolean releaseSafePoint();
+    public final String threadName;
 
-    /**
-     * Create dump.
-     */
-    T dump();
+    /** */
+    public final Thread.State state;
+
+    /** */
+    public final PageLockDump pageLockDump;
+
+    /** */
+    public final InvalidContext<? extends PageLockDump> invalidContext;
+
+    /** */
+    public ThreadPageLockState(
+        long threadId,
+        String threadName,
+        Thread.State state,
+        PageLockDump pageLockDump,
+        InvalidContext<? extends PageLockDump> invalidContext
+    ) {
+        this.threadId = threadId;
+        this.threadName = threadName;
+        this.state = state;
+        this.pageLockDump = pageLockDump;
+        this.invalidContext = invalidContext;
+    }
 }

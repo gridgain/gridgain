@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,27 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory;
+/**
+ * Log entry.
+ */
+public class LogEntry {
+    /** */
+    public final long pageId;
 
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.OFF_HEAP_LOG;
+    /** */
+    public final int structureId;
 
-/** */
-public class OffHeapLockLogTest extends PageLockLogTest {
-    /** {@inheritDoc} */
-    @Override protected LockLog createLogStackTracer(String name) {
-        return (LockLog)PageLockTrackerFactory.create(OFF_HEAP_LOG, name);
+    /** */
+    public final int operation;
+
+    /** */
+    public final int holdedLocks;
+
+    /** */
+    LogEntry(long pageId, int structureId, int operation, int holdedLock) {
+        this.pageId = pageId;
+        this.structureId = structureId;
+        this.operation = operation;
+        this.holdedLocks = holdedLock;
     }
 }
