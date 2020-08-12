@@ -86,7 +86,7 @@ public class MetadataRemoveCommand
     /** {@inheritDoc} */
     @Override protected void printResult(MetadataMarshalled res, Logger log) {
         if (res.metadata() == null) {
-            log.info("Type not found");
+            log.info("Failed to remove binary type, type not found: " + arg());
 
             return;
         }
