@@ -324,10 +324,6 @@ public enum IgniteFeatures {
             if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
-            //Disable new rolling upgrade
-            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
-                continue;
-
             // Add only when indexing is enabled.
             if (INDEXING == value && !ctx.query().moduleEnabled())
                 continue;
