@@ -20,6 +20,7 @@ import org.apache.ignite.events.IgniteControlUtilityBaselineEventsLocalTest;
 import org.apache.ignite.events.IgniteControlUtilityBaselineEventsRemoteTest;
 import org.apache.ignite.internal.commandline.CommandHandlerParsingTest;
 import org.apache.ignite.internal.processors.security.GridCommandHandlerSslWithSecurityTest;
+import org.apache.ignite.util.CommandHandlerParsedArgsTest;
 import org.apache.ignite.util.GridCommandHandlerBrokenIndexTest;
 import org.apache.ignite.util.GridCommandHandlerCheckIndexesInlineSizeTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
@@ -34,6 +35,7 @@ import org.apache.ignite.util.GridCommandHandlerIndexingClusterByClassWithSSLTes
 import org.apache.ignite.util.GridCommandHandlerIndexingTest;
 import org.apache.ignite.util.GridCommandHandlerIndexingWithSSLTest;
 import org.apache.ignite.util.GridCommandHandlerInterruptCommandTest;
+import org.apache.ignite.util.GridCommandHandlerMessageStatisticsTest;
 import org.apache.ignite.util.GridCommandHandlerMetadataTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicPersistentTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicTest;
@@ -95,6 +97,10 @@ import org.junit.runners.Suite;
     GridCommandHandlerInterruptCommandTest.class,
     GridCommandHandlerMetadataTest.class,
     GridCommandHandlerGetCacheSizeTest.class,
+
+    GridCommandHandlerMessageStatisticsTest.class,
+
+    CommandHandlerParsedArgsTest.class
 })
 public class IgniteControlUtilityTestSuite {
 }

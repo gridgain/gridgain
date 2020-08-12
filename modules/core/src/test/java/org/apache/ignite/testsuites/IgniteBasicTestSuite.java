@@ -133,8 +133,6 @@ import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
 import org.apache.ignite.testframework.test.ParametersTest;
 import org.apache.ignite.testframework.test.VariationsIteratorTest;
 import org.apache.ignite.util.AttributeNodeFilterSelfTest;
-import org.apache.ignite.util.CommandHandlerParsedArgsTest;
-import org.apache.ignite.util.GridCommandHandlerMessageStatisticsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -312,10 +310,6 @@ import org.junit.runners.Suite;
 
     IgniteThreadGroupNodeRestartTest.class,
     BaselineEventsRemoteTest.class,
-
-    CommandHandlerParsedArgsTest.class,
-
-    GridCommandHandlerMessageStatisticsTest.class,
 
     BaselineEventsRemoteTest.class
 })
