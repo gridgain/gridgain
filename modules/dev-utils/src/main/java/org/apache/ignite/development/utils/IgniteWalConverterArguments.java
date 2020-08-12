@@ -310,7 +310,7 @@ public class IgniteWalConverterArguments {
         Long fromTime = null;
         Long toTime = null;
         String hasText = null;
-        ProcessSensitiveData includeSensitive = ProcessSensitiveData.SHOW;
+        ProcessSensitiveData includeSensitive = ProcessSensitiveData.HIDE;
         boolean printStat = false;
         boolean skipCrc = false;
 

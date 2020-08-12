@@ -183,13 +183,23 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Test checks that by default sensitive data is displayed.
+     * Test checks that by default sensitive data is not displayed.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testShowSensitiveDataByDefault() throws Exception {
-        exeWithCheck(null, true, true, identity());
+    public void testHideSensitiveDataByDefault() throws Exception {
+        exeWithCheck(null, false, false, identity());
+    }
+
+    /**
+     * Test checks that by default sensitive data is displayed with argument specified.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShowSensitiveData() throws Exception {
+        exeWithCheck(ProcessSensitiveData.SHOW, true, true, identity());
     }
 
     /**
