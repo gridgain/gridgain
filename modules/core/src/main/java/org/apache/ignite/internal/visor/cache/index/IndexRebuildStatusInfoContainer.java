@@ -25,12 +25,13 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
-
 /**
  * Container for index rebuild status info.
  */
 public class IndexRebuildStatusInfoContainer extends IgniteDataTransferObject {
+    /** Empty group name. */
+    public static final String EMPTY_GROUP_NAME = "no_group";
+
     /** */
     private static final long serialVersionUID = 0L;
 

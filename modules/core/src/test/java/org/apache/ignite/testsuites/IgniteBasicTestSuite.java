@@ -133,7 +133,6 @@ import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
 import org.apache.ignite.testframework.test.ParametersTest;
 import org.apache.ignite.testframework.test.VariationsIteratorTest;
 import org.apache.ignite.util.AttributeNodeFilterSelfTest;
-import org.apache.ignite.util.GridCommandHandlerTracingConfigurationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -310,10 +309,7 @@ import org.junit.runners.Suite;
     BaselineEventsRemoteTest.class,
 
     IgniteThreadGroupNodeRestartTest.class,
-    BaselineEventsRemoteTest.class,
-
-    // Tests for tracing configuration
-    GridCommandHandlerTracingConfigurationTest.class
+    BaselineEventsRemoteTest.class
 })
 public class IgniteBasicTestSuite {
 }

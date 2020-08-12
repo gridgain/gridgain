@@ -64,6 +64,7 @@
         <commons.compress.version>1.20</commons.compress.version>
         <commons.lang.version>2.6</commons.lang.version>
         <commons.io.version>2.6</commons.io.version>
+        <commons.dbcp.version>1.4</commons.dbcp.version>
         <cron4j.version>2.2.5</cron4j.version>
         <curator.version>4.2.0</curator.version>
         <!--Need this version to test ZooKeeper 3.4.x-->
@@ -868,6 +869,19 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <format>html</format>
+                    <rulesets>
+                            <ruleset>checkrules/pmd-ruleset.xml</ruleset>
+                    </rulesets>
+                    <aggregate>true</aggregate>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
@@ -1051,6 +1065,8 @@
                                         <!--platforms-->
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test1/1.1/test1-1.1.jar</exclude>
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test2/1.1/test2-1.1.jar</exclude>
+                                        <exclude>**/*.cmake</exclude>
+                                        <exclude>**/CMakeLists.txt</exclude>
                                         <exclude>**/Makefile.am</exclude>
                                         <exclude>**/configure.ac</exclude>
                                         <exclude>**/Makefile.amrel</exclude>

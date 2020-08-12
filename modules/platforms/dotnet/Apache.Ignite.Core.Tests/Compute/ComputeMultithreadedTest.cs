@@ -29,6 +29,12 @@ namespace Apache.Ignite.Core.Tests.Compute
     public class ComputeMultithreadedTest : AbstractTaskTest
     {
         /** */
+        private const int Duration = 5;
+
+        /** */
+        private const int ThreadNum = 4;
+
+        /** */
         private static IList<Action<ICompute>> _actions;
 
         /// <summary>
@@ -67,7 +73,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
-        /// Test not-marshalable error occurred during map step.
+        /// Tests all task types in parallel.
         /// </summary>
         [Test]
         public void TestAllTaskTypeAtSameTime()
@@ -79,7 +85,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             TestUtils.RunMultiThreaded(() =>
             {
                 _actions[TestUtils.Random.Next(_actions.Count)](compute);
-            }, 4, 60);
+            }, ThreadNum, Duration * 2);
         }
 
         /// <summary>
@@ -90,7 +96,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Assert.AreEqual(_actions.Count, 6);
 
-            TestUtils.RunMultiThreaded(() => _actions[0](Grid1.GetCompute()), 4, 20);
+            TestUtils.RunMultiThreaded(() => _actions[0](Grid1.GetCompute()), ThreadNum, Duration);
         }
 
         /// <summary>
@@ -101,7 +107,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Assert.AreEqual(_actions.Count, 6);
 
-            TestUtils.RunMultiThreaded(() => _actions[1](Grid1.GetCompute()), 4, 20);
+            TestUtils.RunMultiThreaded(() => _actions[1](Grid1.GetCompute()), ThreadNum, Duration);
         }
 
         /// <summary>
@@ -112,7 +118,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Assert.AreEqual(_actions.Count, 6);
 
-            TestUtils.RunMultiThreaded(() => _actions[2](Grid1.GetCompute()), 4, 20);
+            TestUtils.RunMultiThreaded(() => _actions[2](Grid1.GetCompute()), ThreadNum, Duration);
         }
 
         /// <summary>
@@ -123,7 +129,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Assert.AreEqual(_actions.Count, 6);
 
-            TestUtils.RunMultiThreaded(() => _actions[3](Grid1.GetCompute()), 4, 20);
+            TestUtils.RunMultiThreaded(() => _actions[3](Grid1.GetCompute()), ThreadNum, Duration);
         }
         /// <summary>
         ///
@@ -133,7 +139,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Assert.AreEqual(_actions.Count, 6);
 
-            TestUtils.RunMultiThreaded(() => _actions[4](Grid1.GetCompute()), 4, 20);
+            TestUtils.RunMultiThreaded(() => _actions[ThreadNum](Grid1.GetCompute()), ThreadNum, Duration);
         }
 
         /// <summary>
@@ -144,7 +150,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Assert.AreEqual(_actions.Count, 6);
 
-            TestUtils.RunMultiThreaded(() => _actions[5](Grid1.GetCompute()), 4, 20);
+            TestUtils.RunMultiThreaded(() => _actions[5](Grid1.GetCompute()), ThreadNum, Duration);
         }
     }
 

@@ -23,6 +23,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Linq;
     using System.Net;
     using System.Threading.Tasks;
+    using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
@@ -265,6 +267,84 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         [Test]
+        public void ReplicatedCacheGet_RepeatedCall_DoesNotRequestAffinityMapping()
+        {
+            // Test cache for which affinity awareness is not applicable.
+            var cfg = new CacheClientConfiguration("replicated_cache") {CacheMode = CacheMode.Replicated};
+            var cache = Client.CreateCache<int, int>(cfg);
+
+            // Init the replicated cache and start the new one to enforce partition mapping request.
+            cache.PutAll(Enumerable.Range(1, 3).ToDictionary(x => x, x => x));
+            Client.CreateCache<int, int>("repeat-call-test-replicated");
+            ClearLoggers();
+
+            cache.Get(1);
+            cache.Get(2);
+            cache.Get(3);
+
+            var reqs = GetLoggers()
+                .Select(l => new
+                {
+                    Logger = l, 
+                    Requests = GetServerRequestNames(l, RequestNamePrefixCache).ToArray()
+                })
+                .Where(r => r.Requests.Length > 0)
+                .ToArray();
+
+            // All requests should go to a single (default) node, because affinity awareness is not applicable.
+            Assert.AreEqual(1, reqs.Length);
+
+            // There should be only one partitions request.
+            var expectedRequests = new[]
+            {
+                "Partitions",
+                "Get",
+                "Get",
+                "Get"
+            };
+
+            Assert.AreEqual(expectedRequests, reqs[0].Requests);
+        }
+
+        [Test]
+        public void ReplicatedCachePut_RequestRoutedToDefaultNode()
+        {
+            var cfg = new CacheConfiguration(TestContext.CurrentContext.Test.Name)
+            {
+                CacheMode = CacheMode.Replicated
+            };
+
+            AssertPutIsRoutedToDefaultNode(cfg);
+        }
+
+        [Test]
+        public void CustomAffinityCachePut_RoutedToDefaultNode()
+        {
+            var cfg = new CacheConfiguration(TestContext.CurrentContext.Test.Name)
+            {
+                CacheMode = CacheMode.Partitioned,
+                AffinityFunction = new CustomAffinityFunction()
+            };
+
+            AssertPutIsRoutedToDefaultNode(cfg);
+        }
+
+        private void AssertPutIsRoutedToDefaultNode(CacheConfiguration cfg)
+        {
+            Ignition.GetIgnite().CreateCache<int, int>(cfg);
+            var cache = Client.GetCache<int, int>(cfg.Name);
+
+            Client.GetCacheNames();
+            var defaultNodeIdx = GetClientRequestGridIndex("GetNames");
+
+            for (var i = 0; i < 20; i++)
+            {
+                cache.Put(i, i);
+                Assert.AreEqual(defaultNodeIdx, GetClientRequestGridIndex("Put"));
+            }
+        }
+
+        [Test]
         public void CacheGet_PartitionAwarenessDisabled_RequestIsRoutedToDefaultNode()
         {
             var cfg = GetClientConfiguration();
@@ -462,6 +542,15 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
 
             throw new InvalidOperationException("Can't determine primary node");
+        }
+
+        private class CustomAffinityFunction : RendezvousAffinityFunction
+        {
+            public override int Partitions
+            {
+                get { return 10; }
+                set { throw new NotSupportedException(); }
+            }
         }
     }
 }

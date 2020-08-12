@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#if !NETCOREAPP
 namespace Apache.Ignite.Core.Tests.Cache
 {
     using System.IO;
@@ -34,8 +35,8 @@ namespace Apache.Ignite.Core.Tests.Cache
         [TestFixtureSetUp]
         public void SetUp()
         {
-            const string springConfigUrl = "config\\compute\\compute-grid1.xml";
-            
+            const string springConfigUrl = "Config/Compute/compute-grid1.xml";
+
             // ReSharper disable once UnusedVariable
             var proc = new IgniteProcess(
                 "-springConfigUrl=" + Path.GetFullPath(springConfigUrl),
@@ -76,3 +77,4 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
     }
 }
+#endif
