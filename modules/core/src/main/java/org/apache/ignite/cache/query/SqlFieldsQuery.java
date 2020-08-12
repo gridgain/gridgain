@@ -102,6 +102,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
      */
     private String qryInitiatorId;
 
+    /** Whether server side DML should be enabled. */
+    private boolean skipReducerOnUpdate;
+
     /**
      * Copy constructs SQL fields query.
      *
@@ -120,6 +123,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
         schema = qry.schema;
         updateBatchSize = qry.updateBatchSize;
         qryInitiatorId = qry.qryInitiatorId;
+        skipReducerOnUpdate = qry.skipReducerOnUpdate;
     }
 
     /**
@@ -205,6 +209,42 @@ public class SqlFieldsQuery extends Query<List<?>> {
         this.timeout = QueryUtils.validateTimeout(timeout, timeUnit);
 
         return this;
+    }
+
+    /**
+     * Switches update mode on server side.
+     * <p>
+     * By default, when processing DML command, Ignite first fetches all affected intermediate rows for analysis to the
+     * node which initiated the query and only then forms batches of updated values to be sent to remote nodes.
+     * For simple DML commands (that however affect great deal of rows) such approach may be an overkill in terms of
+     * network delays and memory usage on initiating node. Use this flag as hint for Ignite to do all intermediate rows
+     * analysis and updates in place on corresponding remote data nodes.
+     * <p>
+     * <b>IMPORTANT NOTE</b>: There are limitations to what DML command can be optimized this way. The command containing LIMIT, OFFSET,
+     * DISTINCT, ORDER BY, GROUP BY, sub-query or UNION will be processed the usual way despite this flag setting.
+     * <p>
+     * Defaults to {@code false}, meaning that intermediate results will be fetched to initiating node first.
+     * Only affects DML commands. Ignored when {@link #isLocal()} is {@code true}.
+     * Note that when set to {@code true}, the query may fail in the case of even single node failure.
+     *
+     * @param skipReducerOnUpdate Server side update flag.
+     * @return {@code this} For chaining.
+     */
+    public SqlFieldsQuery setSkipReducerOnUpdate(boolean skipReducerOnUpdate) {
+        this.skipReducerOnUpdate = skipReducerOnUpdate;
+
+        return this;
+    }
+
+    /**
+     * Gets server side update flag.
+     * <p>
+     * See {@link #setSkipReducerOnUpdate(boolean)} for more information.
+     *
+     * @return Server side update flag.
+     */
+    public boolean isSkipReducerOnUpdate() {
+        return skipReducerOnUpdate;
     }
 
     /**

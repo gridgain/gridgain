@@ -632,7 +632,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     qry = new SqlFieldsQueryEx(sql, false);
 
                     if (cliCtx.isSkipReducerOnUpdate())
-                        ((SqlFieldsQueryEx)qry).setSkipReducerOnUpdate(true);
+                        qry.setSkipReducerOnUpdate(true);
             }
 
             setupQuery(qry, prepareSchemaName(req.schemaName()));
