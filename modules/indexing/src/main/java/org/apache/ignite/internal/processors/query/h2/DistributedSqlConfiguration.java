@@ -122,7 +122,7 @@ public class DistributedSqlConfiguration {
 
                         // Set properties to default.
                         disabledSqlFuncs.localUpdate(null);
-                        dfltQueryTimeout.localUpdate(ctx.config().getSqlConfiguration().getDefaultQueryTimeout());
+                        dfltQueryTimeout.localUpdate((int)ctx.config().getSqlConfiguration().getDefaultQueryTimeout());
                     }
                 }
             }
