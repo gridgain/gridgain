@@ -23,22 +23,17 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
  * IO for partition metadata pages.
- * Persistent partition contains it's own PendingTree.
+ * Add UpdateLogTree (update counter -> row link) for each partition.
  */
-public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
-    /** */
-    private static final int PENDING_TREE_ROOT_OFF = PagePartitionMetaIO.END_OF_PARTITION_PAGE_META;
+public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV2 {
 
     /** */
-    private static final int PART_META_REUSE_LIST_ROOT_OFF = PENDING_TREE_ROOT_OFF + 8;
-
-    /** */
-    protected static final int GAPS_LINK = PART_META_REUSE_LIST_ROOT_OFF + 8;
+    private static final int UPDATE_LOG_TREE_ROOT_OFF = GAPS_LINK + 8;
 
     /**
      * @param ver Version.
      */
-    public PagePartitionMetaIOV2(int ver) {
+    public PagePartitionMetaIOV1GG(int ver) {
         super(ver);
     }
 
@@ -46,58 +41,17 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
         super.initNewPage(pageAddr, pageId, pageSize);
 
-        setPendingTreeRoot(pageAddr, 0L);
-        setPartitionMetaStoreReuseListRoot(pageAddr, 0L);
-        setGapsLink(pageAddr, 0L);
         setUpdateTreeRoot(pageAddr, 0L);
     }
 
     /** {@inheritDoc} */
-    @Override public long getPendingTreeRoot(long pageAddr) {
-        return PageUtils.getLong(pageAddr, PENDING_TREE_ROOT_OFF);
+    @Override public long getUpdateTreeRoot(long pageAddr) {
+        return PageUtils.getLong(pageAddr, UPDATE_LOG_TREE_ROOT_OFF);
     }
 
     /** {@inheritDoc} */
-    @Override public void setPendingTreeRoot(long pageAddr, long listRoot) {
-        PageUtils.putLong(pageAddr, PENDING_TREE_ROOT_OFF, listRoot);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     */
-    @Override public long getPartitionMetaStoreReuseListRoot(long pageAddr) {
-        return PageUtils.getLong(pageAddr, PART_META_REUSE_LIST_ROOT_OFF);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param listRoot List root.
-     */
-    @Override public void setPartitionMetaStoreReuseListRoot(long pageAddr, long listRoot) {
-        PageUtils.putLong(pageAddr, PART_META_REUSE_LIST_ROOT_OFF, listRoot);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @return Partition size.
-     */
-    @Override public long getGapsLink(long pageAddr) {
-        return PageUtils.getLong(pageAddr, GAPS_LINK);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param link Link.
-     *
-     * @return {@code true} if value has changed as a result of this method's invocation.
-     */
-    @Override public boolean setGapsLink(long pageAddr, long link) {
-        if (getGapsLink(pageAddr) == link)
-            return false;
-
-        PageUtils.putLong(pageAddr, GAPS_LINK, link);
-
-        return true;
+    @Override public void setUpdateTreeRoot(long pageAddr, long link) {
+        PageUtils.putLong(pageAddr, UPDATE_LOG_TREE_ROOT_OFF, link);
     }
 
     /** {@inheritDoc} */
@@ -118,6 +72,29 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
         sb.a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")");
         sb.a(",\n\tcountersPageId=").a(getCountersPageId(pageAddr));
         sb.a(",\n\tcntrUpdDataPageId=").a(getGapsLink(pageAddr));
+        sb.a(",\n\tupdLogRootPageId=").a(getUpdateTreeRoot(pageAddr));
         sb.a("\n]");
+    }
+
+    /**
+     * Upgrade page to PagePartitionMetaIOV2.
+     *
+     * @param pageAddr Page address.
+     * @param from From version.
+     */
+    public void upgradePage(long pageAddr, int from) {
+        assert PageIO.getType(pageAddr) == getType();
+        assert PageIO.getVersion(pageAddr) < 3;
+
+        PageIO.setVersion(pageAddr, getVersion());
+
+        if (from < 2) {
+            setPendingTreeRoot(pageAddr, 0);
+            setPartitionMetaStoreReuseListRoot(pageAddr, 0);
+            setGapsLink(pageAddr, 0);
+        }
+
+        if (from < 3)
+            setUpdateTreeRoot(pageAddr, 0);
     }
 }
