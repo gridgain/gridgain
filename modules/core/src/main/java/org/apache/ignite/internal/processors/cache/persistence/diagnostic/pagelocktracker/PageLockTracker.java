@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
-import org.apache.ignite.lang.IgniteFuture;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
@@ -340,7 +338,6 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     /** {@inheritDoc} */
     @Override public synchronized boolean acquireSafePoint() {
         return dump ? false : (dump = true);
-
     }
 
     /** {@inheritDoc} */
@@ -360,11 +357,6 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
             releaseSafePoint();
 
         return dump0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteFuture<T> dumpSync() {
-        throw new UnsupportedOperationException();
     }
 
     /** */

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#if !NETCOREAPP // Serializing delegates is not supported on this platform
 namespace Apache.Ignite.Core.Tests.Binary.Serializable
 {
     using System;
@@ -158,3 +159,4 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
         }
     }
 }
+#endif

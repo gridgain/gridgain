@@ -38,7 +38,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -361,7 +360,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
             });
 
         try {
-            final SqlFieldsQueryEx qry = new SqlFieldsQueryEx(UPDATE_SQL, false)
+            final SqlFieldsQuery qry = new SqlFieldsQuery(UPDATE_SQL)
                 .setArgs("New Name");
 
             GridTestUtils.assertThrows(log, () -> {
