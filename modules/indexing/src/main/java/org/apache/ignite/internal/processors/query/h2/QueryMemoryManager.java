@@ -251,8 +251,8 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * @return Current global query quota.
      */
-    public String getGlobalQuota() {
-        return String.valueOf(globalQuota);
+    public long getGlobalQuota() {
+        return globalQuota;
     }
 
     public String getGlobalQuotaInOriginalNotation() { return globalQuotaInOriginalNotation; }
@@ -285,8 +285,8 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * @return Current query quota.
      */
-    public String getQueryQuotaString() {
-        return String.valueOf(qryQuota);
+    public long getQueryQuota() {
+        return qryQuota;
     }
 
     public String getQueryQuotaStrinInOriginalNotation() { return qryQuotaInOriginalNotation; }

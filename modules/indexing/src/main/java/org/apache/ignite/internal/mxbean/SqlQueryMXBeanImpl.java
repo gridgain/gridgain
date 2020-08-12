@@ -18,7 +18,6 @@ package org.apache.ignite.internal.mxbean;
 
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * QueryMXBean implementation.
@@ -76,7 +75,7 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
 
     /** {@inheritDoc} */
     @Override public Long getSqlGlobalMemoryQuotaBytes() {
-        return U.parseBytes(h2idx.memoryManager().getGlobalQuota());
+        return h2idx.memoryManager().getGlobalQuota();
     }
 
     /** {@inheritDoc} */
@@ -91,7 +90,7 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
 
     /** {@inheritDoc} */
     @Override public Long getSqlQueryMemoryQuotaBytes() {
-        return U.parseBytes(h2idx.memoryManager().getQueryQuotaString());
+        return h2idx.memoryManager().getQueryQuota();
     }
 
 
