@@ -432,7 +432,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         if (!joiningNodeId.equals(ctx.localNodeId()) || !locInfos.isEmpty()) {
             Map<UUID, LocalRoutineInfo> locInfos0 = copyLocalInfos(locInfos);
 
-            if (locInfos0.isEmpty())
+            if (joiningNodeId.equals(ctx.localNodeId()) && locInfos0.isEmpty())
                 return null;
 
             Map<UUID, Map<UUID, LocalRoutineInfo>> clientInfos0 = copyClientInfos(clientInfos);
@@ -493,6 +493,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             if (ctx.config().isPeerClassLoadingEnabled() &&
                 e.getValue().handler() instanceof CacheContinuousQueryHandler &&
                 ((CacheContinuousQueryHandler)e.getValue().handler()).isRemarshalRequired()) {
+                log.info("Local listener scheduled for remarshal [locInfo=" + e.getValue() + "]");
+
                 ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         try {
