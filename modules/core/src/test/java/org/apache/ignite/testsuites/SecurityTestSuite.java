@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.security.datastreamer.DataStreamerP
 import org.apache.ignite.internal.processors.security.datastreamer.closure.DataStreamerRemoteSecurityContextCheckTest;
 import org.apache.ignite.ssl.MultipleSSLContextsTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.apache.ignite.tools.junit.JUnitTeamcityReporter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -88,8 +87,6 @@ public class SecurityTestSuite {
      */
     @BeforeClass
     public static void init() {
-        JUnitTeamcityReporter.suite = SecurityTestSuite.class.getName();
-
         System.setProperty(IGNITE_SECURITY_PROCESSOR.name(), "true");
     }
 
