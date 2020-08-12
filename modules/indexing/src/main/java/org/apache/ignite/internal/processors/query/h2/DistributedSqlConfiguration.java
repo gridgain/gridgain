@@ -61,7 +61,7 @@ public class DistributedSqlConfiguration {
         "CANCEL_SESSION"
     }).collect(Collectors.toSet());
 
-    /** Default value of the default query timeout. */
+    /** Default value of the query timeout. */
     public static final int DFLT_QRY_TIMEOUT = 0;
 
     /** Disabled SQL functions. */
@@ -210,8 +210,7 @@ public class DistributedSqlConfiguration {
      * @param timeout Default query timeout.
      * @throws IgniteCheckedException if failed.
      */
-    public GridFutureAdapter<?> defaultQueryTimeout(int timeout)
-        throws IgniteCheckedException {
+    public GridFutureAdapter<?> defaultQueryTimeout(int timeout) throws IgniteCheckedException {
         A.ensure(timeout >= 0,
             "default query timeout value must not be negative.");
 

@@ -44,7 +44,7 @@ public class JdbcThinDefaultTimeoutTest extends GridCommonAbstractTest {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setIndexedTypes(Integer.class, Integer.class)
             .setSqlSchema("PUBLIC")
-            .setSqlFunctionClasses(TestSQLFunctions.class);
+            .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class);
 
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(ccfg)
@@ -82,7 +82,7 @@ public class JdbcThinDefaultTimeoutTest extends GridCommonAbstractTest {
             // Set infinite timeout explicitly.
             stmt.setQueryTimeout(0);
 
-            ResultSet rs = stmt.executeQuery("select _key, _val, sleepFunc(5) from Integer");
+            ResultSet rs = stmt.executeQuery("select _key, _val, delay(5) from Integer");
 
             int cnt = 0;
             while (rs.next())
@@ -101,7 +101,7 @@ public class JdbcThinDefaultTimeoutTest extends GridCommonAbstractTest {
             Statement stmt = conn.createStatement();
 
             GridTestUtils.assertThrows(log, () -> {
-                    ResultSet rs = stmt.executeQuery("select _key, _val, sleepFunc(5) from Integer");
+                    ResultSet rs = stmt.executeQuery("select _key, _val, delay(5) from Integer");
 
                     int cnt = 0;
                     while (rs.next())
@@ -110,24 +110,6 @@ public class JdbcThinDefaultTimeoutTest extends GridCommonAbstractTest {
                     return null;
                 },
                 SQLException.class, "The query was cancelled while executing");
-        }
-    }
-
-    /**
-     * Utility class with custom SQL functions.
-     */
-    public static class TestSQLFunctions {
-        /** */
-        @QuerySqlFunction
-        public static int sleepFunc(int v) {
-            try {
-                Thread.sleep(v);
-            }
-            catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            return v;
         }
     }
 }

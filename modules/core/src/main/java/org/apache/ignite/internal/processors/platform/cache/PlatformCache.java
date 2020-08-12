@@ -1455,7 +1455,7 @@ public class PlatformCache extends PlatformAbstractTarget {
         boolean collocated = reader.readBoolean();
         String schema = reader.readString();
 
-        SqlFieldsQuery qry = new SqlFieldsQuery(sql)
+        SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.SECONDS)
             .setPageSize(pageSize)
             .setArgs(args)
             .setLocal(loc)
@@ -1465,8 +1465,6 @@ public class PlatformCache extends PlatformAbstractTarget {
             .setReplicatedOnly(replicated)
             .setCollocated(collocated)
             .setSchema(schema);
-
-        QueryUtils.copyQueryTimeout(qry, timeout, TimeUnit.MILLISECONDS);
 
         return qry;
     }
