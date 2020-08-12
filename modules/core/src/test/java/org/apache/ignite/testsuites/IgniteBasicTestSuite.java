@@ -319,7 +319,9 @@ import org.junit.runners.Suite;
 
     CommandHandlerParsedArgsTest.class,
 
-    GridCommandHandlerMessageStatisticsTest.class
+    GridCommandHandlerMessageStatisticsTest.class,
+
+    BaselineEventsRemoteTest.class
 })
 public class IgniteBasicTestSuite {
 }
