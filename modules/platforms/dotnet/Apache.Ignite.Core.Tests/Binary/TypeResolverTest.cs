@@ -18,11 +18,12 @@ namespace Apache.Ignite.Core.Tests.Binary
 {
     using System;
     using System.Collections.Generic;
+#if !NETCOREAPP
     using System.Linq;
     using System.Reflection;
+#endif
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary;
-    using Apache.Ignite.Core.Tests.TestDll;
     using NUnit.Framework;
 
     /// <summary>
@@ -84,7 +85,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 // Without assembly
                 var resolvedType = new TypeResolver().ResolveType(type.FullName);
                 Assert.AreEqual(type.FullName, resolvedType.FullName);
-                
+
                 // With assembly
                 resolvedType = new TypeResolver().ResolveType(type.FullName, type.Assembly.FullName);
                 Assert.AreEqual(type.FullName, resolvedType.FullName);
@@ -104,7 +105,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             var resolver = new TypeResolver();
             var mapper = BinaryBasicNameMapper.SimpleNameInstance;
 
-            Assert.AreEqual(typeof(TestGenericBinarizable<int>), 
+            Assert.AreEqual(typeof(TestGenericBinarizable<int>),
                 resolver.ResolveType("TestGenericBinarizable`1[[Int32]]", nameMapper: mapper));
 
             Assert.IsNull(resolver.ResolveType("TestGenericBinarizable`1[[Invalid-Type]]", nameMapper: mapper));
@@ -144,8 +145,8 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(typeof(int[,,][,]), resolver.ResolveType("System.Int32[,][,,]"));
 
             Assert.AreEqual(typeof(int).MakeArrayType(1), resolver.ResolveType("System.Int32[*]"));
-            
-            Assert.AreEqual(typeof(TestGenericBinarizable<TypeResolverTest>[]), 
+
+            Assert.AreEqual(typeof(TestGenericBinarizable<TypeResolverTest>[]),
                 resolver.ResolveType("Apache.Ignite.Core.Tests.TestGenericBinarizable`1" +
                                      "[[Apache.Ignite.Core.Tests.Binary.TypeResolverTest]][]"));
         }
@@ -169,6 +170,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 resolver.ResolveType("TestGenericBinarizable`1[[TypeResolverTest]][]", nameMapper: mapper));
         }
 
+#if !NETCOREAPP
         /// <summary>
         /// Tests loading a type from referenced assembly that is not yet loaded.
         /// </summary>
@@ -188,7 +190,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             // Check resolver
             var type = new TypeResolver().ResolveType(typeName);
-            
+
             Assert.IsNotNull(type);
             Assert.AreEqual(typeName, type.FullName);
             Assert.IsNotNull(Activator.CreateInstance(type));
@@ -204,7 +206,8 @@ namespace Apache.Ignite.Core.Tests.Binary
         /// </summary>
         public void UnusedMethod()
         {
-            Assert.IsNotNull(typeof(TestClass));
-        }        
+            Assert.IsNotNull(typeof(TestDll.TestClass));
+        }
+#endif
     }
 }

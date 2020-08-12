@@ -37,14 +37,6 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.RepairEntryProc
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTaskTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicPersistentTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationCommonTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationExtendedTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationReplicatedPersistentTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationReplicatedTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationTxPersistentTest;
-import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationTxTest;
 import org.junit.runner.RunWith;
 
 /**
@@ -66,14 +58,6 @@ public class PartitionReconciliationTestSuite {
     public static List<Class<?>> suite(Collection<Class> ignoredTests) {
         List<Class<?>> suite = new ArrayList<>();
 
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationTxTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationTxPersistentTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationReplicatedTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationReplicatedPersistentTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationExtendedTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationCommonTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationAtomicTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCommandHandlerPartitionReconciliationAtomicPersistentTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationInterruptionRecheckTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationInterruptionRepairTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationProcessorTest.class, ignoredTests);

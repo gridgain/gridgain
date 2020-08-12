@@ -233,6 +233,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         IgniteEx ignite3 = startGrid(3);
 
+        awaitPartitionMapExchange();
+
         log.info("Stop block1.");
 
         spi.stopBlock();
@@ -588,6 +590,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         IgniteEx ignite3 = startGrid(3);
 
+        awaitPartitionMapExchange();
+
         log.info("Stop block1.");
 
         spi.stopBlock();
@@ -636,6 +640,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
         spi.stopBlock();
 
         putFut.get();
+
+        awaitPartitionMapExchange();
 
         checkData(map, null, cache, 4);
 

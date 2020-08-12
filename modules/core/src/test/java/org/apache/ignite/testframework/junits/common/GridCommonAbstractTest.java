@@ -2390,7 +2390,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
-     * Load data into single partition.
+     * Load data into a single partition.
      *
      * @param p Partition.
      * @param cacheName Cache name.

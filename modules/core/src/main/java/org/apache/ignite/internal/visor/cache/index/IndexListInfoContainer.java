@@ -27,12 +27,13 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
-
 /**
  * Container for index info.
  */
 public class IndexListInfoContainer extends IgniteDataTransferObject {
+    /** Empty group name. */
+    public static final String EMPTY_GROUP_NAME = "no_group";
+
     /** Required for serialization */
     private static final long serialVersionUID = 0L;
 
