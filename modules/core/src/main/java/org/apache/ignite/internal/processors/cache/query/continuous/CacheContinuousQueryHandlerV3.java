@@ -161,8 +161,8 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override public boolean p2pMarshalled() {
-        return super.p2pMarshalled() || rmtTransFactoryDep != null;
+    @Override public boolean isRemarshalRequired() {
+        return super.isRemarshalRequired() || !isDeployableObjectValid(ctx, rmtTransFactoryDep);
     }
 
     /** {@inheritDoc} */

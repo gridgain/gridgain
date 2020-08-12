@@ -49,6 +49,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -207,7 +208,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     private transient volatile Map<Integer, T2<Long, Long>> locInitUpdCntrs;
 
     /** */
-    private transient GridKernalContext ctx;
+    protected transient GridKernalContext ctx;
 
     /** */
     private transient IgniteLogger log;
@@ -1294,10 +1295,24 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     }
 
     /**
-     * @return Whether the handler was marshalled for peer class loading.
+     * @return Whether the deployable object should be remarhsalled in the current context.
      */
-    public boolean p2pMarshalled() {
-        return rmtFilterDep != null;
+    public boolean isRemarshalRequired() {
+        return !isDeployableObjectValid(ctx, rmtFilterDep);
+    }
+
+    /**
+     * @param ctx Kernel context.
+     * @param depObj Deployable object.
+     * @return Whether the {@code depObj} is valid in the current context.
+     */
+    protected static boolean isDeployableObjectValid(GridKernalContext ctx, CacheContinuousQueryDeployableObject depObj) {
+        if (depObj == null)
+            return true;
+
+        GridDeployment dep = ctx.deploy().getDeployment(depObj.className());
+
+        return dep == null || dep.classLoaderId().equals(depObj.depInfo().classLoaderId());
     }
 
     /**

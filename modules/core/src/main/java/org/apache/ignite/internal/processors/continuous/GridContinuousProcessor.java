@@ -492,7 +492,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
             if (ctx.config().isPeerClassLoadingEnabled() &&
                 e.getValue().handler() instanceof CacheContinuousQueryHandler &&
-                ((CacheContinuousQueryHandler)e.getValue().handler()).p2pMarshalled()) {
+                ((CacheContinuousQueryHandler)e.getValue().handler()).isRemarshalRequired()) {
                 ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         try {

@@ -79,6 +79,24 @@ class CacheContinuousQueryDeployableObject implements Externalizable {
     }
 
     /**
+     * Gets property clsName.
+     *
+     * @return Property clsName.
+     */
+    String className() {
+        return clsName;
+    }
+
+    /**
+     * Gets property depInfo.
+     *
+     * @return Property depInfo.
+     */
+    GridDeploymentInfo depInfo() {
+        return depInfo;
+    }
+
+    /**
      * @param nodeId Node ID.
      * @param ctx Kernal context.
      * @return Deserialized object.
