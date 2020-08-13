@@ -16,45 +16,33 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
+import java.util.List;
+import java.util.Map;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToStringDumpHelper;
 
 /**
- * Base page lock tracker structures dump.
+ *
  */
-public abstract class PageLockDump {
-    /** Page lock log name. */
-    public final String name;
-
-    /** Dump creation time. */
-    public final long time;
-
-    /** Head position. */
-    public final int headIdx;
-
-    /** Next operation. */
-    public final int nextOp;
-
-    /** Next data structure. */
-    public final int nextOpStructureId;
-
-    /** Next page id. */
-    public final long nextOpPageId;
+public class SharedPageLockTrackerDump {
 
     /** */
-    protected PageLockDump(
-        String name,
+    public final Map<Integer, String> structureIdToStrcutureName;
+
+    /** */
+    public final List<ThreadPageLockState> threadPageLockStates;
+
+    /** */
+    public final long time;
+
+    /** */
+    public SharedPageLockTrackerDump(
         long time,
-        int headIdx,
-        int nextOp,
-        int nextOpStructureId,
-        long nextOpPageId
+        Map<Integer, String> structureIdToStrcutureName,
+        List<ThreadPageLockState> threadPageLockStates
     ) {
-        this.name = name;
         this.time = time;
-        this.headIdx = headIdx;
-        this.nextOp = nextOp;
-        this.nextOpStructureId = nextOpStructureId;
-        this.nextOpPageId = nextOpPageId;
+        this.structureIdToStrcutureName = structureIdToStrcutureName;
+        this.threadPageLockStates = threadPageLockStates;
     }
 
     /** {@inheritDoc} */
