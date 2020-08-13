@@ -142,7 +142,9 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--meta", "remove", "--typeId", Integer.toString(wrongTypeId)));
 
-        assertContains(log, testOut.toString(), "Failed to remove binary type, type not found: " + wrongTypeId);
+        assertContains(log, testOut.toString(), "Failed to remove binary type, type not found: ");
+        assertContains(log, testOut.toString(), "0x" +
+            Integer.toHexString(wrongTypeId).toUpperCase() + " (" + wrongTypeId + ")");
     }
 
     /**
