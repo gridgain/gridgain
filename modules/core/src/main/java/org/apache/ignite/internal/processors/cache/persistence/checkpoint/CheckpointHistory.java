@@ -706,8 +706,7 @@ public class CheckpointHistory {
     public CheckpointHistoryResult searchAndReserveCheckpoints(
         final Map<Integer, Set<Integer>> groupsAndPartitions
     ) {
-        if (F.isEmpty(groupsAndPartitions) ||
-            cctx.kernalContext().config().getDataStorageConfiguration().getWalMode() == WALMode.NONE)
+        if (F.isEmpty(groupsAndPartitions))
             return new CheckpointHistoryResult(Collections.emptyMap(), null);
 
         final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
