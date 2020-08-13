@@ -20,6 +20,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.configuration.MutableCacheEntryListenerConfiguration;
@@ -30,14 +31,19 @@ import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -48,6 +54,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
 
 /**
  *
@@ -323,19 +330,23 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
             (Class<Factory<CacheEntryEventFilter>>)getExternalClassLoader().
                 loadClass("org.apache.ignite.tests.p2p.CacheDeploymentEntryEventFilterFactory");
 
-        testContinuousQuery(ccfg, isClient, false, evtFilterFactoryCls);
-        testContinuousQuery(ccfg, isClient, true, evtFilterFactoryCls);
+        testContinuousQuery(ccfg, isClient, false, false, evtFilterFactoryCls);
+        testContinuousQuery(ccfg, isClient, true, false, evtFilterFactoryCls);
+
+        if (isClient)
+            testContinuousQuery(ccfg, isClient, false, true, evtFilterFactoryCls);
     }
 
     /**
      * @param ccfg Cache configuration.
      * @param isClient Client.
      * @param joinNode If a node should be added to topology after a query is started.
+     * @param joinNode If a node should be restarted after a query is started.
      * @param evtFilterFactoryCls Remote filter factory class.
      * @throws Exception If failed.
      */
     private void testContinuousQuery(CacheConfiguration<Object, Object> ccfg,
-        boolean isClient, boolean joinNode,
+        boolean isClient, boolean joinNode, boolean restartNode,
         Class<Factory<CacheEntryEventFilter>> evtFilterFactoryCls) throws Exception {
 
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -375,11 +386,11 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
                 true
             );
 
-        IgniteCache<Integer, Integer> cache;
+        int nodeIdx = isClient
+            ? NODES - 1
+            : rnd.nextInt(NODES - 1);
 
-        cache = isClient
-            ? grid(NODES - 1).cache(ccfg.getName())
-            : grid(rnd.nextInt(NODES - 1)).cache(ccfg.getName());
+        IgniteCache<Integer, Integer> cache = grid(nodeIdx).cache(ccfg.getName());
 
         try (QueryCursor<?> cur = cache.query(qry)) {
             cache.registerCacheEntryListener(lsnrCfg);
@@ -387,6 +398,44 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
             if (joinNode) {
                 startGrid(NODES);
                 awaitPartitionMapExchange();
+            }
+
+            if (restartNode) {
+                CountDownLatch disconnectLatch = new CountDownLatch(1);
+
+                CountDownLatch reconnectLatch = new CountDownLatch(1);
+
+                grid(nodeIdx).events().localListen(new IgnitePredicate<Event>() {
+                    @Override public boolean apply(Event evt) {
+                        if (evt.type() == EVT_CLIENT_NODE_DISCONNECTED) {
+                            IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
+                                try {
+                                    cache.put(0, 0);
+
+                                    fail();
+                                } catch (CacheException e) {
+                                    IgniteClientDisconnectedException e0 = (IgniteClientDisconnectedException)e.getCause();
+
+                                    e0.reconnectFuture().get();
+
+                                    reconnectLatch.countDown();
+                                }
+                            });
+
+                            disconnectLatch.countDown();
+                        }
+
+                        return true;
+                    }
+                }, EVT_CLIENT_NODE_DISCONNECTED);
+
+                TcpDiscoverySpi clientDiscSpi = (TcpDiscoverySpi) grid(nodeIdx).configuration().getDiscoverySpi();
+
+                clientDiscSpi.clientReconnect();
+
+                assertTrue(disconnectLatch.await(5, TimeUnit.SECONDS));
+
+                assertTrue(reconnectLatch.await(10, TimeUnit.SECONDS));
             }
 
             for (int i = 0; i < UPDATES; i++)
