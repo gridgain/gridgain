@@ -149,8 +149,13 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
             }
 
             if (X.hasCause(e, ClusterTopologyCheckedException.class) || X.hasCause(e, ClusterTopologyException.class)) {
-                if (tx.onePhaseCommit())
+                if (tx.onePhaseCommit()) {
                     tx.markForBackupCheck();
+
+                    onComplete();
+
+                    return;
+                }
             }
 
             if (ERR_UPD.compareAndSet(this, null, e))
