@@ -34,6 +34,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -662,6 +663,9 @@ public class StripedExecutor implements ExecutorService {
         /** */
         private volatile boolean parked;
 
+        /** */
+        private final AtomicInteger queueSize = new AtomicInteger();
+
         /**
          * @param igniteInstanceName Ignite instance name.
          * @param poolName Pool name.
@@ -718,6 +722,8 @@ public class StripedExecutor implements ExecutorService {
             for (int i = 0; i < 2048; i++) {
                 r = queue.poll();
 
+                queueSize.decrementAndGet();
+
                 if (r != null)
                     return r;
             }
@@ -727,6 +733,8 @@ public class StripedExecutor implements ExecutorService {
             try {
                 for (;;) {
                     r = queue.poll();
+
+                    queueSize.decrementAndGet();
 
                     if (r != null)
                         return r;
@@ -770,6 +778,8 @@ public class StripedExecutor implements ExecutorService {
 
             queue.add(cmd);
 
+            queueSize.incrementAndGet();
+
             if (parked)
                 LockSupport.unpark(thread);
 
@@ -788,7 +798,7 @@ public class StripedExecutor implements ExecutorService {
 
         /** {@inheritDoc} */
         @Override public int queueSize() {
-            return queue.sizex();
+            return queueSize.get();
         }
 
         /** {@inheritDoc} */
