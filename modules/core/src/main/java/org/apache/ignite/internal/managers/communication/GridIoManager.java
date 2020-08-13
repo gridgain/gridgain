@@ -1374,7 +1374,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             @Override public void assign(StripedExecutor.Stripe stripe) {
                 this.stripe = stripe;
 
-                beforeQueueSize = stripe.queueSize();
+                beforeQueueSize = -1;//stripe.queueSize();
             }
 
             /** {@inheritDoc} */
@@ -1407,7 +1407,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                                 System.nanoTime(),
                                 enqueueTs,
                                 beforeQueueSize,
-                                stripe == null ? -1 : stripe.queueSize()
+                                -1//stripe == null ? -1 : stripe.queueSize()
                             );
                         }
                     }
