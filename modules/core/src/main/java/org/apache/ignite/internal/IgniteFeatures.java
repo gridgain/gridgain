@@ -166,7 +166,10 @@ public enum IgniteFeatures {
     INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
 
     /** Snapshots without PME. */
-    EXCHANGELESS_SNAPSHOT(43);
+    EXCHANGELESS_SNAPSHOT(43),
+
+    /** Optimization of protocol for cluster which does not contain MVCC caches. */
+    MVCC_PROTOCOL_IMPRUVMENT(44);
 
     /**
      * Unique feature identifier.

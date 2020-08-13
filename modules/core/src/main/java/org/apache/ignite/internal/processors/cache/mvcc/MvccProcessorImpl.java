@@ -506,7 +506,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             // 2. Notify previous queries.
             prevQueries.onNodeFailed(nodeId);
 
-            if (mvccEnabled || evt.type() == EVT_NODE_JOINED) {
+            if (mvccEnabled) {
                 // 3. Recover transactions started by the failed node.
                 recoveryBallotBoxes.forEach((nearNodeId, ballotBox) -> {
                     // Put synthetic vote from another failed node
@@ -528,8 +528,6 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
                     tryFinishRecoveryVoting(nodeId, ballotBox);
                 }
             }
-            else
-                recoveryBallotBoxes.remove(nodeId);
         }
     }
 
@@ -1866,6 +1864,9 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
      * @param msg Message.
      */
     private void processRecoveryFinishedMessage(UUID nodeId, MvccRecoveryFinishedMessage msg) {
+        if (!mvccEnabled)
+            return;
+
         UUID nearNodeId = msg.nearNodeId();
 
         RecoveryBallotBox ballotBox = recoveryBallotBoxes.computeIfAbsent(nearNodeId, uuid -> new RecoveryBallotBox());
