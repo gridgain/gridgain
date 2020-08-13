@@ -44,7 +44,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             _wrappedLogger = wrappedLogger;
             EnabledLevels = new[] {LogLevel.Debug, LogLevel.Warn, LogLevel.Error};
         }
-        
+
         /// <summary>
         /// Gets or sets enabled levels.
         /// </summary>
@@ -85,7 +85,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             {
                 return;
             }
-            
+
             if (_wrappedLogger != null)
             {
                 _wrappedLogger.Log(level, message, args, formatProvider, category, nativeErrorInfo, ex);

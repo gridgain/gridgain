@@ -348,19 +348,6 @@ public class GridDhtPartitionDemander {
             if (oldFut.isInitial())
                 fut.listen(f -> oldFut.onDone(f.result()));
 
-            // Make sure partitions scheduled for full rebalancing are cleared first.
-            if (grp.persistenceEnabled()) {
-                for (Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> e : assignments.entrySet()) {
-                    for (Integer partId : e.getValue().partitions().fullSet()) {
-                        GridDhtLocalPartition part = grp.topology().localPartition(partId);
-
-                        assert part.state() == MOVING : part;
-
-                        part.clearAsync();
-                    }
-                }
-            }
-
             if (forcedRebFut != null)
                 forcedRebFut.add(fut);
 
@@ -1334,146 +1321,124 @@ public class GridDhtPartitionDemander {
                     d.rebalanceId(rebalanceId);
                     d.timeout(grp.preloader().timeout());
 
-                    IgniteInternalFuture<?> clearAllFut = clearFullPartitions(d.partitions().fullSet());
+                    // Make sure partitions scheduled for full rebalancing are cleared first.
+                    if (grp.persistenceEnabled()) {
+                        final int fullSetSize = e.getValue().partitions().fullSet().size();
 
-                    // Start rebalancing after clearing full partitions is finished.
-                    clearAllFut.listen(f -> ctx.kernalContext().closure().runLocalSafe(() -> {
-                        if (isDone())
-                            return;
+                        AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
 
-                        try {
-                            if (log.isInfoEnabled())
-                                log.info("Starting rebalance routine [" + grp.cacheOrGroupName() +
-                                    ", topVer=" + topVer +
-                                    ", supplier=" + supplierNode.id() +
-                                    ", fullPartitions=" + S.compact(parts.fullSet()) +
-                                    ", histPartitions=" + S.compact(parts.historicalSet()) + "]");
+                        for (Integer partId : e.getValue().partitions().fullSet()) {
+                            GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
-                            if (availablePrintRebalanceStatistics())
-                                stat.start(supplierNode, U.currentTimeMillis());
+                            assert part.state() == MOVING : part;
 
-                            ctx.io().sendOrderedMessage(supplierNode, d.topic(),
-                                d.convertIfNeeded(supplierNode.version()), grp.ioPolicy(), d.timeout());
+                            // Reset the initial update counter value to prevent historical rebalancing on this partition.
+                            part.dataStore().resetInitialUpdateCounter();
 
-                            // Cleanup required in case partitions demanded in parallel with cancellation.
-                            synchronized (this) {
-                                if (isDone())
-                                    cleanupRemoteContexts(supplierNode.id());
-                            }
+                            part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+                                @Override public void apply(IgniteInternalFuture<?> fut) {
+                                    if (fut.error() != null) {
+                                        tryCancel();
+
+                                        log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
+                                            + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
+
+                                        updateClearingPartitionsMetric(0);
+
+                                        return;
+                                    }
+
+                                    int remaining = waitCnt.decrementAndGet();
+
+                                    updateClearingPartitionsMetric(remaining);
+
+                                    if (remaining == 0) {
+                                        ctx.kernalContext().closure().runLocalSafe(() -> {
+                                            requestPartitions0(supplierNode, parts, d);
+                                        });
+                                    }
+                                }
+                            });
                         }
-                        catch (IgniteCheckedException e1) {
-                            ClusterTopologyCheckedException cause = e1.getCause(ClusterTopologyCheckedException.class);
 
-                            if (cause != null)
-                                log.warning("Failed to send initial demand request to node. " + e1.getMessage());
-                            else
-                                log.error("Failed to send initial demand request to node.", e1);
-
-                            cancel();
+                        if (fullSetSize > 0)
+                            updateClearingPartitionsMetric(fullSetSize);
+                        else if (!e.getValue().partitions().historicalSet().isEmpty()) {
+                            ctx.kernalContext().closure().runLocalSafe(() -> {
+                                requestPartitions0(supplierNode, parts, d);
+                            });
                         }
-                        catch (Throwable th) {
-                            log.error("Runtime error caught during initial demand request sending.", th);
-
-                            cancel();
-                        }
-                    }, true));
+                    }
+                    else {
+                        ctx.kernalContext().closure().runLocalSafe(() -> {
+                            requestPartitions0(supplierNode, parts, d);
+                        });
+                    }
                 }
             }
         }
 
         /**
-         * Creates future which will be completed when all {@code fullPartitions} are cleared.
-         *
-         * @param fullPartitions Set of full partitions need to be cleared.
-         * @return Future which will be completed when given partitions are cleared.
+         * @param clearing Clearing partitions.
          */
-        private IgniteInternalFuture<?> clearFullPartitions(Set<Integer> fullPartitions) {
-            final GridFutureAdapter clearAllFuture = new GridFutureAdapter();
-
-            if (fullPartitions.isEmpty()) {
-                clearAllFuture.onDone();
-
-                return clearAllFuture;
-            }
-
+        private void updateClearingPartitionsMetric(int clearing) {
             for (GridCacheContext cctx : grp.caches()) {
                 if (cctx.statisticsEnabled()) {
                     final CacheMetricsImpl metrics = cctx.cache().metrics0();
 
-                    metrics.rebalanceClearingPartitions(fullPartitions.size());
+                    metrics.rebalanceClearingPartitions(clearing);
                 }
             }
+        }
 
-            final AtomicInteger clearingPartitions = new AtomicInteger(fullPartitions.size());
+        /**
+         * @param supplierNode Supplier node.
+         * @param parts Map.
+         * @param msg Demand message.
+         */
+        private void requestPartitions0(
+            ClusterNode supplierNode,
+            IgniteDhtDemandedPartitionsMap parts,
+            GridDhtPartitionDemandMessage msg
+        ) {
+            if (isDone())
+                return;
 
-            for (int partId : fullPartitions) {
-                if (isDone()) {
-                    clearAllFuture.onDone();
+            try {
+                if (log.isInfoEnabled())
+                    log.info("Starting rebalance routine [" + grp.cacheOrGroupName() +
+                        ", topVer=" + topVer +
+                        ", supplier=" + supplierNode.id() +
+                        ", fullPartitions=" + S.compact(parts.fullSet()) +
+                        ", histPartitions=" + S.compact(parts.historicalSet()) + ']');
 
-                    return clearAllFuture;
-                }
+                if (availablePrintRebalanceStatistics())
+                    stat.start(supplierNode, U.currentTimeMillis());
 
-                GridDhtLocalPartition part = grp.topology().localPartition(partId);
+                ctx.io().sendOrderedMessage(supplierNode, msg.topic(),
+                    msg.convertIfNeeded(supplierNode.version()), grp.ioPolicy(), msg.timeout());
 
-                if (part != null && part.state() == MOVING) {
-                    part.onClearFinished(f -> {
-                        if (!isDone()) {
-                            // Cancel rebalance if partition clearing was failed.
-                            if (f.error() != null) {
-                                for (GridCacheContext cctx : grp.caches()) {
-                                    if (cctx.statisticsEnabled()) {
-                                        final CacheMetricsImpl metrics = cctx.cache().metrics0();
-
-                                        metrics.rebalanceClearingPartitions(0);
-                                    }
-                                }
-
-                                log.error("Unable to await partition clearing " + part, f.error());
-
-                                cancel();
-
-                                clearAllFuture.onDone(f.error());
-                            }
-                            else {
-                                int remaining = clearingPartitions.decrementAndGet();
-
-                                for (GridCacheContext cctx : grp.caches()) {
-                                    if (cctx.statisticsEnabled()) {
-                                        final CacheMetricsImpl metrics = cctx.cache().metrics0();
-
-                                        metrics.rebalanceClearingPartitions(remaining);
-                                    }
-                                }
-
-                                if (log.isDebugEnabled())
-                                    log.debug("Partition is ready for rebalance [grp=" + grp.cacheOrGroupName()
-                                        + ", p=" + part.id() + ", remaining=" + remaining + "]");
-
-                                if (remaining == 0)
-                                    clearAllFuture.onDone();
-                            }
-                        }
-                        else
-                            clearAllFuture.onDone();
-                    });
-                }
-                else {
-                    int remaining = clearingPartitions.decrementAndGet();
-
-                    for (GridCacheContext cctx : grp.caches()) {
-                        if (cctx.statisticsEnabled()) {
-                            final CacheMetricsImpl metrics = cctx.cache().metrics0();
-
-                            metrics.rebalanceClearingPartitions(remaining);
-                        }
-                    }
-
-                    if (remaining == 0)
-                        clearAllFuture.onDone();
+                // Cleanup required in case partitions demanded in parallel with cancellation.
+                synchronized (this) {
+                    if (isDone())
+                        cleanupRemoteContexts(supplierNode.id());
                 }
             }
+            catch (IgniteCheckedException e1) {
+                ClusterTopologyCheckedException cause = e1.getCause(ClusterTopologyCheckedException.class);
 
-            return clearAllFuture;
+                if (cause != null)
+                    log.warning("Failed to send initial demand request to node. " + e1.getMessage());
+                else
+                    log.error("Failed to send initial demand request to node.", e1);
+
+                tryCancel();
+            }
+            catch (Throwable th) {
+                log.error("Runtime error caught during initial demand request sending.", th);
+
+                tryCancel();
+            }
         }
 
         /** {@inheritDoc} */
@@ -1528,9 +1493,9 @@ public class GridDhtPartitionDemander {
                 return;
             }
 
-            assert state == RebalanceFutureState.STARTED : this;
-
             if (onDone(true, null)) {
+                assert state == RebalanceFutureState.STARTED : this;
+
                 grp.localWalEnabled(true, true);
 
                 // Safe to own from exchange worker thread because moving partitions from new assignments

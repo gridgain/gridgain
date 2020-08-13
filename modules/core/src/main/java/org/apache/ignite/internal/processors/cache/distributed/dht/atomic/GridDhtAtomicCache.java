@@ -3331,6 +3331,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         GridCacheVersion ver = req.writeVersion();
 
+        ctx.versions().onReceived(nodeId, ver);
+
         GridDhtAtomicNearResponse nearRes = null;
 
         if (req.nearNodeId() != null) {

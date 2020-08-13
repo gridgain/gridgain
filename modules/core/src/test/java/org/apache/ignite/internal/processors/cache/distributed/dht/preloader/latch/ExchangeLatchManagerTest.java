@@ -37,9 +37,7 @@ import org.junit.Test;
  * Tests for {@link ExchangeLatchManager} functionality when latch coordinator is failed.
  */
 public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
-    /**
-     *
-     */
+    /** */
     private static final String LATCH_NAME = "test";
 
     /** Message are meaning that node getting a stale acknowledge message. */

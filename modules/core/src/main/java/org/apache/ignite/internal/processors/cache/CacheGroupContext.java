@@ -115,7 +115,7 @@ public class CacheGroupContext {
     /** */
     private final boolean storeCacheId;
 
-    /** We modify content under lock, by making defencive copy, field always contains unmodifiable list. */
+    /** We modify content under lock, by making defensive copy, field always contains unmodifiable list. */
     private volatile List<GridCacheContext> caches = Collections.unmodifiableList(new ArrayList<>());
 
     /** List of caches with registered CQ listeners. */
@@ -1115,6 +1115,8 @@ public class CacheGroupContext {
             initializeIO();
 
             ctx.affinity().onCacheGroupCreated(this);
+
+            ctx.evict().onCacheGroupStarted(this);
         }
     }
 
