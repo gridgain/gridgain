@@ -90,6 +90,6 @@ public class MetadataTypeArgs extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return typeId != null ? "0x" + Integer.toHexString(typeId).toUpperCase() : typeName;
+        return typeId != null ? Integer.toString(typeId) : typeName;
     }
 }

@@ -109,6 +109,43 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     }
 
     /**
+     * Checks that command remove when provided with absent type name prints informative message and
+     * returns corresponding error code (invalid argument).
+     *
+     * Test scenario:
+     * <ol>
+     *     <li>
+     *         Execute meta --remove command passing non-existing type name.
+     *     </li>
+     *     <li>
+     *         Verify that invalid argument error code is returned, message is printed to command output.
+     *     </li>
+     *     <li>
+     *         Execute meta --remove command passing non-existing type id.
+     *     </li>
+     *     <li>
+     *         Verify that invalid argument error code is returned, message is printed to command output.
+     *     </li>
+     * </ol>
+     */
+    @Test
+    public void testMetadataRemoveWrongType() {
+        injectTestSystemOut();
+
+        String wrongTypeName = "Type01";
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--meta", "remove", "--typeName", wrongTypeName));
+
+        assertContains(log, testOut.toString(), "Failed to remove binary type, type not found: " + wrongTypeName);
+
+        int wrongTypeId = 42;
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--meta", "remove", "--typeId", Integer.toString(wrongTypeId)));
+
+        assertContains(log, testOut.toString(), "Failed to remove binary type, type not found: " + wrongTypeId);
+    }
+
+    /**
      * Checks that commands --meta list and --meta remove don't cause registering system or internal classes
      * in binary metadata.
      *
