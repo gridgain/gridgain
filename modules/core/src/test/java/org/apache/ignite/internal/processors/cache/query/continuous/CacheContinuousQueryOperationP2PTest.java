@@ -40,10 +40,10 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -429,7 +429,7 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
                     }
                 }, EVT_CLIENT_NODE_DISCONNECTED);
 
-                TcpDiscoverySpi clientDiscSpi = (TcpDiscoverySpi) grid(nodeIdx).configuration().getDiscoverySpi();
+                IgniteDiscoverySpi clientDiscSpi = (IgniteDiscoverySpi) grid(nodeIdx).configuration().getDiscoverySpi();
 
                 clientDiscSpi.clientReconnect();
 

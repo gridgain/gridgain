@@ -1330,36 +1330,23 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         if (locInfosToStart.isEmpty())
             return null;
 
-//        return ctx.closure().runLocalSafe(new GridPlainRunnable() {
-//              @Override public void run() {
-                  List<IgniteInternalFuture<UUID>> futs = new ArrayList<>();
+        List<IgniteInternalFuture<UUID>> futs = new ArrayList<>();
 
-                  for (LocalRoutineInfo locInfo : locInfosToStart){
-                      try {
-                          futs.add(startRoutine(
-                              locInfo.handler().clone(),
-                              false,
-                              locInfo.bufSize,
-                              locInfo.interval,
-                              locInfo.autoUnsubscribe,
-                              locInfo.prjPred
-                          ));
-                      }
-                      catch (IgniteCheckedException | IgniteException ex) {
-                          log.warning("Failed to start continuous query.", ex);
-                      }
-                  }
-
-//                  for (IgniteInternalFuture<UUID> fut : futs) {
-//                      try {
-//                          fut.get();
-//                      }
-//                      catch (IgniteCheckedException e) {
-//                          log.warning("Failed to start continuous query.", e);
-//                      }
-//                  }
-//              }
-//          });
+        for (LocalRoutineInfo locInfo : locInfosToStart) {
+            try {
+                futs.add(startRoutine(
+                    locInfo.handler().clone(),
+                    false,
+                    locInfo.bufSize,
+                    locInfo.interval,
+                    locInfo.autoUnsubscribe,
+                    locInfo.prjPred
+                ));
+            }
+            catch (IgniteCheckedException | IgniteException ex) {
+                log.warning("Failed to start continuous query.", ex);
+            }
+        }
 
         return ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
@@ -1373,7 +1360,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                 }
             }
         });
-//        return null;
     }
 
     /**
