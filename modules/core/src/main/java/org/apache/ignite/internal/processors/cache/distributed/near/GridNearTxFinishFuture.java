@@ -664,8 +664,19 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                     }
                 }
             }
-            else
+            else {
                 readyNearMappingFromBackup(mapping);
+
+                if (cctx.discovery().node(nodeId) == null) {
+                    ClusterTopologyCheckedException cause =
+                        new ClusterTopologyCheckedException("Primary node left grid: " + nodeId);
+
+                    cause.retryReadyFuture(cctx.nextAffinityReadyFuture(tx.topologyVersion()));
+
+                    onDone(new IgniteTxRollbackCheckedException("Failed to commit transaction " +
+                        "(primary has left grid): " + tx.xidVersion(), cause));
+                }
+            }
         }
     }
 

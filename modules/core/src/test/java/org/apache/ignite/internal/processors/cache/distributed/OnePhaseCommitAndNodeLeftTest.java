@@ -22,10 +22,12 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -36,20 +38,47 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTAN
  */
 public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
+    /** Chache backup count. */
+    private int backups = 0;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
+                .setBackups(backups)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
     }
 
     /**
      * @throws Exception If failed.
      */
     @Test
-    public void test() throws Exception {
+    public void testZiroBackups() throws Exception {
+        startTransactionAndFailPrimary();
+    }
 
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testOneBackups() throws Exception {
+        backups = 1;
+
+        startTransactionAndFailPrimary();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    private void startTransactionAndFailPrimary() throws Exception {
         Ignite ignite0 = startGrids(2);
 
         awaitPartitionMapExchange();
@@ -62,7 +91,9 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
         assertFalse("Found key is local: " + key + " on node " + node1, node1.isLocal());
 
-        TestRecordingCommunicationSpi.spi(ignite0).blockMessages((node, msg) -> {
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ignite0);
+
+        spi.blockMessages((node, msg) -> {
             if (msg instanceof GridNearTxPrepareRequest) {
                 GridNearTxPrepareRequest putReq = (GridNearTxPrepareRequest)msg;
 
@@ -74,13 +105,7 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
                         String nodeName = node.attribute(ATTR_IGNITE_INSTANCE_NAME);
 
-                        info("Writing a single key to remote node in one pahse transaction: [cahce=" +
-                            DEFAULT_CACHE_NAME +
-                            ", key=" + putReq.writes().iterator().next().key() +
-                            ", node=" + nodeName +
-                            ']');
-
-                        ignite(getTestIgniteInstanceIndex(nodeName)).close();
+                        return true;
                     }
                 }
             }
@@ -90,7 +115,19 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
         String testVal = "Tets value";
 
-        cache.put(key, testVal);
+        IgniteInternalFuture putFut = GridTestUtils.runAsync(() -> {
+            cache.put(key, testVal);
+        });
+
+        spi.waitForBlocked();
+
+        assertFalse(putFut.isDone());
+
+        ignite(1).close();
+
+        spi.stopBlock();
+
+        putFut.get();
 
         assertEquals(testVal, cache.get(key));
     }
