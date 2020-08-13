@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.query.continuous;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
@@ -39,7 +40,8 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
-import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.failure.AbstractFailureHandler;
+import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.CommunicationSpi;
@@ -69,6 +71,9 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
     /** */
     private boolean client;
 
+    /** Flag that is raised in case the failure handler was called. */
+    private final AtomicBoolean failure = new AtomicBoolean(false);
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -77,6 +82,15 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
 
         cfg.setClientMode(client);
         cfg.setPeerClassLoadingEnabled(true);
+
+        cfg.setFailureHandler(new AbstractFailureHandler() {
+            /** {@inheritDoc} */
+            @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
+                failure.set(true);
+
+                return false;
+            }
+        });
 
         return cfg;
     }
@@ -332,21 +346,19 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
 
         testContinuousQuery(ccfg, isClient, false, false, evtFilterFactoryCls);
         testContinuousQuery(ccfg, isClient, true, false, evtFilterFactoryCls);
-
-        if (isClient)
-            testContinuousQuery(ccfg, isClient, false, true, evtFilterFactoryCls);
+        testContinuousQuery(ccfg, isClient, false, true, evtFilterFactoryCls);
     }
 
     /**
      * @param ccfg Cache configuration.
      * @param isClient Client.
      * @param joinNode If a node should be added to topology after a query is started.
-     * @param joinNode If a node should be restarted after a query is started.
+     * @param reconnectClient If a client node should be reconnected after a query is started.
      * @param evtFilterFactoryCls Remote filter factory class.
      * @throws Exception If failed.
      */
     private void testContinuousQuery(CacheConfiguration<Object, Object> ccfg,
-        boolean isClient, boolean joinNode, boolean restartNode,
+        boolean isClient, boolean joinNode, boolean reconnectClient,
         Class<Factory<CacheEntryEventFilter>> evtFilterFactoryCls) throws Exception {
 
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -386,11 +398,11 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
                 true
             );
 
-        int nodeIdx = isClient
-            ? NODES - 1
-            : rnd.nextInt(NODES - 1);
+        IgniteCache<Integer, Integer> cache;
 
-        IgniteCache<Integer, Integer> cache = grid(nodeIdx).cache(ccfg.getName());
+        cache = isClient
+            ? grid(NODES - 1).cache(ccfg.getName())
+            : grid(rnd.nextInt(NODES - 1)).cache(ccfg.getName());
 
         try (QueryCursor<?> cur = cache.query(qry)) {
             cache.registerCacheEntryListener(lsnrCfg);
@@ -400,43 +412,8 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
                 awaitPartitionMapExchange();
             }
 
-            if (restartNode) {
-                CountDownLatch disconnectLatch = new CountDownLatch(1);
-
-                CountDownLatch reconnectLatch = new CountDownLatch(1);
-
-                grid(nodeIdx).events().localListen(new IgnitePredicate<Event>() {
-                    @Override public boolean apply(Event evt) {
-                        if (evt.type() == EVT_CLIENT_NODE_DISCONNECTED) {
-                            IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
-                                try {
-                                    cache.put(0, 0);
-
-                                    fail();
-                                } catch (CacheException e) {
-                                    IgniteClientDisconnectedException e0 = (IgniteClientDisconnectedException)e.getCause();
-
-                                    e0.reconnectFuture().get();
-
-                                    reconnectLatch.countDown();
-                                }
-                            });
-
-                            disconnectLatch.countDown();
-                        }
-
-                        return true;
-                    }
-                }, EVT_CLIENT_NODE_DISCONNECTED);
-
-                IgniteDiscoverySpi clientDiscSpi = (IgniteDiscoverySpi) grid(nodeIdx).configuration().getDiscoverySpi();
-
-                clientDiscSpi.clientReconnect();
-
-                assertTrue(disconnectLatch.await(5, TimeUnit.SECONDS));
-
-                assertTrue(reconnectLatch.await(10, TimeUnit.SECONDS));
-            }
+            if (reconnectClient)
+                reconnectClient(ccfg.getName());
 
             for (int i = 0; i < UPDATES; i++)
                 cache.put(i, i);
@@ -445,7 +422,59 @@ public class CacheContinuousQueryOperationP2PTest extends GridCommonAbstractTest
                 latch.await(3, TimeUnit.SECONDS));
 
             assertNull(err.get(), err.get());
+
+            // Check that the failure handler was not called.
+            assertFalse(failure.get());
         }
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @throws InterruptedException If failed.
+     */
+    private void reconnectClient(String cacheName) throws InterruptedException {
+        int nodeIdx = NODES - 1;
+
+        CountDownLatch disconnectLatch = new CountDownLatch(1);
+
+        CountDownLatch reconnectLatch = new CountDownLatch(1);
+
+        grid(nodeIdx).events().localListen(new IgnitePredicate<Event>() {
+            @Override public boolean apply(Event evt) {
+                if (evt.type() == EVT_CLIENT_NODE_DISCONNECTED) {
+                    GridTestUtils.runAsync(() -> {
+                        try {
+                            IgniteCache<Integer, Integer> cache = grid(nodeIdx).cache(cacheName);
+
+                            cache.put(0, 0);
+
+                            fail();
+                        }
+                        catch (CacheException | IgniteClientDisconnectedException e) {
+                            IgniteClientDisconnectedException e0 = e instanceof CacheException
+                                ? (IgniteClientDisconnectedException)e.getCause()
+                                : (IgniteClientDisconnectedException)e;
+
+                            e0.reconnectFuture().get();
+
+                            reconnectLatch.countDown();
+                        }
+                    });
+
+                    disconnectLatch.countDown();
+                }
+
+                return true;
+            }
+        }, EVT_CLIENT_NODE_DISCONNECTED);
+
+        IgniteDiscoverySpi clientDiscSpi = (IgniteDiscoverySpi) grid(nodeIdx).configuration().getDiscoverySpi();
+
+        clientDiscSpi.clientReconnect();
+
+        assertTrue("Failed to wait for the node disconnect.", disconnectLatch.await(5, TimeUnit.SECONDS));
+
+        assertTrue("Failed to wait for the node reconnect.", reconnectLatch.await(10, TimeUnit.SECONDS));
     }
 
     /**

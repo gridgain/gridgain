@@ -1295,10 +1295,10 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     }
 
     /**
-     * @return Whether the deployable object should be remarhsalled in the current context.
+     * @return Whether the marshalled object is not valid in the current context.
      */
-    public boolean isRemarshalRequired() {
-        return !isDeployableObjectValid(ctx, rmtFilterDep);
+    public boolean isMarshalledObjectValid() {
+        return isDeployableObjectValid(ctx, rmtFilterDep);
     }
 
     /**

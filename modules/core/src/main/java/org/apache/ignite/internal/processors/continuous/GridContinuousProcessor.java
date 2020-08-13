@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.continuous;
 
-import java.util.List;
 import javax.cache.event.CacheEntryUpdatedListener;
 import java.io.Externalizable;
 import java.io.IOException;
@@ -72,6 +71,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Cac
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryHandler;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -493,27 +493,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
             if (ctx.config().isPeerClassLoadingEnabled() &&
                 e.getValue().handler() instanceof CacheContinuousQueryHandler &&
-                ((CacheContinuousQueryHandler)e.getValue().handler()).isRemarshalRequired()) {
-//                ctx.discovery().localJoinFuture().listen(f -> ctx.closure().runLocalSafe(new GridPlainRunnable() {
-//                    @Override public void run() {
-//                        try {
-//                            startRoutine(
-//                                e.getValue().handler().clone(),
-//                                false,
-//                                e.getValue().bufSize,
-//                                e.getValue().interval,
-//                                e.getValue().autoUnsubscribe,
-//                                e.getValue().prjPred
-//                            ).get();
-//                        }
-//                        catch (IgniteCheckedException | IgniteException e) {
-//                            log.warning("Failed to start continuous query.", e);
-//                        }
-//                    }
-//                }));
-
+                !((CacheContinuousQueryHandler)e.getValue().handler()).isMarshalledObjectValid())
                 continue;
-            }
 
             res.put(e.getKey(), e.getValue());
         }
@@ -1317,49 +1298,34 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         if (!ctx.config().isPeerClassLoadingEnabled())
             return null;
 
-        List<LocalRoutineInfo> locInfosToStart = new ArrayList<>(locInfos.size());
+        GridCompoundFuture<UUID, ?> compFut = new GridCompoundFuture<>();
 
         for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
             LocalRoutineInfo locInfo = e.getValue();
 
             if (locInfo.handler() instanceof CacheContinuousQueryHandler &&
-                ((CacheContinuousQueryHandler)locInfo.handler()).isRemarshalRequired())
-                locInfosToStart.add(e.getValue());
-        }
+                !((CacheContinuousQueryHandler)locInfo.handler()).isMarshalledObjectValid()) {
+                try {
+                    IgniteInternalFuture<UUID> fut = startRoutine(
+                        locInfo.handler().clone(),
+                        false,
+                        locInfo.bufSize,
+                        locInfo.interval,
+                        locInfo.autoUnsubscribe,
+                        locInfo.prjPred
+                    );
 
-        if (locInfosToStart.isEmpty())
-            return null;
-
-        List<IgniteInternalFuture<UUID>> futs = new ArrayList<>();
-
-        for (LocalRoutineInfo locInfo : locInfosToStart) {
-            try {
-                futs.add(startRoutine(
-                    locInfo.handler().clone(),
-                    false,
-                    locInfo.bufSize,
-                    locInfo.interval,
-                    locInfo.autoUnsubscribe,
-                    locInfo.prjPred
-                ));
-            }
-            catch (IgniteCheckedException | IgniteException ex) {
-                log.warning("Failed to start continuous query.", ex);
-            }
-        }
-
-        return ctx.closure().runLocalSafe(new GridPlainRunnable() {
-            @Override public void run() {
-                for (IgniteInternalFuture<UUID> fut : futs) {
-                    try {
-                      fut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                      log.warning("Failed to start continuous query.", e);
-                    }
+                    compFut.add(fut);
+                }
+                catch (IgniteCheckedException ex) {
+                    log.warning("Failed to start continuous query.", ex);
                 }
             }
-        });
+        }
+
+        compFut.markInitialized();
+
+        return compFut;
     }
 
     /**
