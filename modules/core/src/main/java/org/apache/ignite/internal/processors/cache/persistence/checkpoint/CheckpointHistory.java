@@ -750,8 +750,6 @@ public class CheckpointHistory {
 
                 for (Map.Entry<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> entry : res.entrySet())
                     entry.setValue(new T2<>(ReservationReason.WAL_RESERVATION_ERROR, null));
-
-                oldestCpForReservation = null;
             }
         }
 
