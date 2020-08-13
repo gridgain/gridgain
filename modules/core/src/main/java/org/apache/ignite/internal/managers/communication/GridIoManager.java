@@ -1374,7 +1374,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             @Override public void assign(StripedExecutor.Stripe stripe) {
                 this.stripe = stripe;
 
-                beforeQueueSize = 0;//stripe.queueSize();
+                beforeQueueSize = stripe.queueSize();
             }
 
             /** {@inheritDoc} */
