@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -34,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.resources.LoggerResource;
 import org.h2.table.Column;
 import org.h2.value.Value;
 
@@ -46,6 +49,10 @@ public class SqlStatisticsManager implements MetastorageLifecycleListener {
     private final static String META_STAT_PREFIX = "data_stats";
     private final static String META_TABLE_STAT_PREX = META_STAT_PREFIX + "_tbl";
     private final static String META_PART_STAT_PREX = META_STAT_PREFIX + "_part";
+
+    /** Logger. */
+    @LoggerResource
+    private IgniteLogger log;
 
     private final Map<QueryTable, Map<Integer, TablePartitionStatistics>> partitionedTblStats = new ConcurrentHashMap<>();
 
@@ -155,8 +162,10 @@ public class SqlStatisticsManager implements MetastorageLifecycleListener {
 
         Map<Integer, TablePartitionStatistics> tblParts = partitionedTblStats.computeIfAbsent(tblId, k -> new HashMap<>());
 
-        for (TablePartitionStatistics part : tblPartStats)
+        for (TablePartitionStatistics part : tblPartStats) {
             tblParts.put(part.partId(), part);
+            writePartStatistics(tbl.getSchema().getName(), tbl.getName(), part);
+        }
 
         aggregateLocalStatistics(tbl);
     }
@@ -198,13 +207,39 @@ public class SqlStatisticsManager implements MetastorageLifecycleListener {
         TableStatistics tblStats = new TableStatistics(rowCnt, aggregatedStats);
 
         locTblStats.put(tblId, tblStats);
+        writeTblStatistics(tbl.getSchema().getName(), tbl.getName(), tblStats);
 
         tbl.tableStatistics(tblStats);
-        //if (metastore != null)
-            //TODO metastore.write(getMetaKey(tblId.schema(), tblId.table()), tblStats);
     }
 
 
+    private void writePartStatistics(String schemaName, String tblName, TablePartitionStatistics partStats) {
+        if (metastore == null) {
+            log.warning(String.format("Metastore not ready to save partition statistic: %s.%s part %d", schemaName,
+                    tblName, partStats.partId()));
+            return;
+        }
+
+        //TODO: writeMeta();
+    }
+
+    //rivate Serializable prepareStat()
+
+    private void writeTblStatistics(String schemaName, String tblName, TableStatistics tblStats) {
+        if (metastore == null) {
+            log.warning(String.format("Metastore not ready to save table statistic: %s.%s", schemaName));
+            return;
+        }
+    }
+
+    private void writeMeta(String key, Serializable object) throws IgniteCheckedException {
+        ctx.cache().context().database().checkpointReadLock();
+        try {
+            metastore.write(key, object);
+        } finally {
+            ctx.cache().context().database().checkpointReadUnlock();
+        }
+    }
 
     private static class ColumnStatisticsAggregator {
         private final Comparator<Value> cmp;
