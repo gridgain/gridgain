@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -53,7 +54,13 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
             );
     }
 
-    /** */
+    /**
+     * Check negative value of the default query timeout passed through {@link SqlConfiguration}.
+     * Steps:
+     * - set default query timeout to negative value;
+     * - try to start node;
+     * - check appropriate exception is thrown.
+     */
     @Test
     public void testNegativeDefaultTimeoutByConfig() throws Exception {
         cfgDfltQryTimeout = -1;
@@ -65,7 +72,14 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         }, IllegalArgumentException.class);
     }
 
-    /** */
+    /**
+     * Check negative value of the default query timeout passed through API of the  {@link DistributedSqlConfiguration}.
+     * Steps:
+     * - start node;
+     * - try to set default query timeout to negative value
+     *      via {@link DistributedSqlConfiguration#defaultQueryTimeout(int)};
+     * - check appropriate exception is thrown.
+     */
     @Test
     public void testNegativeDefaultTimeout() throws Exception {
         startGrid(0);
@@ -80,7 +94,14 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         }, IllegalArgumentException.class);
     }
 
-    /** */
+    /**
+     * Check zero value of the default query timeout passed through API of the  {@link DistributedSqlConfiguration}.
+     * Steps:
+     * - start node;
+     * - try to set default query timeout to zero value
+     *      via {@link DistributedSqlConfiguration#defaultQueryTimeout(int)};
+     * - no exception must be thrown.
+     */
     @Test
     public void testZeroDefaultTimeout() throws Exception {
         startGrid(0);
@@ -88,7 +109,14 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         setDefaultQueryTimeout(0);
     }
 
-    /** */
+    /**
+     * Check positive value of the default query timeout passed through API of the  {@link DistributedSqlConfiguration}.
+     * Steps:
+     * - start node;
+     * - try to set default query timeout to positive value
+     *      via {@link DistributedSqlConfiguration#defaultQueryTimeout(int)};
+     * - no exception must be thrown.
+     */
     @Test
     public void testPositiveDefaultTimeout() throws Exception {
         startGrid(0);
@@ -96,7 +124,13 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         setDefaultQueryTimeout(1);
     }
 
-    /** */
+    /**
+     * Check too big  value of the default query timeout passed through {@link SqlConfiguration}.
+     * Steps:
+     * - set default query timeout to too big value;
+     * - try to start node;
+     * - check appropriate exception is thrown.
+     */
     @Test
     public void testTooBigDefaultTimeout() throws Exception {
         cfgDfltQryTimeout = Integer.MAX_VALUE + 1L;
@@ -110,7 +144,17 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         }, IllegalArgumentException.class);
     }
 
-    /** */
+    /**
+     * Check change the default query timeout via API of the {@link DistributedSqlConfiguration} on runtime.
+     * Steps:
+     * - start two servers an one client node;
+     * - set default query timeout to 2000 ms;
+     * - execute query that takes 1000 ms;
+     * - check that query is successful;
+     * - set default query timeout to 500 ms;
+     * - execute query that takes 1000 ms;
+     * - check that query fails with QueryCancelledException.
+     */
     @Test
     public void testChangeDefaultTimeout() throws Exception {
         startGrids(2);

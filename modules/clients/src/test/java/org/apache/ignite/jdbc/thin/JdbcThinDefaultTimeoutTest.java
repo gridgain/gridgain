@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
@@ -73,7 +72,12 @@ public class JdbcThinDefaultTimeoutTest extends GridCommonAbstractTest {
         super.afterTestsStopped();
     }
 
-    /** */
+    /**
+     * Check JDBC query timeout.
+     * Steps:
+     * - execute query with zero explicit timeout (timeout disabled);
+     * - check that query successful.
+     */
     @Test
     public void testDefaultTimeoutIgnored() throws Exception {
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://localhost")) {
@@ -94,7 +98,13 @@ public class JdbcThinDefaultTimeoutTest extends GridCommonAbstractTest {
         }
     }
 
-    /** */
+    /**
+     * Check JDBC query timeout.
+     * Steps:
+     * - set default timeout to 100 ms;
+     * - execute query without explicit timeout;
+     * - check that query fails by timeout.
+     */
     @Test
     public void testDefaultTimeout() throws Exception {
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://localhost")) {
