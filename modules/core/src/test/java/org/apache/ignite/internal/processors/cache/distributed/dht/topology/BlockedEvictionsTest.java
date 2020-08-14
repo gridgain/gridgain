@@ -33,14 +33,19 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
@@ -199,6 +204,94 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         }
 
         waitForTopology(2);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStopNodeDuringEviction_2() throws Exception {
+        AtomicInteger holder = new AtomicInteger();
+
+        CountDownLatch l1 = new CountDownLatch(1);
+        CountDownLatch l2 = new CountDownLatch(1);
+
+        IgniteEx g0 = startGrid(0, new DependencyResolver() {
+            @Override public <T> T resolve(T instance) {
+                if (instance instanceof GridDhtPartitionTopologyImpl) {
+                    GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
+
+                    top.partitionFactory(new GridDhtPartitionTopologyImpl.PartitionFactory() {
+                        @Override public GridDhtLocalPartition create(
+                            GridCacheSharedContext ctx,
+                            CacheGroupContext grp,
+                            int id,
+                            boolean recovery
+                        ) {
+                            return new GridDhtLocalPartitionSyncEviction(ctx, grp, id, recovery, 3, l1, l2) {
+                                /** */
+                                @Override protected void sync() {
+                                    if (holder.get() == id)
+                                        super.sync();
+                                }
+                            };
+                        }
+                    });
+                }
+                else if (instance instanceof IgniteCacheOffheapManager) {
+                    IgniteCacheOffheapManager mgr = (IgniteCacheOffheapManager) instance;
+
+                    IgniteCacheOffheapManager spied = Mockito.spy(mgr);
+
+                    Mockito.doAnswer(new Answer() {
+                        @Override public Object answer(InvocationOnMock invocation) throws Throwable {
+                            Object ret = invocation.callRealMethod();
+
+                            // Wait is necessary here to guarantee test progress.
+                            doSleep(2_000);
+
+                            return ret;
+                        }
+                    }).when(spied).stop();
+
+                    return (T) spied;
+                }
+
+                return instance;
+            }
+        });
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        IgniteCache<Object, Object> cache = g0.getOrCreateCache(cacheConfiguration());
+
+        int p0 = evictingPartitionsAfterJoin(g0, cache, 1).get(0);
+        holder.set(p0);
+
+        loadDataToPartition(p0, g0.name(), DEFAULT_CACHE_NAME, 5_000, 0, 3);
+
+        startGrid(2);
+
+        U.awaitQuiet(l1);
+
+        GridDhtLocalPartition part = g0.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(p0);
+
+        IgniteInternalFuture<?> clearFut = U.field(part, "clearFut");
+
+        IgniteInternalFuture fut = runAsync(g0::close);
+
+        // Give some time to execute cache store destroy.
+        doSleep(500);
+
+        l2.countDown();
+
+        fut.get();
+
+        // Partition clearing future should be finished with NodeStoppingException.
+        assertTrue(clearFut.error().getMessage(),
+            clearFut.error() != null && X.hasCause(clearFut.error(), NodeStoppingException.class));
     }
 
     /**
