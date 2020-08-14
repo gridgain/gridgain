@@ -56,10 +56,10 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
     public static final int VAL_SIZE = 16;
 
     /** */
-    private static final String QRY_1 = "select a._val, b._val from String a, String b";
+    private static final String QRY_1 = "select a._val, b._val, delay(1) from String a, String b";
 
     /** */
-    private static final String QRY_2 = "select a._key, count(*) from String a group by a._key";
+    private static final String QRY_2 = "select a._key, count(*), delay(1) from String a group by a._key";
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -74,6 +74,7 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
 
         CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
         ccfg.setIndexedTypes(Integer.class, String.class);
+        ccfg.setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class);
 
         cfg.setCacheConfiguration(ccfg);
 
@@ -92,22 +93,38 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
         grid(0).cache(DEFAULT_CACHE_NAME).removeAll();
     }
 
-    /** */
+    /**
+     * Check timeout for distributed query.
+     * Steps:
+     * - run long distributed query with timeout 500 ms;
+     * - the query must be failed with QueryCancelledException.
+     */
     @Test
     public void testRemoteQueryExecutionTimeout() throws Exception {
-        testQueryCancel(QRY_1, 500, TimeUnit.MILLISECONDS, true, true);
+        testQueryCancel(QRY_1, 500, TimeUnit.MILLISECONDS, true);
     }
 
-    /** */
+    /**
+     * Check timeout for distributed query with merge table.
+     * Steps:
+     * - run long distributed query with timeout 500 ms;
+     * - the query must be failed with QueryCancelledException.
+     */
     @Test
     public void testRemoteQueryWithMergeTableTimeout() throws Exception {
-        testQueryCancel(QRY_2, 500, TimeUnit.MILLISECONDS, true, false);
+        testQueryCancel(QRY_2, 500, TimeUnit.MILLISECONDS, true);
     }
 
-    /** */
+    /**
+     * Check timeout for distributed query.
+     * Steps:
+     * - run long distributed query;
+     * - cancel query after 1 ms;
+     * - the query must be failed with QueryCancelledException.
+     */
     @Test
     public void testRemoteQueryExecutionCancel0() throws Exception {
-        testQueryCancel(QRY_1, 1, TimeUnit.MILLISECONDS, false, true);
+        testQueryCancel(QRY_1, 1, TimeUnit.MILLISECONDS, false);
     }
 
     /** */
@@ -115,8 +132,7 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
         String sql,
         int timeout,
         TimeUnit timeUnit,
-        boolean useTimeout,
-        boolean checkCanceled) throws Exception {
+        boolean useTimeout) throws Exception {
         try (Ignite client = startGrid("client")) {
             IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
@@ -145,8 +161,7 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
             try (QueryCursor<List<?>> ignored = cursor) {
                 cursor.getAll();
 
-                if (checkCanceled)
-                    fail("Query not canceled");
+                fail("Query not canceled");
             }
             catch (CacheException ex) {
                 error("Got expected exception", ex);
@@ -169,7 +184,7 @@ public class IgniteCacheDistributedQueryDefaultTimeoutSelfTest extends GridCommo
             IgniteEx grid = grid(i);
 
             // Validate everything was cleaned up.
-            ConcurrentMap<UUID, ?> map = U.field(((IgniteH2Indexing)grid().context().query()
+            ConcurrentMap<UUID, ?> map = U.field(((IgniteH2Indexing)grid.context().query()
                 .getIndexing()).mapQueryExecutor(), "qryRess");
 
             String msg = "Map executor state is not cleared";

@@ -39,7 +39,16 @@ public class JdbcThinStatementTimeoutInternalsTest extends GridCommonAbstractTes
     }
 
     /**
-     * @throws Exception If failed.
+     * Check internal state of statement: explicitTimeout flag means that the query timeout is set bu user explicitly.
+     * Steps:
+     * - create JDBC connection without timeout property;
+     * - check the flag explicitTimeout. It must be false;
+     * - set query timeout by JDBC API;
+     * - check the flag explicitTimeout. It must be true;
+     * - create JDBC connection with timeout property;
+     * - check the flag explicitTimeout. It must be true;
+     * - set query timeout by JDBC API;
+     * - check the flag explicitTimeout. It must be true.
      */
     @Test
     public void testUrlQueryTimeoutPropertyIsSetInternally() throws Exception {

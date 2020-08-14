@@ -95,6 +95,11 @@ public class IgniteCacheLocalQueryDefaultTimeoutSelfTest extends GridCommonAbstr
 
     /**
      * Tests query execution with default query timeout.
+     * Steps:
+     * - start server node;
+     * - execute query;
+     * - cancel query after 1 ms;
+     * - the query must be failed with QueryCancelledException.
      */
     @Test
     public void testQueryDefaultTimeout() {
@@ -103,6 +108,10 @@ public class IgniteCacheLocalQueryDefaultTimeoutSelfTest extends GridCommonAbstr
 
     /**
      * Tests query execution with query timeout.
+     * Steps:
+     * - start server node;
+     * - execute query with query timeout 1 ms;
+     * - the query must be failed with QueryCancelledException by timeout.
      */
     @Test
     public void testQueryTimeout() {
