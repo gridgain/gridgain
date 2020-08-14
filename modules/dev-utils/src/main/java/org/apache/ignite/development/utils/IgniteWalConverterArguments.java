@@ -124,11 +124,21 @@ public class IgniteWalConverterArguments {
      * @param printStat                     Write summary statistics for WAL.
      * @param skipCrc                       Skip CRC calculation/check flag.
      */
-    public IgniteWalConverterArguments(File walDir, File walArchiveDir, int pageSize,
-        File binaryMetadataDir, File marshallerMappingDir, boolean keepBinary,
-        Set<WALRecord.RecordType> recordTypes, Long fromTime, Long toTime, String hasText,
+    public IgniteWalConverterArguments(
+        File walDir,
+        File walArchiveDir,
+        int pageSize,
+        File binaryMetadataDir,
+        File marshallerMappingDir,
+        boolean keepBinary,
+        Set<WALRecord.RecordType> recordTypes,
+        Long fromTime,
+        Long toTime,
+        String hasText,
         ProcessSensitiveData includeSensitive,
-        boolean printStat, boolean skipCrc) {
+        boolean printStat,
+        boolean skipCrc
+    ) {
         this.walDir = walDir;
         this.walArchiveDir = walArchiveDir;
         this.pageSize = pageSize;
