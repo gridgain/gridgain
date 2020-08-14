@@ -539,6 +539,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                                 null,
                                 taskName,
                                 expiryPlc,
+                                true,
                                 true);
                         }
 

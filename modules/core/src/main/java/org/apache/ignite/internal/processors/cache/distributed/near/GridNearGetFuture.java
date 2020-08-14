@@ -375,7 +375,8 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
                             null,
                             taskName,
                             expiryPlc,
-                            !deserializeBinary);
+                            !deserializeBinary,
+                            true);
                     }
                 }
 
@@ -524,7 +525,8 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
                             null,
                             taskName,
                             expiryPlc,
-                            !deserializeBinary);
+                            !deserializeBinary,
+                            true);
                     }
 
                     // Entry was not in memory or in swap, so we remove it from cache.

@@ -1847,7 +1847,8 @@ public class IgniteTxHandler {
                                                 /*transformClo*/null,
                                                 tx.resolveTaskName(),
                                                 /*expiryPlc*/null,
-                                                /*keepBinary*/true);
+                                                /*keepBinary*/true,
+                                                true);
 
                                             if (val == null)
                                                 val = cacheCtx.toCacheObject(cacheCtx.store().load(null, entry.key()));

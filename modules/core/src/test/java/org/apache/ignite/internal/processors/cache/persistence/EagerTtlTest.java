@@ -16,12 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -29,18 +32,21 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
 /**
- * Test checks a work of eager the TTL policy with a short time to leave.
+ * Test checks a work of the TTL policy.
  */
 public class EagerTtlTest extends GridCommonAbstractTest {
 
@@ -48,6 +54,18 @@ public class EagerTtlTest extends GridCommonAbstractTest {
     private static final String ASSERTION_ERR = "java.lang.AssertionError: Invalid topology version [topVer=" +
         AffinityTopologyVersion.NONE +
         ", group=" + DEFAULT_CACHE_NAME + ']';
+
+    /** Text will appear when an assertion error happens. */
+    public static final String ANY_ASSERTION_ERR = "java.lang.AssertionError";
+
+    /** Expiration time. */
+    public static final int EXPIRATION_TIME = 1_000;
+
+    /** Count of entries. */
+    public static final int ENTRIES = 100;
+
+    /** Cache eager ttl falg. */
+    private boolean eagerTtl = false;
 
     /** Listening logger. */
     private ListeningTestLogger listeningLog;
@@ -83,19 +101,29 @@ public class EagerTtlTest extends GridCommonAbstractTest {
      */
     private CacheConfiguration getCacheConfiguration(String cacheName) {
         return new CacheConfiguration(cacheName)
+            .setAffinity(new RendezvousAffinityFunction(false, 16))
+            .setEagerTtl(eagerTtl)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 10)));
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 1)));
     }
 
+    /**
+     * Checks of restart node with TTL cache.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testOneNode() throws Exception {
+    public void testOneNodeRestartWithTtlCache() throws Exception {
+        eagerTtl = true;
+
         IgniteEx ignite = startGrid(0);
 
         ignite.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < ENTRIES; i++)
             cache.put(i, i);
 
         ignite.close();
@@ -110,7 +138,6 @@ public class EagerTtlTest extends GridCommonAbstractTest {
 
         ignite.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-
                 try {
                     exchnageHangLatch.await();
                 }
@@ -135,76 +162,40 @@ public class EagerTtlTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
     }
 
+    /**
+     * Checks that an assertion error does not happen during expiration in transactions.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void test() throws Exception {
-        IgniteEx ignite = startGrids(2);
+    public void testNotEagerEpireOnPut() throws Exception {
+        eagerTtl = false;
 
-        checkTopology(2);
-
-        CountDownLatch exchnageHangLatch = new CountDownLatch(1);
-
-        ignite.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                try {
-                    exchnageHangLatch.await();
-                }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+        IgniteEx ignite = startGrid(0);
 
         ignite.cluster().state(ClusterState.ACTIVE);
 
-        LogListener assertListener = LogListener.matches(ASSERTION_ERR).build();
+        LogListener assertListener = LogListener.matches(ANY_ASSERTION_ERR).build();
 
-        assertFalse(GridTestUtils.waitForCondition(assertListener::check, 5_000));
+        listeningLog.registerListener(assertListener);
 
-        exchnageHangLatch.countDown();
+        IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
 
-        awaitPartitionMapExchange();
+        for (int i = 0; i < ENTRIES; i++)
+            cache.put(i, i);
 
-//        IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
-//
-//        for (int i = 0; i < 100; i++)
-//            cache.put(i, i);
-//
-//        CountDownLatch exchnageHangLatch1 = new CountDownLatch(1);
-//
-//        ignite.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
-//            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-//                try {
-//                    exchnageHangLatch1.await();
-//                }
-//                catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-//
-////         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ignite(1));
-//
-////        spi.blockMessages(GridDhtPartitionsSingleMessage.class, getTestIgniteInstanceName(0));
-//
-//        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
-//            IgniteCache cache1 = ignite.getOrCreateCache(getCacheConfiguration(DEFAULT_CACHE_NAME + 1));
-//
-//            for (int i = 0; i < 100; i++)
-//                cache1.put(i, i);
-//        });
-//
-////        spi.waitForBlocked();
-//
-//        assertFalse(fut.isDone());
-//
-//        info("Exchnage blocked.");
-//
-//        Thread.sleep(10_000);
-//
-//        exchnageHangLatch1.countDown();
-//
-//        fut.get();
+        for (TransactionIsolation isolation : TransactionIsolation.values()) {
+            U.sleep(EXPIRATION_TIME);
 
-//        spi.stopBlock();
+            for (int i = 0; i < ENTRIES; i++) {
+                try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC, isolation)) {
+                    cache.putAll(Collections.singletonMap(i, isolation.ordinal() + 1));
+
+                    tx.commit();
+                }
+            }
+        }
+
+        assertFalse(GridTestUtils.waitForCondition(assertListener::check, 2_000));
     }
 }

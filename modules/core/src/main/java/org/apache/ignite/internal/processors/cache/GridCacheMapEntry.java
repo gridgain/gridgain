@@ -646,7 +646,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         Object transformClo,
         String taskName,
         @Nullable IgniteCacheExpiryPolicy expirePlc,
-        boolean keepBinary)
+        boolean keepBinary,
+        boolean checkExpire)
         throws IgniteCheckedException, GridCacheEntryRemovedException {
         return (CacheObject)innerGet0(
             ver,
@@ -661,7 +662,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             false,
             keepBinary,
             false,
-            null);
+            null,
+            checkExpire);
     }
 
     /** {@inheritDoc} */
@@ -685,7 +687,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             true,
             keepBinary,
             /*reserve*/true,
-            readerArgs);
+            readerArgs,
+            true);
     }
 
     /** {@inheritDoc} */
@@ -714,7 +717,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             true,
             keepBinary,
             false,
-            readerArgs);
+            readerArgs,
+            true);
     }
 
     /** */
@@ -732,7 +736,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         boolean retVer,
         boolean keepBinary,
         boolean reserveForLoad,
-        @Nullable ReaderArguments readerArgs
+        @Nullable ReaderArguments readerArgs,
+        boolean checkExpire
     ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         assert !(retVer && readThrough);
         assert !(reserveForLoad && readThrough);
@@ -770,7 +775,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
 
-                if (val != null) {
+                if (checkExpire && val != null) {
                     long expireTime = expireTimeExtras();
 
                     if (expireTime > 0 && (expireTime < U.currentTimeMillis())) {

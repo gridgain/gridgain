@@ -528,7 +528,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                                 null,
                                 taskName,
                                 expiryPlc,
-                                !deserializeBinary);
+                                !deserializeBinary,
+                                true);
                         }
 
                         entry.touch();

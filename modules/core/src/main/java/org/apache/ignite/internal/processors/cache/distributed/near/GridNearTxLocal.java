@@ -1470,7 +1470,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     entryProcessor,
                                     resolveTaskName(),
                                     null,
-                                    keepBinary);
+                                    keepBinary,
+                                    false);
                             }
                         }
                         catch (ClusterTopologyCheckedException e) {
@@ -2358,7 +2359,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                             transformClo,
                                             resolveTaskName(),
                                             null,
-                                            txEntry.keepBinary());
+                                            txEntry.keepBinary(),
+                                            true);
                                     }
 
                                     // If value is in cache and passed the filter.
@@ -2658,7 +2660,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         transformClo,
                                         resolveTaskName(),
                                         null,
-                                        txEntry.keepBinary());
+                                        txEntry.keepBinary(),
+                                        true);
                                 }
 
                                 if (val != null) {
@@ -2744,7 +2747,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         null,
                                         resolveTaskName(),
                                         accessPlc,
-                                        !deserializeBinary);
+                                        !deserializeBinary,
+                                        true);
                                 }
 
                                 if (val != null) {
