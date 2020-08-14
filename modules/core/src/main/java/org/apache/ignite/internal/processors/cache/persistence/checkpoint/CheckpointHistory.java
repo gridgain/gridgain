@@ -31,8 +31,10 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.Checkpoint;
@@ -174,9 +176,10 @@ public class CheckpointHistory {
      * is not finished yet.
      *
      * @param entry Entry to add.
+     * @param cacheStates Cache states map.
      */
-    public void addCheckpoint(CheckpointEntry entry) {
-        addCpToEarliestCpMap(entry);
+    public void addCheckpoint(CheckpointEntry entry, Map<Integer, CacheState> cacheStates) {
+        addCpCacheStatesToEarliestCpMap(entry, cacheStates);
 
         histMap.put(entry.timestamp(), entry);
     }
@@ -211,7 +214,7 @@ public class CheckpointHistory {
                     iter.remove();
             }
 
-            addCpToEarliestCpMap(entry);
+            addCpGroupStatesToEarliestCpMap(entry, states);
         }
         catch (IgniteCheckedException ex) {
             U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
@@ -240,36 +243,54 @@ public class CheckpointHistory {
      * Add last checkpoint to map of the earliest checkpoints.
      *
      * @param entry Checkpoint entry.
+     * @param cacheStates Cache states map.
      */
-    private void addCpToEarliestCpMap(CheckpointEntry entry) {
-        try {
-            Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(cctx);
+    private void addCpCacheStatesToEarliestCpMap(CheckpointEntry entry, Map<Integer, CacheState> cacheStates) {
+        for (Integer grpId : cacheStates.keySet()) {
+            CacheState cacheState = cacheStates.get(grpId);
 
-            for (Integer grpId : states.keySet()) {
-                CheckpointEntry.GroupState grpState = states.get(grpId);
+            for (int pIdx = 0; pIdx < cacheState.size(); pIdx++) {
+                int part = cacheState.partitionByIndex(pIdx);
 
-                for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
-                    int part = grpState.getPartitionByIndex(pIdx);
+                GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
 
-                    GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
-
-                    if (!earliestCp.containsKey(grpPartKey))
-                        earliestCp.put(grpPartKey, entry);
-                }
+                addPartitionToEarliestCheckpoints(grpPartKey, entry);
             }
-        }
-        catch (IgniteCheckedException ex) {
-            U.warn(log, "Failed to process checkpoint: " + (entry != null ? entry : "none"), ex);
-
-            earliestCp.clear();
         }
     }
 
     /**
-     * @return {@code true} if there is space for next checkpoint.
+     * Add last checkpoint to map of the earliest checkpoints.
+     *
+     * @param entry Checkpoint entry.
+     * @param cacheGrpStates Group states map.
      */
-    public boolean hasSpace() {
-        return isWalTruncationEnabled || histMap.size() + 1 <= maxCpHistMemSize;
+    private void addCpGroupStatesToEarliestCpMap(
+        CheckpointEntry entry,
+        Map<Integer, CheckpointEntry.GroupState> cacheGrpStates
+    ) {
+        for (Integer grpId : cacheGrpStates.keySet()) {
+            CheckpointEntry.GroupState grpState = cacheGrpStates.get(grpId);
+
+            for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
+                int part = grpState.getPartitionByIndex(pIdx);
+
+                GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
+
+                addPartitionToEarliestCheckpoints(grpPartKey, entry);
+            }
+        }
+    }
+
+    /**
+     * Add entry to earliest checkpoint map. Ignore is such key is already present.
+     *
+     * @param grpPartKey Key that consists of cache group id and partition index.
+     * @param entry Checkpoint entry.
+     */
+    private void addPartitionToEarliestCheckpoints(GroupPartitionId grpPartKey, CheckpointEntry entry) {
+        if (!earliestCp.containsKey(grpPartKey))
+            earliestCp.put(grpPartKey, entry);
     }
 
     /**
@@ -309,7 +330,7 @@ public class CheckpointHistory {
         List<CheckpointEntry> removed = new ArrayList<>();
 
         for (Iterator<Map.Entry<Long, CheckpointEntry>> iterator = histMap.entrySet().iterator();
-                iterator.hasNext() && removed.size() < countToRemove; ) {
+            iterator.hasNext() && removed.size() < countToRemove; ) {
             Map.Entry<Long, CheckpointEntry> entry = iterator.next();
 
             CheckpointEntry checkpoint = entry.getValue();
@@ -385,7 +406,7 @@ public class CheckpointHistory {
      *
      * @return Checkpoint count to be deleted.
      */
-     private int checkpointCountUntilDeleteByArchiveSize() {
+    private int checkpointCountUntilDeleteByArchiveSize() {
         long absFileIdxToDel = cctx.wal().maxArchivedSegmentToDelete();
 
         if (absFileIdxToDel < 0)
@@ -679,21 +700,22 @@ public class CheckpointHistory {
      *
      * @param groupsAndPartitions Groups and partitions to find and reserve earliest valid checkpoint.
      *
-     * @return Map (groupId, Reason (the reason why reservation cannot be made deeper): Map
-     * (partitionId, earliest valid checkpoint to history search)).
+     * @return Checkpoint history reult: Map (groupId, Reason (the reason why reservation cannot be made deeper): Map
+     * (partitionId, earliest valid checkpoint to history search)) and reserved checkpoint.
      */
-    public Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> searchAndReserveCheckpoints(
+    public CheckpointHistoryResult searchAndReserveCheckpoints(
         final Map<Integer, Set<Integer>> groupsAndPartitions
     ) {
-        if (F.isEmpty(groupsAndPartitions))
-            return Collections.emptyMap();
+        if (F.isEmpty(groupsAndPartitions) ||
+            cctx.kernalContext().config().getDataStorageConfiguration().getWalMode() == WALMode.NONE)
+            return new CheckpointHistoryResult(Collections.emptyMap(), null);
 
         final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> res = new HashMap<>();
 
         CheckpointEntry oldestCpForReservation = null;
 
         synchronized (earliestCp) {
-            CheckpointEntry oldestHistoryCpEntry = firstCheckpoint();
+            CheckpointEntry oldestHistCpEntry = firstCheckpoint();
 
             for (Integer grpId : groupsAndPartitions.keySet()) {
                 CheckpointEntry oldestGrpCpEntry = null;
@@ -715,7 +737,7 @@ public class CheckpointHistory {
                         .get2().put(part, cpEntry);
                 }
 
-                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistoryCpEntry)
+                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistCpEntry)
                     res.computeIfAbsent(grpId, (partCpMap) ->
                         new T2<>(ReservationReason.CHECKPOINT_NOT_APPLICABLE, null))
                         .set1(ReservationReason.CHECKPOINT_NOT_APPLICABLE);
@@ -728,10 +750,12 @@ public class CheckpointHistory {
 
                 for (Map.Entry<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> entry : res.entrySet())
                     entry.setValue(new T2<>(ReservationReason.WAL_RESERVATION_ERROR, null));
+
+                oldestCpForReservation = null;
             }
         }
 
-        return res;
+        return new CheckpointHistoryResult(res, oldestCpForReservation);
     }
 
     /**

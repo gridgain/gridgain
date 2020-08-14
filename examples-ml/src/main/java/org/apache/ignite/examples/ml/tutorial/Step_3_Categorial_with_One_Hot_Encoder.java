@@ -98,7 +98,6 @@ public class Step_3_Categorial_with_One_Hot_Encoder {
                 System.out.println("\n>>> Test Error " + (1 - accuracy));
 
                 System.out.println(">>> Tutorial step 3 (categorial with One-hot encoder) example started.");
-
             }
             catch (FileNotFoundException e) {
                 e.printStackTrace();
