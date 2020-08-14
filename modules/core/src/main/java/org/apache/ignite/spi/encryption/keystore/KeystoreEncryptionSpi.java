@@ -156,9 +156,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
         assertParameter(keyStorePwd != null && keyStorePwd.length > 0,
             "KeyStorePassword shouldn't be empty");
 
-        try (InputStream keyStoreFile = keyStoreFile()) {
-            assertParameter(keyStoreFile != null, keyStorePath + " doesn't exists!");
-
+        try (InputStream keyStoreFile = U.openFileInputStream(keyStorePath)) {
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 
             ks.load(keyStoreFile, keyStorePwd);
@@ -383,25 +381,6 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
         ThreadLocalRandom.current().nextBytes(iv);
 
         return iv;
-    }
-
-    /**
-     * {@code keyStorePath} could be absolute path or path to classpath resource.
-     *
-     * @return File for {@code keyStorePath}.
-     */
-    private InputStream keyStoreFile() throws IOException {
-        File abs = new File(keyStorePath);
-
-        if (abs.exists())
-            return new FileInputStream(abs);
-
-        URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
-
-        if (clsPthRes != null)
-            return clsPthRes.openStream();
-
-        return null;
     }
 
     /**

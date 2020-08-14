@@ -24,7 +24,9 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -1053,6 +1055,52 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
             assertTrue(e.toString(), X.hasCause(e, TimeoutException.class));
         } finally {
             executorService.shutdownNow();
+        }
+    }
+
+    /**
+     * Test open file:
+     * 1. by relative path
+     * 2. by absolute path
+     * 3. by classpath path
+     * 4. by non existing path
+     *
+     * @throws Throwable
+     */
+    @Test
+    public void testOpenFileInputStream() throws Throwable{
+        // 1. by relative path
+        InputStream relative = U.openFileInputStream("org.apache.ignite.util/bigUtf.txt");
+
+        assertNotNull("Can't open input stream by relative path org.apache.ignite.util/bigUtf.txt", relative);
+
+        relative.close();
+
+        // 2. by absolute path
+        String absolutePath = U.getIgniteHome() + "/pom.xml";
+        InputStream absolute = U.openFileInputStream(absolutePath);
+
+        assertNotNull("Can't open input stream by absolute path " + absolutePath, absolute);
+
+        absolute.close();
+
+
+        // 3. by classpath path
+
+        InputStream classpath = U.openFileInputStream("org/apache/ignite/internal/util/IgniteUtils.class");
+
+        assertNotNull("Can't open input stream to IgniteUtils.class resource", classpath);
+
+        classpath.close();
+
+        // 4. by non existing path
+
+        try {
+            InputStream notExisting = U.openFileInputStream("Open/Source/In-Memory/Computing/Platform/Apache/Ignite");
+
+            fail("Open input stream to not existing resource");
+        } catch (FileNotFoundException e) {
+            // No-op.
         }
     }
 

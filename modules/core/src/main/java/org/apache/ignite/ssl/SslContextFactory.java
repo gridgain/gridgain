@@ -39,6 +39,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * SSL context factory that provides SSL context configuration with specified key and trust stores.
@@ -469,18 +470,6 @@ public class SslContextFactory implements Factory<SSLContext> {
     }
 
     /**
-     * By default, this method simply opens a raw file input stream. Subclasses may override this method
-     * if some specific location should be handled (this may be a case for Android users).
-     *
-     * @param filePath Path to the file.
-     * @return Opened input stream.
-     * @throws IOException If stream could not be opened.
-     */
-    protected InputStream openFileInputStream(String filePath) throws IOException {
-        return new FileInputStream(filePath);
-    }
-
-    /**
      * Loads key store with configured parameters.
      *
      * @param keyStoreType Type of key store.
@@ -494,7 +483,7 @@ public class SslContextFactory implements Factory<SSLContext> {
         try {
             KeyStore keyStore = KeyStore.getInstance(keyStoreType);
 
-            try (InputStream input = openFileInputStream(storeFilePath)) {
+            try (InputStream input = U.openFileInputStream(storeFilePath)) {
 
                 keyStore.load(input, keyStorePwd);
 
