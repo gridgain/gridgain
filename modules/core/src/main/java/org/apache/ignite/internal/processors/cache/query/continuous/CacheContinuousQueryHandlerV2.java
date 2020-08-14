@@ -137,8 +137,8 @@ public class CacheContinuousQueryHandlerV2<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isMarshalledObjectValid() {
-        return super.isMarshalledObjectValid() && isDeployableObjectValid(ctx, rmtFilterFactoryDep);
+    @Override public boolean isMarshalledObjectValid(GridKernalContext ctx) {
+        return super.isMarshalledObjectValid(ctx) && isDeployableObjectValid(ctx, rmtFilterFactoryDep);
     }
 
     /** {@inheritDoc} */

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.continuous;
 
+import java.util.List;
 import javax.cache.event.CacheEntryUpdatedListener;
 import java.io.Externalizable;
 import java.io.IOException;
@@ -389,13 +390,9 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         if (ctx.isDaemon())
             return;
 
-        if (discoProtoVer == 2) {
-            routinesInfo.collectJoiningNodeData(dataBag);
-
-            return;
-        }
-
-        Serializable data = getDiscoveryData(dataBag.joiningNodeId());
+        Serializable data = discoProtoVer == 2
+            ? getDiscoveryDataV2(dataBag.joiningNodeId())
+            : getDiscoveryDataV1(dataBag.joiningNodeId());
 
         if (data != null)
             dataBag.addJoiningNodeData(CONTINUOUS_PROC.ordinal(), data);
@@ -412,7 +409,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             return;
         }
 
-        Serializable data = getDiscoveryData(dataBag.joiningNodeId());
+        Serializable data = getDiscoveryDataV1(dataBag.joiningNodeId());
 
         if (data != null)
             dataBag.addNodeSpecificData(CONTINUOUS_PROC.ordinal(), data);
@@ -421,7 +418,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     /**
      * @param joiningNodeId Joining node id.
      */
-    private Serializable getDiscoveryData(UUID joiningNodeId) {
+    private Serializable getDiscoveryDataV1(UUID joiningNodeId) {
         if (log.isDebugEnabled()) {
             log.debug("collectDiscoveryData [node=" + joiningNodeId +
                     ", loc=" + ctx.localNodeId() +
@@ -467,6 +464,40 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * @param joiningNodeId Joining node id.
+     */
+    private Serializable getDiscoveryDataV2(UUID joiningNodeId) {
+        Collection<ContinuousRoutineInfo> routineInfos = routinesInfo.collectJoiningNodeData(joiningNodeId);
+
+        final List<ContinuousRoutineInfo> res = new ArrayList<>(routineInfos.size());
+
+        for (ContinuousRoutineInfo info : routineInfos) {
+            if (ctx.config().isPeerClassLoadingEnabled()) {
+                try {
+                    GridContinuousHandler hnd = U.unmarshal(marsh, info.hnd, U.resolveClassLoader(ctx.config()));
+
+                    if (hnd instanceof CacheContinuousQueryHandler &&
+                        !((CacheContinuousQueryHandler)hnd).isMarshalledObjectValid(ctx))
+                        continue;
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Failed to unmarshal continuous routine handler [" +
+                        "routineId=" + info.routineId +
+                        ", srcNodeId=" + info.srcNodeId + ']', e);
+
+                    ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+
+                    continue;
+                }
+            }
+
+            res.add(info);
+        }
+
+        return new ContinuousRoutinesJoiningNodeDiscoveryData(res);
+    }
+
+    /**
      * @param clientInfos Client infos.
      */
     private Map<UUID, Map<UUID, LocalRoutineInfo>> copyClientInfos(Map<UUID, Map<UUID, LocalRoutineInfo>> clientInfos) {
@@ -493,7 +524,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
             if (ctx.config().isPeerClassLoadingEnabled() &&
                 e.getValue().handler() instanceof CacheContinuousQueryHandler &&
-                !((CacheContinuousQueryHandler)e.getValue().handler()).isMarshalledObjectValid())
+                !((CacheContinuousQueryHandler)e.getValue().handler()).isMarshalledObjectValid(ctx))
                 continue;
 
             res.put(e.getKey(), e.getValue());
@@ -1304,7 +1335,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             LocalRoutineInfo locInfo = e.getValue();
 
             if (locInfo.handler() instanceof CacheContinuousQueryHandler &&
-                !((CacheContinuousQueryHandler)locInfo.handler()).isMarshalledObjectValid()) {
+                !((CacheContinuousQueryHandler)locInfo.handler()).isMarshalledObjectValid(ctx)) {
                 try {
                     IgniteInternalFuture<UUID> fut = startRoutine(
                         locInfo.handler().clone(),

@@ -1297,7 +1297,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     /**
      * @return Whether the marshalled object is not valid in the current context.
      */
-    public boolean isMarshalledObjectValid() {
+    public boolean isMarshalledObjectValid(GridKernalContext ctx) {
         return isDeployableObjectValid(ctx, rmtFilterDep);
     }
 
