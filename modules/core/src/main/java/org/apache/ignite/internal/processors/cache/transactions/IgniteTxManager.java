@@ -3301,7 +3301,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         private boolean isMvccRecoveryMessageRequired() {
             return node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null &&
                 (cctx.kernalContext().coordinators().mvccEnabled() ||
-                !IgniteFeatures.nodeSupports(cctx.kernalContext(), cctx.node(mvccCrd.nodeId()), IgniteFeatures.MVCC_PROTOCOL_IMPRUVMENT));
+                !IgniteFeatures.nodeSupports(cctx.kernalContext(), cctx.node(mvccCrd.nodeId()), IgniteFeatures.MVCC_TX_RECOVERY_PROTOCOL_V2));
         }
     }
 
