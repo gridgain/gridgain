@@ -1460,18 +1460,24 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                 }
                             }
                             else {
-                                old = entry.innerGet(
-                                    null,
-                                    this,
-                                    /*read through*/false,
-                                    /*metrics*/retval,
-                                    /*events*/retval,
-                                    CU.subjectId(this, cctx),
-                                    entryProcessor,
-                                    resolveTaskName(),
-                                    null,
-                                    keepBinary,
-                                    false);
+                                cctx.database().checkpointReadLock();
+
+                                try {
+                                    old = entry.innerGet(
+                                        null,
+                                        this,
+                                        /*read through*/false,
+                                        /*metrics*/retval,
+                                        /*events*/retval,
+                                        CU.subjectId(this, cctx),
+                                        entryProcessor,
+                                        resolveTaskName(),
+                                        null,
+                                        keepBinary);
+                                }
+                                finally {
+                                    cctx.database().checkpointReadUnlock();
+                                }
                             }
                         }
                         catch (ClusterTopologyCheckedException e) {
@@ -2359,8 +2365,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                             transformClo,
                                             resolveTaskName(),
                                             null,
-                                            txEntry.keepBinary(),
-                                            true);
+                                            txEntry.keepBinary());
                                     }
 
                                     // If value is in cache and passed the filter.
@@ -2660,8 +2665,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         transformClo,
                                         resolveTaskName(),
                                         null,
-                                        txEntry.keepBinary(),
-                                        true);
+                                        txEntry.keepBinary());
                                 }
 
                                 if (val != null) {
@@ -2747,8 +2751,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         null,
                                         resolveTaskName(),
                                         accessPlc,
-                                        !deserializeBinary,
-                                        true);
+                                        !deserializeBinary);
                                 }
 
                                 if (val != null) {

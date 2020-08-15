@@ -4569,8 +4569,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             /*transformClo*/null,
             /*taskName*/null,
             /*expiryPlc*/null,
-            !deserializeBinary,
-            true);
+            !deserializeBinary);
 
         if (val == null)
             return null;

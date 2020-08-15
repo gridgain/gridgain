@@ -587,8 +587,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
                                             null,
                                             taskName,
                                             expiryPlc,
-                                            !deserializeBinary,
-                                            true);
+                                            !deserializeBinary);
                                     }
 
                                     // Entry was not in memory or in swap, so we remove it from cache.

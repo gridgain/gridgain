@@ -1445,8 +1445,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                                         null,
                                         tx != null ? tx.resolveTaskName() : null,
                                         null,
-                                        req.keepBinary(),
-                                        true);
+                                        req.keepBinary());
                                 }
 
                                 assert e.lockedBy(mappedVer) ||

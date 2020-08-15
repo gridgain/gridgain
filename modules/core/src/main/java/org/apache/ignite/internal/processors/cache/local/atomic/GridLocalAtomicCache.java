@@ -490,8 +490,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                                         null,
                                         taskName,
                                         expiry,
-                                        !deserializeBinary,
-                                        true);
+                                        !deserializeBinary);
 
                                     if (v != null) {
                                         ctx.addResult(vals,
@@ -1104,8 +1103,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                             entryProcessor,
                             taskName,
                             null,
-                            keepBinary,
-                            true);
+                            keepBinary);
 
                         Object oldVal = null;
 
@@ -1247,8 +1245,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                                 null,
                                 taskName,
                                 null,
-                                keepBinary,
-                                true);
+                                keepBinary);
 
                             Object interceptorVal = ctx.config().getInterceptor().onBeforePut(new CacheLazyEntry(
                                 ctx, entry.key(), old, keepBinary), val);
@@ -1283,8 +1280,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                                 null,
                                 taskName,
                                 null,
-                                keepBinary,
-                                true);
+                                keepBinary);
 
                             IgniteBiTuple<Boolean, ?> interceptorRes = ctx.config().getInterceptor()
                                 .onBeforeRemove(new CacheLazyEntry(ctx, entry.key(), old, keepBinary));

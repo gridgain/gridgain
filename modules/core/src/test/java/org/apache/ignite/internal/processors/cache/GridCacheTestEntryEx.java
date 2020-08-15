@@ -422,8 +422,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
         Object transformClo,
         String taskName,
         @Nullable IgniteCacheExpiryPolicy expiryPlc,
-        boolean keepBinary,
-        boolean checkExpire) {
+        boolean keepBinary) {
         return val;
     }
 
