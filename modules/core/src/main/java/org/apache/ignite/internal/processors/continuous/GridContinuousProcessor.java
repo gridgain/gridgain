@@ -481,11 +481,9 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                         continue;
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Failed to unmarshal continuous routine handler [" +
+                    U.warn(log, "Failed to unmarshal continuous routine handler [" +
                         "routineId=" + info.routineId +
                         ", srcNodeId=" + info.srcNodeId + ']', e);
-
-                    ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
                     continue;
                 }

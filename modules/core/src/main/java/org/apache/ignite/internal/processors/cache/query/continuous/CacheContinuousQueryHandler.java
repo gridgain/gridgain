@@ -208,7 +208,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     private transient volatile Map<Integer, T2<Long, Long>> locInitUpdCntrs;
 
     /** */
-    protected transient GridKernalContext ctx;
+    private transient GridKernalContext ctx;
 
     /** */
     private transient IgniteLogger log;
