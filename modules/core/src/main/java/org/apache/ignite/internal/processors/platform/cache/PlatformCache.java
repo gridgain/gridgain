@@ -1450,12 +1450,12 @@ public class PlatformCache extends PlatformAbstractTarget {
         boolean distrJoins = reader.readBoolean();
         boolean enforceJoinOrder = reader.readBoolean();
         boolean lazy = reader.readBoolean();
-        int timeout = reader.readInt();
+        long timeout = reader.readLong();
         boolean replicated = reader.readBoolean();
         boolean collocated = reader.readBoolean();
         String schema = reader.readString();
 
-        SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.SECONDS)
+        SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), (int)timeout, TimeUnit.SECONDS)
             .setPageSize(pageSize)
             .setArgs(args)
             .setLocal(loc)
