@@ -19,16 +19,24 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.util.typedef.CI3;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
@@ -38,6 +46,9 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTAN
  */
 public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
+    /** Message appears when all owner partition was lost so a cluster do an operation cannot execute over them. */
+    public static final String LOST_ALL_QWNERS_MSG = "all partition owners have left the grid, partition data has been lost";
+
     /** Chache backup count. */
     private int backups = 0;
 
@@ -46,8 +57,9 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
-                .setBackups(backups)
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
+                .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_SAFE)
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                .setBackups(backups));
     }
 
     /** {@inheritDoc} */
@@ -58,27 +70,86 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests an implicit transaction on a cache without backups.
+     *
      * @throws Exception If failed.
      */
     @Test
-    public void testZiroBackups() throws Exception {
-        startTransactionAndFailPrimary();
+    public void testImplicitlyTxZiroBackups() throws Exception {
+        backups = 0;
+
+        startTransactionAndFailPrimary((ignite, key, val) -> ignite.cache(DEFAULT_CACHE_NAME).put(key, val));
     }
 
     /**
+     * Tests an implicit transaction on a cache with one backup.
+     *
      * @throws Exception If failed.
      */
     @Test
-    public void testOneBackups() throws Exception {
+    public void testImplicitlyTxOneBackups() throws Exception {
         backups = 1;
 
-        startTransactionAndFailPrimary();
+        startTransactionAndFailPrimary((ignite, key, val) -> ignite.cache(DEFAULT_CACHE_NAME).put(key, val));
     }
 
     /**
+     * Tests an explicit transaction on a cache without backups.
+     *
      * @throws Exception If failed.
      */
-    private void startTransactionAndFailPrimary() throws Exception {
+    @Test
+    public void testTxZiroBackups() throws Exception {
+        backups = 0;
+
+        for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
+            for (TransactionIsolation isolation : TransactionIsolation.values()) {
+                startTransactionAndFailPrimary((ignite, key, val) -> {
+                    try (Transaction tx = ignite.transactions().txStart(concurrency, isolation)) {
+                        ignite.cache(DEFAULT_CACHE_NAME).put(key, val);
+
+                        tx.commit();
+                    }
+                });
+
+                stopAllGrids();
+            }
+        }
+    }
+
+    /**
+     * Tests an explicit transaction on a cache with one backup.
+     *
+     * @throws Exception If failed.
+     */
+    @Ignore
+    public void testTxOneBackups() throws Exception {
+        backups = 1;
+
+        for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
+            for (TransactionIsolation isolation : TransactionIsolation.values()) {
+                startTransactionAndFailPrimary((ignite, key, val) -> {
+                    info("Tx pu: [concurrency=" + concurrency + ", isolation=" + isolation + ']');
+
+                    try (Transaction tx = ignite.transactions().txStart(concurrency, isolation)) {
+                        ignite.cache(DEFAULT_CACHE_NAME).put(key, val);
+
+                        tx.commit();
+                    }
+                });
+
+                stopAllGrids();
+            }
+        }
+    }
+
+    /**
+     * Stars cluster and stops exactly primary node for a cache operation specified in parameters.
+     *
+     * @param cacheClosure Closure for a cache operation.
+     * @throws Exception If failed.
+     */
+    private void startTransactionAndFailPrimary(CI3<Ignite, Integer, String> cacheClosure) throws Exception {
         Ignite ignite0 = startGrids(2);
 
         awaitPartitionMapExchange();
@@ -116,7 +187,16 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
         String testVal = "Tets value";
 
         IgniteInternalFuture putFut = GridTestUtils.runAsync(() -> {
-            cache.put(key, testVal);
+            try {
+                cacheClosure.apply(ignite0, key, testVal);
+
+                //We are not sure, operation completed correctly or not when backups are zero.
+                //Exception could be thrown or not.
+                // assertTrue(((CacheConfiguration)cache.getConfiguration(CacheConfiguration.class)).getBackups() != 0);
+            }
+            catch (Exception e) {
+                checkException(cache, e);
+            }
         });
 
         spi.waitForBlocked();
@@ -129,6 +209,29 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
         putFut.get();
 
-        assertEquals(testVal, cache.get(key));
+        try {
+            assertEquals(testVal, cache.get(key));
+
+            assertTrue(((CacheConfiguration)cache.getConfiguration(CacheConfiguration.class)).getBackups() != 0);
+        }
+        catch (Exception e) {
+            checkException(cache, e);
+        }
+    }
+
+    /**
+     * Checks an exception that happened in the cache specified.
+     *
+     * @param cache Ignite cache.
+     * @param e Checked exception.
+     */
+    private void checkException(IgniteCache cache, Exception e) {
+        log.error("Ex", e);
+
+        Exception ex = X.cause(e, CacheInvalidStateException.class);
+
+        assertTrue(ex.getMessage().contains(LOST_ALL_QWNERS_MSG));
+
+        assertEquals(0, ((CacheConfiguration)cache.getConfiguration(CacheConfiguration.class)).getBackups());
     }
 }

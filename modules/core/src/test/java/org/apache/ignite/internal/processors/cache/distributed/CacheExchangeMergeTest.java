@@ -910,6 +910,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         checkAffinity();
 
+        awaitPartitionMapExchange();
+
         checkCaches0();
 
         checkAffinity();
