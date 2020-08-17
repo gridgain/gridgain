@@ -1080,15 +1080,12 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
             assertNotNull("Can't open input stream by absolute path " + absolutePath, absolute);
         }
 
-
         // 3. by classpath path
-
         try(InputStream classpath = U.openFileInputStream("org/apache/ignite/internal/util/IgniteUtils.class")) {
             assertNotNull("Can't open input stream to IgniteUtils.class resource", classpath);
         }
 
         // 4. by non existing path
-
         try(InputStream notExisting = U.openFileInputStream("Open/Source/In-Memory/Computing/Platform/Apache/Ignite");) {
             fail("Open input stream to not existing resource");
         } catch (FileNotFoundException e) {
