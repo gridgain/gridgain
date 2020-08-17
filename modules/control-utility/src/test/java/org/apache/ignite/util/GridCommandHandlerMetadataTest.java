@@ -185,6 +185,10 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
 
         grid(0).destroyCache(DEFAULT_CACHE_NAME);
 
+        metadata = crd.context().cacheObjects().metadata();
+
+        assertEquals(metadata.toString(), 1, metadata.size());
+
         assertEquals(EXIT_CODE_OK, execute("--meta", "remove", "--typeName", TestValue.class.getTypeName()));
 
         metadata = crd.context().cacheObjects().metadata();
