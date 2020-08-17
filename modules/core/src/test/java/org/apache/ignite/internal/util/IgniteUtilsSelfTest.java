@@ -1070,34 +1070,26 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     @Test
     public void testOpenFileInputStream() throws Throwable{
         // 1. by relative path
-        InputStream relative = U.openFileInputStream("org.apache.ignite.util/bigUtf.txt");
-
-        assertNotNull("Can't open input stream by relative path org.apache.ignite.util/bigUtf.txt", relative);
-
-        relative.close();
+        try(InputStream relative = U.openFileInputStream("org.apache.ignite.util/bigUtf.txt")) {
+            assertNotNull("Can't open input stream by relative path org.apache.ignite.util/bigUtf.txt", relative);
+        }
 
         // 2. by absolute path
         String absolutePath = U.getIgniteHome() + "/pom.xml";
-        InputStream absolute = U.openFileInputStream(absolutePath);
-
-        assertNotNull("Can't open input stream by absolute path " + absolutePath, absolute);
-
-        absolute.close();
+        try (InputStream absolute = U.openFileInputStream(absolutePath)) {
+            assertNotNull("Can't open input stream by absolute path " + absolutePath, absolute);
+        }
 
 
         // 3. by classpath path
 
-        InputStream classpath = U.openFileInputStream("org/apache/ignite/internal/util/IgniteUtils.class");
-
-        assertNotNull("Can't open input stream to IgniteUtils.class resource", classpath);
-
-        classpath.close();
+        try(InputStream classpath = U.openFileInputStream("org/apache/ignite/internal/util/IgniteUtils.class")) {
+            assertNotNull("Can't open input stream to IgniteUtils.class resource", classpath);
+        }
 
         // 4. by non existing path
 
-        try {
-            InputStream notExisting = U.openFileInputStream("Open/Source/In-Memory/Computing/Platform/Apache/Ignite");
-
+        try(InputStream notExisting = U.openFileInputStream("Open/Source/In-Memory/Computing/Platform/Apache/Ignite");) {
             fail("Open input stream to not existing resource");
         } catch (FileNotFoundException e) {
             // No-op.
