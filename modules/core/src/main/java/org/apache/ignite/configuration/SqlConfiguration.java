@@ -296,7 +296,7 @@ public class SqlConfiguration {
     @Deprecated
     public SqlConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
         A.ensure(dfltQryTimeout >= 0 && dfltQryTimeout <= Integer.MAX_VALUE,
-            "default query timeout value should be valid Integer.");
+            "default query timeout value should be not negative Integer.");
 
         this.dfltQryTimeout = dfltQryTimeout;
 
