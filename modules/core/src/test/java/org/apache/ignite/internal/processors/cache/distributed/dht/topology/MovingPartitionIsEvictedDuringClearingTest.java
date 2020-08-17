@@ -38,7 +38,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
- * Tests a scenario when a clearing partition is attempted to evict after call to
+ * Tests a scenario when a clearing partition is attempted to evict after a call to
  * {@link GridDhtPartitionTopology#tryEvict(GridDhtLocalPartition)}.
  *
  * Such a scenario can leave a partition in RENTING state until the next exchange, but it's look acceptable.

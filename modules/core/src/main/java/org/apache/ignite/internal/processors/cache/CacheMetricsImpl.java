@@ -180,6 +180,9 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Number of currently clearing partitions for rebalancing. */
     private final AtomicLongMetric rebalanceClearingPartitions;
 
+    /** Number of currently evicting non-affinity partitions. Not available in the old metrics framework. */
+    private final AtomicLongMetric evictingPartitions;
+
     /** Get time. */
     private final HistogramMetric getTime;
 
@@ -346,7 +349,10 @@ public class CacheMetricsImpl implements CacheMetrics {
             20);
 
         rebalanceClearingPartitions = mreg.longMetric("RebalanceClearingPartitionsLeft",
-            "Number of partitions need to be cleared before actual rebalance start.");
+            "The number of partitions need to be cleared before actual rebalance start.");
+
+        evictingPartitions = mreg.longMetric("EvictingPartitionsLeft",
+            "The number of non-affinity partitions scheduled for eviction.");
 
         getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
 
@@ -1391,12 +1397,29 @@ public class CacheMetricsImpl implements CacheMetrics {
         return rebalanceClearingPartitions.value();
     }
 
-    /**
-     * Sets clearing partitions number.
-     * @param partitions Partitions number.
-     */
-    public void rebalanceClearingPartitions(int partitions) {
-        rebalanceClearingPartitions.value(partitions);
+    /** {@inheritDoc} */
+    public long evictingPartitionsLeft() {
+        return evictingPartitions.value();
+    }
+
+    /** */
+    public void incrementRebalanceClearingPartitions() {
+        rebalanceClearingPartitions.increment();
+    }
+
+    /** */
+    public void decrementRebalanceClearingPartitions() {
+        rebalanceClearingPartitions.decrement();
+    }
+
+    /** */
+    public void incrementEvictingPartitions() {
+        evictingPartitions.increment();
+    }
+
+    /** */
+    public void decrementEvictingPartitions() {
+        evictingPartitions.decrement();
     }
 
     /**

@@ -1323,11 +1323,11 @@ public class GridDhtPartitionDemander {
 
                     // Make sure partitions scheduled for full rebalancing are cleared first.
                     if (grp.persistenceEnabled()) {
-                        final int fullSetSize = e.getValue().partitions().fullSet().size();
+                        final int fullSetSize = d.partitions().fullSet().size();
 
                         AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
 
-                        for (Integer partId : e.getValue().partitions().fullSet()) {
+                        for (Integer partId : d.partitions().fullSet()) {
                             GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
                             assert part.state() == MOVING : part;
@@ -1343,16 +1343,10 @@ public class GridDhtPartitionDemander {
                                         log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
                                             + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
 
-                                        updateClearingPartitionsMetric(0);
-
                                         return;
                                     }
 
-                                    int remaining = waitCnt.decrementAndGet();
-
-                                    updateClearingPartitionsMetric(remaining);
-
-                                    if (remaining == 0) {
+                                    if (waitCnt.decrementAndGet() == 0) {
                                         ctx.kernalContext().closure().runLocalSafe(() -> {
                                             requestPartitions0(supplierNode, parts, d);
                                         });
@@ -1361,9 +1355,7 @@ public class GridDhtPartitionDemander {
                             });
                         }
 
-                        if (fullSetSize > 0)
-                            updateClearingPartitionsMetric(fullSetSize);
-                        else if (!e.getValue().partitions().historicalSet().isEmpty()) {
+                        if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty()) {
                             ctx.kernalContext().closure().runLocalSafe(() -> {
                                 requestPartitions0(supplierNode, parts, d);
                             });
@@ -1374,19 +1366,6 @@ public class GridDhtPartitionDemander {
                             requestPartitions0(supplierNode, parts, d);
                         });
                     }
-                }
-            }
-        }
-
-        /**
-         * @param clearing Clearing partitions.
-         */
-        private void updateClearingPartitionsMetric(int clearing) {
-            for (GridCacheContext cctx : grp.caches()) {
-                if (cctx.statisticsEnabled()) {
-                    final CacheMetricsImpl metrics = cctx.cache().metrics0();
-
-                    metrics.rebalanceClearingPartitions(clearing);
                 }
             }
         }

@@ -1078,6 +1078,7 @@ public final class IgniteSystemProperties {
     /**
      * Number of concurrent operation for evict partitions.
      */
+    @Deprecated
     public static final String IGNITE_EVICTION_PERMITS = "IGNITE_EVICTION_PERMITS";
 
     /**

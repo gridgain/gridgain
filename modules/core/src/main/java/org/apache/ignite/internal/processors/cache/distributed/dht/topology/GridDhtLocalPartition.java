@@ -79,8 +79,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EvictReason.CLEARING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EvictReason.EVICTION;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
@@ -714,7 +712,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             return clearFut;
 
         // Evict partition asynchronously to avoid deadlocks.
-        (clearFut = ctx.evict().evictPartitionAsync(grp, this, evictionRequested ? EVICTION : CLEARING))
+        (clearFut = ctx.evict().evictPartitionAsync(grp, this))
             .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut) {
                     // A partition cannot be reused after the eviction, not necessary to reset clearing state.
