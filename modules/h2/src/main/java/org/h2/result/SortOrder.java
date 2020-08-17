@@ -5,8 +5,10 @@
  */
 package org.h2.result;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import org.h2.command.dml.Query;
-import org.h2.command.dml.Select;
 import org.h2.command.dml.SelectOrderBy;
 import org.h2.engine.Database;
 import org.h2.engine.SysProperties;
@@ -18,10 +20,6 @@ import org.h2.util.Utils;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueRow;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 
 /**
  * A sort order represents an ORDER BY clause in a query.
