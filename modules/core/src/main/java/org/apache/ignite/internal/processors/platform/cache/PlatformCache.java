@@ -1455,7 +1455,7 @@ public class PlatformCache extends PlatformAbstractTarget {
         boolean collocated = reader.readBoolean();
         String schema = reader.readString();
 
-        SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.SECONDS)
+        SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.MILLISECONDS)
             .setPageSize(pageSize)
             .setArgs(args)
             .setLocal(loc)
