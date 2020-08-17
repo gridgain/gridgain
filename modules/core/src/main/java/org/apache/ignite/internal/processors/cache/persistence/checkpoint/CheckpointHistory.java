@@ -37,7 +37,6 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.Checkpoint;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.typedef.F;
@@ -49,9 +48,8 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 
 /**
- * Checkpoint history. Holds chronological ordered map with {@link CheckpointEntry CheckpointEntries}.
- * Data is loaded from corresponding checkpoint directory.
- * This directory holds files for checkpoint start and end.
+ * Checkpoint history. Holds chronological ordered map with {@link CheckpointEntry CheckpointEntries}. Data is loaded
+ * from corresponding checkpoint directory. This directory holds files for checkpoint start and end.
  */
 public class CheckpointHistory {
     /** Logger. */
@@ -61,8 +59,8 @@ public class CheckpointHistory {
     private final GridCacheSharedContext<?, ?> cctx;
 
     /**
-     * Maps checkpoint's timestamp (from CP file name) to CP entry.
-     * Using TS provides historical order of CP entries in map ( first is oldest )
+     * Maps checkpoint's timestamp (from CP file name) to CP entry. Using TS provides historical order of CP entries in
+     * map ( first is oldest )
      */
     private final NavigableMap<Long, CheckpointEntry> histMap = new ConcurrentSkipListMap<>();
 
@@ -131,7 +129,7 @@ public class CheckpointHistory {
      * @return First checkpoint entry if exists. Otherwise {@code null}.
      */
     public CheckpointEntry firstCheckpoint() {
-        Map.Entry<Long,CheckpointEntry> entry = histMap.firstEntry();
+        Map.Entry<Long, CheckpointEntry> entry = histMap.firstEntry();
 
         return entry != null ? entry.getValue() : null;
     }
@@ -140,7 +138,7 @@ public class CheckpointHistory {
      * @return Last checkpoint entry if exists. Otherwise {@code null}.
      */
     public CheckpointEntry lastCheckpoint() {
-        Map.Entry<Long,CheckpointEntry> entry = histMap.lastEntry();
+        Map.Entry<Long, CheckpointEntry> entry = histMap.lastEntry();
 
         return entry != null ? entry.getValue() : null;
     }
@@ -172,8 +170,8 @@ public class CheckpointHistory {
     }
 
     /**
-     * Adds checkpoint entry after the corresponding WAL record has been written to WAL. The checkpoint itself
-     * is not finished yet.
+     * Adds checkpoint entry after the corresponding WAL record has been written to WAL. The checkpoint itself is not
+     * finished yet.
      *
      * @param entry Entry to add.
      * @param cacheStates Cache states map.
@@ -346,6 +344,7 @@ public class CheckpointHistory {
 
     /**
      * Remove checkpoint from history
+     *
      * @param checkpoint Checkpoint to be removed
      * @return Whether checkpoint was removed from history
      */
@@ -560,9 +559,8 @@ public class CheckpointHistory {
     }
 
     /**
-     * The class is used for get a pointer with a specific margin.
-     * This stores the nearest pointer which covering a partition counter.
-     * It is able to choose between other pointer and this.
+     * The class is used for get a pointer with a specific margin. This stores the nearest pointer which covering a
+     * partition counter. It is able to choose between other pointer and this.
      */
     private class WalPointerCandidate {
         /** Group id. */
@@ -596,8 +594,8 @@ public class CheckpointHistory {
         }
 
         /**
-         * Make a choice between stored WAL pointer and other, getting from checkpoint, with a specific margin.
-         * Updates counter in collection from parameters.
+         * Make a choice between stored WAL pointer and other, getting from checkpoint, with a specific margin. Updates
+         * counter in collection from parameters.
          *
          * @param cpEntry Checkpoint entry.
          * @param margin Margin.
@@ -629,7 +627,8 @@ public class CheckpointHistory {
      * @param searchCntrMap Search map contains (Group Id, partition, counter).
      * @return Map of group-partition on checkpoint entry or empty map if nothing found.
      */
-    @Nullable public Map<GroupPartitionId, CheckpointEntry> searchCheckpointEntry(Map<T2<Integer, Integer>, Long> searchCntrMap) {
+    @Nullable public Map<GroupPartitionId, CheckpointEntry> searchCheckpointEntry(
+        Map<T2<Integer, Integer>, Long> searchCntrMap) {
         if (F.isEmpty(searchCntrMap))
             return Collections.emptyMap();
 
@@ -699,7 +698,6 @@ public class CheckpointHistory {
      * Finds and reserves earliest valid checkpoint for each of given groups and partitions.
      *
      * @param groupsAndPartitions Groups and partitions to find and reserve earliest valid checkpoint.
-     *
      * @return Checkpoint history reult: Map (groupId, Reason (the reason why reservation cannot be made deeper): Map
      * (partitionId, earliest valid checkpoint to history search)) and reserved checkpoint.
      */
@@ -759,15 +757,14 @@ public class CheckpointHistory {
     }
 
     /**
-     * Checkpoint is not applicable when:
-     * 1) WAL was disabled somewhere after given checkpoint.
-     * 2) Checkpoint doesn't contain specified {@code grpId}.
+     * Checkpoint is not applicable when: 1) WAL was disabled somewhere after given checkpoint. 2) Checkpoint doesn't
+     * contain specified {@code grpId}.
      *
      * @param grpId Group ID.
      * @param cp Checkpoint.
      */
     public boolean isCheckpointApplicableForGroup(int grpId, CheckpointEntry cp) throws IgniteCheckedException {
-        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager) cctx.database();
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)cctx.database();
 
         if (dbMgr.isCheckpointInapplicableForWalRebalance(cp.timestamp(), grpId))
             return false;
