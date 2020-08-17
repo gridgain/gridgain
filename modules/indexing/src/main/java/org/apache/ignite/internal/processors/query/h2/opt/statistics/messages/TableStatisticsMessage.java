@@ -12,6 +12,21 @@ import java.nio.ByteBuffer;
 public abstract class TableStatisticsMessage implements Message {
 
 
+    /** */
+    public static final short TYPE_CODE = 172;
+
+    /** */
+    private static final long serialVersionUID = 0L;
+
+    /** Request id. */
+    private long reqId;
+
+    /** Query id on a node. */
+    private long nodeQryId;
+
+    /** Async response flag. */
+    private boolean asyncRes;
+
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.

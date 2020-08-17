@@ -43,6 +43,7 @@ import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.TableStatisticsMessage;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -169,8 +170,10 @@ public class MessageCodeGenerator {
 
         MessageCodeGenerator gen = new MessageCodeGenerator(srcDir);
 
-        gen.generateAndWrite(GridQueryKillRequest.class);
-        gen.generateAndWrite(GridQueryKillResponse.class);
+        gen.generateAndWrite(TableStatisticsMessage.class);
+
+//        gen.generateAndWrite(GridQueryKillRequest.class);
+//        gen.generateAndWrite(GridQueryKillResponse.class);
 
 //        gen.generateAndWrite(ProbedTx.class);
 //        gen.generateAndWrite(DeadlockProbe.class);
