@@ -5,6 +5,8 @@
  */
 package org.h2.result;
 
+import org.h2.command.dml.Query;
+import org.h2.command.dml.Select;
 import org.h2.command.dml.SelectOrderBy;
 import org.h2.engine.Database;
 import org.h2.engine.SysProperties;
@@ -92,6 +94,8 @@ public class SortOrder implements Comparator<Value[]> {
      */
     private final ArrayList<SelectOrderBy> orderList;
 
+    private final Query qry;
+
     /**
      * Construct a new sort order object.
      *
@@ -101,11 +105,12 @@ public class SortOrder implements Comparator<Value[]> {
      * @param orderList the original query order list (if this is a query)
      */
     public SortOrder(Database database, int[] queryColumnIndexes,
-            int[] sortType, ArrayList<SelectOrderBy> orderList) {
+            int[] sortType, ArrayList<SelectOrderBy> orderList, Query qry) {
         this.database = database;
         this.queryColumnIndexes = queryColumnIndexes;
         this.sortTypes = sortType;
         this.orderList = orderList;
+        this.qry = qry;
     }
 
     /**
@@ -262,25 +267,33 @@ public class SortOrder implements Comparator<Value[]> {
      * @return the column, or null
      */
     public Column getColumn(int index, TableFilter filter) {
-        if (orderList == null) {
+        if (orderList == null)
             return null;
-        }
+
         SelectOrderBy order = orderList.get(index);
         Expression expr = order.expression;
+
         if (expr == null) {
-            return null;
+            if (order.columnIndexExpr.isConstant()) {
+                int expIdx = order.columnIndexExpr.getValue(null).getInt();
+
+                expr = qry.getExpressions().get(expIdx - 1);
+            }
+            else
+                return null;
         }
+
         expr = expr.getNonAliasExpression();
-        if (expr.isConstant()) {
+        if (expr.isConstant())
             return null;
-        }
-        if (!(expr instanceof ExpressionColumn)) {
+
+        if (!(expr instanceof ExpressionColumn))
             return null;
-        }
+
         ExpressionColumn exprCol = (ExpressionColumn) expr;
-        if (exprCol.getTableFilter() != filter) {
+        if (exprCol.getTableFilter() != filter)
             return null;
-        }
+
         return exprCol.getColumn();
     }
 
