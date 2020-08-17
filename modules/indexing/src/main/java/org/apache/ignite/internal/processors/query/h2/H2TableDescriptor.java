@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -44,8 +45,6 @@ import org.h2.result.SortOrder;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
-
-import static org.apache.ignite.internal.util.IgniteUtils.SRVS_NODES_FILTER;
 
 /**
  * Information about table in database.
@@ -333,7 +332,8 @@ public class H2TableDescriptor {
                 // SPECIFIED_SEQ_PK_KEYS check guarantee that request running on heterogeneous (RU) cluster can
                 // perform equally on all nodes.
                 if (!idx.kernalContext().recoveryMode() && IgniteFeatures.allNodesSupports(idx.kernalContext(),
-                    F.view(idx.kernalContext().discovery().remoteNodes(), SRVS_NODES_FILTER), IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
+                    F.view(idx.kernalContext().discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+                    IgniteFeatures.SPECIFIED_SEQ_PK_KEYS)) {
                     for (String keyName : type.primaryKeyFields()) {
                         GridQueryProperty prop = type.property(keyName);
 
