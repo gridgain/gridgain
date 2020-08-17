@@ -449,7 +449,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         while (true) {
             long state = this.state.get();
 
-            if (getPartState(state) == EVICTED)
+//            if (getPartState(state) == EVICTED)
+//                return false;
+
+            if (ordinal(state) > 1) // 1 is OWNING.
                 return false;
 
             long newState = setReservations(state, getReservations(state) + 1);
@@ -694,10 +697,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Starts clearing process asynchronously if it's requested and not running at the moment.
-     * Method may finish clearing process ahead of time if partition is empty and doesn't have reservations.
      */
     public IgniteInternalFuture<?> clearAsync() {
-        // Method expected to be called from exchange worker or rebalancing thread when rebalancing is done.
         long state = this.state.get();
 
         GridDhtPartitionState partState = getPartState(state);
@@ -976,12 +977,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         grp.affinity().lastVersion(),
                         row.key(),
                         true,
-                        false);
+                        true);
 
                     if (cached.deleted())
                         continue;
 
-                    if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry)cached).clearInternal(clearVer, extras)) {
+                    if (cached instanceof GridDhtCacheEntry && ((GridDhtCacheEntry) cached).clearInternal(clearVer, extras)) {
                         removeEntry(cached);
 
                         if (rec && !hld.cctx.config().isEventsDisabled()) {
@@ -1228,6 +1229,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     private static GridDhtPartitionState getPartState(long state) {
         return GridDhtPartitionState.fromOrdinal((int)(state & (0x0000000000000007L)));
+    }
+
+    /**
+     * @param state State.
+     */
+    private static int ordinal(long state) {
+        return (int)(state & (0x0000000000000007L));
     }
 
     /**

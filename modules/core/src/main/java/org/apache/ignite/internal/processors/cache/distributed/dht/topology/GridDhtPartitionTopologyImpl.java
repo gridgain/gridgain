@@ -2797,6 +2797,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         ctx.database().checkpointReadLock();
 
         try {
+            // Write lock protects from concurrent partition creation.
             lock.writeLock().lock();
 
             try {
@@ -2816,7 +2817,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 consistencyCheck();
 
-                // Write lock protects from concurrent partition creation.
                 grp.onPartitionEvicted(part.id());
 
                 try {
