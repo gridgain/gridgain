@@ -51,6 +51,7 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -95,7 +96,6 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
-import static org.apache.ignite.internal.util.IgniteUtils.SRVS_NODES_FILTER;
 
 /**
  *
@@ -179,7 +179,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (!compatibilityMode)
                 return;
 
-            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), SRVS_NODES_FILTER),
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
                 IgniteFeatures.CLUSTER_ID_AND_TAG)
             ) {
                 // Only coordinator initializes ID and tag.
@@ -438,7 +438,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), SRVS_NODES_FILTER),
+        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
             IgniteFeatures.CLUSTER_ID_AND_TAG)
         ) {
             compatibilityMode = true;

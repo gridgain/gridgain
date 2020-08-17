@@ -623,9 +623,6 @@ public abstract class IgniteUtils {
     /** JDK9: URLClassPath#getURLs. */
     private static Method mthdURLClassPathGetUrls;
 
-    /** Only servers node filter. */
-    public static final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
-
     /*
      * Initializes enterprise check.
      */
