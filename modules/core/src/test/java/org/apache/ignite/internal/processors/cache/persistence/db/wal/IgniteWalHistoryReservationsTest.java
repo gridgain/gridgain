@@ -529,7 +529,7 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-    public void testCheckpointsNotReserveWithWalModeNone() throws Exception{
+    public void testCheckpointsNotReserveWithWalModeNone() throws Exception {
         walMode = WALMode.NONE;
 
         IgniteEx grid = startGrids(2);
