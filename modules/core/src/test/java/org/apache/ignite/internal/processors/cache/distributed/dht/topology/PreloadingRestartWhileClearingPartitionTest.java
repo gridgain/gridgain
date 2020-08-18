@@ -94,13 +94,13 @@ public class PreloadingRestartWhileClearingPartitionTest extends GridCommonAbstr
         final int delta = 2_000;
         final int rmv = 1_500;
 
-        loadDataToPartition(clearingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, cnt, 0, 3);
+        loadDataToPartition(clearingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, cnt, 0);
 
         forceCheckpoint();
 
         stopGrid(2);
 
-        loadDataToPartition(clearingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, delta, cnt, 3);
+        loadDataToPartition(clearingPart, getTestIgniteInstanceName(0), DEFAULT_CACHE_NAME, delta, cnt);
 
         // Removal required for triggering full rebalancing.
         List<Integer> clearKeys = partitionKeys(grid(0).cache(DEFAULT_CACHE_NAME), clearingPart, rmv, cnt);

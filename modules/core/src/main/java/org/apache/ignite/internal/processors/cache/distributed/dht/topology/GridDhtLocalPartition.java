@@ -941,8 +941,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         boolean rec = grp.eventRecordable(EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
 
         long cleared = 0;
-
-        final int stopCheckingFreq = 1000;
+        int stopCntr = 0;
 
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
@@ -950,6 +949,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);
 
             while (it0.hasNext()) {
+                if ((stopCntr = (stopCntr + 1) & 1023) == 0 && evictionCtx.shouldStop())
+                    return cleared;
+
                 ctx.database().checkpointReadLock();
 
                 try {
@@ -1006,10 +1008,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                         cleared++;
                     }
-
-                    // For each 'stopCheckingFreq' cleared entities check clearing process to stop.
-                    if (cleared % stopCheckingFreq == 0 && evictionCtx.shouldStop())
-                        return cleared;
                 }
                 catch (GridDhtInvalidPartitionException e) {
                     assert isEmpty() && state() == EVICTED : "Invalid error [e=" + e + ", part=" + this + ']';

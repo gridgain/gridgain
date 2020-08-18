@@ -167,9 +167,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             int size = executor.getQueue().size();
 
             if (log.isInfoEnabled()) {
-                log.info("Eviction in progress [" +
-                    ", groups=" + evictionGroupsMap.keySet().size() +
-                    ", remainingPartsToEvict=" + size + "]");
+                log.info("Eviction in progress [groups=" + evictionGroupsMap.keySet().size() +
+                    ", remainingPartsToEvict=" + size + ']');
 
                 evictionGroupsMap.values().forEach(GroupEvictionContext::showProgress);
 
