@@ -20,10 +20,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -155,6 +157,8 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
 
                 try {
                     cctx.discovery().localJoin();
+
+                    cctx.exchange().affinityReadyFuture(AffinityTopologyVersion.ZERO).get();
                 }
                 finally {
                     blockingSectionEnd();
@@ -207,7 +211,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                     err = t;
                 }
 
-                throw t;
+                throw new IgniteException(t);
             }
             finally {
                 if (err == null && !isCancelled)
