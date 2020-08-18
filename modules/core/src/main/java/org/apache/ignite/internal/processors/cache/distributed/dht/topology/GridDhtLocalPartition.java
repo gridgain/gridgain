@@ -449,10 +449,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         while (true) {
             long state = this.state.get();
 
-//            if (getPartState(state) == EVICTED)
-//                return false;
-
-            if (ordinal(state) > 1) // 1 is OWNING.
+            if (ordinal(state) > 1 /** OWNING */ )
                 return false;
 
             long newState = setReservations(state, getReservations(state) + 1);
@@ -963,7 +960,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
                     // Partition state can be switched from RENTING to MOVING and vice versa during clearing.
-                    if (state() == MOVING && row.version().order() > order)
+                    long order0 = row.version().order();
+
+                    if (state() == MOVING && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
@@ -978,6 +977,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         row.key(),
                         true,
                         true);
+
+                    assert cached != null : "Expecting the reservation " + this;
 
                     if (cached.deleted())
                         continue;

@@ -1322,46 +1322,42 @@ public class GridDhtPartitionDemander {
                     d.timeout(grp.preloader().timeout());
 
                     // Make sure partitions scheduled for full rebalancing are cleared first.
-                    if (grp.persistenceEnabled()) {
-                        final int fullSetSize = d.partitions().fullSet().size();
+                    // Clearing attempt is also required for in-memory caches because some partitions can be switched
+                    // from RENTING to MOVING state in the middle of clearing.
+                    final int fullSetSize = d.partitions().fullSet().size();
 
-                        AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
+                    AtomicInteger waitCnt = new AtomicInteger(fullSetSize);
 
-                        for (Integer partId : d.partitions().fullSet()) {
-                            GridDhtLocalPartition part = grp.topology().localPartition(partId);
+                    for (Integer partId : d.partitions().fullSet()) {
+                        GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
-                            assert part.state() == MOVING : part;
+                        assert part.state() == MOVING : part;
 
-                            // Reset the initial update counter value to prevent historical rebalancing on this partition.
-                            part.dataStore().resetInitialUpdateCounter();
+                        // Reset the initial update counter value to prevent historical rebalancing on this partition.
+                        part.dataStore().resetInitialUpdateCounter();
 
-                            part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
-                                @Override public void apply(IgniteInternalFuture<?> fut) {
-                                    if (fut.error() != null) {
-                                        tryCancel();
+                        part.clearAsync().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+                            @Override public void apply(IgniteInternalFuture<?> fut) {
+                                if (fut.error() != null) {
+                                    tryCancel();
 
-                                        log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
-                                            + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
+                                    log.error("Failed to clear a partition, cancelling rebalancing for a group [grp="
+                                        + grp.cacheOrGroupName() + ", part=" + part.id() + ']', fut.error());
 
-                                        return;
-                                    }
-
-                                    if (waitCnt.decrementAndGet() == 0) {
-                                        ctx.kernalContext().closure().runLocalSafe(() -> {
-                                            requestPartitions0(supplierNode, parts, d);
-                                        });
-                                    }
+                                    return;
                                 }
-                            });
-                        }
 
-                        if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty()) {
-                            ctx.kernalContext().closure().runLocalSafe(() -> {
-                                requestPartitions0(supplierNode, parts, d);
-                            });
-                        }
+                                if (waitCnt.decrementAndGet() == 0) {
+                                    ctx.kernalContext().closure().runLocalSafe(() -> {
+                                        requestPartitions0(supplierNode, parts, d);
+                                    });
+                                }
+                            }
+                        });
                     }
-                    else {
+
+                    // The special case for historical rebalancing.
+                    if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty()) {
                         ctx.kernalContext().closure().runLocalSafe(() -> {
                             requestPartitions0(supplierNode, parts, d);
                         });

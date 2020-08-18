@@ -90,7 +90,6 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-28593")
     public void testWithPersistence() throws Exception {
         persistenceEnabled = true;
 
@@ -122,7 +121,12 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
             if (msg instanceof GridDhtPartitionsSingleMessage) {
                 GridDhtPartitionsSingleMessage sm = (GridDhtPartitionsSingleMessage)msg;
 
-                return sm.exchangeId() == null && !sm.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME)).hasMovingPartitions();
+                if (sm.exchangeId() == null) {
+                    GridDhtPartitionMap map = sm.partitions().get(CU.cacheId(DEFAULT_CACHE_NAME));
+
+                    // Partition states message for a group is send as soon as group rebalancing has finished.
+                    return map != null && !map.hasMovingPartitions();
+                }
             }
 
             return false;

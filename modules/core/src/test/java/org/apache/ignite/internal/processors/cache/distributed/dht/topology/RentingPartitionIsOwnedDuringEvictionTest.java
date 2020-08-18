@@ -49,6 +49,7 @@ public class RentingPartitionIsOwnedDuringEvictionTest extends GridCommonAbstrac
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setRebalanceThreadPoolSize(4);
         cfg.setConsistentId(igniteInstanceName);
 
         if (persistence) {
@@ -125,7 +126,7 @@ public class RentingPartitionIsOwnedDuringEvictionTest extends GridCommonAbstrac
             log.info("Evicting partition " + p0);
 
             final int cnt = 50_000;
-            final int cnt2 = backups == 0 && persistence ? 0 : 1_000; // Handle partition loss.
+            final int cnt2 = backups == 0 && persistence ? 0 : 0; // Handle partition loss.
 
             List<Integer> keys = partitionKeys(g0.cache(DEFAULT_CACHE_NAME), p0, cnt, 0);
             List<Integer> keys2 = partitionKeys(g0.cache(DEFAULT_CACHE_NAME), p0, cnt2, cnt);
