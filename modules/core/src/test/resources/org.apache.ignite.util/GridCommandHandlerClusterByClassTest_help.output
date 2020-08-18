@@ -63,10 +63,10 @@ This utility can do the following commands:
     control.(sh|bat) --diagnostic
 
   Enable rolling upgrade:
-    control.(sh|bat) --rolling-upgrade on
+    control.(sh|bat) --rolling-upgrade on [--yes]
 
   Disable rolling upgrade:
-    control.(sh|bat) --rolling-upgrade off
+    control.(sh|bat) --rolling-upgrade off [--yes]
 
   Get rolling upgrade status:
     control.(sh|bat) --rolling-upgrade status
