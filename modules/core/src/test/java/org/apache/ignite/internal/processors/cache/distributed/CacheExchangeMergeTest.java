@@ -908,9 +908,9 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         stopGrid(getTestIgniteInstanceName(2), true, false);
 
-        checkAffinity();
+        checkTopology(2);
 
-        awaitPartitionMapExchange();
+        checkAffinity();
 
         checkCaches0();
 

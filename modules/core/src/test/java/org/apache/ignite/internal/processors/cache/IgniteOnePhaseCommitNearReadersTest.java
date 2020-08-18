@@ -159,7 +159,7 @@ public class IgniteOnePhaseCommitNearReadersTest extends GridCommonAbstractTest 
     private void putReaderUpdatePrimaryFails(int backups) throws Exception {
         testSpi = true;
 
-        final int SRVS = 2;
+        final int SRVS = 3;
 
         startGrids(SRVS);
 
@@ -198,7 +198,7 @@ public class IgniteOnePhaseCommitNearReadersTest extends GridCommonAbstractTest 
 
         fut.get();
 
-        checkCacheData(F.asMap(key, 2), DEFAULT_CACHE_NAME);
+        checkCacheData(F.asMap(key, backups == 0 ? null : 2), DEFAULT_CACHE_NAME);
 
         for (TransactionConcurrency concurrency : TransactionConcurrency.values()) {
             for (TransactionIsolation isolation : TransactionIsolation.values()) {
