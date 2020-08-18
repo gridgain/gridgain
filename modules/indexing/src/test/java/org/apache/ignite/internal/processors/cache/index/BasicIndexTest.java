@@ -710,11 +710,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
 
         assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS"));
-
-        // first idx fields not belongs to request fields.
-        assertTrue(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "ADDRESS", "LAST_NAME"));
-
-        assertTrue(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
     }
 
     /**
