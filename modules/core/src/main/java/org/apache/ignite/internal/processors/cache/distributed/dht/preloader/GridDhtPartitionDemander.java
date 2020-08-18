@@ -1356,7 +1356,7 @@ public class GridDhtPartitionDemander {
                         });
                     }
 
-                    // The special case for historical rebalancing.
+                    // The special case for historical only rebalancing.
                     if (d.partitions().fullSet().isEmpty() && !d.partitions().historicalSet().isEmpty()) {
                         ctx.kernalContext().closure().runLocalSafe(() -> {
                             requestPartitions0(supplierNode, parts, d);
