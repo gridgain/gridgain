@@ -438,7 +438,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Reserves the partition so it won't be cleared or evicted.
-     * Only MOVING and OWNING partitions can be reserved.
+     * Only MOVING, OWNING and LOST partitions can be reserved.
      *
      * @return {@code True} if reserved.
      */
@@ -446,7 +446,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         while (true) {
             long state = this.state.get();
 
-            if (ordinal(state) > 1 /** OWNING */ )
+            int ordinal = ordinal(state);
+
+            if (ordinal == RENTING.ordinal() || ordinal == EVICTED.ordinal())
                 return false;
 
             long newState = setReservations(state, getReservations(state) + 1);
@@ -622,7 +624,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             GridDhtPartitionState partState = getPartState(state);
 
             assert partState == OWNING || partState == RENTING :
-                "Only partitions in state OWNING or RENTING can be moved to MOVING state";
+                "Only partitions in state OWNING or RENTING can be moved to MOVING state " + partState + " " + id;
 
             if (casState(state, MOVING)) {
                 // The state is switched under global topology lock, safe to record version here.

@@ -2505,6 +2505,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     private GridDhtLocalPartition rebalancePartition(int p, boolean clear, GridDhtPartitionsExchangeFuture exchFut) {
         GridDhtLocalPartition part = getOrCreatePartition(p);
 
+        if (part.state() == LOST)
+            return part;
+
         // Prevent renting.
         if (part.state() == RENTING) {
             if (part.reserve()) {
