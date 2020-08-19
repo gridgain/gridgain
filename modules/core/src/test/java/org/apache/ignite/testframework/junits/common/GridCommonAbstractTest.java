@@ -692,7 +692,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param printPartState If {@code true} will print partition state if evictions not happened.
      * @throws InterruptedException If interrupted.
      */
-    @SuppressWarnings("BusyWait")
     protected void awaitPartitionMapExchange(
         boolean waitEvicts,
         boolean waitNode2PartUpdate,
@@ -2624,14 +2623,34 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         Class<T> cls,
         Class<I> implCls
     ) throws Exception {
-        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, implCls.getSimpleName());
+        return getMxBean(igniteInstanceName, grp, implCls.getSimpleName(), cls);
+    }
+
+    /**
+     * Returns MX bean by specified name and group name.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param grp Name of the group.
+     * @param name Name of the bean.
+     * @param cls Bean class.
+     * @param <T> Type parameter for bean class.
+     * @return MX bean.
+     * @throws Exception If failed.
+     */
+    public static <T> T getMxBean(
+        String igniteInstanceName,
+        String grp,
+        String name,
+        Class<T> cls
+    ) throws Exception {
+        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, name);
 
         MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
 
         if (!mbeanSrv.isRegistered(mbeanName))
             fail("MBean is not registered: " + mbeanName.getCanonicalName());
 
-        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, true);
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, false);
     }
 
     /**
