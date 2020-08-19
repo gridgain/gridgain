@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -157,10 +156,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     private volatile long delayedRentingTopVer;
 
     /** */
-    private volatile IgniteInternalFuture<?> clearFut;
-
-    /** */
-    private final AtomicBoolean clearing = new AtomicBoolean();
+    private final AtomicReference<GridFutureAdapter<?>> finishFutRef = new AtomicReference<>();
 
     /** */
     private volatile long clearVer;
@@ -672,7 +668,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         if (partState == RENTING) {
             // If for some reason a partition has stuck in renting state try restart clearing.
-            if (!clearing.get())
+            if (finishFutRef.get() == null)
                 clearAsync();
 
             return rent;
@@ -706,22 +702,30 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (!evictionRequested && !clearingRequested)
             return new GridFinishedFuture<>();
 
-        if (!clearing.compareAndSet(false, true))
-            return clearFut;
+        GridFutureAdapter<?> finishFut = new GridFutureAdapter<>();
+
+        do {
+            GridFutureAdapter<?> curFut = finishFutRef.get();
+
+            if (curFut != null)
+                return curFut;
+        }
+        while (!finishFutRef.compareAndSet(null, finishFut));
+
+        finishFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
+            @Override public void apply(IgniteInternalFuture<?> fut) {
+                // A partition cannot be reused after the eviction, it's not necessary to reset a clearing state.
+                if (state() == EVICTED)
+                    rent.onDone(fut.error());
+                else
+                    finishFutRef.set(null);
+            }
+        });
 
         // Evict partition asynchronously to avoid deadlocks.
-        (clearFut = ctx.evict().evictPartitionAsync(grp, this))
-            .listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
-                @Override public void apply(IgniteInternalFuture<?> fut) {
-                    // A partition cannot be reused after the eviction, not necessary to reset clearing state.
-                    if (state() == EVICTED)
-                        rent.onDone(fut.error());
-                    else
-                        clearing.set(false);
-                }
-            });
+        ctx.evict().evictPartitionAsync(grp, this, finishFut);
 
-        return clearFut;
+        return finishFut;
     }
 
     /**
@@ -763,7 +767,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return {@code True} if clearing process is running at the moment on the partition.
      */
     public boolean isClearing() {
-        return clearing.get();
+        return finishFutRef.get() != null;
     }
 
     /**

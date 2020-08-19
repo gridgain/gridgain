@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheMode;
@@ -49,7 +50,7 @@ public class RentingPartitionIsOwnedDuringEvictionTest extends GridCommonAbstrac
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setRebalanceThreadPoolSize(4);
+        cfg.setRebalanceThreadPoolSize(ThreadLocalRandom.current().nextInt(4) + 1);
         cfg.setConsistentId(igniteInstanceName);
 
         if (persistence) {

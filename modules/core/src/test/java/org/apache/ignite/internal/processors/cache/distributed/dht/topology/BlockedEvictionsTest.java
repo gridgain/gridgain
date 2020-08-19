@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -69,7 +71,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setRebalanceThreadPoolSize(4);
+        cfg.setRebalanceThreadPoolSize(ThreadLocalRandom.current().nextInt(4) + 1);
         cfg.setSystemThreadPoolSize(sysPoolSize);
         cfg.setConsistentId(igniteInstanceName);
 
@@ -343,7 +345,9 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         GridDhtLocalPartition part = g0.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(p0);
 
-        IgniteInternalFuture<?> clearFut = U.field(part, "clearFut");
+        AtomicReference<GridFutureAdapter<?>> ref = U.field(part, "finishFutRef");
+
+        GridFutureAdapter<?> finishFut = ref.get();
 
         IgniteInternalFuture fut = runAsync(g0::close);
 
@@ -355,8 +359,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         fut.get();
 
         // Partition clearing future should be finished with NodeStoppingException.
-        assertTrue(clearFut.error().getMessage(),
-            clearFut.error() != null && X.hasCause(clearFut.error(), NodeStoppingException.class));
+        assertTrue(finishFut.error().getMessage(),
+            finishFut.error() != null && X.hasCause(finishFut.error(), NodeStoppingException.class));
     }
 
     /**

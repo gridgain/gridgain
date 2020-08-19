@@ -114,8 +114,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      *
      * @param grp Group context.
      * @param part Partition to evict.
+     * @param finishFut Clearing finish future.
      */
-    public IgniteInternalFuture<?> evictPartitionAsync(CacheGroupContext grp, GridDhtLocalPartition part) {
+    public IgniteInternalFuture<?> evictPartitionAsync(
+        CacheGroupContext grp,
+        GridDhtLocalPartition part,
+        GridFutureAdapter<?> finishFut
+    ) {
         assert nonNull(grp);
         assert nonNull(part);
 
@@ -137,7 +142,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     + ", fullSize=" + part.fullSize() + ", reason=" + reason + ']');
 
             synchronized (mux) {
-                PartitionEvictionTask task = new PartitionEvictionTask(part, grpEvictionCtx, reason);
+                PartitionEvictionTask task = new PartitionEvictionTask(part, grpEvictionCtx, reason, finishFut);
 
                 logEvictPartByGrps.computeIfAbsent(grpId, i -> new HashMap<>()).put(part.id(), reason);
 
@@ -355,21 +360,24 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final GroupEvictionContext grpEvictionCtx;
 
         /** */
-        private final GridFutureAdapter<?> finishFut = new GridFutureAdapter<>();
+        private final GridFutureAdapter<?> finishFut;
 
         /**
          * @param part Partition.
          * @param grpEvictionCtx Eviction context.
          * @param reason Reason for eviction.
+         * @param finishFut Finish future.
          */
         private PartitionEvictionTask(
             GridDhtLocalPartition part,
             GroupEvictionContext grpEvictionCtx,
-            EvictReason reason
+            EvictReason reason,
+            GridFutureAdapter<?> finishFut
         ) {
             this.part = part;
             this.grpEvictionCtx = grpEvictionCtx;
             this.reason = reason;
+            this.finishFut = finishFut;
         }
 
         /** {@inheritDoc} */
