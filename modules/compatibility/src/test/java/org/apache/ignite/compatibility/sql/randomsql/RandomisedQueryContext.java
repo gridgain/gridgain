@@ -23,12 +23,16 @@ import org.apache.ignite.compatibility.sql.randomsql.ast.TableRef;
 /**
  * Context for building randomised query.
  */
+@SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
 class RandomisedQueryContext {
     /** Table available for column references. */
     private final List<TableRef> scopeTbls;
 
     /** Current schema. */
     private Schema schema;
+
+    /** Query params. */
+    private List<Object> params = new ArrayList<>();
 
     /**
      * @param schema Schema.
@@ -64,5 +68,21 @@ class RandomisedQueryContext {
      */
     public void addScopeTable(TableRef tblRef) {
         scopeTbls.add(tblRef);
+    }
+
+    /**
+     * Add param to the query.
+     *
+     * @param obj Object.
+     */
+    public void addQueryParam(Object obj) {
+        params.add(obj);
+    }
+
+    /**
+     * @return Params for prepared statement.
+     */
+    public List<Object> queryParams() {
+        return params;
     }
 }

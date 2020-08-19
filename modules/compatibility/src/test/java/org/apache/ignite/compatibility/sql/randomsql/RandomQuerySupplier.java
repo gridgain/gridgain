@@ -32,13 +32,14 @@ import org.apache.ignite.compatibility.sql.randomsql.ast.Operator;
 import org.apache.ignite.compatibility.sql.randomsql.ast.Select;
 import org.apache.ignite.compatibility.sql.randomsql.ast.TableList;
 import org.apache.ignite.compatibility.sql.randomsql.ast.TableRef;
+import org.apache.ignite.compatibility.sql.runner.QueryWithParams;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 
 /**
  * Supplier which generates random SELECT queries.
  */
-public class RandomQuerySupplier implements Supplier<String> {
+public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     /** Generator of unique alias ID. */
     private final AtomicLong aliasIdGen = new AtomicLong();
 
@@ -64,7 +65,7 @@ public class RandomQuerySupplier implements Supplier<String> {
     }
 
     /** {@inheritDoc} */
-    @Override public String get() {
+    @Override public QueryWithParams get() {
         RandomisedQueryContext rndQryCtx = new RandomisedQueryContext(schema);
 
         Select select = rndSelect(rndQryCtx);
@@ -73,7 +74,9 @@ public class RandomQuerySupplier implements Supplier<String> {
 
         select.writeTo(sb);
 
-        return sb.toString();
+        return F.isEmpty(rndQryCtx.queryParams())
+            ? new QueryWithParams(sb.toString())
+            : new QueryWithParams(sb.toString(), rndQryCtx.queryParams());
     }
 
     /**
@@ -111,10 +114,12 @@ public class RandomQuerySupplier implements Supplier<String> {
     /**
      * Generates random WHERE expression for provided tables.
      *
-     * @param tbls Tables that should have filter condition.
+     * @param rndQryCtx Context of randomised query.
      * @return Ast representing WHERE expression.
      */
-    private Ast rndWhereClause(List<TableRef> tbls) {
+    private Ast rndWhereClause(RandomisedQueryContext rndQryCtx) {
+        List<TableRef> tbls = rndQryCtx.scopeTables();
+
         assert !tbls.isEmpty();
 
         List<TableRef> tbls0 = new ArrayList<>(tbls);
@@ -126,9 +131,18 @@ public class RandomQuerySupplier implements Supplier<String> {
         else {
             TableRef tbl = tbls0.get(rnd.nextInt(tbls0.size()));
 
+            Ast rightOp;
+            if (rndWithRatio(5))
+                rightOp = new Const(Integer.toString(rnd.nextInt(100)));
+            else {
+                rightOp = new Const("?");
+
+                rndQryCtx.addQueryParam(rnd.nextInt(100));
+            }
+
             cond = new BiCondition(
                 rndNumericColumn(tbl),
-                new Const(Integer.toString(rnd.nextInt(100))),
+                rightOp,
                 Operator.EQUALS
             );
         }
@@ -156,7 +170,7 @@ public class RandomQuerySupplier implements Supplier<String> {
      */
     private Select rndSelect(RandomisedQueryContext rndQryCtx) {
         Ast from = rndFrom(rndQryCtx);
-        Ast where = from instanceof TableList ? rndWhereClause(rndQryCtx.scopeTables()) : new Const("TRUE");
+        Ast where = from instanceof TableList ? rndWhereClause(rndQryCtx) : new Const("TRUE");
 
         return new Select().from(from).where(where);
     }
