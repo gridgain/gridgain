@@ -260,9 +260,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private void startBaseAndNewClusters(int seed) throws Exception {
         // Base cluster.
         try (DependencyContext ignored = createContext(baseVer, baseIsIgnite)) {
-            startGrid(3, baseVer, new NodeConfigurationClosure("3", BASE_DISCOVERY_PORT, BASE_JDBC_PORT),
+            startGrid(3, baseVer, new NodeConfigurationClosure("1", BASE_DISCOVERY_PORT, BASE_JDBC_PORT),
                 ignite -> createTablesAndPopulateData(ignite, seed));
-            startGrid(4, baseVer, new NodeConfigurationClosure("4", BASE_DISCOVERY_PORT, BASE_JDBC_PORT));
+            startGrid(4, baseVer, new NodeConfigurationClosure("2", BASE_DISCOVERY_PORT, BASE_JDBC_PORT));
         }
 
         rmJvmInstance = null; // clear remote instance because we are going to start separate cluster now
