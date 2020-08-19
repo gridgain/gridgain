@@ -137,14 +137,52 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
-    public void testDeactivation_Volatile() {
-        // TODO
+    public void testDeactivation_Volatile() throws Exception {
+        AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
+
+        testOperationDuringEviction(false, 1, new Runnable() {
+            @Override public void run() {
+                IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
+
+                ref.set(fut);
+
+                doSleep(1000);
+
+                assertFalse(fut.isDone());
+            }
+        });
+
+        ref.get().get();
+
+        assertTrue(grid(0).cluster().state() == ClusterState.INACTIVE);
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
-    public void testDeactivation_Persistence() {
-        // TODO
+    public void testDeactivation_Persistence() throws Exception {
+        AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
+
+        testOperationDuringEviction(true, 1, new Runnable() {
+            @Override public void run() {
+                IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
+
+                ref.set(fut);
+
+                doSleep(1000);
+
+                assertFalse(fut.isDone());
+            }
+        });
+
+        ref.get().get();
+
+        assertTrue(grid(0).cluster().state() == ClusterState.INACTIVE);
     }
 
     /**

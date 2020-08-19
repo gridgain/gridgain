@@ -29,7 +29,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
@@ -100,16 +99,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         CacheConfiguration cfg2 = new CacheConfiguration(cfg1)
             .setName(CACHE2);
 
-        CacheConfiguration cfg3 = new CacheConfiguration()
-            .setName(CACHE3)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setRebalanceMode(CacheRebalanceMode.ASYNC)
-            .setRebalanceBatchSize(100)
-            .setStatisticsEnabled(true)
-            .setRebalanceDelay(REBALANCE_DELAY);
-
-        cfg.setCacheConfiguration(cfg1, cfg2, cfg3);
+        cfg.setCacheConfiguration(cfg1, cfg2);
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
@@ -257,21 +247,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
                 st.addData(i, CACHE1 + "-" + i);
         }
 
-        final CountDownLatch finishRebalanceLatch = new CountDownLatch(1);
-
         final Ignite ig2 = startGrid(2);
-
-        ig2.events().localListen(evt -> {
-            CacheRebalancingEvent rebEvt = (CacheRebalancingEvent)evt;
-
-            if (rebEvt.cacheName().equals(CACHE1)) {
-                log.info("CountDown rebalance stop latch: " + rebEvt.cacheName());
-
-                finishRebalanceLatch.countDown();
-            }
-
-            return false;
-        }, EventType.EVT_CACHE_REBALANCE_STOPPED);
 
         boolean rebalancingStartTimeGot = waitForCondition(() -> ig2.cache(CACHE1).localMetrics().getRebalancingStartTime() != -1L, 5_000);
 
@@ -300,7 +276,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
 
                 long keyLeft = m.getKeysToRebalanceLeft();
 
-                if (keyLeft > 0 && keyLeft < keysLine) {
+                if (keyLeft < keysLine) {
                     latch.countDown();
 
                     break;
@@ -375,7 +351,16 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     public void testRebalanceDelay() throws Exception {
         Ignite ig1 = startGrid(1);
 
-        final IgniteCache<Object, Object> cache = ig1.cache(CACHE3);
+        CacheConfiguration cfg3 = new CacheConfiguration()
+            .setName(CACHE3)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setRebalanceMode(CacheRebalanceMode.ASYNC)
+            .setRebalanceBatchSize(100)
+            .setStatisticsEnabled(true)
+            .setRebalanceDelay(REBALANCE_DELAY);
+
+        final IgniteCache<Object, Object> cache = ig1.getOrCreateCache(cfg3);
 
         for (int i = 0; i < 10000; i++)
             cache.put(i, CACHE3 + "-" + i);
