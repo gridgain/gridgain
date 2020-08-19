@@ -1397,7 +1397,7 @@ public class CacheMetricsImpl implements CacheMetrics {
         return rebalanceClearingPartitions.value();
     }
 
-    /** {@inheritDoc} */
+    /** */
     public long evictingPartitionsLeft() {
         return evictingPartitions.value();
     }
