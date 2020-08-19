@@ -24,8 +24,8 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -34,7 +34,7 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
+import static org.apache.ignite.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 
 /**
  * Node validation.

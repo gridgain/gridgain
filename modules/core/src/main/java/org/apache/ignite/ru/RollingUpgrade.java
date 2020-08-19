@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.ru;
+package org.apache.ignite.ru;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.processors.GridProcessor;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 
-import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
+import static org.apache.ignite.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 
 /**
  * Defines public API for Rolling Upgrade process.
  */
-public interface RollingUpgradeProcessor extends GridProcessor {
+public interface RollingUpgrade {
     /**
      * Enables or disables rolling upgrade mode.
      *

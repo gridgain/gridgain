@@ -19,8 +19,10 @@ package org.apache.ignite.internal.visor.ru;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
+import org.apache.ignite.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.util.VisorExceptionWrapper;
@@ -54,8 +56,11 @@ public class VisorRollingUpgradeChangeModeResult extends IgniteDataTransferObjec
      * @param changeModeRes Status of the operation.
      */
     public VisorRollingUpgradeChangeModeResult(RollingUpgradeModeChangeResult changeModeRes) {
+        if (!(changeModeRes.status() instanceof IgniteRollingUpgradeStatus))
+            throw new IgniteException("Unsupported instance type: " + status.getClass().getSimpleName());
+
         res = changeModeRes.result();
-        status = new VisorRollingUpgradeStatus(changeModeRes.status());
+        status = new VisorRollingUpgradeStatus((IgniteRollingUpgradeStatus)changeModeRes.status());
         cause = (changeModeRes.cause() != null) ? new VisorExceptionWrapper(changeModeRes.cause()) : null;
     }
 

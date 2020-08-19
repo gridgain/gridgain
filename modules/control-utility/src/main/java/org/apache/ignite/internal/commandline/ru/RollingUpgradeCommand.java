@@ -22,7 +22,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeTask;
@@ -34,6 +34,8 @@ import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatusTask;
 
 import static org.apache.ignite.internal.commandline.CommandArgIterator.isCommandOrOption;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
+import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.ru.RollingUpgradeSubCommands.of;
 
@@ -84,8 +86,8 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.ENABLE.text());
-        Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.DISABLE.text());
+        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.ENABLE.text(), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.DISABLE.text(), optional(CMD_AUTO_CONFIRMATION));
         Command.usage(logger, "Get rolling upgrade status:", ROLLING_UPGRADE, RollingUpgradeSubCommands.STATUS.text());
     }
 
@@ -116,6 +118,11 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
     /** {@inheritDoc} */
     @Override public String name() {
         return ROLLING_UPGRADE.toCommandName();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String confirmationPrompt() {
+        return "Warning: the command will change rolling upgrade mode.";
     }
 
     /**

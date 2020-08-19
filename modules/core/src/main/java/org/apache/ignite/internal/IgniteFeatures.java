@@ -19,7 +19,8 @@ package org.apache.ignite.internal;
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
+import org.apache.ignite.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -199,8 +200,8 @@ public enum IgniteFeatures {
         if (ctx != null) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.enabled() && !status.forcedModeEnabled())
-                return status.supportedFeatures().contains(feature);
+            if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
+                return ((IgniteRollingUpgradeStatus)status).supportedFeatures().contains(feature);
         }
 
         return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
@@ -242,8 +243,8 @@ public enum IgniteFeatures {
         if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.enabled() && !status.forcedModeEnabled())
-                return status.supportedFeatures().contains(feature);
+            if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
+                return ((IgniteRollingUpgradeStatus)status).supportedFeatures().contains(feature);
         }
 
         for (ClusterNode next : nodes) {

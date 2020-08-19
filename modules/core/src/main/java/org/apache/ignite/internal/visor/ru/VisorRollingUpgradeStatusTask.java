@@ -17,7 +17,8 @@
 package org.apache.ignite.internal.visor.ru;
 
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
+import org.apache.ignite.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeUtil;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
@@ -60,8 +61,11 @@ public class VisorRollingUpgradeStatusTask extends VisorOneNodeTask<Void, VisorR
         @Override protected VisorRollingUpgradeStatusResult run(Void arg) throws IgniteException {
             RollingUpgradeStatus state = ignite.context().rollingUpgrade().getStatus();
 
+            if (!(state instanceof IgniteRollingUpgradeStatus))
+                throw new IgniteException("Unsupported instance type: " + state.getClass().getSimpleName());
+
             return new VisorRollingUpgradeStatusResult(
-                new VisorRollingUpgradeStatus(state),
+                new VisorRollingUpgradeStatus((IgniteRollingUpgradeStatus)state),
                 RollingUpgradeUtil.initialNodes(ignite.context(), state),
                 RollingUpgradeUtil.updatedNodes(ignite.context(), state));
         }

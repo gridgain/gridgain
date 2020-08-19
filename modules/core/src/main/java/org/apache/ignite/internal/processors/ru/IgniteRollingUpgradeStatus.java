@@ -23,6 +23,7 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.ru.RollingUpgradeStatus;
 
 /**
  * Represent cluster-wide status of Rolling Upgrade process.
@@ -98,7 +99,7 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     }
 
     /** {@inheritDoc} */
-    @Override public Set<IgniteFeatures> supportedFeatures() {
+    public Set<IgniteFeatures> supportedFeatures() {
         return supportedFeatures;
     }
 
