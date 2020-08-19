@@ -522,7 +522,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             CacheGroupContext grpCtx,
             GridDhtLocalPartition part
         ) {
-            if (!part.reserve())
+            if (part.state() == GridDhtPartitionState.OWNING && !part.reserve())
                 return emptyMap();
 
             int partHash = 0;

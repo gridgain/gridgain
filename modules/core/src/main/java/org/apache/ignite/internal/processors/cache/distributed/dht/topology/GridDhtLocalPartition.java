@@ -438,6 +438,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /**
      * Reserves the partition so it won't be cleared or evicted.
+     * Only MOVING and OWNING partitions can be reserved.
      *
      * @return {@code True} if reserved.
      */
