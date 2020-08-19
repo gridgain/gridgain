@@ -21,12 +21,18 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.ignite.internal.util.typedef.F;
 
+/** */
 public class QueryWithParams {
-
+    /** */
     private final String qry;
 
+    /** */
     private final List<Object> params;
 
+    /**
+     * @param qry Query.
+     * @param params Params.
+     */
     public QueryWithParams(String qry, List<Object> params) {
         assert !F.isEmpty(qry);
 
@@ -34,18 +40,30 @@ public class QueryWithParams {
         this.params = F.isEmpty(params) ? Collections.emptyList() : Collections.unmodifiableList(params);
     }
 
+    /**
+     * @param qry Query.
+     */
     public QueryWithParams(String qry) {
         this(qry, null);
     }
 
+    /**
+     * @return {@code true} if query has at least one param.
+     */
     public boolean parametrized() {
         return !F.isEmpty(params);
     }
 
+    /**
+     * @return Query.
+     */
     public String query() {
         return qry;
     }
 
+    /**
+     * @return  Param list.
+     */
     public List<Object> params() {
         return params;
     }
