@@ -908,7 +908,14 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         stopGrid(getTestIgniteInstanceName(2), true, false);
 
-        checkTopology(2);
+        assertTrue("Failed to wait baseline change.", GridTestUtils.waitForCondition(() -> {
+            for (Ignite ign: G.allGrids()) {
+                if (ign.cluster().currentBaselineTopology().size() != 2)
+                    return false;
+            }
+
+            return true;
+        }, 10_000));
 
         checkAffinity();
 
