@@ -35,7 +35,7 @@ public class UpdateLogRow {
 
     /** Update counter. */
     @GridToStringInclude
-    final long updCntr;
+    final long updateCntr;
 
     /** Link. */
     @GridToStringInclude
@@ -55,22 +55,22 @@ public class UpdateLogRow {
     }
 
     /**
-     * @param cacheId    Cache ID.
+     * @param cacheId Cache ID.
      * @param updCntr Update counter.
-     * @param link       Data row link.
+     * @param link Data row link.
      */
     public UpdateLogRow(int cacheId, long updCntr) {
         this(cacheId, updCntr, 0L);
     }
 
     /**
-     * @param cacheId    Cache ID.
+     * @param cacheId Cache ID.
      * @param updCntr Update counter.
-     * @param link       Data row link.
+     * @param link Data row link.
      */
     public UpdateLogRow(int cacheId, long updCntr, long link) {
         this.cacheId = cacheId;
-        this.updCntr = updCntr;
+        this.updateCntr = updCntr;
         this.link = link;
     }
 
@@ -88,8 +88,11 @@ public class UpdateLogRow {
         return cacheId;
     }
 
+    /**
+     * @return Update counter.
+     */
     public long updateCounter() {
-        return updCntr;
+        return updateCntr;
     }
 
     /**
