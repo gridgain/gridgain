@@ -65,6 +65,14 @@ public interface DataRegionMetricsMXBean extends DataRegionMetrics {
     @Override public long getTotalUsedPages();
 
     /** {@inheritDoc} */
+    @MXBeanDescription("Total size of allocated pages in bytes.")
+    @Override public long getTotalAllocatedSize();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Total size of used pages in bytes.")
+    @Override public long getTotalUsedSize();
+
+    /** {@inheritDoc} */
     @MXBeanDescription("Allocation rate (pages per second) averaged across rateTimeInternal.")
     @Override public float getAllocationRate();
 
