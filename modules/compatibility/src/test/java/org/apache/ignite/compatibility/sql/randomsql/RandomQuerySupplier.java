@@ -17,10 +17,12 @@
 package org.apache.ignite.compatibility.sql.randomsql;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.ignite.compatibility.sql.randomsql.ast.Ast;
@@ -40,6 +42,12 @@ import org.apache.ignite.internal.util.typedef.internal.A;
  * Supplier which generates random SELECT queries.
  */
 public class RandomQuerySupplier implements Supplier<QueryWithParams> {
+    /** */
+    private static final Predicate<ColumnRef> NUMERICAL_COLUMN_FILTER = col -> Number.class.isAssignableFrom(col.typeClass());
+
+    /** */
+    private static final Ast[] EMPTY_AST_ARR = new Ast[0];
+
     /** Generator of unique alias ID. */
     private final AtomicLong aliasIdGen = new AtomicLong();
 
@@ -52,6 +60,9 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      */
     private final Random rnd;
 
+    /** Helps to take hard decisions. */
+    private final Dice dice;
+
     /**
      * @param schema Schema based on which query will be generated.
      * @param seed Seed used to initialize random value generator.
@@ -62,6 +73,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
         this.schema = schema;
 
         rnd = new Random(seed);
+        dice = new Dice(rnd);
     }
 
     /** {@inheritDoc} */
@@ -80,151 +92,211 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     }
 
     /**
-     * Pick up to 4 random tables from provided schema. Some tables in
-     * result list may appear twice.
-     *
-     * @param schema Schema.
-     * @return List of random tables from schema (perhaps with duplicates).
-     */
-    private List<TableRef> rndTables(Schema schema) {
-        int tblCnt = 1;
-
-        for (int i = 0; i < 3; i++) {
-            if (rndWithRatio(2))
-                tblCnt++;
-        }
-
-        List<Table> tbls = new ArrayList<>(schema.tables());
-
-        tbls.addAll(schema.tables()); // add all tables again to get duplicates
-
-        Collections.shuffle(tbls, rnd);
-
-        List<TableRef> res = new ArrayList<>(tblCnt);
-
-        for (Table tbl : tbls.subList(0, tblCnt)) {
-            String alias = String.valueOf(tbl.name().toLowerCase().charAt(0)) + aliasIdGen.incrementAndGet();
-
-            res.add(new TableRef(tbl, alias));
-        }
-
-        return res;
-    }
-
-    /**
-     * Generates random WHERE expression for provided tables.
-     *
-     * @param rndQryCtx Context of randomised query.
-     * @return Ast representing WHERE expression.
-     */
-    private Ast rndWhereClause(RandomisedQueryContext rndQryCtx) {
-        List<TableRef> tbls = rndQryCtx.scopeTables();
-
-        assert !tbls.isEmpty();
-
-        List<TableRef> tbls0 = new ArrayList<>(tbls);
-
-        Ast cond;
-
-        if (rndWithRatio(4))
-            cond = new Const("TRUE");
-        else {
-            TableRef tbl = tbls0.get(rnd.nextInt(tbls0.size()));
-
-            Ast rightOp;
-            if (rndWithRatio(5))
-                rightOp = new Const(Integer.toString(rnd.nextInt(100)));
-            else {
-                rightOp = new Const("?");
-
-                rndQryCtx.addQueryParam(rnd.nextInt(100));
-            }
-
-            cond = new BiCondition(
-                rndNumericColumn(tbl),
-                rightOp,
-                Operator.EQUALS
-            );
-        }
-
-        // all tables connected one by one with an AND expression
-        while (tbls0.size() >= 2) {
-            TableRef left = tbls0.remove(0);
-            TableRef right = tbls0.get(0);
-
-            cond = new BiCondition(
-                cond,
-                new BiCondition(rndNumericColumn(left), rndNumericColumn(right), Operator.EQUALS),
-                Operator.AND
-            );
-        }
-
-        return cond;
-    }
-
-    /**
      * Generates random SELECT expression.
      *
      * @param rndQryCtx Context of randomised query.
      * @return Ast representing SELECT expression.
      */
     private Select rndSelect(RandomisedQueryContext rndQryCtx) {
-        Ast from = rndFrom(rndQryCtx);
-        Ast where = from instanceof TableList ? rndWhereClause(rndQryCtx) : new Const("TRUE");
-
-        return new Select().from(from).where(where);
+        return dice.roll() <= 3
+            ? rndSingleTableSelect(rndQryCtx)
+            : rndMultiTableSelect(rndQryCtx);
     }
 
     /**
-     * Generates random FROM expression.
+     * Generates random SELECT expression from several tables.
      *
      * @param rndQryCtx Context of randomised query.
-     * @return Ast representing FROM expression.
+     * @return Ast representing SELECT expression.
      */
-    private Ast rndFrom(RandomisedQueryContext rndQryCtx) {
-        List<TableRef> tbls = rndTables(rndQryCtx.schema());
+    private Select rndMultiTableSelect(RandomisedQueryContext rndQryCtx) {
+        pickRndTables(rndQryCtx, 2 + rnd.nextInt(3), true);
 
-        assert !F.isEmpty(tbls);
+        assert rndQryCtx.scopeTables().size() > 1;
 
-        if (tbls.size() == 1 || rndWithRatio(5)) {
-            tbls.forEach(rndQryCtx::addScopeTable);
+        Ast from;
+        Ast where = null;
 
-            return new TableList(tbls);
+        boolean tblList = dice.roll() <= 3;
+        from = tblList ? new TableList(rndQryCtx.scopeTables()) : rndQryCtx.scopeTables().get(0);
+
+        List<TableRef> connScope = new ArrayList<>(rndQryCtx.scopeTables().size());
+
+        // scope of tables that should be connected to each other
+        connScope.add(rndQryCtx.scopeTables().get(0));
+
+        for (int i = 1; i < rndQryCtx.scopeTables().size(); i++) {
+            TableRef anotherTbl = rndQryCtx.scopeTables().get(i);
+
+            Ast cond = new BiCondition(
+                pickRndItem(pickRndItem(connScope).cols(), NUMERICAL_COLUMN_FILTER),
+                pickRndItem(anotherTbl.cols(), NUMERICAL_COLUMN_FILTER),
+                Operator.EQUALS
+            );
+
+            connScope.add(anotherTbl); // add a table to the connection scope AFTER we created the condition
+
+            if (tblList)
+                where = where != null ? new BiCondition(where, cond, Operator.AND) : cond;
+            else
+                from = new InnerJoin(from, anotherTbl, cond);
         }
 
-        TableRef leftTbl = tbls.get(0);
+        if (!tblList)
+            where = new Const("TRUE");
 
-        Ast from = leftTbl;
-
-        rndQryCtx.addScopeTable(leftTbl);
-
-        for (int i = 1; i < tbls.size(); i++) {
-            TableRef rightTbl = tbls.get(i);
-
-            from = new InnerJoin(from, rightTbl,
-                new BiCondition(rndNumericColumn(rndScopeTable(rndQryCtx)), rndNumericColumn(rightTbl), Operator.EQUALS));
-
-            rndQryCtx.addScopeTable(rightTbl); // add a table to the scope AFTER we created the join condition
-        }
-
-        return from;
+        return new Select(rndColList(rndQryCtx))
+            .from(from)
+            .where(new BiCondition(where, rndQueryFilter(rndQryCtx), Operator.AND));
     }
 
     /**
-     * Returns random table which was used in FROM expression.
+     * Generates random column list.
      *
      * @param rndQryCtx Context of randomised query.
+     * @return Ast representing column list.
      */
-    private TableRef rndScopeTable(RandomisedQueryContext rndQryCtx) {
-        if (F.isEmpty(rndQryCtx.scopeTables()))
+    private Ast[] rndColList(RandomisedQueryContext rndQryCtx) {
+        Ast[] cols = EMPTY_AST_ARR;
+
+        if (dice.roll() == 1)
+            return cols; // select * from...
+
+        List<ColumnRef> cols0 = new ArrayList<>();
+
+        rndQryCtx.scopeTables().forEach(t -> cols0.addAll(t.cols()));
+
+        Collections.shuffle(cols0, rnd);
+
+        cols = cols0.subList(0, 1 + rnd.nextInt(2)).toArray(cols);
+
+        return cols;
+    }
+
+    /**
+     * Generates random SELECT expression from single tables.
+     *
+     * @param rndQryCtx Context of randomised query.
+     * @return Ast representing SELECT expression.
+     */
+    private Select rndSingleTableSelect(RandomisedQueryContext rndQryCtx) {
+        pickRndTables(rndQryCtx, 1);
+
+        assert rndQryCtx.scopeTables().size() == 1;
+
+        return new Select(rndColList(rndQryCtx))
+            .from(new TableList(rndQryCtx.scopeTables()))
+            .where(rndQueryFilter(rndQryCtx));
+    }
+
+    /**
+     * Generates random query filter.
+     *
+     * @param rndQryCtx Context of randomised query.
+     * @return Ast representing query filter.
+     */
+    private Ast rndQueryFilter(RandomisedQueryContext rndQryCtx) {
+        List<TableRef> scopeTbls = rndQryCtx.scopeTables();
+
+        Ast cond1 = rndTableFilter(rndQryCtx, scopeTbls.get(rnd.nextInt(scopeTbls.size())));
+
+        if (dice.roll() <= 2)
+            return cond1;
+
+        Ast cond2 = rndTableFilter(rndQryCtx, scopeTbls.get(rnd.nextInt(scopeTbls.size())));
+
+        return new BiCondition(cond1, cond2, dice.roll() <= 2 ? Operator.AND : Operator.OR);
+    }
+
+    /**
+     * Generates random filter for specified table.
+     *
+     * @param rndQryCtx Context of randomised query.
+     * @param tbl Table that requires filter.
+     * @return Ast representing table filter.
+     */
+    private Ast rndTableFilter(RandomisedQueryContext rndQryCtx, TableRef tbl) {
+        Ast rigthOp;
+        if (dice.roll() == 1)
+            rigthOp = new Const(Integer.toString(rnd.nextInt(100)));
+        else {
+            rigthOp = new Const("?");
+
+            rndQryCtx.addQueryParam(rnd.nextInt(100));
+        }
+
+        return new BiCondition(
+            rndNumericColumn(tbl),
+            rigthOp,
+            Operator.EQUALS
+        );
+    }
+
+    /**
+     * Picks N random table from the schema and adds them to the scope.
+     *
+     * @param rndQryCtx Random query context.
+     * @param tblCnt Tables count.
+     */
+    private void pickRndTables(RandomisedQueryContext rndQryCtx, int tblCnt) {
+        pickRndTables(rndQryCtx, tblCnt, false);
+    }
+
+    /**
+     * Picks N random table from the schema and adds them to the scope.
+     *
+     * @param rndQryCtx Random query context.
+     * @param tblCnt Tables count.
+     * @param allowDublicates Whether to allow dublicates or not.
+     */
+    private void pickRndTables(RandomisedQueryContext rndQryCtx, int tblCnt, boolean allowDublicates) {
+        List<Table> tbls = new ArrayList<>(schema.tables());
+
+        if (allowDublicates)
+            tbls.addAll(schema.tables()); // add all tables again to get duplicates
+
+        Collections.shuffle(tbls, rnd);
+
+        for (Table tbl : tbls.subList(0, tblCnt)) {
+            String alias = String.valueOf(tbl.name().toLowerCase().charAt(0)) + aliasIdGen.incrementAndGet();
+
+            rndQryCtx.addScopeTable(new TableRef(tbl, alias));
+        }
+    }
+
+    /**
+     * Picks random item from provided collection that met specified condition.
+     *
+     * @param items Collection for picking item.
+     * @param filter Required condition.
+     * @return Random item or {@code null} if collection is empty or there is no
+     * item that met condition.
+     */
+    private <T> T pickRndItem(Collection<T> items, Predicate<T> filter) {
+        if (F.isEmpty(items))
             return null;
 
-        List<TableRef> tbls = new ArrayList<>(rndQryCtx.scopeTables());
+        List<T> filteredItems = items.stream()
+            .filter(filter)
+            .collect(Collectors.toList());
 
-        if (tbls.size() > 1)
-            Collections.shuffle(tbls, rnd);
+        if (F.isEmpty(filteredItems))
+            return null;
 
-        return tbls.get(0);
+        if (filteredItems.size() > 1)
+            Collections.shuffle(filteredItems, rnd);
+
+        return filteredItems.get(0);
+    }
+
+    /**
+     * Picks random item from provided collection.
+     *
+     * @param items Collection for picking item.
+     * @return Random item or {@code null} if collection is empty.
+     */
+    private <T> T pickRndItem(Collection<T> items) {
+        return pickRndItem(items, i -> true);
     }
 
     /**
@@ -248,13 +320,51 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     }
 
     /**
-     * Returns {@code true} with probability that calculated
-     * as {@code 1/r} where {@code r} - provided ratio.
-     *
-     * @param r Ratio.
-     * @return {@code true} with desired probability.
+     * Classic dice with 6 sides.
      */
-    private boolean rndWithRatio(int r) {
-        return rnd.nextInt(r) == 0;
+    private static class Dice {
+        /** */
+        private static final int SIDES_COUNT = 6;
+
+        /** */
+        private final Random rnd;
+
+        /**
+         * @param rnd Random.
+         */
+        public Dice(Random rnd) {
+            this.rnd = rnd;
+        }
+
+        /**
+         * Roll this dice one times.
+         *
+         * @return Random value within interval [1..6].
+         */
+        public int roll() {
+            return 1 + rnd.nextInt(SIDES_COUNT);
+        }
+
+        /**
+         * Roll this dice twice.
+         *
+         * @return Random value within interval [1..12].
+         */
+        public int rollTwice() {
+            return rollNTimes(2);
+        }
+
+        /**
+         * Roll this dice {@code N} times.
+         *
+         * @param n Amount of time to roll dice. Should be greater than 0.
+         * @return Random value within interval [1..N*6].
+         */
+        public int rollNTimes(int n) {
+            if (n <= 0)
+                throw new IllegalArgumentException("'n' should be greater than 0");
+
+            return 1 + rnd.nextInt(n * SIDES_COUNT);
+        }
     }
 }
