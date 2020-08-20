@@ -92,6 +92,9 @@ public class SortOrder implements Comparator<Value[]> {
      */
     private final ArrayList<SelectOrderBy> orderList;
 
+    /**
+     * The reference to the query contains ORDER BY expressions.
+     */
     private final Query qry;
 
     /**
