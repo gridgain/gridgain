@@ -30,16 +30,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class UpdateLogRow {
     /** Cache ID. */
-    @GridToStringInclude
-    final int cacheId;
+    @GridToStringInclude final int cacheId;
 
     /** Update counter. */
-    @GridToStringInclude
-    final long updCntr;
+    @GridToStringInclude final long updCntr;
 
     /** Link. */
-    @GridToStringInclude
-    final long link;
+    @GridToStringInclude final long link;
 
     /** Materialized row. */
     private CacheDataRowAdapter rowData;
@@ -55,18 +52,18 @@ public class UpdateLogRow {
     }
 
     /**
-     * @param cacheId    Cache ID.
+     * @param cacheId Cache ID.
      * @param updCntr Update counter.
-     * @param link       Data row link.
+     * @param link Data row link.
      */
     public UpdateLogRow(int cacheId, long updCntr) {
         this(cacheId, updCntr, 0L);
     }
 
     /**
-     * @param cacheId    Cache ID.
+     * @param cacheId Cache ID.
      * @param updCntr Update counter.
-     * @param link       Data row link.
+     * @param link Data row link.
      */
     public UpdateLogRow(int cacheId, long updCntr, long link) {
         this.cacheId = cacheId;
@@ -88,6 +85,9 @@ public class UpdateLogRow {
         return cacheId;
     }
 
+    /**
+     * @return Update counter.
+     */
     public long updateCounter() {
         return updCntr;
     }
