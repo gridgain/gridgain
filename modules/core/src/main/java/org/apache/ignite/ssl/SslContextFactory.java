@@ -16,6 +16,7 @@
 
 package org.apache.ignite.ssl;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -466,6 +467,19 @@ public class SslContextFactory implements Factory<SSLContext> {
     private void checkNullParameter(Object param, String name) throws SSLException {
         if (param == null)
             throw new SSLException("Failed to initialize SSL context (parameter cannot be null): " + name);
+    }
+
+    /**
+     * By default, this method simply opens a raw file input stream. Subclasses may override this method
+     * if some specific location should be handled (this may be a case for Android users).
+     *
+     * @param filePath Path to the file.
+     * @return Opened input stream.
+     * @throws IOException If stream could not be opened.
+     */
+    @Deprecated
+    protected InputStream openFileInputStream(String filePath) throws IOException {
+        return new FileInputStream(filePath);
     }
 
     /**
