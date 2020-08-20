@@ -40,9 +40,9 @@ public abstract class AbstractUpdateLogLeafIO extends BPlusLeafIO<UpdateLogRow> 
     /** {@inheritDoc} */
     @Override public void storeByOffset(long pageAddr, int off, UpdateLogRow row) {
         assert row.link != 0;
-        assert row.updateCntr != 0;
+        assert row.updCntr != 0;
 
-        PageUtils.putLong(pageAddr, off, row.updateCntr);
+        PageUtils.putLong(pageAddr, off, row.updCntr);
         PageUtils.putLong(pageAddr, off + 8, row.link);
 
         if (storeCacheId()) {
