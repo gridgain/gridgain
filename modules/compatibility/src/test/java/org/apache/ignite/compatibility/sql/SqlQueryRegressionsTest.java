@@ -48,16 +48,20 @@ import org.apache.ignite.compatibility.testframework.junits.IgniteCompatibilityA
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.IgniteProperties;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.junit.Test;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.unmodifiableList;
 
 /**
  * Test for SQL queries regressions detection.
@@ -97,16 +101,28 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static final Integer DEFAULT_SEED = null;
 
     /** */
-    private static final String DEFAULT_BASE_VERSION = "8.7.22";
+    private static final String DEFAULT_BASE_VERSION = IgniteProperties.get("ignite.version");
+
+    /** */
+    private static final String DEFAULT_TARGET_VERSION = IgniteProperties.get("ignite.version");
 
     /** */
     private static final boolean DEFAULT_BASE_IS_IGNITE = false;
 
     /** */
+    private static final boolean DEFAULT_TARGET_IS_IGNITE = false;
+
+    /** */
     private static final String BASE_VERSION_PARAM = "BASE_VERSION";
 
     /** */
+    private static final String TARGET_VERSION_PARAM = "TARGET_VERSION";
+
+    /** */
     private static final String BASE_IS_IGNITE_PARAM = "BASE_IS_IGNITE";
+
+    /** */
+    private static final String TARGET_IS_IGNITE_PARAM = "TARGET_IS_IGNITE";
 
     /** */
     private static final String SEED_PARAM = "SEED";
@@ -126,15 +142,14 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /** */
     private static final String JDBC_URL = "jdbc:ignite:thin://127.0.0.1:";
 
-    /** */
-    private static final TcpDiscoveryIpFinder BASE_VER_FINDER = new TcpDiscoveryVmIpFinder(true) {{
-        setAddresses(Collections.singleton("127.0.0.1:47500..47509"));
-    }};
+    /** Amount of discovery ports. */
+    private static final int DISCOVERY_PORT_RANGE = 9;
 
-    /**  */
-    private static final TcpDiscoveryVmIpFinder NEW_VER_FINDER = new TcpDiscoveryVmIpFinder(true) {{
-        setAddresses(Collections.singleton("127.0.0.1:47510..47519"));
-    }};
+    /** The very first discovery port in the range for base cluster. */
+    private static final int BASE_DISCOVERY_PORT = 47500;
+
+    /** The very first discovery port in the range for target cluster. */
+    private static final int TARGET_DISCOVERY_PORT = BASE_DISCOVERY_PORT + DISCOVERY_PORT_RANGE + 1;
 
     /** Model factories. */
     private static final List<ModelFactory<?>> MODEL_FACTORIES = Arrays.asList(
@@ -157,26 +172,28 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      */
     private boolean baseIsIgnite;
 
+    /**
+     * {@code true} if target is Ignite, {@code false} if it is GG
+     */
+    private boolean targetIsIgnite;
+
     /** */
-    private String ver;
+    private String baseVer;
+
+    /** */
+    private String targetVer;
 
     /** */
     private int seed;
 
+    /** Current dependecy list. */
+    private DependencyContext currDep;
+
     /** {@inheritDoc} */
     @Override protected Collection<Dependency> getDependencies(String igniteVer) {
-        Collection<Dependency> dependencies = new ArrayList<>();
+        assert currDep != null;
 
-        dependencies.add(new Dependency("core", groupId(), "ignite-core", igniteVer, false));
-        dependencies.add(new Dependency("core", groupId(), "ignite-core", igniteVer, true));
-        dependencies.add(new Dependency("indexing", groupId(), "ignite-indexing", igniteVer, false));
-
-        if (baseIsIgnite)
-            dependencies.add(new Dependency("h2", "com.h2database", "h2", "1.4.197", false));
-        else
-            dependencies.add(new Dependency("h2", groupId(), "ignite-h2", igniteVer, false));
-
-        return dependencies;
+        return currDep.deps();
     }
 
     /** {@inheritDoc} */
@@ -240,36 +257,47 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      *
      * @param seed Random seed.
      */
-    public void startBaseAndNewClusters(int seed) throws Exception {
+    private void startBaseAndNewClusters(int seed) throws Exception {
         // Base cluster.
-        startGrid(2, ver, new NodeConfigurationClosure("0"),
-            ignite -> createTablesAndPopulateData(ignite, seed));
-        startGrid(3, ver, new NodeConfigurationClosure("1"));
+        try (DependencyContext ignored = createContext(baseVer, baseIsIgnite)) {
+            startGrid(3, baseVer, new NodeConfigurationClosure("1", BASE_DISCOVERY_PORT, BASE_JDBC_PORT),
+                ignite -> createTablesAndPopulateData(ignite, seed));
+            startGrid(4, baseVer, new NodeConfigurationClosure("2", BASE_DISCOVERY_PORT, BASE_JDBC_PORT));
+        }
 
-        // New cluster
-        Ignite ignite = IgnitionEx.start(prepareNodeConfig(
-            getConfiguration(getTestIgniteInstanceName(0)), NEW_VER_FINDER, NEW_JDBC_PORT, "0"));
-        IgnitionEx.start(prepareNodeConfig(
-            getConfiguration(getTestIgniteInstanceName(1)), NEW_VER_FINDER, NEW_JDBC_PORT, "1"));
+        rmJvmInstance = null; // clear remote instance because we are going to start separate cluster now
 
-        createTablesAndPopulateData(ignite, seed);
+        // Target cluster
+        try (DependencyContext ignored = createContext(targetVer, targetIsIgnite)) {
+            startGrid(1, targetVer, new NodeConfigurationClosure("1", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT),
+                ignite -> createTablesAndPopulateData(ignite, seed));
+            startGrid(2, targetVer, new NodeConfigurationClosure("2", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT));
+        }
     }
 
     /** */
     private void initParam() {
-        String verParam = System.getProperty(BASE_VERSION_PARAM);
+        String baseVerParam = System.getProperty(BASE_VERSION_PARAM);
+        String targetVerParam = System.getProperty(TARGET_VERSION_PARAM);
         String baseIsIgniteParam = System.getProperty(BASE_IS_IGNITE_PARAM);
+        String targetIsIgniteParam = System.getProperty(TARGET_IS_IGNITE_PARAM);
         String seedParam = System.getProperty(SEED_PARAM);
 
-        ver = !F.isEmpty(verParam) ? verParam : DEFAULT_BASE_VERSION;
+        baseVer = !F.isEmpty(baseVerParam) ? baseVerParam : DEFAULT_BASE_VERSION;
+        targetVer = !F.isEmpty(targetVerParam) ? targetVerParam : DEFAULT_TARGET_VERSION;
+
         baseIsIgnite = !F.isEmpty(baseIsIgniteParam) ? Boolean.parseBoolean(baseIsIgniteParam) : DEFAULT_BASE_IS_IGNITE;
+        targetIsIgnite = !F.isEmpty(targetIsIgniteParam) ? Boolean.parseBoolean(targetIsIgniteParam) : DEFAULT_TARGET_IS_IGNITE;
+
         seed = DEFAULT_SEED != null ? DEFAULT_SEED : !F.isEmpty(seedParam) ? Integer.parseInt(seedParam) : ThreadLocalRandom.current().nextInt();
 
         if (log.isInfoEnabled()) {
             log.info("Test was started with params:\n"
                 + "\tseed=" + seed + "\n"
-                + "\tversion=" + ver + "\n"
+                + "\tbaseVersion=" + baseVer + "\n"
                 + "\tbaseIsIgnite=" + baseIsIgnite + "\n"
+                + "\ttargetVersion=" + targetVer + "\n"
+                + "\ttargetIsIgnite=" + targetIsIgnite + "\n"
             );
         }
     }
@@ -278,10 +306,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      * Stops both new and old clusters.
      */
     public void stopClusters() {
-        // Old cluster.
         IgniteProcessProxy.killAll();
 
-        // New cluster.
+        // Just in case
         for (Ignite ignite : G.allGrids())
             U.close(ignite, log);
     }
@@ -308,11 +335,6 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static void createTablesAndPopulateData(Ignite ignite, int seed) {
         for (ModelFactory<?> mdlFactory : MODEL_FACTORIES)
             createAndPopulateTable(ignite, mdlFactory, seed);
-    }
-
-    /** */
-    private String groupId() {
-        return baseIsIgnite ? "org.apache.ignite" : "org.gridgain";
     }
 
     /** */
@@ -344,19 +366,30 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /**
      * Prepares ignite nodes configuration.
      */
-    private static IgniteConfiguration prepareNodeConfig(IgniteConfiguration cfg, TcpDiscoveryIpFinder ipFinder,
-        int jdbcPort, String consistentId) {
-        cfg.setLocalHost("127.0.0.1");
-        cfg.setPeerClassLoadingEnabled(false);
-        cfg.setConsistentId(consistentId);
-
-        TcpDiscoverySpi disco = new TcpDiscoverySpi();
-        disco.setIpFinder(ipFinder);
-        cfg.setDiscoverySpi(disco);
-
-        ClientConnectorConfiguration clientCfg = new ClientConnectorConfiguration();
-        clientCfg.setPort(jdbcPort);
-        return cfg;
+    private static IgniteConfiguration prepareNodeConfig(
+        IgniteConfiguration cfg,
+        int discoPort,
+        int jdbcPort,
+        String consistentId
+    ) {
+        return cfg
+            .setLocalHost("127.0.0.1")
+            .setPeerClassLoadingEnabled(false)
+            .setConsistentId(consistentId)
+            .setDiscoverySpi(
+                new TcpDiscoverySpi()
+                    .setLocalPort(discoPort)
+                    .setLocalPortRange(DISCOVERY_PORT_RANGE)
+                    .setIpFinder(
+                        new TcpDiscoveryVmIpFinder(true)
+                            .setAddresses(
+                                singletonList("127.0.0.1:" + discoPort + ".." + (discoPort + DISCOVERY_PORT_RANGE))
+                            )
+                    )
+            )
+            .setClientConnectorConfiguration(
+                new ClientConnectorConfiguration().setPort(jdbcPort)
+            );
     }
 
     /**
@@ -366,14 +399,83 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         /** */
         private final String consistentId;
 
+        /** Lower port for discovery port range. */
+        private final int discoPort;
+
+        /** Port for JDBC client connection. */
+        private final int jdbcPort;
+
         /** */
-        public NodeConfigurationClosure(String consistentId) {
+        public NodeConfigurationClosure(String consistentId, int discoPort, int jdbcPort) {
             this.consistentId = consistentId;
+            this.discoPort = discoPort;
+            this.jdbcPort = jdbcPort;
         }
 
         /** {@inheritDoc} */
         @Override public void apply(IgniteConfiguration cfg) {
-            prepareNodeConfig(cfg, BASE_VER_FINDER, BASE_JDBC_PORT, consistentId);
+            prepareNodeConfig(cfg, discoPort, jdbcPort, consistentId);
+        }
+    }
+
+    /**
+     * @param ver Version.
+     * @param isIgnite Is ignite.
+     */
+    private DependencyContext createContext(String ver, boolean isIgnite) {
+        List<Dependency> dependencies = new ArrayList<>();
+
+        String grpId = groupId(isIgnite);
+
+        dependencies.add(new Dependency("core", grpId, "ignite-core", ver, false));
+        dependencies.add(new Dependency("core", grpId, "ignite-core", ver, true));
+        dependencies.add(new Dependency("indexing", grpId, "ignite-indexing", ver, false));
+
+        dependencies.add(h2Dependency(ver, isIgnite));
+
+        return (currDep = new DependencyContext(dependencies));
+    }
+
+    /**
+     * @param verStr Version string.
+     * @param isIgnite Is ignite.
+     */
+    private Dependency h2Dependency(String verStr, boolean isIgnite) {
+        IgniteProductVersion ver = IgniteProductVersion.fromString(verStr);
+
+        if (isIgnite || ver.compareTo(IgniteProductVersion.fromString("8.7.6")) <= 0)
+            return new Dependency("h2", "com.h2database", "h2", "1.4.197", false);
+
+        return new Dependency("h2", groupId(isIgnite), "ignite-h2", verStr, false);
+    }
+
+    /**
+     * @param isIgnite Is ignite.
+     */
+    private String groupId(boolean isIgnite) {
+        return isIgnite ? "org.apache.ignite" : "org.gridgain";
+    }
+
+    /** */
+    private class DependencyContext implements AutoCloseable {
+        /** */
+        private final List<Dependency> deps;
+
+        /**
+         * @param deps Deps.
+         */
+        public DependencyContext(List<Dependency> deps) {
+            this.deps = F.isEmpty(deps) ? emptyList() : unmodifiableList(deps);
+        }
+
+        /** */
+        public List<Dependency> deps() {
+            return deps;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() throws Exception {
+            currDep = null;
         }
     }
 }
