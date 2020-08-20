@@ -98,7 +98,7 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         return updateVer;
     }
 
-    /** {@inheritDoc} */
+    /** Returns list of supported ignite features. */
     public Set<IgniteFeatures> supportedFeatures() {
         return supportedFeatures;
     }
