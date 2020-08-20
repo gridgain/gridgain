@@ -7,24 +7,17 @@ package org.h2.test.synth;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import org.h2.test.utils.Utils;
-import org.h2.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.h2.test.utils.Utils.sql;
 import static org.h2.test.utils.Utils.sqlStr;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.h2.test.utils.Utils.sql;
 
 /**
  * A test that runs random join statements against two databases and compares the results.
