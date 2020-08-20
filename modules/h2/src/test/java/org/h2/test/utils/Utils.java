@@ -5,7 +5,6 @@
  */
 package org.h2.test.utils;
 
-import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
