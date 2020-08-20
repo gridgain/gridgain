@@ -49,7 +49,6 @@ import org.junit.Test;
  * Test checks a work of the TTL policy.
  */
 public class EagerTtlTest extends GridCommonAbstractTest {
-
     /** Text will print to log when assertion error happens. */
     private static final String ASSERTION_ERR = "java.lang.AssertionError: Invalid topology version [topVer=" +
         AffinityTopologyVersion.NONE +
@@ -65,7 +64,7 @@ public class EagerTtlTest extends GridCommonAbstractTest {
     public static final int ENTRIES = 100;
 
     /** Cache eager ttl falg. */
-    private boolean eagerTtl = false;
+    private boolean eagerTtl;
 
     /** Listening logger. */
     private ListeningTestLogger listeningLog;
@@ -99,13 +98,13 @@ public class EagerTtlTest extends GridCommonAbstractTest {
      * @param cacheName Cahce name.
      * @return Cache configuration.
      */
-    private CacheConfiguration getCacheConfiguration(String cacheName) {
+    private CacheConfiguration<Integer, Integer> getCacheConfiguration(String cacheName) {
         return new CacheConfiguration(cacheName)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setEagerTtl(eagerTtl)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 1)));
+            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, EXPIRATION_TIME )));
     }
 
     /**
@@ -121,7 +120,7 @@ public class EagerTtlTest extends GridCommonAbstractTest {
 
         ignite.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < ENTRIES; i++)
             cache.put(i, i);
@@ -168,7 +167,7 @@ public class EagerTtlTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testNotEagerEpireOnPut() throws Exception {
+    public void testNotEagerExpireOnPut() throws Exception {
         eagerTtl = false;
 
         IgniteEx ignite = startGrid(0);
@@ -179,7 +178,7 @@ public class EagerTtlTest extends GridCommonAbstractTest {
 
         listeningLog.registerListener(assertListener);
 
-        IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < ENTRIES; i++)
             cache.put(i, i);
@@ -189,7 +188,10 @@ public class EagerTtlTest extends GridCommonAbstractTest {
 
             for (int i = 0; i < ENTRIES; i++) {
                 try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC, isolation)) {
-                    cache.putAll(Collections.singletonMap(i, isolation.ordinal() + 1));
+                    if (1 % 2 == 0)
+                        cache.putAll(Collections.singletonMap(i, isolation.ordinal() + 1));
+                    else
+                        cache.getAndPut(i, isolation.ordinal() + 1);
 
                     tx.commit();
                 }
