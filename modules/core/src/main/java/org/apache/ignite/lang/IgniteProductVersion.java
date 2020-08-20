@@ -25,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteVersionUtils;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
@@ -48,7 +49,7 @@ public class IgniteProductVersion implements Comparable<IgniteProductVersion>, E
 
     /** Regexp parse pattern. */
     private static final Pattern VER_PATTERN =
-        Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)([-.]([^0123456789][^-]+)(-SNAPSHOT)?)?(-(\\d+))?(-([\\da-f]+))?");
+        Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)([-.]([^\\d][^-]+)(-SNAPSHOT)?)?(-(\\d+))?(-([\\da-f]+))?");
 
     /** Major version number. */
     private byte major;
@@ -272,7 +273,9 @@ public class IgniteProductVersion implements Comparable<IgniteProductVersion>, E
 
         hash = hash.length() > 8 ? hash.substring(0, 8) : hash;
 
-        return major + "." + minor + "." + maintenance + "#" + revTsStr + "-sha1:" + hash;
+        return major + "." + minor + "." + maintenance +
+            (F.isEmpty(stage) ? "" : ("-" + stage)) +
+            "#" + revTsStr + "-sha1:" + hash;
     }
 
     /**

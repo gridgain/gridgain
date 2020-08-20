@@ -42,6 +42,7 @@ public class GridProductVersionSelfTest extends GridCommonAbstractTest {
         assertEquals("", ver.stage());
         assertEquals(0, ver.revisionTimestamp());
         assertArrayEquals(new byte[20], ver.revisionHash());
+        assertEquals("1.2.3#19700101-sha1:00000000", ver.toString());
 
         ver = IgniteProductVersion.fromString("1.2.3-0-DEV");
 
@@ -59,6 +60,18 @@ public class GridProductVersionSelfTest extends GridCommonAbstractTest {
         assertEquals("b1", ver.stage());
         assertEquals(4, ver.revisionTimestamp());
         assertArrayEquals(new byte[20], ver.revisionHash());
+
+        ver = IgniteProductVersion.fromString("2.7.2-p14-1597656965-14d6499e102005cb5308a834976f1dc751a2775f");
+
+        assertEquals(2, ver.major());
+        assertEquals(7, ver.minor());
+        assertEquals(2, ver.maintenance());
+        assertEquals("p14", ver.stage());
+        assertEquals(1597656965L, ver.revisionTimestamp());
+        assertArrayEquals(new byte[] {
+            20, -42, 73, -98, 16, 32, 5, -53, 83, 8, -88, 52, -105, 111, 29, -57, 81, -94, 119, 95 },
+            ver.revisionHash());
+        assertEquals("2.7.2-p14#20200817-sha1:14d6499e", ver.toString());
 
         ver = IgniteProductVersion.fromString("1.2.3.final-4-DEV");
 
