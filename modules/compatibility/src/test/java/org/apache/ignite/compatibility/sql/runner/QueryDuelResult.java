@@ -45,7 +45,7 @@ public class QueryDuelResult {
      * @param baseErr Base err.
      * @param targetErr Target err.
      */
-    public QueryDuelResult(QueryWithParams qry, long baseExecTimeNanos, long targetExecTimeNanos,
+    private QueryDuelResult(QueryWithParams qry, long baseExecTimeNanos, long targetExecTimeNanos,
         Exception baseErr, Exception targetErr) {
         this.qry = qry;
         this.baseExecTimeNanos = baseExecTimeNanos;
