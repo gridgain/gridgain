@@ -1068,9 +1068,9 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
      * @throws Throwable
      */
     @Test
-    public void testOpenFileInputStream() throws Throwable{
+    public void testOpenFileInputStream() throws Throwable {
         // 1. by relative path
-        try(InputStream relative = U.openFileInputStream("org.apache.ignite.util/bigUtf.txt")) {
+        try (InputStream relative = U.openFileInputStream("org.apache.ignite.util/bigUtf.txt")) {
             assertNotNull("Can't open input stream by relative path org.apache.ignite.util/bigUtf.txt", relative);
         }
 
@@ -1081,12 +1081,12 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         }
 
         // 3. by classpath path
-        try(InputStream classpath = U.openFileInputStream("org/apache/ignite/internal/util/IgniteUtils.class")) {
+        try (InputStream classpath = U.openFileInputStream("org/apache/ignite/internal/util/IgniteUtils.class")) {
             assertNotNull("Can't open input stream to IgniteUtils.class resource", classpath);
         }
 
         // 4. by non existing path
-        try(InputStream notExisting = U.openFileInputStream("Open/Source/In-Memory/Computing/Platform/Apache/Ignite");) {
+        try (InputStream notExisting = U.openFileInputStream("Open/Source/In-Memory/Computing/Platform/Apache/Ignite");) {
             fail("Open input stream to not existing resource");
         } catch (FileNotFoundException e) {
             // No-op.
