@@ -3601,7 +3601,6 @@ public abstract class IgniteUtils {
      * @throws IOException If stream could not be opened.
      */
     public static InputStream openFileInputStream(String filePath) throws IOException {
-
         File abs = new File(filePath);
 
         if (abs.exists())

@@ -1065,7 +1065,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
      * 3. by classpath path
      * 4. by non existing path
      *
-     * @throws Throwable
+     * @throws Throwable If fails.
      */
     @Test
     public void testOpenFileInputStream() throws Throwable {
