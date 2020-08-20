@@ -1009,38 +1009,42 @@ public class GridDhtPartitionDemander {
         try {
             GridCacheEntryEx cached = null;
 
-            try {
-                cached = cctx.cache().entryEx(info.key(), topVer);
-
-                if (log.isTraceEnabled())
-                    log.trace("Rebalancing key [key=" + info.key() + ", part=" + p + ", node=" + from.id() + ']');
-
-                if (cached.mvccPreloadEntry(history)) {
-                    cached.touch(); // Start tracking.
-
-                    if (cctx.events().isRecordable(EVT_CACHE_REBALANCE_OBJECT_LOADED) && !cached.isInternal())
-                        cctx.events().addEvent(cached.partition(), cached.key(), cctx.localNodeId(), null,
-                            null, null, EVT_CACHE_REBALANCE_OBJECT_LOADED, null, true, null,
-                            false, null, null, null, true);
-                }
-                else {
-                    cached.touch(); // Start tracking.
+            while (true) {
+                try {
+                    cached = cctx.cache().entryEx(info.key(), topVer);
 
                     if (log.isTraceEnabled())
-                        log.trace("Rebalancing entry is already in cache (will ignore) [key=" + cached.key() +
-                            ", part=" + p + ']');
-                }
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                if (log.isTraceEnabled())
-                    log.trace("Entry has been concurrently removed while rebalancing (will ignore) [key=" +
-                        cached.key() + ", part=" + p + ']');
-            }
-            catch (GridDhtInvalidPartitionException ignored) {
-                if (log.isDebugEnabled())
-                    log.debug("Partition became invalid during rebalancing (will ignore): " + p);
+                        log.trace("Rebalancing key [key=" + info.key() + ", part=" + p + ", node=" + from.id() + ']');
 
-                return false;
+                    if (cached.mvccPreloadEntry(history)) {
+                        cached.touch(); // Start tracking.
+
+                        if (cctx.events().isRecordable(EVT_CACHE_REBALANCE_OBJECT_LOADED) && !cached.isInternal())
+                            cctx.events().addEvent(cached.partition(), cached.key(), cctx.localNodeId(), null,
+                                null, null, EVT_CACHE_REBALANCE_OBJECT_LOADED, null, true, null,
+                                false, null, null, null, true);
+                    }
+                    else {
+                        cached.touch(); // Start tracking.
+
+                        if (log.isTraceEnabled())
+                            log.trace("Rebalancing entry is already in cache (will ignore) [key=" + cached.key() +
+                                ", part=" + p + ']');
+                    }
+
+                    break;
+                }
+                catch (GridCacheEntryRemovedException ignored) {
+                    if (log.isTraceEnabled())
+                        log.trace("Entry has been concurrently removed while rebalancing (will ignore) [key=" +
+                            cached.key() + ", part=" + p + ']');
+                }
+                catch (GridDhtInvalidPartitionException ignored) {
+                    if (log.isDebugEnabled())
+                        log.debug("Partition became invalid during rebalancing (will ignore): " + p);
+
+                    return false;
+                }
             }
         }
         catch (IgniteInterruptedCheckedException | ClusterTopologyCheckedException e) {
