@@ -30,13 +30,16 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class UpdateLogRow {
     /** Cache ID. */
-    @GridToStringInclude final int cacheId;
+    @GridToStringInclude
+    final int cacheId;
 
     /** Update counter. */
-    @GridToStringInclude final long updCntr;
+    @GridToStringInclude
+    final long updCntr;
 
     /** Link. */
-    @GridToStringInclude final long link;
+    @GridToStringInclude
+    final long link;
 
     /** Materialized row. */
     private CacheDataRowAdapter rowData;
