@@ -876,7 +876,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     private void mergeServersFail1(boolean waitRebalance, boolean delayRebalance, int mergeTopVer) throws Exception {
         testSpi = true;
 
-        final Ignite srv0 = startGrids(5);
+        final IgniteEx srv0 = startGrids(5);
 
         if (waitRebalance)
             awaitPartitionMapExchange();
@@ -908,14 +908,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         stopGrid(getTestIgniteInstanceName(2), true, false);
 
-        assertTrue("Failed to wait baseline change.", GridTestUtils.waitForCondition(() -> {
-            for (Ignite ign: G.allGrids()) {
-                if (ign.cluster().currentBaselineTopology().size() != 2)
-                    return false;
-            }
-
-            return true;
-        }, 10_000));
+        // Waiting for baseline auto adjustment completed.
+        srv0.context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(8, 1)).get();
 
         checkAffinity();
 
