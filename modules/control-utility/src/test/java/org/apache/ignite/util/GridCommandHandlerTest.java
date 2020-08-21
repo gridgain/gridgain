@@ -785,9 +785,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testConnectivityCommandWithoutFailedNodes() throws Exception {
         IgniteEx ignite = startGrids(5);
 
-        assertFalse(ignite.cluster().active());
+        assertFalse(ClusterState.active(ignite.cluster().state()));
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         injectTestSystemOut();
 
@@ -839,9 +839,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             return configuration;
         });
 
-        ignite.active(true);
+        ignite.cluster().state(ACTIVE);
 
-        failure.active(true);
+        failure.cluster().state(ACTIVE);
 
         injectTestSystemOut();
 
