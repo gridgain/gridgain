@@ -69,6 +69,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.messages.SpanContainer;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessage;
@@ -514,7 +515,7 @@ class ClientImpl extends TcpDiscoveryImpl {
             throw new IgniteException("Failed to send custom message: client is " + state.name().toLowerCase() + ".");
 
         try {
-            TcpDiscoveryAbstractMessage msg;
+            TcpDiscoveryCustomEventMessage msg;
 
             if (((CustomMessageWrapper)evt).delegate() instanceof DiscoveryServerOnlyCustomMessage)
                 msg = new TcpDiscoveryServerOnlyCustomEventMessage(getLocalNodeId(), evt,
@@ -523,7 +524,19 @@ class ClientImpl extends TcpDiscoveryImpl {
                 msg = new TcpDiscoveryCustomEventMessage(getLocalNodeId(), evt,
                     U.marshal(spi.marshaller(), evt));
 
+            Span rootSpan = tracing.create(TraceableMessagesTable.traceName(msg.getClass()))
+                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), () -> getLocalNodeId().toString())
+                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
+                    () -> locNode.consistentId().toString())
+                .addTag(SpanTags.MESSAGE_CLASS, () -> ((CustomMessageWrapper)evt).delegate().getClass().getSimpleName())
+                .addLog(() -> "Created");
+
+            // This root span will be parent both from local and remote nodes.
+            msg.spanContainer().serializedSpanBytes(tracing.serialize(rootSpan));
+
             sockWriter.sendMessage(msg);
+
+            rootSpan.addLog(() -> "Sent").end();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteSpiException("Failed to marshal custom event: " + evt, e);
@@ -1787,11 +1800,21 @@ class ClientImpl extends TcpDiscoveryImpl {
                         assert spi.getSpiContext().isStopping();
 
                         if (connected && currSock != null) {
-                            TcpDiscoveryAbstractMessage leftMsg = new TcpDiscoveryNodeLeftMessage(getLocalNodeId());
+                            TcpDiscoveryNodeLeftMessage leftMsg = new TcpDiscoveryNodeLeftMessage(getLocalNodeId());
 
                             leftMsg.client(true);
 
+                            Span rootSpan = tracing.create(TraceableMessagesTable.traceName(leftMsg.getClass()))
+                                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), () -> locNode.id().toString())
+                                .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.CONSISTENT_ID),
+                                    () -> locNode.consistentId().toString())
+                                .addLog(() -> "Created");
+
+                            leftMsg.spanContainer().serializedSpanBytes(tracing.serialize(rootSpan));
+
                             sockWriter.sendMessage(leftMsg);
+
+                            rootSpan.addLog(() -> "Sent").end();
                         }
                         else
                             leaveLatch.countDown();
@@ -2669,6 +2692,20 @@ class ClientImpl extends TcpDiscoveryImpl {
          * @param msg Message.
          */
         void addMessage(Object msg) {
+            //TODO: https://ggsystems.atlassian.net/browse/GG-22502
+            if (msg instanceof TraceableMessage && msg instanceof TcpDiscoveryAbstractMessage) {
+                TraceableMessage tMsg = (TraceableMessage)msg;
+
+                if (!((TcpDiscoveryAbstractMessage)msg).verified() &&
+                    tMsg.spanContainer().serializedSpanBytes() == null) {
+                    Span rootSpan = tracing.create(TraceableMessagesTable.traceName(tMsg.getClass()))
+                        .end();
+
+                    // This root span will be parent both from local and remote nodes.
+                    tMsg.spanContainer().serializedSpanBytes(tracing.serialize(rootSpan));
+                }
+            }
+
             queue.add(msg);
         }
 

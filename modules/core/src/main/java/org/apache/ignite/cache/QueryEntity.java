@@ -16,6 +16,7 @@
 
 package org.apache.ignite.cache;
 
+import java.util.LinkedHashSet;
 import javax.cache.CacheException;
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -120,7 +121,7 @@ public class QueryEntity implements Serializable {
         valueFieldName = other.valueFieldName;
 
         fields = new LinkedHashMap<>(other.fields);
-        keyFields = other.keyFields != null ? new HashSet<>(other.keyFields) : null;
+        keyFields = other.keyFields != null ? new LinkedHashSet<>(other.keyFields) : null;
 
         aliases = new HashMap<>(other.aliases);
         idxs = other.idxs != null ? new ArrayList<>(other.idxs) : null;

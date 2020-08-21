@@ -14,27 +14,36 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
+package org.apache.ignite.tests.p2p.cache;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log.PageLockLogSnapshot;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.PageLockStackSnapshot;
+import java.io.Serializable;
 
 /**
- * Dump processor.
+ * Car color
  */
-public interface DumpProcessor {
+public enum Color implements Serializable {
     /**
-     * @param snapshot Process lock log snapshot.
+     * Grey color.
      */
-    void processDump(PageLockLogSnapshot snapshot);
+    GREY,
 
     /**
-     * @param snapshot Process lock stack snapshot.
+     * Red color.
      */
-    void processDump(PageLockStackSnapshot snapshot);
+    RED,
 
     /**
-     * @param snapshot Process lock thread dump snapshot.
+     * Green color.
      */
-    void processDump(ThreadPageLocksDumpLock snapshot);
+    GREEN,
+
+    /**
+     * Purple color.
+     */
+    PURPLE,
+
+    /**
+     * Light blue color.
+     */
+    LIGHTBLUE
 }
