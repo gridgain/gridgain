@@ -909,7 +909,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         stopGrid(getTestIgniteInstanceName(2), true, false);
 
         // Waiting for baseline auto adjustment completed.
-        srv0.context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(8, 1)).get();
+        srv0.context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(8, 0)).get();
 
         checkAffinity();
 
