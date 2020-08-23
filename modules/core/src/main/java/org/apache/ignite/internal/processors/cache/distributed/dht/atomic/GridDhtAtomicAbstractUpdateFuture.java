@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -54,6 +55,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_PROCESS_ATOMIC_DEFERRED_UPDATE_RESPONSE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_UPDATE_FUTURE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_UPDATE_MAP;
 
 /**
  * DHT atomic cache backup update future.
@@ -387,46 +392,58 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
         GridCacheReturn ret,
         GridNearAtomicUpdateResponse updateRes,
         GridDhtAtomicCache.UpdateReplyClosure completionCb) {
-        if (F.isEmpty(mappings)) {
-            updateRes.mapping(Collections.<UUID>emptyList());
+        try (
+            TraceSurroundings ignored =
+                MTC.supportContinual(span = cctx.kernalContext().tracing().create(CACHE_API_DHT_UPDATE_FUTURE,
+                    MTC.span()));
+            TraceSurroundings ignored2 =
+                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_DHT_UPDATE_MAP, span))
+        ) {
+            span.addTag("write.version", writeVer::toString);
 
-            completionCb.apply(updateReq, updateRes);
+            MTC.span().addTag("mappings", () -> mappings.toString());
 
-            onDone();
+            if (F.isEmpty(mappings)) {
+                updateRes.mapping(Collections.<UUID>emptyList());
 
-            return;
-        }
+                completionCb.apply(updateReq, updateRes);
 
-        boolean needReplyToNear = updateReq.writeSynchronizationMode() == PRIMARY_SYNC ||
-            !ret.emptyResult() ||
-            updateReq.nearCache() ||
-            cctx.localNodeId().equals(nearNode.id());
+                onDone();
 
-        boolean needMapping = updateReq.fullSync() && (updateReq.needPrimaryResponse() || !sendAllToDht());
+                return;
+            }
 
-        boolean readersOnlyNodes = false;
+            boolean needReplyToNear = updateReq.writeSynchronizationMode() == PRIMARY_SYNC ||
+                !ret.emptyResult() ||
+                updateReq.nearCache() ||
+                cctx.localNodeId().equals(nearNode.id());
 
-        if (!updateReq.needPrimaryResponse() && addedReader) {
-            for (GridDhtAtomicAbstractUpdateRequest dhtReq : mappings.values()) {
-                if (dhtReq.nearSize() > 0 && dhtReq.size() == 0) {
-                    readersOnlyNodes = true;
+            boolean needMapping = updateReq.fullSync() && (updateReq.needPrimaryResponse() || !sendAllToDht());
 
-                    break;
+            boolean readersOnlyNodes = false;
+
+            if (!updateReq.needPrimaryResponse() && addedReader) {
+                for (GridDhtAtomicAbstractUpdateRequest dhtReq : mappings.values()) {
+                    if (dhtReq.nearSize() > 0 && dhtReq.size() == 0) {
+                        readersOnlyNodes = true;
+
+                        break;
+                    }
                 }
             }
+
+            if (needMapping || readersOnlyNodes) {
+                initMapping(updateRes);
+
+                needReplyToNear = true;
+            }
+
+            // If there are readers updates then nearNode should not finish before primary response received.
+            sendDhtRequests(nearNode, ret, !readersOnlyNodes);
+
+            if (needReplyToNear)
+                completionCb.apply(updateReq, updateRes);
         }
-
-        if (needMapping || readersOnlyNodes) {
-            initMapping(updateRes);
-
-            needReplyToNear = true;
-        }
-
-        // If there are readers updates then nearNode should not finish before primary response received.
-        sendDhtRequests(nearNode, ret, !readersOnlyNodes);
-
-        if (needReplyToNear)
-            completionCb.apply(updateReq, updateRes);
     }
 
     /**
@@ -496,10 +513,14 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
      * @param nodeId Backup node ID.
      */
     final void onDeferredResponse(UUID nodeId) {
-        if (log.isDebugEnabled())
-            log.debug("Received deferred DHT atomic update future result [nodeId=" + nodeId + ']');
+        try (MTC.TraceSurroundings ignored =
+                 MTC.support(cctx.kernalContext().tracing().
+                     create(CACHE_API_DHT_PROCESS_ATOMIC_DEFERRED_UPDATE_RESPONSE, span))) {
+            if (log.isDebugEnabled())
+                log.debug("Received deferred DHT atomic update future result [nodeId=" + nodeId + ']');
 
-        registerResponse(nodeId);
+            registerResponse(nodeId);
+        }
     }
 
     /**
