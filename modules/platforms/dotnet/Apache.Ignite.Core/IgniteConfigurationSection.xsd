@@ -622,6 +622,29 @@
                                                 </xs:attribute>
                                             </xs:complexType>
                                         </xs:element>
+                                      <!-- Add the declaration 
+                                        <xs:element name="nodeFilter" minOccurs="0">
+                                          <xs:annotation>
+                                            <xs:documentation>Attribute node filter to match only nodes with a particular attributes set.</xs:documentation>
+                                          </xs:annotation>
+                                          <xs:complexType>
+                                            <xs:sequence>
+                                              <xs:element name="iNodeFilter">
+                                                <xs:annotation>
+                                                  <xs:documentation>Node filter.</xs:documentation>
+                                                </xs:annotation>
+                                                <xs:complexType>
+                                                  <xs:attribute name="type" type="xs:string" use="required">
+                                                    <xs:annotation>
+                                                      <xs:documentation>Assembly-qualified type name.</xs:documentation>
+                                                    </xs:annotation>
+                                                  </xs:attribute>
+                                                </xs:complexType>
+                                              </xs:element>
+                                            </xs:sequence>
+                                          </xs:complexType>
+                                        </xs:element>
+                                        -->
                                         <xs:element name="keyConfiguration" minOccurs="0">
                                             <xs:annotation>
                                                 <xs:documentation>Cache key configuration collection.</xs:documentation>
