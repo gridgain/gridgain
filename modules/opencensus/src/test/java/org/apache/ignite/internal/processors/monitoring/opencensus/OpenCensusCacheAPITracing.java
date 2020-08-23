@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT;
+import static org.apache.ignite.internal.processors.monitoring.opencensus.AbstractTracingTest.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_PROCESS_ATOMIC_DEFERRED_UPDATE_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_PROCESS_ATOMIC_UPDATE_REQUEST;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_UPDATE_FUTURE;
@@ -66,6 +67,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  *     <li>removeAllAsync</li>
  * </ul>
  */
+@WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
 public class OpenCensusCacheAPITracing extends AbstractTracingTest {
 
     /** Client node. */
@@ -73,9 +75,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
 
     /** Cache name*/
     public static final String ATOMIC_CACHE = "AtomicCache";
-
-    /** */
-    public static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL = "10";
 
     /** {@inheritDoc} */
     @Override protected TracingSpi getTracingSpi() {
@@ -128,12 +127,8 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicPutTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -243,7 +238,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicPutAllTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAll(
             new HashMap<String, Integer>() {{
@@ -251,9 +245,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 put("Two", 2);
                 put("Three", 3);
             }});
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -288,11 +279,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             2,
             null);
 
-        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
+        );
 
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -318,11 +312,13 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -379,12 +375,8 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicPutAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAsync("One",1);
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -419,11 +411,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutSpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutSpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             spanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapSpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -494,7 +489,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicPutAllAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAllAsync(
             new HashMap<String, Integer>() {{
@@ -502,9 +496,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 put("Two", 2);
                 put("Three", 3);
             }});
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -539,11 +530,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             2,
             null);
 
-        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -569,11 +563,13 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -636,17 +632,10 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicRemoveTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
-
         client.cache(ATOMIC_CACHE).remove("One");
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -681,11 +670,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutSpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutSpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             spanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapSpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -756,7 +748,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicRemoveAllTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAll(
             new HashMap<String, Integer>() {{
@@ -765,18 +756,12 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 put("Three", 3);
             }});
 
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
-
         client.cache(ATOMIC_CACHE).removeAll(
             new HashSet<String>() {{
                 add("One");
                 add("Two");
                 add("Three");
             }});
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -811,11 +796,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             2,
             null);
 
-        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -841,11 +829,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -902,17 +893,10 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicRemoveAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAsync("One",1);
 
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
-
         client.cache(ATOMIC_CACHE).removeAsync("One");
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -947,11 +931,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutSpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutSpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             spanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapSpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -1022,7 +1009,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicRemoveAllAsyncTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAllAsync(
             new HashMap<String, Integer>() {{
@@ -1031,18 +1017,12 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 put("Three", 3);
             }});
 
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
-
         client.cache(ATOMIC_CACHE).removeAllAsync(
             new HashSet<String>() {{
                 add("One");
                 add("Two");
                 add("Three");
             }});
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -1077,11 +1057,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             2,
             null);
 
-        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq1SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -1107,11 +1090,14 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             1,
             null);
 
-        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpan(
+        List<SpanId> dhtUpdateFutReq2SpanIds = checkSpanWithWaitForCondition(
             CACHE_API_DHT_UPDATE_FUTURE,
             reqNearReqSpanIds.get(0),
             1,
-            null);
+            null,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
+
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -1154,17 +1140,10 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicRemoveWithValidValTracing() throws Exception {
         client.cache(ATOMIC_CACHE).put("One",1);
 
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
-
         client.cache(ATOMIC_CACHE).remove("One", 1);
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -1198,17 +1177,10 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
     public void testCacheAtomicRemoveAsyncWithValidValueTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAsync("One",1);
 
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
-
         client.cache(ATOMIC_CACHE).removeAsync("One", 1);
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
@@ -1260,9 +1232,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             () -> client.cache(ATOMIC_CACHE).remove(null),
             NullPointerException.class,
             "Ouch! Argument cannot be null: key");
-
-        // Waiting for all batched responses.
-        Thread.sleep(Integer.valueOf(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 10);
 
         handler().flush();
 
