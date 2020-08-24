@@ -249,10 +249,10 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
         List<SpanId> reqSpanIds = checkSpan(
             CACHE_API_NEAR_PROCESS_ATOMIC_GET_REQUEST,
             spanIds.get(0),
-            3,
+            2,
             null);
 
-        // key ONE
+        // Futute 1.
         List<SpanId> dhtGetFutSpanIds1 = checkSpan(
             CACHE_API_DHT_GET_FUTURE,
             reqSpanIds.get(0),
@@ -271,7 +271,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             1,
             null);
 
-        // key TWO
+        // Futue 2.
         List<SpanId> dhtGetFutSpanIds2 = checkSpan(
             CACHE_API_DHT_GET_FUTURE,
             reqSpanIds.get(1),
@@ -287,25 +287,6 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
         checkSpan(
             CACHE_API_NEAR_PROCESS_ATOMIC_GET_RESPONSE,
             reqSpanIds.get(1),
-            1,
-            null);
-
-        // key THREE
-        List<SpanId> dhtGetFutSpanIds3 = checkSpan(
-            CACHE_API_DHT_GET_FUTURE,
-            reqSpanIds.get(2),
-            1,
-            null);
-
-        checkSpan(
-            CACHE_API_DHT_GET_MAP,
-            dhtGetFutSpanIds3.get(0),
-            1,
-            null);
-
-        checkSpan(
-            CACHE_API_NEAR_PROCESS_ATOMIC_GET_RESPONSE,
-            reqSpanIds.get(2),
             1,
             null);
     }
@@ -472,10 +453,10 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
         List<SpanId> reqSpanIds = checkSpan(
             CACHE_API_NEAR_PROCESS_ATOMIC_GET_REQUEST,
             spanIds.get(0),
-            3,
+            2,
             null);
 
-        // key ONE
+        // Futute 1.
         List<SpanId> dhtGetFutSpanIds1 = checkSpan(
             CACHE_API_DHT_GET_FUTURE,
             reqSpanIds.get(0),
@@ -494,7 +475,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             1,
             null);
 
-        // key TWO
+        // Futute 2.
         List<SpanId> dhtGetFutSpanIds2 = checkSpan(
             CACHE_API_DHT_GET_FUTURE,
             reqSpanIds.get(1),
@@ -510,25 +491,6 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
         checkSpan(
             CACHE_API_NEAR_PROCESS_ATOMIC_GET_RESPONSE,
             reqSpanIds.get(1),
-            1,
-            null);
-
-        // key THREE
-        List<SpanId> dhtGetFutSpanIds3 = checkSpan(
-            CACHE_API_DHT_GET_FUTURE,
-            reqSpanIds.get(2),
-            1,
-            null);
-
-        checkSpan(
-            CACHE_API_DHT_GET_MAP,
-            dhtGetFutSpanIds3.get(0),
-            1,
-            null);
-
-        checkSpan(
-            CACHE_API_NEAR_PROCESS_ATOMIC_GET_RESPONSE,
-            reqSpanIds.get(2),
             1,
             null);
     }
