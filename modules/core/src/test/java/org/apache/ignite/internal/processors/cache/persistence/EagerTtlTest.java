@@ -55,15 +55,15 @@ public class EagerTtlTest extends GridCommonAbstractTest {
         ", group=" + DEFAULT_CACHE_NAME + ']';
 
     /** Text will appear when an assertion error happens. */
-    public static final String ANY_ASSERTION_ERR = "java.lang.AssertionError";
+    private static final String ANY_ASSERTION_ERR = "java.lang.AssertionError";
 
     /** Expiration time. */
-    public static final int EXPIRATION_TIME = 1_000;
+    private static final int EXPIRATION_TIME = 1_000;
 
     /** Count of entries. */
-    public static final int ENTRIES = 100;
+    private static final int ENTRIES = 100;
 
-    /** Cache eager ttl falg. */
+    /** Cache eager ttl flag. */
     private boolean eagerTtl;
 
     /** Listening logger. */
@@ -74,7 +74,7 @@ public class EagerTtlTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName)
             .setGridLogger(listeningLog)
             .setClusterStateOnStart(ClusterState.INACTIVE)
-            .setCacheConfiguration(getCacheConfiguration(DEFAULT_CACHE_NAME))
+            .setCacheConfiguration(getDefaultCacheConfiguration())
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setMaxSize(200L * 1024 * 1024)
@@ -93,18 +93,17 @@ public class EagerTtlTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Creates a configuration for cache with the name specified.
+     * Creates a configuration for default cache.
      *
-     * @param cacheName Cahce name.
      * @return Cache configuration.
      */
-    private CacheConfiguration<Integer, Integer> getCacheConfiguration(String cacheName) {
-        return new CacheConfiguration(cacheName)
+    private CacheConfiguration<Integer, Integer> getDefaultCacheConfiguration() {
+        return new CacheConfiguration<Integer, Integer>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setEagerTtl(eagerTtl)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, EXPIRATION_TIME )));
+            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, EXPIRATION_TIME)));
     }
 
     /**
@@ -133,28 +132,28 @@ public class EagerTtlTest extends GridCommonAbstractTest {
 
         ignite = startGrid(0);
 
-        CountDownLatch exchnageHangLatch = new CountDownLatch(1);
+        CountDownLatch exchangeHangLatch = new CountDownLatch(1);
 
         ignite.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
                 try {
-                    exchnageHangLatch.await();
+                    exchangeHangLatch.await();
                 }
                 catch (InterruptedException e) {
-                    log.error("Interruped of waiting latch", e);
+                    log.error("Interrupted of waiting latch", e);
 
                     fail(e.getMessage());
                 }
             }
         });
 
-        IgniteInternalFuture activeFut = GridTestUtils.runAsync(() -> ignite(0).cluster().state(ClusterState.ACTIVE));
+        IgniteInternalFuture<?> activeFut = GridTestUtils.runAsync(() -> ignite(0).cluster().state(ClusterState.ACTIVE));
 
         assertFalse(activeFut.isDone());
 
         assertFalse(GridTestUtils.waitForCondition(assertListener::check, 2_000));
 
-        exchnageHangLatch.countDown();
+        exchangeHangLatch.countDown();
 
         activeFut.get();
 
@@ -188,7 +187,7 @@ public class EagerTtlTest extends GridCommonAbstractTest {
 
             for (int i = 0; i < ENTRIES; i++) {
                 try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC, isolation)) {
-                    if (1 % 2 == 0)
+                    if (i % 2 == 0)
                         cache.putAll(Collections.singletonMap(i, isolation.ordinal() + 1));
                     else
                         cache.getAndPut(i, isolation.ordinal() + 1);
