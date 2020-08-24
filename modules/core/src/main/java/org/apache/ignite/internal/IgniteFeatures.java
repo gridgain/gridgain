@@ -201,7 +201,7 @@ public enum IgniteFeatures {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
             if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
-                return ((IgniteRollingUpgradeStatus)status).supportedFeatures().contains(feature);
+                return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
         }
 
         return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
@@ -244,7 +244,7 @@ public enum IgniteFeatures {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
             if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
-                return ((IgniteRollingUpgradeStatus)status).supportedFeatures().contains(feature);
+                return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
         }
 
         for (ClusterNode next : nodes) {

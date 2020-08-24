@@ -49,7 +49,8 @@ public interface RollingUpgrade {
             false,
             null,
             null,
-            new HashSet<>(Arrays.asList(IgniteFeatures.values())));
+            new byte[0]
+        );
     }
 
     /**
