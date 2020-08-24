@@ -67,7 +67,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  * </ul>
  */
 @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
-public class OpenCensusCacheAPITracing extends AbstractTracingTest {
+public class OpenCensusCacheAPIWriteTracing extends AbstractTracingTest {
 
     /** Client node. */
     private IgniteEx client;
@@ -283,7 +283,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
         );
 
@@ -316,7 +316,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
@@ -415,7 +415,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             spanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -534,7 +534,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -567,7 +567,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
@@ -595,12 +595,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             null);
     }
 
-    ////////////////////
-    ///////////////////
-    //////////////////
-    ////////////////
-    ////////////////
-    ///////////////
     /**
      * <ol>
      *     <li>Run cache.remove on atomic cache with two backups.</li>
@@ -674,7 +668,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             spanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -800,7 +794,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -833,7 +827,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -935,7 +929,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             spanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -1061,7 +1055,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
@@ -1094,7 +1088,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             reqNearReqSpanIds.get(0),
             1,
             null,
-            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 500,
+            Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
 
