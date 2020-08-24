@@ -69,7 +69,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  * </ul>
  */
 @WithSystemProperty(key = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, value = IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL)
-public class OpenCensusCacheAPIWriteTracing extends AbstractTracingTest {
+public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
 
     /** Client node. */
     private IgniteEx client;
@@ -1240,7 +1240,7 @@ public class OpenCensusCacheAPIWriteTracing extends AbstractTracingTest {
 
         handler().flush();
 
-         checkSpan(
+        checkSpan(
             CACHE_API_REMOVE,
             null,
             1,
@@ -1257,7 +1257,7 @@ public class OpenCensusCacheAPIWriteTracing extends AbstractTracingTest {
     /**
      * @return [@code True} to prevent rebalancing before test start.
      */
-   @Override protected boolean blockRebalancing() {
+    @Override protected boolean blockRebalancing() {
         return false;
     }
 }

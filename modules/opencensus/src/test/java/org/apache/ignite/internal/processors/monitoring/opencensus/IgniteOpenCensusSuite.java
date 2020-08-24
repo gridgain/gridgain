@@ -38,8 +38,8 @@ import org.junit.runners.Suite;
     OpenCensusTracingConfigurationResetAllTest.class,
     OpenCensusTracingConfigurationSetTest.class,
     OpenCensusDiscoveryTracingTest.class,
-    OpenCensusCacheAPIWriteTracing.class,
-    OpenCensusCacheAPIReadTracing.class
+    OpenCensusCacheAPIWriteTracingTest.class,
+    OpenCensusCacheAPIReadTracingTest.class
 })
 public class IgniteOpenCensusSuite {
 }

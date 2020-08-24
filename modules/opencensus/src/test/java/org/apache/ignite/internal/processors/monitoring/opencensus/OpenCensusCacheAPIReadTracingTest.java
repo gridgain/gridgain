@@ -58,7 +58,7 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
  *     <li>getAllAsync</li>
  * </ul>
  */
-public class OpenCensusCacheAPIReadTracing extends AbstractTracingTest {
+public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
 
     /** Client node. */
     private IgniteEx client;
