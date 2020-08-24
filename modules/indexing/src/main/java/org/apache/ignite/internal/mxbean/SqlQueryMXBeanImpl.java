@@ -74,8 +74,13 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public String getSqlGlobalMemoryQuota() {
+    @Override public Long getSqlGlobalMemoryQuotaBytes() {
         return h2idx.memoryManager().getGlobalQuota();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getSqlGlobalMemoryQuota() {
+        return h2idx.memoryManager().getGlobalQuotaInOriginalNotation();
     }
 
     /** {@inheritDoc} */
@@ -84,8 +89,14 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public Long getSqlQueryMemoryQuotaBytes() {
+        return h2idx.memoryManager().getQueryQuota();
+    }
+
+
+    /** {@inheritDoc} */
     @Override public String getSqlQueryMemoryQuota() {
-        return h2idx.memoryManager().getQueryQuotaString();
+        return h2idx.memoryManager().getQueryQuotaStrinInOriginalNotation();
     }
 
     /** {@inheritDoc} */
