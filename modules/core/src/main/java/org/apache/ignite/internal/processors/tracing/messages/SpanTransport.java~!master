@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.internal.processors.tracing.messages;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * This interface indicates class which able to transfer span.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+public interface SpanTransport {
+    /**
+     * Stored span for transferring.
+     *
+     * @param span Binary view of span.
+     */
+    void span(byte[] span);
 
     /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * @return Binary view of span.
      */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
-    }
+    byte[] span();
 }

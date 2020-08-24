@@ -14,22 +14,38 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.internal.metric;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Type of statistics.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
+public enum IoStatisticsType {
+    /** Cache group. */
+    CACHE_GROUP("io.statistics.cacheGroups"),
+
+    /** Hash index. */
+    HASH_INDEX("io.statistics.hashIndexes"),
+
+    /** Sorted index. */
+    SORTED_INDEX("io.statistics.sortedIndexes"),
+
+    /** SQL. */
+    SQL("io.statistics.sql");
+
+    /** Metric group. */
+    private String metricGroupName;
+
+    /**
+     * @param monitoringGroup Monitoring group.
+     */
+    IoStatisticsType(String metricGroupName) {
+        this.metricGroupName = metricGroupName;
     }
 
     /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * @return Metric group name.
      */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
+    public String metricGroupName() {
+        return metricGroupName;
     }
 }

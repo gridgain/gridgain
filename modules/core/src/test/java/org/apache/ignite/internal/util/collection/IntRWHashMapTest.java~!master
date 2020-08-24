@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.internal.util.collection;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Base scenarios for read-write map.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
+public class IntRWHashMapTest extends AbstractBaseIntMapTest {
     /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
-
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
+    @Override protected IntMap<String> instantiateMap() {
+        return new IntRWHashMap<>();
     }
 }

@@ -29,12 +29,15 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
+import org.apache.ignite.internal.processors.configuration.distributed.PublicSimpleProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
+import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedPublicProperty;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.gridgain.internal.h2.util.DateTimeUtils;
+import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
@@ -65,15 +68,39 @@ public class DistributedSqlConfiguration {
     public static final int DFLT_QRY_TIMEOUT = 0;
 
     /** Disabled SQL functions. */
-    private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
-        = new SimpleDistributedProperty<>("sql.disabledFunctions");
+    private final SimpleDistributedPublicProperty<HashSet<String>> disabledSqlFuncs = new SimpleDistributedPublicProperty<>(
+        "sql.disabledFunctions",
+        new PublicSimpleProperty<>(
+            "Disabled SQL functions",
+            null,
+            SecurityPermission.ADMIN_OPS,
+            PublicSimpleProperty::parseStringSet,
+            (set) -> String.join(", ", set)
+        )
+    );
 
     /** Value of cluster time zone. */
-    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sql.timeZone");
+    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedPublicProperty<>(
+        "sql.timeZone",
+        new PublicSimpleProperty<>(
+            "Cluster time zone for SQL date conversion",
+            null,
+            SecurityPermission.ADMIN_OPS,
+            TimeZone::getTimeZone,
+            TimeZone::getID
+        )
+    );
 
     /** Query timeout. */
-    private final SimpleDistributedProperty<Integer> dfltQueryTimeout
-        = new SimpleDistributedProperty<>("sql.defaultQueryTimeout");
+    private final SimpleDistributedPublicProperty<Integer> dfltQueryTimeout = new SimpleDistributedPublicProperty<>(
+        "sql.defaultQueryTimeout",
+        new PublicSimpleProperty<>(
+            "Default query timeout",
+            null,
+            SecurityPermission.ADMIN_OPS,
+            PublicSimpleProperty::parseNonNegativeInteger
+        )
+    );
 
     /** Context. */
     private final GridKernalContext ctx;

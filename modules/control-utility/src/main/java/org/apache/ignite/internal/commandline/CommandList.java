@@ -20,6 +20,7 @@ import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
 import org.apache.ignite.internal.commandline.meta.MetadataCommand;
+import org.apache.ignite.internal.commandline.property.PropertyCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -69,7 +70,10 @@ public enum CommandList {
     SHUTDOWN_POLICY("--shutdown-policy", new ShutdownPolicyCommand()),
 
     /** */
-    METADATA("--meta", new MetadataCommand());
+    METADATA("--meta", new MetadataCommand()),
+
+    /** */
+    PROPERTY("--property", new PropertyCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();

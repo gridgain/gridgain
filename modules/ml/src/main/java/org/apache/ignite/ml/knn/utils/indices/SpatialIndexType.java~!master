@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.ml.knn.utils.indices;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Spatial index type.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+public enum SpatialIndexType {
+    /** Array based spatial index (see {@link ArraySpatialIndex}. */
+    ARRAY,
 
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
-    }
+    /** KD tree based spatial index (see {@link KDTreeSpatialIndex}). */
+    KD_TREE,
+
+    /** Ball tree based spatial index (see {@link BallTreeSpatialIndex}). */
+    BALL_TREE
 }

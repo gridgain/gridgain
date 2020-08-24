@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.ml.environment.deploy;
+
+import java.util.List;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Represents an final objects from Ignite ML library like models or preprocessors having
+ * dependencies that can be custom objects from client side.
+ *
+ * NOTE: this interface should be inherited only by Ignite ML classes.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
-
+public interface DeployableObject {
     /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * Returns dependencies of this object that can be object with class defined by client side and unknown for server.
      */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
-    }
+    public List<Object> getDependencies();
 }

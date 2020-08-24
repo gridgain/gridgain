@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Interface for page lock tracker structures dump.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+public interface PageLockDump {
+    /**
+     * @param dumpProcessort Apply dump processor.
+     */
+    void apply(DumpProcessor dumpProcessort);
 
     /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * @return Dump creation time.
      */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
-    }
+    long time();
 }

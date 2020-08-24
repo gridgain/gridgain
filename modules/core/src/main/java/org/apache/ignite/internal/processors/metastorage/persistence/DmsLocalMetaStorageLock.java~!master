@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.internal.processors.metastorage.persistence;
 
-/**
- * Implementation of {@link DistributedProperty} for {@link Long}.
- */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+/** */
+interface DmsLocalMetaStorageLock {
+    /** Lock. */
+    public void lock();
 
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
-    }
+    /** Unlock. */
+    public void unlock();
 }

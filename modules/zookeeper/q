@@ -1,0 +1,134 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;33mWARNING[m] 
+[[1;33mWARNING[m] Some problems were encountered while building the effective model for org.gridgain:ignite-zookeeper:jar:9.0.0-SNAPSHOT
+[[1;33mWARNING[m] 'parent.relativePath' of POM org.gridgain:community.parent:1 (/home/tledkov/work/incubator-ignite/parent/pom.xml) points at org.gridgain:apache-ignite instead of org.apache:apache, please verify your project structure @ org.gridgain:community.parent:1, /home/tledkov/work/incubator-ignite/parent/pom.xml, line 28, column 13
+[[1;33mWARNING[m] 
+[[1;33mWARNING[m] It is highly recommended to fix these problems because they threaten the stability of your build.
+[[1;33mWARNING[m] 
+[[1;33mWARNING[m] For this reason, future Maven versions might no longer support building such malformed projects.
+[[1;33mWARNING[m] 
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m-------------------< [0;36morg.gridgain:ignite-zookeeper[0;1m >--------------------[m
+[[1;34mINFO[m] [1mBuilding ignite-zookeeper 9.0.0-SNAPSHOT[m
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+Downloading from gridgain-external-repository: http://repository.gridgain.local/artifactory/gridgain-local/org/gridgain/ignite-core/9.0.0-SNAPSHOT/maven-metadata.xml
+[[1;33mWARNING[m] Could not transfer metadata org.gridgain:ignite-core:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local: Name or service not known
+[[1;33mWARNING[m] Failure to transfer org.gridgain:ignite-core:9.0.0-SNAPSHOT/maven-metadata.xml from http://repository.gridgain.local/artifactory/gridgain-local was cached in the local repository, resolution will not be reattempted until the update interval of gridgain-external-repository has elapsed or updates are forced. Original error: Could not transfer metadata org.gridgain:ignite-core:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local: Name or service not known
+Downloading from gridgain-external-repository: http://repository.gridgain.local/artifactory/gridgain-local/org/gridgain/ignite-log4j/9.0.0-SNAPSHOT/maven-metadata.xml
+[[1;33mWARNING[m] Could not transfer metadata org.gridgain:ignite-log4j:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+[[1;33mWARNING[m] Failure to transfer org.gridgain:ignite-log4j:9.0.0-SNAPSHOT/maven-metadata.xml from http://repository.gridgain.local/artifactory/gridgain-local was cached in the local repository, resolution will not be reattempted until the update interval of gridgain-external-repository has elapsed or updates are forced. Original error: Could not transfer metadata org.gridgain:ignite-log4j:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+Downloading from gridgain-external-repository: http://repository.gridgain.local/artifactory/gridgain-local/org/gridgain/ignite-spring/9.0.0-SNAPSHOT/maven-metadata.xml
+[[1;33mWARNING[m] Could not transfer metadata org.gridgain:ignite-spring:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+[[1;33mWARNING[m] Failure to transfer org.gridgain:ignite-spring:9.0.0-SNAPSHOT/maven-metadata.xml from http://repository.gridgain.local/artifactory/gridgain-local was cached in the local repository, resolution will not be reattempted until the update interval of gridgain-external-repository has elapsed or updates are forced. Original error: Could not transfer metadata org.gridgain:ignite-spring:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+Downloading from gridgain-external-repository: http://repository.gridgain.local/artifactory/gridgain-local/org/gridgain/ignite-indexing/9.0.0-SNAPSHOT/maven-metadata.xml
+[[1;33mWARNING[m] Could not transfer metadata org.gridgain:ignite-indexing:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+[[1;33mWARNING[m] Failure to transfer org.gridgain:ignite-indexing:9.0.0-SNAPSHOT/maven-metadata.xml from http://repository.gridgain.local/artifactory/gridgain-local was cached in the local repository, resolution will not be reattempted until the update interval of gridgain-external-repository has elapsed or updates are forced. Original error: Could not transfer metadata org.gridgain:ignite-indexing:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+Downloading from gridgain-external-repository: http://repository.gridgain.local/artifactory/gridgain-local/org/gridgain/ignite-h2/9.0.0-SNAPSHOT/maven-metadata.xml
+[[1;33mWARNING[m] Could not transfer metadata org.gridgain:ignite-h2:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+[[1;33mWARNING[m] Failure to transfer org.gridgain:ignite-h2:9.0.0-SNAPSHOT/maven-metadata.xml from http://repository.gridgain.local/artifactory/gridgain-local was cached in the local repository, resolution will not be reattempted until the update interval of gridgain-external-repository has elapsed or updates are forced. Original error: Could not transfer metadata org.gridgain:ignite-h2:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local
+[[1;33mWARNING[m] Failure to transfer org.gridgain:ignite-core:9.0.0-SNAPSHOT/maven-metadata.xml from http://repository.gridgain.local/artifactory/gridgain-local was cached in the local repository, resolution will not be reattempted until the update interval of gridgain-external-repository has elapsed or updates are forced. Original error: Could not transfer metadata org.gridgain:ignite-core:9.0.0-SNAPSHOT/maven-metadata.xml from/to gridgain-external-repository (http://repository.gridgain.local/artifactory/gridgain-local): repository.gridgain.local: Name or service not known
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-dependency-plugin:2.8:tree[m [1m(default-cli)[m @ [36mignite-zookeeper[0;1m ---[m
+[[1;34mINFO[m] org.gridgain:ignite-zookeeper:jar:9.0.0-SNAPSHOT
+[[1;34mINFO[m] +- org.gridgain:ignite-core:jar:9.0.0-SNAPSHOT:compile
+[[1;34mINFO[m] |  +- javax.cache:cache-api:jar:1.0.0:compile
+[[1;34mINFO[m] |  +- org.jetbrains:annotations:jar:16.0.3:compile
+[[1;34mINFO[m] |  \- org.gridgain:ignite-shmem:jar:1.0.0:compile
+[[1;34mINFO[m] +- com.fasterxml.jackson.core:jackson-databind:jar:2.10.1:compile
+[[1;34mINFO[m] |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.10.1:compile
+[[1;34mINFO[m] |  \- com.fasterxml.jackson.core:jackson-core:jar:2.10.1:compile
+[[1;34mINFO[m] +- org.apache.curator:curator-framework:jar:4.2.0:compile
+[[1;34mINFO[m] |  \- (org.apache.curator:curator-client:jar:4.2.0:compile - omitted for duplicate)
+[[1;34mINFO[m] +- org.apache.curator:curator-recipes:jar:4.2.0:compile
+[[1;34mINFO[m] |  \- (org.apache.curator:curator-framework:jar:4.2.0:compile - omitted for duplicate)
+[[1;34mINFO[m] +- org.apache.curator:curator-x-discovery:jar:4.2.0:compile
+[[1;34mINFO[m] |  \- (org.apache.curator:curator-recipes:jar:4.2.0:compile - omitted for duplicate)
+[[1;34mINFO[m] +- org.apache.curator:curator-client:jar:4.2.0:compile
+[[1;34mINFO[m] |  +- (org.apache.zookeeper:zookeeper:jar:3.5.4-beta:compile - omitted for conflict with 3.4.14)
+[[1;34mINFO[m] |  +- (com.google.guava:guava:jar:27.0.1-jre:compile - omitted for conflict with 25.1-jre)
+[[1;34mINFO[m] |  \- (org.slf4j:slf4j-api:jar:1.7.25:compile - omitted for conflict with 1.7.7)
+[[1;34mINFO[m] +- com.google.guava:guava:jar:25.1-jre:compile
+[[1;34mINFO[m] |  +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+[[1;34mINFO[m] |  +- org.checkerframework:checker-qual:jar:2.0.0:compile
+[[1;34mINFO[m] |  +- com.google.errorprone:error_prone_annotations:jar:2.1.3:compile
+[[1;34mINFO[m] |  +- com.google.j2objc:j2objc-annotations:jar:1.1:compile
+[[1;34mINFO[m] |  \- org.codehaus.mojo:animal-sniffer-annotations:jar:1.14:compile
+[[1;34mINFO[m] +- org.apache.zookeeper:zookeeper:jar:3.4.14:compile
+[[1;34mINFO[m] |  +- (org.slf4j:slf4j-api:jar:1.7.25:compile - omitted for duplicate)
+[[1;34mINFO[m] |  +- (org.slf4j:slf4j-log4j12:jar:1.7.25:compile - omitted for conflict with 1.7.7)
+[[1;34mINFO[m] |  +- com.github.spotbugs:spotbugs-annotations:jar:3.1.9:compile
+[[1;34mINFO[m] |  |  \- (com.google.code.findbugs:jsr305:jar:3.0.2:compile - omitted for duplicate)
+[[1;34mINFO[m] |  +- (log4j:log4j:jar:1.2.17:compile - omitted for duplicate)
+[[1;34mINFO[m] |  +- jline:jline:jar:0.9.94:compile
+[[1;34mINFO[m] |  |  \- (junit:junit:jar:3.8.1:compile - omitted for conflict with 4.12)
+[[1;34mINFO[m] |  +- org.apache.yetus:audience-annotations:jar:0.5.0:compile
+[[1;34mINFO[m] |  \- io.netty:netty:jar:3.10.6.Final:compile
+[[1;34mINFO[m] +- org.slf4j:slf4j-api:jar:1.7.7:compile
+[[1;34mINFO[m] +- org.slf4j:slf4j-log4j12:jar:1.7.7:compile
+[[1;34mINFO[m] |  +- (org.slf4j:slf4j-api:jar:1.7.7:compile - omitted for duplicate)
+[[1;34mINFO[m] |  \- (log4j:log4j:jar:1.2.17:compile - omitted for duplicate)
+[[1;34mINFO[m] +- log4j:log4j:jar:1.2.17:compile
+[[1;34mINFO[m] +- org.apache.curator:curator-test:jar:2.9.1:test
+[[1;34mINFO[m] |  +- (org.apache.zookeeper:zookeeper:jar:3.4.6:test - omitted for conflict with 3.4.14)
+[[1;34mINFO[m] |  +- (org.javassist:javassist:jar:3.18.1-GA:test - omitted for conflict with 3.21.0-GA)
+[[1;34mINFO[m] |  +- org.apache.commons:commons-math:jar:2.2:test
+[[1;34mINFO[m] |  \- (com.google.guava:guava:jar:16.0.1:test - omitted for conflict with 25.1-jre)
+[[1;34mINFO[m] +- org.gridgain:ignite-log4j:jar:9.0.0-SNAPSHOT:test
+[[1;34mINFO[m] |  +- (org.gridgain:ignite-core:jar:9.0.0-SNAPSHOT:test - omitted for duplicate)
+[[1;34mINFO[m] |  \- (log4j:log4j:jar:1.2.17:test - omitted for duplicate)
+[[1;34mINFO[m] +- org.gridgain:ignite-spring:jar:9.0.0-SNAPSHOT:test
+[[1;34mINFO[m] |  +- (org.gridgain:ignite-core:jar:9.0.0-SNAPSHOT:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.gridgain:ignite-indexing:jar:9.0.0-SNAPSHOT:test
+[[1;34mINFO[m] |  |  +- (org.gridgain:ignite-core:jar:9.0.0-SNAPSHOT:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  +- commons-codec:commons-codec:jar:1.12:test
+[[1;34mINFO[m] |  |  +- org.apache.lucene:lucene-core:jar:7.4.0:test
+[[1;34mINFO[m] |  |  +- org.apache.lucene:lucene-analyzers-common:jar:7.4.0:test
+[[1;34mINFO[m] |  |  |  \- (org.apache.lucene:lucene-core:jar:7.4.0:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  +- org.apache.lucene:lucene-queryparser:jar:7.4.0:test
+[[1;34mINFO[m] |  |  |  +- (org.apache.lucene:lucene-core:jar:7.4.0:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  |  +- org.apache.lucene:lucene-queries:jar:7.4.0:test
+[[1;34mINFO[m] |  |  |  \- org.apache.lucene:lucene-sandbox:jar:7.4.0:test
+[[1;34mINFO[m] |  |  \- (org.gridgain:ignite-h2:jar:9.0.0-SNAPSHOT:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.springframework:spring-core:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  \- (commons-logging:commons-logging:jar:1.2:test - omitted for conflict with 1.1.1)
+[[1;34mINFO[m] |  +- org.springframework:spring-aop:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-beans:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  \- (org.springframework:spring-core:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.springframework:spring-beans:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  \- (org.springframework:spring-core:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.springframework:spring-context:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-aop:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-beans:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-core:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  \- (org.springframework:spring-expression:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.springframework:spring-expression:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  \- (org.springframework:spring-core:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.springframework:spring-tx:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-beans:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  \- (org.springframework:spring-core:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- org.springframework:spring-jdbc:jar:4.3.25.RELEASE:test
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-beans:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  +- (org.springframework:spring-core:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  |  \- (org.springframework:spring-tx:jar:4.3.25.RELEASE:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- commons-logging:commons-logging:jar:1.1.1:test
+[[1;34mINFO[m] |  \- org.gridgain:ignite-h2:jar:9.0.0-SNAPSHOT:test
+[[1;34mINFO[m] |     +- javax.servlet:javax.servlet-api:jar:3.1.0:test
+[[1;34mINFO[m] |     +- (org.slf4j:slf4j-api:jar:1.6.4:test - omitted for conflict with 1.7.7)
+[[1;34mINFO[m] |     \- org.locationtech.jts:jts-core:jar:1.15.0:test
+[[1;34mINFO[m] +- com.thoughtworks.xstream:xstream:jar:1.4.8:test
+[[1;34mINFO[m] |  +- xmlpull:xmlpull:jar:1.1.3.1:test
+[[1;34mINFO[m] |  \- xpp3:xpp3_min:jar:1.1.4c:test
+[[1;34mINFO[m] +- org.gridgain:ignite-core:test-jar:tests:9.0.0-SNAPSHOT:test
+[[1;34mINFO[m] |  +- (javax.cache:cache-api:jar:1.0.0:test - omitted for duplicate)
+[[1;34mINFO[m] |  +- (org.jetbrains:annotations:jar:16.0.3:test - omitted for duplicate)
+[[1;34mINFO[m] |  \- (org.gridgain:ignite-shmem:jar:1.0.0:test - omitted for duplicate)
+[[1;34mINFO[m] +- junit:junit:jar:4.12:test (scope not updated to compile)
+[[1;34mINFO[m] |  \- org.hamcrest:hamcrest-core:jar:1.3:test
+[[1;34mINFO[m] +- org.javassist:javassist:jar:3.21.0-GA:test
+[[1;34mINFO[m] \- com.sun:tools:jar:1.8.0_162:system
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] [1;32mBUILD SUCCESS[m
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] Total time:  11.622 s
+[[1;34mINFO[m] Finished at: 2020-03-12T16:25:26+03:00
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m

@@ -14,22 +14,27 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.spi.metric;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Interface for the metrics that holds long primitive.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
+public interface LongMetric extends Metric {
+    /** @return Value of the metric. */
+    public long value();
+
     /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
+    @Override public default String getAsString() {
+        return Long.toString(value());
     }
 
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
+    /** @return Value of the metric. */
+    public default long longValue() {
+        return value();
+    }
+
+    /** @return Value of the metric. */
+    public default long get() {
+        return value();
     }
 }

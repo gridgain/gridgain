@@ -14,22 +14,32 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.testframework.wal.record;
+
+import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * The wrapper of record type which isn't supported anymore.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+public class UnsupportedWalRecord extends WALRecord {
+    /** **/
+    private final RecordType recordType;
 
     /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
+     * @param type Record type.
      */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
+    public UnsupportedWalRecord(RecordType type) {
+        recordType = type;
+    }
+
+    /** {@inheritDoc} */
+    @Override public RecordType type() {
+        return recordType;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(UnsupportedWalRecord.class, this, "super", super.toString());
     }
 }

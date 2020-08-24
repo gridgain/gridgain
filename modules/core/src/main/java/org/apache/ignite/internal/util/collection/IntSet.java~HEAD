@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.internal.util.collection;
+
+import java.util.Set;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ *
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+public interface IntSet extends Set<Integer> {
+    /** Returns <tt>true</tt> if this set contains the specified element. */
+    boolean contains(int element);
 
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
-    }
+    /** Adds the specified element to this set. */
+    boolean add(int element);
+
+    /** Removes the specified element from this set. */
+    boolean remove(int element);
+
+    /** Returns array with primitive types **/
+    int[] toIntArray();
 }

@@ -14,22 +14,27 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.spi.metric;
+
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Implementation of {@link DistributedProperty} for {@link Long}.
+ * Interface for the metrics that holds typed value.
  */
-public class DistributedLongProperty extends DistributedComparableProperty<Long> {
-    /** {@inheritDoc} */
-    DistributedLongProperty(String name) {
-        super(name);
-    }
+public interface ObjectMetric<T> extends Metric {
+    /** @return Value ot the metric. */
+    public T value();
 
-    /**
-     * @param name Name of property.
-     * @return Property detached from processor.(Distributed updating are not accessable).
-     */
-    public static DistributedLongProperty detachedLongProperty(String name) {
-        return new DistributedLongProperty(name);
+    /** @return Type of metric value. */
+    public Class<T> type();
+
+    /** {@inheritDoc} */
+    @Override @Nullable default String getAsString() {
+        T val = value();
+
+        if (val == null)
+            return null;
+
+        return val.toString();
     }
 }
