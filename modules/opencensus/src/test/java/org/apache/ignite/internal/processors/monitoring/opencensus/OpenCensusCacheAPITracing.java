@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -28,10 +31,6 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT;
 import static org.apache.ignite.internal.processors.monitoring.opencensus.AbstractTracingTest.IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL;

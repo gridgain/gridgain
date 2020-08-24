@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.processor.EntryProcessor;
@@ -399,9 +400,9 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
             TraceSurroundings ignored2 =
                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_DHT_UPDATE_MAP, span))
         ) {
-            span.addTag("write.version", writeVer::toString);
+            span.addTag("write.version", () -> Objects.toString(writeVer));
 
-            MTC.span().addTag("mappings", () -> mappings.toString());
+            MTC.span().addTag("mappings", () -> Objects.toString(mappings));
 
             if (F.isEmpty(mappings)) {
                 updateRes.mapping(Collections.<UUID>emptyList());
