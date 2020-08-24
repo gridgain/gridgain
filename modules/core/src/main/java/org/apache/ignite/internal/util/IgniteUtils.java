@@ -3595,6 +3595,27 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Find file (by path or in resources) and open input stream to it.
+     *
+     * @param filePath Path to the file.
+     * @return Opened input stream.
+     * @throws IOException If stream could not be opened.
+     */
+    public static InputStream openFileInputStream(String filePath) throws IOException {
+        File abs = new File(filePath);
+
+        if (abs.exists())
+            return new FileInputStream(abs);
+
+        URL clsPthRes = IgniteUtils.class.getClassLoader().getResource(filePath);
+
+        if (clsPthRes != null)
+            return clsPthRes.openStream();
+
+        throw new FileNotFoundException("File " + filePath + " not found");
+    }
+
+    /**
      * Copies input byte stream to output byte stream.
      *
      * @param in Input byte stream.
