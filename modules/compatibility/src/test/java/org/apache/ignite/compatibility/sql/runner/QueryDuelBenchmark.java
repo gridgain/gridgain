@@ -17,12 +17,10 @@
 package org.apache.ignite.compatibility.sql.runner;
 
 import java.sql.Connection;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 
 /**
@@ -58,31 +56,22 @@ public class QueryDuelBenchmark {
      * @param qrySupplier Sql queries generator.
      * @return Suspicious queries collection.
      */
-    public Collection<QueryDuelResult> runBenchmark(
+    public List<QueryDuelResult> runBenchmark(
         final long timeout,
-        Supplier<String> qrySupplier,
-        int successCnt,
-        int attemptsCnt
+        Supplier<QueryWithParams> qrySupplier
     ) {
-        A.ensure(successCnt >= 0, "successCnt >= 0");
-        A.ensure(attemptsCnt > 0, "attemptsCnt > 0");
-        A.ensure(attemptsCnt >= successCnt, "attemptsCnt >= successCnt");
-
         final long end = System.currentTimeMillis() + timeout;
 
         QueryDuelRunner runner = new QueryDuelRunner(log, baseConn, targetConn);
 
-        Set<QueryDuelResult> res = new HashSet<>();
+        List<QueryDuelResult> res = new ArrayList<>();
         while (System.currentTimeMillis() < end) {
-            String qry = qrySupplier.get();
+            QueryWithParams qry = qrySupplier.get();
 
-            if (F.isEmpty(qry))
+            if (qry == null)
                 break; // seems like supplier won't supply new queries anymore
 
-            QueryDuelResult duelRes = runner.run(qry, successCnt, attemptsCnt);
-
-            if (!duelRes.successful())
-                res.add(duelRes);
+            res.add(runner.run(qry));
         }
 
         return res;

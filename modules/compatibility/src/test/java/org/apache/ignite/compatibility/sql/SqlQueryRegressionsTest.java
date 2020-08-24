@@ -24,8 +24,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
@@ -43,6 +45,7 @@ import org.apache.ignite.compatibility.sql.randomsql.Table;
 import org.apache.ignite.compatibility.sql.runner.PredefinedQueriesSupplier;
 import org.apache.ignite.compatibility.sql.runner.QueryDuelBenchmark;
 import org.apache.ignite.compatibility.sql.runner.QueryDuelResult;
+import org.apache.ignite.compatibility.sql.runner.QueryWithParams;
 import org.apache.ignite.compatibility.testframework.junits.Dependency;
 import org.apache.ignite.compatibility.testframework.junits.IgniteCompatibilityAbstractTest;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -134,10 +137,16 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static final int NEW_JDBC_PORT = 10802;
 
     /** */
-    private static final long BENCHMARK_TIMEOUT = 60_000;
+    private static final long BENCHMARK_TIMEOUT = 60 * 1000;
 
     /** */
     private static final long WARM_UP_TIMEOUT = 5_000;
+
+    /** */
+    private static final int REREUN_COUNT = 10;
+
+    /** */
+    private static final int REREUN_SUCCESS_COUNT = Math.max((int)(REREUN_COUNT * 0.8), 1);
 
     /** */
     private static final String JDBC_URL = "jdbc:ignite:thin://127.0.0.1:";
@@ -211,40 +220,57 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         initParam();
 
         try {
-            Supplier<String> qrySupplier = new RandomQuerySupplier(SCHEMA, seed);
+            Supplier<QueryWithParams> qrySupplier = new RandomQuerySupplier(SCHEMA, seed);
 
             startBaseAndNewClusters(seed);
 
-            try (Connection oldConn = createConnection(BASE_JDBC_PORT);
-                 Connection newConn = createConnection(NEW_JDBC_PORT)
+            try (Connection baseConn = createConnection(BASE_JDBC_PORT);
+                 Connection targetConn = createConnection(NEW_JDBC_PORT)
             ) {
-                QueryDuelBenchmark benchmark = new QueryDuelBenchmark(log, oldConn, newConn);
+                QueryDuelBenchmark benchmark = new QueryDuelBenchmark(log, baseConn, targetConn);
 
-                // 0. Warm-up.IgniteCompatibilityNodeRunner
-                benchmark.runBenchmark(WARM_UP_TIMEOUT, qrySupplier, 0, 1);
+                // 0. Warm-up.
+                benchmark.runBenchmark(WARM_UP_TIMEOUT, qrySupplier);
 
                 // 1. Initial run.
-                Collection<QueryDuelResult> suspiciousQrys =
-                    benchmark.runBenchmark(BENCHMARK_TIMEOUT, qrySupplier, 1, 1);
+                List<QueryDuelResult> suspiciousQrys = benchmark.runBenchmark(BENCHMARK_TIMEOUT, qrySupplier).stream()
+                    .filter(this::isResultUnsuccessful)
+                    .collect(Collectors.toList());
 
                 if (suspiciousQrys.isEmpty())
                     return; // No suspicious queries - no problem.
 
-                Set<String> suspiciousQrysSet = suspiciousQrys.stream()
-                    .map(QueryDuelResult::query)
-                    .collect(Collectors.toSet());
-
                 if (log.isInfoEnabled())
-                    log.info("Problematic queries number: " + suspiciousQrysSet.size());
-
-                Supplier<String> problematicQrysSupplier = new PredefinedQueriesSupplier(suspiciousQrysSet, true);
+                    log.info("Problematic queries number: " + suspiciousQrys.size());
 
                 // 2. Rerun problematic queries to ensure they are not outliers.
-                Collection<QueryDuelResult> failedQueries =
-                    benchmark.runBenchmark(getTestTimeout(), problematicQrysSupplier, 7, 10);
+                Map<QueryWithParams, AtomicInteger> qryToSuccessExecCnt = suspiciousQrys.stream()
+                    .collect(Collectors.toMap(QueryDuelResult::query, r -> new AtomicInteger()));
+
+                int i = 0;
+                do {
+                    if (qryToSuccessExecCnt.isEmpty())
+                        break;
+
+                    List<QueryDuelResult> rerunRes = benchmark.runBenchmark(getTestTimeout(),
+                        new PredefinedQueriesSupplier(qryToSuccessExecCnt.keySet(), true));
+
+                    Set<QueryWithParams> failedQrys = rerunRes.stream()
+                        .filter(this::isResultUnsuccessful)
+                        .map(QueryDuelResult::query)
+                        .collect(Collectors.toSet());
+
+                    qryToSuccessExecCnt.entrySet().stream()
+                        .filter(e -> !failedQrys.contains(e.getKey()))
+                        .forEach(e -> e.getValue().incrementAndGet());
+
+                    qryToSuccessExecCnt.values().removeIf(v -> v.get() == REREUN_SUCCESS_COUNT);
+                } while (i++ < REREUN_COUNT);
+
+                suspiciousQrys.removeIf(r -> !qryToSuccessExecCnt.containsKey(r.query()));
 
                 assertTrue("Found SQL performance regression for queries (seed is " + seed + "): "
-                        + formatPretty(failedQueries), failedQueries.isEmpty());
+                        + formatPretty(suspiciousQrys), suspiciousQrys.isEmpty());
             }
         }
         finally {
@@ -273,6 +299,33 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
                 ignite -> createTablesAndPopulateData(ignite, seed));
             startGrid(2, targetVer, new NodeConfigurationClosure("2", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT));
         }
+    }
+
+    /**
+     * @param res Query duel result.
+     * @return {@code true} if a query execution time in the target engine
+     * is not much longer than in the base one.
+     */
+    private boolean isResultUnsuccessful(QueryDuelResult res) {
+        if (res.targetError() != null)
+            return true;
+
+        if (res.baseError() != null)
+            return false;
+
+        long baseRes = res.baseExecutionTimeNanos();
+        long targetRes = res.targetExecutionTimeNanos();
+        final double epsilon = 2.0 * 1_000_000; // Let's say 2 ms is about statistical error.
+
+        if (targetRes < baseRes || targetRes < epsilon)
+            // execution is faster than on the base version
+            // or both times not greater than epsilon
+            return false;
+
+        double target = Math.max(targetRes, epsilon);
+        double base = Math.max(baseRes, epsilon);
+
+        return target / base > 2;
     }
 
     /** */
