@@ -15,9 +15,6 @@
  */
 package org.apache.ignite.ru;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 
 import static org.apache.ignite.ru.RollingUpgradeModeChangeResult.Result.FAIL;
