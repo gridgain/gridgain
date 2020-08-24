@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.monitoring.opencensus;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.UUID;
+
 import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -127,7 +129,9 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicPutTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).put("One",1);
+        UUID key = UUID.randomUUID();
+
+        client.cache(ATOMIC_CACHE).put(key,1);
 
         handler().flush();
 
@@ -140,7 +144,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", key.toString())
                 .build()
         );
 
@@ -238,11 +242,15 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicPutAllTracing() throws Exception {
+        UUID key1 = UUID.randomUUID();
+        UUID key2 = UUID.randomUUID();
+        UUID key3 = UUID.randomUUID();
+
         client.cache(ATOMIC_CACHE).putAll(
-            new HashMap<String, Integer>() {{
-                put("One", 1);
-                put("Two", 2);
-                put("Three", 3);
+            new HashMap<UUID, Integer>() {{
+                put(key1, 1);
+                put(key2, 2);
+                put(key3, 3);
             }});
 
         handler().flush();
@@ -375,7 +383,9 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicPutAsyncTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAsync("One",1);
+        UUID key = UUID.randomUUID();
+
+        client.cache(ATOMIC_CACHE).putAsync(key,1);
 
         handler().flush();
 
@@ -388,7 +398,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", key.toString())
                 .build()
         );
 
@@ -489,11 +499,15 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicPutAllAsyncTracing() throws Exception {
+        UUID key1 = UUID.randomUUID();
+        UUID key2 = UUID.randomUUID();
+        UUID key3 = UUID.randomUUID();
+
         client.cache(ATOMIC_CACHE).putAllAsync(
-            new HashMap<String, Integer>() {{
-                put("One", 1);
-                put("Two", 2);
-                put("Three", 3);
+            new HashMap<UUID, Integer>() {{
+                put(key1, 1);
+                put(key2, 2);
+                put(key3, 3);
             }});
 
         handler().flush();
@@ -595,12 +609,6 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
             null);
     }
 
-    ////////////////////
-    ///////////////////
-    //////////////////
-    ////////////////
-    ////////////////
-    ///////////////
     /**
      * <ol>
      *     <li>Run cache.remove on atomic cache with two backups.</li>
@@ -632,9 +640,11 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).put("One",1);
+        UUID key = UUID.randomUUID();
 
-        client.cache(ATOMIC_CACHE).remove("One");
+        client.cache(ATOMIC_CACHE).put(key,1);
+
+        client.cache(ATOMIC_CACHE).remove(key);
 
         handler().flush();
 
@@ -647,7 +657,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", key.toString())
                 .build()
         );
 
@@ -748,18 +758,22 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveAllTracing() throws Exception {
+        UUID key1 = UUID.randomUUID();
+        UUID key2 = UUID.randomUUID();
+        UUID key3 = UUID.randomUUID();
+
         client.cache(ATOMIC_CACHE).putAll(
-            new HashMap<String, Integer>() {{
-                put("One", 1);
-                put("Two", 2);
-                put("Three", 3);
+            new HashMap<UUID, Integer>() {{
+                put(key1, 1);
+                put(key2, 2);
+                put(key3, 3);
             }});
 
         client.cache(ATOMIC_CACHE).removeAll(
-            new HashSet<String>() {{
-                add("One");
-                add("Two");
-                add("Three");
+            new HashSet<UUID>() {{
+                add(key1);
+                add(key2);
+                add(key3);
             }});
 
         handler().flush();
@@ -893,9 +907,10 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveAsyncTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAsync("One",1);
+        UUID key = UUID.randomUUID();
+        client.cache(ATOMIC_CACHE).putAsync(key,1);
 
-        client.cache(ATOMIC_CACHE).removeAsync("One");
+        client.cache(ATOMIC_CACHE).removeAsync(key);
 
         handler().flush();
 
@@ -908,7 +923,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", key.toString())
                 .build()
         );
 
@@ -1009,18 +1024,22 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveAllAsyncTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAllAsync(
-            new HashMap<String, Integer>() {{
-                put("One", 1);
-                put("Two", 2);
-                put("Three", 3);
+        UUID key1 = UUID.randomUUID();
+        UUID key2 = UUID.randomUUID();
+        UUID key3 = UUID.randomUUID();
+
+        client.cache(ATOMIC_CACHE).putAll(
+            new HashMap<UUID, Integer>() {{
+                put(key1, 1);
+                put(key2, 2);
+                put(key3, 3);
             }});
 
         client.cache(ATOMIC_CACHE).removeAllAsync(
-            new HashSet<String>() {{
-                add("One");
-                add("Two");
-                add("Three");
+            new HashSet<UUID>() {{
+                add(key1);
+                add(key2);
+                add(key3);
             }});
 
         handler().flush();
@@ -1140,9 +1159,11 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveWithValidValTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).put("One",1);
+        UUID key = UUID.randomUUID();
 
-        client.cache(ATOMIC_CACHE).remove("One", 1);
+        client.cache(ATOMIC_CACHE).put(key,1);
+
+        client.cache(ATOMIC_CACHE).remove(key, 1);
 
         handler().flush();
 
@@ -1155,7 +1176,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", key.toString())
                 .build()
         );
     }
@@ -1177,9 +1198,11 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicRemoveAsyncWithValidValueTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).putAsync("One",1);
+        UUID key = UUID.randomUUID();
 
-        client.cache(ATOMIC_CACHE).removeAsync("One", 1);
+        client.cache(ATOMIC_CACHE).putAsync(key,1);
+
+        client.cache(ATOMIC_CACHE).removeAsync(key, 1);
 
         handler().flush();
 
@@ -1192,7 +1215,7 @@ public class OpenCensusCacheAPITracing extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", key.toString())
                 .build()
         );
     }
