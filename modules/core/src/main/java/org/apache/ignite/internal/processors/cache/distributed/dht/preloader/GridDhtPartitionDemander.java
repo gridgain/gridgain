@@ -27,13 +27,14 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -65,14 +66,18 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccUpdateVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridIterableAdapter;
+import org.apache.ignite.internal.util.lang.GridIterableAdapter.IteratorWrapper;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -82,24 +87,23 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_LOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STARTED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_STOPPED;
+import static org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl.CACHE_GROUP_METRICS_PREFIX;
 import static org.apache.ignite.internal.IgniteFeatures.TX_TRACKING_UPDATE_COUNTER;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintRebalanceStatistics;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.cacheGroupRebalanceStatistics;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.totalRebalanceStatistic;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.PAGE_SNAPSHOT_TAKEN;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
  * Thread pool for requesting partitions from other nodes and populating local cache.
@@ -131,9 +135,8 @@ public class GridDhtPartitionDemander {
     /** Last exchange future. */
     private volatile GridDhtPartitionsExchangeFuture lastExchangeFut;
 
-    /** Total statistics of rebalance. */
-    @GridToStringExclude
-    @Nullable private final RebalanceStatistics totalRebStat;
+    /** Rebalancing last cancelled time. */
+    private final AtomicLong lastCancelledTime = new AtomicLong(-1);
 
     /**
      * @param grp Ccahe group.
@@ -157,7 +160,57 @@ public class GridDhtPartitionDemander {
             syncFut.onDone();
         }
 
-        totalRebStat = availablePrintRebalanceStatistics() ? new RebalanceStatistics() : null;
+        String metricGroupName = metricName(CACHE_GROUP_METRICS_PREFIX, grp.cacheOrGroupName());
+
+        MetricRegistry mreg = grp.shared().kernalContext().metric().registry(metricGroupName);
+
+        mreg.register("RebalancingPartitionsLeft", () -> rebalanceFut.partitionsLeft.get(),
+            "The number of cache group partitions left to be rebalanced.");
+
+        mreg.register("RebalancingReceivedKeys", () -> rebalanceFut.receivedKeys.get(),
+            "The number of currently rebalanced keys for the whole cache group.");
+
+        mreg.register("RebalancingReceivedBytes", () -> rebalanceFut.receivedBytes.get(),
+            "The number of currently rebalanced bytes of this cache group.");
+
+        mreg.register("RebalancingStartTime", () -> rebalanceFut.startTime, "The time the first partition " +
+            "demand message was sent. If there are no messages to send, the rebalancing time will be undefined.");
+
+        mreg.register("RebalancingEndTime", () -> rebalanceFut.endTime, "The time the rebalancing was " +
+            "completed. If the rebalancing completed with an error, was cancelled, or the start time was undefined, " +
+            "the rebalancing end time will be undefined.");
+
+        mreg.register("RebalancingLastCancelledTime", () -> lastCancelledTime.get(), "The time the " +
+            "rebalancing was completed with an error or was cancelled. If there were several such cases, the metric " +
+            "stores the last time. The metric displays the value even if there is no rebalancing process.");
+
+        mreg.register(
+            "RebalancingFullReceivedKeys",
+            () -> F.viewReadOnly(rebalanceFut.fullReceivedKeys, LongAdder::sum),
+            Map.class,
+            "Currently received keys for full rebalance by supplier."
+        );
+
+        mreg.register(
+            "RebalancingHistReceivedKeys",
+            () -> F.viewReadOnly(rebalanceFut.histReceivedKeys, LongAdder::sum),
+            Map.class,
+            "Currently received keys for historical rebalance by supplier."
+        );
+
+        mreg.register(
+            "RebalancingFullReceivedBytes",
+            () -> F.viewReadOnly(rebalanceFut.fullReceivedBytes, LongAdder::sum),
+            Map.class,
+            "Currently received bytes for full rebalance by supplier."
+        );
+
+        mreg.register(
+            "RebalancingHistReceivedBytes",
+            () -> F.viewReadOnly(rebalanceFut.histReceivedBytes, LongAdder::sum),
+            Map.class,
+            "Currently received bytes for historical rebalance by supplier."
+        );
     }
 
     /**
@@ -343,7 +396,7 @@ public class GridDhtPartitionDemander {
             if (assignments.isEmpty())
                 return null;
 
-            final RebalanceFuture fut = new RebalanceFuture(grp, lastExchangeFut, assignments, log, rebalanceId, next, oldFut);
+            final RebalanceFuture fut = new RebalanceFuture(grp, lastExchangeFut, assignments, log, rebalanceId, next, lastCancelledTime);
 
             if (oldFut.isInitial())
                 fut.listen(f -> oldFut.onDone(f.result()));
@@ -443,58 +496,61 @@ public class GridDhtPartitionDemander {
      * rebalanced or marked as missed send new Demand message to request next
      * batch of entries.
      *
-     * @param supplierNodeId Supplier node id.
+     * @param nodeId Node id.
      * @param supplyMsg Supply message.
      */
     public void handleSupplyMessage(
-        final UUID supplierNodeId,
+        final UUID nodeId,
         final GridDhtPartitionSupplyMessage supplyMsg
     ) {
         AffinityTopologyVersion topVer = supplyMsg.topologyVersion();
 
-        RebalanceFuture rebalanceFut = this.rebalanceFut;
-        RebalanceStatistics rebalanceStat = rebalanceFut.stat;
+        RebalanceFuture fut = rebalanceFut;
 
-        ClusterNode supplierNode = ctx.node(supplierNodeId);
+        ClusterNode node = ctx.node(nodeId);
 
-        rebalanceFut.cancelLock.readLock().lock();
+        fut.cancelLock.readLock().lock();
 
         try {
             String errMsg = null;
 
-            if (rebalanceFut.isDone())
+            if (fut.isDone())
                 errMsg = "rebalance completed";
-            else if (isNull(supplierNode))
+            else if (node == null)
                 errMsg = "supplier has left cluster";
             else if (!rebalanceFut.isActual(supplyMsg.rebalanceId()))
                 errMsg = "topology changed";
 
-            if (nonNull(errMsg)) {
+            if (errMsg != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Supply message has been ignored (" + errMsg + ") [" +
-                        demandRoutineInfo(supplierNodeId, supplyMsg) + ']');
+                        demandRoutineInfo(nodeId, supplyMsg) + ']');
                 }
 
                 return;
             }
 
             if (log.isDebugEnabled())
-                log.debug("Received supply message [" + demandRoutineInfo(supplierNodeId, supplyMsg) + ']');
+                log.debug("Received supply message [" + demandRoutineInfo(nodeId, supplyMsg) + ']');
 
             // Check whether there were error during supplying process.
-            if (nonNull(supplyMsg.classError()))
+            if (supplyMsg.classError() != null)
                 errMsg = supplyMsg.classError().getMessage();
-            else if (nonNull(supplyMsg.error()))
+            else if (supplyMsg.error() != null)
                 errMsg = supplyMsg.error().getMessage();
 
-            if (nonNull(errMsg)) {
+            if (errMsg != null) {
                 U.warn(log, "Rebalancing routine has failed [" +
-                    demandRoutineInfo(supplierNodeId, supplyMsg) + ", err=" + errMsg + ']');
+                    demandRoutineInfo(nodeId, supplyMsg) + ", err=" + errMsg + ']');
 
-                rebalanceFut.error(supplierNodeId);
+                fut.error(nodeId);
 
                 return;
             }
+
+            final GridDhtPartitionTopology top = grp.topology();
+
+            fut.receivedBytes.addAndGet(supplyMsg.messageSize());
 
             if (grp.sharedGroup()) {
                 for (GridCacheContext cctx : grp.caches()) {
@@ -520,14 +576,8 @@ public class GridDhtPartitionDemander {
                 }
             }
 
-            GridDhtPartitionTopology top = grp.topology();
-
             try {
                 AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
-
-                //Counters of rebalanced entries and bytes.
-                AtomicLong entryCnt = new AtomicLong();
-                AtomicLong byteCnt = new AtomicLong();
 
                 // Preload.
                 for (Map.Entry<Integer, CacheEntryInfoCollection> e : supplyMsg.infos().entrySet()) {
@@ -567,33 +617,36 @@ public class GridDhtPartitionDemander {
                             part.beforeApplyBatch(last);
 
                             try {
-                                CacheEntryInfoCollection entryInfoCol = e.getValue();
-                                Iterator<GridCacheEntryInfo> infos = entryInfoCol.infos().iterator();
+                                long[] byteRcv = {0};
 
-                                entryCnt.set(0);
-                                byteCnt.set(0);
+                                GridIterableAdapter<GridCacheEntryInfo> infosWrap = new GridIterableAdapter<>(
+                                    new IteratorWrapper<GridCacheEntryInfo>(e.getValue().infos().iterator()) {
+                                        /** {@inheritDoc} */
+                                        @Override public GridCacheEntryInfo nextX() throws IgniteCheckedException {
+                                            GridCacheEntryInfo i = super.nextX();
+
+                                            byteRcv[0] += i.marshalledSize(ctx.cacheObjectContext(i.cacheId()));
+
+                                            return i;
+                                        }
+                                    }
+                                );
 
                                 if (grp.mvccEnabled())
-                                    mvccPreloadEntries(topVer, supplierNode, p, infos, entryCnt, byteCnt);
-                                else
-                                    preloadEntries(topVer, supplierNode, p, infos, entryCnt, byteCnt);
+                                    mvccPreloadEntries(topVer, node, p, infosWrap);
+                                else {
+                                    preloadEntries(topVer, node, p, infosWrap);
 
-                                if (nonNull(rebalanceStat)) {
-                                    rebalanceStat.update(
-                                        supplierNode,
-                                        p,
-                                        entryInfoCol.historical(),
-                                        entryCnt.get(),
-                                        byteCnt.get()
-                                    );
+                                    rebalanceFut.onReceivedKeys(p, e.getValue().infos().size(), node);
                                 }
 
-                                rebalanceFut.processed.get(p).increment();
+                                fut.processed.get(p).increment();
 
-                                // If message was last for this partition,
-                                // then we take ownership.
+                                fut.onReceivedBytes(p, byteRcv[0], node);
+
+                                // If message was last for this partition, then we take ownership.
                                 if (last)
-                                    ownPartition(rebalanceFut, part, supplierNodeId, supplyMsg);
+                                    ownPartition(fut, part, nodeId, supplyMsg);
                             }
                             finally {
                                 part.release();
@@ -601,30 +654,30 @@ public class GridDhtPartitionDemander {
                         }
                         else {
                             if (last)
-                                rebalanceFut.partitionDone(supplierNodeId, p, false);
+                                fut.partitionDone(nodeId, p, false);
 
                             if (log.isDebugEnabled())
                                 log.debug("Skipping rebalancing partition (state is not MOVING): " +
-                                    "[" + demandRoutineInfo(supplierNodeId, supplyMsg) + ", p=" + p + ']');
+                                    '[' + demandRoutineInfo(nodeId, supplyMsg) + ", p=" + p + ']');
                         }
                     }
                     else {
-                        rebalanceFut.partitionDone(supplierNodeId, p, false);
+                        fut.partitionDone(nodeId, p, false);
 
                         if (log.isDebugEnabled())
                             log.debug("Skipping rebalancing partition (affinity changed): " +
-                                "[" + demandRoutineInfo(supplierNodeId, supplyMsg) + ", p=" + p + ']');
+                                '[' + demandRoutineInfo(nodeId, supplyMsg) + ", p=" + p + ']');
                     }
                 }
 
                 // Only request partitions based on latest topology version.
                 for (Integer miss : supplyMsg.missed()) {
                     if (aff.get(miss).contains(ctx.localNode()))
-                        rebalanceFut.partitionMissed(supplierNodeId, miss);
+                        fut.partitionMissed(nodeId, miss);
                 }
 
                 for (Integer miss : supplyMsg.missed())
-                    rebalanceFut.partitionDone(supplierNodeId, miss, false);
+                    fut.partitionDone(nodeId, miss, false);
 
                 GridDhtPartitionDemandMessage d = new GridDhtPartitionDemandMessage(
                     supplyMsg.rebalanceId(),
@@ -633,48 +686,42 @@ public class GridDhtPartitionDemander {
 
                 d.timeout(grp.preloader().timeout());
 
-                if (!rebalanceFut.isDone()) {
+                if (!fut.isDone()) {
                     // Send demand message.
                     try {
-                        ctx.io().sendOrderedMessage(supplierNode, d.topic(),
-                            d.convertIfNeeded(supplierNode.version()), grp.ioPolicy(), grp.preloader().timeout());
+                        ctx.io().sendOrderedMessage(node, d.topic(),
+                            d.convertIfNeeded(node.version()), grp.ioPolicy(), grp.preloader().timeout());
 
                         if (log.isDebugEnabled())
-                            log.debug("Send next demand message [" +
-                                demandRoutineInfo(supplierNodeId, supplyMsg) + "]");
+                            log.debug("Send next demand message [" + demandRoutineInfo(nodeId, supplyMsg) + "]");
                     }
                     catch (ClusterTopologyCheckedException e) {
                         if (log.isDebugEnabled())
-                            log.debug("Supplier has left [" + demandRoutineInfo(supplierNodeId, supplyMsg) +
+                            log.debug("Supplier has left [" + demandRoutineInfo(nodeId, supplyMsg) +
                                 ", errMsg=" + e.getMessage() + ']');
                     }
                 }
                 else {
                     if (log.isDebugEnabled())
-                        log.debug("Will not request next demand message [" +
-                            demandRoutineInfo(supplierNodeId, supplyMsg) + ", rebalanceFuture=" + rebalanceFut + ']');
+                        log.debug("Will not request next demand message [" + demandRoutineInfo(nodeId, supplyMsg) +
+                            ", rebalanceFuture=" + fut + ']');
                 }
             }
             catch (IgniteSpiException | IgniteCheckedException e) {
-                rebalanceFut.error(supplierNodeId);
+                fut.error(nodeId);
 
-                LT.error(log, e, "Error during rebalancing [" + demandRoutineInfo(supplierNodeId, supplyMsg) +
+                LT.error(log, e, "Error during rebalancing [" + demandRoutineInfo(nodeId, supplyMsg) +
                     ", err=" + e + ']');
             }
         }
         finally {
-            rebalanceFut.cancelLock.readLock().unlock();
-
-            if (nonNull(rebalanceStat)) {
-                if (nonNull(supplierNode))
-                    rebalanceStat.end(supplierNode, U.currentTimeMillis());
-                else
-                    rebalanceStat.end(supplierNodeId, U.currentTimeMillis());
-            }
+            fut.cancelLock.readLock().unlock();
         }
     }
 
     /**
+     * Owns the partition recursively.
+     *
      * @param fut Future.
      * @param part Partition.
      * @param nodeId Node id.
@@ -729,21 +776,17 @@ public class GridDhtPartitionDemander {
     /**
      * Adds mvcc entries with theirs history to partition p.
      *
-     * @param supplierNode Node which sent entry.
+     * @param node Node which sent entry.
      * @param p Partition id.
      * @param infos Entries info for preload.
      * @param topVer Topology version.
-     * @param entryCnt Counter of rebalanced entries.
-     * @param byteCnt Counter of rebalanced bytes.
      * @throws IgniteInterruptedCheckedException If interrupted.
      */
     private void mvccPreloadEntries(
         AffinityTopologyVersion topVer,
-        ClusterNode supplierNode,
+        ClusterNode node,
         int p,
-        Iterator<GridCacheEntryInfo> infos,
-        AtomicLong entryCnt,
-        AtomicLong byteCnt
+        Iterator<GridCacheEntryInfo> infos
     ) throws IgniteCheckedException {
         if (!infos.hasNext())
             return;
@@ -789,7 +832,7 @@ public class GridDhtPartitionDemander {
                         }
 
                         if (cctx != null) {
-                            if (!mvccPreloadEntry(cctx, supplierNode, entryHist, topVer, p)) {
+                            if (!mvccPreloadEntry(cctx, node, entryHist, topVer, p)) {
                                 if (log.isTraceEnabled())
                                     log.trace("Got entries for invalid partition during " +
                                         "preloading (will skip) [p=" + p +
@@ -798,10 +841,7 @@ public class GridDhtPartitionDemander {
                                 return; // Skip current partition.
                             }
 
-                            entryCnt.incrementAndGet();
-
-                            for (GridCacheMvccEntryInfo entryInfo : entryHist)
-                                byteCnt.addAndGet(entryInfo.marshalledSize(cctx.cacheObjectContext()));
+                            rebalanceFut.onReceivedKeys(p, 1, node);
 
                             //TODO: IGNITE-11330: Update metrics for touched cache only.
                             for (GridCacheContext ctx : grp.caches()) {
@@ -828,21 +868,17 @@ public class GridDhtPartitionDemander {
     /**
      * Adds entries with theirs history to partition p.
      *
-     * @param supplierNode Node which sent entry.
+     * @param node Node which sent entry.
      * @param p Partition id.
      * @param infos Entries info for preload.
      * @param topVer Topology version.
-     * @param entryCnt Counter of rebalanced entries.
-     * @param byteCnt Counter of rebalanced bytes.
      * @throws IgniteInterruptedCheckedException If interrupted.
      */
     private void preloadEntries(
         AffinityTopologyVersion topVer,
-        ClusterNode supplierNode,
+        ClusterNode node,
         int p,
-        Iterator<GridCacheEntryInfo> infos,
-        AtomicLong entryCnt,
-        AtomicLong byteCnt
+        Iterator<GridCacheEntryInfo> infos
     ) throws IgniteCheckedException {
         GridCacheContext cctx = null;
 
@@ -866,16 +902,13 @@ public class GridDhtPartitionDemander {
                             cctx = cctx.dhtCache().context();
                     }
 
-                    if (!preloadEntry(supplierNode, p, entry, topVer, cctx)) {
+                    if (!preloadEntry(node, p, entry, topVer, cctx)) {
                         if (log.isTraceEnabled())
                             log.trace("Got entries for invalid partition during " +
                                 "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
 
                         return;
                     }
-
-                    entryCnt.incrementAndGet();
-                    byteCnt.addAndGet(entry.marshalledSize(cctx.cacheObjectContext()));
 
                     //TODO: IGNITE-11330: Update metrics for touched cache only.
                     for (GridCacheContext ctx : grp.caches()) {
@@ -1148,10 +1181,6 @@ public class GridDhtPartitionDemander {
          * partition in OWNING state. */
         private final ReentrantReadWriteLock cancelLock;
 
-        /** Rebalance statistics. */
-        @GridToStringExclude
-        @Nullable final RebalanceStatistics stat;
-
         /** Entries batches queued. */
         private final Map<Integer/* Partition id. */, LongAdder/* Batch count. */> queued = new HashMap<>();
 
@@ -1160,6 +1189,24 @@ public class GridDhtPartitionDemander {
 
         /** Historical rebalance set. */
         private final Set<Integer> historical = new HashSet<>();
+
+        /** Rebalanced bytes count. */
+        private final AtomicLong receivedBytes = new AtomicLong(0);
+
+        /** Rebalanced keys count. */
+        private final AtomicLong receivedKeys = new AtomicLong(0);
+
+        /** The number of cache group partitions left to be rebalanced. */
+        private final AtomicLong partitionsLeft = new AtomicLong(0);
+
+        /** Rebalancing start time. */
+        private volatile long startTime = -1;
+
+        /** Rebalancing end time. */
+        private volatile long endTime = -1;
+
+        /** Rebalancing last cancelled time. */
+        private final AtomicLong lastCancelledTime;
 
         /** Next future in chain. */
         @GridToStringExclude
@@ -1171,8 +1218,20 @@ public class GridDhtPartitionDemander {
         /** Partitions which have been scheduled for rebalance from specific supplier. */
         private final Map<ClusterNode, Set<Integer>> rebalancingParts;
 
+        /** Received keys for full rebalance by supplier. */
+        private final Map<UUID, LongAdder> fullReceivedKeys = new ConcurrentHashMap<>();
+
+        /** Received bytes for full rebalance by supplier. */
+        private final Map<UUID, LongAdder> fullReceivedBytes = new ConcurrentHashMap<>();
+
+        /** Received keys for historical rebalance by suppliers. */
+        private final Map<UUID, LongAdder> histReceivedKeys = new ConcurrentHashMap<>();
+
+        /** Received keys for historical rebalance by suppliers. */
+        private final Map<UUID, LongAdder> histReceivedBytes = new ConcurrentHashMap<>();
+
         /**
-         * Constructor.
+         * Creates a new rebalance future.
          *
          * @param grp Cache group context.
          * @param exchFut Exchange future.
@@ -1180,7 +1239,7 @@ public class GridDhtPartitionDemander {
          * @param log Logger.
          * @param rebalanceId Rebalance id.
          * @param next Next rebalance future.
-         * @param previous Previous rebalance future.
+         * @param lastCancelledTime Cancelled time.
          */
         RebalanceFuture(
             CacheGroupContext grp,
@@ -1189,7 +1248,7 @@ public class GridDhtPartitionDemander {
             IgniteLogger log,
             long rebalanceId,
             RebalanceFuture next,
-            RebalanceFuture previous
+            AtomicLong lastCancelledTime
         ) {
             assert assignments != null : "Asiignments must not be null.";
 
@@ -1200,13 +1259,17 @@ public class GridDhtPartitionDemander {
             this.exchFut = exchFut;
             this.next = next;
 
+            this.lastCancelledTime = lastCancelledTime;
+
             assignments.forEach((k, v) -> {
                 assert v.partitions() != null :
                     "Partitions are null [grp=" + grp.cacheOrGroupName() + ", fromNode=" + k.id() + "]";
 
                 remaining.put(k.id(), v.partitions());
 
-                rebalancingParts.put(k, new HashSet<Integer>() {{
+                partitionsLeft.addAndGet(v.partitions().size());
+
+                rebalancingParts.put(k, new HashSet<Integer>(v.partitions().size()) {{
                     addAll(v.partitions().historicalSet());
                     addAll(v.partitions().fullSet());
                 }});
@@ -1219,6 +1282,9 @@ public class GridDhtPartitionDemander {
                             queued.put(p, new LongAdder());
                             processed.put(p, new LongAdder());
                         });
+
+                Stream.of(fullReceivedKeys, fullReceivedBytes, histReceivedKeys, histReceivedBytes)
+                    .forEach(map -> map.put(k.id(), new LongAdder()));
             });
 
             this.routines = remaining.size();
@@ -1230,13 +1296,6 @@ public class GridDhtPartitionDemander {
             ctx = grp.shared();
 
             cancelLock = new ReentrantReadWriteLock();
-
-            if (!availablePrintRebalanceStatistics())
-                stat = null;
-            else {
-                RebalanceStatistics prevStat = previous.stat;
-                stat = new RebalanceStatistics(nonNull(prevStat) ? prevStat.attempt() + 1 : 1);
-            }
         }
 
         /**
@@ -1255,7 +1314,7 @@ public class GridDhtPartitionDemander {
             this.routines = 0;
             this.cancelLock = new ReentrantReadWriteLock();
             this.next = null;
-            this.stat = null;
+            this.lastCancelledTime = new AtomicLong();
         }
 
         /**
@@ -1272,9 +1331,6 @@ public class GridDhtPartitionDemander {
          * Before sending messages, method awaits partitions clearing for full partitions.
          */
         public void requestPartitions() {
-            if (availablePrintRebalanceStatistics())
-                stat.start(U.currentTimeMillis());
-
             if (!STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.STARTED)) {
                 cancel();
 
@@ -1292,7 +1348,7 @@ public class GridDhtPartitionDemander {
 
             if (isDone()) {
                 assert !result() : "Rebalance future was done, but partitions never requested [grp="
-                    + grp.cacheOrGroupName() + ", topVer=" + topVer + "]";
+                    + grp.cacheOrGroupName() + ", topVer=" + topologyVersion() + "]";
 
                 return;
             }
@@ -1300,7 +1356,7 @@ public class GridDhtPartitionDemander {
             final CacheConfiguration cfg = grp.config();
 
             for (Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> e : assignments.entrySet()) {
-                ClusterNode supplierNode = e.getKey();
+                final ClusterNode node = e.getKey();
 
                 GridDhtPartitionDemandMessage d = e.getValue();
 
@@ -1310,12 +1366,15 @@ public class GridDhtPartitionDemander {
                     if (isDone())
                         return;
 
-                    parts = remaining.get(supplierNode.id());
-                }
+                    if (startTime == -1)
+                        startTime = System.currentTimeMillis();
 
-                U.log(log, "Prepared rebalancing [grp=" + grp.cacheOrGroupName()
-                    + ", mode=" + cfg.getRebalanceMode() + ", supplier=" + supplierNode.id() +
-                    ", partitionsCount=" + parts.size() + ", topVer=" + topVer + "]");
+                    parts = remaining.get(node.id());
+
+                    U.log(log, "Prepared rebalancing [grp=" + grp.cacheOrGroupName()
+                        + ", mode=" + cfg.getRebalanceMode() + ", supplier=" + node.id() + ", partitionsCount=" + parts.size()
+                        + ", topVer=" + topologyVersion() + "]");
+                }
 
                 if (!parts.isEmpty()) {
                     d.rebalanceId(rebalanceId);
@@ -1354,7 +1413,7 @@ public class GridDhtPartitionDemander {
 
                                     if (remaining == 0) {
                                         ctx.kernalContext().closure().runLocalSafe(() -> {
-                                            requestPartitions0(supplierNode, parts, d);
+                                            requestPartitions0(node, parts, d);
                                         });
                                     }
                                 }
@@ -1365,13 +1424,13 @@ public class GridDhtPartitionDemander {
                             updateClearingPartitionsMetric(fullSetSize);
                         else if (!e.getValue().partitions().historicalSet().isEmpty()) {
                             ctx.kernalContext().closure().runLocalSafe(() -> {
-                                requestPartitions0(supplierNode, parts, d);
+                                requestPartitions0(node, parts, d);
                             });
                         }
                     }
                     else {
                         ctx.kernalContext().closure().runLocalSafe(() -> {
-                            requestPartitions0(supplierNode, parts, d);
+                            requestPartitions0(node, parts, d);
                         });
                     }
                 }
@@ -1412,9 +1471,6 @@ public class GridDhtPartitionDemander {
                         ", fullPartitions=" + S.compact(parts.fullSet()) +
                         ", histPartitions=" + S.compact(parts.historicalSet()) + ']');
 
-                if (availablePrintRebalanceStatistics())
-                    stat.start(supplierNode, U.currentTimeMillis());
-
                 ctx.io().sendOrderedMessage(supplierNode, msg.topic(),
                     msg.convertIfNeeded(supplierNode.version()), grp.ioPolicy(), msg.timeout());
 
@@ -1443,15 +1499,6 @@ public class GridDhtPartitionDemander {
 
         /** {@inheritDoc} */
         @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err) {
-            if (availablePrintRebalanceStatistics() && !isInitial()) {
-                // Avoid race with next rebalancing.
-                listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
-                    @Override public void apply(IgniteInternalFuture<Boolean> fut) {
-                        printRebalanceStatistics();
-                    }
-                });
-            }
-
             if (super.onDone(res, err)) {
                 if (!isInitial()) {
                     sendRebalanceFinishedEvent();
@@ -1462,6 +1509,9 @@ public class GridDhtPartitionDemander {
                     // Complete sync future only if rebalancing was not cancelled.
                     if (res && !grp.preloader().syncFuture().isDone())
                         ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
+
+                    if (isChainFinish())
+                        onChainFinished();
                 }
 
                 if (next != null)
@@ -1582,6 +1632,23 @@ public class GridDhtPartitionDemander {
             }
         }
 
+        /** {@inheritDoc} */
+        @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err, boolean cancel) {
+            assert !cancel : "RebalanceFuture cancel is not supported. Use res = false.";
+
+            boolean byThisCall = super.onDone(res, err, cancel);
+            boolean isCancelled = res == Boolean.FALSE || isFailed();
+
+            if (byThisCall) {
+                if (isCancelled)
+                    lastCancelledTime.accumulateAndGet(System.currentTimeMillis(), Math::max);
+                else if (startTime != -1)
+                    endTime = System.currentTimeMillis();
+            }
+
+            return byThisCall;
+        }
+
         /**
          * @param nodeId Node id.
          */
@@ -1677,14 +1744,11 @@ public class GridDhtPartitionDemander {
             assert rmvd : "Partition already done [grp=" + grp.cacheOrGroupName() + ", fromNode=" + nodeId +
                 ", part=" + p + ", left=" + parts + "]";
 
-            if (parts.isEmpty()) {
-                int remainingRoutines = remaining.size() - 1;
+            if (rmvd)
+                partitionsLeft.decrementAndGet();
 
-                U.log(log, "Completed " + ((remainingRoutines == 0 ? "(final) " : "") +
-                    "rebalancing [grp=" + grp.cacheOrGroupName() +
-                    ", supplier=" + nodeId +
-                    ", topVer=" + topologyVersion() +
-                    ", progress=" + (routines - remainingRoutines) + "/" + routines + "]"));
+            if (parts.isEmpty()) {
+                logSupplierDone(nodeId);
 
                 remaining.remove(nodeId);
             }
@@ -1872,88 +1936,139 @@ public class GridDhtPartitionDemander {
             return true;
         }
 
+        /**
+         * Callback when getting entries from supplier.
+         *
+         * @param p Partition.
+         * @param k Key count.
+         * @param node Supplier.
+         */
+        private void onReceivedKeys(int p, long k, ClusterNode node) {
+            receivedKeys.addAndGet(k);
+
+            boolean hist = assignments.get(node).partitions().hasHistorical(p);
+            (hist ? histReceivedKeys : fullReceivedKeys).get(node.id()).add(k);
+        }
+
+        /**
+         * Callback when getting size of received entries in bytes.
+         *
+         * @param p Partition.
+         * @param bytes Byte count.
+         * @param node Supplier.
+         */
+        private void onReceivedBytes(int p, long bytes, ClusterNode node) {
+            boolean hist = assignments.get(node).partitions().hasHistorical(p);
+            (hist ? histReceivedBytes : fullReceivedBytes).get(node.id()).add(bytes);
+        }
+
+        /**
+         * Checks if rebalance chain has completed.
+         *
+         * @return {@code true} if rebalance chain completed.
+         */
+        private boolean isChainFinish() {
+            assert isDone() : this;
+
+            if (isInitial() || !result())
+                return false;
+
+            RebalanceFuture fut = next;
+
+            while (nonNull(fut)) {
+                if (fut.isInitial() || !fut.isDone())
+                    return false;
+                else
+                    fut = fut.next;
+            }
+
+            return true;
+        }
+
+        /**
+         * Callback when rebalance chain ends.
+         */
+        private void onChainFinished() {
+            assert isChainFinish();
+
+            Set<RebalanceFuture> futs = ctx.cacheContexts().stream()
+                .map(GridCacheContext::preloader)
+                .filter(GridDhtPreloader.class::isInstance)
+                .map(GridDhtPreloader.class::cast)
+                .map(p -> p.demander().rebalanceFut)
+                .filter(fut -> !fut.isInitial() && fut.isDone() && fut.result() && topVer.equals(fut.topVer))
+                .collect(toSet());
+
+            long parts = 0;
+            long entries = 0;
+            long bytes = 0;
+            long minStartTime = Long.MAX_VALUE;
+
+            for (RebalanceFuture fut : futs) {
+                parts += fut.rebalancingParts.values().stream().mapToLong(Collection::size).sum();
+
+                entries += Stream.of(fut.fullReceivedKeys, fut.histReceivedKeys)
+                    .flatMap(map -> map.values().stream()).mapToLong(LongAdder::sum).sum();
+
+                bytes += Stream.of(fut.fullReceivedBytes, fut.histReceivedBytes)
+                    .flatMap(map -> map.values().stream()).mapToLong(LongAdder::sum).sum();
+
+                minStartTime = Math.min(minStartTime, fut.startTime);
+            }
+
+            log.info("Completed rebalance chain: [rebalanceId=" + rebalanceId +
+                ", partitions=" + parts +
+                ", entries=" + entries +
+                ", duration=" + U.humanReadableDuration(System.currentTimeMillis() - minStartTime) +
+                ", bytesRcvd=" + U.humanReadableByteCount(bytes) + ']');
+        }
+
+        /**
+         * Callback for logging on completion of rebalance by supplier.
+         *
+         * @param nodeId Suuplier node id.
+         */
+        private void logSupplierDone(UUID nodeId) {
+            int remainingRoutines = remaining.size() - 1;
+
+            Map<Boolean, Long> partCnts = rebalancingParts.get(ctx.node(nodeId)).stream()
+                .collect(partitioningBy(historical::contains, counting()));
+
+            int fullParts = partCnts.getOrDefault(Boolean.FALSE, 0L).intValue();
+            int histParts = partCnts.getOrDefault(Boolean.TRUE, 0L).intValue();
+
+            long fullEntries = fullReceivedKeys.get(nodeId).sum();
+            long histEntries = histReceivedKeys.get(nodeId).sum();
+
+            long fullBytes = fullReceivedBytes.get(nodeId).sum();
+            long histBytes = histReceivedBytes.get(nodeId).sum();
+
+            long duration = System.currentTimeMillis() - startTime;
+            long durationSec = Math.max(1, TimeUnit.MILLISECONDS.toSeconds(duration));
+
+            U.log(log, "Completed " + (remainingRoutines == 0 ? "(final) " : "") +
+                "rebalancing [rebalanceId=" + rebalanceId +
+                ", grp=" + grp.cacheOrGroupName() +
+                ", supplier=" + nodeId +
+                ", partitions=" + (fullParts + histParts) +
+                ", entries=" + (fullEntries + histEntries) +
+                ", duration=" + U.humanReadableDuration(duration) +
+                ", bytesRcvd=" + U.humanReadableByteCount(fullBytes + histBytes) +
+                ", bandwidth=" + U.humanReadableByteCount((fullBytes + histBytes) / durationSec) + "/sec" +
+                ", histPartitions=" + histParts +
+                ", histEntries=" + histEntries +
+                ", histBytesRcvd=" + U.humanReadableByteCount(histBytes) +
+                ", fullPartitions=" + fullParts +
+                ", fullEntries=" + fullEntries +
+                ", fullBytesRcvd=" + U.humanReadableByteCount(fullBytes) +
+                ", topVer=" + topologyVersion() +
+                ", progress=" + (routines - remainingRoutines) + "/" + routines + "]");
+        }
+
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(RebalanceFuture.class, this, "result", result());
         }
-
-        /**
-         * Collect demander per cache groups. For print statistics.
-         *
-         * @param demanderPred Demander predicate.
-         * @return Set demanders.
-         */
-        private Set<GridDhtPartitionDemander> demanders(Predicate<? super GridDhtPartitionDemander> demanderPred) {
-            return ctx.cacheContexts().stream()
-                .map(GridCacheContext::preloader)
-                .filter(GridDhtPreloader.class::isInstance)
-                .map(GridDhtPreloader.class::cast)
-                .map(GridDhtPreloader::demander)
-                .filter(demanderPred)
-                .collect(toSet());
-        }
-
-        /**
-         * Logging statistics of rebalance. Statistics will be printed for
-         * cache group and total if rebalance has ended for all cache groups
-         * successfully.
-         *
-         * @throws IgniteCheckedException If error occurs.
-         */
-        private void printRebalanceStatistics() {
-            assert isDone() : "RebalanceFuture should be done.";
-            assert availablePrintRebalanceStatistics();
-            assert nonNull(stat);
-
-            RebalanceStatistics totalStat = ((GridDhtPreloader)grp.preloader()).demander().totalRebStat;
-            assert nonNull(totalStat);
-
-            stat.end(U.currentTimeMillis());
-
-            if (log.isInfoEnabled())
-                log.info(cacheGroupRebalanceStatistics(grp, stat, result(), topVer));
-
-            totalStat.merge(stat);
-            stat.reset();
-
-            // Check that rebalance is over for all cache groups successfully.
-            for (GridCacheContext<?, ?> cacheCtx : ctx.cacheContexts()) {
-                IgniteInternalFuture<Boolean> rebFut = cacheCtx.preloader().rebalanceFuture();
-
-                if (!rebFut.isDone() || !rebFut.result())
-                    return;
-            }
-
-            // Exclude not rebalanced cache groups.
-            Set<GridDhtPartitionDemander> demanders = demanders(d -> !d.rebalanceFut.isInitial());
-
-            Map<CacheGroupContext, RebalanceStatistics> totalStats =
-                demanders.stream().collect(toMap(d -> d.grp, d -> d.totalRebStat));
-
-            if (log.isInfoEnabled())
-                log.info(totalRebalanceStatistic(totalStats));
-
-            totalStats.forEach((grpCtx, statistics) -> statistics.reset());
-            demanders.forEach(d -> d.rebalanceFut.stat.resetAttempt());
-        }
-
-        /**
-         * Return rebalance statistics.
-         *
-         * @return Rebalance statistics.
-         */
-        @Nullable public RebalanceStatistics statistics() {
-            return stat;
-        }
-    }
-
-    /**
-     * Return total statistics of rebalance.
-     *
-     * @return Total statistics of rebalance.
-     */
-    @Nullable public RebalanceStatistics totalStatistics() {
-        return totalRebStat;
     }
 
     /**
