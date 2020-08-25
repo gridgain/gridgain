@@ -73,6 +73,16 @@ public class CacheConfigurationEnrichment implements Serializable {
     }
 
     /**
+     * Checks that a field presents among of fields for enshrinement.
+     *
+     * @param name Field name.
+     * @return True when field presents, false otherwise.
+     */
+    public boolean hasField(String name) {
+        return fieldClassNames.containsKey(name);
+    }
+
+    /**
      * @param nearCacheCfgEnrichment Enrichment configured for {@link org.apache.ignite.configuration.NearCacheConfiguration}.
      */
     public void nearCacheConfigurationEnrichment(CacheConfigurationEnrichment nearCacheCfgEnrichment) {

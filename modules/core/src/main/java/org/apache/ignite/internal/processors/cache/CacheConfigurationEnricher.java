@@ -116,7 +116,8 @@ public class CacheConfigurationEnricher {
         try {
             for (Field field : CacheConfiguration.class.getDeclaredFields())
                 if (field.getDeclaredAnnotation(SerializeSeparately.class) != null) {
-                    if (!affinityNode && skipDeserialization(ccfg, field))
+                    if ((!affinityNode && skipDeserialization(ccfg, field)) ||
+                        !enrichment.hasField(field.getName()))
                         continue;
 
                     field.setAccessible(true);
