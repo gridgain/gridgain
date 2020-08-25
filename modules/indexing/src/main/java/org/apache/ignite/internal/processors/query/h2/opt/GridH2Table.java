@@ -54,7 +54,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.TableStatistics;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.ObjectStatistics;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -129,9 +129,6 @@ public class GridH2Table extends TableBase {
 
     /** */
     private volatile boolean destroyed;
-
-    /** */
-    private volatile TableStatistics tblStats;
 
     /**
      * Map of sessions locks.
@@ -462,12 +459,8 @@ public class GridH2Table extends TableBase {
         return cacheInfo.cacheContext() == null;
     }
 
-    public TableStatistics tableStatistics() {
-        return tblStats;
-    }
-
-    public void tableStatistics(@Nullable TableStatistics locStatistics) {
-        this.tblStats = locStatistics;
+    public ObjectStatistics tableStatistics() {
+        return cacheInfo.cacheContext().kernalContext().query().getIndexing().stat
     }
 
     /**

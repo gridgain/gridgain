@@ -142,6 +142,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.SqlStatisticsManager;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.SqlStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
@@ -322,7 +323,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Query message listener. */
     private GridMessageListener qryLsnr;
 
-    private volatile SqlStatisticsManager statsManager;
+    private volatile SqlStatisticsManagerImpl statsManager;
 
     /**
      * @return Kernal context.
@@ -2201,7 +2202,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         longRunningQryMgr = new LongRunningQueryManager(ctx);
 
-        statsManager = new SqlStatisticsManager(ctx);
+        statsManager = new SqlStatisticsManagerImpl(ctx);
+        statsManager.start();
 
         parser = new QueryParser(this, connections());
 
@@ -2250,6 +2252,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         distrCfg = new DistributedSqlConfiguration(ctx, log);
 
         distrCfg.listenDisabledFunctions(new FunctionsManager<>());
+    }
+
+    public SqlStatisticsManager statsManager() {
+        return statsManager;
     }
 
     /** {@inheritDoc} */

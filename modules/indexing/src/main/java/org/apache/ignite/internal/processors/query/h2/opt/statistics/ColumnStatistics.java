@@ -18,20 +18,40 @@ package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
 import org.h2.value.Value;
 
+/**
+ * Values statistic in particular column.
+ */
 public class ColumnStatistics {
+    /** Minimum value in column or {@code null} if there are no non null values in the column. */
     private final Value min;
 
+    /** Maximum value in column or {@code null} if there are no non null values in the column. */
     private final Value max;
 
+    /** Percent of null values in column. */
     private final int nulls;
 
-    private final int selectivity;
+    /** Percent of different values in column, i.e. 100 means that all values are unique, 0% means that all values
+     * are the same. */
+    private final int cardinality;
 
-    public ColumnStatistics(Value min, Value max, int nulls, int selectivity) {
+    private final byte[] raw;
+
+    /**
+     * Constructor.
+     *
+     * @param min min value in column or {@code null}.
+     * @param max max value in column or {@code null}.
+     * @param nulls percent of null values in column
+     * @param cardinality percent of unique value in column
+     * @param raw raw data to aggregate statistics.
+     */
+    public ColumnStatistics(Value min, Value max, int nulls, int cardinality, byte[] raw) {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
-        this.selectivity = selectivity;
+        this.cardinality = cardinality;
+        this.raw = raw;
     }
 
     public Value min() {
@@ -46,7 +66,11 @@ public class ColumnStatistics {
         return nulls;
     }
 
-    public int selectivity() {
-        return selectivity;
+    public int cardinality() {
+        return cardinality;
+    }
+
+    public byte[] raw() {
+        return raw;
     }
 }

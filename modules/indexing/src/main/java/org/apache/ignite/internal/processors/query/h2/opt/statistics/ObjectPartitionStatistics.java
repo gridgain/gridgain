@@ -18,12 +18,25 @@ package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
 import java.util.Map;
 
-public class TablePartitionStatistics extends TableStatistics {
+/**
+ * Statistic for some partition of data object.
+ */
+public class ObjectPartitionStatistics extends ObjectStatistics {
+    /** Partition id. */
     private final int partId;
 
+    /** Local flag. */
     private final boolean loc;
 
-    public TablePartitionStatistics(int partId, boolean loc, long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
+    /**
+     * Constructor.
+     *
+     * @param partId partition id.
+     * @param loc local flag.
+     * @param rowsCnt total count of rows in partition.
+     * @param colNameToStat column key to column statistics map.
+     */
+    public ObjectPartitionStatistics(int partId, boolean loc, long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
         super(rowsCnt, colNameToStat);
 
         this.partId = partId;

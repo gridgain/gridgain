@@ -21,7 +21,7 @@ import java.util.Arrays;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStatistics;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.TableStatistics;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.ObjectStatistics;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.h2.command.dml.AllColumnsForPlan;
@@ -109,7 +109,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      */
     private long getCostRangeIndex_Last(int[] masks, long rowCount, TableFilter[] filters, int filter,
         SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
-        TableStatistics locTblStats = tbl.tableStatistics();
+        ObjectStatistics locTblStats = tbl.tableStatistics();
 
         if (locTblStats != null)
             rowCount = locTblStats.rowCount();
@@ -138,7 +138,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                     ColumnStatistics colStat;
                     int selectivity = locTblStats != null
-                        && (colStat = locTblStats.columnStatistics(column.getName())) != null ? colStat.selectivity()
+                        && (colStat = locTblStats.columnStatistics(column.getName())) != null ? colStat.cardinality()
                         : column.getSelectivity();
 
                     totalSelectivity = 100 - ((100 - totalSelectivity) * (100 - selectivity) / 100);

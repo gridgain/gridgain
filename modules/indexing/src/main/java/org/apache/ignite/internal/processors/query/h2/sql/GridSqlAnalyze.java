@@ -32,21 +32,18 @@ public class GridSqlAnalyze extends GridSqlStatement {
     /** Table name. */
     private String tblName;
 
-    /** Attempt to create the index only if it does not exist. */
-    private boolean ifNotExists;
-
     /** Index to create. */
     private QueryIndex idx;
 
     /**
-     * @return Schema name for new index.
+     * @return Schema name for statistic collection.
      */
     public String schemaName() {
         return schemaName;
     }
 
     /**
-     * @param schemaName Schema name for new index.
+     * @param schemaName Schema name for tatistic collection.
      */
     public void schemaName(String schemaName) {
         this.schemaName = schemaName;
@@ -64,34 +61,6 @@ public class GridSqlAnalyze extends GridSqlStatement {
      */
     public void tableName(String tblName) {
         this.tblName = tblName;
-    }
-
-    /**
-     * @return whether attempt to create the index should be made only if it does not exist.
-     */
-    public boolean ifNotExists() {
-        return ifNotExists;
-    }
-
-    /**
-     * @param ifNotExists whether attempt to create the index should be made only if it does not exist.
-     */
-    public void ifNotExists(boolean ifNotExists) {
-        this.ifNotExists = ifNotExists;
-    }
-
-    /**
-     * @return Index to create.
-     */
-    public QueryIndex index() {
-        return idx;
-    }
-
-    /**
-     * @param idx Index to create.
-     */
-    public void index(QueryIndex idx) {
-        this.idx = idx;
     }
 
     /** {@inheritDoc} */

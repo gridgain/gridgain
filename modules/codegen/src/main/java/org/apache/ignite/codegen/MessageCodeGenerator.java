@@ -43,9 +43,12 @@ import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.TableStatisticsMessage;
-import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
-import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsCollectionCancelRequestMessage;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsCollectionRequestMessage;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsColumnData;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsKey;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsPropagationMessage;
+import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsRequestMessage;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -170,7 +173,12 @@ public class MessageCodeGenerator {
 
         MessageCodeGenerator gen = new MessageCodeGenerator(srcDir);
 
-        gen.generateAndWrite(TableStatisticsMessage.class);
+        gen.generateAndWrite(StatsKey.class);
+        gen.generateAndWrite(StatsColumnData.class);
+        gen.generateAndWrite(StatsCollectionRequestMessage.class);
+        gen.generateAndWrite(StatsCollectionCancelRequestMessage.class);
+        gen.generateAndWrite(StatsPropagationMessage.class);
+        gen.generateAndWrite(StatsRequestMessage.class);
 
 //        gen.generateAndWrite(GridQueryKillRequest.class);
 //        gen.generateAndWrite(GridQueryKillResponse.class);
