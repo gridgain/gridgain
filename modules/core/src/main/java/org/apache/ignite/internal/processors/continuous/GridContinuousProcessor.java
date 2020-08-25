@@ -476,8 +476,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                 try {
                     GridContinuousHandler hnd = U.unmarshal(marsh, info.hnd, U.resolveClassLoader(ctx.config()));
 
-                    if (hnd instanceof CacheContinuousQueryHandler &&
-                        !((CacheContinuousQueryHandler)hnd).isMarshalledObjectValid(ctx))
+                    if (!hnd.p2pContextValid(ctx))
                         continue;
                 }
                 catch (IgniteCheckedException e) {
@@ -520,10 +519,18 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         Map<UUID, LocalRoutineInfo> res = U.newHashMap(locInfos.size());
 
         for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
-            if (ctx.config().isPeerClassLoadingEnabled() &&
-                e.getValue().handler() instanceof CacheContinuousQueryHandler &&
-                !((CacheContinuousQueryHandler)e.getValue().handler()).isMarshalledObjectValid(ctx))
-                continue;
+            if (ctx.config().isPeerClassLoadingEnabled()) {
+                GridContinuousHandler hnd = e.getValue().handler();
+
+                try {
+                    if (!hnd.p2pContextValid(ctx))
+                        continue;
+                } catch (IgniteCheckedException ex) {
+                    U.warn(log, "Failed to validate continuous handler: " + ex);
+
+                    continue;
+                }
+            }
 
             res.put(e.getKey(), e.getValue());
         }
@@ -1332,8 +1339,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         for (Map.Entry<UUID, LocalRoutineInfo> e : locInfos.entrySet()) {
             LocalRoutineInfo locInfo = e.getValue();
 
-            if (locInfo.handler() instanceof CacheContinuousQueryHandler &&
-                !((CacheContinuousQueryHandler)locInfo.handler()).isMarshalledObjectValid(ctx)) {
+            if (!locInfo.handler().p2pContextValid(ctx)) {
                 try {
                     IgniteInternalFuture<UUID> fut = startRoutine(
                         locInfo.handler().clone(),

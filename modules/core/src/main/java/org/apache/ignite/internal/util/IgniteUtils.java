@@ -209,6 +209,7 @@ import org.apache.ignite.internal.compute.ComputeTaskTimeoutCheckedException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
@@ -12371,5 +12372,17 @@ public abstract class IgniteUtils {
         }
 
         return false;
+    }
+
+    /**
+     * @param ctx Kernel context.
+     * @param depInfo Deployment info.
+     * @param clsName Class name.
+     * @return Whether the {@code depObj} is valid for the {@code clsName} in the current context.
+     */
+    public static boolean validateDeploymentInfo(GridKernalContext ctx, GridDeploymentInfo depInfo, String clsName) {
+        GridDeployment dep = ctx.deploy().getDeployment(clsName);
+
+        return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
     }
 }

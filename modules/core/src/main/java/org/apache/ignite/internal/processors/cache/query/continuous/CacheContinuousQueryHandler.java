@@ -49,7 +49,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
-import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -1287,32 +1286,19 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
             ((GridFutureAdapter)p2pUnmarshalFut).onDone();
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean p2pContextValid(GridKernalContext ctx) throws IgniteCheckedException {
+        assert ctx != null;
+        assert ctx.config().isPeerClassLoadingEnabled();
+
+        return rmtFilterDep == null || rmtFilterDep.isValid(ctx);
+    }
+
     /**
      * @return Whether the handler is marshalled for peer class loading.
      */
     public boolean isMarshalled() {
         return rmtFilter == null || U.isGrid(rmtFilter.getClass()) || rmtFilterDep != null;
-    }
-
-    /**
-     * @return Whether the marshalled object is not valid in the current context.
-     */
-    public boolean isMarshalledObjectValid(GridKernalContext ctx) {
-        return isDeployableObjectValid(ctx, rmtFilterDep);
-    }
-
-    /**
-     * @param ctx Kernel context.
-     * @param depObj Deployable object.
-     * @return Whether the {@code depObj} is valid in the current context.
-     */
-    protected static boolean isDeployableObjectValid(GridKernalContext ctx, CacheContinuousQueryDeployableObject depObj) {
-        if (depObj == null)
-            return true;
-
-        GridDeployment dep = ctx.deploy().getDeployment(depObj.className());
-
-        return dep == null || dep.classLoaderId().equals(depObj.depInfo().classLoaderId());
     }
 
     /**

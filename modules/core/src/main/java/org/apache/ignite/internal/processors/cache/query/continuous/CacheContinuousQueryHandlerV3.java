@@ -161,8 +161,8 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isMarshalledObjectValid(GridKernalContext ctx) {
-        return super.isMarshalledObjectValid(ctx) && isDeployableObjectValid(ctx, rmtTransFactoryDep);
+    @Override public boolean p2pContextValid(GridKernalContext ctx) throws IgniteCheckedException {
+        return super.p2pContextValid(ctx) && (rmtTransFactoryDep == null || rmtTransFactoryDep.isValid(ctx));
     }
 
     /** {@inheritDoc} */
