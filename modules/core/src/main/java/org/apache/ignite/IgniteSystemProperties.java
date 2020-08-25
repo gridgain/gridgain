@@ -1078,6 +1078,7 @@ public final class IgniteSystemProperties {
     /**
      * Number of concurrent operation for evict partitions.
      */
+    @Deprecated
     public static final String IGNITE_EVICTION_PERMITS = "IGNITE_EVICTION_PERMITS";
 
     /**
@@ -1397,14 +1398,6 @@ public final class IgniteSystemProperties {
      */
     @IgniteExperimental
     public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
-
-    /**
-     * Time threshold (in milliseconds) of rebalance after which partition
-     * distribution will be present in rebalance statistics.
-     * Default value is {@code 10} min.
-     */
-    public static final String IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD =
-        "IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD";
 
     /**
      * Choose the index cost function. May be used to compatibility with old version

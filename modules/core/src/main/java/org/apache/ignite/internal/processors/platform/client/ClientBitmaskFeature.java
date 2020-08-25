@@ -33,7 +33,10 @@ public enum ClientBitmaskFeature implements ThinProtocolFeature {
     // CLUSTER_STATES(2),
 
     /** Client discovery. */
-    CLUSTER_GROUP_GET_NODES_ENDPOINTS(3);
+    CLUSTER_GROUP_GET_NODES_ENDPOINTS(3),
+
+    /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
+    DEFAULT_QRY_TIMEOUT(6);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

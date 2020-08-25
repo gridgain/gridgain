@@ -256,16 +256,19 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     public void testUrlQueryTimeoutProperty() throws Exception {
         final int QRY_TIMEOUT = 1;
 
-        try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=10000&queryTimeout=" + QRY_TIMEOUT)) {
+        try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=10000&queryTimeout="
+            + QRY_TIMEOUT)) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
             final Statement stmt = conn.createStatement();
 
             GridTestUtils.assertThrows(log, () -> {
-                stmt.executeQuery("select sleep_func(3) from Integer;");
+                    stmt.executeQuery("select sleep_func(3) from Integer;");
 
-                return null;
-            }, SQLTimeoutException.class, "The query was cancelled while executing due to timeout. Query timeout was : " + QRY_TIMEOUT);
+                    return null;
+                },
+                SQLTimeoutException.class,
+                "The query was cancelled while executing due to timeout. Query timeout was : " + QRY_TIMEOUT);
 
             stmt.execute("select 1");
         }
