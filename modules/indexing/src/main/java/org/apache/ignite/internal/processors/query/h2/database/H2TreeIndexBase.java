@@ -18,14 +18,10 @@ package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
-import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
@@ -42,18 +38,8 @@ import org.h2.table.TableFilter;
  * H2 tree index base.
  */
 public abstract class H2TreeIndexBase extends GridH2IndexBase {
-
     /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
-    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
-
-    /**
-     * Default sql index size for types with variable length (such as String or byte[]).
-     * Note that effective length will be lower, because 3 bytes will be taken for the inner representation of variable type.
-     */
-    static final int IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE = 10;
-
-    /** SQL pattern for the String with defined length. */
-    static final Pattern STRING_WITH_LENGTH_SQL_PATTERN = Pattern.compile("\\w+\\((\\d+)\\)");
+    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 10;
 
     /**
      * Constructor.
@@ -115,26 +101,13 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         int size = 0;
 
         for (InlineIndexColumn idxHelper : inlineIdxs) {
-            // for variable types - default variable size, for other types - type's size + type marker
-            int sizeInc = idxHelper.size() < 0 ? IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE : idxHelper.size() + 1;
-
-            if (idxHelper instanceof StringInlineIndexColumn || idxHelper instanceof BytesInlineIndexColumn) {
-                String sql = idxHelper.columnSql();
-
-                if (sql != null) {
-                    Matcher m = STRING_WITH_LENGTH_SQL_PATTERN.matcher(sql);
-
-                    if (m.find())
-                        // if column has defined length we use it as default + 3 bytes for the inner info of the variable type
-                        sizeInc = Integer.parseInt(m.group(1)) + 3;
-                }
+            if (idxHelper.size() <= 0) {
+                size = propSize;
+                break;
             }
 
-            size += sizeInc;
-
-            // total index size is limited by the property
-            if (size > propSize)
-                size = propSize;
+            // 1 byte type + size
+            size += idxHelper.size() + 1;
         }
 
         return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
