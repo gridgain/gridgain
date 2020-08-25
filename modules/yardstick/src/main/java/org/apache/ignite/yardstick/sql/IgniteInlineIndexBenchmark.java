@@ -48,11 +48,18 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
         /** */
         LARGE_DECIMAL,
         /** */
-        SMALL_DECIMAL
+        SMALL_DECIMAL,
+        /** */
+        STRING,
+        /** */
+        LARGE_STRING
     }
 
     /* List of double keys generated before execution */
     private final List<Double> doubleKeys = new ArrayList<>();
+
+    /* List of string keys generated before execution */
+    private final List<String> stringKeys = new ArrayList<>();
 
     /** Cache name for benchmark. */
     private String cacheName;
@@ -83,22 +90,32 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
                 keyCls = Integer.class;
                 break;
             case DECIMAL:
-                generateDoublekeys(doubleKeys);
+                generateDoubleKeys(doubleKeys);
                 cacheName = "CACHE_DECIMAL";
                 keyCls = BigDecimal.class;
                 break;
             case LARGE_DECIMAL:
-                generateDoublekeys(doubleKeys);
+                generateDoubleKeys(doubleKeys);
                 cacheName = "CACHE_LARGE_DECIMAL";
                 keyCls = BigDecimal.class;
                 break;
             case SMALL_DECIMAL:
-                generateDoublekeys(doubleKeys);
+                generateDoubleKeys(doubleKeys);
                 cacheName = "CACHE_SMALL_DECIMAL";
                 keyCls = BigDecimal.class;
                 break;
+            case STRING:
+                generateStringKeys(stringKeys, 10);
+                cacheName = "CACHE_STRING";
+                keyCls = String.class;
+                break;
+            case LARGE_STRING:
+                generateStringKeys(stringKeys, 100);
+                cacheName = "CACHE_LARGE_STRING";
+                keyCls = String.class;
+                break;
             default:
-                throw new Exception(testedType + "is not expected type");
+                throw new Exception(testedType + " is not expected type");
         }
 
         printParameters();
@@ -123,9 +140,20 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
         }
     }
 
-    private void generateDoublekeys(List<Double> keys) {
+    private void generateDoubleKeys(List<Double> keys) {
         while (keys.size() < range)
             keys.add(ThreadLocalRandom.current().nextDouble(range));
+    }
+
+    private void generateStringKeys(List<String> keys, int len) {
+        while (keys.size() < range) {
+            String generatedStr = ThreadLocalRandom.current().ints(97, 123)
+                .limit(len)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+
+            keys.add(generatedStr);
+        }
     }
 
     /**
@@ -171,6 +199,9 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
                 // low enough to use intCompact of BigDecimal
                 return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range))).
                     divide(BigDecimal.TEN, RoundingMode.HALF_DOWN).setScale(2, RoundingMode.HALF_UP);
+            case STRING:
+            case LARGE_STRING:
+                return stringKeys.get(ThreadLocalRandom.current().nextInt(range));
             default:
                 return null;
         }
