@@ -422,7 +422,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
-
         List<SpanId> dhtUpdateMapSpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
             dhtUpdateFutSpanIds.get(0),
@@ -541,7 +540,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             null,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
-
 
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -677,7 +675,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
-
         List<SpanId> dhtUpdateMapSpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
             dhtUpdateFutSpanIds.get(0),
@@ -804,7 +801,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
-
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
             dhtUpdateFutReq1SpanIds.get(0),
@@ -837,7 +833,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             null,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
-
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -939,7 +934,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             null,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
-
 
         List<SpanId> dhtUpdateMapSpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -1067,7 +1061,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
 
-
         List<SpanId> dhtUpdateMapReq1SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
             dhtUpdateFutReq1SpanIds.get(0),
@@ -1100,7 +1093,6 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
             null,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL) * 1000,
             Long.parseLong(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL));
-
 
         List<SpanId> dhtUpdateMapReq2SpanIds = checkSpan(
             CACHE_API_DHT_UPDATE_MAP,
@@ -1208,7 +1200,7 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
      */
     @Test
     @SuppressWarnings("ThrowableNotThrown")
-    public void testVerifyThatNullKeyDoNotFailTracing() throws Exception{
+    public void testVerifyThatNullKeyDoNotFailTracing() throws Exception {
         GridTestUtils.assertThrows(
             log,
             () -> client.cache(ATOMIC_CACHE).put(null,1),
