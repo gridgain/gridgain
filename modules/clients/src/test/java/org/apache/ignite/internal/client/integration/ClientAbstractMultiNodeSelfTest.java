@@ -104,23 +104,11 @@ public abstract class ClientAbstractMultiNodeSelfTest extends GridCommonAbstract
      */
     static final int TOP_REFRESH_FREQ = 2500;
 
-    /** Path to jetty config. */
-    public static final String REST_JETTY_CFG = "modules/clients/src/test/resources/jetty/rest-jetty.xml";
-
-    /** Path to jetty config with SSl enabled. */
-    public static final String REST_JETTY_SSL_CFG = "modules/clients/src/test/resources/jetty/rest-jetty-ssl.xml";
-
     /** Host. */
     public static final String HOST = "127.0.0.1";
 
     /** Base for tcp rest ports. */
     public static final int REST_TCP_PORT_BASE = 12345;
-
-    /** Base for http rest ports, defined in {@link #REST_JETTY_CFG}. */
-    public static final int REST_HTTP_PORT_BASE = 11080;
-
-    /** Base for https rest ports, defined in {@link #REST_JETTY_SSL_CFG}. */
-    public static final int REST_HTTPS_PORT_BASE = 11443;
 
     /** */
     private static volatile boolean commSpiEnabled;

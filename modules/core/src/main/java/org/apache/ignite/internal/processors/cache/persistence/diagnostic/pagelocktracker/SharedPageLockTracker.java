@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,22 +24,18 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lifecycle.LifecycleAware;
+import org.apache.ignite.internal.util.worker.CycleThread;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.DEFAULT_CAPACITY;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.DEFAULT_TYPE;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.DEFAULT_CAPACITY;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.DEFAULT_TYPE;
 
 //TODO Fast local get thread local.
 //TODO Dynamic enable/disable tracing.
@@ -47,77 +43,48 @@ import static org.apache.ignite.internal.processors.cache.persistence.diagnostic
 /**
  *
  */
-public class SharedPageLockTracker implements LifecycleAware, PageLockListener, DumpSupported<ThreadPageLocksDumpLock> {
-    /**
-     *
-     */
+public class SharedPageLockTracker implements PageLockListener {
+    /** */
     private static final long OVERHEAD_SIZE = 16 + (8 * 8) + (4 * 3);
 
-    /**
-     *
-     */
+    /** */
     private final MemoryCalculator memCalc;
 
-    /**
-     *
-     */
+    /** */
     public final int threadLimits;
 
-    /**
-     *
-     */
-    public final int timeOutWorkerInterval;
+    /** */
+    private final Map<Long, PageLockTracker<?>> threadStacks = new HashMap<>();
 
-    /**
-     *
-     */
-    private final Map<Long, PageLockTracker<? extends PageLockDump>> threadStacks = new HashMap<>();
-
-    /**
-     *
-     */
+    /** */
     private final Map<Long, Thread> threadIdToThreadRef = new HashMap<>();
 
-    /**
-     *
-     */
+    /** */
     private final Map<String, Integer> structureNameToId = new HashMap<>();
 
     /** Thread for clean terminated threads from map. */
-    private final TimeOutWorker timeOutWorker = new TimeOutWorker();
+    private final TimeOutWorker timeOutWorker;
 
-    /**
-     *
-     */
-    private Map<Long, SharedPageLockTracker.State> prevThreadsState = new HashMap<>();
+    /** */
+    private Map<Long, PageLockThreadState> prevThreadsState = new HashMap<>();
 
-    /**
-     *
-     */
+    /** */
     private int idGen;
 
-    /**
-     *
-     */
-    private final Consumer<Set<SharedPageLockTracker.State>> hangThreadsCallBack;
+    /** */
+    private final Consumer<Set<PageLockThreadState>> hangThreadsCallBack;
 
-    /**
-     *
-     */
+    /** */
     private final ThreadLocal<PageLockTracker> lockTracker = ThreadLocal.withInitial(this::createTracker);
 
-    /**
-     *
-     */
+    /** */
     public SharedPageLockTracker() {
         this((ids) -> {
         }, new MemoryCalculator());
     }
 
-    /**
-     *
-     */
-    public SharedPageLockTracker(Consumer<Set<State>> hangThreadsCallBack, MemoryCalculator memCalc) {
+    /** */
+    public SharedPageLockTracker(Consumer<Set<PageLockThreadState>> hangThreadsCallBack, MemoryCalculator memCalc) {
         this(
             1000,
             getInteger(IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL, 60_000),
@@ -126,17 +93,15 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         );
     }
 
-    /**
-     *
-     */
+    /** */
     public SharedPageLockTracker(
         int threadLimits,
         int timeOutWorkerInterval,
-        Consumer<Set<SharedPageLockTracker.State>> hangThreadsCallBack,
+        Consumer<Set<PageLockThreadState>> hangThreadsCallBack,
         MemoryCalculator memCalc
     ) {
         this.threadLimits = threadLimits;
-        this.timeOutWorkerInterval = timeOutWorkerInterval;
+        timeOutWorker = new TimeOutWorker(timeOutWorkerInterval);
         this.hangThreadsCallBack = hangThreadsCallBack;
         this.memCalc = memCalc;
 
@@ -154,7 +119,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         String name = "name=" + thread.getName();
         long threadId = thread.getId();
 
-        PageLockTracker<? extends PageLockDump> tracker = LockTrackerFactory.create(
+        PageLockTracker<?> tracker = PageLockTrackerFactory.create(
             DEFAULT_TYPE, DEFAULT_CAPACITY, name, memCalc
         );
 
@@ -172,9 +137,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         return tracker;
     }
 
-    /**
-     *
-     */
+    /** */
     public synchronized PageLockListener registrateStructure(String structureName) {
         Integer id = structureNameToId.get(structureName);
 
@@ -221,10 +184,12 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         lockTracker.get().onReadUnlock(structureId, pageId, page, pageAddr);
     }
 
-    /** {@inheritDoc} */
-    @Override public synchronized ThreadPageLocksDumpLock dump() {
-        Collection<PageLockTracker<? extends PageLockDump>> trackers = threadStacks.values();
-        List<ThreadPageLocksDumpLock.ThreadState> threadStates = new ArrayList<>(threadStacks.size());
+    /**
+     * Creates dump.
+     */
+    public synchronized SharedPageLockTrackerDump dump() {
+        Collection<PageLockTracker<?>> trackers = threadStacks.values();
+        List<ThreadPageLockState> threadPageLockStates = new ArrayList<>(threadStacks.size());
 
         for (PageLockTracker tracker : trackers) {
             boolean acquired = tracker.acquireSafePoint();
@@ -233,7 +198,7 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
             assert acquired;
         }
 
-        for (Map.Entry<Long, PageLockTracker<? extends PageLockDump>> entry : threadStacks.entrySet()) {
+        for (Map.Entry<Long, PageLockTracker<?>> entry : threadStacks.entrySet()) {
             Long threadId = entry.getKey();
             Thread thread = threadIdToThreadRef.get(threadId);
 
@@ -242,13 +207,13 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
             try {
                 PageLockDump pageLockDump = tracker.dump();
 
-                threadStates.add(
-                    new ThreadPageLocksDumpLock.ThreadState(
+                threadPageLockStates.add(
+                    new ThreadPageLockState(
                         threadId,
                         thread.getName(),
                         thread.getState(),
                         pageLockDump,
-                        tracker.isInvalid() ? tracker.invalidContext() : null
+                        tracker.invalidContext()
                     )
                 );
             }
@@ -266,13 +231,12 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
                     ))
             );
 
-        List<ThreadPageLocksDumpLock.ThreadState> threadStates0 =
-            Collections.unmodifiableList(threadStates);
+        List<ThreadPageLockState> threadPageLockStates0 = Collections.unmodifiableList(threadPageLockStates);
 
         // Get first thread dump time or current time is threadStates is empty.
-        long time = !threadStates.isEmpty() ? threadStates.get(0).pageLockDump.time() : System.currentTimeMillis();
+        long time = !threadPageLockStates.isEmpty() ? threadPageLockStates.get(0).pageLockDump.time : System.currentTimeMillis();
 
-        return new ThreadPageLocksDumpLock(time, idToStructureName0, threadStates0);
+        return new SharedPageLockTrackerDump(time, idToStructureName0, threadPageLockStates0);
     }
 
     /**
@@ -303,30 +267,26 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         }
     }
 
-    /**
-     *
-     */
-    private synchronized Map<Long, State> getThreadOperationState() {
+    /** */
+    private Map<Long, PageLockThreadState> getThreadOperationState() {
         return threadStacks.entrySet().stream().collect(Collectors.toMap(
             Map.Entry::getKey,
             e -> {
                 PageLockTracker<? extends PageLockDump> lt = e.getValue();
 
-                return new State(lt.operationsCounter(), lt.heldLocksNumber(), threadIdToThreadRef.get(e.getKey()));
+                return new PageLockThreadState(lt.operationsCounter(), lt.heldLocksNumber(), threadIdToThreadRef.get(e.getKey()));
             }
         ));
     }
 
-    /**
-     *
-     */
-    private synchronized Set<State> hangThreads() {
-        Set<State> hangsThreads = new HashSet<>();
+    /** */
+    private synchronized Set<PageLockThreadState> hangThreads() {
+        Set<PageLockThreadState> hangsThreads = new HashSet<>();
 
-        Map<Long, SharedPageLockTracker.State> currentThreadsOperationState = getThreadOperationState();
+        Map<Long, PageLockThreadState> currentThreadsOperationState = getThreadOperationState();
 
         prevThreadsState.forEach((threadId, prevState) -> {
-            State state = currentThreadsOperationState.get(threadId);
+            PageLockThreadState state = currentThreadsOperationState.get(threadId);
 
             if (state == null)
                 return;
@@ -343,15 +303,15 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
         return hangsThreads;
     }
 
-    /** {@inheritDoc} */
-    @Override public void start() throws IgniteException {
+    /** Starts background worker. */
+    public void start() {
         timeOutWorker.setDaemon(true);
 
         timeOutWorker.start();
     }
 
-    /** {@inheritDoc} */
-    @Override public void stop() throws IgniteException {
+    /** Stops background worker. */
+    public void stop() {
         timeOutWorker.interrupt();
 
         try {
@@ -367,89 +327,25 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
     /**
      *
      */
-    private class TimeOutWorker extends Thread {
-        /**
-         *
-         */
-        @Override public void run() {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    sleep(timeOutWorkerInterval);
-
-                    cleanTerminatedThreads();
-
-                    if (hangThreadsCallBack != null) {
-                        Set<SharedPageLockTracker.State> threadIds = hangThreads();
-
-                        if (!F.isEmpty(threadIds))
-                            hangThreadsCallBack.accept(threadIds);
-                    }
-                }
-            }
-            catch (InterruptedException e) {
-                // No-op.
-            }
-        }
-    }
-
-    /**
-     *
-     */
-    public static class State {
-        /**
-         *
-         */
-        final long threadOpCnt;
+    private class TimeOutWorker extends CycleThread {
 
         /**
          *
          */
-        final long heldLockCnt;
-
-        /**
-         *
-         */
-        final Thread thread;
-
-        /**
-         *
-         */
-        private State(long threadOpCnt, long heldLockCnt, Thread thread) {
-            this.threadOpCnt = threadOpCnt;
-            this.heldLockCnt = heldLockCnt;
-            this.thread = thread;
+        TimeOutWorker(long interval) {
+            super("page-lock-tracker-timeout", interval);
         }
 
         /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (o == null || getClass() != o.getClass())
-                return false;
-            State state = (State)o;
-            return threadOpCnt == state.threadOpCnt &&
-                heldLockCnt == state.heldLockCnt &&
-                Objects.equals(thread, state.thread);
+        @Override public void iteration() {
+            cleanTerminatedThreads();
+
+            if (hangThreadsCallBack != null) {
+                Set<PageLockThreadState> threadIds = hangThreads();
+
+                if (!F.isEmpty(threadIds))
+                    hangThreadsCallBack.accept(threadIds);
+            }
         }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return Objects.hash(threadOpCnt, heldLockCnt, thread);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteFuture<ThreadPageLocksDumpLock> dumpSync() {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean acquireSafePoint() {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean releaseSafePoint() {
-        throw new UnsupportedOperationException();
     }
 }

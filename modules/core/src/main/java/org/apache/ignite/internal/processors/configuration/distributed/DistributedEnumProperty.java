@@ -24,20 +24,20 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Wrapper for any enumerator.
- * It will be serialized by its originality into meta store.
+ * Distributed enum implementation for storing into meta storage.
+ * The implementation will serialize by its integer ordinal.
  *
  * @param <T> Type of enum.
  */
 public class DistributedEnumProperty<T extends Enum> implements DistributedChangeableProperty<T> {
     /** This property stored enumerator as order. */
-    SimpleDistributedProperty<Integer> internal;
+    private final SimpleDistributedProperty<Integer> internal;
 
     /** Function reflects an integer, which getting from meta storage, to an enumeration value. */
-    IgniteClosure<Integer, T> fromOrdinalFunc;
+    private final IgniteClosure<Integer, T> fromOrdinalFunc;
 
     /** Function converts an enumeration value to an integer for stored in meta storage. */
-    IgniteClosure<T, Integer> toOredinalFunc;
+    private final IgniteClosure<T, Integer> toOredinalFunc;
 
     /**
      * Property constructor.
@@ -133,7 +133,7 @@ public class DistributedEnumProperty<T extends Enum> implements DistributedChang
     }
 
     /**
-     * Determine ordinal by enum value, or return null if enum value is {@code null}.
+     * Determines ordinal by enum value, or returns null if enum value is {@code null}.
      *
      * @param val Enum value.
      * @return Ordinal or {@code null}.
@@ -143,7 +143,7 @@ public class DistributedEnumProperty<T extends Enum> implements DistributedChang
     }
 
     /**
-     * Return enum value or {@code null} if ordinal is {@code null} or less zero.
+     * Returns enum value or {@code null} if ordinal is {@code null} or less zero.
      *
      * @param ord Ordinal or {@code null}.
      * @return Enum value or {@code null}.

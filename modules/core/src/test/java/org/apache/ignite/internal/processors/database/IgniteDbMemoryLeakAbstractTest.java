@@ -43,19 +43,7 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
     private volatile Exception ex;
 
     /** */
-    private long warmUpEndTime;
-
-    /** */
     private long endTime;
-
-    /** */
-    private long loadedPages;
-
-    /** */
-    private long delta;
-
-    /** */
-    private long probeCnt;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -63,11 +51,7 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
 
         DataStructure.rnd = null;
 
-        long startTime = System.nanoTime();
-
-        warmUpEndTime = startTime + TimeUnit.SECONDS.toNanos(warmUp());
-
-        endTime = warmUpEndTime + TimeUnit.SECONDS.toNanos(duration());
+        endTime = System.nanoTime() + TimeUnit.SECONDS.toNanos(duration());
     }
 
     /** {@inheritDoc} */
@@ -89,15 +73,7 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
      * @return Test duration in seconds.
      */
     protected int duration() {
-        return getInteger("IGNITE_MEMORY_LEAKS_TEST_DURATION", 300);
-    }
-
-    /**
-     * @return Warm up duration in seconds.
-     */
-    @SuppressWarnings("WeakerAccess")
-    protected int warmUp() {
-        return getInteger("IGNITE_MEMORY_LEAKS_TEST_WARM_UP", 450);
+        return getInteger("IGNITE_MEMORY_LEAKS_TEST_DURATION", 30);
     }
 
     /** {@inheritDoc} */
@@ -112,7 +88,7 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return (warmUp() + duration() + 10) * 1000; // Extra seconds to stop all threads.
+        return (duration() + 10) * 1000; // Extra seconds to stop all threads.
     }
 
     /**
@@ -196,20 +172,10 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
 
         Thread[] threads = new Thread[CONCURRENCY_LEVEL];
 
-        info("Warming up is started.");
-
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Thread(target);
             threads[i].start();
         }
-
-        while (ex == null && System.nanoTime() < warmUpEndTime)
-            Thread.sleep(100);
-
-        if (ex != null)
-            throw ex;
-
-        info("Warming up is ended.");
 
         while (ex == null && System.nanoTime() < endTime) {
             try {
@@ -221,7 +187,7 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
                 break;
             }
 
-            Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+            Thread.sleep(100L);
         }
 
         if (ex != null)
@@ -237,25 +203,9 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
     protected final void check(IgniteCache cache) throws Exception {
         long pagesActual = ((IgniteCacheProxy)cache).context().dataRegion().pageMemory().loadedPages();
 
-        if (loadedPages > 0) {
-            delta += pagesActual - loadedPages;
-
-            int allowedDelta = pagesDelta();
-
-            if (probeCnt++ > 12) { // We need some statistic first. Minimal statistic is taken for a minute.
-                long actualDelta = delta / probeCnt;
-
-                assertTrue(
-                    "Average growth pages in the number is more than expected [allowed=" + allowedDelta + ", actual=" + actualDelta + "]",
-                    actualDelta <= allowedDelta);
-            }
-        }
-
         long pagesAllowed = pagesMax();
 
         assertTrue("Allocated pages count is more than expected [allowed=" + pagesAllowed + ", actual=" + pagesActual + "]", pagesActual < pagesAllowed);
-
-        loadedPages = pagesActual;
     }
 
     /**
@@ -263,11 +213,4 @@ public abstract class IgniteDbMemoryLeakAbstractTest extends IgniteDbAbstractTes
      */
     protected abstract long pagesMax();
 
-    /**
-     * @return Expected average number of pages, on which their total number can grow per 5 seconds.
-     */
-    @SuppressWarnings("WeakerAccess")
-    protected int pagesDelta() {
-        return 3;
-    }
 }

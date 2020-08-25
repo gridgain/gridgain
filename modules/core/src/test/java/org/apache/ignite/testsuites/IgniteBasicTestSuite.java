@@ -75,6 +75,7 @@ import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExc
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.DropCacheContextDuringEvictionTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictPartitionInLogTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionEvictionOrderTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictionTaskFailureHandlerTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagePoolTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
@@ -96,6 +97,7 @@ import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
 import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorThreadDumpThrottlingTest;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageClassloadingTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageFeatureTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageStopTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
@@ -131,7 +133,6 @@ import org.apache.ignite.testframework.test.ListeningTestLoggerTest;
 import org.apache.ignite.testframework.test.ParametersTest;
 import org.apache.ignite.testframework.test.VariationsIteratorTest;
 import org.apache.ignite.util.AttributeNodeFilterSelfTest;
-import org.apache.ignite.util.GridCommandHandlerTracingConfigurationTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -204,6 +205,7 @@ import org.junit.runners.Suite;
     PartitionsEvictionTaskFailureHandlerTest.class,
     DropCacheContextDuringEvictionTest.class,
     EvictPartitionInLogTest.class,
+    PartitionEvictionOrderTest.class,
 
     IgniteExceptionInNioWorkerSelfTest.class,
     IgniteLocalNodeMapBeforeStartTest.class,
@@ -280,6 +282,7 @@ import org.junit.runners.Suite;
     DistributedMetaStorageFeatureTest.class,
     DistributedMetaStorageStopTest.class,
     DistributedMetaStorageHistoryCacheTest.class,
+    DistributedMetaStorageClassloadingTest.class,
     DmsDataWriterWorkerTest.class,
     InMemoryCachedDistributedMetaStorageBridgeTest.class,
     DistributedConfigurationInMemoryTest.class,
@@ -306,10 +309,7 @@ import org.junit.runners.Suite;
     BaselineEventsRemoteTest.class,
 
     IgniteThreadGroupNodeRestartTest.class,
-    BaselineEventsRemoteTest.class,
-
-    // Tests for tracing configuration
-    GridCommandHandlerTracingConfigurationTest.class
+    BaselineEventsRemoteTest.class
 })
 public class IgniteBasicTestSuite {
 }

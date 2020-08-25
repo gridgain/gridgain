@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef _IGNITE_IGNITE_PRODUCT_VERSION
-#define _IGNITE_IGNITE_PRODUCT_VERSION
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
  /**
   * @file
   * Declares ignite::IgniteProductVersion class.
   */
+
+#ifndef _IGNITE_IGNITE_PRODUCT_VERSION
+#define _IGNITE_IGNITE_PRODUCT_VERSION
 
 #include <stdint.h>
 #include <vector>
@@ -67,7 +65,5 @@ namespace ignite
         }
     };
 }
-
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
 #endif //_IGNITE_IGNITE_PRODUCT_VERSION

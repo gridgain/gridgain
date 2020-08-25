@@ -24,7 +24,6 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Lifecycle;
     using Apache.Ignite.Core.Tests.Client.Cache;
-    using Apache.Ignite.Core.Tests.Process;
     using NUnit.Framework;
 
     /// <summary>
@@ -103,6 +102,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(2, cache.Get(1).Id);
         }
 
+#if !NETCOREAPP
         /// <summary>
         /// Tests the failed connection scenario, where servers are alive, but can't be contacted.
         /// </summary>
@@ -116,7 +116,9 @@ namespace Apache.Ignite.Core.Tests
                 JvmOptions = TestUtils.TestJavaOptions()
             };
 
-            var proc = StartServerProcess(cfg);
+            var proc = new Process.IgniteProcess(
+                "-springConfigUrl=" + cfg.SpringConfigUrl, "-J-ea", "-J-Xcheck:jni", "-J-Xms512m", "-J-Xmx512m",
+                "-J-DIGNITE_QUIET=false");
 
             Ignition.ClientMode = true;
 
@@ -164,6 +166,7 @@ namespace Apache.Ignite.Core.Tests
                 Assert.AreEqual(1, reconnected);
             }
         }
+#endif
 
         /// <summary>
         /// Tests writer structure cleanup after client reconnect with full cluster restart.
@@ -214,29 +217,9 @@ namespace Apache.Ignite.Core.Tests
 
             // Verify that we can deserialize on server (meta is resent properly).
             cache[2] = new Person(2);
-            
+
             var serverCache = server2.GetCache<int, Person>(CacheName);
             Assert.AreEqual(2, serverCache[2].Id);
-        }
-
-        /// <summary>
-        /// Starts the server process.
-        /// </summary>
-        private static IgniteProcess StartServerProcess(IgniteConfiguration cfg)
-        {
-            return new IgniteProcess(
-                "-springConfigUrl=" + cfg.SpringConfigUrl, "-J-ea", "-J-Xcheck:jni", "-J-Xms512m", "-J-Xmx512m",
-                "-J-DIGNITE_QUIET=false");
-        }
-
-        /// <summary>
-        /// Test set up.
-        /// </summary>
-        [SetUp]
-        public void SetUp()
-        {
-            Ignition.StopAll(true);
-            IgniteProcess.KillAll();
         }
 
         /// <summary>
@@ -246,7 +229,11 @@ namespace Apache.Ignite.Core.Tests
         public void TearDown()
         {
             Ignition.StopAll(true);
-            IgniteProcess.KillAll();
+
+#if !NETCOREAPP
+            Process.IgniteProcess.KillAll();
+#endif
+
             Ignition.ClientMode = false;
         }
     }

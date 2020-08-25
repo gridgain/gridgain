@@ -147,6 +147,7 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.JobContextResource;
 import org.apache.ignite.resources.LoggerResource;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -1113,7 +1114,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
             try {
                 if (jobs.size() > 1) {
-                    execSvc = Executors.newFixedThreadPool(jobs.size() - 1);
+                    execSvc = Executors.newFixedThreadPool(jobs.size() - 1,
+                        new IgniteThreadFactory(ctx.igniteInstanceName(), "async-cache-cleaner"));
 
                     for (int i = 1; i < jobs.size(); i++)
                         execSvc.execute(jobs.get(i));
@@ -1178,6 +1180,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7952
         MvccUtils.verifyMvccOperationSupport(ctx, "Clear");
 
+        ctx.shared().cache().checkReadOnlyState("clear", ctx.config());
+
         if (isLocal()) {
             if (keys == null)
                 clearLocally(true, false, false);
@@ -1197,6 +1201,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     private IgniteInternalFuture<?> clearAsync(@Nullable final Set<? extends K> keys) {
         //TODO IGNITE-7952
         MvccUtils.verifyMvccOperationSupport(ctx, "Clear");
+
+        ctx.shared().cache().checkReadOnlyState("clear", ctx.config());
 
         if (isLocal())
             return clearLocallyAsync(keys);
@@ -4190,6 +4196,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @param readers Whether to clear readers.
      */
     private boolean clearLocally0(K key, boolean readers) {
+        ctx.shared().cache().checkReadOnlyState("clear", ctx.config());
+
         //TODO IGNITE-7952
         MvccUtils.verifyMvccOperationSupport(ctx, "Clear");
 

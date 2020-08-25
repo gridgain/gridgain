@@ -23,8 +23,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,12 +42,12 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -277,16 +275,19 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
         int pagesForStartThrottling = 10;
 
+        //Number of pages which were poll from checkpoint buffer for throttling.
+        AtomicInteger cpBufferPollPages = new AtomicInteger();
+
         // Create a 1 mb page memory.
         PageMemoryImpl memory = createPageMemory(
             1,
             plc,
             pageStoreMgr,
             pageStoreMgr,
-            new IgniteInClosure<FullPageId>() {
-                @Override public void apply(FullPageId fullPageId) {
-                    assertTrue(allocated.contains(fullPageId));
-                }
+            (IgniteInClosure<FullPageId>)fullPageId -> {
+                //First increment then get because pageStoreMgr.storedPages always contains at least one page
+                // which was written before throttling.
+                assertEquals(cpBufferPollPages.incrementAndGet(), pageStoreMgr.storedPages.size());
             }
         );
 
@@ -304,10 +305,16 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
         GridMultiCollectionWrapper<FullPageId> markedPages = memory.beginCheckpoint(new GridFinishedFuture());
 
-        for (int i = 0; i < 10 + (memory.checkpointBufferPagesSize() * 2 / 3); i++)
+        for (int i = 0; i < pagesForStartThrottling + (memory.checkpointBufferPagesSize() * 2 / 3); i++)
             writePage(memory, allocated.get(i), (byte)1);
 
         doCheckpoint(markedPages, memory, pageStoreMgr);
+
+        //There is 'pagesForStartThrottling - 1' because we should write pagesForStartThrottling pages
+        // from checkpoint buffer before throttling will be disabled but at least one page always would be written
+        // outside of throttling and in our case we certainly know that this page is also contained in checkpoint buffer
+        // (because all of our pages are in checkpoint buffer).
+        assertEquals(pagesForStartThrottling - 1, cpBufferPollPages.get());
     }
 
     /**
@@ -679,83 +686,12 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         return mem;
     }
 
-    /** Checks correctness of comparator implementation.
-     *
-     *  Right comparator and further iteration need to be sorted by ts and flags from lower to higher:
-     *  [(ts = 100, dirty=false, meta=false),
-     *  (ts = 200, dirty=false, meta=false),
-     *  (ts = 80, dirty=true, meta=false),
-     *  (ts = 90, dirty=true, meta=false),
-     *  (ts = 50, dirty=false|true, meta=true),
-     *  (ts = 300, dirty=false|true, meta=true)]
-     */
-    @Test
-    public void testPageWithAttrComparator() {
-        long ts = 1000;
-
-        int ethalonSize = 15;
-
-        Set<PageMemoryImpl.PageWithAttrHolder> checkedSet = new TreeSet<>();
-
-        long clearPageAddr = 1000;
-
-        long onlyDirtyPageAddr = 2000;
-
-        long dirtyOrMetaAddr = 3000;
-
-        for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(dirtyOrMetaAddr + i, 1, null, ts + i, true, true));
-
-        for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(clearPageAddr + i, 1, null, ts + i, false, false));
-
-        for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(onlyDirtyPageAddr + i, 1, null, ts + i, true, false));
-
-        for (int i = 0; i < 5; ++i)
-            checkedSet.add(new PageMemoryImpl.PageWithAttrHolder(dirtyOrMetaAddr + i, 1, null, ts + i, false, true));
-
-        assertTrue(checkedSet.size() == ethalonSize);
-
-        int i = 0;
-
-        for (PageMemoryImpl.PageWithAttrHolder holder : checkedSet) {
-            if (i < 5) {
-                assertTrue(!holder.dirty);
-
-                assertTrue(!holder.meta);
-
-                assertEquals(holder.ts, 1000 + i);
-
-                assertTrue(holder.absAddr >= clearPageAddr && holder.absAddr < onlyDirtyPageAddr);
-            }
-            else if (i < 10) {
-                assertTrue(holder.dirty);
-
-                assertTrue(!holder.meta);
-
-                assertEquals(holder.ts, 1000 + (i % 5));
-
-                assertTrue(holder.absAddr >= onlyDirtyPageAddr && holder.absAddr < dirtyOrMetaAddr);
-            }
-            else if (i < 15) {
-                assertTrue(holder.meta);
-
-                assertEquals(holder.ts, 1000 + (i % 5));
-
-                assertTrue(holder.absAddr >= dirtyOrMetaAddr);
-            }
-
-            ++i;
-        }
-    }
-
     /**
      *
      */
     private static class TestPageStoreManager extends NoOpPageStoreManager implements PageStoreWriter {
         /** */
-        private Map<FullPageId, byte[]> storedPages = new HashMap<>();
+        public Map<FullPageId, byte[]> storedPages = new HashMap<>();
 
         /** {@inheritDoc} */
         @Override public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException {

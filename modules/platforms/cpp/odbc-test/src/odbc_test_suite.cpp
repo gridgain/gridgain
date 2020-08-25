@@ -94,9 +94,7 @@ namespace ignite
                 outstr, sizeof(outstr), &outstrlen, SQL_DRIVER_COMPLETE);
 
             if (!SQL_SUCCEEDED(ret))
-            {
                 BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_DBC, dbc));
-            }
 
             // Allocate a statement handle
             SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);

@@ -157,7 +157,23 @@ public enum IgniteFeatures {
     REMOVE_METADATA(39),
 
     /** Support policy of shutdown. */
-    SHUTDOWN_POLICY(40);
+    SHUTDOWN_POLICY(40),
+
+    /** New security processor with a security context support. */
+    IGNITE_SECURITY_PROCESSOR_V2(41),
+
+    /** Force rebuild, list or request indexes rebuild status from control script. */
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
+
+    /** Snapshots without PME. */
+    EXCHANGELESS_SNAPSHOT(43),
+
+    /** Optimization of recovery protocol for cluster which doesn't contain MVCC caches. */
+    MVCC_TX_RECOVERY_PROTOCOL_V2(44),
+
+    /** Pk index keys are applied in correct order. */
+    SPECIFIED_SEQ_PK_KEYS(45);
+
     /**
      * Unique feature identifier.
      */
@@ -309,6 +325,9 @@ public enum IgniteFeatures {
         for (IgniteFeatures value : IgniteFeatures.values()) {
             // After rolling upgrade, our security has more strict validation. This may come as a surprise to customers.
             if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
+                continue;
+
+            if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
             //Disable new rolling upgrade
