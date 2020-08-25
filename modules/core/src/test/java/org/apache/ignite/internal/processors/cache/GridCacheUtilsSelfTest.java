@@ -116,42 +116,6 @@ public class GridCacheUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     */
-    @Test
-    public void testCacheKeyValidation() throws IgniteCheckedException {
-        CU.validateCacheKey("key");
-
-        CU.validateCacheKey(1);
-
-        CU.validateCacheKey(1L);
-
-        CU.validateCacheKey(1.0);
-
-        CU.validateCacheKey(new ExtendsClassWithEqualsAndHashCode());
-
-        CU.validateCacheKey(new ExtendsClassWithEqualsAndHashCode2());
-
-        assertThrowsForInvalidKey(new NoEqualsAndHashCode());
-
-        assertThrowsForInvalidKey(new NoEquals());
-
-        assertThrowsForInvalidKey(new NoHashCode());
-
-        assertThrowsForInvalidKey(new WrongEquals());
-
-        BinaryObjectBuilderImpl binBuilder = new BinaryObjectBuilderImpl(binaryContext(),
-            EqualsAndHashCode.class.getName());
-
-        BinaryObject binObj = binBuilder.build();
-
-        CU.validateCacheKey(binObj);
-
-        BinaryObjectBuilderImpl binBuilder2 = new BinaryObjectBuilderImpl((BinaryObjectImpl) binObj);
-
-        CU.validateCacheKey(binBuilder2.build());
-    }
-
-    /**
      * @return Binary marshaller.
      * @throws IgniteCheckedException if failed.
      */
@@ -181,18 +145,5 @@ public class GridCacheUtilsSelfTest extends GridCommonAbstractTest {
         GridBinaryMarshaller impl = U.field(binaryMarshaller(), "impl");
 
         return impl.context();
-    }
-
-    /**
-     * @param key Cache key.
-     */
-    private void assertThrowsForInvalidKey(final Object key) {
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                CU.validateCacheKey(key);
-
-                return null;
-            }
-        }, IllegalArgumentException.class, null);
     }
 }
