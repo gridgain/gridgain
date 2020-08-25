@@ -33,6 +33,8 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -65,9 +67,8 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
+    @After
+    public void tearDown() {
         stopAllGrids();
     }
 
@@ -90,7 +91,7 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
         // check sending messages is possible while connected
         IgniteMessaging messaging = client.message(client.cluster().forLocal());
 
-        CountDownLatch topicSignal = new CountDownLatch(1);
+        CountDownLatch topicSignal = new CountDownLatch(2);
 
         messaging.localListen("topic", (IgniteBiPredicate<UUID, Object>) (uuid, n) -> {
             topicSignal.countDown();
@@ -98,6 +99,7 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
             return true;
         });
 
+        //countDown latch = 1
         messaging.send("topic", new External());
 
         CountDownLatch discSignal = new CountDownLatch(1);
@@ -130,6 +132,7 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
         awaitPartitionMapExchange();
 
         // check sending messages is possible after reconnecting
+        //countDown latch = 0
         messaging = client.message(client.cluster().forLocal());
 
         messaging.send("topic", new External());
