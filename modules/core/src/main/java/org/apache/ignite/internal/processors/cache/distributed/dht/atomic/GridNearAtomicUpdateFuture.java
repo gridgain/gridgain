@@ -746,7 +746,7 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
      * @param remapKeys Keys to remap.
      */
     private void map(AffinityTopologyVersion topVer, @Nullable Collection<KeyCacheObject> remapKeys) {
-        MTC.span().addSensitiveTag("remap.keys", ()-> Objects.toString(remapKeys));
+        MTC.span().addSensitiveTag("remap.keys", () -> Objects.toString(remapKeys));
 
         Collection<ClusterNode> topNodes = CU.affinityNodes(cctx, topVer);
 

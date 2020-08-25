@@ -228,7 +228,6 @@ public enum SpanType {
     /** */
     CACHE_API_NEAR_UPDATE_WAIT_AND_REMAP(Scope.CACHE_API_WRITE, "cache.api.near.update.wait.and.remap", 65, false);
 
-
     /** Scope */
     private Scope scope;
 
