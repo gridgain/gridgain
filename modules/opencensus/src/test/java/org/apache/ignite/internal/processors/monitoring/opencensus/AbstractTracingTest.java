@@ -243,6 +243,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
 
         return spanIds;
     }
+
     /**
      * Conditional check span.
      *
@@ -254,7 +255,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
      * @param awaitInterval Await interval.
      * @return List of founded span ids.
      */
-    java.util.List<SpanId> checkSpanWithWaitForCondition(
+    List<SpanId> checkSpanWithWaitForCondition(
         SpanType spanType,
         SpanId parentSpanId,
         int expSpansCnt,
