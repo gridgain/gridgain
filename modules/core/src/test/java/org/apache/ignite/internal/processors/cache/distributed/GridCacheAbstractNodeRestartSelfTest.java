@@ -38,6 +38,7 @@ import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils.SF;
@@ -119,14 +120,16 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration c = super.getConfiguration(igniteInstanceName);
 
+        c.setFailureDetectionTimeout(100000L);
+
         ((TcpCommunicationSpi)c.getCommunicationSpi()).setSharedMemoryPort(-1);
 
         // Discovery.
-        TcpDiscoverySpi disco = (TcpDiscoverySpi)c.getDiscoverySpi();
+        //TcpDiscoverySpi disco = (TcpDiscoverySpi)c.getDiscoverySpi();
 
-        disco.setSocketTimeout(30_000);
-        disco.setAckTimeout(30_000);
-        disco.setNetworkTimeout(30_000);
+//        disco.setSocketTimeout(30_000);
+//        disco.setAckTimeout(30_000);
+//        disco.setNetworkTimeout(30_000);
 
         CacheConfiguration ccfg = cacheConfiguration();
 
@@ -178,7 +181,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return TEST_TIMEOUT;
+        return TEST_TIMEOUT * 10000;
     }
 
     /**
@@ -478,6 +481,23 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
      * @throws Exception If failed.
      */
     @Test
+    public void testRestartWithTxFourNodesTwoBackups() throws Throwable {
+        backups = 2;
+        nodeCnt = 4;
+        keyCnt = 10;
+        partitions = 29;
+        rebalancMode = ASYNC;
+        evict = false;
+
+        long duration = SF.applyLB(30_000, 6_000);
+
+        checkRestartWithTx(duration, 2, 2, 3);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testRestartWithPutEightNodesTwoBackups() throws Throwable {
         backups = 2;
         nodeCnt = 8;
@@ -719,6 +739,8 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
         Collection<Thread> threads = new LinkedList<>();
 
+        log.info("RND: " + U.field(RAND, "seed"));
+
         try {
             final AtomicInteger txCntr = new AtomicInteger();
 
@@ -744,7 +766,9 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
                             List<Integer> keys = new ArrayList<>(txKeys);
 
-                            while (System.currentTimeMillis() < endTime && err.get() == null) {
+                            int c = 0;
+
+                            while (err.get() == null) {
                                 keys.clear();
 
                                 for (int i = 0; i < txKeys; i++)
@@ -752,8 +776,6 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
                                 // Ensure lock order.
                                 Collections.sort(keys);
-
-                                int c = 0;
 
                                 try {
                                     IgniteTransactions txs = ignite.transactions();
@@ -820,7 +842,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
                             int cnt = 0;
 
-                            while (System.currentTimeMillis() < endTime && err.get() == null) {
+                            while (err.get() == null) {
                                 stopGrid(getTestIgniteInstanceName(gridIdx), false, false);
                                 startGrid(gridIdx);
 
@@ -1019,4 +1041,6 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
         error("Attempt: " + attempt);
         error("Node: " + ignite.cluster().localNode().id());
     }
+
+
 }

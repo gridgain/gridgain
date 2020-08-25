@@ -16,15 +16,26 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
+import java.util.Collection;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheAbstractNodeRestartSelfTest;
+import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 
@@ -35,6 +46,12 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration c = super.getConfiguration(igniteInstanceName);
+
+        c.setConsistentId(igniteInstanceName);
+
+        c.setSystemThreadPoolSize(32);
+        c.setPublicThreadPoolSize(32);
+        c.setStripedPoolSize(32);
 
         c.getTransactionConfiguration().setDefaultTxConcurrency(OPTIMISTIC);
 
@@ -62,7 +79,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
      * @return {@code True} if near cache enabled.
      */
     protected boolean nearEnabled() {
-        return true;
+        return false;
     }
 
     /** {@inheritDoc} */
@@ -136,19 +153,89 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
     /** {@inheritDoc} */
     @Test
+    @Override public void testRestartWithTxFourNodesTwoBackups() throws Throwable {
+        //super.testRestartWithTxFourNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
     @Override public void testRestartWithTxTenNodesTwoBackups() throws Throwable {
-        super.testRestartWithTxTenNodesTwoBackups();
+        //super.testRestartWithTxTenNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesNoBackups() throws Throwable {
-        super.testRestartWithTxTwoNodesNoBackups();
+        //super.testRestartWithTxTwoNodesNoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesOneBackup() throws Throwable {
-        super.testRestartWithTxTwoNodesOneBackup();
+        //super.testRestartWithTxTwoNodesOneBackup();
+    }
+
+    @Test
+    public void testZzz() throws Exception {
+        backups = 2;
+        nodeCnt = 4;
+        keyCnt = 10;
+        partitions = 29;
+        rebalancMode = ASYNC;
+        evict = false;
+
+        IgniteEx crd = startGrids(4);
+
+        awaitPartitionMapExchange(false, true, null);
+
+        IgniteCache<Object, Object> cache = crd.cache(CACHE_NAME);
+
+        int k = 0;
+
+        Collection<ClusterNode> nodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(k);
+
+        ClusterNode notOwner = null;
+
+        for (Ignite ignite : G.allGrids()) {
+            if (!nodes.contains(ignite.cluster().localNode())) {
+                notOwner = ignite.cluster().localNode();
+
+                break;
+            }
+        }
+
+        try (Transaction tx = grid(notOwner).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> cache1 = grid(notOwner).cache(CACHE_NAME);
+
+            cache1.put(k, 0);
+
+            tx.commit();
+        }
+
+        assertEquals(0, cache.get(k));
+
+        ClusterNode owner = nodes.iterator().next();
+
+        try (Transaction tx = grid(owner).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> cache2 = grid(owner).cache(CACHE_NAME);
+
+            cache2.put(k, 1);
+
+            TransactionProxyImpl p = (TransactionProxyImpl) tx;
+            p.tx().prepare(true);
+
+            nodes.remove(owner);
+
+            grid(owner).close();
+        }
+        catch (Throwable e) {
+            // Ignored.
+        }
+
+        awaitPartitionMapExchange();
+
+        assertEquals(1, grid(nodes.iterator().next()).cache(CACHE_NAME).get(k));
+
+        checkFutures();
     }
 }
