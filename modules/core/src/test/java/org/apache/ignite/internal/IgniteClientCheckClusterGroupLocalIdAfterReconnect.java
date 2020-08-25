@@ -34,7 +34,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -66,7 +65,7 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
         return cfg;
     }
 
-    /** {@inheritDoc} */
+    /** Stop all nodes after test */
     @After
     public void tearDown() {
         stopAllGrids();
@@ -99,7 +98,7 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
             return true;
         });
 
-        //countDown latch = 1
+        // countDown latch = 1
         messaging.send("topic", new External());
 
         CountDownLatch discSignal = new CountDownLatch(1);
@@ -132,7 +131,7 @@ public class IgniteClientCheckClusterGroupLocalIdAfterReconnect extends GridComm
         awaitPartitionMapExchange();
 
         // check sending messages is possible after reconnecting
-        //countDown latch = 0
+        // countDown latch = 0
         messaging = client.message(client.cluster().forLocal());
 
         messaging.send("topic", new External());
