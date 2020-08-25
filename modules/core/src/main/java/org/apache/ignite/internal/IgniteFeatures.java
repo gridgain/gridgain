@@ -326,7 +326,7 @@ public enum IgniteFeatures {
                 continue;
 
             // Add only when indexing is enabled.
-            if (INDEXING == value && !ctx.query().moduleEnabled())
+            if (INDEXING == value && (ctx.query() == null || !ctx.query().moduleEnabled()))
                 continue;
 
             // Add only when tracing is enabled.
