@@ -92,6 +92,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.nio.GridNioBackPressureControl;
@@ -1668,7 +1669,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 return;
             }
 
-            updateAllAsyncInternal0(node, req, completionCb);
+            updateAllAsyncInternal0(node, req, completionCb, MTC.span());
         }
         else {
             forceFut.listen(new CI1<IgniteInternalFuture<Object>>() {
@@ -1685,7 +1686,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         return;
                     }
 
-                    updateAllAsyncInternal0(node, req, completionCb);
+                    updateAllAsyncInternal0(node, req, completionCb, MTC.span());
                 }
             });
         }
@@ -1720,11 +1721,13 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param node Node.
      * @param req Update request.
      * @param completionCb Completion callback.
+     * @param span Tracing span.
      */
     private void updateAllAsyncInternal0(
         final ClusterNode node,
         final GridNearAtomicAbstractUpdateRequest req,
-        final UpdateReplyClosure completionCb
+        final UpdateReplyClosure completionCb,
+        final Span span
     ) {
         GridNearAtomicUpdateResponse res = new GridNearAtomicUpdateResponse(ctx.cacheId(),
             node.id(),
@@ -1834,7 +1837,11 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                                 + req.topologyVersion() + ']';
                                         }
                                         else {
-                                            affFut.listen(f -> updateAllAsyncInternal0(node, req, completionCb));
+                                            affFut.listen(f -> updateAllAsyncInternal0(
+                                                node,
+                                                req,
+                                                completionCb,
+                                                MTC.span()));
 
                                             return;
                                         }
@@ -1966,7 +1973,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         }
         else {
             if (dhtFut != null)
-                dhtFut.map(node, res.returnValue(), res, completionCb);
+                dhtFut.map(node, res.returnValue(), res, completionCb, span);
         }
 
         if (req.writeSynchronizationMode() != FULL_ASYNC)
@@ -3008,6 +3015,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      */
     private List<GridDhtCacheEntry> lockEntries(GridNearAtomicAbstractUpdateRequest req, AffinityTopologyVersion topVer)
         throws GridDhtInvalidPartitionException {
+        MTC.span().addLog(() -> "lock.entries");
+
         if (req.size() == 1) {
             KeyCacheObject key = req.key(0);
 
@@ -3072,6 +3081,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param topVer Topology version.
      */
     private void unlockEntries(List<GridDhtCacheEntry> locked, AffinityTopologyVersion topVer) {
+        MTC.span().addLog(() -> "unlock.entries");
+
         // Process deleted entries before locks release.
         assert ctx.deferredDelete() : this;
 

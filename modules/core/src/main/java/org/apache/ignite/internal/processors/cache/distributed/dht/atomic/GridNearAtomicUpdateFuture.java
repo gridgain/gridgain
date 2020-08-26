@@ -736,7 +736,7 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
     /** {@inheritDoc} */
     @Override protected void map(AffinityTopologyVersion topVer) {
-        MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+        span.addTag("topology.version", () -> Objects.toString(topVer));
 
         map(topVer, null);
     }
