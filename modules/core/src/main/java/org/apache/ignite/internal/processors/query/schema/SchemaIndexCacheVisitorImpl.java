@@ -99,6 +99,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             return;
         }
 
+        cctx.cache().metrics0().resetIndexRebuildKeyProcessed();
+
         AtomicBoolean stop = new AtomicBoolean();
 
         GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> buildIdxCompoundFut =
