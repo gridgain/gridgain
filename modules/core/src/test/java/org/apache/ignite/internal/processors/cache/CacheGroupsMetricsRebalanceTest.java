@@ -39,7 +39,6 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
@@ -106,6 +105,9 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
     /** Acceptable time inaccuracy for testRebalanceEstimateFinishTime() */
     public static final long ACCEPTABLE_TIME_INACCURACY = 25_000L;
 
+    /** */
+    private long rebalanceDelay = 0;
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
@@ -142,7 +144,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
             .setRebalanceMode(CacheRebalanceMode.ASYNC)
             .setRebalanceBatchSize(100)
             .setStatisticsEnabled(true)
-            .setRebalanceDelay(REBALANCE_DELAY);
+            .setRebalanceDelay(rebalanceDelay);
 
         CacheConfiguration cfg4 = new CacheConfiguration()
             .setAffinity(new RendezvousAffinityFunction())
@@ -161,6 +163,13 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        rebalanceDelay = 0;
     }
 
     /**
@@ -342,6 +351,8 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalancingLastCancelledTime() throws Exception {
+        rebalanceDelay = REBALANCE_DELAY; // Used for trigger rebalance cancellation.
+
         IgniteEx ignite0 = startGrid(0);
 
         List<String> cacheNames = Lists.newArrayList(CACHE4, CACHE5);
@@ -492,21 +503,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
                 st.addData(i, CACHE1 + "-" + i);
         }
 
-        final CountDownLatch finishRebalanceLatch = new CountDownLatch(1);
-
         final Ignite ig2 = startGrid(2);
-
-        ig2.events().localListen(evt -> {
-            CacheRebalancingEvent rebEvt = (CacheRebalancingEvent)evt;
-
-            if (rebEvt.cacheName().equals(CACHE1)) {
-                log.info("CountDown rebalance stop latch: " + rebEvt.cacheName());
-
-                finishRebalanceLatch.countDown();
-            }
-
-            return false;
-        }, EventType.EVT_CACHE_REBALANCE_STOPPED);
 
         boolean rebalancingStartTimeGot = waitForCondition(() -> ig2.cache(CACHE1).localMetrics().getRebalancingStartTime() != -1L, 5_000);
 
@@ -535,7 +532,7 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
 
                 long keyLeft = m.getKeysToRebalanceLeft();
 
-                if (keyLeft > 0 && keyLeft < keysLine) {
+                if (keyLeft < keysLine) {
                     latch.countDown();
 
                     break;
@@ -608,9 +605,20 @@ public class CacheGroupsMetricsRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceDelay() throws Exception {
+        rebalanceDelay = REBALANCE_DELAY;
+
         Ignite ig1 = startGrid(1);
 
-        final IgniteCache<Object, Object> cache = ig1.cache(CACHE3);
+        CacheConfiguration cfg3 = new CacheConfiguration()
+            .setName(CACHE3)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setRebalanceMode(CacheRebalanceMode.ASYNC)
+            .setRebalanceBatchSize(100)
+            .setStatisticsEnabled(true)
+            .setRebalanceDelay(REBALANCE_DELAY);
+
+        final IgniteCache<Object, Object> cache = ig1.getOrCreateCache(cfg3);
 
         for (int i = 0; i < KEYS_COUNT; i++)
             cache.put(i, CACHE3 + "-" + i);

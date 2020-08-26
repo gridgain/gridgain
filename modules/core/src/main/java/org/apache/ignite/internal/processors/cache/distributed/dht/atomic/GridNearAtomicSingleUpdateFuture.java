@@ -456,7 +456,7 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
 
     /** {@inheritDoc} */
     @Override protected void map(AffinityTopologyVersion topVer) {
-        MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+        span.addTag("topology.version", () -> Objects.toString(topVer));
 
         long futId = cctx.mvcc().nextAtomicId();
 
