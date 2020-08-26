@@ -173,7 +173,7 @@ public class CacheConfigurationEnricher {
      * @return {@code true} if deserialization for given field should be skipped.
      */
     private static boolean skipDeserialization(CacheConfiguration<?, ?> ccfg, Field field) {
-        return "storeFactory".equals(field.getName()) && ccfg.getAtomicityMode() == CacheAtomicityMode.ATOMIC ||
+        return ("storeFactory".equals(field.getName()) && ccfg.getAtomicityMode() == CacheAtomicityMode.ATOMIC) ||
             "interceptor".equals(field.getName());
     }
 }
