@@ -24,7 +24,7 @@ public enum RollingUpgradeCommandArg implements CommandArg {
     /**
      * Enables strict mode of rolling upgrade.
      */
-    FORCE("force");
+    FORCE("--force");
 
     /** Option name. */
     private final String name;

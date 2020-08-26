@@ -43,6 +43,9 @@ import static org.apache.ignite.internal.commandline.ru.RollingUpgradeSubCommand
  * Represents a command associated with rolling upgrade functionality.
  */
 public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
+    /** Empty list. */
+    private static final String EMPTY_LIST = CommandLogger.INDENT + "none";
+
     /** */
     private RollingUpgradeArguments rollingUpgradeArgs;
 
@@ -86,7 +89,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.ENABLE.text(), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.ENABLE.text(), optional(RollingUpgradeCommandArg.FORCE), optional(CMD_AUTO_CONFIRMATION));
         Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.DISABLE.text(), optional(CMD_AUTO_CONFIRMATION));
         Command.usage(logger, "Get rolling upgrade status:", ROLLING_UPGRADE, RollingUpgradeSubCommands.STATUS.text());
     }
@@ -148,20 +151,25 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
         VisorRollingUpgradeStatus status = res.getStatus();
 
         log.info("Rolling upgrade is " + (status.isEnabled() ? "enabled" : "disabled"));
-        log.info("Initial version: " + status.getInitialVersion());
-        log.info("Target version: " + ((F.isEmpty(status.getTargetVersion())) ? "N/A" : status.getTargetVersion()));
-
         if (status.isForcedModeEnabled())
             log.info("Forced mode is enabled.");
+        log.info("Initial version: " + status.getInitialVersion());
+        log.info("Target version: " + ((F.isEmpty(status.getTargetVersion())) ? "N/A" : status.getTargetVersion()));
 
         if (status.isEnabled()) {
             log.info("List of alive nodes in the cluster that are not updated yet:");
 
-            res.getInitialNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
+            if (res.getInitialNodes().isEmpty())
+                log.info(EMPTY_LIST);
+            else
+                res.getInitialNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
 
             log.info("List of alive nodes in the cluster that are updated:");
 
-            res.getUpdatedNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
+            if (res.getUpdatedNodes().isEmpty())
+                log.info(EMPTY_LIST);
+            else
+                res.getUpdatedNodes().forEach(id -> log.info(CommandLogger.INDENT + id));
         }
     }
 
