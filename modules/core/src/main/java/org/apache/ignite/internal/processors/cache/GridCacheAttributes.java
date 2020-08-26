@@ -375,6 +375,9 @@ public class GridCacheAttributes implements Serializable {
      * @return Interceptor class name.
      */
     public String interceptorClassName() {
+        if (enrichment != null && enrichment.hasField("interceptor"))
+            return enrichment.getFieldClassName("interceptor");
+
         return className(ccfg.getInterceptor());
     }
 
