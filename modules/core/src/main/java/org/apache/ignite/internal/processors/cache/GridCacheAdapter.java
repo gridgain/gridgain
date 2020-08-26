@@ -3826,8 +3826,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     !ctx.skipStore(),
                     ctx.mvccEnabled(),
                     0,
-                    null,
-                    false
+                    null
                 );
 
                 assert tx != null;
@@ -3942,8 +3941,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     !skipStore,
                     ctx.mvccEnabled(),
                     0,
-                    null,
-                    false);
+                    null);
 
                 return asyncOp(tx, op, opCtx, /*retry*/false);
             }
@@ -4682,8 +4680,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 opCtx == null || !opCtx.skipStore(),
                 ctx.mvccEnabled(),
                 0,
-                null,
-                false);
+                null);
 
             IgniteInternalFuture<T> fut = asyncOp(tx, op, opCtx, retry);
 
