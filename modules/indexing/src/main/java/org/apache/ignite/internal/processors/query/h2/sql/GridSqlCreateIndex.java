@@ -38,7 +38,7 @@ public class GridSqlCreateIndex extends GridSqlStatement {
     private QueryIndex idx;
 
     /**
-     * @return Schema name for statistic collection.
+     * @return Schema name for new index.
      */
     public String schemaName() {
         return schemaName;

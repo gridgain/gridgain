@@ -113,8 +113,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
      */
     @Test
     public void compareJoinsWithoutConditions() {
-
-        runSql("select * from BIG");
+        //runSql("select * from BIG");
         String sql = "SELECT COUNT(*) FROM t1 JOIN t2 ON t1.c = t2.c";
 
         checkOptimalPlanChosenForDifferentJoinOrders(grid(0), sql, "big", "small");

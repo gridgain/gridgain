@@ -104,18 +104,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         return constFunc.getCostRangeIndex(masks, rowCount, filters, filter, sortOrder, isScanIndex, allColumnsSet);
     }
 
-    /**
-     * Re-implement {@link BaseIndex#getCostRangeIndex} to support  compatibility with old version.
-     */
-    private long getCostRangeIndex_Last(int[] masks, long rowCount, TableFilter[] filters, int filter,
-        SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
-        ObjectStatistics locTblStats = tbl.tableStatistics();
-
-        if (locTblStats != null)
-            rowCount = locTblStats.rowCount();
-
-        rowCount += Constants.COST_ROW_OFFSET;
-
+    private long getCostRangeIndexRowCost_Last(int[] masks, long rowCount, ObjectStatistics locTblStats) {
         int totalSelectivity = 0;
 
         long rowsCost = rowCount;
@@ -138,8 +127,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                     ColumnStatistics colStat;
                     int selectivity = locTblStats != null
-                        && (colStat = locTblStats.columnStatistics(column.getName())) != null ? colStat.cardinality()
-                        : column.getSelectivity();
+                            && (colStat = locTblStats.columnStatistics(column.getName())) != null ? colStat.cardinality()
+                            : column.getSelectivity();
 
                     totalSelectivity = 100 - ((100 - totalSelectivity) * (100 - selectivity) / 100);
 
@@ -169,10 +158,11 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     break;
             }
         }
+        return rowsCost;
+    }
 
-        // If the ORDER BY clause matches the ordering of this index,
-        // it will be cheaper than another index, so adjust the cost
-        // accordingly.
+    private long getCostRangeIndexSortingCost_Last(long rowCount, TableFilter[] filters, int filter,
+                                                   SortOrder sortOrder, boolean isScanIndex) {
         long sortingCost = 0;
 
         if (sortOrder != null)
@@ -228,6 +218,27 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 sortingCost = 100 - coveringCount;
             }
         }
+        return sortingCost;
+    }
+
+    /**
+     * Re-implement {@link BaseIndex#getCostRangeIndex} to support  compatibility with old version.
+     */
+    private long getCostRangeIndex_Last(int[] masks, long rowCount, TableFilter[] filters, int filter,
+        SortOrder sortOrder, boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
+        ObjectStatistics locTblStats = tbl.tableStatistics();
+
+        if (locTblStats != null)
+            rowCount = locTblStats.rowCount();
+
+        rowCount += Constants.COST_ROW_OFFSET;
+
+        long rowsCost = getCostRangeIndexRowCost_Last(masks, rowCount, locTblStats);
+
+        // If the ORDER BY clause matches the ordering of this index,
+        // it will be cheaper than another index, so adjust the cost
+        // accordingly.
+        long sortingCost = getCostRangeIndexSortingCost_Last(rowCount, filters, filter, sortOrder, isScanIndex);
 
         TableFilter tableFilter;
 
