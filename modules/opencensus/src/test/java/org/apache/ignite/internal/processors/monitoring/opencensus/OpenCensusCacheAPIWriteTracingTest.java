@@ -127,7 +127,7 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
      */
     @Test
     public void testCacheAtomicPutTracing() throws Exception {
-        client.cache(ATOMIC_CACHE).put("One",1);
+        client.cache(ATOMIC_CACHE).put("AnotherOne",1);
 
         handler().flush();
 
@@ -140,7 +140,7 @@ public class OpenCensusCacheAPIWriteTracingTest extends AbstractTracingTest {
                 .put("node.consistent.id", client.localNode().consistentId().toString())
                 .put("node.name", client.name())
                 .put("cache", ATOMIC_CACHE)
-                .put("key", "One")
+                .put("key", "AnotherOne")
                 .build()
         );
 
