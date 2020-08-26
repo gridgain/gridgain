@@ -620,10 +620,10 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         OutputStream destStream = new ByteArrayOutputStream();
 
+        Set<String> idxSet = isNull(idxs) ? null : new HashSet<>(asList(idxs));
+
         try (IgniteIndexReader reader = new IgniteIndexReader(
-            PAGE_SIZE,
-            PART_CNT,
-            idxs,
+            isNull(idxSet) ? null : idxSet::contains,
             checkParts,
             destStream,
             createFilePageStoreFactory(dir)
@@ -643,7 +643,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     protected IgniteIndexReaderFilePageStoreFactory createFilePageStoreFactory(
         File dir
     ) throws IgniteCheckedException {
-        return new IgniteIndexReaderFilePageStoreFactoryImpl(dir, PAGE_SIZE, PAGE_STORE_VER);
+        return new IgniteIndexReaderFilePageStoreFactoryImpl(dir, PAGE_SIZE, PART_CNT, PAGE_STORE_VER);
     }
 
     /**
