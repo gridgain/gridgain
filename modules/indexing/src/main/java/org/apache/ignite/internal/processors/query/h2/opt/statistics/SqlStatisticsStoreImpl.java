@@ -148,6 +148,12 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
     }
 
     private void writeMeta(String key, Serializable object) throws IgniteCheckedException {
+        assert object != null;
+
+        if (metastore == null)
+            // TODO log warn
+            return;
+
         ctx.cache().context().database().checkpointReadLock();
         try {
             metastore.write(key, object);

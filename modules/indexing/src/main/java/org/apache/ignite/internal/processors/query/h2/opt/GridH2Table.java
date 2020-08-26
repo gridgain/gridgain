@@ -460,7 +460,9 @@ public class GridH2Table extends TableBase {
     }
 
     public ObjectStatistics tableStatistics() {
-        return cacheInfo.cacheContext().kernalContext().query().getIndexing().stat
+        // TODO get without typecast
+        IgniteH2Indexing indexing =  (IgniteH2Indexing) cacheInfo.cacheContext().kernalContext().query().getIndexing();
+        return indexing.statsManager().getLocalStatistics(identifier);
     }
 
     /**
@@ -1234,6 +1236,7 @@ public class GridH2Table extends TableBase {
 
     /** {@inheritDoc} */
     @Override public long getRowCountApproximation(Session ses) {
+        ObjectStatistics tblStats = tableStatistics();
         if (!localQuery(H2Utils.context(ses)) || tblStats == null)
             return 10_000; // Fallback to the previous behaviour.
 

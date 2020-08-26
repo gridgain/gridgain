@@ -7,6 +7,7 @@ import org.apache.ignite.resources.LoggerResource;
 
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,35 +31,62 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
     }
 
     @Override
-    public void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics) {
-        store.saveLocalPartitionsStatistics(tbl, statistics);
+    public void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics,
+                                              boolean fullStat) {
+        if (store != null)
+            if (fullStat)
+                store.saveLocalPartitionsStatistics(tbl, statistics);
+            else
+                // TODO implement me
+                throw new UnsupportedOperationException();
     }
 
     public Collection<ObjectPartitionStatistics> getLocalPartitionsStatistics(QueryTable tbl){
-        return store.getLocalPartitionsStatistics(tbl);
-    }
-
-    public void clearLocalPartitionsStatistics(QueryTable tbl) {
-        store.clearLocalPartitionsStatistics(tbl);
+        return store == null ? Collections.emptyList() : store.getLocalPartitionsStatistics(tbl);
     }
 
     @Override
-    public void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics) {
-        store.saveLocalPartitionStatistics(tbl, partId, statistics);
+    public void clearLocalPartitionsStatistics(QueryTable tbl, String ... colNames) {
+        if (colNames == null || colNames.length == 0) {
+            if (store != null)
+                store.clearLocalPartitionsStatistics(tbl);
+        } else {
+            // TODO implement me
+            throw new UnsupportedOperationException();
+        }
     }
 
+    @Override
+    public void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics,
+                                             boolean fullStat) {
+        if (store != null)
+            if (fullStat)
+                store.saveLocalPartitionStatistics(tbl, partId, statistics);
+            else
+                // TODO implement me
+                throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ObjectPartitionStatistics getLocalPartitionStatistics(QueryTable tbl, int partId) {
-        return store.getLocalPartitionStatistics(tbl, partId);
-    }
-
-    public void clearLocalPartitionStatistics(QueryTable tbl, int partId) {
-        store.clearLocalPartitionStatistics(tbl, partId);
+        return (store == null) ? null : store.getLocalPartitionStatistics(tbl, partId);
     }
 
     @Override
-    public void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics) {
+    public void clearLocalPartitionStatistics(QueryTable tbl, int partId) {
+        if (store != null)
+            store.clearLocalPartitionStatistics(tbl, partId);
+    }
+
+    @Override
+    public void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
         localStats.put(tbl, statistics);
-        store.saveLocalStatistics(tbl, statistics);
+        if (store != null)
+            if (fullStat)
+                store.saveLocalStatistics(tbl, statistics);
+            else
+                // TODO implement me
+                throw new UnsupportedOperationException();
     }
 
     @Override
@@ -73,15 +101,26 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
     }
 
     @Override
-    public void clearLocalStatistics(QueryTable tbl) {
-        localStats.remove(tbl);
-        store.clearLocalStatistics(tbl);
+    public void clearLocalStatistics(QueryTable tbl, String ... colNames) {
+        if (colNames == null || colNames.length == 0) {
+            localStats.remove(tbl);
+            if (store != null)
+                store.clearLocalStatistics(tbl);
+        } else {
+            // TODO implement me
+            throw new UnsupportedOperationException();
+        }
     }
 
     @Override
-    public void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics) {
+    public void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
+        if (!fullStat)
+            // TODO implement me
+            throw new UnsupportedOperationException();
+
         globalStats.put(tbl, statistics);
-        store.saveGlobalStatistics(tbl, statistics);
+        if (store != null)
+            store.saveGlobalStatistics(tbl, statistics);
     }
 
     @Override
@@ -94,8 +133,15 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
         return globalStats.get(tbl);
     }
 
-    public void clearGlobalStatistics(QueryTable tbl) {
-        globalStats.remove(tbl);
-        store.clearGlobalStatistics(tbl);
+    @Override
+    public void clearGlobalStatistics(QueryTable tbl, String ... colNames) {
+        if (colNames == null || colNames.length == 0) {
+            globalStats.remove(tbl);
+            if (store != null)
+                store.clearGlobalStatistics(tbl);
+        } else {
+            // TODO implement me
+            throw new UnsupportedOperationException();
+        }
     }
 }

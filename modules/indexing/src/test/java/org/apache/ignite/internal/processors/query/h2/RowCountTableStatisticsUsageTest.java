@@ -89,7 +89,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
             for (String tbl : Arrays.asList("BIG", "MED", "SMALL")) {
                 for (Ignite node : G.allGrids())
                     ((IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing())
-                        .collectTableStatistics("PUBLIC", tbl.toUpperCase());
+                        .collectObjectStatistics("PUBLIC", tbl.toUpperCase());
             }
         }
         catch (IgniteCheckedException ex) {

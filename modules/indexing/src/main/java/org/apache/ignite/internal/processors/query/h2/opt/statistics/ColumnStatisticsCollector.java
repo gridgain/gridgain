@@ -25,6 +25,26 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import net.agkn.hll.HLL;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Array;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Boolean;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Byte;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Bytes;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2CacheObject;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Date;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Decimal;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Double;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Float;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Geometry;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Integer;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2JavaObject;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Long;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Null;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Short;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2String;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Time;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Timestamp;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Uuid;
 import org.h2.table.Column;
 import org.h2.value.Value;
 
@@ -38,8 +58,8 @@ public class ColumnStatisticsCollector {
     /** */
     private final Column col;
 
-    /** Value hasher. */
-    private final Hasher hasher;
+    /** Value hash function. */
+    private final HashFunction hash;
 
     /** Hyper Log Log structure */
     private final HLL hll = new HLL(13/*log2m*/, 5/*registerWidth*/);
@@ -64,18 +84,18 @@ public class ColumnStatisticsCollector {
         this.comp = comp;
         //valFreq = new TreeMap<>(comp);
 
-        HashFunction hash = Hashing.murmur3_128(seed);
-        hasher = hash.newHasher();
+        hash = Hashing.murmur3_128(seed);
     }
 
     public void add(Value val) {
-        if (val == null) {
+        if (isNull((val))) {
             nullsCnt++;
 
             return;
         }
 
-        hll.addRaw(hasher.hash().asLong());
+        long valHash = hash.hashBytes(val.getBytes()).asLong();
+        hll.addRaw(valHash);
 
         if (null == min || comp.compare(val, min) < 0)
             min = val;
@@ -84,18 +104,85 @@ public class ColumnStatisticsCollector {
             max = val;
     }
 
+    private boolean isNull(Value v) {
+        return v == null || v.getType().getValueType() == Value.NULL;
+    }
+
+    /*private byte[] getBytes(Value v) {
+        switch (v.getType().getValueType()) {
+            case Value.NULL:
+                throw new IllegalArgumentException();
+
+            case Value.BOOLEAN:
+                return v.getBytes();
+
+            case Value.BYTE:
+                return new GridH2Byte(v);
+
+            case Value.SHORT:
+                return new GridH2Short(v);
+
+            case Value.INT:
+                return new GridH2Integer(v);
+
+            case Value.LONG:
+                return new GridH2Long(v);
+
+            case Value.DECIMAL:
+                return new GridH2Decimal(v);
+
+            case Value.DOUBLE:
+                return new GridH2Double(v);
+
+            case Value.FLOAT:
+                return new GridH2Float(v);
+
+            case Value.DATE:
+                return new GridH2Date(v);
+
+            case Value.TIME:
+                return new GridH2Time(v);
+
+            case Value.TIMESTAMP:
+                return new GridH2Timestamp(v);
+
+            case Value.BYTES:
+                return new GridH2Bytes(v);
+
+            case Value.STRING:
+            case Value.STRING_FIXED:
+            case Value.STRING_IGNORECASE:
+                return new GridH2String(v);
+
+            case Value.ROW: // Intentionally converts Value.ROW to GridH2Array to preserve compatibility
+            case Value.ARRAY:
+                return new GridH2Array(v);
+
+            case Value.JAVA_OBJECT:
+                if (v instanceof GridH2ValueCacheObject)
+                    return new GridH2CacheObject((GridH2ValueCacheObject)v);
+
+                return new GridH2JavaObject(v);
+
+            case Value.UUID:
+                return new GridH2Uuid(v);
+
+            case Value.GEOMETRY:
+                return new GridH2Geometry(v);
+
+            default:
+                throw new IllegalStateException("Unsupported H2 type: " + v.getType());
+        }
+    }*/
+
     public ColumnStatistics finish(long totalRows) {
-        int nulls = 0;
-        Value min = null;
-        Value max = null;
+        int nulls = nullsPercent(nullsCnt, totalRows);
 
-        nulls = nullsPercent(nullsCnt, totalRows);
+        int cardinality = 0;
 
-        int selectivity = 0;
+        cardinality = cardinalityPercent(nullsCnt, totalRows, hll.cardinality());
 
-        selectivity = cardinalityPercent(nullsCnt, totalRows, hll.cardinality());
-
-        return new ColumnStatistics(min, max, nulls, selectivity, hll.toBytes());
+        return new ColumnStatistics(min, max, nulls, cardinality, hll.toBytes());
     }
 
     private static int nullsPercent(long nullsCnt, long totalRows) {

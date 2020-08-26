@@ -67,7 +67,7 @@ public class GridSqlAnalyze extends GridSqlStatement {
     @Override public String getSQL() {
         StringBuilder sb = new StringBuilder("CREATE ")
             .append(idx.getIndexType() == QueryIndexType.GEOSPATIAL ? "SPATIAL " : "")
-            .append("INDEX ").append(ifNotExists ? "IF NOT EXISTS " : "")
+            .append("INDEX ").append("IF NOT EXISTS ")
             .append(Parser.quoteIdentifier(schemaName, true)).append('.')
             .append(Parser.quoteIdentifier(idx.getName(), true)).append(" ON ")
             .append(Parser.quoteIdentifier(tblName, true)).append(" (");

@@ -16,28 +16,22 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.GridTopic;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsPropagationMessage;
 import org.apache.ignite.resources.LoggerResource;
 import org.h2.table.Column;
 
@@ -52,29 +46,45 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
     private final GridKernalContext ctx;
 
     private final SqlStatisticsStoreImpl store;
-    private final SqlStatisticsRepository statRepos;
+    private final SqlStatisticsRepository statsRepos;
 
     public SqlStatisticsManagerImpl(GridKernalContext ctx) {
         this.ctx = ctx;
-        store = new SqlStatisticsStoreImpl(ctx);
-        statRepos = new SqlStatisticsRepositoryImpl(ctx, store);
+        GridCacheSharedContext cctx = ctx.cache().context();
+        if (cctx.kernalContext().clientNode() && cctx.kernalContext().config().getDataStorageConfiguration() == null)
+            store = null;
+        else
+            store = new SqlStatisticsStoreImpl(ctx);
+        statsRepos = new SqlStatisticsRepositoryImpl(ctx, store);
     }
     public SqlStatisticsRepository statisticsRepository() {
-        return statRepos;
+        return statsRepos;
     }
 
     public void start() {
-        store.start(statRepos);
+        store.start(statsRepos);
         //ctx.io().addMessageListener(GridTopic.TOPIC_QUERY, );
     }
 
+
+    @Override
+    public ObjectStatistics getLocalStatistics(QueryTable tbl) {
+        return statsRepos.getLocalStatistics(tbl, true);
+    }
+
+    @Override
+    public void clearObjectStatistics(QueryTable tbl, String... colNames) {
+        statsRepos.clearLocalPartitionsStatistics(tbl, colNames);
+        statsRepos.clearLocalStatistics(tbl, colNames);
+        statsRepos.clearGlobalStatistics(tbl, colNames);
+    }
 
     public void onPartEvicted(QueryTable table, int partId) {
 
         // Send partition stat
         // TODO
         // Remove partition stat
-        statRepos.clearLocalPartitionStatistics(table, partId);
+        statsRepos.clearLocalPartitionStatistics(table, partId);
         // Update local stat
         // TODO
     }
@@ -103,18 +113,31 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
         return resultList.toArray(new Column[resultList.size()]);
     }
 
-    public void collectTableStatistics(GridH2Table tbl, String ... colNames) throws IgniteCheckedException {
+    @Override
+    public void refreshStatistics(GridH2Table... tbls) {
+
+    }
+
+    @Override
+    public void collectObjectStatistics(GridH2Table tbl, String ... colNames) throws IgniteCheckedException {
         assert tbl != null;
 
-        Column[] selectedColumns = filterColumns(tbl.getColumns(), colNames);
+        Column[] selectedColumns;
+        boolean fullStat;
+        if (colNames == null || colNames.length == 0) {
+            fullStat = true;
+            selectedColumns = tbl.getColumns();
+        } else {
+            fullStat = false;
+            selectedColumns = filterColumns(tbl.getColumns(), colNames);
+        }
 
         Collection<ObjectPartitionStatistics> partsStats = collectPartitionStatistics(tbl, selectedColumns);
-        // TODO: add existing partition statistics to save previously calculated statistics by different columns... if colNames specified
-        statRepos.saveLocalPartitionsStatistics(tbl.identifier(), partsStats);
+        statsRepos.saveLocalPartitionsStatistics(tbl.identifier(), partsStats, fullStat);
 
         ObjectStatistics tblStats = aggregateLocalStatistics(tbl, selectedColumns, partsStats);
         // TODO support refreshing only part of columns (step to columnar storage and ability to handle lack of some stats)
-        statRepos.saveLocalStatistics(tbl.identifier(), tblStats);
+        statsRepos.saveLocalStatistics(tbl.identifier(), tblStats, fullStat);
     }
 
     private Collection<ObjectPartitionStatistics> collectPartitionStatistics(GridH2Table tbl, Column[] selectedColumns) throws IgniteCheckedException {
@@ -171,9 +194,9 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
         return tblPartStats;
     }
 
-    private ObjectStatistics aggregateLocalStatistics(GridH2Table tbl, Column[] selectedColumns, Collection<ObjectPartitionStatistics> tblPartStats) {
+    private ObjectStatistics aggregateLocalStatistics(GridH2Table tbl, Column[] selectedColumns,
+                                                      Collection<ObjectPartitionStatistics> tblPartStats) {
 
-        long rowCnt = 0;
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedColumns.length);
         Map<Column, Long> colRowCounter = new HashMap<>(selectedColumns.length);
         for(Column col : selectedColumns) {
@@ -198,34 +221,13 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
         Map<String, ColumnStatistics> colStats = new HashMap<>(selectedColumns.length);
         for(Column col : selectedColumns) {
             colStats.put(col.getName(), ColumnStatisticsCollector.aggregate(
-                    tbl::compareValues, colRowCounter.get(col), colPartStats.get(col));
+                    tbl::compareValues, colRowCounter.get(col), colPartStats.get(col)));
         }
 
-        long rowCount = tblPartStats.stream().map(ObjectPartitionStatistics::rowCount).reduce(0L, Long::sum);
+        long rowCnt = colRowCounter.values().stream().max(Long::compare).orElse(0L);
 
-        // TODO ColumnStatisticsCollector.aggregate(tbl::compareValues, rowCount, partStats);
-        for (ObjectPartitionStatistics part : ) {
-            if (!part.local())
-                continue;
+        ObjectStatistics tblStats = new ObjectStatistics(rowCnt, colStats);
 
-
-
-            rowCnt += part.rowCount();
-
-            for (Map.Entry<String, ColumnStatistics> colNameToStat : part.getColNameToStat().entrySet()) {
-                String colName = colNameToStat.getKey();
-                ColumnStatisticsCollector statAggregator = colStats.computeIfAbsent(colName,
-                    k -> new ColumnStatisticsCollector(tbl.getColumn(colName), tbl::compareValues));
-
-                //statAggregator.collect(colNameToStat.getValue());
-            }
-        }
-
-        Map<String, ColumnStatistics> aggregatedStats = new HashMap<>(colStats.size());
-
-        ObjectStatistics tblStats = new ObjectStatistics(rowCnt, aggregatedStats);
-
-        tbl.tableStatistics(tblStats);
         return tblStats;
     }
 }

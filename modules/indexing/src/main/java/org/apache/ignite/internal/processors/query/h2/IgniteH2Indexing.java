@@ -3268,13 +3268,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
     }
 
-    public void collectTableStatistics(String schemaName, String tblName, String ... colNames) throws IgniteCheckedException {
+    public void collectObjectStatistics(String schemaName, String tblName, String ... colNames) throws IgniteCheckedException {
         GridH2Table tbl = schemaMgr.dataTable(schemaName, tblName);
 
         if (tbl == null)
             return;
 
-        statsManager.collectTableStatistics(tbl, colNames);
+        statsManager.collectObjectStatistics(tbl, colNames);
     }
 
     /** {@inheritDoc} */

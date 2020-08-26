@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 
 public class StatisticsUtils {
     public static StatsColumnData toMessage(ColumnStatistics stat) throws IgniteCheckedException {
-        GridH2ValueMessage msgMin = GridH2ValueMessageFactory.toMessage(stat.min());
-        GridH2ValueMessage msgMax = GridH2ValueMessageFactory.toMessage(stat.max());
+        GridH2ValueMessage msgMin = stat.min() == null ? null : GridH2ValueMessageFactory.toMessage(stat.min());
+        GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
         return new StatsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.raw());
     }

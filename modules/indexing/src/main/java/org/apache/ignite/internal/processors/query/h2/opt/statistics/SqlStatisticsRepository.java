@@ -15,8 +15,9 @@ public interface SqlStatisticsRepository {
      *
      * @param tbl table.
      * @param statistics collection of tables partition statistics
+     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics);
+    void saveLocalPartitionsStatistics(QueryTable tbl, Collection<ObjectPartitionStatistics> statistics, boolean fullStat);
 
     /**
      * Get local partition statistics by specified table.
@@ -30,8 +31,9 @@ public interface SqlStatisticsRepository {
      * Clear partition statistics for specified table.
      *
      * @param tbl table to clear statistics by.
+     * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearLocalPartitionsStatistics(QueryTable tbl);
+    void clearLocalPartitionsStatistics(QueryTable tbl, String ... colNames);
 
     /**
      * Save specified local partition statistics.
@@ -39,8 +41,9 @@ public interface SqlStatisticsRepository {
      * @param tbl table.
      * @param partId partition id.
      * @param statistics statistics to save.
+     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics);
+    void saveLocalPartitionStatistics(QueryTable tbl, int partId, ObjectPartitionStatistics statistics, boolean fullStat);
 
     /**
      * Get partition statistics.
@@ -64,8 +67,9 @@ public interface SqlStatisticsRepository {
      *
      * @param tbl object.
      * @param statistics statistics to save.
+     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics);
+    void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat);
 
     /**
      * Cache saved local statistics.
@@ -87,16 +91,18 @@ public interface SqlStatisticsRepository {
      * Clear local object statistics.
      *
      * @param tbl object to clear local statistics by.
+     * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearLocalStatistics(QueryTable tbl);
+    void clearLocalStatistics(QueryTable tbl, String ... colNames);
 
     /**
      * Save global statistics.
      *
      * @param tbl table.
      * @param statistics statistics to save.
+     * @param fullStat if {@code True} - replace whole statistics, try to merge with existing - otherwise.
      */
-    void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics);
+    void saveGlobalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat);
 
     /**
      * Cache saved global statistics.
@@ -119,7 +125,8 @@ public interface SqlStatisticsRepository {
      * Clear global statistics by object.
      *
      * @param tbl table
+     * @param colNames if specified - only statistics by specified columns will be cleared.
      */
-    void clearGlobalStatistics(QueryTable tbl);
+    void clearGlobalStatistics(QueryTable tbl, String ... colNames);
 
 }
