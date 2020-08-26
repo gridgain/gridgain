@@ -30,9 +30,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- * Extends a DHT partition adding extended blocking capabilities on clearing.
+ * Extends a DHT partition adding a support for blocking capabilities on clearing.
  */
-class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
+public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     /** */
     static final int TIMEOUT = 30_000;
 
