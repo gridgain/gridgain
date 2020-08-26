@@ -22,7 +22,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
-import org.apache.ignite.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeTask;

@@ -19,13 +19,13 @@ package org.apache.ignite.util;
 import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.commandline.CommandHandler;
-import org.apache.ignite.ru.RollingUpgradeModeChangeResult.Result;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.ru.RollingUpgradeModeChangeResult.Result.FAIL;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**

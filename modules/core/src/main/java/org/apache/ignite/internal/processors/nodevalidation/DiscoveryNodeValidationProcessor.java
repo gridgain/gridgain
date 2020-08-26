@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.nodevalidation;
 
 import org.apache.ignite.internal.processors.GridProcessor;
-import org.apache.ignite.ru.RollingUpgrade;
+import org.apache.ignite.internal.processors.ru.RollingUpgrade;
 
 /**
  * Node validation.

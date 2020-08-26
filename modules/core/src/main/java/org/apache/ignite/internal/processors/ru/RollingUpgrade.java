@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.ru;
+package org.apache.ignite.internal.processors.ru;
 
-import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
-
-import static org.apache.ignite.ru.RollingUpgradeModeChangeResult.Result.FAIL;
+import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 
 /**
  * Defines public API for Rolling Upgrade process.

@@ -18,7 +18,7 @@ package org.apache.ignite.internal.visor.ru;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
-import org.apache.ignite.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeUtil;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;

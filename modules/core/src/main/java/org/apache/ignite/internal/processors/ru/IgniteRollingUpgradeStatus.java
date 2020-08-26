@@ -22,7 +22,6 @@ import java.util.HashSet;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
-import org.apache.ignite.ru.RollingUpgradeStatus;
 
 /**
  * Represent cluster-wide status of Rolling Upgrade process.

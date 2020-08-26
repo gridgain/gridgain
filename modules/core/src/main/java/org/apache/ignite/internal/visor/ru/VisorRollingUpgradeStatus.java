@@ -23,7 +23,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 
 /**
  * Represents a wrapper class for a value of {@link RollingUpgradeStatus}.
