@@ -214,7 +214,7 @@ public class IgniteIndexReader implements AutoCloseable {
      *
      * @param idxFilter Index name filter, if {@code null} then is not used.
      * @param checkParts Check cache data tree in partition files and it's consistency with indexes.
-     * @param outputStream Stream for print report.
+     * @param outputStream Stream for print report, if {@code null} then will be used {@link System#out}.
      * @throws IgniteCheckedException If failed.
      */
     public IgniteIndexReader(
