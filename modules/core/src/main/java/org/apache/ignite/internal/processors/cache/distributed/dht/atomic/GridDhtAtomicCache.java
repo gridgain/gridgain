@@ -1841,7 +1841,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                                 node,
                                                 req,
                                                 completionCb,
-                                                MTC.span()));
+                                                span));
 
                                             return;
                                         }
