@@ -60,7 +60,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_PROCESS_ATOMIC_DEFERRED_UPDATE_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_UPDATE_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_UPDATE_MAP;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_UPDATE_MAP;
 
 /**
  * DHT atomic cache backup update future.
@@ -402,7 +402,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                 MTC.supportContinual(span = cctx.kernalContext().tracing().create(CACHE_API_DHT_UPDATE_FUTURE,
                     ctxSpan));
             TraceSurroundings ignored2 =
-                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_DHT_UPDATE_MAP, span))
+                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_UPDATE_MAP, span))
         ) {
             span.addTag("write.version", () -> Objects.toString(writeVer));
 

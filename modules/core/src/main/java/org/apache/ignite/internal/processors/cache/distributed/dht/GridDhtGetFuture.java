@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
@@ -59,7 +60,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_MAP;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 
 /**
  *
@@ -273,7 +274,9 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
      */
     private void map0(Map<KeyCacheObject, Boolean> keys, boolean forceKeys) {
         try (TraceSurroundings ignored =
-                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_DHT_GET_MAP, span))) {
+                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+
             Map<KeyCacheObject, Boolean> mappedKeys = null;
 
             // Assign keys to primary nodes.
