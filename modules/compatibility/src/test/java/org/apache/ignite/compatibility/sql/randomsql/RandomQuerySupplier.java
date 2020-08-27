@@ -110,7 +110,11 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      * @return Ast representing SELECT expression.
      */
     private Select rndMultiTableSelect(RandomisedQueryContext rndQryCtx) {
-        pickRndTables(rndQryCtx, 2 + rnd.nextInt(3), true);
+        pickRndTables(
+            rndQryCtx,
+            2 /* at least 2 tables */ + rnd.nextInt(3) /* and 2 more optional */,
+            true
+        );
 
         assert rndQryCtx.scopeTables().size() > 1;
 

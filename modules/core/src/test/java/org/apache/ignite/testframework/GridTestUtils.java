@@ -2594,6 +2594,9 @@ public final class GridTestUtils {
      * @param upperBound Upper bound.
      */
     public static <T extends Comparable<? super T>> Matcher<T> inRange(T lowerBound, T upperBound) {
+        Objects.requireNonNull(lowerBound, "lowerBound");
+        Objects.requireNonNull(upperBound, "upperBound");
+
         return new CustomMatcher<T>("should be in range [" + lowerBound + ", " + upperBound + "]") {
             @SuppressWarnings({"unchecked", "rawtypes"})
             @Override public boolean matches(Object item) {
