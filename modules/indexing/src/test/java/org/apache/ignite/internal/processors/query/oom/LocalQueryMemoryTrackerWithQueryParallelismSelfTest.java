@@ -31,8 +31,6 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.value.ValueInt;
 import org.h2.value.ValueString;
-import org.hamcrest.CustomMatcher;
-import org.hamcrest.Matcher;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.summarizingLong;
