@@ -291,7 +291,7 @@ public class IgniteWalConverterArguments {
             out.println("    walTimeFromMillis                (Optional) The start time interval for the record time in milliseconds.");
             out.println("    walTimeToMillis                  (Optional) The end time interval for the record time in milliseconds.");
             out.println("    hasText                          (Optional) Filter by substring in the WAL record.");
-            out.println("    includeSensitive                 (Optional) Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default SHOW.");
+            out.println("    includeSensitive                 (Optional) Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default MD5.");
             out.println("    printStat                        Write summary statistics for WAL. Default false.");
             out.println("    skipCrc                          Skip CRC calculation/check flag. Default false.");
             out.println("For example:");
@@ -320,7 +320,7 @@ public class IgniteWalConverterArguments {
         Long fromTime = null;
         Long toTime = null;
         String hasText = null;
-        ProcessSensitiveData includeSensitive = ProcessSensitiveData.HIDE;
+        ProcessSensitiveData includeSensitive = ProcessSensitiveData.MD5;
         boolean printStat = false;
         boolean skipCrc = false;
 

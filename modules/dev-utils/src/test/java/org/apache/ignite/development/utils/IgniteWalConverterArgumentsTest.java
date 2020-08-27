@@ -374,7 +374,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         Assert.assertNull(parseArgs.getFromTime());
         Assert.assertNull(parseArgs.getToTime());
         Assert.assertNull(parseArgs.hasText());
-        Assert.assertEquals(ProcessSensitiveData.HIDE, parseArgs.includeSensitive());
+        Assert.assertEquals(ProcessSensitiveData.MD5, parseArgs.includeSensitive());
         Assert.assertFalse(parseArgs.isPrintStat());
         Assert.assertFalse(parseArgs.isSkipCrc());
     }

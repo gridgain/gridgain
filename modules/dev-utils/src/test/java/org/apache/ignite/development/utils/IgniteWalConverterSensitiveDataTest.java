@@ -188,8 +188,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @throws Exception If failed.
      */
     @Test
-    public void testHideSensitiveDataByDefault() throws Exception {
-        exeWithCheck(null, false, false, identity());
+    public void testSensitiveDataByDefaultMd5() throws Exception {
+        exeWithCheck(null, true, false, ProcessSensitiveDataUtils::md5);
     }
 
     /**
