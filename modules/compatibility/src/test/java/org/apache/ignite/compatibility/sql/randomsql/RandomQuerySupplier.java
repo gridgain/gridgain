@@ -267,12 +267,12 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     }
 
     /**
-     * Picks random item from provided collection that met specified condition.
+     * Picks random item from provided collection that meet specified condition.
      *
      * @param items Collection for picking item.
      * @param filter Required condition.
      * @return Random item or {@code null} if collection is empty or there is no
-     * item that met condition.
+     * item that meet condition.
      */
     private <T> T pickRndItem(Collection<T> items, Predicate<T> filter) {
         if (F.isEmpty(items))
