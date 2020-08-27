@@ -28,28 +28,12 @@ class RandomisedQueryContext {
     /** Table available for column references. */
     private final List<TableRef> scopeTbls;
 
-    /** Current schema. */
-    private Schema schema;
-
     /** Query params. */
     private List<Object> params = new ArrayList<>();
 
-    /**
-     * @param schema Schema.
-     */
-    public RandomisedQueryContext(Schema schema) {
-        this.schema = schema;
-
+    /** */
+    public RandomisedQueryContext() {
         scopeTbls = new ArrayList<>();
-    }
-
-    /**
-     * Returns current schema this context were created with.
-     *
-     * @return Schema of this context.
-     */
-    public Schema schema() {
-        return schema;
     }
 
     /**

@@ -117,6 +117,8 @@ import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -2585,6 +2587,23 @@ public final class GridTestUtils {
                 throw new IgniteException(e);
             }
         }
+    }
+
+    /**
+     * @param lowerBound Lower bound.
+     * @param upperBound Upper bound.
+     */
+    public static <T extends Comparable<? super T>> Matcher<T> inRange(T lowerBound, T upperBound) {
+        Objects.requireNonNull(lowerBound, "lowerBound");
+        Objects.requireNonNull(upperBound, "upperBound");
+
+        return new CustomMatcher<T>("should be in range [" + lowerBound + ", " + upperBound + "]") {
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            @Override public boolean matches(Object item) {
+                return lowerBound != null && upperBound != null && item instanceof Comparable
+                    && ((Comparable)item).compareTo(lowerBound) >= 0 && ((Comparable)item).compareTo(upperBound) <= 0;
+            }
+        };
     }
 
     /**

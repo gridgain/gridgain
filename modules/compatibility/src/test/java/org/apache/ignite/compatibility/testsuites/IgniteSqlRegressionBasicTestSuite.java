@@ -16,6 +16,8 @@
 
 package org.apache.ignite.compatibility.testsuites;
 
+import org.apache.ignite.compatibility.sql.DiceSelfTest;
+import org.apache.ignite.compatibility.sql.RandomQuerySupplierSelfTest;
 import org.apache.ignite.compatibility.sql.SqlQueryRegressionsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -25,7 +27,9 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    SqlQueryRegressionsTest.class
+    DiceSelfTest.class,
+    RandomQuerySupplierSelfTest.class,
+    SqlQueryRegressionsTest.class,
 })
 public class IgniteSqlRegressionBasicTestSuite {
 }

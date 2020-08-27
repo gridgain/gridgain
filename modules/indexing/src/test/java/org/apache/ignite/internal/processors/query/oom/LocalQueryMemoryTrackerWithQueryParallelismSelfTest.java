@@ -31,13 +31,12 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.value.ValueInt;
 import org.h2.value.ValueString;
-import org.hamcrest.CustomMatcher;
-import org.hamcrest.Matcher;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.summarizingLong;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.rowSizeInBytes;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
+import static org.apache.ignite.testframework.GridTestUtils.inRange;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -400,19 +399,5 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         assertEquals(1, localResults.size());
         assertEquals(0, localResults.get(0).memoryReserved());
         assertEquals(0, localResults.get(0).getRowCount());
-    }
-
-    /**
-     * @param lowerBound Lower bound.
-     * @param upperBound Upper bound.
-     */
-    private static <T extends Comparable<? super T>> Matcher<T> inRange(T lowerBound, T upperBound) {
-        return new CustomMatcher<T>("should be in range [" + lowerBound + ", " + upperBound + "]") {
-            @SuppressWarnings({"unchecked", "rawtypes"})
-            @Override public boolean matches(Object item) {
-                return lowerBound != null && upperBound != null && item instanceof Comparable
-                    && ((Comparable)item).compareTo(lowerBound) >= 0 && ((Comparable)item).compareTo(upperBound) <= 0;
-            }
-        };
     }
 }

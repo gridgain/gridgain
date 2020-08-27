@@ -315,7 +315,7 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
 
         long baseRes = res.baseExecutionTimeNanos();
         long targetRes = res.targetExecutionTimeNanos();
-        final double epsilon = 2.0 * 1_000_000; // Let's say 2 ms is about statistical error.
+        final double epsilon = 500_000; // Let's say 0.5ms is about statistical error.
 
         if (targetRes < baseRes || targetRes < epsilon)
             // execution is faster than on the base version
