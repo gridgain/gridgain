@@ -476,7 +476,6 @@ public class SslContextFactory implements Factory<SSLContext> {
      * @return Opened input stream.
      * @throws IOException If stream could not be opened.
      */
-    @Deprecated
     protected InputStream openFileInputStream(String filePath) throws IOException {
         return U.openFileInputStream(filePath);
     }
@@ -495,7 +494,7 @@ public class SslContextFactory implements Factory<SSLContext> {
         try {
             KeyStore keyStore = KeyStore.getInstance(keyStoreType);
 
-            try (InputStream input = U.openFileInputStream(storeFilePath)) {
+            try (InputStream input = openFileInputStream(storeFilePath)) {
 
                 keyStore.load(input, keyStorePwd);
 
