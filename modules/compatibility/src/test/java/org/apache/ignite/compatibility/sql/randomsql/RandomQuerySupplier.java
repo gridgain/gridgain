@@ -78,7 +78,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
 
     /** {@inheritDoc} */
     @Override public QueryWithParams get() {
-        RandomisedQueryContext rndQryCtx = new RandomisedQueryContext(schema);
+        RandomisedQueryContext rndQryCtx = new RandomisedQueryContext();
 
         Select select = rndSelect(rndQryCtx);
 
@@ -233,7 +233,8 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     }
 
     /**
-     * Picks N random table from the schema and adds them to the scope.
+     * Picks N random tables (or less if there are not enough tables in the schema)
+     * from the schema and adds them to the scope.
      *
      * @param rndQryCtx Random query context.
      * @param tblCnt Tables count.
@@ -243,7 +244,8 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     }
 
     /**
-     * Picks N random table from the schema and adds them to the scope.
+     * Picks N random tables (or less if there are not enough tables in the schema)
+     * from the schema and adds them to the scope.
      *
      * @param rndQryCtx Random query context.
      * @param tblCnt Tables count.
@@ -257,7 +259,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
 
         Collections.shuffle(tbls, rnd);
 
-        for (Table tbl : tbls.subList(0, tblCnt)) {
+        for (Table tbl : tbls.subList(0, Math.min(tblCnt, tbls.size()))) {
             String alias = String.valueOf(tbl.name().toLowerCase().charAt(0)) + aliasIdGen.incrementAndGet();
 
             rndQryCtx.addScopeTable(new TableRef(tbl, alias));
@@ -317,54 +319,5 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
             Collections.shuffle(numCols, rnd);
 
         return numCols.get(0);
-    }
-
-    /**
-     * Classic dice with 6 sides.
-     */
-    private static class Dice {
-        /** */
-        private static final int SIDES_COUNT = 6;
-
-        /** */
-        private final Random rnd;
-
-        /**
-         * @param rnd Random.
-         */
-        public Dice(Random rnd) {
-            this.rnd = rnd;
-        }
-
-        /**
-         * Roll this dice one times.
-         *
-         * @return Random value within interval [1..6].
-         */
-        public int roll() {
-            return 1 + rnd.nextInt(SIDES_COUNT);
-        }
-
-        /**
-         * Roll this dice twice.
-         *
-         * @return Random value within interval [1..12].
-         */
-        public int rollTwice() {
-            return rollNTimes(2);
-        }
-
-        /**
-         * Roll this dice {@code N} times.
-         *
-         * @param n Amount of time to roll dice. Should be greater than 0.
-         * @return Random value within interval [1..N*6].
-         */
-        public int rollNTimes(int n) {
-            if (n <= 0)
-                throw new IllegalArgumentException("'n' should be greater than 0");
-
-            return 1 + rnd.nextInt(n * SIDES_COUNT);
-        }
     }
 }
