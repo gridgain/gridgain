@@ -22,6 +22,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheInterceptor;
+import org.apache.ignite.cache.CacheInterceptorAdapter;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -47,6 +48,9 @@ public class NoPresentCacheInterceptorOnClientTest extends GridCommonAbstractTes
     /** Cache interceptor class name. */
     private static final String INTERCEPTOR_CLASS = "org.apache.ignite.tests.p2p.cache.OddEvenCacheInterceptor";
 
+    /** True that means a custom classloader will be assigned through node configuration, otherwise false. */
+    private boolean useCustomLdr;
+
     /** Test class loader. */
     private ClassLoader testClassLoader;
 
@@ -54,7 +58,7 @@ public class NoPresentCacheInterceptorOnClientTest extends GridCommonAbstractTes
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        if (getTestIgniteInstanceName(0).equals(igniteInstanceName))
+        if (useCustomLdr)
             cfg.setClassLoader(testClassLoader);
 
         return cfg;
@@ -76,7 +80,9 @@ public class NoPresentCacheInterceptorOnClientTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
-    public void test() throws Exception {
+    public void testStartCacheFromServer() throws Exception {
+        useCustomLdr = true;
+
         IgniteEx ignite0 = startGrid(0);
 
         IgniteCache<Integer, Integer> cache = ignite0.getOrCreateCache(generateCacheConfiguration(
@@ -89,16 +95,49 @@ public class NoPresentCacheInterceptorOnClientTest extends GridCommonAbstractTes
             CacheAtomicityMode.TRANSACTIONAL
         ));
 
-        checkCache(cache);
-        checkCache(txCache);
+        checkCache(cache, false);
+        checkCache(txCache, false);
+
+        useCustomLdr = false;
 
         IgniteEx client = startClientGrid(1);
 
-        IgniteCache<Integer, Integer> cacheOnClient = client.cache(DEFAULT_CACHE_NAME);
-        IgniteCache<Integer, Integer> txCacheOnClient = client.cache(TX_DEFAULT_CACHE_NAME);
+        assertNotNull(cache.getConfiguration(CacheConfiguration.class).getInterceptor());
+        assertNotNull(txCache.getConfiguration(CacheConfiguration.class).getInterceptor());
 
-        checkCache(cacheOnClient);
-        checkCache(txCacheOnClient);
+        checkCache(client.cache(DEFAULT_CACHE_NAME), false);
+        checkCache(client.cache(TX_DEFAULT_CACHE_NAME), false);
+    }
+
+    /**
+     * Test starts two caches, each of them with interceptor, from a client node.
+     * Check all of these cache work correct and the interceptors present in a started configurations on server.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStartCacheFromClient() throws Exception {
+        useCustomLdr = false;
+
+        IgniteEx ignite0 = startGrid(0);
+
+        IgniteEx client = startClientGrid(1);
+
+        IgniteCache<Integer, Integer> cache = client.getOrCreateCache(generateCacheConfiguration(
+            DEFAULT_CACHE_NAME,
+            CacheAtomicityMode.ATOMIC
+        ));
+
+        IgniteCache<Integer, Integer> txCache = client.getOrCreateCache(generateCacheConfiguration(
+            TX_DEFAULT_CACHE_NAME,
+            CacheAtomicityMode.TRANSACTIONAL
+        ));
+
+        assertNotNull(ignite0.cache(DEFAULT_CACHE_NAME).getConfiguration(CacheConfiguration.class).getInterceptor());
+        assertNotNull(ignite0.cache(TX_DEFAULT_CACHE_NAME).getConfiguration(CacheConfiguration.class).getInterceptor());
+
+        checkCache(cache, true);
+        checkCache(txCache, true);
     }
 
     /**
@@ -113,16 +152,20 @@ public class NoPresentCacheInterceptorOnClientTest extends GridCommonAbstractTes
         return new CacheConfiguration<Integer, Integer>(name)
             .setAffinity(new RendezvousAffinityFunction(false, 64))
             .setAtomicityMode(mode)
-            .setInterceptor((CacheInterceptor<Integer, Integer>)testClassLoader.loadClass(INTERCEPTOR_CLASS).newInstance());
+            .setInterceptor(useCustomLdr ?
+                (CacheInterceptor<Integer, Integer>)testClassLoader.loadClass(INTERCEPTOR_CLASS).newInstance() :
+                new CacheInterceptorAdapter<Integer, Integer>());
     }
 
     /**
      * Checks a work of caches by loading entries and checking values ​​from cache.
      *
      * @param cache Ignite cache.
+     * @param isPlainInterceptor True when using a plain interceptor, false that using a specific interceptor from
+     * the user defined class loader.
      * @throws Exception If failed.
      */
-    private void checkCache(IgniteCache<Integer, Integer> cache) throws Exception {
+    private void checkCache(IgniteCache<Integer, Integer> cache, boolean isPlainInterceptor) throws Exception {
         CacheAtomicityMode atomicityMode = cache.getConfiguration(CacheConfiguration.class).getAtomicityMode();
 
         if (atomicityMode == CacheAtomicityMode.TRANSACTIONAL) {
@@ -137,8 +180,12 @@ public class NoPresentCacheInterceptorOnClientTest extends GridCommonAbstractTes
         else
             loadCache(cache);
 
-        for (int i = 0; i < ENTRIES_TO_LOAD; i++)
-            assertTrue(abs(i % 2) == abs(cache.get(i) % 2));
+        for (int i = 0; i < ENTRIES_TO_LOAD; i++) {
+            if (isPlainInterceptor)
+                assertNotNull(cache.get(i));
+            else
+                assertTrue(abs(i % 2) == abs(cache.get(i) % 2));
+        }
     }
 
     /**
