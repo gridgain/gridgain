@@ -56,7 +56,7 @@ public interface SpanManager {
      * @param spanType Type of span to create.
      * @param parentSpan Parent span.
      * @param lb Label.
-     * @param forceTracing Trace given span regardless tracing configuration parameters.
+     * @param forceTracing Trace given span regardless tracing configuration parameters. Applicable only for root spans.
      * @return Created span.
      */
     @NotNull Span create(
