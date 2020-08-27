@@ -185,9 +185,6 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Output strean. */
     private final PrintStream outStream;
 
-    /** Error output stream. */
-    private final PrintStream outErrStream;
-
     /** Page store of {@link FilePageStoreManager#INDEX_FILE_NAME}. */
     @Nullable private final FilePageStore idxStore;
 
@@ -214,13 +211,13 @@ public class IgniteIndexReader implements AutoCloseable {
      *
      * @param idxFilter Index name filter, if {@code null} then is not used.
      * @param checkParts Check cache data tree in partition files and it's consistency with indexes.
-     * @param outputStream Stream for print report, if {@code null} then will be used {@link System#out}.
+     * @param outStream {@link PrintStream} for print report, if {@code null} then will be used {@link System#out}.
      * @throws IgniteCheckedException If failed.
      */
     public IgniteIndexReader(
         @Nullable Predicate<String> idxFilter,
         boolean checkParts,
-        @Nullable OutputStream outputStream,
+        @Nullable PrintStream outStream,
         IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
     ) throws IgniteCheckedException {
         pageSize = filePageStoreFactory.pageSize();
@@ -228,8 +225,7 @@ public class IgniteIndexReader implements AutoCloseable {
         this.checkParts = checkParts;
         this.idxFilter = idxFilter;
 
-        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
-        outErrStream = outStream;
+        this.outStream = isNull(outStream) ? System.out : outStream;
 
         idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX);
 
@@ -256,7 +252,6 @@ public class IgniteIndexReader implements AutoCloseable {
         checkParts = false;
         idxFilter = null;
         outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
-        outErrStream = outStream;
         idxStore = null;
         partStores = null;
     }
@@ -268,7 +263,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private void printErr(String s) {
-        outErrStream.println(ERROR_PREFIX + s);
+        outStream.println(ERROR_PREFIX + s);
     }
 
     /** */
@@ -287,10 +282,10 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         if (caption != null)
-            outErrStream.println(prefix + ERROR_PREFIX + caption);
+            outStream.println(prefix + ERROR_PREFIX + caption);
 
         errors.forEach((k, v) -> {
-            outErrStream.println(prefix + ERROR_PREFIX + format(elementFormatPtrn, k.toString()));
+            outStream.println(prefix + ERROR_PREFIX + format(elementFormatPtrn, k.toString()));
 
             v.forEach(e -> {
                 if (printTrace)
@@ -315,7 +310,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         e.printStackTrace(new PrintStream(os));
 
-        outErrStream.println(os.toString());
+        outStream.println(os.toString());
     }
 
     /** */
@@ -1510,7 +1505,7 @@ public class IgniteIndexReader implements AutoCloseable {
             try (IgniteIndexReader reader = new IgniteIndexReader(
                 isNull(idxSet) ? null : idxSet::contains,
                 p.get(CHECK_PARTS.arg()),
-                destStream,
+                isNull(destStream) ? null : new PrintStream(destFile),
                 filePageStoreFactory
             )) {
                 reader.readIdx();

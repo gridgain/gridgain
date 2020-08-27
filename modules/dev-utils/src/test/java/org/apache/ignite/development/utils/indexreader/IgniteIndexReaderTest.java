@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -625,7 +626,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         try (IgniteIndexReader reader = new IgniteIndexReader(
             isNull(idxSet) ? null : idxSet::contains,
             checkParts,
-            destStream,
+            new PrintStream(destStream),
             createFilePageStoreFactory(dir)
         )) {
             reader.readIdx();
