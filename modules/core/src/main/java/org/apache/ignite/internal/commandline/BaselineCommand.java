@@ -81,7 +81,9 @@ public class BaselineCommand implements Command<BaselineArguments> {
     /** {@inheritDoc} */
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = getClusterName(client.state());
+            ClusterInfo clusterInfo = getClusterInfo(client.state());
+            if(clusterInfo != null)
+                clusterName = clusterInfo.getTag();
         }
     }
 

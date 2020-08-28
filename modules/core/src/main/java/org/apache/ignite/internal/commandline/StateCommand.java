@@ -16,14 +16,11 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandList.STATE;
 
 /**
@@ -46,16 +43,6 @@ public class StateCommand implements Command<Void> {
             GridClientClusterState state = client.state();
 
             printClusterInfoBanner(state, log);
-
-            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
-                UUID id = state.id();
-                String tag = state.tag();
-
-                log.info("Cluster  ID: " + id);
-                log.info("Cluster tag: " + tag);
-
-                log.info(CommandHandler.DELIM);
-            }
 
             log.info("Cluster is " + (state.active() ? "active" : "inactive"));
         }

@@ -25,6 +25,8 @@ import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientFactory;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
@@ -56,40 +58,45 @@ public interface Command<T> {
     /**
      * @return Cluster information to show user for.
      */
-    default void printClusterInfoBanner(GridClientClusterState clientCfg, Logger logger){
-        String clusterName = getClusterName(clientCfg);
+    default void printClusterInfoBanner(GridClientClusterState clientCfg, Logger log){
+        ClusterInfo clusterName = getClusterInfo(clientCfg);
 
         if (clusterName != null) {
-            logger.info(CommandHandler.DELIM);
-            logger.info("Cluster \"" + clusterName + "\"");
-            logger.info(CommandHandler.DELIM);
+            log.info(CommandHandler.DELIM);
+            log.info("Cluster  ID: \"" + clusterName.getIdAsString() + "\"");
+            log.info("Cluster tag: " + clusterName.getTag() + "\"");
+
+            log.info(CommandHandler.DELIM);
         }
     }
 
     /**
      * @return Cluster information to show user for.
      */
-    default String getClusterName(GridClientClusterState clientCfg){
+    default ClusterInfo getClusterInfo(GridClientClusterState clientCfg){
         String clusterName = null;
         try{
-            clusterName = clientCfg.clusterName();
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
+                ClusterInfo clusterInfo = new ClusterInfo(clientCfg.id(), clientCfg.tag());
+                return clusterInfo;
+            }
         }
         catch (GridClientException ignored){
         };
-        return clusterName;
+        return null;
     }
 
     /**
      * Print command usage.
      *
-     * @param logger Logger to use.
+     * @param log Logger to use.
      * @param desc Command description.
      * @param args Arguments.
      */
-    public static void usage(Logger logger, String desc, CommandList cmd, String... args) {
-        logger.info(INDENT + desc);
-        logger.info(DOUBLE_INDENT + CommandLogger.join(" ", UTILITY_NAME, cmd, CommandLogger.join(" ", args)));
-        logger.info("");
+    public static void usage(Logger log, String desc, CommandList cmd, String... args) {
+        log.info(INDENT + desc);
+        log.info(DOUBLE_INDENT + CommandLogger.join(" ", UTILITY_NAME, cmd, CommandLogger.join(" ", args)));
+        log.info("");
     }
 
     /**
