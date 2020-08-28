@@ -88,6 +88,18 @@ public interface DataRegionMetrics {
     public long getTotalAllocatedSize();
 
     /**
+     * Gets a total size of memory allocated for storing the data. It includes allocated pages except of empty
+     * pages that are not used yet or pages that can be reused.
+     * <p>
+     * E. g. data region contains 1000 allocated pages, and 200 pages are used to store some data, this
+     * metric shows 200 used pages. Then the data was partially deleted and 50 pages were totally freed,
+     * hence this metric should show 150 used pages.
+     *
+     * @return Total size of memory used, in bytes.
+     */
+    public long getTotalUsedSize();
+
+    /**
      * Gets pages allocation rate of a memory region.
      *
      * @return Number of allocated pages per second.
@@ -220,6 +232,8 @@ public interface DataRegionMetrics {
      * Total used offheap size in bytes.
      *
      * @return Total used offheap size in bytes.
+     * @deprecated Metric is redundant, it's effectively equals to {@link #getPhysicalMemorySize()} value.
      */
+    @Deprecated
     public long getOffheapUsedSize();
 }

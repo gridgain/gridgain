@@ -30,6 +30,7 @@ import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -176,6 +177,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param busyLock Shutdown latch.
      * @param sender Results sender.
      * @param maxCursors Maximum allowed cursors.
+     * @param maxMem Memory quota.
      * @param distributedJoins Distributed joins flag.
      * @param enforceJoinOrder Enforce join order flag.
      * @param collocated Collocated flag.
@@ -183,6 +185,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param autoCloseCursors Flag to automatically close server cursors.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param nestedTxMode Transactional mode.
      * @param dataPageScanEnabled Enable scan data page mode.
      * @param updateBatchSize Size of internal batch for DML queries.
      * @param actx Authentication context.
@@ -629,13 +632,18 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     qry = new SqlFieldsQueryEx(sql, false);
 
                     if (cliCtx.isSkipReducerOnUpdate())
-                        ((SqlFieldsQueryEx)qry).setSkipReducerOnUpdate(true);
+                        qry.setSkipReducerOnUpdate(true);
             }
 
             setupQuery(qry, prepareSchemaName(req.schemaName()));
 
             qry.setArgs(req.arguments());
             qry.setAutoCommit(req.autoCommit());
+
+            if (req.explicitTimeout()) {
+                // Timeout is handled on a client side, do not handle it on a server side.
+                qry.setTimeout(0, TimeUnit.MILLISECONDS);
+            }
 
             if (req.pageSize() <= 0)
                 return new JdbcResponse(IgniteQueryErrorCode.UNKNOWN, "Invalid fetch size: " + req.pageSize());
@@ -1470,6 +1478,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     /**
      * Get partition map for a cache.
      * @param cacheDesc Cache descriptor.
+     * @param affVer Affinity version.
      * @return Partitions mapping for cache.
      */
     private Map<UUID, Set<Integer>> getPartitionsMap(DynamicCacheDescriptor cacheDesc, AffinityTopologyVersion affVer) {

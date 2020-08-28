@@ -450,9 +450,10 @@ namespace ignite
                     int err = pthread_condattr_init(&attr);
                     assert(!err);
 
+#if !defined(__APPLE__)
                     err = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
                     assert(!err);
-
+#endif
                     err = pthread_cond_init(&cond, &attr);
                     assert(!err);
                 }
@@ -540,9 +541,10 @@ namespace ignite
                     pthread_condattr_t attr;
                     int err = pthread_condattr_init(&attr);
                     assert(!err);
-
+#if !defined(__APPLE__)
                     err = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
                     assert(!err);
+#endif
 
                     err = pthread_cond_init(&cond, &attr);
                     assert(!err);
