@@ -27,7 +27,9 @@ import org.apache.ignite.lang.IgniteProductVersion;
  * Represent cluster-wide status of Rolling Upgrade process.
  */
 public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject implements RollingUpgradeStatus {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** {@code true} if Rolling Upgrade is enabled. */
@@ -39,10 +41,10 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
     /** Represents the version that is used as starting point for Rolling Upgrade. */
     private IgniteProductVersion initVer;
 
-    /** Represents the resulting version.*/
+    /** Represents the resulting version. */
     private IgniteProductVersion updateVer;
 
-    /** Feature set that is supported by nodes.  */
+    /** Feature set that is supported by nodes. */
     private byte[] supportedFeatures;
 
     /**
@@ -119,7 +121,14 @@ public class IgniteRollingUpgradeStatus extends IgniteDataTransferObject impleme
         initVer = (IgniteProductVersion)in.readObject();
         updateVer = (IgniteProductVersion)in.readObject();
         in.readObject();
-        supportedFeatures = (byte[])in.readObject();
+
+        if (protoVer >= V2)
+            supportedFeatures = (byte[])in.readObject();
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
     }
 
     /** {@inheritDoc} */
