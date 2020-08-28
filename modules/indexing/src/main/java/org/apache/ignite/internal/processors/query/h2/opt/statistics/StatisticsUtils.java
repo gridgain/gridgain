@@ -41,11 +41,21 @@ public class StatisticsUtils {
         for(Map.Entry<String, ColumnStatistics> ts : stat.getColNameToStat().entrySet())
             columnData.put(ts.getKey(), toMessage(ts.getValue()));
 
-        StatsObjectData data = new StatsObjectData(schemaName, objectName, stat.rowCount(), columnData);
+        StatsObjectData data;
+        if (stat instanceof ObjectPartitionStatistics) {
+            ObjectPartitionStatistics partStats = (ObjectPartitionStatistics) stat;
+            data = new StatsObjectData(schemaName, objectName, stat.rowCount(), type, partStats.partId(),
+                    partStats.updCnt(), columnData);
+        } else
+            data = new StatsObjectData(schemaName, objectName, stat.rowCount(), type, 0,0, columnData);
+
         return new StatsPropagationMessage(reqId, Collections.singletonList(data));
     }
 
     public static ObjectPartitionStatistics toObjectPartitionStatistics(StatsPropagationMessage data) throws IgniteCheckedException {
+        if (data == null)
+            return null;
+
         assert data.data().size() == 1;
 
         StatsObjectData objData = data.data().get(0);
@@ -58,10 +68,13 @@ public class StatisticsUtils {
             colNameToStat.put(cs.getKey(), toColumnStatistics(cs.getValue()));
         }
 
-        return new ObjectPartitionStatistics(objData.partId, true, objData.rowsCnt, colNameToStat);
+        return new ObjectPartitionStatistics(objData.partId, true, objData.rowsCnt, objData.updCnt, colNameToStat);
     }
 
     public static ObjectStatistics toObjectStatistics(StatsPropagationMessage data) throws IgniteCheckedException {
+        if (data == null)
+            return null;
+
         assert data.data().size() == 1;
 
         StatsObjectData objData = data.data().get(0);

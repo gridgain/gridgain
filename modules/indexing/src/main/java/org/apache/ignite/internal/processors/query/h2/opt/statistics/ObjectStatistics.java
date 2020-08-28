@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
+import com.google.common.base.Objects;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -47,5 +49,19 @@ public class ObjectStatistics {
 
     public Map<String, ColumnStatistics> getColNameToStat() {
         return colNameToStat;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ObjectStatistics that = (ObjectStatistics) o;
+        return rowsCnt == that.rowsCnt &&
+                Objects.equal(colNameToStat, that.colNameToStat);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(rowsCnt, colNameToStat);
     }
 }

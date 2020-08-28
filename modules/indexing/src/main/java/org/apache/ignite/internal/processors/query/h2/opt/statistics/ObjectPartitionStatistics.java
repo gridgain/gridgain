@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
+import com.google.common.base.Objects;
+
 import java.util.Map;
 
 /**
@@ -24,6 +26,9 @@ import java.util.Map;
 public class ObjectPartitionStatistics extends ObjectStatistics {
     /** Partition id. */
     private final int partId;
+
+    /** Partition update counter at the moment when */
+    private final long updCnt;
 
     /** Local flag. */
     private final boolean loc;
@@ -34,13 +39,15 @@ public class ObjectPartitionStatistics extends ObjectStatistics {
      * @param partId partition id.
      * @param loc local flag.
      * @param rowsCnt total count of rows in partition.
+     * @param updCnt update counter of partition.
      * @param colNameToStat column key to column statistics map.
      */
-    public ObjectPartitionStatistics(int partId, boolean loc, long rowsCnt, Map<String, ColumnStatistics> colNameToStat) {
+    public ObjectPartitionStatistics(int partId, boolean loc, long rowsCnt, long updCnt, Map<String, ColumnStatistics> colNameToStat) {
         super(rowsCnt, colNameToStat);
 
         this.partId = partId;
         this.loc = loc;
+        this.updCnt = updCnt;
     }
 
     public int partId() {
@@ -49,5 +56,24 @@ public class ObjectPartitionStatistics extends ObjectStatistics {
 
     public boolean local() {
         return loc;
+    }
+
+    public long updCnt() {
+        return updCnt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ObjectPartitionStatistics that = (ObjectPartitionStatistics) o;
+        return partId == that.partId &&
+                updCnt == that.updCnt &&
+                loc == that.loc;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(partId, updCnt, loc);
     }
 }

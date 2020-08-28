@@ -53,7 +53,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
     }
 
     @Override protected void beforeTestsStarted() throws Exception {
-        Ignite node = startGridsMultiThreaded(2);
+        Ignite node = startGridsMultiThreaded(1);
 
         node.getOrCreateCache(DEFAULT_CACHE_NAME);
     }

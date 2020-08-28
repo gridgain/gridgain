@@ -251,7 +251,7 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
             return null;
         List<ObjectPartitionStatistics> result = new ArrayList<>();
         try {
-            iterateMeta(getLocalKey(tbl.schema(), tbl.table()), (k,v) -> {
+            iterateMeta(getPartKeyPrefix(tbl.schema(), tbl.table()), (k,v) -> {
                 try {
                     ObjectPartitionStatistics partStats = StatisticsUtils.toObjectPartitionStatistics((StatsPropagationMessage)v);
                     result.add(partStats);
@@ -262,7 +262,7 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
         } catch (IgniteCheckedException e) {
             // TODO
         }
-        return null;
+        return result;
     }
 
     @Override
@@ -271,7 +271,7 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
             return;
 
         try {
-            iterateMeta(getLocalKey(tbl.schema(), tbl.table()), (k,v) -> {
+            iterateMeta(getPartKeyPrefix(tbl.schema(), tbl.table()), (k,v) -> {
                 try {
                     metastore.remove(k);
                 } catch (IgniteCheckedException e) {
@@ -290,7 +290,7 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
         String partPrefix = getPartKeyPrefix(tbl.schema(), tbl.table()) + partId;
         StatsPropagationMessage statsMessage = null;
         try {
-            statsMessage = StatisticsUtils.toMessage(-1L, tbl.schema(), tbl.table(), StatsType.LOCAL, statistics);
+            statsMessage = StatisticsUtils.toMessage(-1L, tbl.schema(), tbl.table(), StatsType.PARTITION, statistics);
             writeMeta(partPrefix, statsMessage);
         } catch (IgniteCheckedException e) {
             // TODO
@@ -339,6 +339,14 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
 
     @Override
     public ObjectStatistics getLocalStatistics(QueryTable tbl, boolean tryLoad) {
+        if (metastore == null)
+            return null;
+        String metaKey = getLocalKey(tbl.schema(), tbl.table());
+        try {
+            return StatisticsUtils.toObjectStatistics((StatsPropagationMessage)readMeta(metaKey));
+        } catch (IgniteCheckedException e) {
+            // TODO
+        }
         return null;
     }
 
@@ -370,6 +378,14 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
 
     @Override
     public ObjectStatistics getGlobalStatistics(QueryTable tbl, boolean tryLoad) {
+        if (metastore == null)
+            return null;
+        String metaKey = getGlobalKey(tbl.schema(), tbl.table());
+        try {
+            return StatisticsUtils.toObjectStatistics((StatsPropagationMessage)readMeta(metaKey));
+        } catch (IgniteCheckedException e) {
+            // TODO
+        }
         return null;
     }
 

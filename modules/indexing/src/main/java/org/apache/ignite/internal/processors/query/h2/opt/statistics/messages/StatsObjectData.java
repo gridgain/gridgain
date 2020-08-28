@@ -1,7 +1,6 @@
 package org.apache.ignite.internal.processors.query.h2.opt.statistics.messages;
 
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.StatsType;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -36,7 +35,7 @@ public class StatsObjectData implements Message {
     public int partId;
 
     /** Update counter if statistics was collected by partition. */
-    public long updateCounter;
+    public long updCnt;
 
     /** Columns key to statistic map. */
     public Map<String, StatsColumnData> data;
@@ -51,26 +50,12 @@ public class StatsObjectData implements Message {
     /**
      * Constructor.
      *
-     * @param schemaName schema name
-     * @param objectName object (table or index) name
-     * @param rowsCnt
-     * @param data map of column name to
-     */
-    public StatsObjectData(String schemaName, String objectName, long rowsCnt, Map<String, StatsColumnData> data) {
-        this.schemaName = schemaName;
-        this.objectName = objectName;
-        this.data = data;
-    }
-
-    /**
-     * Constructor.
-     *
      * @param schemaName
      * @param objectName
      * @param rowsCnt
      * @param type
      * @param partId
-     * @param updateCounter
+     * @param updCnt
      * @param data
      */
     public StatsObjectData(String schemaName,
@@ -78,14 +63,14 @@ public class StatsObjectData implements Message {
                            long rowsCnt,
                            StatsType type,
                            int partId,
-                           long updateCounter,
+                           long updCnt,
                            Map<String, StatsColumnData> data) {
         this.schemaName = schemaName;
         this.objectName = objectName;
         this.rowsCnt = rowsCnt;
         this.type = type;
         this.partId = partId;
-        this.updateCounter = updateCounter;
+        this.updCnt = updCnt;
         this.data = data;
     }
 

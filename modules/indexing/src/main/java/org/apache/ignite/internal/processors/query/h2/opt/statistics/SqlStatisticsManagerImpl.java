@@ -178,7 +178,8 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
                 ));
 
 
-                tblPartStats.add(new ObjectPartitionStatistics(locPart.id(), true, rowsCnt, colStats));
+                tblPartStats.add(new ObjectPartitionStatistics(locPart.id(), true, rowsCnt, locPart.updateCounter(),
+                        colStats));
             }
             finally {
                 if (reserved)
