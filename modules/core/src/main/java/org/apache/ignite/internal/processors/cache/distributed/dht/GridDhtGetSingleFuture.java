@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
@@ -51,7 +52,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_MAP;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 
 /**
  *
@@ -218,7 +219,9 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
      */
     private void map() {
         try (TraceSurroundings ignored =
-                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_DHT_SINGLE_GET_MAP, span))) {
+                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+
             // TODO Get rid of force keys request https://issues.apache.org/jira/browse/IGNITE-10251.
             if (cctx.group().preloader().needForceKeys()) {
                 assert !cctx.mvccEnabled();

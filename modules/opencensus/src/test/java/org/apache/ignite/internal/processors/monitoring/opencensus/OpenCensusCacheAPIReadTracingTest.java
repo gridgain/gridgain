@@ -31,21 +31,18 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_SINGLE_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_ALL;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_ALL_ASYNC;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_ASYNC;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_PROCESS_ATOMIC_GET_REQUEST;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_PROCESS_ATOMIC_GET_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_PROCESS_ATOMIC_SINGLE_GET_REQUEST;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_PROCESS_ATOMIC_SINGLE_GET_RESPONSE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_SINGLE_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_SINGLE_GET_MAP;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 
 /**
@@ -140,7 +137,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         spanIds = checkSpan(
-            CACHE_API_PARTITIONED_SINGLE_GET_MAP,
+            CACHE_API_GET_MAP,
             spanIds.get(0),
             1,
             null);
@@ -158,7 +155,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         checkSpan(
-            CACHE_API_DHT_SINGLE_GET_MAP,
+            CACHE_API_GET_MAP,
             dhtGetFutSpanIds.get(0),
             1,
             null);
@@ -241,7 +238,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         spanIds = checkSpan(
-            CACHE_API_PARTITIONED_GET_MAP,
+            CACHE_API_GET_MAP,
             spanIds.get(0),
             1,
             null);
@@ -260,7 +257,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         checkSpan(
-            CACHE_API_DHT_GET_MAP,
+            CACHE_API_GET_MAP,
             dhtGetFutSpanIds1.get(0),
             1,
             null);
@@ -279,7 +276,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         checkSpan(
-            CACHE_API_DHT_GET_MAP,
+            CACHE_API_GET_MAP,
             dhtGetFutSpanIds2.get(0),
             1,
             null);
@@ -344,7 +341,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         spanIds = checkSpan(
-            CACHE_API_PARTITIONED_SINGLE_GET_MAP,
+            CACHE_API_GET_MAP,
             spanIds.get(0),
             1,
             null);
@@ -362,7 +359,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         checkSpan(
-            CACHE_API_DHT_SINGLE_GET_MAP,
+            CACHE_API_GET_MAP,
             dhtGetFutSpanIds.get(0),
             1,
             null);
@@ -445,7 +442,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         spanIds = checkSpan(
-            CACHE_API_PARTITIONED_GET_MAP,
+            CACHE_API_GET_MAP,
             spanIds.get(0),
             1,
             null);
@@ -464,7 +461,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         checkSpan(
-            CACHE_API_DHT_GET_MAP,
+            CACHE_API_GET_MAP,
             dhtGetFutSpanIds1.get(0),
             1,
             null);
@@ -483,7 +480,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
             null);
 
         checkSpan(
-            CACHE_API_DHT_GET_MAP,
+            CACHE_API_GET_MAP,
             dhtGetFutSpanIds2.get(0),
             1,
             null);

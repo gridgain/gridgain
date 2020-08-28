@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
@@ -56,8 +57,8 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_NEAR_GET_MAP;
 
 /**
  *
@@ -183,7 +184,9 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
         AffinityTopologyVersion topVer
     ) {
         try (TraceSurroundings ignored =
-                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_NEAR_GET_MAP, span))) {
+                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+
             Collection<ClusterNode> affNodes = CU.affinityNodes(cctx, topVer);
 
             if (affNodes.isEmpty()) {

@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -71,10 +72,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_NEAR_GET_MAX_REMAP
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_SINGLE_GET_FUTURE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_SINGLE_GET_MAP;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_SINGLE_GET_REMAP;
-import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_SINGLE_GET_WAIT_AND_REMAP;
 
 /**
  *
@@ -259,7 +258,9 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
     @SuppressWarnings("unchecked")
     private void map(AffinityTopologyVersion topVer) {
         try (TraceSurroundings ignored =
-                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_PARTITIONED_SINGLE_GET_MAP, span))) {
+                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+
             GridDhtPartitionsExchangeFuture fut = cctx.shared().exchange().lastTopologyFuture();
 
             // Finished DHT future is required for topology validation.
@@ -907,21 +908,17 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      * @param topVer Topology version.
      */
     private void awaitVersionAndRemap(AffinityTopologyVersion topVer) {
-        try (TraceSurroundings ignored =
-                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_PARTITIONED_SINGLE_GET_WAIT_AND_REMAP,
-                     span))) {
-            IgniteInternalFuture<AffinityTopologyVersion> awaitTopologyVersionFuture =
-                cctx.shared().exchange().affinityReadyFuture(topVer);
+        IgniteInternalFuture<AffinityTopologyVersion> awaitTopologyVersionFuture =
+            cctx.shared().exchange().affinityReadyFuture(topVer);
 
-            awaitTopologyVersionFuture.listen(f -> {
-                try {
-                    remap(f.get());
-                }
-                catch (IgniteCheckedException e) {
-                    onDone(e);
-                }
-            });
-        }
+        awaitTopologyVersionFuture.listen(f -> {
+            try {
+                remap(f.get());
+            }
+            catch (IgniteCheckedException e) {
+                onDone(e);
+            }
+        });
     }
 
     /**
@@ -929,8 +926,9 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      */
     private void remap(final AffinityTopologyVersion topVer) {
         try (TraceSurroundings ignored =
-                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_PARTITIONED_SINGLE_GET_REMAP,
-                     span))) {
+                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
+
             cctx.closures().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     // If topology changed reset collection of invalid nodes.
