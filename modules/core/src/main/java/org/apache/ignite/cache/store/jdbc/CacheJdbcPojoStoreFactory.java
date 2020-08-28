@@ -37,7 +37,7 @@ import org.apache.ignite.resources.SpringApplicationContextResource;
  *
  * <h2 class="header">Spring Example</h2>
  * <pre name="code" class="xml">
- *     &lt;bean id= "myDataSource" class="org.h2.jdbcx.JdbcDataSource"/&gt;
+ *     &lt;bean id= "myDataSource" class="org.gridgain.internal.h2.jdbcx.JdbcDataSource"/&gt;
  *
  *     &lt;bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration"&gt;
  *          ...

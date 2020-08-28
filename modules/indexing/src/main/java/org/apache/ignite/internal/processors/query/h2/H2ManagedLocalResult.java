@@ -19,17 +19,17 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
-import org.h2.engine.Session;
-import org.h2.engine.SessionInterface;
-import org.h2.expression.Expression;
-import org.h2.message.DbException;
-import org.h2.result.LocalResult;
-import org.h2.result.ResultExternal;
-import org.h2.result.SortOrder;
-import org.h2.util.Utils;
-import org.h2.value.TypeInfo;
-import org.h2.value.Value;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.engine.SessionInterface;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.LocalResult;
+import org.gridgain.internal.h2.result.ResultExternal;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.TypeInfo;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueRow;
 
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.calculateMemoryDelta;
 

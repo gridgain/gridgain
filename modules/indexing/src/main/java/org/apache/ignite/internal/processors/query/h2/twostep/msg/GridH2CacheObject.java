@@ -24,7 +24,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * H2 Cache object message.

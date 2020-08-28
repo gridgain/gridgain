@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
-import org.h2.result.LocalResult;
-import org.h2.result.LocalResultFactory;
-import org.h2.result.LocalResultImpl;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.result.LocalResult;
+import org.gridgain.internal.h2.result.LocalResultFactory;
+import org.gridgain.internal.h2.result.LocalResultImpl;
 
 /**
  * Ignite implementation of the H2 local result factory.

@@ -85,7 +85,7 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
 
     /** */
-    public static final String CONNECTION_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    public static final String CONNECTION_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** */
     public static final String ENTITY_NAME = Entity.class.getName();

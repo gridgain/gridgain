@@ -77,7 +77,7 @@ import static org.hibernate.cfg.Environment.USE_SECOND_LEVEL_CACHE;
  */
 public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
     /** */
-    public static final String CONNECTION_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    public static final String CONNECTION_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** */
     public static final String ENTITY_NAME = Entity.class.getName();
