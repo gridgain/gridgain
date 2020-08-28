@@ -18,6 +18,7 @@ package org.apache.ignite.compatibility.sql.randomsql;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.apache.ignite.compatibility.sql.randomsql.ast.TableRef;
 
 /**
@@ -25,15 +26,27 @@ import org.apache.ignite.compatibility.sql.randomsql.ast.TableRef;
  */
 @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
 class RandomisedQueryContext {
+    /** Context of parent query. Used to build current query as a subquery. */
+    private final RandomisedQueryContext parentCtx;
+
     /** Table available for column references. */
-    private final List<TableRef> scopeTbls;
+    private final List<TableRef> scopeTbls = new ArrayList<>();
 
     /** Query params. */
-    private List<Object> params = new ArrayList<>();
+    private final List<Object> params = new ArrayList<>();
 
     /** */
     public RandomisedQueryContext() {
-        scopeTbls = new ArrayList<>();
+        parentCtx = null;
+    }
+
+    /**
+     * Use this constructor to create context for subquery.
+     *
+     * @param parentCtx Parent context.
+     */
+    public RandomisedQueryContext(RandomisedQueryContext parentCtx) {
+        this.parentCtx = Objects.requireNonNull(parentCtx, "parentCtx");
     }
 
     /**
@@ -68,5 +81,12 @@ class RandomisedQueryContext {
      */
     public List<Object> queryParams() {
         return params;
+    }
+
+    /**
+     * @return Context of parent query.
+     */
+    public RandomisedQueryContext parentContext() {
+        return parentCtx;
     }
 }

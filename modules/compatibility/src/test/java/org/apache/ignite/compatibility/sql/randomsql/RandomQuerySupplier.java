@@ -29,9 +29,12 @@ import org.apache.ignite.compatibility.sql.randomsql.ast.Ast;
 import org.apache.ignite.compatibility.sql.randomsql.ast.BiCondition;
 import org.apache.ignite.compatibility.sql.randomsql.ast.ColumnRef;
 import org.apache.ignite.compatibility.sql.randomsql.ast.Const;
+import org.apache.ignite.compatibility.sql.randomsql.ast.ExistsCondition;
+import org.apache.ignite.compatibility.sql.randomsql.ast.InCondition;
 import org.apache.ignite.compatibility.sql.randomsql.ast.InnerJoin;
 import org.apache.ignite.compatibility.sql.randomsql.ast.Operator;
 import org.apache.ignite.compatibility.sql.randomsql.ast.Select;
+import org.apache.ignite.compatibility.sql.randomsql.ast.SubSelect;
 import org.apache.ignite.compatibility.sql.randomsql.ast.TableList;
 import org.apache.ignite.compatibility.sql.randomsql.ast.TableRef;
 import org.apache.ignite.compatibility.sql.runner.QueryWithParams;
@@ -112,7 +115,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     private Select rndMultiTableSelect(RandomisedQueryContext rndQryCtx) {
         pickRndTables(
             rndQryCtx,
-            2 /* at least 2 tables */ + rnd.nextInt(3) /* and 2 more optional */,
+            2 /* at least 2 tables */ + rnd.nextInt(3) /* and up to 2 more optional */,
             true
         );
 
@@ -202,6 +205,15 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     private Ast rndQueryFilter(RandomisedQueryContext rndQryCtx) {
         List<TableRef> scopeTbls = rndQryCtx.scopeTables();
 
+        RandomisedQueryContext parentCtx = rndQryCtx.parentContext();
+        if (parentCtx != null) {
+            return new BiCondition(
+                pickRndItem(pickRndItem(scopeTbls).cols(), NUMERICAL_COLUMN_FILTER),
+                pickRndItem(pickRndItem(parentCtx.scopeTables()).cols(), NUMERICAL_COLUMN_FILTER),
+                Operator.EQUALS
+            );
+        }
+
         Ast cond1 = rndTableFilter(rndQryCtx, scopeTbls.get(rnd.nextInt(scopeTbls.size())));
 
         if (dice.roll() <= 2)
@@ -220,20 +232,42 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      * @return Ast representing table filter.
      */
     private Ast rndTableFilter(RandomisedQueryContext rndQryCtx, TableRef tbl) {
-        Ast rigthOp;
-        if (dice.roll() == 1)
-            rigthOp = new Const(Integer.toString(rnd.nextInt(100)));
-        else {
-            rigthOp = new Const("?");
+        final int decision = dice.roll();
 
-            rndQryCtx.addQueryParam(rnd.nextInt(100));
+        if (decision <= 2) {
+            Ast rigthOp;
+            if (dice.roll() == 1)
+                rigthOp = new Const(Integer.toString(rnd.nextInt(100)));
+            else {
+                rigthOp = new Const("?");
+
+                rndQryCtx.addQueryParam(rnd.nextInt(100));
+            }
+
+            return new BiCondition(
+                pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER),
+                rigthOp,
+                Operator.EQUALS
+            );
         }
+        else if (decision <= 4) {
+            int inArrSize = dice.roll();
 
-        return new BiCondition(
-            rndNumericColumn(tbl),
-            rigthOp,
-            Operator.EQUALS
-        );
+            Ast[] inArr = new Ast[inArrSize];
+
+            for (int i = 0; i < inArrSize; i++)
+                inArr[i] = new Const(Integer.toString(rnd.nextInt(100)));
+
+            return new InCondition(
+                pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER),
+                inArr
+            );
+        }
+        else {
+            return new ExistsCondition(
+                new SubSelect(rndSingleTableSelect(new RandomisedQueryContext(rndQryCtx)))
+            );
+        }
     }
 
     /**
@@ -303,25 +337,5 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      */
     private <T> T pickRndItem(Collection<T> items) {
         return pickRndItem(items, i -> true);
-    }
-
-    /**
-     * Returns random column from provided table.
-     *
-     * @param tbl Table.
-     * @return Random column of numeric type.
-     */
-    private ColumnRef rndNumericColumn(TableRef tbl) {
-        // for now we could work only with numeric columns
-        List<ColumnRef> numCols = tbl.cols().stream()
-            .filter(col -> Number.class.isAssignableFrom(col.typeClass()))
-            .collect(Collectors.toList());
-
-        assert !numCols.isEmpty();
-
-        if (numCols.size() > 1)
-            Collections.shuffle(numCols, rnd);
-
-        return numCols.get(0);
     }
 }
