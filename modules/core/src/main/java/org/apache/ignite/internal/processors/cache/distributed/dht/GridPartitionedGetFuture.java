@@ -61,6 +61,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_PARTITIONED_GET_FUTURE;
+
 /**
  * Colocated get future.
  */
