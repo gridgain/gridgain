@@ -46,6 +46,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.cluster.DistributedTransactionConfiguration;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -106,6 +107,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteOutClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -119,15 +121,10 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SLOW_TX_WARN_TIMEOUT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
-import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -136,16 +133,16 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
+import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_DISTRIBUTED_PROPERTIES;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_TX_COLLISIONS_DUMP;
-import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.RECOVERY_FINISH;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
 import static org.apache.ignite.internal.util.GridConcurrentFactory.newMap;
-import static org.apache.ignite.internal.util.IgniteUtils.broadcastToNodesSupportingFeature;
+import static org.apache.ignite.internal.util.IgniteUtils.broadcastToNodesWithFilter;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -184,10 +181,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     static int DEADLOCK_MAX_ITERS =
         IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
 
-    /** Collisions dump interval. */
-    private volatile int collisionsDumpInterval =
-        IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
-
     /** Lower tx collisions queue size threshold. */
     private static final int COLLISIONS_QUEUE_THRESHOLD = 100;
 
@@ -215,36 +208,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** TX handler. */
     private IgniteTxHandler txHnd;
 
-    /**
-     * Shows if dump requests from local node to near node are allowed, when long running transaction
-     * is found. If allowed, the compute request to near node will be made to get thread dump of transaction
-     * owner thread.
-     */
-    private boolean txOwnerDumpRequestsAllowed =
-        IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
-
-    /**
-     * Threshold timeout for long transactions, if transaction exceeds it, it will be dumped in log with
-     * information about how much time did it spent in system time (time while aquiring locks, preparing,
-     * commiting, etc) and user time (time when client node runs some code while holding transaction and not
-     * waiting it). Equals 0 if not set. No transactions are dumped in log if this parameter is not set.
-     */
-    private volatile long longTransactionTimeDumpThreshold = getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
-
-    /**
-     * The coefficient for samples of completed transactions that will be dumped in log.
-     */
-    private volatile double transactionTimeDumpSamplesCoefficient =
-        IgniteSystemProperties.getFloat(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT, 0.0f);
-
-    /**
-     * The limit of samples of completed transactions that will be dumped in log per second, if
-     * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
-     * greater than <code>0</code>.
-     */
-    private volatile int longTransactionTimeDumpSamplesPerSecondLimit =
-        IgniteSystemProperties.getInteger(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT, 5);
-
     /** Committed local transactions. */
     private final GridBoundedConcurrentOrderedMap<GridCacheVersion, Boolean> completedVersSorted =
         new GridBoundedConcurrentOrderedMap<>(
@@ -264,10 +227,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** Slow tx warn timeout. */
     private int slowTxWarnTimeout = SLOW_TX_WARN_TIMEOUT;
-
-    /** Long operations dump timeout. */
-    private volatile long longOpsDumpTimeout =
-        getLong(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, DFLT_LONG_OPERATIONS_DUMP_TIMEOUT);
 
     /** */
     private TxDumpsThrottling txDumpsThrottling = new TxDumpsThrottling();
@@ -301,6 +260,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /** Key collisions info holder. */
     private volatile KeyCollisionsHolder keyCollisionsInfo;
+
+    /** Distributed config. */
+    private DistributedTransactionConfiguration distrCfg;
 
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
@@ -383,6 +345,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         longOperationsDumpTimeout(longOperationsDumpTimeout());
 
         txCollisionsDumpInterval(collisionsDumpInterval());
+
+        distrCfg = new DistributedTransactionConfiguration(cctx.kernalContext(), log);
     }
 
     /**
@@ -532,7 +496,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return <code>true</code> if allowed, <code>false</code> otherwise.
      */
     public boolean txOwnerDumpRequestsAllowed() {
-        return txOwnerDumpRequestsAllowed;
+        return distrCfg.txOwnerDumpRequestsAllowed();
     }
 
     /**
@@ -543,7 +507,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param allowed whether allowed
      */
     public void setTxOwnerDumpRequestsAllowed(boolean allowed) {
-        txOwnerDumpRequestsAllowed = allowed;
+        distrCfg.updateTxOwnerDumpRequestsAllowedLocal(allowed);
     }
 
     /**
@@ -555,7 +519,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Threshold timeout in milliseconds.
      */
     public long longTransactionTimeDumpThreshold() {
-        return longTransactionTimeDumpThreshold;
+        return distrCfg.longTransactionTimeDumpThreshold();
     }
 
     /**
@@ -570,14 +534,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert longTransactionTimeDumpThreshold >= 0
             : "longTransactionTimeDumpThreshold must be greater than or equal to 0.";
 
-        this.longTransactionTimeDumpThreshold = longTransactionTimeDumpThreshold;
+        distrCfg.updateLongTransactionTimeDumpThresholdLocal(longTransactionTimeDumpThreshold);
     }
 
     /**
      * The coefficient for samples of completed transactions that will be dumped in log.
      */
     public double transactionTimeDumpSamplesCoefficient() {
-        return transactionTimeDumpSamplesCoefficient;
+        return distrCfg.transactionTimeDumpSamplesCoefficient();
     }
 
     /**
@@ -587,7 +551,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert transactionTimeDumpSamplesCoefficient >= 0.0 && transactionTimeDumpSamplesCoefficient <= 1.0
             : "transactionTimeDumpSamplesCoefficient value must be between 0.0 and 1.0 inclusively.";
 
-        this.transactionTimeDumpSamplesCoefficient = transactionTimeDumpSamplesCoefficient;
+        this.distrCfg.updateTransactionTimeDumpSamplesCoefficientLocal(transactionTimeDumpSamplesCoefficient);
     }
 
     /**
@@ -596,7 +560,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * greater than <code>0</code>.
      */
     public int transactionTimeDumpSamplesPerSecondLimit() {
-        return longTransactionTimeDumpSamplesPerSecondLimit;
+        return distrCfg.longTransactionTimeDumpSamplesPerSecondLimit();
     }
 
     /**
@@ -608,7 +572,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert transactionTimeDumpSamplesPerSecondLimit > 0
             : "transactionTimeDumpSamplesPerSecondLimit must be integer value greater than 0.";
 
-        this.longTransactionTimeDumpSamplesPerSecondLimit = transactionTimeDumpSamplesPerSecondLimit;
+        distrCfg.updateLongTransactionTimeDumpSamplesPerSecondLimitLocal(transactionTimeDumpSamplesPerSecondLimit);
     }
 
     /**
@@ -2073,14 +2037,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Long operations dump timeout.
      */
     public long longOperationsDumpTimeout() {
-        return longOpsDumpTimeout;
+        return distrCfg.longOperationsDumpTimeout();
     }
 
     /**
      * @param longOpsDumpTimeout Long operations dump timeout.
      */
     public void longOperationsDumpTimeout(long longOpsDumpTimeout) {
-        this.longOpsDumpTimeout = longOpsDumpTimeout;
+        distrCfg.updateLongOperationsDumpTimeoutLocal(longOpsDumpTimeout);
 
         scheduleDumpTask(
             IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
@@ -2095,7 +2059,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param timeout Sets tx key collisions analysis interval.
      **/
     void txCollisionsDumpInterval(int timeout) {
-        collisionsDumpInterval = timeout;
+        distrCfg.updateCollisionsDumpIntervalLocal(timeout);
 
         scheduleDumpTask(
             IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
@@ -2864,6 +2828,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param timeout Transaction timeout on partition map exchange in milliseconds.
      */
     public void setTxTimeoutOnPartitionMapExchange(long timeout) throws IgniteCheckedException {
+
+
+
         UUID reqId = UUID.randomUUID();
 
         TxTimeoutOnPartitionMapExchangeChangeFuture fut = new TxTimeoutOnPartitionMapExchangeChangeFuture(reqId);
@@ -2878,6 +2845,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         fut.get();
     }
 
+
+
+
     /**
      * Callback invoked from discovery thread when discovery custom message is received.
      *
@@ -2891,6 +2861,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             if (cfg.getTxTimeoutOnPartitionMapExchange() != msg.getTimeout())
                 cfg.setTxTimeoutOnPartitionMapExchange(msg.getTimeout());
+
+            distrCfg.updateTxTimeoutOnPartitionMapExchangeLocal(msg.getTimeout());
         }
         else {
             TxTimeoutOnPartitionMapExchangeChangeFuture fut = txTimeoutOnPartitionMapExchangeFuts.get(
@@ -2936,11 +2908,21 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param allowed whether allowed
      */
     public void setTxOwnerDumpRequestsAllowedDistributed(boolean allowed) {
-        broadcastToNodesSupportingFeature(
+        try {
+            distrCfg.updateTxOwnerDumpRequestsAllowed(allowed);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+            && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING);
+
+        broadcastToNodesWithFilter(
             cctx.kernalContext(),
             new TxOwnerDumpRequestAllowedSettingClosure(allowed),
             true,
-            TRANSACTION_OWNER_THREAD_DUMP_PROVIDING
+            nodeFilter
         );
     }
 
@@ -2956,11 +2938,21 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void longTransactionTimeDumpThresholdDistributed(long threshold) {
         assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
 
-        broadcastToNodesSupportingFeature(
+        try {
+            distrCfg.updateLongTransactionTimeDumpThreshold(threshold);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+            && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+
+        broadcastToNodesWithFilter(
             cctx.kernalContext(),
             new LongRunningTxTimeDumpSettingsClosure(threshold, null, null),
             false,
-            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+            nodeFilter
         );
     }
 
@@ -2973,11 +2965,21 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void transactionTimeDumpSamplesCoefficientDistributed(double coefficient) {
         assert coefficient >= 0.0 && coefficient <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
 
-        broadcastToNodesSupportingFeature(
+        try {
+            distrCfg.updatetransactionTimeDumpSamplesCoefficient(coefficient);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+            && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+
+        broadcastToNodesWithFilter(
             cctx.kernalContext(),
             new LongRunningTxTimeDumpSettingsClosure(null, coefficient, null),
             false,
-            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+            nodeFilter
         );
     }
 
@@ -2991,11 +2993,21 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void longTransactionTimeDumpSamplesPerSecondLimit(int limit) {
         assert limit > 0 : "Limit value must be greater than 0.";
 
-        broadcastToNodesSupportingFeature(
+        try{
+            distrCfg.updateLongTransactionTimeDumpSamplesPerSecondLimit(limit);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+            && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+
+        broadcastToNodesWithFilter(
             cctx.kernalContext(),
             new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
             false,
-            LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+            nodeFilter
         );
     }
 
@@ -3019,11 +3031,21 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param longOpsDumpTimeout Long operations dump timeout.
      */
     public void longOperationsDumpTimeoutDistributed(long longOpsDumpTimeout) {
-        broadcastToNodesSupportingFeature(
+        try {
+            distrCfg.updateLongOperationsDumpTimeoutAsync(longOpsDumpTimeout);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+            && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT);
+
+        broadcastToNodesWithFilter(
             cctx.kernalContext(),
             new LongOperationsDumpSettingsClosure(longOpsDumpTimeout),
             false,
-            DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT
+            nodeFilter
         );
     }
 
@@ -3034,7 +3056,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Collisions dump interval.
      */
     public int collisionsDumpInterval() {
-        return collisionsDumpInterval;
+        return distrCfg.collisionsDumpInterval();
     }
 
     /**
@@ -3044,11 +3066,21 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param collisionsDumpInterval New collisions dump interval or negative for disabling.
      */
     public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
-        broadcastToNodesSupportingFeature(
+        try {
+            distrCfg.updateCollisionsDumpInterval(collisionsDumpInterval);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+
+        IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+            && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_TX_COLLISIONS_DUMP);
+
+        broadcastToNodesWithFilter(
             cctx.kernalContext(),
             new TxCollisionsDumpSettingsClosure(collisionsDumpInterval),
             true,
-            DISTRIBUTED_TX_COLLISIONS_DUMP
+            nodeFilter
         );
     }
 
@@ -3084,6 +3116,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         if (qSize >= COLLISIONS_QUEUE_THRESHOLD)
             pushCollidingKeysWithQueueSize(entry, qSize);
+    }
+
+    /**
+     * @return Distributed configuration.
+     */
+    public DistributedTransactionConfiguration getDistrCfg() {
+        return distrCfg;
     }
 
     /** Tx key collisions info holder. */

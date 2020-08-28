@@ -166,7 +166,10 @@ public enum IgniteFeatures {
     INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
 
     /** Snapshots without PME. */
-    EXCHANGELESS_SNAPSHOT(43);
+    EXCHANGELESS_SNAPSHOT(43),
+
+    /** Transaction distributed config. */
+    TRANSACTION_DISTRIBUTED_PROPERTIES(46);
 
     /**
      * Unique feature identifier.

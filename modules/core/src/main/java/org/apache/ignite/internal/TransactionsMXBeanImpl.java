@@ -123,6 +123,7 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     /** {@inheritDoc} */
     @Override public void setTxTimeoutOnPartitionMapExchange(long timeout) {
         try {
+            //
             ctx.cache().context().tm().setTxTimeoutOnPartitionMapExchange(timeout);
         }
         catch (Exception e) {

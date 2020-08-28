@@ -12326,6 +12326,32 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Broadcasts given job to nodes that match ignite feature.
+     *
+     * @param kctx Kernal context.
+     * @param job Ignite job.
+     * @param srvrsOnly Broadcast only on server nodes.
+     * @param nodeFilter Node filter.
+     */
+    public static void broadcastToNodesWithFilter(
+        GridKernalContext kctx,
+        IgniteRunnable job,
+        boolean srvrsOnly,
+        IgnitePredicate<ClusterNode> nodeFilter
+    ) {
+        ClusterGroup cl = kctx.grid().cluster();
+
+        if (srvrsOnly)
+            cl = cl.forServers();
+
+        ClusterGroup grp = cl.forPredicate(nodeFilter);
+
+        IgniteCompute compute = kctx.grid().compute(grp);
+
+        compute.broadcast(job);
+    }
+
+    /**
      * @param configuration Ignite configuration.
      * @return Whether persistence is enabled.
      */

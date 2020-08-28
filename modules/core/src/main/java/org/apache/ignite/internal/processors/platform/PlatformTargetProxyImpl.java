@@ -82,6 +82,7 @@ public class PlatformTargetProxyImpl implements PlatformTargetProxy {
         }
     }
 
+
     /** {@inheritDoc} */
     @Override public void outStream(int type, long memPtr) throws Exception {
         try (PlatformMemory mem = platformCtx.memory().get(memPtr)) {
@@ -97,7 +98,6 @@ public class PlatformTargetProxyImpl implements PlatformTargetProxy {
             throw target.convertException(e);
         }
     }
-
     /** {@inheritDoc} */
     @Override public Object outObject(int type) throws Exception {
         try {
