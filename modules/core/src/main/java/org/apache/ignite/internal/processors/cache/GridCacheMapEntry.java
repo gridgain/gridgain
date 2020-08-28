@@ -5098,7 +5098,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void lockEntry() {
-        lock.lock();
+            boolean res  = tryLockEntry(7_000L);
+
+            if (!res)
+                throw new RuntimeException("CANNOT LOCK ENTRY " + this);
     }
 
     /** {@inheritDoc} */
