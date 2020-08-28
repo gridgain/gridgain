@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.development.utils.arguments;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -35,10 +36,20 @@ public class CLIArgument<T> {
     private final Class<T> type;
 
     /** */
-    private final Supplier<T> dfltValSupplier;
+    private final Function<CLIArgumentParser, T> dfltValSupplier;
+
+    /** */
+    public static <T> CLIArgument<T> optionalArg(String name, String usage, Class<T> type) {
+        return new CLIArgument<T>(name, usage, true, type, null);
+    }
 
     /** */
     public static <T> CLIArgument<T> optionalArg(String name, String usage, Class<T> type, Supplier<T> dfltValSupplier) {
+        return new CLIArgument<T>(name, usage, true, type, p -> dfltValSupplier.get());
+    }
+
+    /** */
+    public static <T> CLIArgument<T> optionalArg(String name, String usage, Class<T> type, Function<CLIArgumentParser, T> dfltValSupplier) {
         return new CLIArgument<T>(name, usage, true, type, dfltValSupplier);
     }
 
@@ -48,12 +59,14 @@ public class CLIArgument<T> {
     }
 
     /** */
-    public CLIArgument(String name, String usage, boolean isOptional, Class<T> type, Supplier<T> dfltValSupplier) {
+    public CLIArgument(String name, String usage, boolean isOptional, Class<T> type, Function<CLIArgumentParser, T> dfltValSupplier) {
         this.name = name;
         this.usage = usage;
         this.isOptional = isOptional;
         this.type = type;
-        this.dfltValSupplier = dfltValSupplier == null ? () -> null : dfltValSupplier;
+        this.dfltValSupplier = dfltValSupplier == null
+            ? (type.equals(Boolean.class) ? p -> (T) Boolean.FALSE : p -> null)
+            : dfltValSupplier;
     }
 
     /** */
@@ -77,7 +90,7 @@ public class CLIArgument<T> {
     }
 
     /** */
-    public Supplier<T> defaultValueSupplier() {
+    public Function<CLIArgumentParser, T> defaultValueSupplier() {
         return dfltValSupplier;
     }
 }

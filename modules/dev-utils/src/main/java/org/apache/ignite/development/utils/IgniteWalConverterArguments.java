@@ -24,52 +24,33 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.development.utils.arguments.CLIArgumentParser;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.util.typedef.F;
+import org.jetbrains.annotations.Nullable;
+
+import static java.util.Arrays.asList;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.BINARY_METADATA_DIR;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.HAS_TEXT;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.INCLUDE_SENSITIVE;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.UNWRAP_BINARY;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.MARSHALLER_MAPPING_DIR;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.PAGE_SIZE;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.PRINT_STAT;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.RECORD_TYPES;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.SKIP_CRC;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.WAL_ARCHIVE_DIR;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.WAL_DIR;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.WAL_TIME_FROM_MILLIS;
+import static org.apache.ignite.development.utils.IgniteWalConverterArguments.Args.WAL_TIME_TO_MILLIS;
+import static org.apache.ignite.development.utils.arguments.CLIArgument.optionalArg;
 
 /**
  * Parameters for IgniteWalConverter with parsed and validated.
  */
 public class IgniteWalConverterArguments {
-    /** */
-    private static final String WAL_DIR = "walDir";
-
-    /** */
-    private static final String WAL_ARCHIVE_DIR = "walArchiveDir";
-
-    /** */
-    private static final String PAGE_SIZE = "pageSize";
-
-    /** */
-    private static final String BINARY_METADATA_FILE_STORE_DIR = "binaryMetadataFileStoreDir";
-
-    /** */
-    private static final String MARSHALLER_MAPPING_FILE_STORE_DIR = "marshallerMappingFileStoreDir";
-
-    /** */
-    private static final String KEEP_BINARY = "keepBinary";
-
-    /** */
-    private static final String RECORD_TYPES = "recordTypes";
-
-    /** */
-    private static final String WAL_TIME_FROM_MILLIS = "walTimeFromMillis";
-
-    /** */
-    private static final String WAL_TIME_TO_MILLIS = "walTimeToMillis";
-
-    /** */
-    private static final String RECORD_CONTAINS_TEXT = "recordContainsText";
-
-    /** */
-    private static final String PROCESS_SENSITIVE_DATA = "processSensitiveData";
-
-    /** */
-    private static final String PRINT_STAT = "printStat";
-
-    /** */
-    private static final String SKIP_CRC = "skipCrc";
-
     /** Path to dir with wal files. */
     private final File walDir;
 
@@ -86,7 +67,7 @@ public class IgniteWalConverterArguments {
     private final File marshallerMappingFileStoreDir;
 
     /** Keep binary flag. */
-    private final boolean keepBinary;
+    private final boolean unwrapBinary;
 
     /** WAL record types (TX_RECORD, DATA_RECORD, etc). */
     private final Set<WALRecord.RecordType> recordTypes;
@@ -115,7 +96,7 @@ public class IgniteWalConverterArguments {
      * @param pageSize                      Size of pages, which was selected for file store (1024, 2048, 4096, etc).
      * @param binaryMetadataFileStoreDir    Path to binary metadata dir.
      * @param marshallerMappingFileStoreDir Path to marshaller dir.
-     * @param keepBinary                    Keep binary flag.
+     * @param unwrapBinary                  Unwrap binary non-primitive objects.
      * @param recordTypes                   WAL record types (TX_RECORD, DATA_RECORD, etc).
      * @param fromTime                      The start time interval for the record time in milliseconds.
      * @param toTime                        The end time interval for the record time in milliseconds.
@@ -125,7 +106,7 @@ public class IgniteWalConverterArguments {
      * @param skipCrc                       Skip CRC calculation/check flag.
      */
     public IgniteWalConverterArguments(File walDir, File walArchiveDir, int pageSize,
-        File binaryMetadataFileStoreDir, File marshallerMappingFileStoreDir, boolean keepBinary,
+        File binaryMetadataFileStoreDir, File marshallerMappingFileStoreDir, boolean unwrapBinary,
         Set<WALRecord.RecordType> recordTypes, Long fromTime, Long toTime, String recordContainsText,
         ProcessSensitiveData processSensitiveData,
         boolean printStat, boolean skipCrc) {
@@ -134,7 +115,7 @@ public class IgniteWalConverterArguments {
         this.pageSize = pageSize;
         this.binaryMetadataFileStoreDir = binaryMetadataFileStoreDir;
         this.marshallerMappingFileStoreDir = marshallerMappingFileStoreDir;
-        this.keepBinary = keepBinary;
+        this.unwrapBinary = unwrapBinary;
         this.recordTypes = recordTypes;
         this.fromTime = fromTime;
         this.toTime = toTime;
@@ -194,8 +175,8 @@ public class IgniteWalConverterArguments {
      *
      * @return keepBina
      */
-    public boolean isKeepBinary() {
-        return keepBinary;
+    public boolean isUnwrapBinary() {
+        return unwrapBinary;
     }
 
     /**
@@ -262,167 +243,131 @@ public class IgniteWalConverterArguments {
     }
 
     /**
+     * @param filePath Path to the file.
+     * @return File, or {@code null} if {@code filePath} == {@code null}.
+     */
+    public static @Nullable File file(
+        @Nullable String filePath,
+        boolean checkExists,
+        boolean checkIsDirectory
+    ) {
+        if (filePath == null)
+            return null;
+        else {
+            File file = new File(filePath);
+
+            if (checkExists && !file.exists())
+                throw new IllegalArgumentException("File/directory '" + filePath + "' does not exist.");
+
+            if (checkIsDirectory && !file.isDirectory())
+                throw new IllegalArgumentException("File '" + filePath + "' must be directory.");
+
+            return file;
+        }
+    }
+
+    private static Set<WALRecord.RecordType> checkRecordTypes(String[] recordTypesStrArray) {
+        final SortedSet<String> unknownRecordTypes = new TreeSet<>();
+
+        final Set<WALRecord.RecordType> recordTypes = new HashSet<>();
+
+        if (recordTypesStrArray != null) {
+            for (String recordTypeStr : recordTypesStrArray) {
+                try {
+                    recordTypes.add(WALRecord.RecordType.valueOf(recordTypeStr));
+                }
+                catch (Exception e) {
+                    unknownRecordTypes.add(recordTypeStr);
+                }
+            }
+
+            if (!unknownRecordTypes.isEmpty()) {
+                throw new IllegalArgumentException("Unknown record types: " + unknownRecordTypes +
+                    ". Supported record types: " + Arrays.toString(WALRecord.RecordType.values()));
+            }
+        }
+
+        return recordTypes;
+    }
+
+    /**
      * Parse command line arguments and return filled IgniteWalConverterArguments
      *
      * @param args Command line arguments.
      * @return IgniteWalConverterArguments.
      */
     public static IgniteWalConverterArguments parse(final PrintStream out, String args[]) {
+        AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
+
+        CLIArgumentParser parser = new CLIArgumentParser(asList(
+            optionalArg(WAL_DIR.arg(), "Path to dir with wal files.", String.class, () -> {
+                if (parserRef.get().get(Args.WAL_ARCHIVE_DIR.arg()) == null)
+                    throw new IllegalArgumentException("One of the arguments --wal-dir or --wal-archive-dir must be specified.");
+                else
+                    return null;
+            }),
+            optionalArg(Args.WAL_ARCHIVE_DIR.arg(), "Path to dir with wal files.", String.class),
+            optionalArg(PAGE_SIZE.arg(), "Size of pages, which was selected for file store (1024, 2048, 4096, etc).", Integer.class, () -> 4096),
+            optionalArg(BINARY_METADATA_DIR.arg(), "Path to binary meta.", String.class),
+            optionalArg(MARSHALLER_MAPPING_DIR.arg(), "Path to marshaller dir.", String.class),
+            optionalArg(UNWRAP_BINARY.arg(), "Unwrap binary non-primitive objects.", Boolean.class),
+            optionalArg(RECORD_TYPES.arg(), "Comma-separated WAL record types (TX_RECORD, DATA_RECORD, etc). By default, all types will be printed.", String[].class),
+            optionalArg(WAL_TIME_FROM_MILLIS.arg(), "The start time interval for the record time in milliseconds.", Long.class),
+            optionalArg(WAL_TIME_TO_MILLIS.arg(), "The end time interval for the record time in milliseconds.", Long.class),
+            optionalArg(HAS_TEXT.arg(), "Filter by substring in the WAL record.", String.class),
+            optionalArg(INCLUDE_SENSITIVE.arg(), "Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default SHOW.", String.class, ProcessSensitiveData.SHOW::toString),
+            optionalArg(PRINT_STAT.arg(), "Write summary statistics for WAL.", Boolean.class),
+            optionalArg(SKIP_CRC.arg(), "Skip CRC calculation/check flag", Boolean.class)
+        ));
+
         if (args == null || args.length < 1) {
             out.println("Print WAL log data in human-readable form.");
-            out.println("You need to provide:");
-            out.println("    walDir                           Path to dir with wal files.");
-            out.println("    walArchiveDir                    Path to dir with archive wal files. walDir or walArchiveDir must be specified.");
-            out.println("    pageSize                         Size of pages, which was selected for file store (1024, 2048, 4096, etc). Default 4096.");
-            out.println("    binaryMetadataFileStoreDir       (Optional) Path to binary meta.");
-            out.println("    marshallerMappingFileStoreDir    (Optional) Path to marshaller dir.");
-            out.println("    keepBinary                       Keep binary flag. Default true.");
-            out.println("    recordTypes                      (Optional) Comma-separated WAL record types (TX_RECORD, DATA_RECORD, etc). Default all.");
-            out.println("    walTimeFromMillis                (Optional) The start time interval for the record time in milliseconds.");
-            out.println("    walTimeToMillis                  (Optional) The end time interval for the record time in milliseconds.");
-            out.println("    recordContainsText               (Optional) Filter by substring in the WAL record.");
-            out.println("    processSensitiveData             (Optional) Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default SHOW.");
-            out.println("    printStat                        Write summary statistics for WAL. Default false.");
-            out.println("    skipCrc                          Skip CRC calculation/check flag. Default false.");
+            out.println(parser.usage());
             out.println("For example:");
             out.println("    walDir=/work/db/wal");
             out.println("    walArchiveDir=/work/db/wal_archive");
             out.println("    pageSize=4096");
             out.println("    binaryMetadataFileStoreDir=/work/db/nodeId-consistentId");
             out.println("    marshallerMappingFileStoreDir=/work/db/marshaller");
-            out.println("    keepBinary=true");
+            out.println("    unwrapBinary=true");
             out.println("    recordTypes=DataRecord,TxRecord");
             out.println("    walTimeFromMillis=1575158400000");
             out.println("    walTimeToMillis=1577836740999");
             out.println("    recordContainsText=search string");
             out.println("    processSensitiveData=SHOW");
             out.println("    skipCrc=true");
+
             return null;
         }
 
-        File walDir = null;
-        File walArchiveDir = null;
-        int pageSize = 4096;
-        File binaryMetadataFileStoreDir = null;
-        File marshallerMappingFileStoreDir = null;
-        boolean keepBinary = true;
-        final Set<WALRecord.RecordType> recordTypes = new HashSet<>();
-        Long fromTime = null;
-        Long toTime = null;
-        String recordContainsText = null;
-        ProcessSensitiveData processSensitiveData = ProcessSensitiveData.SHOW;
-        boolean printStat = false;
-        boolean skipCrc = false;
+        parserRef.set(parser);
 
-        for (String arg : args) {
-            if (arg.startsWith(WAL_DIR + "=")) {
-                final String walPath = arg.substring(WAL_DIR.length() + 1);
+        parser.parse(asList(args).iterator());
 
-                walDir = new File(walPath);
+        File walDir = file(parser.get(WAL_DIR.arg()), true, false);
+        File walArchiveDir = file(parser.get(Args.WAL_ARCHIVE_DIR.arg()), true, false);
+        int pageSize = parser.get(PAGE_SIZE.arg());
+        File binaryMetadataDir = file(parser.get(BINARY_METADATA_DIR.arg()), true, true);
+        File marshallerMappingDir = file(parser.get(MARSHALLER_MAPPING_DIR.arg()), true, true);
+        boolean unwrapBinary = parser.get(UNWRAP_BINARY.arg());
+        final Set<WALRecord.RecordType> recordTypes = checkRecordTypes(parser.get(RECORD_TYPES.arg()));
+        Long fromTime = parser.get(Args.WAL_TIME_FROM_MILLIS.arg());
+        Long toTime = parser.get(Args.WAL_TIME_TO_MILLIS.arg());
+        String hasText = parser.get(Args.HAS_TEXT.arg());
+        boolean printStat = parser.get(Args.PRINT_STAT.arg());
+        boolean skipCrc = parser.get(Args.SKIP_CRC.arg());
 
-                if (!walDir.exists())
-                    throw new IllegalArgumentException("Incorrect path to dir with wal files: " + walPath);
-            }
-            else if (arg.startsWith(WAL_ARCHIVE_DIR + "=")) {
-                final String walArchivePath = arg.substring(WAL_ARCHIVE_DIR.length() + 1);
+        String processSensitiveDataStr = parser.get(Args.INCLUDE_SENSITIVE.arg());
 
-                walArchiveDir = new File(walArchivePath);
+        ProcessSensitiveData includeSensitive;
 
-                if (!walArchiveDir.exists())
-                    throw new IllegalArgumentException("Incorrect path to dir with archive wal files: " + walArchivePath);
-            }
-            else if (arg.startsWith(PAGE_SIZE + "=")) {
-                final String pageSizeStr = arg.substring(PAGE_SIZE.length() + 1);
-
-                try {
-                    pageSize = Integer.parseInt(pageSizeStr);
-                }
-                catch (Exception e) {
-                    throw new IllegalArgumentException("Incorrect page size. Error parse: " + pageSizeStr);
-                }
-            }
-            else if (arg.startsWith(BINARY_METADATA_FILE_STORE_DIR + "=")) {
-                final String binaryMetadataFileStorePath = arg.substring(BINARY_METADATA_FILE_STORE_DIR.length() + 1);
-
-                binaryMetadataFileStoreDir = new File(binaryMetadataFileStorePath);
-
-                if (!binaryMetadataFileStoreDir.isDirectory())
-                    throw new IllegalArgumentException("Incorrect path to dir with binary meta files: " + binaryMetadataFileStorePath);
-            }
-            else if (arg.startsWith(MARSHALLER_MAPPING_FILE_STORE_DIR + "=")) {
-                final String marshallerMappingFileStorePath = arg.substring(MARSHALLER_MAPPING_FILE_STORE_DIR.length() + 1);
-
-                marshallerMappingFileStoreDir = new File(marshallerMappingFileStorePath);
-
-                if (!marshallerMappingFileStoreDir.isDirectory())
-                    throw new IllegalArgumentException("Incorrect path to dir with marshaller files: " + marshallerMappingFileStorePath);
-            }
-            else if (arg.startsWith(KEEP_BINARY + "=")) {
-                keepBinary = parseBoolean(KEEP_BINARY, arg.substring(KEEP_BINARY.length() + 1));
-            }
-            else if (arg.startsWith(RECORD_TYPES + "=")) {
-                final String recordTypesStr = arg.substring(RECORD_TYPES.length() + 1);
-
-                final String[] recordTypesStrArray = recordTypesStr.split(",");
-
-                final SortedSet<String> unknownRecordTypes = new TreeSet<>();
-
-                for (String recordTypeStr : recordTypesStrArray) {
-                    try {
-                        recordTypes.add(WALRecord.RecordType.valueOf(recordTypeStr));
-                    }
-                    catch (Exception e) {
-                        unknownRecordTypes.add(recordTypeStr);
-                    }
-                }
-
-                if (!unknownRecordTypes.isEmpty())
-                    throw new IllegalArgumentException("Unknown record types: " + unknownRecordTypes +
-                        ". Supported record types: " + Arrays.toString(WALRecord.RecordType.values()));
-            }
-            else if (arg.startsWith(WAL_TIME_FROM_MILLIS + "=")) {
-                final String fromTimeStr = arg.substring(WAL_TIME_FROM_MILLIS.length() + 1);
-
-                try {
-                    fromTime = Long.parseLong(fromTimeStr);
-                }
-                catch (Exception e) {
-                    throw new IllegalArgumentException("Incorrect walTimeFromMillis. Error parse: " + fromTimeStr);
-                }
-            }
-            else if (arg.startsWith(WAL_TIME_TO_MILLIS + "=")) {
-                final String toTimeStr = arg.substring(WAL_TIME_TO_MILLIS.length() + 1);
-
-                try {
-                    toTime = Long.parseLong(toTimeStr);
-                }
-                catch (Exception e) {
-                    throw new IllegalArgumentException("Incorrect walTimeToMillis. Error parse: " + toTimeStr);
-                }
-            }
-            else if (arg.startsWith(RECORD_CONTAINS_TEXT + "=")) {
-                recordContainsText = arg.substring(RECORD_CONTAINS_TEXT.length() + 1);
-            }
-            else if (arg.startsWith(PROCESS_SENSITIVE_DATA + "=")) {
-                final String processSensitiveDataStr = arg.substring(PROCESS_SENSITIVE_DATA.length() + 1);
-                try {
-                    processSensitiveData = ProcessSensitiveData.valueOf(processSensitiveDataStr);
-                }
-                catch (Exception e) {
-                    throw new IllegalArgumentException("Unknown processSensitiveData: " + processSensitiveDataStr +
-                        ". Supported: " + Arrays.toString(ProcessSensitiveData.values()));
-                }
-            }
-            else if (arg.startsWith(PRINT_STAT + "=")) {
-                printStat = parseBoolean(PRINT_STAT, arg.substring(PRINT_STAT.length() + 1));
-            }
-            else if (arg.startsWith(SKIP_CRC + "=")) {
-                skipCrc = parseBoolean(SKIP_CRC, arg.substring(SKIP_CRC.length() + 1));
-            }
+        try {
+            includeSensitive = ProcessSensitiveData.valueOf(processSensitiveDataStr);
         }
-
-        if (walDir == null && walArchiveDir == null)
-            throw new IllegalArgumentException("The paths to the WAL files are not specified.");
+        catch (Exception e) {
+            throw new IllegalArgumentException("Unknown --include-sensitive: " + processSensitiveDataStr +
+                ". Supported: " + Arrays.toString(ProcessSensitiveData.values()));
+        }
 
         out.println("Program arguments:");
 
@@ -434,13 +379,13 @@ public class IgniteWalConverterArguments {
 
         out.printf("\t%s = %d\n", PAGE_SIZE, pageSize);
 
-        if (binaryMetadataFileStoreDir != null)
-            out.printf("\t%s = %s\n", BINARY_METADATA_FILE_STORE_DIR, binaryMetadataFileStoreDir);
+        if (binaryMetadataDir != null)
+            out.printf("\t%s = %s\n", BINARY_METADATA_DIR, binaryMetadataDir);
 
-        if (marshallerMappingFileStoreDir != null)
-            out.printf("\t%s = %s\n", MARSHALLER_MAPPING_FILE_STORE_DIR, marshallerMappingFileStoreDir);
+        if (marshallerMappingDir != null)
+            out.printf("\t%s = %s\n", MARSHALLER_MAPPING_DIR, marshallerMappingDir);
 
-        out.printf("\t%s = %s\n", KEEP_BINARY, keepBinary);
+        out.printf("\t%s = %s\n", UNWRAP_BINARY, unwrapBinary);
 
         if (!F.isEmpty(recordTypes))
             out.printf("\t%s = %s\n", RECORD_TYPES, recordTypes);
@@ -451,40 +396,62 @@ public class IgniteWalConverterArguments {
         if (toTime != null)
             out.printf("\t%s = %s\n", WAL_TIME_TO_MILLIS, new Date(toTime));
 
-        if (recordContainsText != null)
-            out.printf("\t%s = %s\n", RECORD_CONTAINS_TEXT, recordContainsText);
+        if (hasText != null)
+            out.printf("\t%s = %s\n", HAS_TEXT, hasText);
+
+        out.printf("\t%s = %s\n", INCLUDE_SENSITIVE, includeSensitive);
 
         out.printf("\t%s = %b\n", PRINT_STAT, printStat);
 
         out.printf("\t%s = %b\n", SKIP_CRC, skipCrc);
 
         return new IgniteWalConverterArguments(walDir, walArchiveDir, pageSize,
-            binaryMetadataFileStoreDir, marshallerMappingFileStoreDir,
-            keepBinary, recordTypes, fromTime, toTime, recordContainsText, processSensitiveData, printStat, skipCrc);
+            binaryMetadataDir, marshallerMappingDir,
+            unwrapBinary, recordTypes, fromTime, toTime, hasText, includeSensitive, printStat, skipCrc);
     }
 
     /**
-     * Parses the string argument as a boolean.  The {@code boolean}
-     * returned represents the value {@code true} if the string argument
-     * is not {@code null} and is equal, ignoring case, to the string
-     * {@code "true"}, returned value {@code false} if the string argument
-     * is not {@code null} and is equal, ignoring case, to the string
-     * {@code "false"}, else throw IllegalArgumentException<p>
-     *
-     * @param name parameter name of boolean type.
-     * @param value the {@code String} containing the boolean representation to be parsed.
-     * @return the boolean represented by the string argument
      *
      */
-    private static boolean parseBoolean(String name, String value) {
-        if (value == null)
-            throw new IllegalArgumentException("Null value passed for flag " + name);
+    public enum Args {
+        /** */
+        WAL_DIR("--wal-dir"),
+        /** */
+        WAL_ARCHIVE_DIR("--wal-archive-dir"),
+        /** */
+        PAGE_SIZE("--page-size"),
+        /** */
+        BINARY_METADATA_DIR("--binary-metadata-dir"),
+        /** */
+        MARSHALLER_MAPPING_DIR("--marshaller-mapping-dir"),
+        /** */
+        UNWRAP_BINARY("--unwrap-binary"),
+        /** */
+        RECORD_TYPES("--record-types"),
+        /** */
+        WAL_TIME_FROM_MILLIS("--wal-time-from-millis"),
+        /** */
+        WAL_TIME_TO_MILLIS("--wal-time-to-millis"),
+        /** */
+        HAS_TEXT("--has-text"),
+        /** */
+        INCLUDE_SENSITIVE("--include-sensitive"),
+        /** */
+        PRINT_STAT("--print-stat"),
+        /** */
+        SKIP_CRC("--skip-crc");
 
-        if (value.equalsIgnoreCase(Boolean.TRUE.toString()))
-            return true;
-        else if (value.equalsIgnoreCase(Boolean.FALSE.toString()))
-            return false;
-        else
-            throw new IllegalArgumentException("Incorrect flag " + name + ", valid value: true or false. Error parse: " + value);
+        /** */
+        private String arg;
+
+        /** */
+        Args(String arg) {
+            this.arg = arg;
+        }
+
+        /** */
+        public String arg() {
+            return arg;
+        }
     }
 }

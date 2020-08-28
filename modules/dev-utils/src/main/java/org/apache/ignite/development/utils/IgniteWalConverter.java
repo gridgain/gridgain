@@ -81,7 +81,7 @@ public class IgniteWalConverter {
             .pageSize(params.getPageSize())
             .binaryMetadataFileStoreDir(params.getBinaryMetadataFileStoreDir())
             .marshallerMappingFileStoreDir(params.getMarshallerMappingFileStoreDir())
-            .keepBinary(params.isKeepBinary());
+            .keepBinary(!params.isUnwrapBinary());
 
         if (params.getWalDir() != null)
             iteratorParametersBuilder.filesOrDirs(params.getWalDir());

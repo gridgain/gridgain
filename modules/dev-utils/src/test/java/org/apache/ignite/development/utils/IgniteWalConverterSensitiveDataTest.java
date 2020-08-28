@@ -229,23 +229,26 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @param containsData         Contains or not elements {@link #sensitiveValues} in utility output.
      * @param containsPrefix       Contains or not {@link #SENSITIVE_DATA_VALUE_PREFIX} in utility output.
      * @param converter            Converting elements {@link #sensitiveValues} for checking in utility output.
-     * @throws Exception If failed.
      */
     private void exeWithCheck(
         ProcessSensitiveData processSensitiveData,
         boolean containsData,
         boolean containsPrefix,
         Function<String, String> converter
-    ) throws Exception {
+    ) {
         requireNonNull(converter);
 
         injectTestSystemOut();
 
         List<String> args = new ArrayList<>();
-        args.add("pageSize=" + pageSize);
-        args.add("walDir=" + walDirPath);
-        if (processSensitiveData != null)
-            args.add("processSensitiveData=" + processSensitiveData.name());
+        args.add("--page-size");
+        args.add(String.valueOf(pageSize));
+        args.add("--wal-dir");
+        args.add(walDirPath);
+        if (processSensitiveData != null) {
+            args.add("--include-sensitive");
+            args.add(processSensitiveData.name());
+        }
 
         IgniteWalConverter.main(args.toArray(new String[args.size()]));
 
