@@ -106,4 +106,9 @@ public interface SqlStatisticsStore {
      * @param tbl table
      */
     void clearGlobalStatistics(QueryTable tbl);
+
+    /**
+     * TBD
+     */
+    void start(SqlStatisticsRepository statsRepo);
 }

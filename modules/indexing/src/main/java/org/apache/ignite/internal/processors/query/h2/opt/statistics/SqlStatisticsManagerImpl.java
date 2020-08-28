@@ -45,24 +45,19 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
 
     private final GridKernalContext ctx;
 
-    private final SqlStatisticsStoreImpl store;
     private final SqlStatisticsRepository statsRepos;
 
     public SqlStatisticsManagerImpl(GridKernalContext ctx) {
         this.ctx = ctx;
-        GridCacheSharedContext cctx = ctx.cache().context();
-        if (cctx.kernalContext().clientNode() && cctx.kernalContext().config().getDataStorageConfiguration() == null)
-            store = null;
-        else
-            store = new SqlStatisticsStoreImpl(ctx);
-        statsRepos = new SqlStatisticsRepositoryImpl(ctx, store);
+
+        statsRepos = new SqlStatisticsRepositoryImpl(ctx);
     }
     public SqlStatisticsRepository statisticsRepository() {
         return statsRepos;
     }
 
     public void start() {
-        store.start(statsRepos);
+        statsRepos.start();
         //ctx.io().addMessageListener(GridTopic.TOPIC_QUERY, );
     }
 

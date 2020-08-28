@@ -2,14 +2,18 @@ package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.resources.LoggerResource;
 
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
 
@@ -21,13 +25,41 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
 
     private final SqlStatisticsStore store;
 
-    private Map<QueryTable, ObjectStatistics> localStats = new ConcurrentHashMap<>();
-    private Map<QueryTable, ObjectStatistics> globalStats = new ConcurrentHashMap<>();
+    /** Table->Partition->Partition Statistics map, populated only on server nodes without persistence enabled.  */
+    private final Map<QueryTable, Map<Integer, ObjectPartitionStatistics>> partsStats;
+
+    /** Local (for current node) object statistics. */
+    private final Map<QueryTable, ObjectStatistics> localStats;
+
+    /** Global (for whole cluster) object statistics. */
+    private final Map<QueryTable, ObjectStatistics> globalStats = new ConcurrentHashMap<>();
 
 
-    public SqlStatisticsRepositoryImpl(GridKernalContext ctx, SqlStatisticsStore store) {
+    public SqlStatisticsRepositoryImpl(GridKernalContext ctx) {
         this.ctx = ctx;
-        this.store = store;
+
+        if (ctx.config().isClientMode() || ctx.isDaemon()) {
+            // Cache only global statistics, no store
+            store = null;
+            partsStats = null;
+            localStats = null;
+        } else {
+            if (GridCacheUtils.isPersistenceEnabled(ctx.config())) {
+                // Persistence store
+                store = new SqlStatisticsStoreImpl(ctx);
+                partsStats = null;
+            } else {
+                // Cache partitions statistics, no store
+                store = null;
+                partsStats = new ConcurrentHashMap<>();
+            }
+            localStats = new ConcurrentHashMap<>();
+        }
+    }
+
+    public void start() {
+        if (store != null)
+            store.start(this);
     }
 
     @Override
@@ -39,9 +71,35 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
             else
                 // TODO implement me
                 throw new UnsupportedOperationException();
+        if (partsStats != null) {
+            Map<Integer, ObjectPartitionStatistics> statisticsMap = new ConcurrentHashMap<>();
+            for (ObjectPartitionStatistics s : statistics) {
+                if (statisticsMap.put(s.partId(), s) != null) {
+                    // TODO throw new IllegalStateException("Duplicate key"); or just log warning
+                }
+            }
+
+            if (fullStat)
+                partsStats.compute(tbl, (k,v) -> {
+                    if (v == null)
+                        v = statisticsMap;
+                    else
+                        v.putAll(statisticsMap);
+
+                    return v;
+                });
+            else
+                // TODO implement me
+                throw new UnsupportedOperationException();
+        }
     }
 
     public Collection<ObjectPartitionStatistics> getLocalPartitionsStatistics(QueryTable tbl){
+        if (partsStats != null) {
+            Map<Integer, ObjectPartitionStatistics> objectStatisticsMap = partsStats.get(tbl);
+
+            return objectStatisticsMap == null ? null : objectStatisticsMap.values();
+        }
         return store == null ? Collections.emptyList() : store.getLocalPartitionsStatistics(tbl);
     }
 
@@ -50,6 +108,9 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
         if (colNames == null || colNames.length == 0) {
             if (store != null)
                 store.clearLocalPartitionsStatistics(tbl);
+            if (partsStats != null) {
+                partsStats.remove(tbl);
+            }
         } else {
             // TODO implement me
             throw new UnsupportedOperationException();
@@ -65,10 +126,23 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
             else
                 // TODO implement me
                 throw new UnsupportedOperationException();
+        if (partsStats != null) {
+            partsStats.compute(tbl, (k,v) -> {
+                if(v == null)
+                    v = new ConcurrentHashMap<>();
+                v.put(statistics.partId(), statistics);
+
+                return v;
+            });
+        }
     }
 
     @Override
     public ObjectPartitionStatistics getLocalPartitionStatistics(QueryTable tbl, int partId) {
+        if (partsStats != null) {
+            Map<Integer, ObjectPartitionStatistics> objectPartStats = partsStats.get(tbl);
+            return objectPartStats == null ? null : objectPartStats.get(partId);
+        }
         return (store == null) ? null : store.getLocalPartitionStatistics(tbl, partId);
     }
 
@@ -76,11 +150,19 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
     public void clearLocalPartitionStatistics(QueryTable tbl, int partId) {
         if (store != null)
             store.clearLocalPartitionStatistics(tbl, partId);
+        if (partsStats != null) {
+            partsStats.computeIfPresent(tbl, (k,v) -> {
+                v.remove(partId);
+                return v.isEmpty() ? null : v;
+            });
+        }
     }
 
     @Override
     public void saveLocalStatistics(QueryTable tbl, ObjectStatistics statistics, boolean fullStat) {
-        localStats.put(tbl, statistics);
+        if (localStats != null)
+            localStats.put(tbl, statistics);
+
         if (store != null)
             if (fullStat)
                 store.saveLocalStatistics(tbl, statistics);
@@ -91,19 +173,22 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
 
     @Override
     public void cacheLocalStatistics(QueryTable tbl, ObjectStatistics statistics) {
-        localStats.put(tbl, statistics);
+        if (localStats != null)
+            localStats.put(tbl, statistics);
     }
 
     @Override
     public ObjectStatistics getLocalStatistics(QueryTable tbl, boolean tryLoad) {
         // TODO tryLoad
-        return localStats.get(tbl);
+
+        return localStats == null ? null : localStats.get(tbl);
     }
 
     @Override
     public void clearLocalStatistics(QueryTable tbl, String ... colNames) {
         if (colNames == null || colNames.length == 0) {
-            localStats.remove(tbl);
+            if (localStats != null)
+                localStats.remove(tbl);
             if (store != null)
                 store.clearLocalStatistics(tbl);
         } else {

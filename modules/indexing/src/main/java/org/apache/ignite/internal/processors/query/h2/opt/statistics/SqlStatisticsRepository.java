@@ -129,4 +129,8 @@ public interface SqlStatisticsRepository {
      */
     void clearGlobalStatistics(QueryTable tbl, String ... colNames);
 
+    /**
+     * TBD
+     */
+    void start();
 }
