@@ -495,23 +495,24 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
             return;
         }
 
-        IgniteInternalFuture<AffinityTopologyVersion> fut = cctx.shared().exchange().affinityReadyFuture(remapTopVer);
+            IgniteInternalFuture<AffinityTopologyVersion> fut = cctx.shared().exchange().affinityReadyFuture(remapTopVer);
 
-        if (fut == null)
-            fut = new GridFinishedFuture<>(remapTopVer);
+            if (fut == null)
+                fut = new GridFinishedFuture<>(remapTopVer);
 
         fut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
             @Override public void apply(final IgniteInternalFuture<AffinityTopologyVersion> fut) {
                 cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         try (TraceSurroundings ignored =
-                                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_UPDATE_MAP, MTC.span()))) {
+                                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_UPDATE_MAP, MTC.span()))) {
                             mapOnTopology();
                         }
                     }
                 });
             }
         });
+    }
     }
 
     /**

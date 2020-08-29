@@ -34,10 +34,10 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Constants;
-import org.h2.result.Row;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 

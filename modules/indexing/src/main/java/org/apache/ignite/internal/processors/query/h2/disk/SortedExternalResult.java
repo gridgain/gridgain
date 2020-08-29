@@ -30,11 +30,11 @@ import java.util.TreeMap;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.h2.engine.Session;
-import org.h2.result.ResultExternal;
-import org.h2.result.SortOrder;
-import org.h2.value.Value;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.result.ResultExternal;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueRow;
 
 /**
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.

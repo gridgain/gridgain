@@ -20,9 +20,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.h2.table.Column;
-import org.h2.value.Value;
-import org.h2.value.ValueString;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueString;
 
 /**
  * Inline index column implementation for inlining {@link String} values.
