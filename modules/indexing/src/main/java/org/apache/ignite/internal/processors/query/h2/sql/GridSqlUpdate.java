@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import org.h2.command.Parser;
-import org.h2.util.StringUtils;
+import org.gridgain.internal.h2.command.Parser;
+import org.gridgain.internal.h2.util.StringUtils;
 
 /** */
 public class GridSqlUpdate extends GridSqlStatement {

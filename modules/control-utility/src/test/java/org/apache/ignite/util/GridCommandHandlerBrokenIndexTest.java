@@ -35,12 +35,12 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.Index;
-import org.h2.index.IndexType;
-import org.h2.result.SearchRow;
-import org.h2.table.IndexColumn;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.IndexColumn;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;

@@ -17,7 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import junit.framework.Test;
-import org.h2.test.H2TestSuiteBuilder;
+import org.gridgain.internal.h2.test.H2TestSuiteBuilder;
 import org.junit.internal.runners.SuiteMethod;
 import org.junit.runner.RunWith;
 
