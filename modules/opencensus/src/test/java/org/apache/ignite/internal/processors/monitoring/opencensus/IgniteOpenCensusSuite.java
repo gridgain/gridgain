@@ -27,8 +27,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     OpenCensusMetricExporterSpiTest.class,
     OpenCensusTracingSpiTest.class,
-    // TODO: 23.08.20 https://ggsystems.atlassian.net/browse/GG-30395
-//    OpenCensusTxTracingTest.class,
+    OpenCensusTxTracingTest.class,
     MixedTracingSpiTest.class,
     TracingConfigurationValidationTest.class,
     OpenCensusTxTracingConfigurationTest.class,

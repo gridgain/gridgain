@@ -1135,7 +1135,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     }
 
     /**
-     * Check that cache.put opeartions are traced witthin transaction span in case of adding CACHE_API_WRITE as
+     * Check that cache.put operations are traced within transaction span in case of adding CACHE_API_WRITE as
      * supported scope to TX tracing configuration.
      *
      * @throws Exception If failed.
