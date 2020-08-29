@@ -26,7 +26,7 @@
 <hibernate-configuration>
     <session-factory>
         <!-- Database connection URL. -->
-        <property name="connection.url">jdbc:h2:tcp://localhost/mem:ExampleDb</property>
+        <property name="connection.url">jdbc:gg-h2:tcp://localhost/mem:ExampleDb</property>
 
         <!-- Database connection username. -->
         <property name="connection.username">sa</property>

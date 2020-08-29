@@ -28,13 +28,13 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessa
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRangeBounds;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.IndexLookupBatch;
-import org.h2.result.SearchRow;
-import org.h2.util.DoneFuture;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.util.DoneFuture;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
 
 import javax.cache.CacheException;
 import java.util.ArrayList;

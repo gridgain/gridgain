@@ -39,11 +39,11 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.dml.GroupByData;
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
-import org.h2.result.ResultExternal;
-import org.h2.result.SortOrder;
+import org.gridgain.internal.h2.command.dml.GroupByData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.result.ResultExternal;
+import org.gridgain.internal.h2.result.SortOrder;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
 
