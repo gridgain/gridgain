@@ -19,10 +19,10 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.store.Data;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.store.Data;
+import org.gridgain.internal.h2.value.Value;
 
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_COUNTER_NA;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_CRD_COUNTER_NA;

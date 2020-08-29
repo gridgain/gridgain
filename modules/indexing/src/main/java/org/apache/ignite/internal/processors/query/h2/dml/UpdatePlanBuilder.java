@@ -68,8 +68,8 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
-import org.h2.command.Prepared;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.table.Column;
 
 /**
  * Logic for building update plans performed by {@link DmlStatementsProcessor}.

@@ -37,7 +37,7 @@ public class TestJdbcPojoDataSourceFactory implements Factory<DataSource> {
     @Override public DataSource create() {
         TestJdbcPojoDataSource ds = new TestJdbcPojoDataSource();
 
-        ds.setUrl("jdbc:h2:mem:TestDatabase;DB_CLOSE_DELAY=-1");
+        ds.setUrl("jdbc:gg-h2:mem:TestDatabase;DB_CLOSE_DELAY=-1");
 
         ds.setUsername("sa");
 
