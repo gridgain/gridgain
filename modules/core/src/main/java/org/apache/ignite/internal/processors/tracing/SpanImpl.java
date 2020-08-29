@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.tracing;
 
 import java.util.Set;
 import java.util.function.Supplier;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.SpanStatus;
 import org.apache.ignite.spi.tracing.SpiSpecificSpan;
@@ -51,12 +52,22 @@ public class SpanImpl implements Span {
         this.includedScopes = includedScopes;
     }
 
+    /** {@inheritDoc} */
     @Override public Span addTag(String tagName, Supplier<String> tagValSupplier) {
         spiSpecificSpan.addTag(tagName, tagValSupplier.get());
 
         return this;
     }
 
+    /** {@inheritDoc} */
+    @Override public Span addSensitiveTag(String tagName, Supplier<String> tagValSupplier) {
+        if (S.includeSensitive())
+            spiSpecificSpan.addTag(tagName, tagValSupplier.get());
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
     @Override public Span addLog(Supplier<String> logDescSupplier) {
         spiSpecificSpan.addLog(logDescSupplier.get());
 
