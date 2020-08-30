@@ -17,14 +17,9 @@
 
 package org.apache.ignite.platform;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -65,7 +60,10 @@ public abstract class AbstractPlatformServiceCallTask extends ComputeTaskAdapter
 
         ClusterNode node;
 
-        Set<UUID> srvTop = desc.get().topologySnapshot().keySet();
+        Set<UUID> srvTop = desc.get().topologySnapshot().entrySet().stream()
+                .filter(e -> e.getValue() > 0)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
 
         if (loc) {
             UUID nodeId = F.rand(srvTop);
