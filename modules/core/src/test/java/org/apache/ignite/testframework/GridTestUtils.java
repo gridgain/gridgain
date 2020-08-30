@@ -502,7 +502,7 @@ public final class GridTestUtils {
      *      and this message should be equal.
      * @return Thrown throwable.
      */
-    public static <T> T assertThrows(
+    public static <T extends Throwable> T assertThrows(
         @Nullable IgniteLogger log,
         RunnableX run,
         Class<? extends T> cls,
@@ -525,8 +525,12 @@ public final class GridTestUtils {
      *      and this message should be equal.
      * @return Thrown throwable.
      */
-    public static <T> T assertThrows(@Nullable IgniteLogger log, Callable<?> call,
-        Class<? extends T> cls, @Nullable String msg) {
+    public static <T extends Throwable> T assertThrows(
+        @Nullable IgniteLogger log,
+        Callable<?> call,
+        Class<? extends T> cls,
+        @Nullable String msg
+    ) {
         assert call != null;
         assert cls != null;
 
