@@ -183,13 +183,23 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Test checks that by default sensitive data is displayed.
+     * Test checks that by default sensitive data is not displayed.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testShowSensitiveDataByDefault() throws Exception {
-        exeWithCheck(null, true, true, identity());
+    public void testSensitiveDataByDefaultMd5() throws Exception {
+        exeWithCheck(null, true, false, ProcessSensitiveDataUtils::md5);
+    }
+
+    /**
+     * Test checks that by default sensitive data is displayed with argument specified.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShowSensitiveData() throws Exception {
+        exeWithCheck(ProcessSensitiveData.SHOW, true, true, identity());
     }
 
     /**
@@ -245,7 +255,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         args.add("pageSize=" + pageSize);
         args.add("walDir=" + walDirPath);
         if (processSensitiveData != null)
-            args.add("processSensitiveData=" + processSensitiveData.name());
+            args.add("includeSensitive=" + processSensitiveData.name());
 
         IgniteWalConverter.main(args.toArray(new String[args.size()]));
 
