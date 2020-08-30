@@ -276,6 +276,12 @@ public class IgniteWalConverterArguments {
         }
     }
 
+    /**
+     * Check record types.
+     *
+     * @param recordTypesStrArray String array to check.
+     * @return Record types array.
+     */
     private static Set<WALRecord.RecordType> checkRecordTypes(String[] recordTypesStrArray) {
         final SortedSet<String> unknownRecordTypes = new TreeSet<>();
 
@@ -334,18 +340,18 @@ public class IgniteWalConverterArguments {
             out.println("Print WAL log data in human-readable form.");
             out.println(parser.usage());
             out.println("For example:");
-            out.println("    walDir=/work/db/wal");
-            out.println("    walArchiveDir=/work/db/wal_archive");
-            out.println("    pageSize=4096");
-            out.println("    binaryMetadataFileStoreDir=/work/db/nodeId-consistentId");
-            out.println("    marshallerMappingFileStoreDir=/work/db/marshaller");
-            out.println("    unwrapBinary=true");
-            out.println("    recordTypes=DataRecord,TxRecord");
-            out.println("    walTimeFromMillis=1575158400000");
-            out.println("    walTimeToMillis=1577836740999");
-            out.println("    hasText=search string");
-            out.println("    includeSensitive=SHOW");
-            out.println("    skipCrc=true");
+            out.println("    " + WAL_DIR.arg() + " /work/db/wal");
+            out.println("    " + WAL_ARCHIVE_DIR.arg() + " /work/db/wal_archive");
+            out.println("    " + PAGE_SIZE.arg() + " 4096");
+            out.println("    " + BINARY_METADATA_DIR.arg() + " /work/db/nodeId-consistentId");
+            out.println("    " + MARSHALLER_MAPPING_DIR.arg() + " /work/db/marshaller");
+            out.println("    " + UNWRAP_BINARY.arg());
+            out.println("    " + RECORD_TYPES.arg() + " DataRecord,TxRecord");
+            out.println("    " + WAL_TIME_FROM_MILLIS.arg() + " 1575158400000");
+            out.println("    " + WAL_TIME_TO_MILLIS.arg() + " 1577836740999");
+            out.println("    " + HAS_TEXT.arg() + " search_string");
+            out.println("    " + INCLUDE_SENSITIVE.arg() + " SHOW");
+            out.println("    " + SKIP_CRC.arg());
 
             return null;
         }
@@ -421,7 +427,7 @@ public class IgniteWalConverterArguments {
     }
 
     /**
-     *
+     * WAL converter arguments.
      */
     public enum Args {
         /** */

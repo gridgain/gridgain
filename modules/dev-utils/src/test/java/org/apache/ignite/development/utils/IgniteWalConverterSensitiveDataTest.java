@@ -184,7 +184,6 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
     /**
      * Test checks that by default sensitive data is not displayed.
-     *
      */
     @Test
     public void testSensitiveDataByDefaultMd5() {
@@ -193,7 +192,6 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
     /**
      * Test checks that by default sensitive data is displayed with argument specified.
-     *
      */
     @Test
     public void testShowSensitiveData() {
@@ -202,7 +200,6 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
     /**
      * Test verifies that sensitive data will be hidden.
-     *
      */
     @Test
     public void testHideSensitiveData() {
@@ -211,7 +208,6 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
     /**
      * Test verifies that sensitive data should be replaced with hash.
-     *
      */
     @Test
     public void testHashSensitiveData() {
@@ -220,7 +216,6 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
     /**
      * Test verifies that sensitive data should be replaced with MD5 hash.
-     *
      */
     @Test
     public void testMd5HashSensitiveData() {
