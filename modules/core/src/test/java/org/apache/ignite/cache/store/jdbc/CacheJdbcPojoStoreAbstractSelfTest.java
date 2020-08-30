@@ -52,7 +52,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
  */
 public abstract class CacheJdbcPojoStoreAbstractSelfTest extends GridCommonAbstractTest {
     /** DB connection URL. */
-    private static final String DFLT_CONN_URL = "jdbc:h2:mem:TestDatabase;DB_CLOSE_DELAY=-1";
+    private static final String DFLT_CONN_URL = "jdbc:gg-h2:mem:TestDatabase;DB_CLOSE_DELAY=-1";
 
     /** Organization count. */
     private static final int ORGANIZATION_CNT = 1000;

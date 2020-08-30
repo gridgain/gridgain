@@ -61,10 +61,10 @@ public class IgniteWalConverterArguments {
     private final int pageSize;
 
     /** Path to binary metadata dir. */
-    private final File binaryMetadataFileStoreDir;
+    private final File binaryMetadataDir;
 
     /** Path to marshaller dir. */
-    private final File marshallerMappingFileStoreDir;
+    private final File marshallerMappingDir;
 
     /** Keep binary flag. */
     private final boolean unwrapBinary;
@@ -79,10 +79,10 @@ public class IgniteWalConverterArguments {
     private final Long toTime;
 
     /** Filter by substring in the WAL record. */
-    private final String recordContainsText;
+    private final String hasText;
 
     /** Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). */
-    private final ProcessSensitiveData processSensitiveData;
+    private final ProcessSensitiveData includeSensitive;
 
     /** Write summary statistics for WAL */
     private final boolean printStat;
@@ -94,33 +94,43 @@ public class IgniteWalConverterArguments {
      * @param walDir                        Path to dir with wal files.
      * @param walArchiveDir                 Path to dir with archive wal files.
      * @param pageSize                      Size of pages, which was selected for file store (1024, 2048, 4096, etc).
-     * @param binaryMetadataFileStoreDir    Path to binary metadata dir.
-     * @param marshallerMappingFileStoreDir Path to marshaller dir.
+     * @param binaryMetadataDir             Path to binary metadata dir.
+     * @param marshallerMappingDir          Path to marshaller dir.
      * @param unwrapBinary                  Unwrap binary non-primitive objects.
      * @param recordTypes                   WAL record types (TX_RECORD, DATA_RECORD, etc).
      * @param fromTime                      The start time interval for the record time in milliseconds.
      * @param toTime                        The end time interval for the record time in milliseconds.
-     * @param recordContainsText            Filter by substring in the WAL record.
-     * @param processSensitiveData          Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
+     * @param hasText                       Filter by substring in the WAL record.
+     * @param includeSensitive              Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
      * @param printStat                     Write summary statistics for WAL.
      * @param skipCrc                       Skip CRC calculation/check flag.
      */
-    public IgniteWalConverterArguments(File walDir, File walArchiveDir, int pageSize,
-        File binaryMetadataFileStoreDir, File marshallerMappingFileStoreDir, boolean unwrapBinary,
-        Set<WALRecord.RecordType> recordTypes, Long fromTime, Long toTime, String recordContainsText,
-        ProcessSensitiveData processSensitiveData,
-        boolean printStat, boolean skipCrc) {
+    public IgniteWalConverterArguments(
+        File walDir,
+        File walArchiveDir,
+        int pageSize,
+        File binaryMetadataDir,
+        File marshallerMappingDir,
+        boolean unwrapBinary,
+        Set<WALRecord.RecordType> recordTypes,
+        Long fromTime,
+        Long toTime,
+        String hasText,
+        ProcessSensitiveData includeSensitive,
+        boolean printStat,
+        boolean skipCrc
+    ) {
         this.walDir = walDir;
         this.walArchiveDir = walArchiveDir;
         this.pageSize = pageSize;
-        this.binaryMetadataFileStoreDir = binaryMetadataFileStoreDir;
-        this.marshallerMappingFileStoreDir = marshallerMappingFileStoreDir;
+        this.binaryMetadataDir = binaryMetadataDir;
+        this.marshallerMappingDir = marshallerMappingDir;
         this.unwrapBinary = unwrapBinary;
         this.recordTypes = recordTypes;
         this.fromTime = fromTime;
         this.toTime = toTime;
-        this.recordContainsText = recordContainsText;
-        this.processSensitiveData = processSensitiveData;
+        this.hasText = hasText;
+        this.includeSensitive = includeSensitive;
         this.printStat = printStat;
         this.skipCrc = skipCrc;
     }
@@ -157,8 +167,8 @@ public class IgniteWalConverterArguments {
      *
      * @return binaryMetadataFileStoreD
      */
-    public File getBinaryMetadataFileStoreDir() {
-        return binaryMetadataFileStoreDir;
+    public File getBinaryMetadataDir() {
+        return binaryMetadataDir;
     }
 
     /**
@@ -166,8 +176,8 @@ public class IgniteWalConverterArguments {
      *
      * @return marshallerMappingFileStoreD
      */
-    public File getMarshallerMappingFileStoreDir() {
-        return marshallerMappingFileStoreDir;
+    public File getMarshallerMappingDir() {
+        return marshallerMappingDir;
     }
 
     /**
@@ -209,19 +219,19 @@ public class IgniteWalConverterArguments {
     /**
      * Filter by substring in the WAL record.
      *
-     * @return recordContainsText
+     * @return Filter substring.
      */
-    public String getRecordContainsText() {
-        return recordContainsText;
+    public String hasText() {
+        return hasText;
     }
 
     /**
      * Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
      *
-     * @return processSensitiveData
+     * @return Mode of sensitive data including.
      */
-    public ProcessSensitiveData getProcessSensitiveData() {
-        return processSensitiveData;
+    public ProcessSensitiveData includeSensitive() {
+        return includeSensitive;
     }
 
     /**
@@ -315,7 +325,7 @@ public class IgniteWalConverterArguments {
             optionalArg(WAL_TIME_FROM_MILLIS.arg(), "The start time interval for the record time in milliseconds.", Long.class),
             optionalArg(WAL_TIME_TO_MILLIS.arg(), "The end time interval for the record time in milliseconds.", Long.class),
             optionalArg(HAS_TEXT.arg(), "Filter by substring in the WAL record.", String.class),
-            optionalArg(INCLUDE_SENSITIVE.arg(), "Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default SHOW.", String.class, ProcessSensitiveData.SHOW::toString),
+            optionalArg(INCLUDE_SENSITIVE.arg(), "Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default MD5.", String.class, ProcessSensitiveData.MD5::toString),
             optionalArg(PRINT_STAT.arg(), "Write summary statistics for WAL.", Boolean.class),
             optionalArg(SKIP_CRC.arg(), "Skip CRC calculation/check flag", Boolean.class)
         ));
@@ -333,8 +343,8 @@ public class IgniteWalConverterArguments {
             out.println("    recordTypes=DataRecord,TxRecord");
             out.println("    walTimeFromMillis=1575158400000");
             out.println("    walTimeToMillis=1577836740999");
-            out.println("    recordContainsText=search string");
-            out.println("    processSensitiveData=SHOW");
+            out.println("    hasText=search string");
+            out.println("    includeSensitive=SHOW");
             out.println("    skipCrc=true");
 
             return null;

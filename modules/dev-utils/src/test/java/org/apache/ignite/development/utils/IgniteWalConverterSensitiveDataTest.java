@@ -183,42 +183,47 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Test checks that by default sensitive data is displayed.
+     * Test checks that by default sensitive data is not displayed.
      *
-     * @throws Exception If failed.
      */
     @Test
-    public void testShowSensitiveDataByDefault() throws Exception {
-        exeWithCheck(null, true, true, identity());
+    public void testSensitiveDataByDefaultMd5() {
+        exeWithCheck(null, true, false, ProcessSensitiveDataUtils::md5);
+    }
+
+    /**
+     * Test checks that by default sensitive data is displayed with argument specified.
+     *
+     */
+    @Test
+    public void testShowSensitiveData() {
+        exeWithCheck(ProcessSensitiveData.SHOW, true, true, identity());
     }
 
     /**
      * Test verifies that sensitive data will be hidden.
      *
-     * @throws Exception If failed.
      */
     @Test
-    public void testHideSensitiveData() throws Exception {
+    public void testHideSensitiveData() {
         exeWithCheck(ProcessSensitiveData.HIDE, false, false, identity());
     }
 
     /**
      * Test verifies that sensitive data should be replaced with hash.
      *
-     * @throws Exception If failed.
      */
     @Test
-    public void testHashSensitiveData() throws Exception {
+    public void testHashSensitiveData() {
         exeWithCheck(ProcessSensitiveData.HASH, true, false, s -> valueOf(s.hashCode()));
     }
 
     /**
      * Test verifies that sensitive data should be replaced with MD5 hash.
      *
-     * @throws Exception If failed.
      */
     @Test
-    public void testMd5HashSensitiveData() throws Exception {
+    public void testMd5HashSensitiveData() {
         exeWithCheck(ProcessSensitiveData.MD5, true, false, ProcessSensitiveDataUtils::md5);
     }
 

@@ -16,9 +16,9 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.ArrayList;
-import org.h2.command.dml.GroupByData;
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
+import org.gridgain.internal.h2.command.dml.GroupByData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
 
 /**
  * Factory for H2 group by data.

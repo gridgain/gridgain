@@ -310,14 +310,14 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         final IgniteWalConverterArguments parseArgs = IgniteWalConverterArguments.parse(System.out, args);
 
         Assert.assertEquals(4096, parseArgs.getPageSize());
-        Assert.assertNull(parseArgs.getBinaryMetadataFileStoreDir());
-        Assert.assertNull(parseArgs.getMarshallerMappingFileStoreDir());
+        Assert.assertNull(parseArgs.getBinaryMetadataDir());
+        Assert.assertNull(parseArgs.getMarshallerMappingDir());
         Assert.assertFalse(parseArgs.isUnwrapBinary());
         Assert.assertTrue(parseArgs.getRecordTypes().isEmpty());
         Assert.assertNull(parseArgs.getFromTime());
         Assert.assertNull(parseArgs.getToTime());
-        Assert.assertNull(parseArgs.getRecordContainsText());
-        Assert.assertEquals(ProcessSensitiveData.SHOW, parseArgs.getProcessSensitiveData());
+        Assert.assertNull(parseArgs.hasText());
+        Assert.assertEquals(ProcessSensitiveData.MD5, parseArgs.includeSensitive());
         Assert.assertFalse(parseArgs.isPrintStat());
         Assert.assertFalse(parseArgs.isSkipCrc());
     }
@@ -358,15 +358,15 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         Assert.assertEquals(wal, parseArgs.getWalDir());
         Assert.assertEquals(walArchive, parseArgs.getWalArchiveDir());
         Assert.assertEquals(2048, parseArgs.getPageSize());
-        Assert.assertEquals(binaryMetadataDir, parseArgs.getBinaryMetadataFileStoreDir());
-        Assert.assertEquals(marshallerDir, parseArgs.getMarshallerMappingFileStoreDir());
+        Assert.assertEquals(binaryMetadataDir, parseArgs.getBinaryMetadataDir());
+        Assert.assertEquals(marshallerDir, parseArgs.getMarshallerMappingDir());
         Assert.assertTrue(parseArgs.isUnwrapBinary());
         Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.DATA_RECORD));
         Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.TX_RECORD));
         Assert.assertEquals(1575158400000L, (long)parseArgs.getFromTime());
         Assert.assertEquals(1577836740999L, (long)parseArgs.getToTime());
-        Assert.assertEquals("search string", parseArgs.getRecordContainsText());
-        Assert.assertEquals(ProcessSensitiveData.HASH, parseArgs.getProcessSensitiveData());
+        Assert.assertEquals("search string", parseArgs.hasText());
+        Assert.assertEquals(ProcessSensitiveData.HASH, parseArgs.includeSensitive());
         Assert.assertTrue(parseArgs.isPrintStat());
         Assert.assertTrue(parseArgs.isSkipCrc());
     }
