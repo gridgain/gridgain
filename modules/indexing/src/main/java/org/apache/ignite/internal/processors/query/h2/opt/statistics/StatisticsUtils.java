@@ -1,20 +1,15 @@
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsColumnData;
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsObjectData;
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.messages.StatsPropagationMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
-import org.h2.value.Value;
-
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import org.gridgain.internal.h2.value.Value;
 
 public class StatisticsUtils {
     public static StatsColumnData toMessage(ColumnStatistics stat) throws IgniteCheckedException {
