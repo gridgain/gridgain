@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,7 +37,7 @@ namespace Apache.Ignite.Core.Tests.Services
 
         /** */
         private const string CheckCollectionsTaskName = "org.apache.ignite.platform.PlatformServiceCallCollectionsTask";
-        
+
         /** */
         protected IIgnite Grid1;
 
@@ -47,7 +46,7 @@ namespace Apache.Ignite.Core.Tests.Services
 
         /** */
         protected IIgnite Grid3;
-        
+
         /// <summary>
         /// Start grids and deploy test service.
         /// </summary>
@@ -56,7 +55,7 @@ namespace Apache.Ignite.Core.Tests.Services
         {
             StartGrids();
         }
-        
+
         /// <summary>
         /// Stop grids after test.
         /// </summary>
@@ -82,12 +81,12 @@ namespace Apache.Ignite.Core.Tests.Services
                 TotalCount = 1,
                 Service = new TestPlatformService()
             };
-            
+
             Grid1.GetServices().Deploy(cfg);
 
             Grid1.GetCompute().ExecuteJavaTask<object>(CheckTaskName, new object[] { ServiceName, local });
         }
-        
+
         /// <summary>
         /// Tests call a platform service by invoking a special compute java task,
         /// in which real invocation of the service is made.
@@ -104,12 +103,12 @@ namespace Apache.Ignite.Core.Tests.Services
                 TotalCount = 1,
                 Service = new TestPlatformService()
             };
-            
+
             Grid1.GetServices().Deploy(cfg);
 
             Grid1.GetCompute().ExecuteJavaTask<object>(CheckCollectionsTaskName, new object[] { ServiceName, local });
         }
-        
+
         /// <summary>
         /// Starts the grids.
         /// </summary>
@@ -132,7 +131,7 @@ namespace Apache.Ignite.Core.Tests.Services
 
             Ignition.StopAll(true);
         }
-        
+
         /// <summary>
         /// Gets the Ignite configuration.
         /// </summary>
@@ -141,23 +140,23 @@ namespace Apache.Ignite.Core.Tests.Services
             return new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 IgniteInstanceName = "grid" + idx,
-                BinaryConfiguration = new BinaryConfiguration(typeof(TestKey), typeof(TestValue), 
+                BinaryConfiguration = new BinaryConfiguration(typeof(TestKey), typeof(TestValue),
                     typeof(BinarizableTestValue))
                 {
                     NameMapper = BinaryBasicNameMapper.SimpleNameInstance
                 }
             };
         }
-        
+
         /** */
         public interface ITestPlatformService : IService
         {
             /** */
             Guid NodeId { get; }
-            
+
             /** */
             Guid? GuidProp { get; set; }
-            
+
             /** */
             TestValue ValueProp { get; set; }
 
@@ -178,7 +177,7 @@ namespace Apache.Ignite.Core.Tests.Services
         }
 
         #pragma warning disable 649
-        
+
         /** */
         private class TestPlatformService : ITestPlatformService
         {
@@ -194,7 +193,7 @@ namespace Apache.Ignite.Core.Tests.Services
 
             /** <inheritdoc /> */
             public Guid? GuidProp { get; set; }
-            
+
             /** <inheritdoc /> */
             public TestValue ValueProp { get; set; }
 
@@ -203,7 +202,7 @@ namespace Apache.Ignite.Core.Tests.Services
             {
                 throw new Exception("Failed method");
             }
-            
+
             /** <inheritdoc /> */
             public TestValue[] AddOneToEach(TestValue[] arr)
             {
@@ -222,7 +221,7 @@ namespace Apache.Ignite.Core.Tests.Services
                 {
                     Id = val.Id + 1,
                     Name = val.Name
-                
+
                 }).ToList();
 
                 return new ArrayList(res);
@@ -236,16 +235,16 @@ namespace Apache.Ignite.Core.Tests.Services
                 foreach (DictionaryEntry pair in dict)
                 {
                     var k = new TestKey(((TestKey) pair.Key).Id + 1);
-                    
+
                     var v = new TestValue()
                     {
                         Id = ((TestValue)pair.Value).Id + 1,
                         Name = ((TestValue)pair.Value).Name
                     };
-                    
+
                     res.Add(k, v);
                 }
-                
+
                 return res;
             }
 
@@ -277,7 +276,7 @@ namespace Apache.Ignite.Core.Tests.Services
                 // No-op;
             }
         }
-        
+
         #pragma warning restore 649
 
         /** */
@@ -291,25 +290,25 @@ namespace Apache.Ignite.Core.Tests.Services
 
             /** */
             public int Id { get; set; }
-            
+
             /** <inheritdoc /> */
             public override int GetHashCode()
             {
                 return Id;
             }
-            
+
             /** <inheritdoc /> */
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) 
+                if (ReferenceEquals(null, obj))
                     return false;
-                
-                if (ReferenceEquals(this, obj)) 
+
+                if (ReferenceEquals(this, obj))
                     return true;
-                
-                if (obj.GetType() != GetType()) 
+
+                if (obj.GetType() != GetType())
                     return false;
-                
+
                 return Id == ((TestKey)obj).Id;
             }
         }
@@ -319,7 +318,7 @@ namespace Apache.Ignite.Core.Tests.Services
         {
             /** */
             public int Id { get; set; }
-            
+
             /** */
             public string Name { get; set; }
         }
