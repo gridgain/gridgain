@@ -38,7 +38,6 @@ import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils.SF;
@@ -737,8 +736,6 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
         Collection<Thread> threads = new LinkedList<>();
 
-        log.info("RND: " + U.field(RAND, "seed"));
-
         try {
             final AtomicInteger txCntr = new AtomicInteger();
 
@@ -764,9 +761,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
                             List<Integer> keys = new ArrayList<>(txKeys);
 
-                            int c = 0;
-
-                            while (err.get() == null) {
+                            while (System.currentTimeMillis() < endTime && err.get() == null) {
                                 keys.clear();
 
                                 for (int i = 0; i < txKeys; i++)
@@ -774,6 +769,8 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
                                 // Ensure lock order.
                                 Collections.sort(keys);
+
+                                int c = 0;
 
                                 try {
                                     IgniteTransactions txs = ignite.transactions();
@@ -840,7 +837,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
                             int cnt = 0;
 
-                            while (err.get() == null) {
+                            while (System.currentTimeMillis() < endTime && err.get() == null) {
                                 stopGrid(getTestIgniteInstanceName(gridIdx), false, false);
                                 startGrid(gridIdx);
 
@@ -1039,6 +1036,4 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
         error("Attempt: " + attempt);
         error("Node: " + ignite.cluster().localNode().id());
     }
-
-
 }
