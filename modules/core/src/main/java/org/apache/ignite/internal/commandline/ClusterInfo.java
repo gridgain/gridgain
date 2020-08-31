@@ -51,7 +51,9 @@ public class ClusterInfo {
      * @return formatted UUID
      */
     public String getIdAsString() {
-        return getId().toString();
+        if (getId() != null)
+            return getId().toString();
+        return "-ID-";
     }
 
     /**
