@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
@@ -65,6 +66,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInne
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
@@ -121,9 +123,6 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.T_META;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.T_PAGE_LIST_META;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.T_PART_META;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getCrc;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getPageId;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
@@ -375,11 +374,11 @@ public class IgniteIndexReader implements AutoCloseable {
         List<Throwable> errors;
 
         try {
-            Set<Short> metaPageClasses = new HashSet<>(asList(T_META, T_PAGE_LIST_META));
+            Set<Class> metaPageClasses = new HashSet<>(asList(PageMetaIO.class, PagesListMetaIO.class));
 
-            Map<Short, Long> idxMetaPages = findPages(INDEX_PARTITION, FLAG_IDX, idxStore, metaPageClasses);
+            Map<Class, Long> idxMetaPages = findPages(INDEX_PARTITION, FLAG_IDX, idxStore, metaPageClasses);
 
-            Long pageMetaPageId = idxMetaPages.get(T_META);
+            Long pageMetaPageId = idxMetaPages.get(PageMetaIO.class);
 
             // Traversing trees.
             if (pageMetaPageId != null) {
@@ -406,7 +405,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 });
             }
 
-            Long pageListMetaPageId = idxMetaPages.get(T_PAGE_LIST_META);
+            Long pageListMetaPageId = idxMetaPages.get(PagesListMetaIO.class);
 
             // Scanning page reuse lists.
             if (pageListMetaPageId != null)
@@ -587,9 +586,9 @@ public class IgniteIndexReader implements AutoCloseable {
             final int partId = i;
 
             try {
-                Map<Short, Long> metaPages = findPages(i, FLAG_DATA, partStore, singleton(T_PART_META));
+                Map<Class, Long> metaPages = findPages(i, FLAG_DATA, partStore, singleton(PagePartitionMetaIO.class));
 
-                long partMetaId = metaPages.get(T_PART_META);
+                long partMetaId = metaPages.get(PagePartitionMetaIO.class);
 
                 doWithBuffer((buf, addr) -> {
                     readPage(partStore, partMetaId, buf);
@@ -668,18 +667,37 @@ public class IgniteIndexReader implements AutoCloseable {
      * @return Map of found pages. First page of this class that was found, is put to this map.
      * @throws IgniteCheckedException If failed.
      */
-    private Map<Short, Long> findPages(int partId, byte flag, FilePageStore store, Set<Short> pageTypes)
+    private Map<Class, Long> findPages(int partId, byte flag, FilePageStore store, Set<Class> pageTypes)
         throws IgniteCheckedException {
-        Map<Short, Long> res = new HashMap<>();
+        Map<Class, Long> res = new HashMap<>();
+
+        Map<Class, Class> latestToNeededTypes = new HashMap<>();
+
+        for (Class pageType : pageTypes) {
+            try {
+                Field versions = pageType.getDeclaredField("VERSIONS");
+
+                IOVersions v = (IOVersions)versions.get(null);
+
+                Class latest = v.latest().getClass();
+
+                latestToNeededTypes.put(latest, pageType);
+            }
+            catch (NoSuchFieldException | NullPointerException | IllegalAccessException e) {
+                latestToNeededTypes.put(pageType, pageType);
+            }
+        }
+
+        Set<Class> typesToFind = new HashSet<>(latestToNeededTypes.keySet());
 
         scanFileStore(partId, flag, store, (pageId, addr, io) -> {
-            if (pageTypes.contains((short)io.getType())) {
-                res.put((short)io.getType(), pageId);
+            if (typesToFind.contains(io.getClass())) {
+                res.put(latestToNeededTypes.get(io.getClass()), pageId);
 
-                pageTypes.remove((short)io.getType());
+                typesToFind.remove(io.getClass());
             }
 
-            return !pageTypes.isEmpty();
+            return !typesToFind.isEmpty();
         });
 
         return res;
@@ -1369,8 +1387,8 @@ public class IgniteIndexReader implements AutoCloseable {
                         changed = true;
 
                         break;
-                    case T_META:
-                    case T_PART_META:
+                    case PageIO.T_META:
+                    case PageIO.T_PART_META:
                         PageMetaIO io = PageIO.getPageIO(pageType, PageIO.getVersion(readAddr));
 
                         io.setLastAllocatedPageCount(readAddr, 0);
