@@ -908,9 +908,6 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         stopGrid(getTestIgniteInstanceName(2), true, false);
 
-        // Waiting for baseline auto adjustment completed.
-        srv0.context().cache().context().exchange().affinityReadyFuture(new AffinityTopologyVersion(8, 0)).get();
-
         checkAffinity();
 
         checkCaches0();
@@ -1482,6 +1479,12 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                 @Override public void run() {
                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
+                    CacheConfiguration cCfg = cache.getConfiguration(CacheConfiguration.class);
+
+                    boolean isTxCacheWithouBackups = cCfg.getCacheMode() == PARTITIONED &&
+                        cCfg.getAtomicityMode() == TRANSACTIONAL &&
+                        cCfg.getBackups() == 0;
+
                     assertNotNull("No cache [node=" + node.name() +
                         ", client=" + node.configuration().isClientMode() +
                         ", order=" + node.cluster().localNode().order() +
@@ -1499,7 +1502,10 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
                         Object val = cache.get(key);
 
-                        assertEquals(err, i, val);
+                        if (isTxCacheWithouBackups)
+                            assertTrue(err, val.equals(i) || val == null);
+                        else
+                            assertEquals(err, i, val);
                     }
 
                     for (int i = 0; i < 5; i++) {
@@ -1515,8 +1521,12 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
                         Map<Object, Object> res = cache.getAll(map.keySet());
 
-                        for (Map.Entry<Integer, Integer> e : map.entrySet())
-                            assertEquals(err, e.getValue(), res.get(e.getKey()));
+                        for (Map.Entry<Integer, Integer> e : map.entrySet()) {
+                            if (isTxCacheWithouBackups)
+                                assertTrue(err, e.getValue().equals(res.get(e.getKey())) || res.get(e.getKey()) == null);
+                            else
+                                assertEquals(err, e.getValue(), res.get(e.getKey()));
+                        }
                     }
 
                     if (atomicityMode(cache) == TRANSACTIONAL) {

@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
@@ -36,7 +37,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-import org.junit.Ignore;
+import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
@@ -122,7 +123,7 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Ignore
+    @Test
     public void testTxOneBackups() throws Exception {
         backups = 1;
 
@@ -207,15 +208,21 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
 
         spi.stopBlock();
 
-        putFut.get();
-
         try {
-            assertEquals(testVal, cache.get(key));
+            putFut.get();
 
-            assertTrue(((CacheConfiguration)cache.getConfiguration(CacheConfiguration.class)).getBackups() != 0);
+            try {
+                assertEquals(testVal, cache.get(key));
+
+                assertTrue(((CacheConfiguration)cache.getConfiguration(CacheConfiguration.class)).getBackups() != 0);
+            }
+            catch (Exception e) {
+                checkException(cache, e);
+            }
         }
         catch (Exception e) {
-            checkException(cache, e);
+            if (X.hasCause(e, TransactionRollbackException.class))
+                info("Transaction was rolled back [err=" + e.getMessage() + "]");
         }
     }
 
@@ -229,6 +236,9 @@ public class OnePhaseCommitAndNodeLeftTest extends GridCommonAbstractTest {
         log.error("Ex", e);
 
         Exception ex = X.cause(e, CacheInvalidStateException.class);
+
+        if (ex == null)
+            throw new IgniteException(e);
 
         assertTrue(ex.getMessage().contains(LOST_ALL_QWNERS_MSG));
 
