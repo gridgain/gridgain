@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
 import org.apache.ignite.internal.util.lang.GridTuple;
-import org.h2.table.Column;
-import org.h2.value.CompareMode;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.CompareMode;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Factory to create inline column wrapper for given column.

@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
-import org.h2.expression.function.Function;
-import org.h2.expression.function.FunctionInfo;
+import org.gridgain.internal.h2.expression.function.Function;
+import org.gridgain.internal.h2.expression.function.FunctionInfo;
 
 /**
  * SQL function manager.

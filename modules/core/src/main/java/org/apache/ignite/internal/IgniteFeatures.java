@@ -168,8 +168,14 @@ public enum IgniteFeatures {
     /** Snapshots without PME. */
     EXCHANGELESS_SNAPSHOT(43),
 
+    /** Optimization of recovery protocol for cluster which doesn't contain MVCC caches. */
+    MVCC_TX_RECOVERY_PROTOCOL_V2(44),
+
+    /** Pk index keys are applied in correct order. */
+    SPECIFIED_SEQ_PK_KEYS(45),
+
     /** Snapshots upload via sftp. */
-    SNAPSHOT_SFTP_UPLOAD(44);
+    SNAPSHOT_SFTP_UPLOAD(46);
 
     /**
      * Unique feature identifier.

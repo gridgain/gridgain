@@ -51,6 +51,7 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -72,7 +73,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
@@ -171,9 +171,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      */
     private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
 
-    /** */
-    private final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
-
     /**
      * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
      */
@@ -182,7 +179,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (!compatibilityMode)
                 return;
 
-            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), SRVS_NODES_FILTER),
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
                 IgniteFeatures.CLUSTER_ID_AND_TAG)
             ) {
                 // Only coordinator initializes ID and tag.
@@ -441,7 +438,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), SRVS_NODES_FILTER),
+        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
             IgniteFeatures.CLUSTER_ID_AND_TAG)
         ) {
             compatibilityMode = true;

@@ -19,17 +19,17 @@ package org.apache.ignite.internal.processors.query.h2.sys;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemView;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.engine.Session;
-import org.h2.index.Index;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableBase;
-import org.h2.table.TableType;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableBase;
+import org.gridgain.internal.h2.table.TableType;
 
 /**
  * System H2 table over a view.

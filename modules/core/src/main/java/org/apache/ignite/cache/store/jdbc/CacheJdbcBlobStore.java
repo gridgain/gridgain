@@ -82,8 +82,8 @@ import org.jetbrains.annotations.Nullable;
  * Use {@link CacheJdbcBlobStoreFactory} factory to pass {@link CacheJdbcBlobStore} to {@link CacheConfiguration}.
  */
 public class CacheJdbcBlobStore<K, V> extends CacheStoreAdapter<K, V> {
-    /** Default connection URL (value is <tt>jdbc:h2:mem:jdbcCacheStore;DB_CLOSE_DELAY=-1</tt>). */
-    public static final String DFLT_CONN_URL = "jdbc:h2:mem:jdbcCacheStore;DB_CLOSE_DELAY=-1";
+    /** Default connection URL (value is <tt>jdbc:gg-h2:mem:jdbcCacheStore;DB_CLOSE_DELAY=-1</tt>). */
+    public static final String DFLT_CONN_URL = "jdbc:gg-h2:mem:jdbcCacheStore;DB_CLOSE_DELAY=-1";
 
     /**
      * Default create table query

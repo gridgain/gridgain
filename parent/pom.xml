@@ -680,13 +680,13 @@
                 <version>3.0.0-M4</version>
                 <configuration>
                     <forkCount>0</forkCount>
-                    <!--statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
+                    <statelessTestsetInfoReporter implementation="org.apache.ignite.tools.surefire.TestSuiteAwareTestsetReporter"/>
                     <properties>
                         <property>
                             <name>listener</name>
                             <value>org.apache.ignite.tools.junit.JUnitTeamcityReporter</value>
                         </property>
-                    </properties-->
+                    </properties>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -1106,7 +1106,7 @@
                                         <exclude>**/*.json</exclude>
                                         <exclude>**/.dockerignore</exclude>
                                         <!-- H2 forked module. -->
-                                        <exclude>**/org/h2/**</exclude>
+                                        <exclude>**/org/gridgain/internal/h2/**</exclude>
                                         <exclude>src/docsrc/**</exclude>
                                         <exclude>src/test/tools/WEB-INF/console.html</exclude>
                                         <exclude>src/test/tools/WEB-INF/web.xml</exclude>

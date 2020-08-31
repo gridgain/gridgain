@@ -157,7 +157,7 @@ public abstract class AbstractH2CompareQueryTest extends AbstractIndexingCommonT
 
         String dbName = "test";
 
-        Connection conn = DriverManager.getConnection("jdbc:h2:mem:" + dbName + ";DB_CLOSE_DELAY=-1");
+        Connection conn = DriverManager.getConnection("jdbc:gg-h2:mem:" + dbName + ";DB_CLOSE_DELAY=-1");
 
         conn.setAutoCommit(autocommit);
 
