@@ -31,9 +31,9 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRange
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Cursor;
-import org.h2.result.Row;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.value.Value;
 
 import javax.cache.CacheException;
 import java.util.Iterator;
@@ -47,7 +47,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
-import static org.h2.result.Row.MEMORY_CALCULATE;
+import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 
 /**
  * Per node range stream.

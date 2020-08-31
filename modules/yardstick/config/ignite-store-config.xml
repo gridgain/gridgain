@@ -29,8 +29,8 @@
     <!--
         Store data source.
     -->
-    <bean id="storeDataSource" class="org.h2.jdbcx.JdbcDataSource">
-        <property name="url" value="jdbc:h2:tcp://localhost/store-benchmark/h2-benchmark"/>
+    <bean id="storeDataSource" class="org.gridgain.internal.h2.jdbcx.JdbcDataSource">
+        <property name="url" value="jdbc:gg-h2:tcp://localhost/store-benchmark/h2-benchmark"/>
         <property name="user" value="sa"/>
     </bean>
 

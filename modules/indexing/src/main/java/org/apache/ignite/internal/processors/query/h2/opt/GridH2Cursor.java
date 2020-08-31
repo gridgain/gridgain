@@ -17,10 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.Iterator;
-import org.h2.index.Cursor;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
 
 /**
  * H2 Cursor implementation.
