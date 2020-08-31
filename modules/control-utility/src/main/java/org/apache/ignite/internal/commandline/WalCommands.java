@@ -116,6 +116,7 @@ public class WalCommands implements Command<T2<String, String>> {
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg, log)) {
             ClusterInfo clusterInfo = Command.getClusterInfo(client.state());
+
             if(clusterInfo != null)
                 clusterName = clusterInfo.getTag();
         }
