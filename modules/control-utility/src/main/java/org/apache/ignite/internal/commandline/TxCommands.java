@@ -112,7 +112,7 @@ public class TxCommands implements Command<VisorTxTaskArg> {
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         this.logger = logger;
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             if (args.getOperation() == VisorTxOperation.INFO)
                 return transactionInfo(client, clientCfg);
 

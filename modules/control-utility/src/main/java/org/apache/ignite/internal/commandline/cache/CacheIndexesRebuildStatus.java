@@ -89,7 +89,7 @@ public class CacheIndexesRebuildStatus implements Command<CacheIndexesRebuildSta
 
         IndexRebuildStatusTaskArg taskArg = new IndexRebuildStatusTaskArg(nodeId);
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexRebuildStatusTask.class.getName(), taskArg,
                     nodeId, clientCfg);

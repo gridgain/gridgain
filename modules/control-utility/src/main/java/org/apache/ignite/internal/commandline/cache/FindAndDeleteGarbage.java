@@ -120,8 +120,7 @@ public class FindAndDeleteGarbage implements Command<FindAndDeleteGarbage.Argume
             args.nodeId() != null ? Collections.singleton(args.nodeId()) : null
         );
 
-        try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), logger);
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
 
             VisorFindAndDeleteGarbageInPersistenceTaskResult taskRes = executeTask(
                 client, VisorFindAndDeleteGarbageInPersistenceTask.class, taskArg, clientCfg);

@@ -41,9 +41,11 @@ public class DeactivateCommand implements Command<Void> {
     }
 
     /** {@inheritDoc} */
-    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = client.state().clusterName();
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg, Logger logger) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
+            ClusterInfo clusterInfo = Command.getClusterInfo(client.state());
+            if(clusterInfo != null)
+                clusterName = clusterInfo.getTag();
         }
     }
 
@@ -61,7 +63,7 @@ public class DeactivateCommand implements Command<Void> {
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         logger.warning("Command deprecated. Use " + SET_STATE.toString() + " instead.");
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             GridClientClusterState state = client.state();
 
             state.active(false);

@@ -51,8 +51,7 @@ public class ClusterChangeTagCommand implements Command<String> {
         if (!isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE))
             return null;
 
-        try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), logger);
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
 
             UUID coordinatorId = client.compute().nodes().stream()
                 .min(Comparator.comparingLong(GridClientNode::order))

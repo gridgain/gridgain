@@ -20,15 +20,14 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientException;
-import org.apache.ignite.internal.client.GridClientFactory;
+import org.apache.ignite.internal.client.*;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
@@ -47,7 +46,7 @@ public interface Command<T> {
      * @return Grid thin client instance which is already connected to cluster.
      * @throws Exception If error occur.
      */
-    public static GridClient startClient(GridClientConfiguration clientCfg) throws Exception {
+    public static GridClient startClient(GridClientConfiguration clientCfg, Logger log) throws Exception {
         GridClient client = GridClientFactory.start(clientCfg);
 
         // If connection is unsuccessful, fail before doing any operations:
@@ -57,9 +56,41 @@ public interface Command<T> {
             client.close();
 
             throw lastErr;
-        }
+        } else
+            printClusterInfoBanner(client.state(), log);
 
         return client;
+    }
+
+    /**
+     * @return Cluster information to show user for.
+     */
+    static void printClusterInfoBanner(GridClientClusterState clientCfg, Logger log){
+        ClusterInfo clusterName = getClusterInfo(clientCfg);
+
+        if (clusterName != null) {
+            log.info(CommandHandler.DELIM);
+            log.info("Cluster  ID: \"" + clusterName.getIdAsString() + "\"");
+            log.info("Cluster tag: " + clusterName.getTag() + "\"");
+
+            log.info(CommandHandler.DELIM);
+        }
+    }
+
+    /**
+     * @return Cluster information to show user for.
+     */
+    static ClusterInfo getClusterInfo(GridClientClusterState clientCfg){
+        String clusterName = null;
+        try{
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
+                ClusterInfo clusterInfo = new ClusterInfo(clientCfg.id(), clientCfg.tag());
+                return clusterInfo;
+            }
+        }
+        catch (GridClientException ignored){
+        };
+        return null;
     }
 
     /**
@@ -157,7 +188,7 @@ public interface Command<T> {
      * @param clientCfg Thin client configuration.
      * @throws Exception If error occur.
      */
-    default void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception{
+    default void prepareConfirmation(GridClientConfiguration clientCfg, Logger log) throws Exception{
         //no-op
     }
 

@@ -56,9 +56,7 @@ public class ResetLostPartitions implements Command<Set<String>> {
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         CacheResetLostPartitionsTaskArg taskArg = new CacheResetLostPartitionsTaskArg(caches);
 
-        try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), logger);
-
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             CacheResetLostPartitionsTaskResult res =
                 executeTaskByNameOnNode(client, CacheResetLostPartitionsTask.class.getName(), taskArg, null, clientCfg);
 

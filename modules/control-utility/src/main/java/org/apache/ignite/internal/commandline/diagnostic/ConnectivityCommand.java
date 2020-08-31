@@ -77,7 +77,7 @@ public class ConnectivityCommand implements Command<Void> {
 
         Map<ClusterNode, VisorConnectivityResult> result;
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             Set<UUID> nodeIds = client.compute().nodes().stream().map(GridClientNode::nodeId).collect(Collectors.toSet());
 
             VisorConnectivityArgs taskArg = new VisorConnectivityArgs(nodeIds);

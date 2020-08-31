@@ -89,8 +89,7 @@ public class WalCommands implements Command<T2<String, String>> {
         if (experimentalEnabled()) {
             this.logger = logger;
 
-            try (GridClient client = Command.startClient(clientCfg)) {
-                printClusterInfoBanner(client.state(), logger);
+            try (GridClient client = Command.startClient(clientCfg, logger)) {
 
                 switch (walAct) {
                     case WAL_DELETE:
@@ -114,9 +113,9 @@ public class WalCommands implements Command<T2<String, String>> {
     }
 
     /** {@inheritDoc} */
-    @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
-            ClusterInfo clusterInfo = getClusterInfo(client.state());
+    @Override public void prepareConfirmation(GridClientConfiguration clientCfg, Logger log) throws Exception {
+        try (GridClient client = Command.startClient(clientCfg, log)) {
+            ClusterInfo clusterInfo = Command.getClusterInfo(client.state());
             if(clusterInfo != null)
                 clusterName = clusterInfo.getTag();
         }

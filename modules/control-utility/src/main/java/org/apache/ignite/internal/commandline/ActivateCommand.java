@@ -46,7 +46,7 @@ public class ActivateCommand implements Command<Void> {
     @Override public Object execute(GridClientConfiguration cfg, Logger logger) throws Exception {
         logger.warning("Command deprecated. Use " + SET_STATE.toString() + " instead.");
 
-        try (GridClient client = Command.startClient(cfg)) {
+        try (GridClient client = Command.startClient(cfg, logger)) {
             GridClientClusterState state = client.state();
 
             state.active(true);

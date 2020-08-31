@@ -134,7 +134,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         if (experimentalEnabled()) {
-            try (GridClient client = Command.startClient(clientCfg)) {
+            try (GridClient client = Command.startClient(clientCfg, log)) {
                 UUID crdId = client.compute()
                     //Only non client node can be coordinator.
                     .nodes(node -> !node.isClient())

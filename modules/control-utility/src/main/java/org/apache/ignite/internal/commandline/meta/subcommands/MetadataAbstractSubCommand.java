@@ -60,7 +60,7 @@ public abstract class MetadataAbstractSubCommand<
 
     /** {@inheritDoc} */
     @Override public final Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, log)) {
             GridClientCompute compute = client.compute();
 
             // Try to find connectable server nodes.

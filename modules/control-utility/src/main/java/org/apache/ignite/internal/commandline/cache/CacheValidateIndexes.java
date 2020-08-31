@@ -213,8 +213,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             args.checkSizes()
         );
 
-        try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), logger);
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
 
             VisorValidateIndexesTaskResult taskRes = executeTaskByNameOnNode(
                 client, "org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask", taskArg, null, clientCfg);

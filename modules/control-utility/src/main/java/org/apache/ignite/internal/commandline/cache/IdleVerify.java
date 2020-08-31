@@ -190,7 +190,7 @@ public class IdleVerify implements Command<IdleVerify.Arguments> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             Collection<GridClientNode> nodes = client.compute().nodes(GridClientNode::connectable);
 
             boolean idleVerifyV2 = true;

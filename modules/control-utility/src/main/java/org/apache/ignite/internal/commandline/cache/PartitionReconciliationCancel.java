@@ -50,9 +50,7 @@ public class PartitionReconciliationCancel implements Command<Void> {
 
     /** {@inheritDoc} */
     @Override public Void execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), log);
-
+        try (GridClient client = Command.startClient(clientCfg, log)) {
             executeTask(client, VisorPartitionReconciliationCancelTask.class, null, clientCfg);
         }
 

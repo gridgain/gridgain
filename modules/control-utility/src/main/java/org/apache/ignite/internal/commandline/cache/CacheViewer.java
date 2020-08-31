@@ -167,7 +167,7 @@ public class CacheViewer implements Command<CacheViewer.Arguments> {
 
         VisorViewCacheTaskResult res;
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             res = TaskExecutor.executeTaskByNameOnNode(
                 client,
                 VisorViewCacheTask.class.getName(),

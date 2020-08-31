@@ -88,7 +88,7 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
 
         IndexListTaskArg taskArg = new IndexListTaskArg(args.groupsRegEx, args.cachesRegEx, args.indexesRegEx);
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client,
                     "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, nodeId, clientCfg);

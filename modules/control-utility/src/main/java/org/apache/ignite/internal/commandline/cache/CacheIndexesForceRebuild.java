@@ -84,7 +84,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
 
         final UUID nodeId = args.nodeId;
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg,
                     nodeId, clientCfg);

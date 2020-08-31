@@ -56,7 +56,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
             throw new IgniteCheckedException("Rolling upgrade isn't supported.");
         }
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, log)) {
             if (RollingUpgradeSubCommands.STATUS == rollingUpgradeArgs.command()) {
                 VisorRollingUpgradeStatusResult status = executeTask(
                     client,

@@ -67,7 +67,7 @@ public class PageLocksCommand implements Command<PageLocksCommand.Arguments> {
 
         Map<ClusterNode, VisorPageLocksResult> res;
 
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             if (arguments.allNodes) {
                 client.compute().nodes().forEach(n -> {
                     nodeIds.add(String.valueOf(n.consistentId()));

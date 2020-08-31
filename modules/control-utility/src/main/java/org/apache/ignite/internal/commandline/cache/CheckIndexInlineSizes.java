@@ -58,8 +58,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
-            printClusterInfoBanner(client.state(), log);
+        try (GridClient client = Command.startClient(clientCfg, log)) {
 
             Set<GridClientNode> serverNodes = client.compute().nodes().stream()
                 .filter(SRV_NODES)

@@ -66,7 +66,7 @@ public abstract class DrAbstractRemoteSubCommand<
 
     /** {@inheritDoc} */
     @Override public final Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
-        try (GridClient client = Command.startClient(clientCfg)) {
+        try (GridClient client = Command.startClient(clientCfg, log)) {
             VisorResultDto res = execute0(clientCfg, client);
 
             printResult(res, log);
