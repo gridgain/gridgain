@@ -1110,31 +1110,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
     }
 
     /**
-     * Check that cache.put related cache name and key are available as log points on transactions span.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testTXCachePutLogPoint() throws Exception {
-        IgniteEx client = startGrid("client");
-
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
-
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        tx.commit();
-
-        handler().flush();
-
-        SpanData txSpan = handler().allSpans()
-            .filter(span -> TX.spanName().equals(span.getName())).findFirst().get();
-
-        assertEquals("[cache=default]", txSpan.getAnnotations().getEvents().get(0).getEvent().getDescription());
-
-        assertEquals("[key=1]", txSpan.getAnnotations().getEvents().get(1).getEvent().getDescription());
-    }
-
-    /**
      * Check that cache.put opeartions are traced witthin transaction span in case of adding CACHE_API_WRITE as
      * supported scope to TX tracing configuration.
      *
@@ -1205,54 +1180,6 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
         assertEquals("[cache=default]", txSpan.getAnnotations().getEvents().get(0).getEvent().getDescription());
 
         assertEquals("[key=1]", txSpan.getAnnotations().getEvents().get(1).getEvent().getDescription());
-    }
-
-    /**
-     * Check that cache.put operations are traced within transaction span in case of adding CACHE_API_WRITE as
-     * supported scope to TX tracing configuration.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testTxCacheApiWriteIncludedScope() throws Exception {
-        IgniteEx client = startGrid("client");
-
-        grid(0).tracingConfiguration().set(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
-            new TracingConfigurationParameters.Builder().
-                withIncludedScopes(Collections.singleton(Scope.CACHE_API_WRITE)).
-                withSamplingRate(SAMPLING_RATE_ALWAYS).build());
-
-        Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
-
-        client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-
-        client.cache(DEFAULT_CACHE_NAME).put(2, 2);
-
-        tx.commit();
-
-        handler().flush();
-
-        List<SpanId> txSpanIds = checkSpan(
-            TX,
-            null,
-            1,
-            ImmutableMap.<String, String>builder()
-                .put("node.id", client.localNode().id().toString())
-                .put("node.consistent.id", client.localNode().consistentId().toString())
-                .put("node.name", client.name())
-                .put("concurrency", PESSIMISTIC.name())
-                .put("isolation", SERIALIZABLE.name())
-                .put("timeout", String.valueOf(0))
-                .put("label", "label1")
-                .build()
-        );
-
-        checkSpan(
-            CACHE_API_PUT,
-            txSpanIds.get(0),
-            2,
-            null);
     }
 
     /**
