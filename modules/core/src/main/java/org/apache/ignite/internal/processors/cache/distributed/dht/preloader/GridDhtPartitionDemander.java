@@ -2046,6 +2046,11 @@ public class GridDhtPartitionDemander {
                     ", supplier=" + nodeId +
                     ", topVer=" + topologyVersion() +
                     ", progress=" + (routines - remainingRoutines) + "/" + routines + "]"), t);
+
+                U.error(log, "Kirill [rebalancingParts=" + remainingRoutines
+                    + "ln=" + ctx.node(nodeId)
+                    + ']', t);
+                throw t;
             }
         }
 
