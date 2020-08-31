@@ -435,8 +435,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         String clTag = ((IgniteClusterEx)ignite.cluster()).tag();
 
         assertContains(log, out, "Cluster is inactive");
-        assertContains(log, out, "Cluster  ID: " + clId);
-        assertContains(log, out, "Cluster tag: " + clTag);
+        assertContains(log, out, "Cluster  ID: \"" + clId + "\"");
+        assertContains(log, out, "Cluster tag: \"" + clTag + "\"");
 
         ignite.cluster().active(true);
 
