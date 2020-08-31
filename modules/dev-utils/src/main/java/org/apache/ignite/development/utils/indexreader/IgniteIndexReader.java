@@ -1529,23 +1529,23 @@ public class IgniteIndexReader implements AutoCloseable {
         /** */
         DIR("--dir"),
         /** */
-        PART_CNT("--partCnt"),
+        PART_CNT("--part-cnt"),
         /** */
-        PAGE_SIZE("--pageSize"),
+        PAGE_SIZE("--page-size"),
         /** */
-        PAGE_STORE_VER("--pageStoreVer"),
+        PAGE_STORE_VER("--page-store-ver"),
         /** */
         INDEXES("--indexes"),
         /** */
-        DEST_FILE("--destFile"),
+        DEST_FILE("--dest-file"),
         /** */
         TRANSFORM("--transform"),
         /** */
         DEST("--dest"),
         /** */
-        FILE_MASK("--fileMask"),
+        FILE_MASK("--file-mask"),
         /** */
-        CHECK_PARTS("--checkParts"),
+        CHECK_PARTS("--check-parts"),
         /** Snapshot flag. */
         SNAPSHOT("--snapshot");
 
