@@ -48,14 +48,10 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     /** Max retry cont. */
     private static final int MAX_RETRY_CONT = 10;
 
-    /**
-     *
-     */
+    /** */
     private static final String CACHE_NAME = "cache";
 
-    /**
-     *
-     */
+    /** */
     private GridTestUtils.DiscoveryHook discoveryHook;
 
     /** {@inheritDoc} */
@@ -119,8 +115,9 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     public void testRemoveNotExistentType() {
         for (Ignite testNode : G.allGrids()) {
             GridTestUtils.assertThrows(log, () -> {
-                    ((IgniteEx)testNode).context().cacheObjects().removeType
-                        (((IgniteEx)testNode).context().cacheObjects().typeId("NotExistentType"));
+                    ((IgniteEx)testNode).context().cacheObjects().removeType(
+                        ((IgniteEx)testNode).context().cacheObjects().typeId("NotExistentType"));
+
                     return null;
                 },
                 IgniteException.class, "Failed to remove metadata, type not found");
@@ -245,7 +242,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
         barrier0.await();
 
-        GridTestUtils.assertThrows(log, () -> {
+        GridTestUtils.assertThrowsAnyCause(log, () -> {
             BinaryObjectBuilder bld = grid("srv2").binary().builder("Type0");
 
             bld.setField("f1", 1);
@@ -265,6 +262,8 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
             });
 
             bld.build();
+
+            return null;
         }, BinaryObjectException.class, "The type is removing now");
     }
 

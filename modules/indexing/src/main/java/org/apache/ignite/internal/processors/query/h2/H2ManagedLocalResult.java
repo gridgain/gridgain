@@ -19,39 +19,77 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
-import org.h2.engine.Session;
-import org.h2.engine.SessionInterface;
-import org.h2.expression.Expression;
-import org.h2.message.DbException;
-import org.h2.result.LocalResult;
-import org.h2.result.ResultExternal;
-import org.h2.result.SortOrder;
-import org.h2.util.Utils;
-import org.h2.value.TypeInfo;
-import org.h2.value.Value;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.engine.SessionInterface;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.LocalResult;
+import org.gridgain.internal.h2.result.ResultExternal;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.TypeInfo;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueRow;
 
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.calculateMemoryDelta;
 
 /** */
 public class H2ManagedLocalResult implements LocalResult {
+    /** */
     private Session session;
+
+    /** */
     private int visibleColumnCount;
+
+    /** */
     private Expression[] expressions;
-    private int rowId, rowCount;
+
+    /** */
+    private int rowId;
+
+    /** */
+    private int rowCount;
+
+    /** */
     private ArrayList<Value[]> rows;
+
+    /** */
     private SortOrder sort;
+
+    /** */
     private TreeMap<Value, Value[]> distinctRows;
+
+    /** */
     private Value[] currentRow;
+
+    /** */
     private int offset;
+
+    /** */
     private int limit = -1;
+
+    /** */
     private boolean fetchPercent;
+
+    /** */
     private SortOrder withTiesSortOrder;
+
+    /** */
     private boolean limitsWereApplied;
+
+    /** */
     private boolean distinct;
+
+    /** */
     private int[] distinctIndexes;
+
+    /** */
     private boolean closed;
+
+    /** */
     private boolean containsLobs;
+
+    /** */
     private Boolean containsNull;
 
     /** Disk spilling (offloading) manager. */
@@ -84,11 +122,8 @@ public class H2ManagedLocalResult implements LocalResult {
         this.visibleColumnCount = visibleColCnt;
         rowId = -1;
         this.expressions = expressions;
-    }
 
-    private void initMemTracker() {
-        if (memTracker == null)
-            memTracker = session.memoryTracker() != null ? session.memoryTracker().createChildTracker() : null;
+        memTracker = session.memoryTracker();
     }
 
     /**
@@ -248,8 +283,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void reset() {
+    @Override public void reset() {
         rowId = -1;
         currentRow = null;
         if (external != null)
@@ -266,11 +300,11 @@ public class H2ManagedLocalResult implements LocalResult {
         if (!closed && rowId < rowCount) {
             rowId++;
             if (rowId < rowCount) {
-                if (external != null) {
+                if (external != null)
                     currentRow = external.next();
-                } else {
+                else
                     currentRow = rows.get(rowId);
-                }
+
                 return true;
             }
             currentRow = null;
@@ -336,7 +370,6 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void addRow(Value[] values) {
         cloneLobs(values);
-        initMemTracker();
         if (isAnyDistinct()) {
             if (distinctRows != null) {
                 ValueRow array = getDistinctRow(values);
@@ -384,7 +417,7 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
-        memTracker.release(memTracker.reserved());
+        memTracker.release(memReserved);
 
         memReserved = 0;
     }
@@ -396,7 +429,6 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void done() {
-        initMemTracker();
         if (external != null)
             addRowsToDisk(false);
 
@@ -482,7 +514,6 @@ public class H2ManagedLocalResult implements LocalResult {
         external = null;
 
         temp.reset();
-        initMemTracker();
 
         while (--offset >= 0)
             temp.next();
@@ -637,14 +668,20 @@ public class H2ManagedLocalResult implements LocalResult {
         return memTracker;
     }
 
-
     /** Close event handler. */
     protected void onClose() {
         // Allow results to be collected by GC before mark memory released.
         distinctRows = null;
         rows = null;
 
-        if (memTracker != null)
-            memTracker.close();
+        if (memReserved > 0) {
+            H2MemoryTracker tracker = session.memoryTracker();
+
+            assert tracker != null;
+
+            tracker.release(memReserved);
+
+            memReserved = 0;
+        }
     }
 }

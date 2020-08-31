@@ -202,6 +202,11 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     }
 
     /** {@inheritDoc} */
+    @Override public long getTotalUsedSize() {
+        return getTotalUsedPages() * (persistenceEnabled ? pageMem.pageSize() : pageMem.systemPageSize());
+    }
+
+    /** {@inheritDoc} */
     @Override public float getAllocationRate() {
         if (!metricsEnabled)
             return 0;
@@ -375,7 +380,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /**
      * Updates page read.
      */
-    public void onPageRead(){
+    public void onPageRead() {
         if (metricsEnabled)
             readPages.increment();
     }
@@ -383,7 +388,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /**
      * Updates page written.
      */
-    public void onPageWritten(){
+    public void onPageWritten() {
         if (metricsEnabled)
             writtenPages.increment();
     }

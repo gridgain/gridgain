@@ -525,8 +525,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (grpHolder == null)
                     grpHolder = getOrCreateGroupHolder(topVer, grpDesc);
 
-                // If current node is not client and current node have no aff holder.
-                if (grpHolder.nonAffNode() && !cctx.localNode().isClient()) {
+                // If current node have no aff holder.
+                if (grpHolder.nonAffNode()) {
                     GridDhtPartitionsExchangeFuture excFut = context().exchange().lastFinishedFuture();
 
                     grp.topology().updateTopologyVersion(excFut, discoCache, -1, false);
@@ -3025,7 +3025,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             int partsNum
             ) {
             String res = "Cache group '%s'" +
-                " brings high overhead for its metainformation in data region '%s'."  +
+                " brings high overhead for its metainformation in data region '%s'." +
                 " Metainformation required for its partitions (%d partitions, %d bytes per partition, %d MBs total)" +
                 " will consume more than 15%% of data region memory (%d MBs)." +
                 " It may lead to critical errors on the node and cluster instability." +

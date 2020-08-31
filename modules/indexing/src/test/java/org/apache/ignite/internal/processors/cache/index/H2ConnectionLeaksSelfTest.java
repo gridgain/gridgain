@@ -181,7 +181,7 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
         checkThereAreNotUsedConnections();
 
         // Check leaks after error on insert single row.
-        GridTestUtils.assertThrows(log, ()-> {
+        GridTestUtils.assertThrows(log, () -> {
             sql(grid(0), "INSERT INTO TEST_F VALUES (1/?, CURRENT_TIMESTAMP())", 0);
         }, IgniteSQLException.class, "Division by zero");
 

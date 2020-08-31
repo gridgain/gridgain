@@ -20,14 +20,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalResult;
-import org.h2.command.dml.GroupByData;
-import org.h2.engine.Session;
-import org.h2.expression.aggregate.AggregateData;
-import org.h2.value.CompareMode;
-import org.h2.value.Value;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.command.dml.GroupByData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.aggregate.AggregateData;
+import org.gridgain.internal.h2.value.CompareMode;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueRow;
 
-import static org.h2.command.dml.SelectGroups.cleanupAggregates;
+import static org.gridgain.internal.h2.command.dml.SelectGroups.cleanupAggregates;
 
 /**
  * Group by data with disk offload capabilities.

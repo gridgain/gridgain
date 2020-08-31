@@ -827,6 +827,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-29808")
     public void testRestarts() throws Exception {
         final AtomicReference<String> sesIdRef = new AtomicReference<>();
 
@@ -1029,8 +1030,8 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
      * @param srv Server.
      * @throws Exception In case of error.
      */
-    private void stopServerWithLoginService(@Nullable Server srv) throws Exception{
-        if (srv != null){
+    private void stopServerWithLoginService(@Nullable Server srv) throws Exception {
+        if (srv != null) {
             srv.stop();
             File realmFile = new File("/tmp/realm.properties");
             realmFile.delete();
@@ -1038,7 +1039,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
     }
 
     /** Creates a realm file to store test user credentials */
-    private void createRealm() throws Exception{
+    private void createRealm() throws Exception {
         File realmFile = new File("/tmp/realm.properties");
         FileWriter fileWriter = new FileWriter(realmFile);
         fileWriter.append("admin:admin");
@@ -1068,7 +1069,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
                 for (String headerValue : headerFieldValue) {
                     String[] fields = headerValue.split(";");
                     sessionCookieValue = fields[0];
-                    sesId = sessionCookieValue.substring(sessionCookieValue.indexOf("=")+1,
+                    sesId = sessionCookieValue.substring(sessionCookieValue.indexOf("=") + 1,
                             sessionCookieValue.length());
                 }
             }
@@ -1270,6 +1271,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
                 res.getWriter().flush();
             }
         }
+
         /** {@inheritDoc} */
         @Override protected void doPost(HttpServletRequest req, HttpServletResponse res)
                 throws ServletException, IOException {

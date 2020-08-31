@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.util.DateTimeUtils;
+import org.gridgain.internal.h2.util.DateTimeUtils;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Before;
@@ -383,7 +383,7 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
             }
             else {
                 idxName = PK_IDX_NAME;
-                idxFieldName= KEY_FIELD_NAME;
+                idxFieldName = KEY_FIELD_NAME;
             }
 
             Map<T, Integer> data = new TreeMap<>(comp);

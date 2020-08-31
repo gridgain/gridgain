@@ -16,9 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
-import org.h2.table.Column;
-import org.h2.value.Value;
-import org.h2.value.ValueStringIgnoreCase;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueStringIgnoreCase;
 
 /**
  * Inline index column implementation for inlining strings ignore case.

@@ -46,6 +46,7 @@ import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.exceptions.SqlCacheException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -201,7 +202,6 @@ public class QueryUtils {
     public static String indexName(QueryEntity entity, QueryIndex idx) {
         return indexName(tableName(entity), idx);
     }
-
 
     /**
      * Get index name.
@@ -595,7 +595,7 @@ public class QueryUtils {
         Set<String> keyFields = qryEntity.getKeyFields();
         Set<String> notNulls = qryEntity.getNotNullFields();
         Map<String, Object> dlftVals = qryEntity.getDefaultFieldValues();
-        Map<String, Integer> precision  = qryEntity.getFieldsPrecision();
+        Map<String, Integer> precision = qryEntity.getFieldsPrecision();
         Map<String, Integer> scale = qryEntity.getFieldsScale();
 
         boolean hasKeyFields = (keyFields != null);
@@ -640,6 +640,9 @@ public class QueryUtils {
             d.addProperty(prop, false);
         }
 
+        if (!isKeyClsSqlType)
+            d.primaryKeyFields(keyFields);
+
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,
         // so we have to add binary properties for them
@@ -665,7 +668,7 @@ public class QueryUtils {
         String name, boolean isKey) throws IgniteCheckedException {
 
         Map<String, Object> dfltVals = qryEntity.getDefaultFieldValues();
-        Map<String, Integer> precision  = qryEntity.getFieldsPrecision();
+        Map<String, Integer> precision = qryEntity.getFieldsPrecision();
         Map<String, Integer> scale = qryEntity.getFieldsScale();
 
         String typeName = isKey ? qryEntity.getKeyType() : qryEntity.getValueType();
@@ -793,7 +796,7 @@ public class QueryUtils {
 
             d.addIndex(idxDesc);
         }
-        else if (idxTyp == QueryIndexType.FULLTEXT){
+        else if (idxTyp == QueryIndexType.FULLTEXT) {
             for (String field : idx.getFields().keySet()) {
                 String alias = d.aliases().get(field);
 
@@ -826,9 +829,17 @@ public class QueryUtils {
      * @param scale Scale.
      * @return Binary property.
      */
-    public static QueryBinaryProperty buildBinaryProperty(GridKernalContext ctx, String pathStr,
-        Class<?> resType, Map<String, String> aliases, boolean isKeyField, boolean notNull, Object dlftVal,
-        int precision, int scale) {
+    public static QueryBinaryProperty buildBinaryProperty(
+        GridKernalContext ctx,
+        String pathStr,
+        Class<?> resType,
+        Map<String, String> aliases,
+        boolean isKeyField,
+        boolean notNull,
+        Object dlftVal,
+        int precision,
+        int scale
+    ) {
         String[] path = pathStr.split("\\.");
 
         QueryBinaryProperty res = null;
@@ -1536,17 +1547,17 @@ public class QueryUtils {
 
             code = ((SqlCacheException)e).statusCode();
         }
-        else if (e instanceof TransactionDuplicateKeyException){
+        else if (e instanceof TransactionDuplicateKeyException) {
             code = IgniteQueryErrorCode.DUPLICATE_KEY;
 
             sqlState = IgniteQueryErrorCode.codeToSqlState(code);
         }
-        else if (e instanceof TransactionSerializationException){
+        else if (e instanceof TransactionSerializationException) {
             code = IgniteQueryErrorCode.TRANSACTION_SERIALIZATION_ERROR;
 
             sqlState = IgniteQueryErrorCode.codeToSqlState(code);
         }
-        else if (e instanceof TransactionAlreadyCompletedException){
+        else if (e instanceof TransactionAlreadyCompletedException) {
             code = IgniteQueryErrorCode.TRANSACTION_COMPLETED;
 
             sqlState = IgniteQueryErrorCode.codeToSqlState(code);
@@ -1617,6 +1628,19 @@ public class QueryUtils {
      */
     public static boolean removeField(QueryEntity entity, String alias) {
         return entity.getFields().remove(fieldNameByAlias(entity, alias)) != null;
+    }
+
+    /**
+     * @param qry Query.
+     * @param timeout Timeout.
+     * @param timeUnit Time units.
+     * @return Query with timeout.
+     */
+    public static SqlFieldsQuery withQueryTimeout(SqlFieldsQuery qry, int timeout, TimeUnit timeUnit) {
+        if (timeout >= 0)
+            qry.setTimeout(timeout, timeUnit);
+
+        return qry;
     }
 
     /**

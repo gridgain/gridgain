@@ -70,9 +70,8 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
-//    TODO: https://ggsystems.atlassian.net/browse/GG-25084
-//    /** Support of cluster read-only mode. */
-//    CLUSTER_READ_ONLY_MODE(9),
+    /** Support of cluster read-only mode. */
+    CLUSTER_READ_ONLY_MODE(9),
 
     /** Support of suspend/resume operations for pessimistic transactions. */
     SUSPEND_RESUME_PESSIMISTIC_TX(10),
@@ -151,8 +150,30 @@ public enum IgniteFeatures {
     /** Distributed propagation of tx collisions dump interval. */
     DISTRIBUTED_TX_COLLISIONS_DUMP(37),
 
+    /** */
+    METASTORAGE_LONG_KEYS(38),
+
     /** Remove metadata from cluster for specified type. */
-    REMOVE_METADATA(39);
+    REMOVE_METADATA(39),
+
+    /** Support policy of shutdown. */
+    SHUTDOWN_POLICY(40),
+
+    /** New security processor with a security context support. */
+    IGNITE_SECURITY_PROCESSOR_V2(41),
+
+    /** Force rebuild, list or request indexes rebuild status from control script. */
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
+
+    /** Snapshots without PME. */
+    EXCHANGELESS_SNAPSHOT(43),
+
+    /** Optimization of recovery protocol for cluster which doesn't contain MVCC caches. */
+    MVCC_TX_RECOVERY_PROTOCOL_V2(44),
+
+    /** Pk index keys are applied in correct order. */
+    SPECIFIED_SEQ_PK_KEYS(45);
+
     /**
      * Unique feature identifier.
      */
@@ -306,8 +327,11 @@ public enum IgniteFeatures {
             if (IGNITE_SECURITY_PROCESSOR == value && !getBoolean(IGNITE_SECURITY_PROCESSOR.name(), false))
                 continue;
 
+            if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
+                continue;
+
             //Disable new rolling upgrade
-            if(DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
+            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
                 continue;
 
             // Add only when indexing is enabled.

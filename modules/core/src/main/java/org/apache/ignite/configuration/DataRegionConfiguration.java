@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.mxbean.DataRegionMetricsMXBean;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 
@@ -139,6 +140,9 @@ public final class DataRegionConfiguration implements Serializable {
      * Default is {@code true}.
      */
     private boolean lazyMemoryAllocation = true;
+
+    /** Warm-up configuration. */
+    @Nullable private WarmUpConfiguration warmUpCfg;
 
     /**
      * Gets data region name.
@@ -461,6 +465,28 @@ public final class DataRegionConfiguration implements Serializable {
         this.lazyMemoryAllocation = lazyMemoryAllocation;
 
         return this;
+    }
+
+    /**
+     * Sets warm-up configuration.
+     *
+     * @param warmUpCfg Warm-up configuration. Can be {@code null} (default
+     *      {@link DataStorageConfiguration#getDefaultWarmUpConfiguration} will be used).
+     * @return {@code this} for chaining.
+     */
+    public DataRegionConfiguration setWarmUpConfiguration(@Nullable WarmUpConfiguration warmUpCfg) {
+        this.warmUpCfg = warmUpCfg;
+
+        return this;
+    }
+
+    /**
+     * Gets warm-up configuration.
+     *
+     * @return Warm-up configuration.
+     */
+    @Nullable public WarmUpConfiguration getWarmUpConfiguration() {
+        return warmUpCfg;
     }
 
     /** {@inheritDoc} */

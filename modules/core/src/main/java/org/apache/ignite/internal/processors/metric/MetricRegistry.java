@@ -326,7 +326,7 @@ public class MetricRegistry implements Iterable<Metric> {
     private <T extends Metric> T addMetric(String name, T metric) {
         T old = (T)metrics.putIfAbsent(name, metric);
 
-        if(old != null)
+        if (old != null)
             return old;
 
         return metric;

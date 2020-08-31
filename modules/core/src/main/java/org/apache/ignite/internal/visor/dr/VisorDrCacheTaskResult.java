@@ -31,18 +31,25 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 public class VisorDrCacheTaskResult extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+
     /** Data center id. */
     private byte dataCenterId;
+
     /** Cache names. */
     private List<String> cacheNames;
+
     /** Sender config. */
     private Map<String, List<T2<String, Object>>> senderConfig;
+
     /** Receiver config. */
     private Map<String, List<T2<String, Object>>> receiverConfig;
+
     /** Sender metrics. */
     private Map<String, List<T2<String, Object>>> senderMetrics;
+
     /** Receiver metrics. */
     private Map<String, List<T2<String, Object>>> receiverMetrics;
+
     /** Result messages. */
     private List<String> resultMessages = new ArrayList<>();
 
@@ -128,8 +135,7 @@ public class VisorDrCacheTaskResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         dataCenterId = in.readByte();
         resultMessages = U.readList(in);
         cacheNames = U.readList(in);

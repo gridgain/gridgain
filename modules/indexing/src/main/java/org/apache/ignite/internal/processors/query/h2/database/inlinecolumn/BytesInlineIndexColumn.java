@@ -19,9 +19,9 @@ package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 import java.util.Arrays;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.h2.table.Column;
-import org.h2.value.Value;
-import org.h2.value.ValueBytes;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueBytes;
 
 /**
  * Inline index column implementation for inlining byte arrays.
@@ -86,7 +86,7 @@ public class BytesInlineIndexColumn extends AbstractInlineIndexColumn {
 
         int res = Integer.signum(len1 - len2);
 
-        if(isValueFull(pageAddr, off))
+        if (isValueFull(pageAddr, off))
             return res;
 
         if (res >= 0)

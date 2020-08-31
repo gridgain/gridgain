@@ -68,8 +68,8 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
-import org.h2.command.Prepared;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.table.Column;
 
 /**
  * Logic for building update plans performed by {@link DmlStatementsProcessor}.
@@ -331,7 +331,7 @@ public final class UpdatePlanBuilder {
             for (int i1 = 0; i1 < row.length; i1++) {
                 GridSqlElement el = row[i1];
 
-                if(!(noQry &=  (el instanceof GridSqlConst || el instanceof GridSqlParameter)))
+                if (!(noQry &= (el instanceof GridSqlConst || el instanceof GridSqlParameter)))
                     return noQry;
 
             }
@@ -796,7 +796,6 @@ public final class UpdatePlanBuilder {
         }
         return false;
     }
-
 
     /**
      * Checks that DML query (insert, merge, update, bulk load aka copy) columns: <br/>

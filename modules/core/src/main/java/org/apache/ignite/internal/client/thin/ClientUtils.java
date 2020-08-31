@@ -496,7 +496,7 @@ final class ClientUtils {
                             ));
                     }
                     ).toArray(new QueryEntity[0]))
-                    .setExpiryPolicy(!protocolCtx.isFeatureSupported(EXPIRY_POLICY)?
+                    .setExpiryPolicy(!protocolCtx.isFeatureSupported(EXPIRY_POLICY) ?
                              null : reader.readBoolean() ?
                                     new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
                     );
@@ -504,7 +504,7 @@ final class ClientUtils {
     }
 
     /** Serialize SQL field query to stream. */
-    void write(SqlFieldsQuery qry, BinaryOutputStream out) {
+    void write(SqlFieldsQuery qry, BinaryOutputStream out, ProtocolContext protocolCtx) {
         writeObject(out, qry.getSchema());
         out.writeInt(qry.getPageSize());
         out.writeInt(-1); // do not limit
@@ -517,7 +517,12 @@ final class ClientUtils {
         out.writeBoolean(qry.isEnforceJoinOrder());
         out.writeBoolean(qry.isCollocated());
         out.writeBoolean(qry.isLazy());
-        out.writeLong(qry.getTimeout());
+
+        if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.DEFAULT_QRY_TIMEOUT))
+            out.writeLong(qry.getTimeout());
+        else
+            out.writeLong(Math.max(qry.getTimeout(), 0));
+
         out.writeBoolean(true); // include column names
     }
 
@@ -635,7 +640,7 @@ final class ClientUtils {
             isNotNull = notNulls != null && notNulls.contains(name);
             dfltVal = dflts == null ? null : dflts.get(name);
             precision = fldsPrecision == null ? -1 : fldsPrecision.getOrDefault(name, -1);
-            scale = fldsScale == null? -1 : fldsScale.getOrDefault(name, -1);
+            scale = fldsScale == null ? -1 : fldsScale.getOrDefault(name, -1);
         }
 
         /** Deserialization constructor. */

@@ -123,6 +123,4 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
 
         listeners.forEach(lsnr -> assertFalse(lsnr.check()));
     }
-
-
 }

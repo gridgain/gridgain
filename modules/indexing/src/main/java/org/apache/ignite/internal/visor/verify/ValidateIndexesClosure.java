@@ -48,8 +48,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -75,10 +73,10 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.Index;
-import org.h2.message.DbException;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.message.DbException;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyMap;
@@ -153,7 +151,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     private volatile int totalIndexes;
 
     /** Total cache groups. */
-    private volatile  int totalCacheGrps;
+    private volatile int totalCacheGrps;
 
     /** Last progress print timestamp. */
     private final AtomicLong lastProgressPrintTs = new AtomicLong(0);
@@ -418,8 +416,6 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
         IgniteCacheDatabaseSharedManager db = ignite.context().cache().context().database();
 
-        DbCheckpointListener lsnr = null;
-
         try {
             for (Integer grpId: grpIds) {
                 final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
@@ -454,10 +450,6 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 integrityCheckFutures.get(j).cancel(false);
 
             throw unwrapFutureException(e);
-        }
-        finally {
-            if (db instanceof GridCacheDatabaseSharedManager && lsnr != null)
-                ((GridCacheDatabaseSharedManager)db).removeCheckpointListener(lsnr);
         }
 
         return integrityCheckResults;
@@ -870,7 +862,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         if (e instanceof InterruptedException)
             return new IgniteInterruptedException((InterruptedException)e);
         else if (e.getCause() instanceof IgniteException)
-            return  (IgniteException)e.getCause();
+            return (IgniteException)e.getCause();
         else
             return new IgniteException(e.getCause());
     }

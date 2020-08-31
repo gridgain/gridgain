@@ -33,10 +33,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Cursor;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -287,11 +287,11 @@ public abstract class AbstractReducer implements Reducer {
         if (lp == null && !LAST_PAGES_UPDATER.compareAndSet(this, null, lp = new ConcurrentHashMap<>()))
             lp = lastPages;
 
-        assert pageSize > 0: pageSize;
+        assert pageSize > 0 : pageSize;
 
         int lastPage = allRows == 0 ? 0 : (allRows - 1) / pageSize;
 
-        assert lastPage >= 0: lastPage;
+        assert lastPage >= 0 : lastPage;
 
         if (lp.put(new ReduceSourceKey(nodeId, res.segmentId()), lastPage) != null)
             throw new IllegalStateException();

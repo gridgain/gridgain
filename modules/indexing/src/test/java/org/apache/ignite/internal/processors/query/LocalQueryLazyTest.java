@@ -31,8 +31,8 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.result.LazyResult;
-import org.h2.result.ResultInterface;
+import org.gridgain.internal.h2.result.LazyResult;
+import org.gridgain.internal.h2.result.ResultInterface;
 import org.junit.Test;
 
 /**
@@ -198,7 +198,7 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
      * @param args Query parameters.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
+    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
         return sql(grid(), sql, args);
     }
 
@@ -208,7 +208,7 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
      * @param args Query parameters.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
+    private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLocal(true)
             .setLazy(true)
@@ -222,7 +222,7 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
      * @param args Query parameters.
      * @return Results cursor.
      */
-    private FieldsQueryCursor<List<?>> sqlDistrubuted(IgniteEx ign, String sql, Object ... args) {
+    private FieldsQueryCursor<List<?>> sqlDistrubuted(IgniteEx ign, String sql, Object... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLazy(true)
             .setSchema("TEST")

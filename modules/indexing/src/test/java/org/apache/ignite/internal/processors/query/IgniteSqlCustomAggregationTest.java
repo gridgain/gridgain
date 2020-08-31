@@ -34,8 +34,8 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.api.AggregateFunction;
-import org.h2.jdbc.JdbcSQLSyntaxErrorException;
+import org.gridgain.internal.h2.api.AggregateFunction;
+import org.gridgain.internal.h2.jdbc.JdbcSQLSyntaxErrorException;
 import org.junit.Test;
 
 /**
@@ -353,8 +353,7 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        public Object getResult() throws SQLException {
+        @Override public Object getResult() throws SQLException {
             return res;
         }
     }

@@ -579,7 +579,6 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
         return ldr instanceof GridDeploymentClassLoader;
     }
 
-
     /**
      * @throws IgniteCheckedException If failed.
      */

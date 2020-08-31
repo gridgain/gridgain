@@ -26,10 +26,10 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.HEAP_LOG;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.HEAP_STACK;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.OFF_HEAP_LOG;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.LockTrackerFactory.OFF_HEAP_STACK;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_LOG;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_STACK;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.OFF_HEAP_LOG;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.OFF_HEAP_STACK;
 
 /**
  *
@@ -39,7 +39,7 @@ public class PageLockTrackerManagerTest {
      *
      */
     @Test
-    public void testDisableTracking(){
+    public void testDisableTracking() {
         System.setProperty("IGNITE_PAGE_LOCK_TRACKER_TYPE", String.valueOf(-1));
 
         try {
@@ -50,7 +50,7 @@ public class PageLockTrackerManagerTest {
             Assert.assertNotNull(pll);
             Assert.assertSame(pll, DataStructure.NOOP_LSNR);
 
-        }finally {
+        } finally {
             System.clearProperty("IGNITE_PAGE_LOCK_TRACKER_TYPE");
         }
 
@@ -64,7 +64,7 @@ public class PageLockTrackerManagerTest {
             Assert.assertNotNull(pll);
             Assert.assertNotSame(pll, DataStructure.NOOP_LSNR);
 
-        }finally {
+        } finally {
             System.clearProperty("IGNITE_PAGE_LOCK_TRACKER_TYPE");
         }
     }

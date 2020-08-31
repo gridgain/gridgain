@@ -48,6 +48,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CommunicationFailureResolver;
 import org.apache.ignite.events.EventType;
@@ -1101,7 +1102,7 @@ public class ZookeeperDiscoveryImpl {
      * @param locCred Local security credentials for authentication.
      * @throws IgniteSpiException If any error occurs.
      */
-    private void localAuthentication(DiscoverySpiNodeAuthenticator nodeAuth, SecurityCredentials locCred){
+    private void localAuthentication(DiscoverySpiNodeAuthenticator nodeAuth, SecurityCredentials locCred) {
         assert nodeAuth != null;
         assert locCred != null;
 
@@ -1424,7 +1425,7 @@ public class ZookeeperDiscoveryImpl {
         }
 
         // This situation may appear while reconnection and this callback can be skipped.
-        if(!aliveClients.containsKey(locInternalOrder))
+        if (!aliveClients.containsKey(locInternalOrder))
             return;
 
         Map.Entry<Long, String> oldest = aliveClients.firstEntry();
@@ -4042,7 +4043,7 @@ public class ZookeeperDiscoveryImpl {
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    IgnitionEx.stop(igniteInstanceName, true, false, true);
+                    IgnitionEx.stop(igniteInstanceName, true, ShutdownPolicy.IMMEDIATE, true);
 
                     U.log(log, "Stopped the node successfully in response to fatal error in ZookeeperDiscoverySpi.");
                 }

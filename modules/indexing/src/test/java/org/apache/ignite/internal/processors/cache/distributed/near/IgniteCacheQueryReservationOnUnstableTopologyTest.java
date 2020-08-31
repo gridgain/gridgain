@@ -97,7 +97,7 @@ public class IgniteCacheQueryReservationOnUnstableTopologyTest extends GridCommo
 
         IgniteInternalFuture<?> qryFut = multithreadedAsync(new Runnable() {
             @Override public void run() {
-                while(!stop.get()) {
+                while (!stop.get()) {
                     SqlFieldsQuery qry = new SqlFieldsQuery("SELECT * FROM Integer");
 
                     qry.setLazy(lazy);

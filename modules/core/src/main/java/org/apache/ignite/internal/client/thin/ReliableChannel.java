@@ -84,7 +84,7 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     private final ExecutorService asyncRunner = Executors.newSingleThreadExecutor(
         new ThreadFactory() {
             @Override public Thread newThread(@NotNull Runnable r) {
-                return new Thread(r, "thin-client-channel-async-runner");
+                return new Thread(r, ASYNC_RUNNER_THREAD_NAME);
             }
         }
     );
@@ -97,6 +97,9 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
 
     /** Channel is closed. */
     private boolean closed;
+
+    /** Fail (disconnect) listeners. */
+    private ArrayList<Runnable> chFailLsnrs = new ArrayList<>();
 
     /**
      * Constructor.
@@ -153,6 +156,8 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
 
         for (ClientChannelHolder hld : channels)
             hld.closeChannel();
+
+        asyncRunner.shutdown();
     }
 
     /**
@@ -395,6 +400,8 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
         // when current index was changed and no other wrong channel will be closed by current thread because
         // onChannelFailure checks channel binded to the holder before closing it.
         onChannelFailure(channels[curChIdx], ch);
+
+        chFailLsnrs.forEach(Runnable::run);
     }
 
     /**
@@ -444,6 +451,13 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
         if (affinityAwarenessEnabled && affinityCtx.updateLastTopologyVersion(ch.serverTopologyVersion(),
             ch.serverNodeId()))
             initAllChannelsAsync();
+    }
+
+    /**
+     * @param chFailLsnr Listener for the channel fail (disconnect).
+     */
+    public void addChannelFailListener(Runnable chFailLsnr) {
+        chFailLsnrs.add(chFailLsnr);
     }
 
     /**

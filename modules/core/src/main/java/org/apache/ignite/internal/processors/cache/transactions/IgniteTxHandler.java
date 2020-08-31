@@ -1764,6 +1764,8 @@ public class IgniteTxHandler {
 
                     return null;
                 }
+
+                ctx.versions().onReceived(nodeId, req.writeVersion());
             }
             else {
                 tx.writeVersion(req.writeVersion());
@@ -2105,6 +2107,7 @@ public class IgniteTxHandler {
                     nodeId,
                     req.nearNodeId(),
                     req.version(),
+                    req.nearXidVersion(),
                     null,
                     req.system(),
                     req.policy(),

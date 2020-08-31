@@ -283,8 +283,7 @@ public class ClassLoadingProblemExceptionTest extends GridCommonAbstractTest imp
         }
 
         /** {@inheritDoc} */
-        @Override
-        public void addParticipants(Map<UUID, IgniteUuid> allParticipants, Map<UUID, IgniteUuid> addedParticipants) {
+        @Override public void addParticipants(Map<UUID, IgniteUuid> allParticipants, Map<UUID, IgniteUuid> addedParticipants) {
             store.addParticipants(allParticipants, addedParticipants);
         }
     }

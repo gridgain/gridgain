@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Comparator;
-import org.h2.api.AggregateFunction;
+import org.gridgain.internal.h2.api.AggregateFunction;
 
 /**
  *  SQL aggregate function to select the first or last value in the sorted group.
@@ -49,7 +49,7 @@ public class GridAggregateOrderedFunction implements AggregateFunction {
     }
 
     /** {@inheritDoc}  */
-    @Override  public int getType(int[] inputTypes) throws SQLException {
+    @Override public int getType(int[] inputTypes) throws SQLException {
         if (inputTypes.length < 2)
             throw new SQLException("Aggregation function should have at least two arguments.");
 

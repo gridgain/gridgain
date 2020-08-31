@@ -323,7 +323,7 @@ public class MvccUtils {
         if (snapshot != null)
             msg += ", txVer=" + snapshot.coordinatorVersion() + ":" + snapshot.counter() + ":" + snapshot.operationCounter();
 
-        msg += ", localNodeId=" + ctx.localNodeId()  + "]";
+        msg += ", localNodeId=" + ctx.localNodeId() + "]";
 
         return new IgniteTxUnexpectedStateCheckedException(msg);
     }
@@ -601,7 +601,7 @@ public class MvccUtils {
         try {
             long pageAddr = pageMem.readLock(grpId, pageId, page);
 
-            try{
+            try {
                 DataPageIO dataIo = DataPageIO.VERSIONS.forPage(pageAddr);
 
                 return invoke(cctx, dataIo, pageAddr, itemId, pageSize, clo, snapshot);
@@ -769,8 +769,7 @@ public class MvccUtils {
             cctx == null || !cctx.skipStore(),
             true,
             0,
-            null,
-            false
+            null
         );
 
         tx.syncMode(FULL_SYNC);

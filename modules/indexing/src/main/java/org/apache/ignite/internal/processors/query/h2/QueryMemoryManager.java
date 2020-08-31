@@ -39,11 +39,11 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.dml.GroupByData;
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
-import org.h2.result.ResultExternal;
-import org.h2.result.SortOrder;
+import org.gridgain.internal.h2.command.dml.GroupByData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.result.ResultExternal;
+import org.gridgain.internal.h2.result.SortOrder;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
 
@@ -87,6 +87,9 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /** Global memory quota. */
     private volatile long globalQuota;
 
+    /** Global memory quota in G/M as originally specified. */
+    private String globalQuotaInOriginalNotation;
+
     /**
      * Default query memory limit.
      *
@@ -94,6 +97,9 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * treated as separate Map query.
      */
     private volatile long qryQuota;
+
+    /** Query memory limit in Gb/Mb as originally specified. */
+    private volatile String qryQuotaInOriginalNotation;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -222,6 +228,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public synchronized void setGlobalQuota(String newGlobalQuota) {
         long globalQuota0 = U.parseBytes(newGlobalQuota);
+        globalQuotaInOriginalNotation = newGlobalQuota;
         long heapSize = Runtime.getRuntime().maxMemory();
 
         A.ensure(
@@ -235,7 +242,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         globalQuota = globalQuota0;
 
         if (log.isInfoEnabled()) {
-            log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
+            log.info("SQL query global quota was set to " + globalQuota + ". Current memory tracking parameters: " +
                 "[qryQuota=" + qryQuota + ", globalQuota=" + globalQuota +
                 ", offloadingEnabled=" + offloadingEnabled + ']');
         }
@@ -244,9 +251,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * @return Current global query quota.
      */
-    public String getGlobalQuota() {
-        return String.valueOf(globalQuota);
+    public long getGlobalQuota() {
+        return globalQuota;
     }
+
+    public String getGlobalQuotaInOriginalNotation() { return globalQuotaInOriginalNotation; }
 
     /**
      * Sets new per-query quota.
@@ -255,13 +264,14 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public synchronized void setQueryQuota(String newQryQuota) {
         long qryQuota0 = U.parseBytes(newQryQuota);
+        qryQuotaInOriginalNotation = newQryQuota;
 
         A.ensure(qryQuota0 >= 0, "Sql query memory quota must be >= 0: quotaSize=" + qryQuota0);
 
         qryQuota = U.parseBytes(newQryQuota);
 
         if (log.isInfoEnabled()) {
-            log.info("SQL query memory quota was set to " + qryQuota +  ". Current memory tracking parameters: " +
+            log.info("SQL query memory quota was set to " + qryQuota + ". Current memory tracking parameters: " +
                 "[qryQuota=" + qryQuota + ", globalQuota=" + globalQuota +
                 ", offloadingEnabled=" + offloadingEnabled + ']');
         }
@@ -275,9 +285,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * @return Current query quota.
      */
-    public String getQueryQuotaString() {
-        return String.valueOf(qryQuota);
+    public long getQueryQuota() {
+        return qryQuota;
     }
+
+    public String getQueryQuotaStrinInOriginalNotation() { return qryQuotaInOriginalNotation; }
 
     /**
      * Sets offloading enabled flag.

@@ -384,7 +384,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
 
             if (node == null) {
                 if (log.isDebugEnabled())
-                    log.debug("Ignoring p2p context (sender has left) [sndId=" + sndId + ", ldrId=" +  ldrId +
+                    log.debug("Ignoring p2p context (sender has left) [sndId=" + sndId + ", ldrId=" + ldrId +
                         ", userVer=" + userVer + ", mode=" + mode + ", participants=" + participants + ']');
 
                 return;
@@ -416,7 +416,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         if (log.isDebugEnabled())
-            log.debug("Setting p2p context [sndId=" + sndId + ", ldrId=" +  ldrId + ", userVer=" + userVer +
+            log.debug("Setting p2p context [sndId=" + sndId + ", ldrId=" + ldrId + ", userVer=" + userVer +
                 ", seqNum=" + ldrId.localId() + ", mode=" + mode + ", participants=" + participants +
                 ", locDepOwner=false]");
 
@@ -465,7 +465,6 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
                 if (cctx.discovery().node(id) == null) {
                     if (depInfo.removeParticipant(id))
                         deps.remove(ldrId, depInfo);
-
 
                     allParticipants.remove(id);
                 }
@@ -866,7 +865,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
             if (cls != null)
                 return cls;
 
-            throw new ClassNotFoundException("Failed to load class [name=" + name+ ", ctx=" + deps + ']');
+            throw new ClassNotFoundException("Failed to load class [name=" + name + ", ctx=" + deps + ']');
         }
 
         /**

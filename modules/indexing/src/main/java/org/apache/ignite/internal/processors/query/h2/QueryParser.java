@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.NestedTxMode;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlAstUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
@@ -72,7 +73,7 @@ import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashMap;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.Prepared;
+import org.gridgain.internal.h2.command.Prepared;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuerySplitter.keyColumn;
@@ -137,6 +138,51 @@ public class QueryParser {
     }
 
     /**
+     * Create parameters from query.
+     *
+     * @param qry Query.
+     * @return Parameters.
+     */
+    public QueryParameters queryParameters(SqlFieldsQuery qry) {
+        NestedTxMode nestedTxMode = NestedTxMode.DEFAULT;
+        boolean autoCommit = true;
+        List<Object[]> batchedArgs = null;
+        long maxMem = 0;
+
+        if (qry instanceof SqlFieldsQueryEx) {
+            SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
+
+            if (qry0.getNestedTxMode() != null)
+                nestedTxMode = qry0.getNestedTxMode();
+
+            autoCommit = qry0.isAutoCommit();
+
+            batchedArgs = qry0.batchedArguments();
+
+            maxMem = qry0.getMaxMemory();
+        }
+
+        int timeout = qry.getTimeout();
+
+        if (timeout < 0)
+            timeout = (int)idx.distributedConfiguration().defaultQueryTimeout();
+
+        return new QueryParameters(
+            qry.getArgs(),
+            qry.getPartitions(),
+            timeout,
+            qry.isLazy(),
+            qry.getPageSize(),
+            maxMem,
+            null,
+            nestedTxMode,
+            autoCommit,
+            batchedArgs,
+            qry.getUpdateBatchSize()
+        );
+    }
+
+    /**
      * Parse the query.
      *
      * @param schemaName schema name.
@@ -154,7 +200,7 @@ public class QueryParser {
 
             return new QueryParserResult(
                 qryDesc,
-                QueryParameters.fromQuery(qry),
+                queryParameters(qry),
                 null,
                 cached.parametersMeta(),
                 cached.select(),
@@ -192,7 +238,6 @@ public class QueryParser {
      * @param remainingAllowed Whether multiple statements are allowed.
      * @return Command or {@code null} if cannot parse this query.
      */
-    @SuppressWarnings("IfMayBeConditional")
     private @Nullable QueryParserResult parseNative(String schemaName, SqlFieldsQuery qry, boolean remainingAllowed) {
         String sql = qry.getSql();
 
@@ -238,7 +283,7 @@ public class QueryParser {
 
             return new QueryParserResult(
                 newPlanKey,
-                QueryParameters.fromQuery(newQry),
+                queryParameters(newQry),
                 remainingQry,
                 Collections.emptyList(), // Currently none of native statements supports parameters.
                 null,
@@ -276,7 +321,6 @@ public class QueryParser {
      * @param remainingAllowed Whether multiple statements are allowed.
      * @return Parsing result.
      */
-    @SuppressWarnings("IfMayBeConditional")
     private QueryParserResult parseH2(String schemaName, SqlFieldsQuery qry, boolean batched,
         boolean remainingAllowed) {
         try (H2PooledConnection c = connMgr.connection(schemaName)) {
@@ -366,7 +410,7 @@ public class QueryParser {
 
                     return new QueryParserResult(
                         newQryDesc,
-                        QueryParameters.fromQuery(newQry),
+                        queryParameters(newQry),
                         remainingQry,
                         paramsMeta,
                         null,
@@ -379,7 +423,7 @@ public class QueryParser {
 
                     return new QueryParserResult(
                         newQryDesc,
-                        QueryParameters.fromQuery(newQry),
+                        queryParameters(newQry),
                         remainingQry,
                         paramsMeta,
                         null,
@@ -392,7 +436,7 @@ public class QueryParser {
 
                     return new QueryParserResult(
                         newQryDesc,
-                        QueryParameters.fromQuery(newQry),
+                        queryParameters(newQry),
                         remainingQry,
                         paramsMeta,
                         null,
@@ -527,7 +571,7 @@ public class QueryParser {
 
                 return new QueryParserResult(
                     newQryDesc,
-                    QueryParameters.fromQuery(newQry),
+                    queryParameters(newQry),
                     remainingQry,
                     paramsMeta,
                     select,
@@ -649,7 +693,6 @@ public class QueryParser {
             streamTbl = DmlAstUtils.gridTableForElement(insert.into()).dataTable();
         }
 
-
         // Create update plan.
         UpdatePlan plan;
 
@@ -718,13 +761,11 @@ public class QueryParser {
      * @return Plan key.
      */
     private static QueryDescriptor queryDescriptor(String schemaName, SqlFieldsQuery qry) {
-        boolean skipReducerOnUpdate = false;
         boolean batched = false;
 
         if (qry instanceof SqlFieldsQueryEx) {
             SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
 
-            skipReducerOnUpdate = !qry.isLocal() && qry0.isSkipReducerOnUpdate();
             batched = qry0.isBatched();
         }
 
@@ -735,7 +776,7 @@ public class QueryParser {
             qry.isDistributedJoins(),
             qry.isEnforceJoinOrder(),
             qry.isLocal(),
-            skipReducerOnUpdate,
+            !qry.isLocal() && qry.isSkipReducerOnUpdate(),
             batched,
             qry.getQueryInitiatorId()
         );

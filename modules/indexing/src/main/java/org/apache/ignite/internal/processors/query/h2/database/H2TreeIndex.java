@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTask;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
@@ -83,17 +84,17 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.IndexCondition;
-import org.h2.index.IndexLookupBatch;
-import org.h2.index.IndexType;
-import org.h2.index.SingleRowCursor;
-import org.h2.message.DbException;
-import org.h2.result.SearchRow;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableFilter;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexCondition;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.index.SingleRowCursor;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -104,7 +105,7 @@ import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2I
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
-import static org.h2.result.Row.MEMORY_CALCULATE;
+import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 
 /**
  * H2 Index over {@link BPlusTree}.
@@ -423,8 +424,19 @@ public class H2TreeIndex extends H2TreeIndexBase {
         }
     }
 
+    /**
+     * @param row Row to validate.
+     * @throws IgniteSQLException on error (field type mismatch).
+     */
+    private void validateRowFields(H2CacheRow row) {
+        for (int col : columnIds)
+            row.getValue(col);
+    }
+
     /** {@inheritDoc} */
     @Override public boolean putx(H2CacheRow row) {
+        validateRowFields(row);
+
         try {
             int seg = segmentForRow(cctx, row);
 
@@ -603,7 +615,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         assert !cctx.mvccEnabled() || v != null;
 
-        if(p == null && v == null)
+        if (p == null && v == null)
             return null;
 
         return new H2TreeFilterClosure(p, v, cctx, log);

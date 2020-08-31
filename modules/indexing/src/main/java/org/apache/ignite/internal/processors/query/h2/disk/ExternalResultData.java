@@ -31,14 +31,14 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.h2.api.ErrorCode;
-import org.h2.message.DbException;
-import org.h2.store.Data;
-import org.h2.store.DataHandler;
-import org.h2.value.CompareMode;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.store.Data;
+import org.gridgain.internal.h2.store.DataHandler;
+import org.gridgain.internal.h2.value.CompareMode;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
+import org.gridgain.internal.h2.value.ValueRow;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
@@ -254,7 +254,7 @@ public class ExternalResultData<T> implements AutoCloseable {
 
         writeToFile(writeBuff);
 
-        if(hashIdx != null)
+        if (hashIdx != null)
             hashIdx.put(row.getKey(), lastWrittenPos);
 
         lastWrittenPos = currentFilePosition();
@@ -510,7 +510,7 @@ public class ExternalResultData<T> implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
-    @Override public  void close() {
+    @Override public void close() {
         synchronized (this) {
             if (closed)
                 return;
@@ -525,7 +525,7 @@ public class ExternalResultData<T> implements AutoCloseable {
         file.delete();
 
         if (log.isDebugEnabled())
-            log.debug("Deleted spill file "+ file.getName());
+            log.debug("Deleted spill file " + file.getName());
     }
 
     /**

@@ -202,7 +202,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         assert exchFut == null ||
             exchFut.context().events().topologyVersion().equals(top.readyTopologyVersion()) ||
-            exchFut.context().events().topologyVersion().equals(ctx.exchange().lastAffinityChangedTopologyVersion(top.readyTopologyVersion())):
+            exchFut.context().events().topologyVersion().equals(ctx.exchange().lastAffinityChangedTopologyVersion(top.readyTopologyVersion())) :
             "Topology version mismatch [exchId=" + exchId +
             ", grp=" + grp.name() +
             ", topVer=" + top.readyTopologyVersion() + ']';
@@ -213,8 +213,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
-
-        boolean changed = false;
 
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingServerExchange()) {
@@ -238,27 +236,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 if (part.state() == OWNING || part.state() == LOST)
                     continue;
 
-                // If partition is currently rented prevent destroy and start clearing process.
-                if (part.state() == RENTING) {
-                    if (part.reserve()) {
-                        part.moving();
-
-                        part.clearAsync();
-
-                        part.release();
-                    }
-                }
-
-                // If partition was destroyed recreate it.
-                if (part.state() == EVICTED) {
-                    part.awaitDestroy();
-
-                    part = top.localPartition(p, topVer, true);
-
-                    assert part != null : "Partition was not created [grp=" + grp.name() + ", topVer=" + topVer + ", p=" + p + ']';
-
-                    part.resetUpdateCounter();
-                }
+                // State should be switched to MOVING (or partition recreated) during PME.
+                assert part.state() != RENTING && part.state() != EVICTED : part;
 
                 if (part.state() != MOVING && part.state() != OWNING) {
                     throw new AssertionError("Partition has invalid state for rebalance "
@@ -460,27 +439,16 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Resends partitions on partition evict within configured timeout.
-     *
      * @param part Evicted partition.
-     * @param updateSeq Update sequence.
      */
-    public void onPartitionEvicted(GridDhtLocalPartition part, boolean updateSeq) {
+    public void tryEvictPartition(GridDhtLocalPartition part) {
         if (!enterBusy())
             return;
 
         try {
-            top.onEvicted(part, updateSeq);
-
-            if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
-                grp.addUnloadEvent(part.id());
-
-            if (updateSeq) {
-                if (log.isDebugEnabled())
-                    log.debug("Partitions have been scheduled to resend [reason=" +
-                        "Eviction [grp" + grp.cacheOrGroupName() + " " + part.id() + "]");
-
-                ctx.exchange().scheduleResendPartitions();
+            if (top.tryEvict(part)) {
+                if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_UNLOADED))
+                    grp.addUnloadEvent(part.id());
             }
         }
         finally {
@@ -578,7 +546,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<Boolean> forceRebalance() {
-        return demander.forceRebalance();
+        if (!enterBusy())
+            return new GridFinishedFuture<>();
+
+        try {
+            return demander.forceRebalance();
+        }
+        finally {
+            leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */
@@ -592,8 +568,21 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         busyLock.writeLock().unlock();
     }
 
+    /** {@inheritDoc} */
+    @Override public void finishPreloading(AffinityTopologyVersion topVer) {
+        if (!enterBusy())
+            return;
+
+        try {
+            demander.finishPreloading(topVer);
+        }
+        finally {
+            leaveBusy();
+        }
+    }
+
     /**
-     * Return supplier.
+     * Returns supplier.
      *
      * @return Supplier.
      * */

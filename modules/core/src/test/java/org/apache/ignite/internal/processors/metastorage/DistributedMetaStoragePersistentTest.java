@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -288,7 +289,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(3);
 
-
         for (int i = 0; i < cnt; i++)
             startGrid(i);
 
@@ -409,7 +409,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         stopGrid(4);
 
-
         startGrid(1);
 
         startGrid(0);
@@ -458,7 +457,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         metastorage(5).write("key5", "value5");
 
         stopGrid(5);
-
 
         startGrid(2);
 
@@ -633,5 +631,36 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
             this.compId = compId;
             this.config = config;
         }
+    }
+
+    /** */
+    @Test
+    public void testLongKey() throws Exception {
+        startGrid(0).cluster().active(true);
+
+        String l10 = "1234567890";
+        String longKey = l10 + l10 + l10 + l10 + l10 + l10 + l10;
+
+        metastorage(0).write(longKey, "value");
+
+        stopGrid(0);
+
+        // Check that the value was actually persisted to the storage.
+
+        IgniteEx ignite0 = startGrid(0);
+
+        awaitPartitionMapExchange();
+
+        assertSame(ignite0.cluster().state(), ClusterState.ACTIVE);
+
+        assertEquals("value", metastorage(0).read(longKey));
+
+        metastorage(0).remove(longKey);
+
+        stopGrid(0);
+
+        startGrid(0);
+
+        assertNull(metastorage(0).read(longKey));
     }
 }

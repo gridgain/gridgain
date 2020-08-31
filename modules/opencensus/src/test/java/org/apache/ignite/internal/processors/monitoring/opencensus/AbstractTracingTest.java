@@ -38,6 +38,8 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.spi.tracing.TracingSpi;
@@ -46,6 +48,7 @@ import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
@@ -65,6 +68,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
 
     /** Span buffer count - hardcode in open census. */
     private static final int SPAN_BUFFER_COUNT = 32;
+
+    /** */
+    protected static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL = "10";
 
     /** Default configuration map. */
     static final Map<TracingConfigurationCoordinates, TracingConfigurationParameters> DFLT_CONFIG_MAP =
@@ -108,6 +114,14 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
         DFLT_CONFIG_MAP.put(
             new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
             TracingConfigurationManager.DEFAULT_DISCOVERY_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_WRITE).build(),
+            TracingConfigurationManager.DEFAULT_CACHE_API_WRITE_CONFIGURATION);
+
+        DFLT_CONFIG_MAP.put(
+            new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_READ).build(),
+            TracingConfigurationManager.DEFAULT_CACHE_API_READ_CONFIGURATION);
     }
 
     /** Test trace exporter handler. */
@@ -124,6 +138,13 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        TestRecordingCommunicationSpi spi = new TestRecordingCommunicationSpi();
+
+        if (blockRebalancing())
+            spi.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        cfg.setCommunicationSpi(spi);
 
         cfg.setConsistentId(igniteInstanceName);
 
@@ -224,6 +245,98 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Conditional check span.
+     *
+     * @param spanType Span type.
+     * @param parentSpanId Parent span id.
+     * @param expSpansCnt expected spans count.
+     * @param expAttrs Attributes to check.
+     * @param maxAwaitTimeout Maximum timeout to wait.
+     * @param awaitInterval Await interval.
+     * @return List of founded span ids.
+     */
+    List<SpanId> checkSpanWithWaitForCondition(
+        SpanType spanType,
+        SpanId parentSpanId,
+        int expSpansCnt,
+        /* tagName: tagValue*/ Map<String, String> expAttrs,
+        long maxAwaitTimeout,
+        long awaitInterval
+    ) {
+        try {
+            GridTestUtils.waitForCondition(() -> {
+                    List<SpanData> gotSpans = hnd.allSpans()
+                        .filter(
+                            span -> parentSpanId != null ?
+                                parentSpanId.equals(span.getParentSpanId()) && spanType.spanName().equals(span.getName()) :
+                                spanType.spanName().equals(span.getName()))
+                        .collect(Collectors.toList());
+
+                    return expSpansCnt == gotSpans.size();
+                },
+                maxAwaitTimeout,
+                awaitInterval);
+        }
+        catch (IgniteInterruptedCheckedException e) {
+            fail(e.getMessage());
+        }
+
+        List<SpanData> gotSpans = hnd.allSpans()
+            .filter(
+                span -> parentSpanId != null ?
+                    parentSpanId.equals(span.getParentSpanId()) && spanType.spanName().equals(span.getName()) :
+                    spanType.spanName().equals(span.getName()))
+            .collect(Collectors.toList());
+
+        assertEquals(expSpansCnt, gotSpans.size());
+
+        java.util.List<SpanId> spanIds = new ArrayList<>();
+
+        gotSpans.forEach(spanData -> {
+            spanIds.add(spanData.getContext().getSpanId());
+
+            checkSpanAttributes(spanData, expAttrs);
+        });
+
+        return spanIds;
+    }
+
+
+
+    /**
+     * Checks that there's at least one span with given spanType and attributes.
+     *
+     * @param spanType Span type to be found.
+     * @param expAttrs Expected attributes.
+     * @return {@code true} if Span with given type and attributes was found, false otherwise.
+     */
+    boolean checkSpanExistences(
+        SpanType spanType,
+        /* tagName: tagValue*/ Map<String, String> expAttrs
+    ) {
+        java.util.List<SpanData> gotSpans = hnd.allSpans()
+            .filter(span -> spanType.spanName().equals(span.getName())).collect(Collectors.toList());
+
+        for (SpanData specificTypeSpans : gotSpans) {
+            Map<String, AttributeValue> attrs = specificTypeSpans.getAttributes().getAttributeMap();
+
+            boolean matchFound = true;
+
+            for (Map.Entry<String, String> entry : expAttrs.entrySet()) {
+                if (!entry.getValue().equals(attributeValueToString(attrs.get(entry.getKey())))) {
+                    matchFound = false;
+
+                    break;
+                }
+            }
+            if (matchFound && expAttrs.size() == attrs.size())
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Verify that given spanData contains all (and only) propagated expected attributes.
      * @param spanData Span data to check.
      * @param expAttrs Attributes to check.
@@ -243,6 +356,9 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
      * @param attributeVal Attribute value.
      */
     protected static String attributeValueToString(AttributeValue attributeVal) {
+        if (attributeVal == null)
+            return null;
+
         return attributeVal.match(
             Functions.returnToString(),
             Functions.returnToString(),
@@ -257,6 +373,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     static class TraceExporterTestHandler extends SpanExporter.Handler {
         /** Collected spans. */
         private final Map<SpanId, SpanData> collectedSpans = new ConcurrentHashMap<>();
+
         /** */
         private final Map<SpanId, java.util.List<SpanData>> collectedSpansByParents = new ConcurrentHashMap<>();
 
@@ -360,5 +477,12 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
                 span.end();
             }
         }
+    }
+
+    /**
+     * @return [@code True} to prevent rebalancing before test start.
+     */
+    protected boolean blockRebalancing() {
+        return true;
     }
 }

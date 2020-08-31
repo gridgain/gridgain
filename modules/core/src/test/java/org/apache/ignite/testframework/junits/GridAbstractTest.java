@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -81,6 +82,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
+import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.GridClassLoaderCache;
 import org.apache.ignite.internal.util.GridTestClockTimer;
@@ -787,7 +789,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Started grid.
      * @throws Exception If anything failed.
      */
-    protected Ignite startGrid() throws Exception {
+    protected IgniteEx startGrid() throws Exception {
         return startGrid(getTestIgniteInstanceName());
     }
 
@@ -848,7 +850,36 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return First started grid.
      * @throws Exception If failed.
      */
+    protected final Ignite startClientGridsMultiThreaded(int init, int cnt) throws Exception {
+        return startMultiThreaded(init, cnt, idx -> {
+            try {
+                startClientGrid(idx);
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /**
+     * @param init Start grid index.
+     * @param cnt Grid count.
+     * @return First started grid.
+     * @throws Exception If failed.
+     */
     protected final Ignite startGridsMultiThreaded(int init, int cnt) throws Exception {
+        return startMultiThreaded(init, cnt, idx -> {
+            try {
+                startGrid(idx);
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    /** */
+    private final Ignite startMultiThreaded(int init, int cnt, Consumer<Integer> starter) throws Exception {
         assert init >= 0;
         assert cnt > 0;
 
@@ -859,7 +890,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         GridTestUtils.runMultiThreaded(
             new Callable<Object>() {
                 @Nullable @Override public Object call() throws Exception {
-                    startGrid(gridIdx.getAndIncrement());
+                    starter.accept(gridIdx.getAndIncrement());
 
                     return null;
                 }
@@ -920,6 +951,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Starts new grid with given index and overriding {@link DependencyResolver}.
+     *
+     * @param idx Index of the grid to start.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(int idx, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return startGrid(getTestIgniteInstanceName(idx));
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
+    }
+
+    /**
      * Starts new grid with given index.
      *
      * @param idx Index of the grid to start.
@@ -927,7 +977,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Started grid.
      * @throws Exception If anything failed.
      */
-    protected IgniteEx startGrid(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
+    protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
         return startGrid(getTestIgniteInstanceName(idx), cfgOp);
     }
 
@@ -940,6 +990,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     protected IgniteEx startClientGrid(int idx) throws Exception {
         return startClientGrid(getTestIgniteInstanceName(idx));
+    }
+
+    /**
+     * Starts new client grid with given index.
+     *
+     * @param idx Index of the grid to start.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startClientGrid(int idx, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return startClientGrid(getTestIgniteInstanceName(idx));
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
     }
 
     /**
@@ -1348,7 +1417,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected void stopGridx(@Nullable String igniteInstanceName, boolean cancel, boolean awaitTop) {
         stopGrid0(igniteInstanceName, cancel, awaitTop, true);
     }
-
 
     /**
      * @param igniteInstanceName Ignite instance name.
@@ -1950,7 +2018,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         BinaryEnumCache.clear();
         serializedObj.clear();
 
-        if (err!= null)
+        if (err != null)
             throw err;
     }
 
@@ -2173,7 +2241,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     /**
      * @return Test resources.
      */
-    private synchronized IgniteTestResources getIgniteTestResources()  {
+    private synchronized IgniteTestResources getIgniteTestResources() {
         IgniteTestResources rsrcs = tests.get(getClass());
 
         if (rsrcs == null)
@@ -2241,8 +2309,10 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             Throwable t = ex.get();
 
             if (t != null) {
-                if (t instanceof AssumptionViolatedException)
-                    U.quiet(false, "Test ignored [test=" + testDescription() + ", msg=" + t.getMessage() + "]");
+                if (t instanceof AssumptionViolatedException) {
+                    U.quietAndInfo(log, "Test ignored [test=" + testDescription() +
+                        ", msg=" + t.getMessage() + "]");
+                }
                 else {
                     U.error(log, "Test failed [test=" + testDescription() +
                         ", duration=" + (System.currentTimeMillis() - ts) + "]", t);

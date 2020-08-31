@@ -375,7 +375,10 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** */
     private boolean sqlEscapeAll;
 
-    /** */
+    /**
+     * @deprecated {@link #qryEntities} is used instead. This field is preserved for serialization compatibility.
+     * */
+    @Deprecated
     private transient Class<?>[] indexedTypes;
 
     /** Copy on read flag. */

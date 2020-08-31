@@ -38,28 +38,28 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
 import org.apache.ignite.testframework.junits.GridTestBinaryMarshaller;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.h2.table.Column;
-import org.h2.util.DateTimeUtils;
-import org.h2.value.CompareMode;
-import org.h2.value.Value;
-import org.h2.value.ValueBoolean;
-import org.h2.value.ValueByte;
-import org.h2.value.ValueBytes;
-import org.h2.value.ValueDate;
-import org.h2.value.ValueDecimal;
-import org.h2.value.ValueDouble;
-import org.h2.value.ValueFloat;
-import org.h2.value.ValueInt;
-import org.h2.value.ValueJavaObject;
-import org.h2.value.ValueLong;
-import org.h2.value.ValueNull;
-import org.h2.value.ValueShort;
-import org.h2.value.ValueString;
-import org.h2.value.ValueStringFixed;
-import org.h2.value.ValueStringIgnoreCase;
-import org.h2.value.ValueTime;
-import org.h2.value.ValueTimestamp;
-import org.h2.value.ValueUuid;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.util.DateTimeUtils;
+import org.gridgain.internal.h2.value.CompareMode;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueBoolean;
+import org.gridgain.internal.h2.value.ValueByte;
+import org.gridgain.internal.h2.value.ValueBytes;
+import org.gridgain.internal.h2.value.ValueDate;
+import org.gridgain.internal.h2.value.ValueDecimal;
+import org.gridgain.internal.h2.value.ValueDouble;
+import org.gridgain.internal.h2.value.ValueFloat;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueJavaObject;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueNull;
+import org.gridgain.internal.h2.value.ValueShort;
+import org.gridgain.internal.h2.value.ValueString;
+import org.gridgain.internal.h2.value.ValueStringFixed;
+import org.gridgain.internal.h2.value.ValueStringIgnoreCase;
+import org.gridgain.internal.h2.value.ValueTime;
+import org.gridgain.internal.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.value.ValueUuid;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -1031,7 +1031,6 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     private static class IgnoreCaseString {
         /** */
         private final String val;
-
 
         /** */
         public IgnoreCaseString(String val) {

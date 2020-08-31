@@ -24,14 +24,14 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel;
 import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModelMultiplier;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
-import org.h2.engine.Session;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableFilter;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -80,10 +80,10 @@ public abstract class GridH2IndexBase extends H2IndexCostedBase {
      * @return Index segment ID for current query context.
      */
     protected int segment(QueryContext qctx) {
-        if(segmentsCount() == 1)
+        if (segmentsCount() == 1)
             return 0;
 
-        if(qctx == null)
+        if (qctx == null)
             throw new IllegalStateException("GridH2QueryContext is not initialized.");
 
         return qctx.segment();
@@ -186,7 +186,7 @@ public abstract class GridH2IndexBase extends H2IndexCostedBase {
      * @param partition Partition idx.
      * @return Segment ID for given key
      */
-    public int segmentForPartition(int partition){
+    public int segmentForPartition(int partition) {
         return segmentsCount() == 1 ? 0 : (partition % segmentsCount());
     }
 

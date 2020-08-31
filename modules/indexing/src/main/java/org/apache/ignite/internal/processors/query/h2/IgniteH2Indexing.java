@@ -184,18 +184,18 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
-import org.h2.api.AggregateFunction;
-import org.h2.api.ErrorCode;
-import org.h2.api.JavaObjectSerializer;
-import org.h2.engine.Session;
-import org.h2.engine.SysProperties;
-import org.h2.index.Index;
-import org.h2.store.DataHandler;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableType;
-import org.h2.util.JdbcUtils;
-import org.h2.value.DataType;
+import org.gridgain.internal.h2.api.AggregateFunction;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.api.JavaObjectSerializer;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.engine.SysProperties;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.store.DataHandler;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableType;
+import org.gridgain.internal.h2.util.JdbcUtils;
+import org.gridgain.internal.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Math.max;
@@ -350,7 +350,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public List<GridQueryFieldMetadata> resultMetaData(String schemaName, SqlFieldsQuery qry)
-        throws IgniteSQLException{
+        throws IgniteSQLException {
         QueryParserResult parsed = parser.parse(schemaName, qry, true);
 
         if (parsed.remainingQuery() != null)
@@ -376,7 +376,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tbl == null)
             return; // Type was rejected.
 
-        tbl.table().update(row, prevRow,  prevRowAvailable);
+        tbl.table().update(row, prevRow, prevRowAvailable);
 
         if (tbl.luceneIndex() != null) {
             long expireTime = row.expireTime();
@@ -418,7 +418,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void dynamicIndexDrop(String schemaName, String idxName, boolean ifExists)
-        throws IgniteCheckedException{
+        throws IgniteCheckedException {
         schemaMgr.dropIndex(schemaName, idxName, ifExists);
     }
 
@@ -802,16 +802,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     private ResultSet executeSqlQuery(final H2PooledConnection conn, final PreparedStatement stmt,
-        int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException  {
+        int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException {
         if (cancel != null)
             cancel.add(() -> cancelStatement(stmt));
 
         Session ses = session(conn);
 
-        if (timeoutMillis > 0)
+        if (timeoutMillis >= 0)
             ses.setQueryTimeout(timeoutMillis);
         else
-            ses.setQueryTimeout(0);
+            ses.setQueryTimeout((int)distrCfg.defaultQueryTimeout());
 
         try {
             return stmt.executeQuery();
@@ -1000,7 +1000,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             throw new IgniteException(e);
         }
 
-        SqlFieldsQuery res = new SqlFieldsQuery(sql);
+        SqlFieldsQuery res = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), qry.getTimeout(), TimeUnit.MILLISECONDS);
 
         res.setArgs(qry.getArgs());
         res.setDistributedJoins(qry.isDistributedJoins());
@@ -1010,9 +1010,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         res.setReplicatedOnly(qry.isReplicatedOnly());
         res.setSchema(schemaName);
         res.setSql(sql);
-
-        if (qry.getTimeout() > 0)
-            res.setTimeout(qry.getTimeout(), TimeUnit.MILLISECONDS);
 
         return res;
     }
@@ -1355,7 +1352,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             cursor.fieldsMeta(select.meta());
 
-            cursor.partitionResult(select.twoStepQuery() != null ? select.twoStepQuery().derivedPartitions(): null);
+            cursor.partitionResult(select.twoStepQuery() != null ? select.twoStepQuery().derivedPartitions() : null);
 
             return singletonList(cursor);
         }
@@ -1413,7 +1410,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         cursor.fieldsMeta(select.meta());
 
-        cursor.partitionResult(select.twoStepQuery() != null ? select.twoStepQuery().derivedPartitions(): null);
+        cursor.partitionResult(select.twoStepQuery() != null ? select.twoStepQuery().derivedPartitions() : null);
 
         return cursor;
     }
@@ -1640,13 +1637,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         MvccSnapshot mvccSnapshot,
         GridQueryCancel cancel
     ) throws IgniteCheckedException {
-        SqlFieldsQuery fldsQry = new SqlFieldsQuery(qry);
+        SqlFieldsQuery fldsQry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(qry), timeout, TimeUnit.MILLISECONDS);
 
         if (params != null)
             fldsQry.setArgs(params);
 
         fldsQry.setEnforceJoinOrder(U.isFlagSet(flags, GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER));
-        fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
         fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
@@ -1683,13 +1679,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Force keepBinary for operation context to avoid binary deserialization inside entry processor
         DmlUtils.setKeepBinaryContext(planCctx);
 
-        SqlFieldsQuery selectFieldsQry = new SqlFieldsQuery(plan.selectQuery(), fldsQry.isCollocated())
+        SqlFieldsQuery selectFieldsQry =
+            QueryUtils.withQueryTimeout(
+                new SqlFieldsQuery(plan.selectQuery(), fldsQry.isCollocated()),
+                fldsQry.getTimeout(),
+                TimeUnit.MILLISECONDS
+            )
             .setArgs(fldsQry.getArgs())
             .setDistributedJoins(fldsQry.isDistributedJoins())
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
             .setLazy(fldsQry.isLazy());
 
         QueryCursorImpl<List<?>> cur;
@@ -1907,7 +1907,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public Set<String> schemasNames(){
+    @Override public Set<String> schemasNames() {
         return schemaMgr.schemaNames();
     }
 
@@ -2021,7 +2021,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isStreamableInsertStatement(String schemaName, SqlFieldsQuery qry) throws SQLException{
+    @Override public boolean isStreamableInsertStatement(String schemaName, SqlFieldsQuery qry) throws SQLException {
         QueryParserResult parsed = parser.parse(schemaName, qry, true);
 
         return parsed.isDml() && parsed.dml().streamable() && parsed.remainingQuery() == null;
@@ -2034,7 +2034,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void markAsRebuildNeeded(GridCacheContext cctx) {
-        assert cctx.group().persistenceEnabled(): cctx;
+        assert cctx.group().persistenceEnabled() : cctx;
 
         markIndexRebuild(cctx.name(), true);
     }
@@ -2082,6 +2082,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
+        //to avoid possible data race
+        GridFutureAdapter<Void> outRebuildCacheIdxFut = new GridFutureAdapter<>();
+
         cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
         rebuildCacheIdxFut.listen(fut -> {
@@ -2093,18 +2096,18 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 }
                 catch (Throwable t) {
                     err = t;
-
-                    rebuildCacheIdxFut.onDone(t);
                 }
             }
 
             if (nonNull(err))
                 U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
+
+            outRebuildCacheIdxFut.onDone(err);
         });
 
         rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
 
-        return rebuildCacheIdxFut;
+        return outRebuildCacheIdxFut;
     }
 
     /**
@@ -2826,8 +2829,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             for (UpdateResult res : ress) {
                 res.throwIfError();
 
-                QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(singletonList
-                    (singletonList(res.counter())), cancel, false, false);
+                QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(singletonList(
+                    singletonList(res.counter())), cancel, false, false);
 
                 resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -2849,8 +2852,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             res.throwIfError();
 
-            QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(singletonList
-                (singletonList(res.counter())), cancel, false, false);
+            QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(singletonList(
+                singletonList(res.counter())), cancel, false, false);
 
             resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -3236,7 +3239,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         catch (IgniteCheckedException e) {
             IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
 
-            if(sqlEx != null)
+            if (sqlEx != null)
                 throw sqlEx;
 
             Exception ex = IgniteUtils.convertExceptionNoWrap(e);

@@ -56,11 +56,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
-import org.h2.message.DbException;
-import org.h2.result.SearchRow;
-import org.h2.result.SortOrder;
-import org.h2.table.IndexColumn;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
@@ -674,7 +674,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @SuppressWarnings({"ConditionalBreakInInfiniteLoop", "IfMayBeConditional"})
     private void inlineSizeRecomendation(SearchRow row) {
         //Do the check only for put operations.
-        if(!(row instanceof H2CacheRow))
+        if (!(row instanceof H2CacheRow))
             return;
 
         Long invokeCnt = inlineSizeCalculationCntr.get();

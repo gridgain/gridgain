@@ -22,9 +22,13 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.client.GridClientPredicate;
 import org.apache.ignite.internal.client.GridClientProtocol;
@@ -172,5 +176,35 @@ public abstract class GridClientUtils {
         i = Math.abs(i);
 
         return i < 0 ? 0 : i;
+    }
+
+    /**
+     * Checks if node with given id supports given ignite feature.
+     *
+     * @param nodeId Id of node for which check is done.
+     * @param client Client that sould be connected to grid.
+     * @param fut Ignite feature being checked.
+     * @return {@code True} if node with given {@code nodeId} supports given feature {@code fut}.
+     * If {@code nodeId} is {@code} null feature support is checked for all cluster nodes.
+     * @throws GridClientException If failed to get nodes list.
+     */
+    public static boolean nodeSupports(UUID nodeId, GridClient client, IgniteFeatures fut) throws GridClientException {
+        return (nodeId == null && allNodesSupport(client, fut)) ||
+            nodeId != null && client.compute().node(nodeId).supports(fut);
+    }
+
+    /**
+     * Checks if all nodes support given ignite feature.
+     *
+     * @param client Client node.
+     * @param feature {@code IgniteFeatures} to check.
+     * @return {@code True} if all nodes support {@code feature}
+     * @throws GridClientException If failed to get cluster nodes list.
+     */
+    public static boolean allNodesSupport(GridClient client, IgniteFeatures feature) throws GridClientException {
+        return client.compute()
+            .nodes()
+            .stream()
+            .allMatch(node -> node.supports(feature));
     }
 }

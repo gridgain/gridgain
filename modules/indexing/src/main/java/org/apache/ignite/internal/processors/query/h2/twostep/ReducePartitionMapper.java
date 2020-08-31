@@ -37,7 +37,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.util.IntArray;
+import org.gridgain.internal.h2.util.IntArray;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -564,12 +564,12 @@ public class ReducePartitionMapper {
 
         // The main cache is allowed to be partitioned.
         if (!cctx.isReplicated()) {
-            assert cacheIds.size() > 1: "no extra replicated caches with partitioned main cache";
+            assert cacheIds.size() > 1 : "no extra replicated caches with partitioned main cache";
 
             // Just replace the main cache with the first one extra.
             cctx = cacheContext(cacheIds.get(i++));
 
-            assert cctx.isReplicated(): "all the extra caches must be replicated here";
+            assert cctx.isReplicated() : "all the extra caches must be replicated here";
         }
 
         Set<ClusterNode> nodes = replicatedUnstableDataNodes(cctx);

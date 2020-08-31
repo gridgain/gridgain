@@ -82,7 +82,7 @@ public class SmallHashSetsVsReadOnlyViewBenchmark extends JmhAbstractBenchmark {
         for (int i = 0; i < SIZE; i++)
             nodes[i] = new Node(UUID.randomUUID());
 
-        for (int i= 0; i < PARTS; i++) {
+        for (int i = 0; i < PARTS; i++) {
             Collection<UUID> hashSet = new HashSet<>();
 
             for (int j = 0; j < SIZE; j++)
@@ -124,7 +124,7 @@ public class SmallHashSetsVsReadOnlyViewBenchmark extends JmhAbstractBenchmark {
 
         boolean contains = false;
 
-        for(UUID uuid : col)
+        for (UUID uuid : col)
             if (randomUuid.equals(uuid))
                 contains = true;
 
@@ -143,7 +143,7 @@ public class SmallHashSetsVsReadOnlyViewBenchmark extends JmhAbstractBenchmark {
 
         boolean contains = false;
 
-        for(UUID uuid : col)
+        for (UUID uuid : col)
             if (randomUuid.equals(uuid))
                 contains = true;
 

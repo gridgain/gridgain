@@ -46,7 +46,7 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
     }
 
     /** {@inheritDoc} */
-    @Override public ClientClusterGroup forNodeId(UUID id, UUID ... ids) {
+    @Override public ClientClusterGroup forNodeId(UUID id, UUID... ids) {
         Collection<UUID> nodeIds = U.newHashSet(1 + (ids == null ? 0 : ids.length));
 
         nodeIds.add(id);

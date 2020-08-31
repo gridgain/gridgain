@@ -15,10 +15,13 @@
  */
 package org.apache.ignite.development.utils.indexreader;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -30,7 +33,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -39,50 +41,59 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgnitePair;
+import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static java.lang.String.format;
+import static java.lang.String.valueOf;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.ERROR_PREFIX;
-import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_GRP_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
- *
+ * Class for testing {@link IgniteIndexReader}.
  */
 public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     /** Page size. */
-    private static final int PAGE_SIZE = 4096;
+    protected static final int PAGE_SIZE = 4096;
 
     /** Partitions count. */
-    private static final int PART_CNT = 1024;
+    protected static final int PART_CNT = RendezvousAffinityFunction.DFLT_PARTITION_COUNT;
 
     /** Version of file page stores. */
     private static final int PAGE_STORE_VER = 2;
 
-    /** Cache name. */
-    private static final String CACHE_NAME = "default";
-
     /** Cache group name. */
-    private static final String CACHE_GROUP_NAME = "defaultGroup";
+    protected static final String CACHE_GROUP_NAME = "defaultGroup";
 
     /** Cache group without indexes. */
     private static final String EMPTY_CACHE_NAME = "empty";
@@ -129,7 +140,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
-        workDir = prepareIndex();
+        prepareWorkDir();
     }
 
     /** {@inheritDoc} */
@@ -151,10 +162,10 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                         .setMaxSize(50 * 1024L * 1024L)
                 )
         ).setCacheConfiguration(
-            new CacheConfiguration(CACHE_NAME)
+            new CacheConfiguration(DEFAULT_CACHE_NAME)
                 .setGroupName(CACHE_GROUP_NAME)
-                .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
-                .setSqlSchema("PUBLIC"),
+                .setAffinity(new RendezvousAffinityFunction(false))
+                .setSqlSchema(QueryUtils.DFLT_SCHEMA),
             new CacheConfiguration(EMPTY_CACHE_NAME)
                 .setGroupName(EMPTY_CACHE_GROUP_NAME),
             new CacheConfiguration(QUERY_CACHE_NAME)
@@ -177,52 +188,79 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Runs a grid to prepare directory with index and data partitions.
+     * Creating and filling {@link #workDir}.
      *
-     * @return Work directory.
      * @throws Exception If fails.
      */
-    private File prepareIndex() throws Exception {
-        IgniteEx ignite = (IgniteEx)Ignition.start(getConfiguration());
+    protected void prepareWorkDir() throws Exception {
+        try (IgniteEx node = startGrid(0)) {
+            populateData(node, null);
 
-        ignite.cluster().active(true);
+            workDir = ((FilePageStoreManager)node.context().cache().context().pageStore()).workDir();
+        }
+    }
 
-        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
+    /**
+     * Filling node with data.
+     *
+     * @param node Node.
+     * @param insert {@code True} for inserting some data and creating tables and indexes,
+     *      {@code false} for inserting, updating and deleting data and deleting indexes, {@code null} for all data processing.
+     * {@code True} if only insert data, {@code false} if delete from {@link #DEFAULT_CACHE_NAME} and {@code null} all at once.
+     * @throws Exception If fails.
+     */
+    protected void populateData(IgniteEx node, @Nullable Boolean insert) throws Exception {
+        requireNonNull(node);
 
-        IgniteCache<Integer, Object> qryCache = ignite.getOrCreateCache(QUERY_CACHE_NAME);
+        IgniteClusterEx cluster = node.cluster();
 
-        for (int i = 0; i < 100; i++)
-            qryCache.put(i, new TestClass1(i, String.valueOf(i)));
+        if (!cluster.active())
+            cluster.active(true);
 
-        for (int i = 0; i < 70; i++)
-            qryCache.put(i, new TestClass2(i, String.valueOf(i)));
+        IgniteCache<Integer, Object> qryCache = node.cache(QUERY_CACHE_NAME);
+
+        int s = isNull(insert) || insert ? 0 : 70;
+        int e = isNull(insert) || !insert ? 100 : 80;
+
+        for (int i = s; i < e; i++)
+            qryCache.put(i, new TestClass1(i, valueOf(i)));
+
+        s = isNull(insert) || insert ? 0 : 50;
+        e = isNull(insert) || !insert ? 70 : 60;
+
+        for (int i = s; i < e; i++)
+            qryCache.put(i, new TestClass2(i, valueOf(i)));
+
+        IgniteCache<Integer, Integer> cache = node.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
-            createAndFillTable(cache, TableInfo.generate(i));
+            createAndFillTable(cache, TableInfo.generate(i), insert);
 
-        forceCheckpoint(ignite);
+        forceCheckpoint(node);
+    }
 
-        IgniteInternalCache<Integer, Integer> cacheEx = ignite.cachex(CACHE_NAME);
-
-        File cacheWorkDir =
-            ((FilePageStoreManager)cacheEx.context().shared().pageStore()).cacheWorkDir(cacheEx.configuration());
-
-        Ignition.stop(ignite.name(), true);
-
-        return cacheWorkDir.getParentFile();
+    /**
+     * Get data directory for cache group.
+     *
+     * @param cacheGrpName Cache group name.
+     * @return Directory name.
+     */
+    protected String dataDir(String cacheGrpName) {
+        return CACHE_GRP_DIR_PREFIX + cacheGrpName;
     }
 
     /**
      * Corrupts partition file.
      *
+     * @param workDir Work directory.
      * @param partId Partition id.
-     * @param pageNum Page to corrupt.
-     * @throws IOException If failed.
+     * @param pageIdxCorrupt Page index to corrupt.
+     * @throws Exception If failed.
      */
-    private void corruptFile(int partId, int pageNum) throws IOException {
-        String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId);
+    private void corruptFile(File workDir, int partId, int pageIdxCorrupt) throws Exception {
+        String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
 
-        File cacheWorkDir = new File(workDir, CACHE_GRP_DIR_PREFIX + CACHE_GROUP_NAME);
+        File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME));
 
         File file = new File(cacheWorkDir, fileName);
 
@@ -231,36 +269,64 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         if (!backup.exists())
             Files.copy(file.toPath(), backup.toPath());
 
-        try (RandomAccessFile f = new RandomAccessFile(file, "rw")) {
+        ByteBuffer buf = GridUnsafe.allocateBuffer(PAGE_SIZE);
+
+        long addr = GridUnsafe.bufferAddress(buf);
+
+        try (FileChannel c = new RandomAccessFile(file, "rw").getChannel()) {
             byte[] trash = new byte[PAGE_SIZE];
 
             ThreadLocalRandom.current().nextBytes(trash);
 
-            int hdrSize = new FileVersionCheckingFactory(
-                    new AsyncFileIOFactory(),
-                    new AsyncFileIOFactory(),
-                    new DataStorageConfiguration().setPageSize(PAGE_SIZE)
-                )
-                .headerSize(PAGE_STORE_VER);
+            int pageCnt = 0;
 
-            f.seek(pageNum * PAGE_SIZE + hdrSize);
+            while (true) {
+                buf.rewind();
 
-            f.write(trash);
+                if (c.read(buf) == -1)
+                    break;
+
+                pageCnt++;
+
+                buf.rewind();
+
+                long pageId = PageIO.getPageId(addr);
+                int pageIdx = PageIdUtils.pageIndex(pageId);
+
+                if (pageIdx != pageIdxCorrupt)
+                    continue;
+
+                buf.put(trash);
+                buf.rewind();
+
+                c.write(buf, (pageCnt - 1) * PAGE_SIZE);
+
+                return;
+            }
+        }
+        finally {
+            GridUnsafe.freeBuffer(buf);
         }
     }
 
     /**
-     * Restores corrupted file from backup after corruption.
+     * Restores corrupted file from backup after corruption if exists.
      *
+     * @param workDir Work directory.
      * @param partId Partition id.
      * @throws IOException If failed.
      */
-    private void restoreFile(int partId) throws IOException {
-        String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId);
+    private void restoreFile(File workDir, int partId) throws IOException {
+        String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : format(PART_FILE_TEMPLATE, partId);
 
-        File cacheWorkDir = new File(workDir, CACHE_GRP_DIR_PREFIX + CACHE_GROUP_NAME);
+        File cacheWorkDir = new File(workDir, dataDir(CACHE_GROUP_NAME));
 
-        Path backupFilesPath = new File(cacheWorkDir, fileName + ".backup").toPath();
+        File backupFiles = new File(cacheWorkDir, fileName + ".backup");
+
+        if (!backupFiles.exists())
+            return;
+
+        Path backupFilesPath = backupFiles.toPath();
 
         Files.copy(backupFilesPath, new File(cacheWorkDir, fileName).toPath(), REPLACE_EXISTING);
 
@@ -309,34 +375,49 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * Creates an sql table, indexes and fill it with some data.
      *
      * @param cache Ignite cache.
+     * @param insert {@code True} for inserting some data and creating tables and indexes,
+     *      {@code false} for inserting, updating and deleting data and deleting indexes, {@code null} for all data processing.
      * @param info Table info.
      */
-    private static void createAndFillTable(IgniteCache cache, TableInfo info) {
+    private static void createAndFillTable(IgniteCache cache, TableInfo info, @Nullable Boolean insert) {
+        String idxToDelName = info.tblName + "_idx_to_delete";
+
         List<IgnitePair<String>> fields = fields(info.fieldsCnt);
         List<IgnitePair<String>> idxs = idxs(info.tblName, fields);
 
         String strFields = fields.stream().map(f -> f.get1() + " " + f.get2()).collect(joining(", "));
 
-        query(
-            cache,
-            "create table " + info.tblName + " (id integer primary key, " + strFields + ") with " +
-                "\"CACHE_NAME=" + info.tblName + ", CACHE_GROUP=" + CACHE_GROUP_NAME + "\""
-        );
+        if (isNull(insert) || insert) {
+            query(
+                cache,
+                "create table " + info.tblName + " (id integer primary key, " + strFields + ") with " +
+                    "\"CACHE_NAME=" + info.tblName + ", CACHE_GROUP=" + CACHE_GROUP_NAME + "\""
+            );
 
-        for (IgnitePair<String> idx : idxs)
-            query(cache, String.format("create index %s on %s (%s)", idx.get1(), info.tblName, idx.get2()));
+            for (IgnitePair<String> idx : idxs)
+                query(cache, format("create index %s on %s (%s)", idx.get1(), info.tblName, idx.get2()));
 
-        String idxToDeleteName = info.tblName + "_idx_to_delete";
+            query(cache, format("create index %s on %s (%s)", idxToDelName, info.tblName, fields.get(0).get1()));
+        }
 
-        query(cache, String.format("create index %s on %s (%s)", idxToDeleteName, info.tblName, fields.get(0).get1()));
+        int s = isNull(insert) || insert ? 0 : info.rec - 10;
+        int e = isNull(insert) || !insert ? info.rec : info.rec - 10;
 
-        for (int i = 0; i < info.rec; i++)
+        for (int i = s; i < e; i++)
             insertQuery(cache, info.tblName, fields, i);
 
-        for (int i = info.rec - info.del; i < info.rec; i++)
-            query(cache, "delete from " + info.tblName + " where id = " + i);
+        if (nonNull(insert) && !insert) {
+            for (int i = s - 10; i < s; i++)
+                updateQuery(cache, info.tblName, fields, i);
+        }
 
-        query(cache, "drop index " + idxToDeleteName);
+        if (isNull(insert) || !insert) {
+            for (int i = info.rec - info.del; i < info.rec; i++)
+                query(cache, "delete from " + info.tblName + " where id = " + i);
+        }
+
+        if (isNull(insert) || !insert)
+            query(cache, "drop index " + idxToDelName);
     }
 
     /**
@@ -357,7 +438,33 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         Object[] paramVals = new Object[fields.size() + 1];
 
         for (int i = 0; i < fields.size() + 1; i++)
-            paramVals[i] = (i % 2 == 0) ? cntr : String.valueOf(cntr);
+            paramVals[i] = (i % 2 == 0) ? cntr : valueOf(cntr);
+
+        query(cache, q.toString(), paramVals);
+    }
+
+    /**
+     * Performs an update query.
+     *
+     * @param cache Ignite cache.
+     * @param tblName Table name.
+     * @param fields List of fields.
+     * @param cntr Counter which is used to generate data.
+     */
+    private static void updateQuery(IgniteCache cache, String tblName, List<IgnitePair<String>> fields, int cntr) {
+        GridStringBuilder q = new GridStringBuilder().a("update ").a(tblName).a(" set ")
+            .a(fields.stream().map(IgniteBiTuple::get1).collect(joining("=?, ", "", "=?")))
+            .a(" where id=?");
+
+        Object[] paramVals = new Object[fields.size() + 1];
+
+        for (int i = 0; i < fields.size() + 1; i++)
+            paramVals[i] = (i % 2 == 0) ? cntr : valueOf(cntr);
+
+        Object id = paramVals[0];
+
+        paramVals[0] = paramVals[paramVals.length - 1];
+        paramVals[paramVals.length - 1] = id;
 
         query(cache, q.toString(), paramVals);
     }
@@ -393,25 +500,25 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param travErrCnt Count of errors that can occur during traversal.
      * @param pageListsErrCnt Count of errors that can occur during page lists scan.
      * @param seqErrCnt Count of errors that can occur during sequential scan.
+     * @param idxSizeConsistent Index size should be consistent
      */
     private void checkOutput(
         String output,
         int treesCnt,
         int travErrCnt,
         int pageListsErrCnt,
-        int seqErrCnt
+        int seqErrCnt,
+        boolean idxSizeConsistent
     ) {
         assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total trees: " + treesCnt);
         assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total trees: " + treesCnt);
-        assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " +
-            (travErrCnt >= 0 ? travErrCnt : ""));
-        assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " +
-            (travErrCnt >= 0 ? travErrCnt : ""));
+        assertContains(log, output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " + travErrCnt);
+        assertContains(log, output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " + travErrCnt);
         assertContains(log, output, "Total errors during lists scan: " + pageListsErrCnt);
 
-        if (travErrCnt == 0)
+        if (idxSizeConsistent)
             assertContains(log, output, "No index size consistency errors found.");
-        else if (travErrCnt > 0)
+        else
             assertContains(log, output, "Index size inconsistency");
 
         if (seqErrCnt >= 0)
@@ -420,7 +527,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             assertContains(log, output, "Orphan pages were not reported due to --indexes filter.");
 
         if (travErrCnt == 0 && pageListsErrCnt == 0 && seqErrCnt == 0)
-            assertFalse(output.contains(ERROR_PREFIX));
+            assertNotContains(log, output, ERROR_PREFIX);
     }
 
     /**
@@ -453,12 +560,12 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
      * @param canBeCorrupted Whether index can be corrupted.
      */
     private void checkIdx(String output, String traversePrefix, String idx, int entriesCnt, boolean canBeCorrupted) {
-        Pattern ptrnCorrect = Pattern.compile(checkIdxRegex(traversePrefix, false, idx, 1, String.valueOf(entriesCnt)));
+        Pattern ptrnCorrect = compile(checkIdxRegex(traversePrefix, false, idx, 1, valueOf(entriesCnt)));
 
         Matcher mCorrect = ptrnCorrect.matcher(output);
 
         if (canBeCorrupted) {
-            Pattern ptrnCorrupted = Pattern.compile(checkIdxRegex(traversePrefix, true, idx, 0, "[0-9]{1,4}"));
+            Pattern ptrnCorrupted = compile(checkIdxRegex(traversePrefix, true, idx, 0, "[0-9]{1,4}"));
 
             Matcher mCorrupted = ptrnCorrupted.matcher(output);
 
@@ -485,38 +592,41 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         int minimumPageStatSize,
         String itemsCnt
     ) {
-        return String.format(
-                withErrors ? CHECK_IDX_PTRN_WITH_ERRORS : CHECK_IDX_PTRN_CORRECT,
-                idxName,
-                minimumPageStatSize,
-                itemsCnt
-            )
-            .replace("<PREFIX>", traversePrefix);
+        return format(
+            withErrors ? CHECK_IDX_PTRN_WITH_ERRORS : CHECK_IDX_PTRN_CORRECT,
+            idxName,
+            minimumPageStatSize,
+            itemsCnt
+        ).replace("<PREFIX>", traversePrefix);
     }
 
     /**
      * Runs index reader on given cache group.
      *
-     * @param workDir Work directory which contains cache group directories.
+     * @param workDir Work directory.
      * @param cacheGrp Cache group name.
      * @param idxs Indexes to check.
-     * @param checkParts Whether to check cache data tree in partitions.
+     * @param checkParts Whether to check cache data tree in partitions..
      * @return Index reader output.
      * @throws IgniteCheckedException If failed.
      */
-    private String runIndexReader(File workDir, String cacheGrp, String[] idxs, boolean checkParts) throws IgniteCheckedException {
-        File dir = new File(workDir, "cacheGroup-" + cacheGrp);
+    private String runIndexReader(
+        File workDir,
+        String cacheGrp,
+        @Nullable String[] idxs,
+        boolean checkParts
+    ) throws IgniteCheckedException {
+        File dir = new File(workDir, dataDir(cacheGrp));
 
-        OutputStream destStream = new StringBuilderOutputStream();
+        OutputStream destStream = new ByteArrayOutputStream();
 
         try (IgniteIndexReader reader = new IgniteIndexReader(
-            dir.getAbsolutePath(),
             PAGE_SIZE,
             PART_CNT,
-            PAGE_STORE_VER,
             idxs,
             checkParts,
-            destStream
+            destStream,
+            createFilePageStoreFactory(dir)
         )) {
             reader.readIdx();
         }
@@ -524,23 +634,323 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         return destStream.toString();
     }
 
-    /** */
+    /**
+     * Create new {@link IgniteIndexReaderFilePageStoreFactory}.
+     *
+     * @param dir Data rirectory.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected IgniteIndexReaderFilePageStoreFactory createFilePageStoreFactory(
+        File dir
+    ) throws IgniteCheckedException {
+        return new IgniteIndexReaderFilePageStoreFactoryImpl(dir, PAGE_SIZE, PAGE_STORE_VER);
+    }
+
+    /**
+     * Test checks correctness of index.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 2)Check that there are no errors in output and 19 B+trees were found;
+     * 3)Check that all indexes are present in output.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
     @Test
     public void testCorrectIdx() throws IgniteCheckedException {
+        checkCorrectIdx(workDir);
+    }
+
+    /**
+     * Test checks correctness of index and consistency of partitions.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with check partitions;
+     * 2)Check that there are no errors in output and 19 B+trees were found;
+     * 3)Check that all indexes are present in output.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    @Test
+    public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
+        checkCorrectIdxWithCheckParts(workDir);
+    }
+
+    /**
+     * Test verifies that specific indexes being checked are correct.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with filter by indexes;
+     * 2)Check that there are no errors in output and 3 B+trees were found;
+     * 3)Check filtered indexes are present in output.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    @Test
+    public void testCorrectIdxWithFilter() throws IgniteCheckedException {
+        checkCorrectIdxWithFilter(workDir);
+    }
+
+    /**
+     * Test checks whether the index of an empty group is correct.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #EMPTY_CACHE_GROUP_NAME};
+     * 2)Check that there are no errors in output and 1 B+tree were found;
+     * 4)Run {@link IgniteIndexReader} for a non-existent cache group;
+     * 3)Check that an exception is thrown.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    @Test
+    public void testEmpty() throws IgniteCheckedException {
+        checkEmpty(workDir);
+    }
+
+    /**
+     * Test for finding corrupted pages in index.
+     *
+     * Steps:
+     * 1)Currupt page in index.bin and backup it;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 3)Check that found 19 B+trees, 2 errors in sequential and transversal analysis;
+     * 4)Check that all indexes are present in output;
+     * 5)Restore backup index.bin.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorruptedIdx() throws Exception {
+        checkCorruptedIdx(asList(workDir));
+    }
+
+    /**
+     * Test for finding corrupted pages in index and checking for consistency in partitions.
+     *
+     * Steps:
+     * 1)Currupt pages not in reuseList of index.bin and backup it;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME} with check partitions;
+     * 3)Check that there are errors when checking partitions and there are no errors in reuseList;
+     * 4)Restore backup index.bin.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorruptedIdxWithCheckParts() throws Exception {
+        checkCorruptedIdxWithCheckParts(asList(workDir));
+    }
+
+    /**
+     * Test for finding corrupted page in partition.
+     *
+     * Steps:
+     * 1)Currupt page in part-0.bin and backup it;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 2)Check that found 19 B+trees and errors when reading currupted page from partition;
+     * 3)Check that all indexes are present in output;
+     * 4)Restore backup part-0.bin.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorruptedPart() throws Exception {
+        checkCorruptedPart(asList(workDir));
+    }
+
+    /**
+     * Test for finding corrupted pages in index and partition.
+     *
+     * Steps:
+     * 1)Currupt page in index.bin, part-0.bin and backup them;
+     * 2)Run {@link IgniteIndexReader} for {@link #CACHE_GROUP_NAME};
+     * 2)Check that found 19 B+trees and errors when reading currupted page from index and partition;
+     * 3)Check that all indexes are present in output;
+     * 4)Restore backup index.bin and part-0.bin.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorruptedIdxAndPart() throws Exception {
+        checkCorruptedIdxAndPart(asList(workDir));
+    }
+
+    /**
+     * Test checks correctness of index of {@link #QUERY_CACHE_GROUP_NAME}.
+     *
+     * Steps:
+     * 1)Run {@link IgniteIndexReader} for {@link #QUERY_CACHE_GROUP_NAME};
+     * 2)Check that there are no errors in output and 5 B+trees were found.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    @Test
+    public void testQryCacheGroup() throws IgniteCheckedException {
+        checkQryCacheGroup(workDir);
+    }
+
+    /**
+     * Checks whether corrupted pages are found in index and partition.
+     * Index and partition {@code 0} will be corrupted for work directories,
+     * and first work directory will be used to start {@link IgniteIndexReader}.
+     *
+     * @param workDirs Work directories.
+     * @throws Exception If failed.
+     */
+    protected void checkCorruptedIdxAndPart(List<File> workDirs) throws Exception {
+        A.ensure(nonNull(workDirs) && !workDirs.isEmpty(), "empty workDirs");
+
+        try {
+            for (File dir : workDirs) {
+                corruptFile(dir, INDEX_PARTITION, 7);
+                corruptFile(dir, 0, 8);
+            }
+
+            String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
+
+            checkOutput(output, 19, 23, 0, 2, false);
+
+            for (int i = 0; i < CREATED_TABLES_CNT; i++)
+                checkIdxs(output, TableInfo.generate(i), true);
+        }
+        finally {
+            for (File dir : workDirs) {
+                restoreFile(dir, INDEX_PARTITION);
+                restoreFile(dir, 0);
+            }
+        }
+    }
+
+    /**
+     * Checks whether corrupted page are found in partition.
+     * Partition {@code 0} will be corrupted for work directories,
+     * and first work directory will be used to start {@link IgniteIndexReader}.
+     *
+     * @param workDirs Work directories.
+     * @throws Exception If failed.
+     */
+    protected void checkCorruptedPart(List<File> workDirs) throws Exception {
+        A.ensure(nonNull(workDirs) && !workDirs.isEmpty(), "empty workDirs");
+
+        try {
+            for (File dir : workDirs)
+                corruptFile(dir, 0, 8);
+
+            String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
+
+            checkOutput(output, 19, 23, 0, 0, true);
+
+            for (int i = 0; i < CREATED_TABLES_CNT; i++)
+                checkIdxs(output, TableInfo.generate(i), true);
+        }
+        finally {
+            for (File dir : workDirs)
+                restoreFile(dir, 0);
+        }
+    }
+
+    /**
+     * Checking for corrupted pages in index and checking for consistency in partitions.
+     * Index will be corrupted for work directories, and first work directory will be used to start {@link IgniteIndexReader}.
+     *
+     * @param workDirs Work directories.
+     * @throws Exception If failed.
+     */
+    protected void checkCorruptedIdxWithCheckParts(List<File> workDirs) throws Exception {
+        A.ensure(nonNull(workDirs) && !workDirs.isEmpty(), "empty workDirs");
+
+        try {
+            for (int i = 31; i < 35; i++) {
+                for (File dir : workDirs)
+                    corruptFile(dir, INDEX_PARTITION, i);
+            }
+
+            String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, true);
+
+            // Pattern with errors count > 9
+            Pattern ptrn = compile(
+                "Partition check finished, total errors: [0-9]{2,5}, total problem partitions: [0-9]{2,5}"
+            );
+
+            assertTrue(output, ptrn.matcher(output).find());
+
+            assertContains(log, output, "Total errors during lists scan: 0");
+        }
+        finally {
+            for (File dir : workDirs)
+                restoreFile(dir, INDEX_PARTITION);
+        }
+    }
+
+    /**
+     * Checks whether corrupted pages are found in index.
+     * Index will be corrupted for work directories, and first work directory will be used to start {@link IgniteIndexReader}.
+     *
+     * @param workDirs Work directories.
+     * @throws Exception If failed.
+     */
+    protected void checkCorruptedIdx(List<File> workDirs) throws Exception {
+        A.ensure(nonNull(workDirs) && !workDirs.isEmpty(), "empty workDirs");
+
+        try {
+            for (File dir : workDirs)
+                corruptFile(dir, INDEX_PARTITION, 5);
+
+            String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
+
+            // 1 corrupted page detected while traversing, and 1 index size inconsistency error.
+            int travErrCnt = 2;
+
+            // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
+            int seqErrCnt = 2;
+
+            checkOutput(output, 19, travErrCnt, 0, seqErrCnt, false);
+
+            for (int i = 0; i < CREATED_TABLES_CNT; i++)
+                checkIdxs(output, TableInfo.generate(i), true);
+        }
+        finally {
+            for (File dir : workDirs)
+                restoreFile(dir, INDEX_PARTITION);
+        }
+    }
+
+    /**
+     * Checking correctness of index for {@link #QUERY_CACHE_GROUP_NAME}.
+     *
+     * @param workDir Work directory.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void checkQryCacheGroup(File workDir) throws IgniteCheckedException {
+        String output = runIndexReader(workDir, QUERY_CACHE_GROUP_NAME, null, false);
+
+        checkOutput(output, 5, 0, 0, 0, true);
+    }
+
+    /**
+     * Checking correctness of index.
+     *
+     * @param workDir Work directory.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void checkCorrectIdx(File workDir) throws IgniteCheckedException {
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
-        checkOutput(output, 19, 0, 0, 0);
+        checkOutput(output, 19, 0, 0, 0, true);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
     }
 
-    /** */
-    @Test
-    public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
+    /**
+     * Checking correctness of index and consistency of partitions with it.
+     *
+     * @param workDir Work directory.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void checkCorrectIdxWithCheckParts(File workDir) throws IgniteCheckedException {
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true);
 
-        checkOutput(output, 19, 0, 0, 0);
+        checkOutput(output, 19, 0, 0, 0, true);
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
@@ -549,14 +959,18 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         assertContains(log, output, "Partition check finished, total errors: 0, total problem partitions: 0");
     }
 
-    /** */
-    @Test
-    public void testCorrectIdxWithFilter() throws IgniteCheckedException {
-        String[] idxsToCheck = "2654_-1177891018_T2_F1_IDX##H2Tree%0,2654_-1177891018_T2_F2_IDX##H2Tree%0".split(",");
+    /**
+     * Checking that specific indexes being checked are correct.
+     *
+     * @param workDir Work directory.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void checkCorrectIdxWithFilter(File workDir) throws IgniteCheckedException {
+        String[] idxsToCheck = {"2654_-1177891018_T2_F1_IDX##H2Tree%0", "2654_-1177891018_T2_F2_IDX##H2Tree%0"};
 
         String output = runIndexReader(workDir, CACHE_GROUP_NAME, idxsToCheck, false);
 
-        checkOutput(output, 3, 0, 0, -1);
+        checkOutput(output, 3, 0, 0, -1, true);
 
         Set<String> idxSet = new HashSet<>(asList(idxsToCheck));
 
@@ -577,124 +991,36 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         }
     }
 
-    /** */
-    @Test
-    public void testEmpty() throws IgniteCheckedException {
+    /**
+     * Validating index of an empty group.
+     *
+     * @param workDir Work directory.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void checkEmpty(File workDir) throws IgniteCheckedException {
         // Check output for empty cache group.
         String output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME, null, false);
 
-        checkOutput(output, 1, 0, 0, 0);
+        checkOutput(output, 1, 0, 0, 0, true);
 
         // Create an empty directory and try to check it.
-        File cleanDir = new File(workDir, "cacheGroup-noCache");
+        String newCleanGrp = "noCache";
 
-        cleanDir.mkdir();
-
-        RuntimeException re = null;
+        File cleanDir = new File(workDir, dataDir(newCleanGrp));
 
         try {
-            runIndexReader(workDir, "noCache", null, false);
-        }
-        catch (RuntimeException e) {
-            re = e;
-        }
+            cleanDir.mkdir();
 
-        assertNotNull(re);
-    }
-
-    /** */
-    @Test
-    public void testCorruptedIdx() throws IgniteCheckedException, IOException {
-        corruptFile(INDEX_PARTITION, 5);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
-
-            // 1 corrupted page detected while traversing, and 1 index size inconsistency error.
-            int travErrCnt = 2;
-
-            // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
-            int seqErrCnt = 2;
-
-            checkOutput(output, 19, travErrCnt, 0, seqErrCnt);
-
-            for (int i = 0; i < CREATED_TABLES_CNT; i++)
-                checkIdxs(output, TableInfo.generate(i), true);
+            assertThrows(
+                log,
+                () -> runIndexReader(workDir, newCleanGrp, null, false),
+                IgniteCheckedException.class,
+                null
+            );
         }
         finally {
-            restoreFile(INDEX_PARTITION);
+            U.delete(cleanDir);
         }
-    }
-
-    /** */
-    @Test
-    public void testCorruptedIdxWithCheckParts() throws IgniteCheckedException, IOException {
-        int startCorrupt = 30;
-        int endCorrupt = 50;
-
-        for (int i = startCorrupt; i < endCorrupt; i++)
-            corruptFile(INDEX_PARTITION, i);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true);
-
-            // Pattern with errors count > 9
-            Pattern ptrn =
-                Pattern.compile("Partition check finished, total errors: [0-9]{2,5}, total problem partitions: [0-9]{2,5}");
-
-            assertTrue(output, ptrn.matcher(output).find());
-
-            assertContains(log, output, "Total errors during lists scan: 0");
-        }
-        finally {
-            restoreFile(INDEX_PARTITION);
-        }
-    }
-
-    /** */
-    @Test
-    public void testCorruptedPart() throws IgniteCheckedException, IOException {
-        corruptFile(0, 7);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
-
-            checkOutput(output, 19, -1, 0, 0);
-
-            for (int i = 0; i < CREATED_TABLES_CNT; i++)
-                checkIdxs(output, TableInfo.generate(i), true);
-        }
-        finally {
-            restoreFile(0);
-        }
-    }
-
-    /** */
-    @Test
-    public void testCorruptedIdxAndPart() throws IgniteCheckedException, IOException {
-        corruptFile(INDEX_PARTITION, 7);
-        corruptFile(0, 5);
-
-        try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
-
-            checkOutput(output, 19, -1, 0, 2);
-
-            for (int i = 0; i < CREATED_TABLES_CNT; i++)
-                checkIdxs(output, TableInfo.generate(i), true);
-        }
-        finally {
-            restoreFile(INDEX_PARTITION);
-            restoreFile(0);
-        }
-    }
-
-    /** */
-    @Test
-    public void testQryCacheGroup() throws IgniteCheckedException {
-        String output = runIndexReader(workDir, QUERY_CACHE_GROUP_NAME, null, false);
-
-        checkOutput(output, 5, 0, 0, 0);
     }
 
     /**

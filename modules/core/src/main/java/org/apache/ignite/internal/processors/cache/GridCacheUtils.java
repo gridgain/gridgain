@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
+import org.apache.ignite.configuration.WarmUpConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -78,6 +79,10 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaS
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cache.warmup.LoadAllWarmUpStrategy;
+import org.apache.ignite.internal.processors.cache.warmup.NoOpWarmUpStrategy;
+import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategy;
+import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategySupplier;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -113,6 +118,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.of;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -600,7 +606,7 @@ public class GridCacheUtils {
             private final LongAdder res = new LongAdder();
 
             @Override public boolean collect(Long l) {
-                if(l != null)
+                if (l != null)
                     res.add(l);
 
                 return true;
@@ -1135,7 +1141,7 @@ public class GridCacheUtils {
      * @throws IgniteCheckedException If failed.
      */
     public static <K, V> void inTx(IgniteInternalCache<K, V> cache, TransactionConcurrency concurrency,
-        TransactionIsolation isolation, IgniteInClosureX<IgniteInternalCache<K ,V>> clo) throws IgniteCheckedException {
+        TransactionIsolation isolation, IgniteInClosureX<IgniteInternalCache<K, V>> clo) throws IgniteCheckedException {
 
         try (GridNearTxLocal tx = cache.txStartEx(concurrency, isolation)) {
             clo.applyx(cache);
@@ -1154,7 +1160,7 @@ public class GridCacheUtils {
      * @throws IgniteCheckedException If failed.
      */
     public static <K, V> void inTx(Ignite ignite, IgniteCache<K, V> cache, TransactionConcurrency concurrency,
-        TransactionIsolation isolation, IgniteInClosureX<IgniteCache<K ,V>> clo) throws IgniteCheckedException {
+        TransactionIsolation isolation, IgniteInClosureX<IgniteCache<K, V>> clo) throws IgniteCheckedException {
 
         try (Transaction tx = ignite.transactions().txStart(concurrency, isolation)) {
             clo.applyx(cache);
@@ -2092,9 +2098,45 @@ public class GridCacheUtils {
     }
 
     /**
+     * Getting available warming strategies.
+     *
+     * @param kernalCtx Kernal context.
+     * @return Mapping configuration to strategy.
+     */
+    public static Map<Class<? extends WarmUpConfiguration>, WarmUpStrategy> warmUpStrategies(
+        GridKernalContext kernalCtx
+    ) {
+        Map<Class<? extends WarmUpConfiguration>, WarmUpStrategy> strategies = new HashMap<>();
+
+        // Adding default strategies.
+        WarmUpStrategy[] defStrats = {
+            new NoOpWarmUpStrategy(),
+            new LoadAllWarmUpStrategy(
+                kernalCtx.log(LoadAllWarmUpStrategy.class),
+                () -> kernalCtx.cache().cacheGroups()
+            )
+        };
+
+        for (WarmUpStrategy<?> strategy : defStrats)
+            strategies.putIfAbsent(strategy.configClass(), strategy);
+
+        // Adding strategies from plugins.
+        WarmUpStrategySupplier[] suppliers = kernalCtx.plugins().extensions(WarmUpStrategySupplier.class);
+
+        if (nonNull(suppliers)) {
+            for (WarmUpStrategySupplier supplier : suppliers) {
+                for (WarmUpStrategy<?> strategy : supplier.strategies())
+                    strategies.putIfAbsent(strategy.configClass(), strategy);
+            }
+        }
+
+        return strategies;
+    }
+
+    /**
      *
      */
     public interface BackupPostProcessingClosure extends IgniteInClosure<Collection<GridCacheEntryInfo>>,
-        IgniteBiInClosure<CacheObject, GridCacheVersion>{
+        IgniteBiInClosure<CacheObject, GridCacheVersion> {
     }
 }

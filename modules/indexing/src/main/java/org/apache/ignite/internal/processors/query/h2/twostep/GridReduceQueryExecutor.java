@@ -89,12 +89,12 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionException;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.engine.Session;
-import org.h2.index.Index;
-import org.h2.table.Column;
-import org.h2.util.IntArray;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.util.IntArray;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -460,6 +460,7 @@ public class GridReduceQueryExecutor {
                         .parameters(params)
                         .flags(queryFlags(qry, enforceJoinOrder, lazy, dataPageScanEnabled))
                         .timeout(timeoutMillis)
+                        .explicitTimeout(true)
                         .schemaName(schemaName)
                         .maxMemory(maxMem)
                         .runningQryId(qryId);
@@ -647,7 +648,7 @@ public class GridReduceQueryExecutor {
             cancel.checkCancelled();
         }
         catch (QueryCancelledException cancelEx) {
-            throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(),  cancelEx);
+            throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(), cancelEx);
         }
 
         if (ctx.clientDisconnected()) {
@@ -817,7 +818,7 @@ public class GridReduceQueryExecutor {
                     nodes = singletonList(F.rand(nodes));
                 }
 
-                return new ReducePartitionMapResult(nodes,  nodesParts.partitionsMap(), nodesParts.queryPartitionsMap());
+                return new ReducePartitionMapResult(nodes, nodesParts.partitionsMap(), nodesParts.queryPartitionsMap());
             }
 
             return nodesParts;
@@ -898,6 +899,7 @@ public class GridReduceQueryExecutor {
             .pageSize(pageSize)
             .parameters(params)
             .timeout(timeoutMillis)
+            .explicitTimeout(true)
             .flags(flags);
 
         updRuns.put(reqId, r);
@@ -1199,7 +1201,7 @@ public class GridReduceQueryExecutor {
         try {
             Session ses = H2Utils.session(conn);
 
-            CreateTableData data  = new CreateTableData();
+            CreateTableData data = new CreateTableData();
 
             data.tableName = "T___";
             data.schema = ses.getDatabase().getSchema(ses.getCurrentSchemaName());

@@ -205,7 +205,6 @@ public class GridAtomicLong extends AtomicLong {
         }
     }
 
-
     /**
      * Sets value only if it is not equals to current one.
      *

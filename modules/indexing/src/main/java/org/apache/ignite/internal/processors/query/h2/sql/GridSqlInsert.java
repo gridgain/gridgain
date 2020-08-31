@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.List;
+import org.gridgain.internal.h2.command.dml.Insert;
 
 /** */
 public class GridSqlInsert extends GridSqlStatement {
@@ -34,13 +35,13 @@ public class GridSqlInsert extends GridSqlStatement {
 
     /**
      * Not supported, introduced for clarity and correct SQL generation.
-     * @see org.h2.command.dml.Insert#insertFromSelect
+     * @see Insert#insertFromSelect
      */
     private boolean direct;
 
     /**
      * Not supported, introduced for clarity and correct SQL generation.
-     * @see org.h2.command.dml.Insert#sortedInsertMode
+     * @see Insert#sortedInsertMode
      */
     private boolean sorted;
 

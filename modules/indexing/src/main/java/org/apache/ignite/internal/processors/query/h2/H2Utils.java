@@ -72,39 +72,39 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Constants;
-import org.h2.engine.Session;
-import org.h2.expression.aggregate.AggregateData;
-import org.h2.jdbc.JdbcConnection;
-import org.h2.result.Row;
-import org.h2.result.SortOrder;
-import org.h2.store.DataHandler;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.util.JdbcUtils;
-import org.h2.util.LocalDateTimeUtils;
-import org.h2.util.Utils;
-import org.h2.value.DataType;
-import org.h2.value.Value;
-import org.h2.value.ValueArray;
-import org.h2.value.ValueBoolean;
-import org.h2.value.ValueByte;
-import org.h2.value.ValueBytes;
-import org.h2.value.ValueDate;
-import org.h2.value.ValueDecimal;
-import org.h2.value.ValueDouble;
-import org.h2.value.ValueFloat;
-import org.h2.value.ValueGeometry;
-import org.h2.value.ValueInt;
-import org.h2.value.ValueJavaObject;
-import org.h2.value.ValueLong;
-import org.h2.value.ValueNull;
-import org.h2.value.ValueRow;
-import org.h2.value.ValueShort;
-import org.h2.value.ValueString;
-import org.h2.value.ValueTime;
-import org.h2.value.ValueTimestamp;
-import org.h2.value.ValueUuid;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.aggregate.AggregateData;
+import org.gridgain.internal.h2.jdbc.JdbcConnection;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.store.DataHandler;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.util.JdbcUtils;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
+import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueArray;
+import org.gridgain.internal.h2.value.ValueBoolean;
+import org.gridgain.internal.h2.value.ValueByte;
+import org.gridgain.internal.h2.value.ValueBytes;
+import org.gridgain.internal.h2.value.ValueDate;
+import org.gridgain.internal.h2.value.ValueDecimal;
+import org.gridgain.internal.h2.value.ValueDouble;
+import org.gridgain.internal.h2.value.ValueFloat;
+import org.gridgain.internal.h2.value.ValueGeometry;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueJavaObject;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueNull;
+import org.gridgain.internal.h2.value.ValueRow;
+import org.gridgain.internal.h2.value.ValueShort;
+import org.gridgain.internal.h2.value.ValueString;
+import org.gridgain.internal.h2.value.ValueTime;
+import org.gridgain.internal.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -149,7 +149,6 @@ public class H2Utils {
 
     /** Quotation character. */
     private static final char ESC_CH = '\"';
-
 
     /** Hash join max table size (not final for test). */
     private static int hashJoinMaxTableSize
@@ -529,8 +528,8 @@ public class H2Utils {
      */
     @SuppressWarnings("unchecked")
     public static QueryCursorImpl<List<?>> zeroCursor() {
-        QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList
-            (Collections.singletonList(0L)), null, false, false);
+        QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList(
+            Collections.singletonList(0L)), null, false, false);
 
         resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -672,7 +671,7 @@ public class H2Utils {
      * @see Value
      * @see DataType#getTypeFromClass(Class)
      */
-    public static int getTypeFromClass(Class <?> x) {
+    public static int getTypeFromClass(Class<?> x) {
         if (x == null || Void.TYPE == x)
             return Value.NULL;
 
@@ -769,8 +768,13 @@ public class H2Utils {
     private static String dbTypeFromClass(Class<?> cls, int precision, int scale) {
         String dbType = H2DatabaseType.fromClass(cls).dBTypeAsString();
 
-        if (precision != -1 && dbType.equalsIgnoreCase(H2DatabaseType.VARCHAR.dBTypeAsString()))
-            return dbType + "(" + precision + ")";
+        if (precision != -1 && scale != -1 && dbType.equalsIgnoreCase(H2DatabaseType.DECIMAL.dBTypeAsString()))
+            return dbType + "(" + precision + ", " + scale + ')';
+
+        if (precision != -1 && (
+                dbType.equalsIgnoreCase(H2DatabaseType.VARCHAR.dBTypeAsString())
+                        || dbType.equalsIgnoreCase(H2DatabaseType.DECIMAL.dBTypeAsString())))
+            return dbType + '(' + precision + ')';
 
         return dbType;
     }
@@ -826,7 +830,7 @@ public class H2Utils {
                 (upper.startsWith("WHERE") || upper.startsWith("ORDER") || upper.startsWith("LIMIT") ?
                     " " : " WHERE ");
 
-        if(tableAlias != null)
+        if (tableAlias != null)
             t = tableAlias;
 
         qry = "SELECT " + t + "." + KEY_FIELD_NAME + ", " + t + "." + VAL_FIELD_NAME + from + qry;
@@ -1063,14 +1067,14 @@ public class H2Utils {
 
         boolean isSql = tbl.rowDescriptor().tableDescriptor().sql();
 
-        if(!isSql)
+        if (!isSql)
             return idxCols;
 
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
 
         for (IndexColumn idxCol : idxCols) {
-            if(idxCol.column.getColumnId() == KEY_COL){
-                if(QueryUtils.isSqlType(type.keyClass())) {
+            if (idxCol.column.getColumnId() == KEY_COL) {
+                if (QueryUtils.isSqlType(type.keyClass())) {
                     int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
                     //Remap simple key to alternative column.

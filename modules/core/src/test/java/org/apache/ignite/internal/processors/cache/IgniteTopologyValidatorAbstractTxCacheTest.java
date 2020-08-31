@@ -107,7 +107,6 @@ public abstract class IgniteTopologyValidatorAbstractTxCacheTest extends IgniteT
             }
         }
 
-
         try (Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
             putInvalid(CACHE_NAME_1);
         }

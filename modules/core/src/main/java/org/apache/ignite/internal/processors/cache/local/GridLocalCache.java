@@ -331,7 +331,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             needVer); // TODO IGNITE-7371
     }
 
-
     /**
      * @param keys Keys.
      * @param readThrough Read-through flag.
@@ -376,6 +375,8 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             Map<KeyCacheObject, EntryGetResult> misses = null;
 
             Set<GridCacheEntryEx> newLocalEntries = null;
+
+            ctx.shared().database().checkpointReadLock();
 
             try {
                 int keysSize = keys.size();
@@ -695,6 +696,9 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
             }
             catch (IgniteCheckedException e) {
                 return new GridFinishedFuture<>(e);
+            }
+            finally {
+                ctx.shared().database().checkpointReadUnlock();
             }
         }
         else {

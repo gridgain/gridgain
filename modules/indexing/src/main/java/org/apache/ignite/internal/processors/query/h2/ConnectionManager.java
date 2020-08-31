@@ -33,10 +33,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngi
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.api.JavaObjectSerializer;
-import org.h2.engine.Database;
-import org.h2.jdbc.JdbcConnection;
-import org.h2.store.DataHandler;
+import org.gridgain.internal.h2.Driver;
+import org.gridgain.internal.h2.api.JavaObjectSerializer;
+import org.gridgain.internal.h2.engine.Database;
+import org.gridgain.internal.h2.jdbc.JdbcConnection;
+import org.gridgain.internal.h2.store.DataHandler;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT;
@@ -72,7 +73,8 @@ public class ConnectionManager {
     private final Long stmtCleanupPeriod = Long.getLong(IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD, 10_000);
 
     /** The timeout to remove entry from the statement cache if the thread doesn't perform any queries. */
-    private final Long stmtTimeout = Long.getLong(IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT, 600 * 1000);
+    private final Long stmtTimeout = Long.getLong(IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT, 600 * 1000)
+        * 1_000_000; // convert millis to nanos
 
     /** Database URL. */
     private final String dbUrl;
@@ -106,12 +108,12 @@ public class ConnectionManager {
 
         connPool = new ConcurrentStripedPool<>(ctx.config().getQueryThreadPoolSize(), DFLT_CONNECTION_POOL_SIZE);
 
-        dbUrl = "jdbc:h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
+        dbUrl = "jdbc:gg-h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
             ";LOCAL_RESULT_FACTORY=\"" + localResultFactoryClass + "\"";
 
         log = ctx.log(ConnectionManager.class);
 
-        org.h2.Driver.load();
+        Driver.load();
 
         try {
             sysConn = DriverManager.getConnection(dbUrl);
@@ -224,10 +226,8 @@ public class ConnectionManager {
      * Called periodically to clean up the statement cache.
      */
     private void cleanupStatements() {
-        long now = U.currentTimeMillis();
-
         connPool.forEach(c -> {
-            if (now - c.statementCache().lastUsage() > stmtTimeout)
+            if (c.statementCache().inactiveFor(stmtTimeout))
                 c.clearStatementCache();
         });
     }

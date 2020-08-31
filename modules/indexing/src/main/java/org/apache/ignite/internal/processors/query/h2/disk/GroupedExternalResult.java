@@ -19,14 +19,14 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import org.h2.engine.Session;
-import org.h2.value.Value;
-import org.h2.value.ValueRow;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueRow;
 
 /**
  * Wrapper for spilled groups file.
  */
-public class GroupedExternalResult extends AbstractExternalResult<Object>  {
+public class GroupedExternalResult extends AbstractExternalResult<Object> {
     /** Result queue. */
     private Queue<ExternalResultData.Chunk> resQueue;
 
@@ -57,7 +57,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     }
 
     /** */
-    public Map.Entry<ValueRow, Object[]>  next() {
+    public Map.Entry<ValueRow, Object[]> next() {
         if (resQueue.isEmpty())
             return null;
 
@@ -92,7 +92,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
             resQueue = new PriorityQueue<>(chunkCmp);
 
         // Init chunks.
-        for (ExternalResultData.Chunk  chunk : data.chunks()) {
+        for (ExternalResultData.Chunk chunk : data.chunks()) {
             if (chunk.next())
                 resQueue.offer(chunk);
         }

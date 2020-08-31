@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 import java.util.ArrayList;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.h2.command.Parser;
+import org.gridgain.internal.h2.command.Parser;
 
 /**
  * Alias for column or table.
@@ -37,7 +37,7 @@ public class GridSqlAlias extends GridSqlElement {
 
         addChild(expr);
 
-        assert !F.isEmpty(alias): alias;
+        assert !F.isEmpty(alias) : alias;
 
         this.alias = alias;
     }

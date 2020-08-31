@@ -45,7 +45,7 @@ public final class JdbcTestUtils {
      * @param sql SQL query.
      * @return Results.
      */
-    public static List<List<?>> sql(String sql, Object ... params) throws Exception {
+    public static List<List<?>> sql(String sql, Object... params) throws Exception {
         return sql(URL, sql, Arrays.asList(params));
     }
 

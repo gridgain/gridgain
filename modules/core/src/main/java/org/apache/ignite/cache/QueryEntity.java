@@ -16,6 +16,7 @@
 
 package org.apache.ignite.cache;
 
+import java.util.LinkedHashSet;
 import javax.cache.CacheException;
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -120,7 +121,7 @@ public class QueryEntity implements Serializable {
         valueFieldName = other.valueFieldName;
 
         fields = new LinkedHashMap<>(other.fields);
-        keyFields = other.keyFields != null ? new HashSet<>(other.keyFields) : null;
+        keyFields = other.keyFields != null ? new LinkedHashSet<>(other.keyFields) : null;
 
         aliases = new HashMap<>(other.aliases);
         idxs = other.idxs != null ? new ArrayList<>(other.idxs) : null;
@@ -232,7 +233,7 @@ public class QueryEntity implements Serializable {
         }
 
         for (QueryIndex queryIndex : target.getIndexes()) {
-            if(currentIndexes.containsKey(queryIndex.getName())) {
+            if (currentIndexes.containsKey(queryIndex.getName())) {
                 checkEquals(
                     conflicts,
                     "index " + queryIndex.getName(),
@@ -825,7 +826,7 @@ public class QueryEntity implements Serializable {
                     // resulting parent column comes before columns corresponding to those
                     // nested properties in the resulting table - that way nested
                     // properties override will happen properly (first parent, then children).
-                    type.addProperty(prop, key, true);
+                    type.addProperty(prop, sqlAnn, key, true);
 
                     processAnnotation(key, sqlAnn, txtAnn, cls, c, field.getType(), prop, type);
                 }

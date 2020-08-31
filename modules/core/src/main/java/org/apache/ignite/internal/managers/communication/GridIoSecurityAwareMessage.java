@@ -23,6 +23,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents a security communication message.
@@ -30,6 +31,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 public class GridIoSecurityAwareMessage extends GridIoMessage {
     /** */
     private static final long serialVersionUID = 0L;
+
     /** */
     public static final short TYPE_CODE = 174;
 
@@ -37,7 +39,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
     private UUID secSubjId;
 
     /** Security context transmitting from node initiator of action. */
-    private byte[] secCtx;
+    private @Nullable byte[] secCtx;
 
     /**
      * No-op constructor to support {@link Externalizable} interface.
@@ -49,6 +51,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
 
     /**
      * @param secSubjId Security subject id.
+     * @param secCtx Security context.
      * @param plc Policy.
      * @param topic Communication topic.
      * @param topicOrd Topic ordinal value.
@@ -60,7 +63,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
      */
     public GridIoSecurityAwareMessage(
         UUID secSubjId,
-        byte[] secSubject,
+        @Nullable byte[] secCtx,
         byte plc,
         Object topic,
         int topicOrd,
@@ -73,7 +76,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
         super(plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout, connIdx);
 
         this.secSubjId = secSubjId;
-        this.secCtx = secSubject;
+        this.secCtx = secCtx;
     }
 
     /**
@@ -86,7 +89,7 @@ public class GridIoSecurityAwareMessage extends GridIoMessage {
     /**
      * @return Security context
      */
-    public byte[] getSecCtx() {
+    public @Nullable byte[] secCtx() {
         return secCtx;
     }
 

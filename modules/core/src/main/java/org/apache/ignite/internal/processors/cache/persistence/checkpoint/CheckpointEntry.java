@@ -206,9 +206,22 @@ public class CheckpointEntry {
         }
 
         /**
+         * Return a partition id by an index of this group state.
+         * Index was passed through parameter have to be less than size.
          *
+         * @param idx Partition index.
+         * @return Patition id.
          */
-        public long size(){
+        public int getPartitionByIndex(int idx) {
+            return parts[idx];
+        }
+
+        /**
+         * Returns number of partitions.
+         *
+         * @return Number of partitions.
+         */
+        public int size() {
             return idx;
         }
 
@@ -343,9 +356,10 @@ public class CheckpointEntry {
 
                         grpStates = remap(stateRec);
                     }
-                    else
-                        initEx = new IgniteCheckedException(
+                    else {
+                        throw new IgniteCheckedException(
                             "Failed to find checkpoint record at the given WAL pointer: " + ptr);
+                    }
                 }
                 catch (IgniteCheckedException e) {
                     initEx = e;

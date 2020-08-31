@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.binary;
 
-import javax.cache.CacheException;
 import java.io.File;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -757,7 +757,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         " [typeId=" + typeId
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + (holder == null ? "NA" : holder.pendingVersion())
-                        + ", acceptedVer=" + (holder == null ? "NA" :holder.acceptedVersion()) + ']');
+                        + ", acceptedVer=" + (holder == null ? "NA" : holder.acceptedVersion()) + ']');
 
                 try {
                     transport.requestUpToDateMetadata(typeId).get();
@@ -778,7 +778,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         " [typeId=" + typeId
                         + ", schemaId=" + schemaId
                         + ", pendingVer=" + (holder == null ? "NA" : holder.pendingVersion())
-                        + ", acceptedVer=" + (holder == null ? "NA" :holder.acceptedVersion()) + ']');
+                        + ", acceptedVer=" + (holder == null ? "NA" : holder.acceptedVersion()) + ']');
             }
         }
         else {
@@ -824,7 +824,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                         + ", missingSchemaId=" + schemaId
                         + ", pendingVer=" + (holder == null ? "NA" : holder.pendingVersion())
                         + ", acceptedVer=" + (holder == null ? "NA" : holder.acceptedVersion())
-                        + ", binMetaUpdateTimeout=" + waitSchemaTimeout +']');
+                        + ", binMetaUpdateTimeout=" + waitSchemaTimeout + ']');
 
                 long t0 = System.nanoTime();
 
@@ -891,6 +891,28 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                 return metaHolder.metadata().wrap(binaryCtx);
             }
         });
+    }
+
+    /**
+     * @return Cluster binary metadata.
+     * @throws BinaryObjectException on error.
+     */
+    public Collection<BinaryMetadata> binaryMetadata() throws BinaryObjectException {
+        return F.viewReadOnly(metadataLocCache.values(), new IgniteClosure<BinaryMetadataHolder, BinaryMetadata>() {
+            @Override public BinaryMetadata apply(BinaryMetadataHolder metaHolder) {
+                return metaHolder.metadata();
+            }
+        });
+    }
+
+    /**
+     * @return Binary metadata for specified type.
+     * @throws BinaryObjectException on error.
+     */
+    public BinaryMetadata binaryMetadata(int typeId) throws BinaryObjectException {
+        BinaryMetadataHolder hld = metadataLocCache.get(typeId);
+
+        return hld != null ? hld.metadata() : null;
     }
 
     /** {@inheritDoc} */
@@ -1186,7 +1208,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to get partition", e);
 
-            return  -1;
+            return -1;
         }
     }
 
@@ -1491,11 +1513,12 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void removeType(int typeId) {
-        if (metadataLocCache.computeIfAbsent(typeId,
-                (id) -> {
-                    throw new IgniteException("Failed to remove metadata, type not found: " + id);
-                })
-            .removing())
+        BinaryMetadataHolder oldHld = metadataLocCache.get(typeId);
+
+        if (oldHld == null)
+            throw new IgniteException("Failed to remove metadata, type not found: " + typeId);
+
+        if (oldHld.removing())
             throw new IgniteException("Failed to remove metadata, type is being removed: " + typeId);
 
         if (!IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.REMOVE_METADATA)) {

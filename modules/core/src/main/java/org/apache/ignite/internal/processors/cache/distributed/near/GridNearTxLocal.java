@@ -226,6 +226,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private final AtomicLong commitOrRollbackTime = new AtomicLong(0);
 
     /** */
+    @GridToStringExclude
     private IgniteTxManager.TxDumpsThrottling txDumpsThrottling;
 
     /** */
@@ -273,7 +274,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
      * @param subjId Subject ID.
      * @param taskNameHash Task name hash code.
      * @param lb Label.
-     * @param tracingEnabled {@code true} if the transaction should be traced.
      * @param txDumpsThrottling Log throttling information.
      */
     public GridNearTxLocal(
@@ -291,7 +291,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         @Nullable UUID subjId,
         int taskNameHash,
         @Nullable String lb,
-        boolean tracingEnabled,
         IgniteTxManager.TxDumpsThrottling txDumpsThrottling
     ) {
         super(
@@ -1440,36 +1439,51 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                     if (optimistic() && !implicit()) {
                         try {
                             if (needReadVer) {
-                                EntryGetResult res = primaryLocal(entry) ?
-                                    entry.innerGetVersioned(
+                                if (primaryLocal(entry)) {
+                                    cctx.database().checkpointReadLock();
+
+                                    try {
+                                        EntryGetResult res = entry.innerGetVersioned(
+                                            null,
+                                            this,
+                                            /*metrics*/retval,
+                                            /*events*/retval,
+                                            CU.subjectId(this, cctx),
+                                            entryProcessor,
+                                            resolveTaskName(),
+                                            null,
+                                            keepBinary,
+                                            null);
+
+                                        if (res != null) {
+                                            old = res.value();
+                                            readVer = res.version();
+                                        }
+                                    }
+                                    finally {
+                                        cctx.database().checkpointReadUnlock();
+                                    }
+                                }
+                            }
+                            else {
+                                cctx.database().checkpointReadLock();
+
+                                try {
+                                    old = entry.innerGet(
                                         null,
                                         this,
+                                        /*read through*/false,
                                         /*metrics*/retval,
                                         /*events*/retval,
                                         CU.subjectId(this, cctx),
                                         entryProcessor,
                                         resolveTaskName(),
                                         null,
-                                        keepBinary,
-                                        null) : null;
-
-                                if (res != null) {
-                                    old = res.value();
-                                    readVer = res.version();
+                                        keepBinary);
                                 }
-                            }
-                            else {
-                                old = entry.innerGet(
-                                    null,
-                                    this,
-                                    /*read through*/false,
-                                    /*metrics*/retval,
-                                    /*events*/retval,
-                                    CU.subjectId(this, cctx),
-                                    entryProcessor,
-                                    resolveTaskName(),
-                                    null,
-                                    keepBinary);
+                                finally {
+                                    cctx.database().checkpointReadUnlock();
+                                }
                             }
                         }
                         catch (ClusterTopologyCheckedException e) {
@@ -1721,7 +1735,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         final boolean retval,
         @Nullable final CacheEntryPredicate filter,
         boolean singleRmv) {
-        if(cacheCtx.mvccEnabled())
+        if (cacheCtx.mvccEnabled())
             return mvccRemoveAllAsync0(cacheCtx, keys, retval, filter);
 
         try {

@@ -30,9 +30,9 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.h2.message.DbException;
-import org.h2.result.SearchRow;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -92,7 +92,7 @@ public class GridH2RowDescriptor {
      *
      * @return Table descriptor.
      */
-    public H2TableDescriptor tableDescriptor(){
+    public H2TableDescriptor tableDescriptor() {
         return tbl;
     }
 
@@ -149,7 +149,6 @@ public class GridH2RowDescriptor {
     public GridQueryTypeDescriptor type() {
         return type;
     }
-
 
     /**
      * Gets cache context info for this row descriptor.

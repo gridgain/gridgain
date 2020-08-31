@@ -28,6 +28,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.processor.EntryProcessor;
 import javax.management.MBeanServer;
 import javax.net.ssl.SSLContext;
+import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -38,16 +39,18 @@ import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -80,7 +83,9 @@ import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.ssl.SslContextFactory;
+import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -158,7 +163,7 @@ public class IgniteConfiguration {
     public static final int DFLT_DATA_STREAMER_POOL_SIZE = DFLT_PUBLIC_THREAD_CNT;
 
     /** Default limit of threads used for rebalance. */
-    public static final int DFLT_REBALANCE_THREAD_POOL_SIZE = 1;
+    public static final int DFLT_REBALANCE_THREAD_POOL_SIZE = min(4, max(1, AVAILABLE_PROC_CNT / 4));
 
     /** Default rebalance message timeout in milliseconds (value is {@code 10000}). */
     public static final long DFLT_REBALANCE_TIMEOUT = 10000;
@@ -221,10 +226,15 @@ public class IgniteConfiguration {
     @Deprecated
     public static final boolean DFLT_LATE_AFF_ASSIGNMENT = true;
 
+    /** Default value for cluster state on start. */
+    public static final ClusterState DFLT_STATE_ON_START = ClusterState.ACTIVE;
+
     /** Default value for active on start flag. */
+    @Deprecated
     public static final boolean DFLT_ACTIVE_ON_START = true;
 
     /** Default value for auto-activation flag. */
+    @Deprecated
     public static final boolean DFLT_AUTO_ACTIVATION = true;
 
     /** Default failure detection timeout in millis. */
@@ -237,6 +247,9 @@ public class IgniteConfiguration {
     /** Default failure detection timeout for client nodes in millis. */
     @SuppressWarnings("UnnecessaryBoxing")
     public static final Long DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT = new Long(30_000);
+
+    /** Default policy for node shutdown. */
+    public static final ShutdownPolicy DFLT_SHUTDOWN_POLICY = ShutdownPolicy.IMMEDIATE;
 
     /**
      *  Default timeout after which long query warning will be printed.
@@ -283,9 +296,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED;
-
-    /** Default value of environment type is {@link EnvironmentType#STANDALONE}. */
-    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STANDALONE;
 
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
@@ -566,10 +576,15 @@ public class IgniteConfiguration {
     private DataStorageConfiguration dsCfg;
 
     /** Active on start flag. */
-    private boolean activeOnStart = DFLT_ACTIVE_ON_START;
+    @Deprecated
+    private Boolean activeOnStart;
 
     /** Auto-activation flag. */
-    private boolean autoActivation = DFLT_AUTO_ACTIVATION;
+    @Deprecated
+    private Boolean autoActivation;
+
+    /** Cluster state on start. */
+    private ClusterState clusterStateOnStart;
 
     /** SQL connector configuration. */
     @Deprecated
@@ -593,15 +608,14 @@ public class IgniteConfiguration {
     /** Communication failure resolver */
     private CommunicationFailureResolver commFailureRslvr;
 
-    /** Environment type - hint to Ignite that it is started in a specific environment and should adapt
-     * its behavior and algorithms to specific properties. */
-    private EnvironmentType envType = DFLT_ENV_TYPE;
-
     /** Plugin providers. */
     private PluginProvider[] pluginProvs;
 
     /** Sql initial config. */
     private SqlConfiguration sqlCfg = new SqlConfiguration();
+
+    /** Shutdown policy for cluster. */
+    public ShutdownPolicy shutdown = DFLT_SHUTDOWN_POLICY;
 
     /**
      * Creates valid grid configuration with all default values.
@@ -638,13 +652,14 @@ public class IgniteConfiguration {
         /*
          * Order alphabetically for maintenance purposes.
          */
-        activeOnStart = cfg.isActiveOnStart();
+        activeOnStart = cfg.activeOnStart;
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
-        autoActivation = cfg.isAutoActivationEnabled();
+        autoActivation = cfg.autoActivation;
         binaryCfg = cfg.getBinaryConfiguration();
+        clusterStateOnStart = cfg.getClusterStateOnStart();
         dsCfg = cfg.getDataStorageConfiguration();
         memCfg = cfg.getMemoryConfiguration();
         pstCfg = cfg.getPersistentStoreConfiguration();
@@ -724,8 +739,8 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
-        envType = cfg.getEnvironmentType();
         sqlCfg = cfg.getSqlConfiguration();
+        shutdown = cfg.getShutdownPolicy();
     }
 
     /**
@@ -1125,6 +1140,29 @@ public class IgniteConfiguration {
     }
 
     /**
+     * Gets shutdown policy.
+     * If policy was not set default policy will be return {@link IgniteCluster.DEFAULT_SHUTDOWN_POLICY}.
+     *
+     * @return Shutdown policy.
+     */
+    public ShutdownPolicy getShutdownPolicy() {
+        return shutdown;
+    }
+
+    /**
+     * Sets shutdown policy.
+     * If {@code null} is passed as a parameter, policy will be set as default.
+     *
+     * @param shutdownPolicy Shutdown policy.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setShutdownPolicy(ShutdownPolicy shutdownPolicy) {
+        this.shutdown = shutdownPolicy != null ? shutdownPolicy : DFLT_SHUTDOWN_POLICY;
+
+        return this;
+    }
+
+    /**
      * Sets thread pool size to use within grid.
      *
      * @param poolSize Thread pool size to use within grid.
@@ -1390,7 +1428,6 @@ public class IgniteConfiguration {
 
         return this;
     }
-
 
     /**
      * Returns {@code true} if peer class loading is enabled, {@code false}
@@ -2661,13 +2698,15 @@ public class IgniteConfiguration {
      * <p>
      * Default value is {@link #DFLT_ACTIVE_ON_START}.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
-     * cluster is always inactive on start when Ignite Persistence is enabled.
+     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
+     * Cluster is always inactive on start when Ignite Persistence is enabled.
      *
      * @return Active on start flag value.
+     * @deprecated Use {@link #getClusterStateOnStart()} instead.
      */
+    @Deprecated
     public boolean isActiveOnStart() {
-        return activeOnStart;
+        return activeOnStart == null ? DFLT_ACTIVE_ON_START : activeOnStart;
     }
 
     /**
@@ -2680,8 +2719,12 @@ public class IgniteConfiguration {
      * @param activeOnStart Active on start flag value.
      * @return {@code this} instance.
      * @see #isActiveOnStart()
+     * @deprecated Use {@link #setClusterStateOnStart(ClusterState)} instead.
      */
+    @Deprecated
     public IgniteConfiguration setActiveOnStart(boolean activeOnStart) {
+        U.warn(log, "Property activeOnStart deprecated. Use clusterStateOnStart instead.");
+
         this.activeOnStart = activeOnStart;
 
         return this;
@@ -2698,9 +2741,11 @@ public class IgniteConfiguration {
      * <p>
      *
      * @return Auto activation enabled flag value.
+     * @deprecated Use {@link IgniteConfiguration#getClusterStateOnStart()} instead.
      */
+    @Deprecated
     public boolean isAutoActivationEnabled() {
-        return autoActivation;
+        return autoActivation == null ? DFLT_AUTO_ACTIVATION : autoActivation;
     }
 
     /**
@@ -2710,9 +2755,48 @@ public class IgniteConfiguration {
      * @param autoActivation Auto activation enabled flag value.
      * @return {@code this} instance.
      * @see #isAutoActivationEnabled()
+     * @deprecated Use {@link IgniteConfiguration#setClusterStateOnStart(ClusterState)} instead.
      */
+    @Deprecated
     public IgniteConfiguration setAutoActivationEnabled(boolean autoActivation) {
+        U.warn(log, "Property autoActivation deprecated. Use clusterStateOnStart instead.");
+
         this.autoActivation = autoActivation;
+
+        return this;
+    }
+
+    /**
+     * Gets state of cluster on start.
+     * <br/>
+     * For <b>in-memory cluster</b> this state will be applied to the first started node. If
+     * cluster state on start is {@link ClusterState#INACTIVE}, further hode joins will be handled by cluster faster and
+     * manual cluster activation should be performed in order to start working the cluster and caches.
+     * <br/>
+     * For <b>persistent cluster</b> If state is different from {@link ClusterState#INACTIVE} and BaselineTopology is
+     * set (cluster was activated before, for example before cluster restart) as well then cluster moves to given
+     * cluster state when all nodes from the BaselineTopology join the cluster, i.e. manual activation isn't required
+     * in that case.
+     * <p>
+     * Default value is {@link #DFLT_STATE_ON_START}.
+     * <p>
+     *
+     * @return State of cluster on start or {@code null}, if property wasn't set. {@code Null} means that default
+     * value will be used.
+     */
+    public @Nullable ClusterState getClusterStateOnStart() {
+        return clusterStateOnStart;
+    }
+
+    /**
+     * Sets state of cluster on start.
+     *
+     * @param state New cluster state on start.
+     * @return {@code this} for chaining.
+     * @see #getClusterStateOnStart()
+     */
+    public IgniteConfiguration setClusterStateOnStart(ClusterState state) {
+        this.clusterStateOnStart = state;
 
         return this;
     }
@@ -3578,35 +3662,6 @@ public class IgniteConfiguration {
     @Deprecated
     public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         sqlCfg.setSqlOffloadingEnabled(offloadingEnabled);
-
-        return this;
-    }
-
-    /**
-     * <b>This is an experimental feature. Envronment awareness approac may be changed.</b>
-     * <p>
-     *
-     * Configured environment type.
-     *
-     * @return {@link EnvironmentType environment type}.
-     */
-    @IgniteExperimental
-    public EnvironmentType getEnvironmentType() {
-        return envType;
-    }
-
-    /**
-     * <b>This is an experimental feature. Envronment awareness approac may be changed.</b>
-     * <p>
-     *
-     * Sets environment type hint.
-     *
-     * @param environmentType Environment type value.
-     * @return {@code this} for chaining.
-     */
-    @IgniteExperimental
-    public IgniteConfiguration setEnvironmentType(EnvironmentType environmentType) {
-        this.envType = environmentType;
 
         return this;
     }

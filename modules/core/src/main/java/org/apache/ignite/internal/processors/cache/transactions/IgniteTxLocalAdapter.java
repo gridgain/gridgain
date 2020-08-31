@@ -872,21 +872,22 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                 else if (op == READ) {
                                     CacheGroupContext grp = cacheCtx.group();
 
-                                    if (grp.persistenceEnabled() && grp.walEnabled() &&
-                                        cctx.snapshot().needTxReadLogging()) {
+                                    if (grp.persistenceEnabled()) {
                                         cctx.tm().pendingTxsTracker().onKeysRead(
                                             nearXidVersion(), Collections.singletonList(txEntry.key()));
 
-                                        ptr = cctx.wal().log(new DataRecord(new DataEntry(
-                                            cacheCtx.cacheId(),
-                                            txEntry.key(),
-                                            val,
-                                            op,
-                                            nearXidVersion(),
-                                            writeVersion(),
-                                            0,
-                                            txEntry.key().partition(),
-                                            txEntry.updateCounter())));
+                                        if (grp.walEnabled() && cctx.snapshot().needTxReadLogging()) {
+                                            ptr = cctx.wal().log(new DataRecord(new DataEntry(
+                                                cacheCtx.cacheId(),
+                                                txEntry.key(),
+                                                val,
+                                                op,
+                                                nearXidVersion(),
+                                                writeVersion(),
+                                                0,
+                                                txEntry.key().partition(),
+                                                txEntry.updateCounter())));
+                                        }
                                     }
 
                                     ExpiryPolicy expiry = cacheCtx.expiryForTxEntry(txEntry);
@@ -1035,7 +1036,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
             }
         }
     }
-
 
     /**
      * Commits transaction to transaction manager. Used for one-phase commit transactions only.

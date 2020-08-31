@@ -76,7 +76,6 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.processors.tracing.MTC;
-import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.GridLeanSet;
@@ -123,9 +122,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     implements GridCacheVersionedFuture<GridNearTxPrepareResponse>, IgniteDiagnosticAware {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** Tracing span. */
-    private Span span;
 
     /** Logger reference. */
     private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
@@ -1067,7 +1063,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (tx.empty() && !req.queryUpdate()) {
                 tx.setRollbackOnly();
 
-                onDone((GridNearTxPrepareResponse)null);
+                onDone((GridNearTxPrepareResponse) null);
             }
 
             this.req = req;
@@ -1079,13 +1075,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             if (validateCache) {
                 GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
-            if (topFut != null) {
-                err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
+                if (topFut != null) {
+                    IgniteCheckedException err = tx.txState().validateTopology(cctx, isEmpty(req.writes()), topFut);
 
-                if (err != null)
-                    onDone(null, this.err);
+                    if (err != null)
+                        onDone(null, err);
+                }
             }
-        }
 
             boolean ser = tx.serializable() && tx.optimistic();
 
@@ -1929,7 +1925,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                     Map<Integer, int[]> invalidPartsMap = res.invalidPartitionsByCacheId();
 
                     for (Iterator<IgniteTxEntry> it = dhtMapping.entries().iterator(); it.hasNext();) {
-                        IgniteTxEntry entry  = it.next();
+                        IgniteTxEntry entry = it.next();
 
                         int[] invalidParts = invalidPartsMap.get(entry.cacheId());
 

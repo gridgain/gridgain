@@ -301,6 +301,12 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** */
     private boolean isValidForWriting;
 
+    /** Index rebuilding in progress. */
+    private boolean idxRebuildInProgress;
+
+    /** Number of keys processed during index rebuilding. */
+    private long idxRebuildKeyProcessed;
+
     /**
      * Default constructor.
      */
@@ -410,6 +416,9 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
         rebalanceStartTime = m.rebalancingStartTime();
         rebalanceFinishTime = m.estimateRebalancingFinishTime();
         rebalanceClearingPartitionsLeft = m.getRebalanceClearingPartitionsLeft();
+
+        idxRebuildInProgress = m.isIndexRebuildInProgress();
+        idxRebuildKeyProcessed = m.getIndexRebuildKeysProcessed();
     }
 
     /**
@@ -750,6 +759,7 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
 
         return (float) offHeapMisses / offHeapGets * 100.0f;
     }
+
     /** {@inheritDoc} */
     @Override public long getOffHeapEntriesCount() {
         return offHeapEntriesCnt;
@@ -1021,6 +1031,16 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** No need in snapshoting this metric, only local metric would be acceptable. */
     @Override public String getTxKeyCollisions() {
         return "";
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isIndexRebuildInProgress() {
+        return idxRebuildInProgress;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getIndexRebuildKeysProcessed() {
+        return idxRebuildKeyProcessed;
     }
 
     /** {@inheritDoc} */

@@ -36,11 +36,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Cursor;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyIterator;
@@ -457,7 +457,7 @@ public class SortedReducer extends AbstractReducer {
          * @return Lower bound.
          */
         private int findBounds() {
-            assert !rows.isEmpty(): "rows";
+            assert !rows.isEmpty() : "rows";
 
             int firstFound = cur;
 
@@ -465,7 +465,7 @@ public class SortedReducer extends AbstractReducer {
             if (first != null) {
                 firstFound = binarySearchRow(rows, first, firstRowCmp, true);
 
-                assert firstFound >= cur && firstFound <= rows.size(): "firstFound";
+                assert firstFound >= cur && firstFound <= rows.size() : "firstFound";
 
                 if (firstFound == rows.size())
                     return firstFound; // The lower bound is greater than all the rows we have.
@@ -475,7 +475,7 @@ public class SortedReducer extends AbstractReducer {
 
             // Find the upper bound.
             if (last != null) {
-                assert lastFound == Integer.MAX_VALUE: "lastFound";
+                assert lastFound == Integer.MAX_VALUE : "lastFound";
 
                 int lastFound0 = binarySearchRow(rows, last, lastRowCmp, true);
 
@@ -591,7 +591,7 @@ public class SortedReducer extends AbstractReducer {
 
         int res = Collections.binarySearch(rows, searchRow, cmp);
 
-        assert res < 0: res; // Comparator must never return 0.
+        assert res < 0 : res; // Comparator must never return 0.
 
         return -res - 1;
     }

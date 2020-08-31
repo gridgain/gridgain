@@ -38,6 +38,7 @@ import org.apache.ignite.internal.IgniteConcurrentEntryProcessorAccessStopTest;
 import org.apache.ignite.internal.IgniteConnectionConcurrentReserveAndRemoveTest;
 import org.apache.ignite.internal.IgniteUpdateNotifierPerClusterSettingSelfTest;
 import org.apache.ignite.internal.LongJVMPauseDetectorTest;
+import org.apache.ignite.internal.ThreadNameValidationTest;
 import org.apache.ignite.internal.managers.GridManagerStopSelfTest;
 import org.apache.ignite.internal.managers.communication.GridCommunicationSendMessageSelfTest;
 import org.apache.ignite.internal.managers.deployment.DeploymentRequestOfUnknownClassProcessingTest;
@@ -45,9 +46,13 @@ import org.apache.ignite.internal.managers.deployment.GridDeploymentManagerStopS
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAliveCacheSelfTest;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAttributesSelfTest;
 import org.apache.ignite.internal.managers.discovery.IgniteTopologyPrintFormatSelfTest;
+import org.apache.ignite.internal.managers.events.GridEventStorageManagerInternalEventsSelfTest;
 import org.apache.ignite.internal.managers.events.GridEventStorageManagerSelfTest;
+import org.apache.ignite.internal.processors.cache.ClusterActiveStateChangeWithNodeOutOfBaselineTest;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustInMemoryTest;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustTest;
+import org.apache.ignite.internal.processors.cluster.ClusterReadOnlyModeNodeJoinTest;
+import org.apache.ignite.internal.processors.cluster.ClusterReadOnlyModeSelfTest;
 import org.apache.ignite.internal.processors.cluster.GridAddressResolverSelfTest;
 import org.apache.ignite.internal.processors.cluster.GridUpdateNotifierSelfTest;
 import org.apache.ignite.internal.processors.port.GridPortProcessorSelfTest;
@@ -63,6 +68,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    ClusterReadOnlyModeSelfTest.class,
+    ClusterReadOnlyModeNodeJoinTest.class,
     GridGetOrStartSelfTest.class,
     GridSameVmStartupSelfTest.class,
     GridSpiExceptionSelfTest.class,
@@ -73,6 +80,7 @@ import org.junit.runners.Suite;
     GridDiscoverySelfTest.class,
     GridCommunicationSelfTest.class,
     GridEventStorageManagerSelfTest.class,
+    GridEventStorageManagerInternalEventsSelfTest.class,
     GridCommunicationSendMessageSelfTest.class,
     GridCacheMessageSelfTest.class,
     GridDeploymentManagerStopSelfTest.class,
@@ -101,7 +109,9 @@ import org.junit.runners.Suite;
     LongJVMPauseDetectorTest.class,
     ClusterMetricsSelfTest.class,
     DeploymentRequestOfUnknownClassProcessingTest.class,
-    NodeWithFilterRestartTest.class
+    ThreadNameValidationTest.class,
+    NodeWithFilterRestartTest.class,
+    ClusterActiveStateChangeWithNodeOutOfBaselineTest.class
 })
 public class IgniteKernalSelfTestSuite {
     /** Activate service grid for test it. */

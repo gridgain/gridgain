@@ -157,7 +157,7 @@ public abstract class AbstractH2CompareQueryTest extends AbstractIndexingCommonT
 
         String dbName = "test";
 
-        Connection conn = DriverManager.getConnection("jdbc:h2:mem:" + dbName + ";DB_CLOSE_DELAY=-1");
+        Connection conn = DriverManager.getConnection("jdbc:gg-h2:mem:" + dbName + ";DB_CLOSE_DELAY=-1");
 
         conn.setAutoCommit(autocommit);
 
@@ -328,7 +328,7 @@ public abstract class AbstractH2CompareQueryTest extends AbstractIndexingCommonT
     private static void assertRsEquals(List<List<?>> rs1, List<List<?>> rs2, Ordering ordering) {
         assertEquals("Rows count has to be equal.", rs1.size(), rs2.size());
 
-        switch (ordering){
+        switch (ordering) {
             case ORDERED:
                 for (int rowNum = 0; rowNum < rs1.size(); rowNum++) {
                     List<?> row1 = rs1.get(rowNum);

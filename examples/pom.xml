@@ -113,8 +113,26 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
+            <artifactId>ignite-hibernate_5.1</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-schedule</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-geospatial</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-shmem</artifactId>
-            <version>1.0.0</version>
+            <version>8.7.3</version>
             <scope>test</scope>
         </dependency>
 
@@ -192,32 +210,48 @@
         </profile>
 
         <profile>
-            <id>lgpl</id>
+            <id>spark-2.4</id>
 
             <properties>
-                <lgpl.folder>src/main/java-lgpl</lgpl.folder>
-                <lgpl.test.folder>src/test/java-lgpl</lgpl.test.folder>
+                <spark.folder>src/main/spark</spark.folder>
+                <spark.test.folder>src/test/spark</spark.test.folder>
             </properties>
 
             <dependencies>
                 <dependency>
                     <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-hibernate_5.1</artifactId>
+                    <artifactId>ignite-scalar</artifactId>
                     <version>${project.version}</version>
                 </dependency>
 
                 <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-schedule</artifactId>
-                    <version>${project.version}</version>
+                    <groupId>org.scalatest</groupId>
+                    <artifactId>scalatest_2.11</artifactId>
+                    <version>${scala.test.version}</version>
+                    <scope>test</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.scala-lang</groupId>
+                            <artifactId>scala-library</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
 
                 <dependency>
                     <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-geospatial</artifactId>
+                    <artifactId>ignite-spark-2.4</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>net.alchim31.maven</groupId>
+                        <artifactId>scala-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 

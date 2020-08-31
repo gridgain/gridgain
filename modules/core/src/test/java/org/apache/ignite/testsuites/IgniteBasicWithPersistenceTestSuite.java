@@ -34,10 +34,6 @@ import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLoc
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessorTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
-import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
-import org.apache.ignite.util.GridCommandHandlerRUTest;
-import org.apache.ignite.util.GridCommandHandlerSslTest;
-import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridInternalTaskUnusedWalSegmentsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -56,10 +52,6 @@ import org.junit.runners.Suite;
     CheckpointReadLockFailureTest.class,
     PdsConsistentIdProcessorTest.class,
 
-    GridCommandHandlerTest.class,
-    GridCommandHandlerClusterByClassTest.class,
-    GridCommandHandlerSslTest.class,
-    GridCommandHandlerRUTest.class,
     GridInternalTaskUnusedWalSegmentsTest.class,
 
     GridNodeMetricsLogPdsSelfTest.class,

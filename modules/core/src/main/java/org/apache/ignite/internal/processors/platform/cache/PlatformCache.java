@@ -70,6 +70,7 @@ import org.apache.ignite.internal.processors.platform.utils.PlatformFutureUtils;
 import org.apache.ignite.internal.processors.platform.utils.PlatformListenable;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import org.apache.ignite.internal.processors.platform.utils.PlatformWriterClosure;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.X;
@@ -1349,7 +1350,7 @@ public class PlatformCache extends PlatformAbstractTarget {
             QueryCursorEx cursor = (QueryCursorEx) cache.query(qry);
 
             return new PlatformQueryCursor(platformCtx, cursor,
-                qry.getPageSize() > 0 ? qry.getPageSize(): Query.DFLT_PAGE_SIZE);
+                qry.getPageSize() > 0 ? qry.getPageSize() : Query.DFLT_PAGE_SIZE);
         }
         catch (Exception err) {
             throw PlatformUtils.unwrapQueryException(err);
@@ -1398,6 +1399,9 @@ public class PlatformCache extends PlatformAbstractTarget {
 
             case OP_QRY_TXT:
                 return readTextQuery(reader);
+
+            case OP_QRY_SQL_FIELDS:
+                return readFieldsQuery(reader);
         }
 
         throw new IgniteCheckedException("Unsupported query type: " + typ);
@@ -1451,17 +1455,18 @@ public class PlatformCache extends PlatformAbstractTarget {
         boolean collocated = reader.readBoolean();
         String schema = reader.readString();
 
-        return new SqlFieldsQuery(sql)
-                .setPageSize(pageSize)
-                .setArgs(args)
-                .setLocal(loc)
-                .setDistributedJoins(distrJoins)
-                .setEnforceJoinOrder(enforceJoinOrder)
-                .setLazy(lazy)
-                .setTimeout(timeout, TimeUnit.MILLISECONDS)
-                .setReplicatedOnly(replicated)
-                .setCollocated(collocated)
-                .setSchema(schema);
+        SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.MILLISECONDS)
+            .setPageSize(pageSize)
+            .setArgs(args)
+            .setLocal(loc)
+            .setDistributedJoins(distrJoins)
+            .setEnforceJoinOrder(enforceJoinOrder)
+            .setLazy(lazy)
+            .setReplicatedOnly(replicated)
+            .setCollocated(collocated)
+            .setSchema(schema);
+
+        return qry;
     }
 
     /**

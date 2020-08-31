@@ -506,25 +506,27 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             // 2. Notify previous queries.
             prevQueries.onNodeFailed(nodeId);
 
-            // 3. Recover transactions started by the failed node.
-            recoveryBallotBoxes.forEach((nearNodeId, ballotBox) -> {
-                // Put synthetic vote from another failed node
-                ballotBox.vote(nodeId);
+            if (mvccEnabled) {
+                // 3. Recover transactions started by the failed node.
+                recoveryBallotBoxes.forEach((nearNodeId, ballotBox) -> {
+                    // Put synthetic vote from another failed node
+                    ballotBox.vote(nodeId);
 
-                tryFinishRecoveryVoting(nearNodeId, ballotBox);
-            });
+                    tryFinishRecoveryVoting(nearNodeId, ballotBox);
+                });
 
-            if (evt.eventNode().isClient()) {
-                RecoveryBallotBox ballotBox = recoveryBallotBoxes
-                    .computeIfAbsent(nodeId, uuid -> new RecoveryBallotBox());
+                if (evt.eventNode().isClient()) {
+                    RecoveryBallotBox ballotBox = recoveryBallotBoxes
+                        .computeIfAbsent(nodeId, uuid -> new RecoveryBallotBox());
 
-                ballotBox.voters(evt.topologyNodes().stream()
-                    // Nodes not supporting MVCC will never send votes to us. So, filter them away.
-                    .filter(this::supportsMvcc)
-                    .map(ClusterNode::id)
-                    .collect(Collectors.toList()));
+                    ballotBox.voters(evt.topologyNodes().stream()
+                        // Nodes not supporting MVCC will never send votes to us. So, filter them away.
+                        .filter(this::supportsMvcc)
+                        .map(ClusterNode::id)
+                        .collect(Collectors.toList()));
 
-                tryFinishRecoveryVoting(nodeId, ballotBox);
+                    tryFinishRecoveryVoting(nodeId, ballotBox);
+                }
             }
         }
     }
@@ -1826,6 +1828,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
     private static class RecoveryBallotBox {
         /** */
         private List<UUID> voters;
+
         /** */
         private final Set<UUID> ballots = new HashSet<>();
 
@@ -1861,6 +1864,9 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
      * @param msg Message.
      */
     private void processRecoveryFinishedMessage(UUID nodeId, MvccRecoveryFinishedMessage msg) {
+        if (!mvccEnabled)
+            return;
+
         UUID nearNodeId = msg.nearNodeId();
 
         RecoveryBallotBox ballotBox = recoveryBallotBoxes.computeIfAbsent(nearNodeId, uuid -> new RecoveryBallotBox());
@@ -1928,6 +1934,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
     private static class LockFuture extends GridFutureAdapter<Void> implements Waiter, Runnable {
         /** */
         private final byte plc;
+
         /** */
         private final MvccVersion waitingTxVer;
 
@@ -2451,6 +2458,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
     private static class ActiveTx {
         /** */
         private final long tracking;
+
         /** */
         private final UUID nearNodeId;
 

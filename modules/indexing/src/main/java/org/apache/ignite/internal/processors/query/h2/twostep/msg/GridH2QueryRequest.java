@@ -167,6 +167,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     @GridDirectTransient
     private Long runningQryId;
 
+    /** */
+    private boolean explicitTimeout;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -195,6 +198,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         txReq = req.txReq;
         maxMem = req.maxMem;
         runningQryId = req.runningQryId;
+        explicitTimeout = req.explicitTimeout;
     }
 
     /**
@@ -379,7 +383,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      * @return {@code this}.
      */
     public GridH2QueryRequest flags(int flags) {
-        assert flags >= 0 && flags <= 255: flags;
+        assert flags >= 0 && flags <= 255 : flags;
 
         this.flags = (byte)flags;
 
@@ -407,6 +411,23 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public GridH2QueryRequest timeout(int timeout) {
         this.timeout = timeout;
+
+        return this;
+    }
+
+    /**
+     * @return {@code true} if query timeout is set explicitly.
+     */
+    public boolean explicitTimeout() {
+        return explicitTimeout;
+    }
+
+    /**
+     * @param explicitTimeout Explicit timeout flag.
+     * @return {@code this}.
+     */
+    public GridH2QueryRequest explicitTimeout(boolean explicitTimeout) {
+        this.explicitTimeout = explicitTimeout;
 
         return this;
     }
@@ -693,6 +714,11 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 writer.incrementState();
 
+            case 15:
+                if (!writer.writeBoolean("explicitTimeout", explicitTimeout))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -826,6 +852,13 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 reader.incrementState();
 
+            case 15:
+                explicitTimeout = reader.readBoolean("explicitTimeout");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -838,7 +871,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 15;
+        return 16;
     }
 
     /** {@inheritDoc} */

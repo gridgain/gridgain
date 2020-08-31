@@ -37,7 +37,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED
 /**
  * Tests for OpenCensus based {@link TracingConfigurationManager#reset(TracingConfigurationCoordinates)}.
  */
-public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTest {
+public class OpenCensusTracingConfigurationResetTest extends AbstractTracingTest {
     /** {@inheritDoc} */
     @Override protected TracingSpi getTracingSpi() {
         return new OpenCensusTracingSpi();
@@ -67,7 +67,6 @@ public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTes
         grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, SOME_LABEL_SPECIFIC_PARAMETERS);
 
         grid(0).tracingConfiguration().set(EXCHANGE_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS);
-
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg =
             new HashMap<>(DFLT_CONFIG_MAP);
@@ -120,7 +119,6 @@ public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTes
         grid(0).tracingConfiguration().set(TX_LABEL_SPECIFIC_COORDINATES, SOME_LABEL_SPECIFIC_PARAMETERS);
 
         grid(0).tracingConfiguration().set(EXCHANGE_SCOPE_SPECIFIC_COORDINATES, SOME_SCOPE_SPECIFIC_PARAMETERS);
-
 
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> expTracingCfg =
             new HashMap<>(DFLT_CONFIG_MAP);
@@ -177,8 +175,7 @@ public class OpenCensusTracingConfigurationResetTest  extends AbstractTracingTes
             log,
             () -> grid(0).tracingConfiguration().reset(TX_SCOPE_SPECIFIC_COORDINATES),
             IgniteException.class,
-            "Failed to reset tracing configuration for coordinates=[" + TX_SCOPE_SPECIFIC_COORDINATES +
-                "] to default. Meta storage is not available."
+            "Failed to update tracing configuration for coordinates=[" + TX_SCOPE_SPECIFIC_COORDINATES + ']'
         );
     }
 }

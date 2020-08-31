@@ -1280,9 +1280,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         partStoreLock.lock(p);
 
         try {
-            boolean removed = partDataStores.remove(p, store);
+            boolean rmv = partDataStores.remove(p, store);
 
-            assert removed;
+            if (!rmv)
+                return; // Already destroyed.
 
             destroyCacheDataStore0(store);
         }
@@ -1343,49 +1344,56 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         GridCursor<PendingRow> cur;
 
-        if (grp.sharedGroup())
-            cur = pendingEntries.find(new PendingRow(cctx.cacheId()), new PendingRow(cctx.cacheId(), now, 0));
-        else
-            cur = pendingEntries.find(null, new PendingRow(CU.UNDEFINED_CACHE_ID, now, 0));
-
-        if (!cur.next())
-            return 0;
-
-        if (!busyLock.enterBusy())
-            return 0;
+        cctx.shared().database().checkpointReadLock();
 
         try {
-            int cleared = 0;
+            if (grp.sharedGroup())
+                cur = pendingEntries.find(new PendingRow(cctx.cacheId()), new PendingRow(cctx.cacheId(), now, 0));
+            else
+                cur = pendingEntries.find(null, new PendingRow(CU.UNDEFINED_CACHE_ID, now, 0));
 
-            do {
-                if (amount != -1 && cleared > amount)
-                    return cleared;
+            if (!cur.next())
+                return 0;
 
-                PendingRow row = cur.get();
+            if (!busyLock.enterBusy())
+                return 0;
 
-                if (row.key.partition() == -1)
-                    row.key.partition(cctx.affinity().partition(row.key));
+            try {
+                int cleared = 0;
 
-                assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+                do {
+                    if (amount != -1 && cleared > amount)
+                        return cleared;
 
-                if (pendingEntries.removex(row)) {
-                    if (obsoleteVer == null)
-                        obsoleteVer = cctx.cache().nextVersion();
+                    PendingRow row = cur.get();
 
-                    GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+                    if (row.key.partition() == -1)
+                        row.key.partition(cctx.affinity().partition(row.key));
 
-                    if (entry != null)
-                        c.apply(entry, obsoleteVer);
+                    assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
+
+                    if (pendingEntries.removex(row)) {
+                        if (obsoleteVer == null)
+                            obsoleteVer = cctx.cache().nextVersion();
+
+                        GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
+
+                        if (entry != null)
+                            c.apply(entry, obsoleteVer);
+                    }
+
+                    cleared++;
                 }
+                while (cur.next());
 
-                cleared++;
+                return cleared;
             }
-            while (cur.next());
-
-            return cleared;
+            finally {
+                busyLock.leaveBusy();
+            }
         }
         finally {
-            busyLock.leaveBusy();
+            cctx.shared().database().checkpointReadUnlock();
         }
     }
 
@@ -1955,7 +1963,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // Make sure value bytes initialized.
                 key.valueBytes(coCtx);
 
-                if(val != null)
+                if (val != null)
                     val.valueBytes(coCtx);
 
                  MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
@@ -2117,7 +2125,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 procRes = entryProc.process(invokeEntry, invokeArgs);
 
-                if(invokeEntry.modified() && invokeEntry.op() != CacheInvokeEntry.Operation.REMOVE) {
+                if (invokeEntry.modified() && invokeEntry.op() != CacheInvokeEntry.Operation.REMOVE) {
                     Object val = invokeEntry.getValue(true);
 
                     CacheObject val0 = cctx.toCacheObject(val);
@@ -3052,6 +3060,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private class MvccUpdateRowWithPreloadInfoClosure extends MvccDataRow implements OffheapInvokeClosure {
             /** */
             private CacheDataRow oldRow;
+
             /** */
             private IgniteTree.OperationType op;
 
@@ -3292,7 +3301,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 newRow.newMvccCounter(),
                 newRow.newMvccOperationCounter()) != 0) {
 
-                assert newRow.newMvccTxState() == TxState.NA ||  newRow.newMvccCoordinatorVersion() != MVCC_CRD_COUNTER_NA;
+                assert newRow.newMvccTxState() == TxState.NA || newRow.newMvccCoordinatorVersion() != MVCC_CRD_COUNTER_NA;
 
                 iox.updateNewVersion(pageAddr, off, newRow.newMvccCoordinatorVersion(), newRow.newMvccCounter(),
                     newRow.newMvccOperationCounter(), newRow.newMvccTxState());
