@@ -76,7 +76,7 @@ public interface Command<T> {
     /**
      * @return Cluster information to show user for.
      */
-    static void printClusterInfoBanner(GridClientClusterState clientCfg, Logger log){
+    static void printClusterInfoBanner(GridClientClusterState clientCfg, Logger log) {
         if(log == null)
             return;
 
@@ -94,16 +94,16 @@ public interface Command<T> {
     /**
      * @return Cluster information to show user for.
      */
-    static ClusterInfo getClusterInfo(GridClientClusterState clientCfg){
+    static ClusterInfo getClusterInfo(GridClientClusterState clientCfg) {
         String clusterName = null;
-        try{
-            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
-                ClusterInfo clusterInfo = new ClusterInfo(clientCfg.id(), clientCfg.tag());
-                return clusterInfo;
-            }
+
+        try {
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE))
+                return new ClusterInfo(clientCfg.id(), clientCfg.tag());
         }
-        catch (GridClientException ignored){
-        };
+        catch (GridClientException ignored) {
+        }
+
         return null;
     }
 

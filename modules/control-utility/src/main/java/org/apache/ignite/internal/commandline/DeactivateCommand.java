@@ -44,6 +44,7 @@ public class DeactivateCommand implements Command<Void> {
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg, logger)) {
             ClusterInfo clusterInfo = Command.getClusterInfo(client.state());
+
             if(clusterInfo != null)
                 clusterName = clusterInfo.getTag();
         }
