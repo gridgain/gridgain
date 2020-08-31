@@ -89,7 +89,7 @@ public class IgniteCacheDistributedJoinTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        conn = DriverManager.getConnection("jdbc:h2:mem:");
+        conn = DriverManager.getConnection("jdbc:gg-h2:mem:");
 
         Statement s = conn.createStatement();
 

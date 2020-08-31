@@ -22,9 +22,9 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.LongInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
-import org.h2.table.Column;
-import org.h2.value.TypeInfo;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.TypeInfo;
+import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
 /** Tests for the computation of default inline size. */

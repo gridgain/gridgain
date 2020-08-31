@@ -202,6 +202,11 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     }
 
     /** {@inheritDoc} */
+    @Override public long getTotalUsedSize() {
+        return getTotalUsedPages() * (persistenceEnabled ? pageMem.pageSize() : pageMem.systemPageSize());
+    }
+
+    /** {@inheritDoc} */
     @Override public float getAllocationRate() {
         if (!metricsEnabled)
             return 0;

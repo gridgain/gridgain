@@ -45,6 +45,7 @@ import javax.cache.CacheException;
 import javax.cache.integration.CompletionListener;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.net.ssl.HostnameVerifier;
@@ -692,7 +693,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param printPartState If {@code true} will print partition state if evictions not happened.
      * @throws InterruptedException If interrupted.
      */
-    @SuppressWarnings("BusyWait")
     protected void awaitPartitionMapExchange(
         boolean waitEvicts,
         boolean waitNode2PartUpdate,
@@ -2390,7 +2390,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     }
 
     /**
-     * Load data into single partition.
+     * Load data into a single partition.
      *
      * @param p Partition.
      * @param cacheName Cache name.
@@ -2616,22 +2616,47 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param <T> Type parameter for bean class.
      * @param <I> Type parameter for bean implementation class.
      * @return MX bean.
-     * @throws Exception If failed.
      */
     protected <T, I> T getMxBean(
         String igniteInstanceName,
         String grp,
         Class<T> cls,
         Class<I> implCls
-    ) throws Exception {
-        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, implCls.getSimpleName());
+    ) {
+        return getMxBean(igniteInstanceName, grp, implCls.getSimpleName(), cls);
+    }
+
+    /**
+     * Returns MX bean by specified name and group name.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param grp Name of the group.
+     * @param name Name of the bean.
+     * @param cls Bean class.
+     * @param <T> Type parameter for bean class.
+     * @return MX bean.
+     */
+    public static <T> T getMxBean(
+        String igniteInstanceName,
+        String grp,
+        String name,
+        Class<T> cls
+    ) {
+        ObjectName mbeanName = null;
+
+        try {
+            mbeanName = U.makeMBeanName(igniteInstanceName, grp, name);
+        }
+        catch (MalformedObjectNameException e) {
+            fail("Failed to register MBean.");
+        }
 
         MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
 
         if (!mbeanSrv.isRegistered(mbeanName))
             fail("MBean is not registered: " + mbeanName.getCanonicalName());
 
-        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, true);
+        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, cls, false);
     }
 
     /**

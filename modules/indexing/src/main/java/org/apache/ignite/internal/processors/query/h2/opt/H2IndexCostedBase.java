@@ -24,15 +24,15 @@ import org.apache.ignite.internal.processors.query.h2.opt.statistics.ColumnStati
 import org.apache.ignite.internal.processors.query.h2.opt.statistics.ObjectStatistics;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
-import org.h2.command.dml.AllColumnsForPlan;
-import org.h2.engine.Constants;
-import org.h2.index.BaseIndex;
-import org.h2.index.IndexCondition;
-import org.h2.index.IndexType;
-import org.h2.result.SortOrder;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableFilter;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.index.BaseIndex;
+import org.gridgain.internal.h2.index.IndexCondition;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
 
 /**
  * Index base.

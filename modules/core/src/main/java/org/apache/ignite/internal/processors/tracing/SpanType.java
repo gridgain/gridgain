@@ -42,7 +42,7 @@ public enum SpanType {
     DISCOVERY_CUSTOM_EVENT(Scope.DISCOVERY, "discovery.custom.event", 6, true),
 
     /** Exchange future. */
-    EXCHANGE_FUTURE(Scope.DISCOVERY, "exchange.future", 7),
+    EXCHANGE_FUTURE(Scope.DISCOVERY, "exchange.future", 7, true),
 
     /** Affinity calculation. */
     AFFINITY_CALCULATION(Scope.DISCOVERY, "affinity.calculation", 8),
@@ -159,7 +159,116 @@ public enum SpanType {
 
     // TODO GG-28559 Instead of creating custom span with Ignite api, open census api should be used.
     /** Custom job call. */
-    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 45, true);
+    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 45, true),
+
+    /** */
+    CACHE_API_PUT(Scope.CACHE_API_WRITE, "cache.api.put", 46, true),
+
+    /** */
+    CACHE_API_PUT_ALL(Scope.CACHE_API_WRITE, "cache.api.put.all", 47, true),
+
+    /** */
+    CACHE_API_PUT_ASYNC(Scope.CACHE_API_WRITE, "cache.api.put.async", 48, true),
+
+    /** */
+    CACHE_API_PUT_ALL_ASYNC(Scope.CACHE_API_WRITE, "cache.api.put.all.async", 49, true),
+
+    /** */
+    CACHE_API_REMOVE(Scope.CACHE_API_WRITE, "cache.api.remove", 50, true),
+
+    /** */
+    CACHE_API_REMOVE_ALL(Scope.CACHE_API_WRITE, "cache.api.remove.all", 51, true),
+
+    /** */
+    CACHE_API_REMOVE_ASYNC(Scope.CACHE_API_WRITE, "cache.api.remove.async", 52, true),
+
+    /** */
+    CACHE_API_REMOVE_ALL_ASYNC(Scope.CACHE_API_WRITE, "cache.api.remove.all.async", 53, true),
+
+    /** */
+    CACHE_API_NEAR_PROCESS_ATOMIC_UPDATE_REQUEST(Scope.CACHE_API_WRITE,
+        "cache.api.near.process.atomic.update.request", 54, false),
+
+    /** */
+    CACHE_API_NEAR_PROCESS_ATOMIC_UPDATE_RESPONSE(Scope.CACHE_API_WRITE,
+        "cache.api.near.process.atomic.update.response", 55, false),
+
+    /** */
+    CACHE_API_DHT_PROCESS_ATOMIC_UPDATE_REQUEST(Scope.CACHE_API_WRITE,
+        "cache.api.dht.process.atomic.update.request", 56, false),
+
+    /** */
+    CACHE_API_DHT_PROCESS_ATOMIC_UPDATE_RESPONSE(Scope.CACHE_API_WRITE,
+        "cache.api.dht.process.atomic.update.response", 57, false),
+
+    /** */
+    CACHE_API_DHT_PROCESS_ATOMIC_NEAR_RESPONSE(Scope.CACHE_API_WRITE,
+        "cache.api.dht.process.atomic.near.response", 58, false),
+
+    /** */
+    CACHE_API_PROCESS_CHECK_UPDATE_REQUEST(Scope.CACHE_API_WRITE,
+        "cache.api.process.check.update.request", 59, false),
+
+    /** */
+    CACHE_API_DHT_PROCESS_ATOMIC_DEFERRED_UPDATE_RESPONSE(Scope.CACHE_API_WRITE,
+        "cache.api.dht.process.atomic.deferred.update.response", 60, false),
+
+    /** */
+    CACHE_API_DHT_UPDATE_FUTURE(Scope.CACHE_API_WRITE, "cache.api.dht.update.future", 61, false),
+
+    /** */
+    CACHE_API_UPDATE_MAP(Scope.CACHE_API_WRITE, "cache.api.update.map", 62, false),
+
+    /** */
+    CACHE_API_NEAR_UPDATE_FUTURE(Scope.CACHE_API_WRITE, "cache.api.near.update.future", 63, false),
+
+    /** */
+    CACHE_API_NEAR_UPDATE_PRIMARY_FAILED_RESPONSE(Scope.CACHE_API_WRITE,
+        "cache.api.near.atomic.primary.failed.response", 64, false),
+
+    /** */
+    CACHE_API_GET(Scope.CACHE_API_READ, "cache.api.get", 65, true),
+
+    /** */
+    CACHE_API_GET_ALL(Scope.CACHE_API_READ, "cache.api.get.all", 66, true),
+
+    /** */
+    CACHE_API_GET_ASYNC(Scope.CACHE_API_READ, "cache.api.get.async", 67, true),
+
+    /** */
+    CACHE_API_GET_ALL_ASYNC(Scope.CACHE_API_READ, "cache.api.get.all.async", 68, true),
+
+    /** */
+    CACHE_API_NEAR_GET_FUTURE(Scope.CACHE_API_READ, "cache.api.near.get.future", 69, false),
+
+    /** */
+    CACHE_API_PARTITIONED_GET_FUTURE(Scope.CACHE_API_READ, "cache.api.partitioned.get.future", 70, false),
+
+    /** */
+    CACHE_API_PARTITIONED_SINGLE_GET_FUTURE(Scope.CACHE_API_READ, "cache.api.partitioned.single.get.future", 71, false),
+
+    /** */
+    CACHE_API_DHT_GET_FUTURE(Scope.CACHE_API_READ, "cache.api.dht.get.future", 72, false),
+
+    /** */
+    CACHE_API_DHT_SINGLE_GET_FUTURE(Scope.CACHE_API_READ, "cache.api.dht.single.get.future", 73, false),
+
+    /** */
+    CACHE_API_GET_MAP(Scope.CACHE_API_READ, "cache.api.get.map", 74, false),
+
+    /** */
+    CACHE_API_NEAR_PROCESS_ATOMIC_GET_REQUEST(Scope.CACHE_API_READ, "cache.api.near.atomic.get.request", 75, false),
+
+    /** */
+    CACHE_API_NEAR_PROCESS_ATOMIC_GET_RESPONSE(Scope.CACHE_API_READ, "cache.api.near.atomic.get.response", 76, false),
+
+    /** */
+    CACHE_API_NEAR_PROCESS_ATOMIC_SINGLE_GET_REQUEST(Scope.CACHE_API_READ,
+        "cache.api.near.atomic.single.get.request", 77, false),
+
+    /** */
+    CACHE_API_NEAR_PROCESS_ATOMIC_SINGLE_GET_RESPONSE(Scope.CACHE_API_READ,
+        "cache.api.near.atomic.single.get.response", 78, false);
 
     /** Scope */
     private Scope scope;

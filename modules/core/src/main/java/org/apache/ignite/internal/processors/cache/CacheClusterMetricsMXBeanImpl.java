@@ -23,7 +23,7 @@ import org.apache.ignite.mxbean.CacheMetricsMXBean;
 /**
  * Management bean that provides access to {@link IgniteCache IgniteCache}.
  */
-class CacheClusterMetricsMXBeanImpl implements CacheMetricsMXBean {
+public class CacheClusterMetricsMXBeanImpl implements CacheMetricsMXBean {
     /** Cache. */
     private GridCacheAdapter<?, ?> cache;
 
@@ -516,5 +516,15 @@ class CacheClusterMetricsMXBeanImpl implements CacheMetricsMXBean {
         catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isIndexRebuildInProgress() {
+        return cache.clusterMetrics().isIndexRebuildInProgress();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getIndexRebuildKeysProcessed() {
+        return cache.clusterMetrics().getIndexRebuildKeysProcessed();
     }
 }

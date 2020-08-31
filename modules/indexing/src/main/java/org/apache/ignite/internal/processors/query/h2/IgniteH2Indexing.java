@@ -186,18 +186,18 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
-import org.h2.api.AggregateFunction;
-import org.h2.api.ErrorCode;
-import org.h2.api.JavaObjectSerializer;
-import org.h2.engine.Session;
-import org.h2.engine.SysProperties;
-import org.h2.index.Index;
-import org.h2.store.DataHandler;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableType;
-import org.h2.util.JdbcUtils;
-import org.h2.value.DataType;
+import org.gridgain.internal.h2.api.AggregateFunction;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.api.JavaObjectSerializer;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.engine.SysProperties;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.store.DataHandler;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableType;
+import org.gridgain.internal.h2.util.JdbcUtils;
+import org.gridgain.internal.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Math.max;
@@ -812,10 +812,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         Session ses = session(conn);
 
-        if (timeoutMillis > 0)
+        if (timeoutMillis >= 0)
             ses.setQueryTimeout(timeoutMillis);
         else
-            ses.setQueryTimeout(0);
+            ses.setQueryTimeout((int)distrCfg.defaultQueryTimeout());
 
         try {
             return stmt.executeQuery();
@@ -1004,7 +1004,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             throw new IgniteException(e);
         }
 
-        SqlFieldsQuery res = new SqlFieldsQuery(sql);
+        SqlFieldsQuery res = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), qry.getTimeout(), TimeUnit.MILLISECONDS);
 
         res.setArgs(qry.getArgs());
         res.setDistributedJoins(qry.isDistributedJoins());
@@ -1014,9 +1014,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         res.setReplicatedOnly(qry.isReplicatedOnly());
         res.setSchema(schemaName);
         res.setSql(sql);
-
-        if (qry.getTimeout() > 0)
-            res.setTimeout(qry.getTimeout(), TimeUnit.MILLISECONDS);
 
         return res;
     }
@@ -1644,13 +1641,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         MvccSnapshot mvccSnapshot,
         GridQueryCancel cancel
     ) throws IgniteCheckedException {
-        SqlFieldsQuery fldsQry = new SqlFieldsQuery(qry);
+        SqlFieldsQuery fldsQry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(qry), timeout, TimeUnit.MILLISECONDS);
 
         if (params != null)
             fldsQry.setArgs(params);
 
         fldsQry.setEnforceJoinOrder(U.isFlagSet(flags, GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER));
-        fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
         fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
@@ -1687,13 +1683,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Force keepBinary for operation context to avoid binary deserialization inside entry processor
         DmlUtils.setKeepBinaryContext(planCctx);
 
-        SqlFieldsQuery selectFieldsQry = new SqlFieldsQuery(plan.selectQuery(), fldsQry.isCollocated())
+        SqlFieldsQuery selectFieldsQry =
+            QueryUtils.withQueryTimeout(
+                new SqlFieldsQuery(plan.selectQuery(), fldsQry.isCollocated()),
+                fldsQry.getTimeout(),
+                TimeUnit.MILLISECONDS
+            )
             .setArgs(fldsQry.getArgs())
             .setDistributedJoins(fldsQry.isDistributedJoins())
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
             .setLazy(fldsQry.isLazy());
 
         QueryCursorImpl<List<?>> cur;
