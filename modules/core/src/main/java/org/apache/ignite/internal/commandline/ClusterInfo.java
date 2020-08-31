@@ -24,6 +24,7 @@ import java.util.UUID;
 public class ClusterInfo {
     /** Claster UUID. */
     private final UUID id;
+
     /** Cluster tag. */
     private final String tag;
 
