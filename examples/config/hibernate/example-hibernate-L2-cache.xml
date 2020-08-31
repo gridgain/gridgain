@@ -28,7 +28,7 @@
 <hibernate-configuration>
     <session-factory>
         <!-- Database connection settings -->
-        <property name="connection.url">jdbc:h2:mem:example;DB_CLOSE_DELAY=-1</property>
+        <property name="connection.url">jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1</property>
 
         <!-- Drop and re-create the database schema on startup. -->
         <property name="hbm2ddl.auto">create</property>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1197,6 +1197,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 if (ctx.config().getPlatformConfiguration() != null)
                     startProcessor(new PlatformPluginProcessor(ctx));
 
+                mBeansMgr.registerMBeansDuringInitPhase();
+
                 ctx.cluster().initDiagnosticListeners();
 
                 fillNodeAttributes(clusterProc.updateNotifierEnabled());
@@ -1328,7 +1330,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 callbackExecSvc, qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs);
 
             // Register MBeans.
-            mBeansMgr.registerAllMBeans(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
+            mBeansMgr.registerMBeansAfterNodeStarted(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
                 mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
                 qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
 

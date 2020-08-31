@@ -37,10 +37,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
-import org.h2.result.LocalResult;
-import org.h2.result.LocalResultImpl;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.result.LocalResult;
+import org.gridgain.internal.h2.result.LocalResultImpl;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;

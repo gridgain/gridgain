@@ -84,17 +84,17 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.IndexCondition;
-import org.h2.index.IndexLookupBatch;
-import org.h2.index.IndexType;
-import org.h2.index.SingleRowCursor;
-import org.h2.message.DbException;
-import org.h2.result.SearchRow;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableFilter;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexCondition;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.index.SingleRowCursor;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -105,7 +105,7 @@ import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2I
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
-import static org.h2.result.Row.MEMORY_CALCULATE;
+import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 
 /**
  * H2 Index over {@link BPlusTree}.

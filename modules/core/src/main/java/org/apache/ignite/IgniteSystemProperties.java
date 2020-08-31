@@ -1078,6 +1078,7 @@ public final class IgniteSystemProperties {
     /**
      * Number of concurrent operation for evict partitions.
      */
+    @Deprecated
     public static final String IGNITE_EVICTION_PERMITS = "IGNITE_EVICTION_PERMITS";
 
     /**
@@ -1272,7 +1273,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED = "IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED";
 
     /**
-     * Defines factory class for H2 LocalResult (see org.h2.result.LocalResult).
+     * Defines factory class for H2 LocalResult (see org.gridgain.internal.h2.result.LocalResult).
      */
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 

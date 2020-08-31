@@ -40,10 +40,10 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Index;
-import org.h2.result.SortOrder;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
 
 /**

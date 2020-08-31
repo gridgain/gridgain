@@ -16,7 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
-import org.h2.test.TestAllJunit;
+import org.gridgain.internal.h2.test.TestAllJunit;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 

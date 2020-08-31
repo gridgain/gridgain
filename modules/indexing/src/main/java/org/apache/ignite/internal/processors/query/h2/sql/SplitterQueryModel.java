@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.h2.command.dml.SelectUnion;
+import org.gridgain.internal.h2.command.dml.SelectUnion;
 
 import java.util.ArrayList;
 import java.util.List;
