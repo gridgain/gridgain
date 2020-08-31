@@ -461,7 +461,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
-        assertContains(log, testOut.toString(), "Cluster tag: " + newTag);
+        assertContains(log, testOut.toString(), "Cluster tag: \"" + newTag + "\"");
 
         ignite.cluster().state(ACTIVE_READ_ONLY);
 
