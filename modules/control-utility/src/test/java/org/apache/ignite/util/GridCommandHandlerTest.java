@@ -346,7 +346,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = "TEST_CLUSTER_NAME")
+    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "TEST_CLUSTER_TAG")
     public void testDeactivateWithCheckClusterNameInConfirmationBySystemProperty() throws Exception {
         IgniteEx igniteEx = startGrid(0);
         assertFalse(igniteEx.cluster().active());
