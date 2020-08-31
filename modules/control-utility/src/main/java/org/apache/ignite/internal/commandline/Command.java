@@ -85,7 +85,7 @@ public interface Command<T> {
         if (clusterName != null) {
             log.info(CommandHandler.DELIM);
             log.info("Cluster  ID: \"" + clusterName.getIdAsString() + "\"");
-            log.info("Cluster tag: " + clusterName.getTag() + "\"");
+            log.info("Cluster tag: \"" + clusterName.getTag() + "\"");
 
             log.info(CommandHandler.DELIM);
         }
