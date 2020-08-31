@@ -46,6 +46,17 @@ public interface Command<T> {
      * @return Grid thin client instance which is already connected to cluster.
      * @throws Exception If error occur.
      */
+    public static GridClient startClient(GridClientConfiguration clientCfg) throws Exception {
+        return startClient(clientCfg, null);
+    }
+
+    /**
+     * Method to create thin client for communication with cluster.
+     *
+     * @param clientCfg Thin client configuration.
+     * @return Grid thin client instance which is already connected to cluster.
+     * @throws Exception If error occur.
+     */
     public static GridClient startClient(GridClientConfiguration clientCfg, Logger log) throws Exception {
         GridClient client = GridClientFactory.start(clientCfg);
 
@@ -66,6 +77,9 @@ public interface Command<T> {
      * @return Cluster information to show user for.
      */
     static void printClusterInfoBanner(GridClientClusterState clientCfg, Logger log){
+        if(log == null)
+            return;
+
         ClusterInfo clusterName = getClusterInfo(clientCfg);
 
         if (clusterName != null) {
