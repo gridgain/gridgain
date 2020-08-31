@@ -120,16 +120,14 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration c = super.getConfiguration(igniteInstanceName);
 
-        c.setFailureDetectionTimeout(100000L);
-
         ((TcpCommunicationSpi)c.getCommunicationSpi()).setSharedMemoryPort(-1);
 
         // Discovery.
-        //TcpDiscoverySpi disco = (TcpDiscoverySpi)c.getDiscoverySpi();
+        TcpDiscoverySpi disco = (TcpDiscoverySpi)c.getDiscoverySpi();
 
-//        disco.setSocketTimeout(30_000);
-//        disco.setAckTimeout(30_000);
-//        disco.setNetworkTimeout(30_000);
+        disco.setSocketTimeout(30_000);
+        disco.setAckTimeout(30_000);
+        disco.setNetworkTimeout(30_000);
 
         CacheConfiguration ccfg = cacheConfiguration();
 
@@ -181,7 +179,7 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return TEST_TIMEOUT * 10000;
+        return TEST_TIMEOUT;
     }
 
     /**

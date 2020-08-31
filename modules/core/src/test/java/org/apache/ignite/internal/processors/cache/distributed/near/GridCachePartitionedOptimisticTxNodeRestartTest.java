@@ -47,12 +47,6 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration c = super.getConfiguration(igniteInstanceName);
 
-        c.setConsistentId(igniteInstanceName);
-
-        c.setSystemThreadPoolSize(32);
-        c.setPublicThreadPoolSize(32);
-        c.setStripedPoolSize(32);
-
         c.getTransactionConfiguration().setDefaultTxConcurrency(OPTIMISTIC);
 
         return c;
@@ -79,7 +73,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
      * @return {@code True} if near cache enabled.
      */
     protected boolean nearEnabled() {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -154,25 +148,25 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxFourNodesTwoBackups() throws Throwable {
-        //super.testRestartWithTxFourNodesTwoBackups();
+        super.testRestartWithTxFourNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTenNodesTwoBackups() throws Throwable {
-        //super.testRestartWithTxTenNodesTwoBackups();
+        super.testRestartWithTxTenNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesNoBackups() throws Throwable {
-        //super.testRestartWithTxTwoNodesNoBackups();
+        super.testRestartWithTxTwoNodesNoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesOneBackup() throws Throwable {
-        //super.testRestartWithTxTwoNodesOneBackup();
+        super.testRestartWithTxTwoNodesOneBackup();
     }
 
     @Test
