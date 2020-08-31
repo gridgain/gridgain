@@ -77,7 +77,7 @@ public interface Command<T> {
      * @return Cluster information to show user for.
      */
     static void printClusterInfoBanner(GridClientClusterState clientCfg, Logger log) {
-        if(log == null)
+        if (log == null)
             return;
 
         ClusterInfo clusterName = getClusterInfo(clientCfg);

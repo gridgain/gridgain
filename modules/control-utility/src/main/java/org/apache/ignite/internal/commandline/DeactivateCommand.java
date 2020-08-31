@@ -45,7 +45,7 @@ public class DeactivateCommand implements Command<Void> {
         try (GridClient client = Command.startClient(clientCfg, logger)) {
             ClusterInfo clusterInfo = Command.getClusterInfo(client.state());
 
-            if(clusterInfo != null)
+            if (clusterInfo != null)
                 clusterName = clusterInfo.getTag();
         }
     }
