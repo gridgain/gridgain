@@ -19,15 +19,15 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 import java.util.ArrayList;
 import org.apache.ignite.internal.processors.query.h2.opt.H2ScanIndex;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.engine.Session;
-import org.h2.index.Index;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableBase;
-import org.h2.table.TableType;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableBase;
+import org.gridgain.internal.h2.table.TableType;
 
 /**
  * Table for reduce phase. Created for every splitted map query. Tables are created in H2 through SQL statement.

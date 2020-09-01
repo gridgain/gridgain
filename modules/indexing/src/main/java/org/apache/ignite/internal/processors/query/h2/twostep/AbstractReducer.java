@@ -33,10 +33,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Cursor;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

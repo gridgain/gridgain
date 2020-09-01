@@ -16,7 +16,6 @@
 
 package org.apache.ignite.ssl;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +38,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * SSL context factory that provides SSL context configuration with specified key and trust stores.
@@ -477,7 +477,7 @@ public class SslContextFactory implements Factory<SSLContext> {
      * @throws IOException If stream could not be opened.
      */
     protected InputStream openFileInputStream(String filePath) throws IOException {
-        return new FileInputStream(filePath);
+        return U.openFileInputStream(filePath);
     }
 
     /**

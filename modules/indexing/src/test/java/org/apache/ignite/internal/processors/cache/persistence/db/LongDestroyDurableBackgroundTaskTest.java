@@ -78,7 +78,7 @@ import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThread;
-import org.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 

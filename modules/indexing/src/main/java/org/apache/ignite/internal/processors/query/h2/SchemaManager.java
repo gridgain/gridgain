@@ -64,7 +64,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisito
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.index.Index;
+import org.gridgain.internal.h2.index.Index;
 import org.jetbrains.annotations.Nullable;
 
 /**

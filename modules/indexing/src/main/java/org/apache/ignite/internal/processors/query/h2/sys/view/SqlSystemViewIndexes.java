@@ -25,10 +25,10 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.h2.engine.Session;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * View that contains information about all the sql tables in the cluster.

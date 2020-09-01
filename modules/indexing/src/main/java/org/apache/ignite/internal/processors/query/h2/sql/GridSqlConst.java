@@ -17,10 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.Collections;
-import org.h2.expression.ValueExpression;
-import org.h2.value.Value;
-import org.h2.value.ValueBoolean;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.expression.ValueExpression;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueBoolean;
+import org.gridgain.internal.h2.value.ValueNull;
 
 /**
  * Constant value.

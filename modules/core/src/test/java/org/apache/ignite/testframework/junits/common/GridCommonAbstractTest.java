@@ -45,6 +45,7 @@ import javax.cache.CacheException;
 import javax.cache.integration.CompletionListener;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.net.ssl.HostnameVerifier;
@@ -2615,14 +2616,13 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param <T> Type parameter for bean class.
      * @param <I> Type parameter for bean implementation class.
      * @return MX bean.
-     * @throws Exception If failed.
      */
     protected <T, I> T getMxBean(
         String igniteInstanceName,
         String grp,
         Class<T> cls,
         Class<I> implCls
-    ) throws Exception {
+    ) {
         return getMxBean(igniteInstanceName, grp, implCls.getSimpleName(), cls);
     }
 
@@ -2635,15 +2635,21 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param cls Bean class.
      * @param <T> Type parameter for bean class.
      * @return MX bean.
-     * @throws Exception If failed.
      */
     public static <T> T getMxBean(
         String igniteInstanceName,
         String grp,
         String name,
         Class<T> cls
-    ) throws Exception {
-        ObjectName mbeanName = U.makeMBeanName(igniteInstanceName, grp, name);
+    ) {
+        ObjectName mbeanName = null;
+
+        try {
+            mbeanName = U.makeMBeanName(igniteInstanceName, grp, name);
+        }
+        catch (MalformedObjectNameException e) {
+            fail("Failed to register MBean.");
+        }
 
         MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
 
