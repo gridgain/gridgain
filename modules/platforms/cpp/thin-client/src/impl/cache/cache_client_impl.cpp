@@ -20,7 +20,6 @@
 #include "impl/message.h"
 #include "impl/cache/cache_client_impl.h"
 #include "impl/transactions/transactions_impl.h"
-#include "impl/transactions/transaction_impl.h"
 
 using namespace ignite::impl::thin::transactions;
 using namespace ignite::common::concurrent;
