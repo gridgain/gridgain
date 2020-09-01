@@ -106,7 +106,7 @@ public:
     virtual void log_entry_context(std::ostream& os, boost::unit_test::log_level, boost::unit_test::const_string ctx) {
         log_entry_context(os, ctx);
     }
-    virtual void entry_context_finish(std::ostream& os, boost::unit_test::log_level) override {
+    virtual void entry_context_finish(std::ostream& os, boost::unit_test::log_level) {
         entry_context_finish(os);
     }
 #endif
