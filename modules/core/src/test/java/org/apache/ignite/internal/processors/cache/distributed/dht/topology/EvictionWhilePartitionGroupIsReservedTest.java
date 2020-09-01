@@ -141,17 +141,19 @@ public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstrac
             assertEquals(locPart.toString(), OWNING, locPart.state());
         }
 
-        // Make sure partitions are attempted to evict before calling "release".
-        for (Integer p : evicting) {
-            GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                @Override public boolean apply() {
-                    GridDhtLocalPartition locPart = top.localPartition(p);
+        if (!clientAfter) {
+            // Make sure partitions are attempted to evict before calling "release".
+            for (Integer p : evicting) {
+                assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                    @Override public boolean apply() {
+                        GridDhtLocalPartition locPart = top.localPartition(p);
 
-                    long delayedRentingTopVer = U.field(locPart, "delayedRentingTopVer");
+                        long delayedRentingTopVer = U.field(locPart, "delayedRentingTopVer");
 
-                    return delayedRentingTopVer > 0;
-                }
-            }, 5_000);
+                        return delayedRentingTopVer > 0;
+                    }
+                }, 5_000));
+            }
         }
 
         grpR.release();
