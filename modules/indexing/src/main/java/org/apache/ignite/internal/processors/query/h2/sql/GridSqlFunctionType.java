@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import org.h2.expression.function.Function;
+import org.gridgain.internal.h2.expression.function.Function;
 
 /**
  * Full list of available functions see at {@link Function}

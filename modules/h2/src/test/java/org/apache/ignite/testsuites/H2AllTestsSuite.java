@@ -16,8 +16,8 @@
 
 package org.apache.ignite.testsuites;
 
-import org.h2.test.synth.TestChooseIndexWithOrderBy;
-import org.h2.test.synth.TestHashJoin;
+import org.gridgain.internal.h2.test.synth.TestChooseIndexWithOrderBy;
+import org.gridgain.internal.h2.test.synth.TestHashJoin;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 

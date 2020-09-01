@@ -28,8 +28,8 @@
                            http://www.springframework.org/schema/util/spring-util.xsd">
 
     <!-- Data source beans for POJO store. -->
-    <bean id="dsTest" class="org.h2.jdbcx.JdbcDataSource">
-        <property name="URL" value="jdbc:h2:mem:demo-db"/>
+    <bean id="dsTest" class="org.gridgain.internal.h2.jdbcx.JdbcDataSource">
+        <property name="URL" value="jdbc:gg-h2:mem:demo-db"/>
         <property name="user" value="sa"/>
         <property name="password" value=""/>
     </bean>

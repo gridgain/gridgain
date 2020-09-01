@@ -25,7 +25,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.ml.genetic.Chromosome;
 import org.apache.ignite.ml.genetic.Gene;
 import org.apache.ignite.ml.genetic.utils.GAGridUtils;
-import org.h2.tools.SimpleResultSet;
+import org.gridgain.internal.h2.tools.SimpleResultSet;
 
 /**
  * Responsible for providing custom SQL functions to retrieve optimization results.

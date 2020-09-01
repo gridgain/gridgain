@@ -71,9 +71,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
-import org.h2.api.ErrorCode;
-import org.h2.jdbc.JdbcResultSet;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.jdbc.JdbcResultSet;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
