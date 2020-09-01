@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
-import org.h2.value.Value;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Values statistic in particular column.

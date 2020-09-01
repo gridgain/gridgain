@@ -16,37 +16,14 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import java.util.Comparator;
+import java.util.List;
 import net.agkn.hll.HLL;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Array;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Boolean;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Byte;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Bytes;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2CacheObject;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Date;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Decimal;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Double;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Float;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Geometry;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Integer;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2JavaObject;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Long;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Null;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Short;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2String;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Time;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Timestamp;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2Uuid;
-import org.h2.table.Column;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Collector to compute statistic by single column.
