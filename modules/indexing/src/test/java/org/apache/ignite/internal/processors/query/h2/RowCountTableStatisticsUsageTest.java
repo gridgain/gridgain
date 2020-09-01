@@ -25,6 +25,7 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.gridgain.internal.h2.util.Permutations;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -48,7 +49,7 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
     public static Collection parameters() {
         return Arrays.asList(new Object[][] {
             { REPLICATED },
-            { PARTITIONED },
+            //{ PARTITIONED },
         });
     }
 
@@ -117,6 +118,11 @@ public class RowCountTableStatisticsUsageTest extends TableStatisticsAbstractTes
         String sql = "SELECT COUNT(*) FROM t1 JOIN t2 ON t1.c = t2.c";
 
         checkOptimalPlanChosenForDifferentJoinOrders(grid(0), sql, "big", "small");
+    }
+
+    @Test
+    public void compareJoinsWirhoutCond() {
+        runLocalExplainAnalyze(grid(0), false, "SELECT COUNT(*) FROM small JOIN big ON small.c = big.c");
     }
 
     /**

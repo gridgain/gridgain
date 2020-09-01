@@ -105,7 +105,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     }
 
     private long getCostRangeIndexRowCost_Last(int[] masks, long rowCount, ObjectStatistics locTblStats) {
-        int totalSelectivity = 0;
+        int totalCardinality = 0;
 
         long rowsCost = rowCount;
 
@@ -126,13 +126,21 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
 
                     ColumnStatistics colStat;
-                    int selectivity = locTblStats != null
+
+                    ///
+                    int totalSelectivity = 0;
+                    totalSelectivity = 100 - ((100 - totalSelectivity) *
+                            (100 - column.getSelectivity()) / 100);
+                    ///
+                    int cardinality = locTblStats != null
                             && (colStat = locTblStats.columnStatistics(column.getName())) != null ? colStat.cardinality()
                             : column.getSelectivity();
 
-                    totalSelectivity = 100 - ((100 - totalSelectivity) * (100 - selectivity) / 100);
 
-                    long distinctRows = rowCount * totalSelectivity / 100;
+
+                    totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
+
+                    long distinctRows = rowCount * totalCardinality / 100;
 
                     if (distinctRows <= 0)
                         distinctRows = 1;

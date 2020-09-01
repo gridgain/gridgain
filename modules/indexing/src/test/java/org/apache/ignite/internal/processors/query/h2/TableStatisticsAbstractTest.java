@@ -102,7 +102,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
      * @param sql Sql string.
      * @return Actual scanned rows count.
      */
-    private int runLocalExplainAnalyze(Ignite grid, boolean enfJoinOrder, String sql) {
+    protected int runLocalExplainAnalyze(Ignite grid, boolean enfJoinOrder, String sql) {
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null)
                 .setEnforceJoinOrder(enfJoinOrder)
