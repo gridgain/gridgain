@@ -314,9 +314,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
-        if (keyCheck)
-            validateCacheKeys(keys);
-
         warnIfUnordered(keys, BulkOperation.GET);
 
         return getAllAsync0(ctx.cacheKeysView(keys),
