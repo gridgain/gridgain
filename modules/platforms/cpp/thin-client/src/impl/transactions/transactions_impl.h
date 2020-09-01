@@ -103,7 +103,7 @@ namespace ignite
                      * or null pointer if there is no active transaction for
                      * the thread.
                      */
-                    static SP_TransactionImpl GetCurrent();
+                    SP_TransactionImpl GetCurrent();
 
                     /**
                      * Synchronously send message and receive response.
