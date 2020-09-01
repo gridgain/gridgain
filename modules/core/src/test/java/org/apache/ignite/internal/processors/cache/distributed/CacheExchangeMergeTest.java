@@ -1503,7 +1503,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                         Object val = cache.get(key);
 
                         if (isTxCacheWithouBackups)
-                            assertTrue(err, val.equals(i) || val == null);
+                            assertTrue(err, val == null || val.equals(i));
                         else
                             assertEquals(err, i, val);
                     }
@@ -1523,7 +1523,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
                         for (Map.Entry<Integer, Integer> e : map.entrySet()) {
                             if (isTxCacheWithouBackups)
-                                assertTrue(err, e.getValue().equals(res.get(e.getKey())) || res.get(e.getKey()) == null);
+                                assertTrue(err, res.get(e.getKey()) == null || e.getValue().equals(res.get(e.getKey())));
                             else
                                 assertEquals(err, e.getValue(), res.get(e.getKey()));
                         }
