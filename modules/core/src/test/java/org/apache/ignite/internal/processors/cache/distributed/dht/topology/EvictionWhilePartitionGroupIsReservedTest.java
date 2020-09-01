@@ -27,14 +27,15 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
 /**
  * Tests a scenario when a partition is attempted for eviction while being reserved in group.
@@ -102,7 +103,7 @@ public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstrac
         for (int i = 0; i < PARTS; i++)
             crd.cache(DEFAULT_CACHE_NAME).put(i, i);
 
-        IgniteEx node = grid(cnt - 1);
+        IgniteEx node = grid(0);
 
         List<Integer> evicting = evictingPartitionsAfterJoin(node, node.cache(DEFAULT_CACHE_NAME), PARTS);
 
@@ -135,15 +136,22 @@ public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstrac
             startClientGrid(cnt);
 
         for (Integer p : reserved) {
-            // Not expecting RENTING state on client join.
             GridDhtLocalPartition locPart = top.localPartition(p);
 
-            if (!clientAfter && evicting.contains(p)) {
-                assertTrue(locPart.toString(), GridTestUtils.waitForCondition(() -> locPart.state() == RENTING, 10_000));
-                assertEquals(locPart.toString(), 1, locPart.fullSize());
-            }
-            else
-                assertEquals(OWNING, locPart.state());
+            assertEquals(locPart.toString(), OWNING, locPart.state());
+        }
+
+        // Make sure partitions are attempted to evict before calling "release".
+        for (Integer p : evicting) {
+            GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                @Override public boolean apply() {
+                    GridDhtLocalPartition locPart = top.localPartition(p);
+
+                    long delayedRentingTopVer = U.field(locPart, "delayedRentingTopVer");
+
+                    return delayedRentingTopVer > 0;
+                }
+            }, 5_000);
         }
 
         grpR.release();
@@ -151,5 +159,7 @@ public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstrac
         assertEquals(clientAfter, grpR.reserve());
 
         awaitPartitionMapExchange(true, true, null);
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 }

@@ -26,8 +26,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservabl
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
-
 /**
  * Reservation mechanism for multiple partitions allowing to do a reservation in one operation.
  */
@@ -176,14 +174,12 @@ public class GridDhtPartitionsReservation implements GridReservable {
     /**
      * @param parts Partitions.
      */
-    private static void tryEvict(GridDhtLocalPartition[] parts) {
+    private static void tryContinueClearing(GridDhtLocalPartition[] parts) {
         if (parts == null)  // Can be not initialized yet.
             return;
 
-        for (GridDhtLocalPartition part : parts) {
-            if (part.state() == RENTING)
-                part.clearAsync();
-        }
+        for (GridDhtLocalPartition part : parts)
+            part.tryContinueClearing();
     }
 
     /**
@@ -199,10 +195,9 @@ public class GridDhtPartitionsReservation implements GridReservable {
             if (reservations.compareAndSet(r, r - 1)) {
                 // If it was the last reservation and topology version changed -> attempt to evict partitions.
                 if (r == 1 && !cctx.kernalContext().isStopping() &&
-                    // Avoid calling tryEvict if a topology has not changed.
                     !topVer.equals(cctx.shared().exchange().lastAffinityChangedTopologyVersion(
                         cctx.topology().lastTopologyChangeVersion())))
-                    tryEvict(parts.get());
+                    tryContinueClearing(parts.get());
 
                 return;
             }

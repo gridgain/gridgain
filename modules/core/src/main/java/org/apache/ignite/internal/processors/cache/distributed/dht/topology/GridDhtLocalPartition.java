@@ -495,14 +495,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             // Decrement reservations.
             if (this.state.compareAndSet(state, newState)) {
                 // If no more reservations try to continue delayed renting.
-                if (reservations == 0) {
-                    if (delayedRentingTopVer != 0 &&
-                        // Prevents delayed renting on topology which expects ownership.
-                        delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
-                        rent();
-                    else if (getPartState(state) == RENTING) // If was reserved in renting state continue clearing.
-                        clearAsync();
-                }
+                if (reservations == 0)
+                    tryContinueClearing();
 
                 return;
             }
@@ -685,7 +679,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         // Store current topology version to check on partition release.
         delayedRentingTopVer = ctx.exchange().readyAffinityVersion().topologyVersion();
 
-        if (getReservations(state0) == 0 && casState(state0, RENTING)) {
+        if (tryInvalidateGroupReservations() && getReservations(state0) == 0 && casState(state0, RENTING)) {
             delayedRentingTopVer = 0;
 
             // Evict asynchronously, as the 'rent' method may be called
@@ -694,6 +688,15 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         }
 
         return rent;
+    }
+
+    /**
+     * Continue clearing if it was delayed before due to reservation and topology version not changed.
+     */
+    public void tryContinueClearing() {
+        if (delayedRentingTopVer != 0 &&
+            delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
+            rent();
     }
 
     /**
@@ -709,7 +712,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         boolean evictionRequested = partState == RENTING;
         boolean clearingRequested = partState == MOVING;
 
-        if (!evictionRequested && !clearingRequested || !tryInvalidateGroupReservations())
+        if (!evictionRequested && !clearingRequested)
             return new GridFinishedFuture<>();
 
         GridFutureAdapter<?> finishFut = new GridFutureAdapter<>();
@@ -1046,7 +1049,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
 
             // Attempt to destroy.
-            ((GridDhtPreloader)grp.preloader()).tryEvictPartition(this);
+            ((GridDhtPreloader)grp.preloader()).tryFinishEviction(this);
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())
