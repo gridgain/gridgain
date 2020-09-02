@@ -17,6 +17,12 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -44,11 +50,15 @@ import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAbstractNodeRestartSelfTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration c = super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        c.getTransactionConfiguration().setDefaultTxConcurrency(OPTIMISTIC);
+        cfg.setFailureDetectionTimeout(1000000L);
 
-        return c;
+        cfg.setConsistentId(igniteInstanceName);
+
+        cfg.getTransactionConfiguration().setDefaultTxConcurrency(OPTIMISTIC);
+
+        return cfg;
     }
 
     /** {@inheritDoc} */
@@ -173,62 +183,67 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         backups = 2;
         nodeCnt = 4;
         keyCnt = 10;
-        partitions = 29;
+        partitions = 128;
         rebalancMode = ASYNC;
         evict = false;
 
-        IgniteEx crd = startGrids(4);
+        IgniteEx crd = startGrids(3);
 
-        awaitPartitionMapExchange(false, true, null);
+        awaitPartitionMapExchange();
 
-        IgniteCache<Object, Object> cache = crd.cache(CACHE_NAME);
+        IgniteEx testNode = grid(0);
 
-        int k = 0;
+        List<Integer> primary = IntStream.of(grid(0).affinity(CACHE_NAME).primaryPartitions(testNode.localNode())).boxed().collect(Collectors.toList());
+        List<Integer> backups = IntStream.of(grid(0).affinity(CACHE_NAME).backupPartitions(testNode.localNode())).boxed().collect(Collectors.toList());
 
-        Collection<ClusterNode> nodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(k);
+        IgniteEx g3 = startGrid(3);
 
-        ClusterNode notOwner = null;
+        awaitPartitionMapExchange(true, true, null);
 
-        for (Ignite ignite : G.allGrids()) {
-            if (!nodes.contains(ignite.cluster().localNode())) {
-                notOwner = ignite.cluster().localNode();
+        // Fins a key what was primary on testNode, and a testNode no longer owner on next topology.
+        int k = primary.stream().filter(p -> !crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(p).contains(testNode.localNode())).findFirst().orElse(-1);
 
-                break;
-            }
-        }
+        if (k == -1)
+            k = backups.stream().filter(p -> !crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(p).contains(testNode.localNode())).findFirst().orElse(-1);
 
-        try (Transaction tx = grid(notOwner).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-            IgniteCache<Object, Object> cache1 = grid(notOwner).cache(CACHE_NAME);
+        assertTrue(String.valueOf(k), k != -1);
+
+        try (Transaction tx = grid(testNode.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> cache1 = grid(testNode.name()).cache(CACHE_NAME);
 
             cache1.put(k, 0);
 
             tx.commit();
         }
 
-        assertEquals(0, cache.get(k));
+        assertEquals(0, testNode.cache(CACHE_NAME).get(k));
 
-        ClusterNode owner = nodes.iterator().next();
+        IgniteEx owner = grid(1);
 
-        try (Transaction tx = grid(owner).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-            IgniteCache<Object, Object> cache2 = grid(owner).cache(CACHE_NAME);
+        try (Transaction tx = grid(owner.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> cache2 = grid(owner.name()).cache(CACHE_NAME);
 
             cache2.put(k, 1);
 
-            TransactionProxyImpl p = (TransactionProxyImpl) tx;
-            p.tx().prepare(true);
+//            TransactionProxyImpl p = (TransactionProxyImpl) tx;
+//            p.tx().prepare(true);
+//
+//            nodes.remove(owner);
+//
+//            grid(owner).close();
 
-            nodes.remove(owner);
-
-            grid(owner).close();
+            tx.commit();
         }
         catch (Throwable e) {
             // Ignored.
         }
 
-        awaitPartitionMapExchange();
+//        awaitPartitionMapExchange();
+//
+//        assertEquals(1, grid(nodes.iterator().next()).cache(CACHE_NAME).get(k));
+//
+//        checkFutures();
 
-        assertEquals(1, grid(nodes.iterator().next()).cache(CACHE_NAME).get(k));
-
-        checkFutures();
+        System.out.println();
     }
 }
