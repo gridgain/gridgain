@@ -990,11 +990,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                 Collections.<GridCacheVersion>emptyList());
 
             commitRemoteTx();
-
-            if (near()) {
-                while(state() == COMMITTING)
-                    commitRemoteTx();
-            }
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to invalidate transaction: " + xidVersion(), e);
