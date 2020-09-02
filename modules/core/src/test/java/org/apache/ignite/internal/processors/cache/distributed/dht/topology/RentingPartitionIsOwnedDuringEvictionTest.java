@@ -54,8 +54,6 @@ public class RentingPartitionIsOwnedDuringEvictionTest extends GridCommonAbstrac
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(100000L);
-
         cfg.setRebalanceThreadPoolSize(ThreadLocalRandom.current().nextInt(4) + 1);
         cfg.setConsistentId(igniteInstanceName);
 
