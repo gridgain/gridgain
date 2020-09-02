@@ -162,8 +162,17 @@ public enum IgniteFeatures {
     /** New security processor with a security context support. */
     IGNITE_SECURITY_PROCESSOR_V2(41),
 
+    /** Force rebuild, list or request indexes rebuild status from control script. */
+    INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT(42),
+
     /** Snapshots without PME. */
-    EXCHANGELESS_SNAPSHOT(43);
+    EXCHANGELESS_SNAPSHOT(43),
+
+    /** Optimization of recovery protocol for cluster which doesn't contain MVCC caches. */
+    MVCC_TX_RECOVERY_PROTOCOL_V2(44),
+
+    /** Pk index keys are applied in correct order. */
+    SPECIFIED_SEQ_PK_KEYS(45);
 
     /**
      * Unique feature identifier.

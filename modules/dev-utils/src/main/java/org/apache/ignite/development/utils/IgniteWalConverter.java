@@ -68,7 +68,7 @@ public class IgniteWalConverter {
         H2ExtrasLeafIO.register();
 
         System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE,
-            Boolean.toString(params.getProcessSensitiveData() == ProcessSensitiveData.HIDE));
+            Boolean.toString(params.includeSensitive() == ProcessSensitiveData.HIDE));
 
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(params.isSkipCrc()));
         RecordV1Serializer.skipCrc = params.isSkipCrc();
@@ -79,8 +79,8 @@ public class IgniteWalConverter {
 
         IgniteWalIteratorFactory.IteratorParametersBuilder iteratorParametersBuilder = new IgniteWalIteratorFactory.IteratorParametersBuilder()
             .pageSize(params.getPageSize())
-            .binaryMetadataFileStoreDir(params.getBinaryMetadataFileStoreDir())
-            .marshallerMappingFileStoreDir(params.getMarshallerMappingFileStoreDir())
+            .binaryMetadataFileStoreDir(params.getBinaryMetadataDir())
+            .marshallerMappingFileStoreDir(params.getMarshallerMappingDir())
             .keepBinary(params.isKeepBinary());
 
         if (params.getWalDir() != null)
@@ -120,9 +120,9 @@ public class IgniteWalConverter {
                     if (record instanceof TimeStampRecord)
                         print = withinTimeRange((TimeStampRecord) record, params.getFromTime(), params.getToTime());
 
-                    final String recordStr = toString(record, params.getProcessSensitiveData());
+                    final String recordStr = toString(record, params.includeSensitive());
 
-                    if (print && (F.isEmpty(params.getRecordContainsText()) || recordStr.contains(params.getRecordContainsText())))
+                    if (print && (F.isEmpty(params.hasText()) || recordStr.contains(params.hasText())))
                         out.println(recordStr);
                 }
             }

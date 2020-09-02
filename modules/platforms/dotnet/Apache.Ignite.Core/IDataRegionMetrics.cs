@@ -44,6 +44,15 @@ namespace Apache.Ignite.Core
         long TotalAllocatedSize { get; }
 
         /// <summary>
+        /// Gets a total size of memory allocated for storing the data, in bytes.
+        /// It includes allocated pages except of empty pages that are not used yet or pages that can be reused.
+        /// E. g. data region contains 1000 allocated pages, and 200 pages are used to store some data, this
+        /// metric shows 200 used pages. Then the data was partially deleted and 50 pages were totally freed,
+        /// hence this metric should show 150 used pages.
+        /// </summary>
+        long TotalUsedSize { get; }
+
+        /// <summary>
         /// Gets the allocation rate, in pages per second.
         /// </summary>
         float AllocationRate { get; }

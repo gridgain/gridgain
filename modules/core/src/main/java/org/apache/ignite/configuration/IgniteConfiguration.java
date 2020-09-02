@@ -163,7 +163,7 @@ public class IgniteConfiguration {
     public static final int DFLT_DATA_STREAMER_POOL_SIZE = DFLT_PUBLIC_THREAD_CNT;
 
     /** Default limit of threads used for rebalance. */
-    public static final int DFLT_REBALANCE_THREAD_POOL_SIZE = 1;
+    public static final int DFLT_REBALANCE_THREAD_POOL_SIZE = min(4, max(1, AVAILABLE_PROC_CNT / 4));
 
     /** Default rebalance message timeout in milliseconds (value is {@code 10000}). */
     public static final long DFLT_REBALANCE_TIMEOUT = 10000;
@@ -1140,7 +1140,7 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Get shutdown policy.
+     * Gets shutdown policy.
      * If policy was not set default policy will be return {@link IgniteCluster.DEFAULT_SHUTDOWN_POLICY}.
      *
      * @return Shutdown policy.
@@ -1150,8 +1150,8 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Set shutdown policy.
-     * If passed null through parameter, policy will be set as default.
+     * Sets shutdown policy.
+     * If {@code null} is passed as a parameter, policy will be set as default.
      *
      * @param shutdownPolicy Shutdown policy.
      * @return {@code this} for chaining.

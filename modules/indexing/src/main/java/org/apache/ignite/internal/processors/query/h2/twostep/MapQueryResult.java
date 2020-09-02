@@ -39,11 +39,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Session;
-import org.h2.jdbc.JdbcResultSet;
-import org.h2.result.LazyResult;
-import org.h2.result.ResultInterface;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.jdbc.JdbcResultSet;
+import org.gridgain.internal.h2.result.LazyResult;
+import org.gridgain.internal.h2.result.ResultInterface;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

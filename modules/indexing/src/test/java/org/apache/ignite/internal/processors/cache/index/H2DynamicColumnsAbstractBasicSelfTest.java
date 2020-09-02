@@ -31,7 +31,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.testframework.config.GridTestProperties;
-import org.h2.jdbc.JdbcSQLSyntaxErrorException;
+import org.gridgain.internal.h2.jdbc.JdbcSQLSyntaxErrorException;
 import org.junit.Assert;
 import org.junit.Test;
 

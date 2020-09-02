@@ -64,7 +64,7 @@ public class CheckpointEntry {
      * @param cpId Checkpoint ID.
      * @param cacheGrpStates Cache groups states.
      */
-    public CheckpointEntry(
+    CheckpointEntry(
         long cpTs,
         WALPointer cpMark,
         UUID cpId,
@@ -154,13 +154,19 @@ public class CheckpointEntry {
      *
      */
     public static class GroupState {
-        /** */
+        /**
+         *
+         */
         private int[] parts;
 
-        /** */
+        /**
+         *
+         */
         private long[] cnts;
 
-        /** */
+        /**
+         *
+         */
         private int idx;
 
         /**
@@ -206,8 +212,8 @@ public class CheckpointEntry {
         }
 
         /**
-         * Return a partition id by an index of this group state.
-         * Index was passed through parameter have to be less than size.
+         * Return a partition id by an index of this group state. Index was passed through parameter have to be less
+         * than size.
          *
          * @param idx Partition index.
          * @return Patition id.
@@ -240,20 +246,26 @@ public class CheckpointEntry {
     }
 
     /**
-     *  Group state lazy store.
+     * Group state lazy store.
      */
     public static class GroupStateLazyStore {
-        /** */
+        /**
+         *
+         */
         private static final AtomicIntegerFieldUpdater<GroupStateLazyStore> initGuardUpdater =
             AtomicIntegerFieldUpdater.newUpdater(GroupStateLazyStore.class, "initGuard");
 
         /** Cache states. Initialized lazily. */
         private volatile Map<Integer, GroupState> grpStates;
 
-        /** */
+        /**
+         *
+         */
         private final CountDownLatch latch;
 
-        /** */
+        /**
+         *
+         */
         @SuppressWarnings("unused")
         private volatile int initGuard;
 
@@ -356,9 +368,10 @@ public class CheckpointEntry {
 
                         grpStates = remap(stateRec);
                     }
-                    else
-                        initEx = new IgniteCheckedException(
+                    else {
+                        throw new IgniteCheckedException(
                             "Failed to find checkpoint record at the given WAL pointer: " + ptr);
+                    }
                 }
                 catch (IgniteCheckedException e) {
                     initEx = e;

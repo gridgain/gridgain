@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
+ /**
+  * @file
+  * Declares ignite::cache::CacheAffinity class.
+  */
+
 #ifndef _IGNITE_CACHE_AFFINITY
 #define _IGNITE_CACHE_AFFINITY
-
-#ifdef GRIDGAIN_ENABLE_CLUSTER_API
-
-/**
- * @file
- * Declares ignite::cache::CacheAffinity class.
- */
 
 #include <ignite/cluster/cluster_group.h>
 
@@ -169,7 +167,7 @@ namespace ignite
              * @param keys Keys to map to nodes.
              * @return Map of nodes to keys or empty map if there are no alive nodes for this cache.
              */
-            std::map<cluster::ClusterNode, std::list<K> > MapKeysToNodes(const std::list<K>& keys)
+            std::map<cluster::ClusterNode, std::vector<K> > MapKeysToNodes(const std::vector<K>& keys)
             {
                 return impl.Get()->MapKeysToNodes(keys);
             }
@@ -239,5 +237,4 @@ namespace ignite
     }
 }
 
-#endif // GRIDGAIN_ENABLE_CLUSTER_API
 #endif //_IGNITE_CACHE_AFFINITY

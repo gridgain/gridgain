@@ -3455,8 +3455,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (val == null) {
                     skipQryNtf = true;
 
-                    if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal())
+                    if (cctx.deferredDelete() && !deletedUnlocked() && !isInternal()) {
                         deletedUnlocked(true);
+
+                        oldVer = this.ver;
+
+                        deferred = true;
+                    }
                 }
                 else if (deletedUnlocked())
                     deletedUnlocked(false);
@@ -6870,6 +6875,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             else {
                 assert entry.isStartVersion() || ATOMIC_VER_COMPARATOR.compare(entry.ver, newVer) <= 0 :
                     "Invalid version for inner update [name=" + cctx.group().cacheOrGroupName() +
+                        ", topVer=" + cctx.group().topology().readyTopologyVersion() +
                         ", isNew=" + entry.isStartVersion() + ", entry=" + entry + ", newVer=" + newVer + ']';
             }
         }

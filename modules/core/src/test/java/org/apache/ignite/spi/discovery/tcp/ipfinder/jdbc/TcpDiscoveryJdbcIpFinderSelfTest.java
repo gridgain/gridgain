@@ -48,12 +48,12 @@ public class TcpDiscoveryJdbcIpFinderSelfTest extends
         assert finder.isShared() : "IP finder should be shared by default.";
 
         dataSrc = new ComboPooledDataSource();
-        dataSrc.setDriverClass("org.h2.Driver");
+        dataSrc.setDriverClass("org.gridgain.internal.h2.Driver");
 
         if (initSchema)
-            dataSrc.setJdbcUrl("jdbc:h2:mem:./test");
+            dataSrc.setJdbcUrl("jdbc:gg-h2:mem:./test");
         else {
-            dataSrc.setJdbcUrl("jdbc:h2:mem:jdbc_ipfinder_not_initialized_schema");
+            dataSrc.setJdbcUrl("jdbc:gg-h2:mem:jdbc_ipfinder_not_initialized_schema");
 
             finder.setInitSchema(false);
         }

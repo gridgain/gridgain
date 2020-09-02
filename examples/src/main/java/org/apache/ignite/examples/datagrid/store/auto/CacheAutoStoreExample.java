@@ -30,7 +30,7 @@ import org.apache.ignite.examples.ExampleNodeStartup;
 import org.apache.ignite.examples.model.Person;
 import org.apache.ignite.examples.util.DbH2ServerStartup;
 import org.apache.ignite.transactions.Transaction;
-import org.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
@@ -62,7 +62,7 @@ public class CacheAutoStoreExample {
     private static final class CacheJdbcPojoStoreExampleFactory extends CacheJdbcPojoStoreFactory<Long, Person> {
         /** {@inheritDoc} */
         @Override public CacheJdbcPojoStore<Long, Person> create() {
-            setDataSource(JdbcConnectionPool.create("jdbc:h2:tcp://localhost/mem:ExampleDb", "sa", ""));
+            setDataSource(JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", ""));
 
             return super.create();
         }

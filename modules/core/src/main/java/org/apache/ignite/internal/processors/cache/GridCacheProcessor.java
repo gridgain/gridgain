@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.cache.CacheException;
 import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -49,9 +52,13 @@ import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.WarmUpConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
@@ -77,6 +84,7 @@ import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProce
 import org.apache.ignite.internal.processors.cache.datastructures.CacheDataStructuresManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.FinishPreloadingTask;
@@ -113,6 +121,7 @@ import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTransactionsImpl;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
+import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategy;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
@@ -152,6 +161,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
@@ -168,6 +178,10 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -194,7 +208,11 @@ import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 @SuppressWarnings({"unchecked", "TypeMayBeWeakened", "deprecation"})
 public class GridCacheProcessor extends GridProcessorAdapter {
     /** */
-    static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
+    public static final String CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT =
+        "Failed to perform %s operation (cluster is in read-only mode) [cacheGrp=%s, cache=%s]";
+
+    /** */
+    private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
         "Cannot start/stop cache within lock or transaction [cacheNames=%s, operation=%s]";
 
     /** Enables start caches in parallel. */
@@ -866,6 +884,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         final List<GridCacheAdapter> stoppedCaches = new ArrayList<>();
 
+        // Close SQL caches which were not started by client.
+        for (String cacheToStop: reconnectRes.stoppedCaches()) {
+            if (!caches.keySet().contains(cacheToStop))
+                ctx.query().onCacheStop(cacheToStop);
+        }
+
         for (final GridCacheAdapter cache : caches.values()) {
             boolean stopped = reconnectRes.stoppedCacheGroups().contains(cache.context().groupId())
                 || reconnectRes.stoppedCaches().contains(cache.name());
@@ -918,7 +942,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cancel Cancel flag.
      * @param destroy Destroy data flag. Setting to <code>true</code> will remove all cache data.
      */
-    @SuppressWarnings({"unchecked"})
     private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy) {
         stopCache(cache, cancel, destroy, true);
     }
@@ -2680,6 +2703,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             .map(a -> F.t(cacheGrps.get(a.descriptor().groupId()), a.destroy()))
             .collect(Collectors.toList());
 
+        // Wait until all evictions are finished.
         grpsToStop.forEach(t -> sharedCtx.evict().onCacheGroupStopped(t.get1()));
 
         if (!exchActions.cacheStopRequests().isEmpty())
@@ -3379,7 +3403,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
-                () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicStartCache"));
+                () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicStartCache"));
         }
 
         GridPlainClosure<Collection<byte[]>, IgniteInternalFuture<Boolean>> startCacheClsr = (grpKeys) -> {
@@ -3419,6 +3443,59 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
         catch (Exception e) {
             return new GridFinishedFuture<>(e);
+        }
+    }
+
+    /**
+     * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     *
+     * @param opName Operation name.
+     * @param cfgs Cache configurations.
+     * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     */
+    public void checkReadOnlyState(String opName, CacheConfiguration... cfgs) {
+        IgniteOutClosure<String> cacheNameClo = null;
+        IgniteOutClosure<String> cacheGrpNameClo = null;
+
+        if (!F.isEmpty(cfgs)) {
+            if (cfgs.length == 1) {
+                cacheNameClo = () -> cfgs[0] == null ? null : cfgs[0].getName();
+                cacheGrpNameClo = () -> cfgs[0] == null ? null : cfgs[0].getGroupName();
+            }
+            else {
+                cacheNameClo = () -> Stream.of(cfgs)
+                    .map(CacheConfiguration::getName)
+                    .collect(Collectors.toList()).toString();
+
+                cacheGrpNameClo = () -> Stream.of(cfgs)
+                    .map(CacheConfiguration::getGroupName)
+                    .collect(Collectors.toList()).toString();
+            }
+        }
+
+        checkReadOnlyState(opName, cacheGrpNameClo, cacheNameClo);
+    }
+
+    /**
+     * Checks that cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     *
+     * @param opName Operation name.
+     * @param cacheGrpNameClo Closure for getting cache group name, if it needed (optional).
+     * @param cacheNameClo Closure for getting cache name, if it needed (optional).
+     * @throws CacheException If cluster in a {@link ClusterState#ACTIVE_READ_ONLY} state.
+     */
+    private void checkReadOnlyState(
+        String opName,
+        @Nullable IgniteOutClosure<String> cacheGrpNameClo,
+        @Nullable IgniteOutClosure<String> cacheNameClo
+    ) {
+        if (sharedCtx.readOnlyMode()) {
+            String cacheName = cacheNameClo == null ? null : cacheNameClo.apply();
+            String cacheGrpName = cacheGrpNameClo == null ? null : cacheGrpNameClo.apply();
+
+            String errorMsg = format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT, opName, cacheGrpName, cacheName);
+
+            throw new CacheException(new IgniteClusterReadOnlyException(errorMsg));
         }
     }
 
@@ -3536,7 +3613,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     .map(CacheConfiguration::getName)
                     .collect(Collectors.toList());
 
-                return String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicStartCachesByStoredConf");
+                return format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicStartCachesByStoredConf");
             });
         }
 
@@ -3630,8 +3707,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
-                () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicDestroyCache"));
+                () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicDestroyCache"));
         }
+
+        checkReadOnlyState("dynamic destroy cache", null, cacheName::toString);
 
         DynamicCacheChangeRequest req = DynamicCacheChangeRequest.stopRequest(ctx, cacheName, sql, true);
 
@@ -3665,8 +3744,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     ) {
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
-                () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicDestroyCaches"));
+                () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "dynamicDestroyCaches"));
         }
+
+        if (!F.isEmpty(cacheNames))
+            checkReadOnlyState("dynamic destroy caches", null, cacheNames::toString);
 
         return dynamicChangeCaches(
             cacheNames.stream().map(cacheName -> createStopRequest(cacheName, false, null, destroy))
@@ -3717,7 +3799,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return new GridFinishedFuture<>(); // No-op.
 
         sharedCtx.tm().checkEmptyTransactions(
-            () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicCloseCache"));
+            () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicCloseCache"));
 
         if (proxy.context().isLocal())
             return dynamicDestroyCache(cacheName, false, true, false, null);
@@ -3733,7 +3815,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     public IgniteInternalFuture<?> resetCacheState(Collection<String> cacheNames) throws ClusterTopologyCheckedException {
         sharedCtx.tm().checkEmptyTransactions(
-            () -> String.format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "resetCacheState"));
+            () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheNames, "resetCacheState"));
 
         Collection<DynamicCacheChangeRequest> reqs = new ArrayList<>(cacheNames.size());
 
@@ -5072,6 +5154,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
          */
         private final Map<Integer, QuerySchema> querySchemas = new ConcurrentHashMap<>();
 
+        /** Flag for stopping warm-up. */
+        private final AtomicBoolean stopWarmUp = new AtomicBoolean();
+
+        /** Currently running warm-up strategy. */
+        private volatile WarmUpStrategy curWarmUpStrat;
+
         /** {@inheritDoc} */
         @Override public void onBaselineChange() {
             for (GridCacheAdapter<?, ?> cache : caches.values())
@@ -5126,7 +5214,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             IgniteCacheDatabaseSharedManager mgr,
             GridCacheDatabaseSharedManager.RestoreLogicalState restoreState
         ) throws IgniteCheckedException {
-            restorePartitionStates(cacheGroups(), restoreState.partitionRecoveryStates());
+            Collection<CacheGroupContext> cacheGrps = cacheGroups();
+
+            restorePartitionStates(cacheGrps, restoreState.partitionRecoveryStates());
+
+            // Start warm-up only after restoring memory storage, but before starting GridDiscoveryManager.
+            if (!cacheGrps.isEmpty())
+                startWarmUp();
         }
 
         /**
@@ -5192,6 +5286,96 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     ", partitionsProcessed=" + totalProcessed.get() +
                     ", time=" + (U.currentTimeMillis() - startRestorePart) + "ms]");
         }
+
+        /**
+         * Start warming up sequentially for each persist data region.
+         *
+         * @throws IgniteCheckedException If failed.
+         */
+        private void startWarmUp() throws IgniteCheckedException {
+            boolean start = false;
+
+            try {
+                // Collecting custom and default data regions.
+                DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();
+
+                List<DataRegionConfiguration> regCfgs =
+                    new ArrayList<>(asList(dsCfg.getDefaultDataRegionConfiguration()));
+
+                if (nonNull(dsCfg.getDataRegionConfigurations()))
+                    regCfgs.addAll(asList(dsCfg.getDataRegionConfigurations()));
+
+                // Warm-up start.
+                Map<Class<? extends WarmUpConfiguration>, WarmUpStrategy> warmUpStrats = CU.warmUpStrategies(ctx);
+
+                WarmUpConfiguration dfltWarmUpCfg = dsCfg.getDefaultWarmUpConfiguration();
+
+                for (DataRegionConfiguration regCfg : regCfgs) {
+                    if (stopWarmUp.get())
+                        return;
+
+                    if (!regCfg.isPersistenceEnabled())
+                        continue;
+
+                    WarmUpConfiguration warmUpCfg = nonNull(regCfg.getWarmUpConfiguration()) ?
+                        regCfg.getWarmUpConfiguration() : dfltWarmUpCfg;
+
+                    if (isNull(warmUpCfg))
+                        continue;
+
+                    WarmUpStrategy warmUpStrat = (curWarmUpStrat = warmUpStrats.get(warmUpCfg.getClass()));
+
+                    DataRegion region = sharedCtx.database().dataRegion(regCfg.getName());
+
+                    if (!stopWarmUp.get()) {
+                        if (!start && (start = true) && log.isInfoEnabled())
+                            log.info("Warm-up start.");
+
+                        if (log.isInfoEnabled()) {
+                            log.info("Start warm-up for data region [name=" + regCfg.getName()
+                                + ", warmUpStrategy=" + warmUpStrat + ", warmUpConfig=" + warmUpCfg + ", isDefault="
+                                + (warmUpCfg == dfltWarmUpCfg) + ']');
+                        }
+
+                        warmUpStrat.warmUp(warmUpCfg, region);
+
+                        if (log.isInfoEnabled())
+                            log.info("Finish of warm-up data region: " + region.config().getName());
+                    }
+                }
+            }
+            finally {
+                if (stopWarmUp.get() && log.isInfoEnabled())
+                    log.info("Warm-up stop.");
+                else if (start && log.isInfoEnabled())
+                    log.info("Warm-up finish.");
+
+                stopWarmUp.set(true);
+                curWarmUpStrat = null;
+            }
+        }
+    }
+
+    /**
+     * Stop warming up and current running strategy.
+     *
+     * @return {@code true} if stopped by this call.
+     * @throws IgniteCheckedException If there is an error when stopping warm-up.
+     */
+    public boolean stopWarmUp() throws IgniteCheckedException {
+        if (recovery.stopWarmUp.compareAndSet(false, true)) {
+            WarmUpStrategy strat = recovery.curWarmUpStrat;
+
+            if (log.isInfoEnabled())
+                log.info("Stopping warm-up strategy: " + strat);
+
+            if (nonNull(strat))
+                strat.stop();
+
+            return true;
+        }
+
+        return false;
     }
 
     /**

@@ -84,9 +84,12 @@ public class ResetLostPartitionTest extends GridCommonAbstractTest {
 
         DataStorageConfiguration storageCfg = new DataStorageConfiguration();
 
-        storageCfg.setPageSize(1024).setWalMode(LOG_ONLY).setWalSegmentSize(4 * 1024 * 1024);
+        storageCfg.setPageSize(1024)
+            .setWalMode(LOG_ONLY)
+            .setWalSegmentSize(4 * 1024 * 1024);
 
-        storageCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)
+        storageCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            .setPersistenceEnabled(true)
             .setMaxSize(100L * 1024 * 1024));
 
         cfg.setDataStorageConfiguration(storageCfg);

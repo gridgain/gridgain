@@ -27,6 +27,13 @@
     <version>to_be_replaced_by_ignite_version</version>
     <url>http://ignite.apache.org</url>
 
+    <repositories>
+        <repository>
+            <id>GridGain External Repository</id>
+            <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+    </repositories>
+
     <properties>
         <yardstick.version>0.8.3</yardstick.version>
         <spring.version>4.1.0.RELEASE</spring.version>
@@ -119,10 +126,10 @@
 
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <version>3.6.1</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
 

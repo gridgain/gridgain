@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import org.apache.ignite.IgniteException;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.TreeSet;
