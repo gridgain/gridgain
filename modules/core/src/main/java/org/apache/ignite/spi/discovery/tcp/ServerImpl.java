@@ -6198,7 +6198,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                                 if (!aliveCheck && isLocalNodeCoordinator()) {
                                     if (log.isInfoEnabled())
-                                        log.info("Client node failed liveness check. It will be failed. Node: " + clientNode);
+                                        log.info("Client node failed liveness check. Node: " + clientNode);
 
                                     boolean failedNode;
 

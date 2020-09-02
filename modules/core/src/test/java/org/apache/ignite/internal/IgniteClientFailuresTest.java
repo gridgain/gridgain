@@ -216,7 +216,7 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
 
         String logRes = strLog.toString();
 
-        assertTrue(logRes.contains("Client node failed liveness check. It will be failed. Node: "));
+        assertTrue(logRes.contains("Client node failed liveness check. Node: "));
         assertTrue(logRes.contains("time since client fail in milliseconds: "));
     }
 
