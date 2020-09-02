@@ -21,7 +21,6 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
-import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeChangeModeResult;
@@ -32,7 +31,6 @@ import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatus;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatusResult;
 import org.apache.ignite.internal.visor.ru.VisorRollingUpgradeStatusTask;
 
-import static org.apache.ignite.internal.commandline.CommandArgIterator.isCommandOrOption;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
@@ -70,7 +68,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
                 toVisorArguments(rollingUpgradeArgs),
                 clientCfg);
 
-            printRollingUpgradeChangeModeResult(log, res);
+            printRollingUpgradeChangeModeResult(log, res, rollingUpgradeArgs.command());
 
             return res;
         }
@@ -89,8 +87,9 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.ENABLE.text(), optional(RollingUpgradeCommandArg.FORCE), optional(CMD_AUTO_CONFIRMATION));
-        Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.DISABLE.text(), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.START.text(), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.FINISH.text(), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Enable force rolling upgrade mode:", ROLLING_UPGRADE, RollingUpgradeSubCommands.FORCE.text(), optional(CMD_AUTO_CONFIRMATION));
         Command.usage(logger, "Get rolling upgrade status:", ROLLING_UPGRADE, RollingUpgradeSubCommands.STATUS.text());
     }
 
@@ -101,21 +100,7 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
         if (cmd == null)
             throw new IllegalArgumentException("Expected correct action");
 
-        RollingUpgradeArguments.Builder rollingUpgradeArgs = new RollingUpgradeArguments.Builder(cmd);
-
-        if (RollingUpgradeSubCommands.ENABLE == cmd) {
-            if (argIter.peekNextArg() != null && !isCommandOrOption(argIter.peekNextArg())) {
-                RollingUpgradeCommandArg cmdArg = CommandArgUtils.of(
-                    argIter.nextArg("Unknown parameter for enabling rolling upgrade"), RollingUpgradeCommandArg.class);
-
-                if (RollingUpgradeCommandArg.FORCE != cmdArg)
-                    throw new IllegalArgumentException("Unknown parameter for enabling rolling upgrade");
-
-                rollingUpgradeArgs.withForcedMode(true);
-            }
-        }
-
-        this.rollingUpgradeArgs = rollingUpgradeArgs.build();
+        this.rollingUpgradeArgs = new RollingUpgradeArguments.Builder(cmd).build();
     }
 
     /** {@inheritDoc} */
@@ -135,11 +120,20 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
      * @return Task argument.
      */
     private VisorRollingUpgradeChangeModeTaskArg toVisorArguments(RollingUpgradeArguments args) {
-        assert RollingUpgradeSubCommands.ENABLE == args.command() || RollingUpgradeSubCommands.DISABLE == args.command();
+        assert RollingUpgradeSubCommands.START == args.command()
+            || RollingUpgradeSubCommands.FINISH == args.command()
+            || RollingUpgradeSubCommands.FORCE == args.command();
 
-        return RollingUpgradeSubCommands.ENABLE == args.command() ?
-            new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.ENABLE, args.isForcedMode())
-            : new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.DISABLE, false);
+        switch (args.command()) {
+            case FINISH:
+                new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.DISABLE, false);
+            case FORCE:
+                return new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.ENABLE, true);
+            case START:
+                return new VisorRollingUpgradeChangeModeTaskArg(VisorRollingUpgradeOperation.ENABLE, false);
+            default:
+                throw new IllegalArgumentException("Unsupported command: " + args.command());
+        }
     }
 
     /**
@@ -177,11 +171,16 @@ public class RollingUpgradeCommand implements Command<RollingUpgradeArguments> {
      * Prints the given mode change result.
      *
      * @param res Mode change result.
+     * @param command Executed command.
      */
-    private void printRollingUpgradeChangeModeResult(Logger log, VisorRollingUpgradeChangeModeResult res) {
+    private void printRollingUpgradeChangeModeResult(
+        Logger log,
+        VisorRollingUpgradeChangeModeResult res,
+        RollingUpgradeSubCommands command
+    ) {
         if (RollingUpgradeModeChangeResult.Result.SUCCESS == res.getResult())
             log.info("Rolling upgrade mode successfully " +
-                (RollingUpgradeSubCommands.ENABLE == rollingUpgradeArgs.command() ? "enabled." : "disabled."));
+                (RollingUpgradeSubCommands.START == command || RollingUpgradeSubCommands.FORCE == command ? "enabled." : "disabled."));
         else
             log.info("Rolling upgrade operation failed. " + res.getCause().getMessage());
     }
