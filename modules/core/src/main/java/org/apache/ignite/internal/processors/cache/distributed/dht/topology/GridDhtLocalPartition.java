@@ -611,7 +611,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /**
      * Forcibly moves partition to a MOVING state.
      *
-     * @return {@code True} is a partition was switched to MOVING state.
+     * @return {@code True} if a partition was switched to MOVING state.
      */
     public boolean moving() {
         while (true) {
