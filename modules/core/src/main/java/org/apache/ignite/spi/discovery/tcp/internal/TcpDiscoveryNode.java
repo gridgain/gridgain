@@ -527,6 +527,13 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     }
 
     /**
+     * @return Time in nanoseconds before which client is considered alive.
+     */
+    public long aliveCheckTimeNanos() {
+        return aliveCheckTimeNanos;
+    }
+
+    /**
      * @return Client router node ID.
      */
     public UUID clientRouterNodeId() {
