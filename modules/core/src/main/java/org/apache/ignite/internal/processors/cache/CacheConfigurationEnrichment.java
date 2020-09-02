@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
@@ -62,6 +63,15 @@ public class CacheConfigurationEnrichment implements Serializable {
      */
     public byte[] getFieldSerializedValue(String fieldName) {
         return enrichFields.get(fieldName);
+    }
+
+    /**
+     * Returns all fields name which will be enrichment.
+     *
+     * @return Set of field names.
+     */
+    public Set<String> fields() {
+        return fieldClassNames.keySet();
     }
 
     /**
