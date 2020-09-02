@@ -720,8 +720,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         boolean storeEnabled,
         Boolean mvccOp,
         int txSize,
-        @Nullable String lb,
-        boolean tracingEnabled
+        @Nullable String lb
     ) {
         assert sysCacheCtx == null || sysCacheCtx.systemTx();
 
@@ -744,7 +743,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             subjId,
             taskNameHash,
             lb,
-            tracingEnabled,
             txDumpsThrottling
         );
 
@@ -3205,8 +3203,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                         ", failedNodeId=" + evtNodeId + ']');
 
                 // Null means that recovery voting is not needed.
-                GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut =
-                    node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null
+                GridCompoundFuture<IgniteInternalTx, Void> allTxFinFut = isMvccRecoveryMessageRequired()
                     ? new GridCompoundFuture<>() : null;
 
                 for (final IgniteInternalTx tx : activeTransactions()) {
@@ -3292,6 +3289,17 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             finally {
                 cctx.kernalContext().gateway().readUnlock();
             }
+        }
+
+        /**
+         * Determines need to send a recovery message or not.
+         *
+         * @return True if message required, false otherwise.
+         */
+        private boolean isMvccRecoveryMessageRequired() {
+            return node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null &&
+                (cctx.kernalContext().coordinators().mvccEnabled() ||
+                !IgniteFeatures.nodeSupports(cctx.kernalContext(), cctx.node(mvccCrd.nodeId()), IgniteFeatures.MVCC_TX_RECOVERY_PROTOCOL_V2));
         }
     }
 

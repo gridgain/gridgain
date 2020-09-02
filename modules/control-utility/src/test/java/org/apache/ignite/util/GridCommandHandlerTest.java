@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -83,6 +84,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -92,10 +94,12 @@ import org.apache.ignite.internal.visor.cache.VisorFindAndDeleteGarbageInPersist
 import org.apache.ignite.internal.visor.tx.VisorTxInfo;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -772,6 +776,83 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline", "add", consistentIds(other)));
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
+    }
+
+    /**
+     * Test connectivity command works via control.sh.
+     */
+    @Test
+    public void testConnectivityCommandWithoutFailedNodes() throws Exception {
+        IgniteEx ignite = startGrids(5);
+
+        assertFalse(ClusterState.active(ignite.cluster().state()));
+
+        ignite.cluster().state(ACTIVE);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "connectivity"));
+
+        assertContains(log, testOut.toString(), "There are no connectivity problems.");
+    }
+
+    /**
+     * Test connectivity command works via control.sh with one node failing.
+     */
+    @Test
+    public void testConnectivityCommandWithFailedNodes() throws Exception {
+        UUID okId = UUID.randomUUID();
+        UUID failingId = UUID.randomUUID();
+
+        UnaryOperator<IgniteConfiguration> operator = configuration -> {
+            configuration.setCommunicationSpi(new TcpCommunicationSpi() {
+                /** {inheritDoc} */
+                @Override public IgniteFuture<BitSet> checkConnection(List<ClusterNode> nodes) {
+                    BitSet bitSet = new BitSet();
+
+                    int idx = 0;
+
+                    for (ClusterNode remoteNode : nodes) {
+                        if (!remoteNode.id().equals(failingId))
+                            bitSet.set(idx);
+
+                        idx++;
+                    }
+
+                    return new IgniteFinishedFutureImpl<>(bitSet);
+                }
+            });
+            return configuration;
+        };
+
+        IgniteEx ignite = startGrid("normal", configuration -> {
+            operator.apply(configuration);
+            configuration.setConsistentId(okId);
+            configuration.setNodeId(okId);
+            return configuration;
+        });
+
+        IgniteEx failure = startGrid("failure", configuration -> {
+            operator.apply(configuration);
+            configuration.setConsistentId(failingId);
+            configuration.setNodeId(failingId);
+            return configuration;
+        });
+
+        ignite.cluster().state(ACTIVE);
+
+        failure.cluster().state(ACTIVE);
+
+        injectTestSystemOut();
+
+        int connectivity = execute("--diagnostic", "connectivity");
+        assertEquals(EXIT_CODE_OK, connectivity);
+
+        String out = testOut.toString();
+        String what = "There is no connectivity between the following nodes";
+
+        assertContains(log, out.replaceAll("[\\W_]+", "").trim(),
+                            what.replaceAll("[\\W_]+", "").trim());
     }
 
     /**
@@ -1902,10 +1983,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testDiagnosticPageLocksTracker() throws Exception {
-        Ignite ignite = startGrid(0, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node0/dump"));
-        startGrid(1, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node1/dump"));
-        startGrid(2, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node2/dump"));
-        startGrid(3, (UnaryOperator<IgniteConfiguration>)cfg -> cfg.setConsistentId("node3/dump"));
+        Ignite ignite = startGridWithCfg(0, cfg -> cfg.setConsistentId("node0/dump"));
+        startGridWithCfg(1, cfg -> cfg.setConsistentId("node1/dump"));
+        startGridWithCfg(2, cfg -> cfg.setConsistentId("node2/dump"));
+        startGridWithCfg(3, cfg -> cfg.setConsistentId("node3/dump"));
 
         Collection<ClusterNode> nodes = ignite.cluster().nodes();
 

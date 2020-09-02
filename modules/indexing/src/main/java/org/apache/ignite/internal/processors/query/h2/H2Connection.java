@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.jdbc.JdbcStatement;
+import org.gridgain.internal.h2.jdbc.JdbcStatement;
 import org.jetbrains.annotations.Nullable;
 
 /**

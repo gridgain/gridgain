@@ -17,23 +17,23 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
-import org.h2.command.dml.AllColumnsForPlan;
-import org.h2.engine.Database;
-import org.h2.engine.DbObject;
-import org.h2.engine.Session;
-import org.h2.index.BaseIndex;
-import org.h2.index.Cursor;
-import org.h2.index.IndexLookupBatch;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.result.SortOrder;
-import org.h2.schema.Schema;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.Table;
-import org.h2.table.TableFilter;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Database;
+import org.gridgain.internal.h2.engine.DbObject;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.BaseIndex;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.schema.Schema;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableFilter;
 
 /**
  * Scan index. Do not actually store any information, but rather delegate to some underlying index. The only reason

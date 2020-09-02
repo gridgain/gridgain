@@ -121,7 +121,6 @@ import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
-import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.SRV_NODES;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 
 /**
@@ -2076,7 +2075,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return {@code True} if all nodes supports, and {@code false} otherwise.
      */
     private boolean allNodesSupportsReadOnlyMode() {
-        return allNodesSupport(ctx, CLUSTER_READ_ONLY_MODE, SRV_NODES);
+        return allNodesSupport(ctx, CLUSTER_READ_ONLY_MODE, IgniteDiscoverySpi.SRV_NODES);
     }
 
     /**

@@ -16,7 +16,7 @@
 
 package org.apache.ignite.cache.store.jdbc;
 
-import org.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
 
 /**
  * Test for JDBC POJO store from multiple threads.

@@ -44,9 +44,9 @@ import org.apache.ignite.internal.processors.cache.distributed.CacheRentingState
 import org.apache.ignite.internal.processors.cache.distributed.dht.GracefulShutdownTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadDelayedWithPersistenceSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadWaitForBackupsWithPersistenceTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheScheduleResendPartitionsAfterEvictionTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCacheStartWithLoadTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.BlockedEvictionsTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictionWhilePartitionGroupIsReservedTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PreloadingRestartWhileClearingPartitionTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.RentingPartitionIsOwnedDuringEvictionTest;
@@ -108,7 +108,6 @@ public class IgniteCacheTestSuite7 {
         GridTestUtils.addTestIfNeeded(suite, Cache64kPartitionsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingPartitionCountersTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingWithAsyncClearingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, GridCacheScheduleResendPartitionsAfterEvictionTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsCacheAssignmentNodeRestartsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, TxRollbackAsyncWithPersistenceTest.class, ignoredTests);
@@ -155,6 +154,7 @@ public class IgniteCacheTestSuite7 {
         GridTestUtils.addTestIfNeeded(suite, BlockedEvictionsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PreloadingRestartWhileClearingPartitionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, EvictionWhilePartitionGroupIsReservedTest.class, ignoredTests);
 
         return suite;
     }

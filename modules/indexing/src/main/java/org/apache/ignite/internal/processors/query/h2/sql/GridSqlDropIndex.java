@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import org.h2.command.Parser;
+import org.gridgain.internal.h2.command.Parser;
 
 /**
  * DROP INDEX statement.

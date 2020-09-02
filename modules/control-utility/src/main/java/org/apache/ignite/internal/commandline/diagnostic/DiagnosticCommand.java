@@ -27,6 +27,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME
 import static org.apache.ignite.internal.commandline.CommandList.DIAGNOSTIC;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.join;
+import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCommand.CONNECTIVITY;
 import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCommand.HELP;
 import static org.apache.ignite.internal.commandline.diagnostic.DiagnosticSubCommand.PAGE_LOCKS;
 
@@ -75,6 +76,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
 
         switch (cmd) {
             case HELP:
+            case CONNECTIVITY:
                 break;
 
             case PAGE_LOCKS:
@@ -107,6 +109,7 @@ public class DiagnosticCommand implements Command<DiagnosticSubCommand> {
      */
     private void printDiagnosticHelp(Logger logger) {
         logger.info(INDENT + join(" ", UTILITY_NAME, DIAGNOSTIC, PAGE_LOCKS + " - dump page locks info."));
+        logger.info(INDENT + join(" ", UTILITY_NAME, DIAGNOSTIC, CONNECTIVITY + " - show connectivity state."));
 
         logger.info(INDENT + "Subcommands:");
 
