@@ -4,6 +4,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
@@ -71,10 +72,6 @@ public class DistributedTransactionConfiguration {
         IgniteSystemProperties.getBoolean(IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED, true);
 
     /** */
-    private final DistributedChangeableProperty<Long> txTimeoutOnPartMapExchange =
-        detachedLongProperty("txTimeoutOnPartitionMapExchange");
-
-    /** */
     private final DistributedChangeableProperty<Boolean> txOwnerDumpRequestsAllowed =
         detachedBooleanProperty("txOwnerDumpRequestsAllowed");
 
@@ -109,12 +106,13 @@ public class DistributedTransactionConfiguration {
      */
     public DistributedTransactionConfiguration(
         GridKernalContext ctx,
-        IgniteLogger log
+        IgniteLogger log,
+        DistributePropertyListener<Long> longOperationsDumpTimeoutListener,
+        DistributePropertyListener<Integer> collisionsDumpIntervalListener
     ) {
         ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
-                    txTimeoutOnPartMapExchange.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     txOwnerDumpRequestsAllowed.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     longOperationsDumpTimeout.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     longTransactionTimeDumpThreshold.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
@@ -122,44 +120,26 @@ public class DistributedTransactionConfiguration {
                     longTransactionTimeDumpSamplesPerSecondLimit.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     collisionsDumpInterval.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
 
-                    dispatcher.registerProperties(txTimeoutOnPartMapExchange, txOwnerDumpRequestsAllowed,
-                        longOperationsDumpTimeout, longTransactionTimeDumpThreshold, transactionTimeDumpSamplesCoefficient,
-                        longTransactionTimeDumpSamplesPerSecondLimit, collisionsDumpInterval);
+                    dispatcher.registerProperties(txOwnerDumpRequestsAllowed, longOperationsDumpTimeout,
+                            longTransactionTimeDumpThreshold, transactionTimeDumpSamplesCoefficient,
+                            longTransactionTimeDumpSamplesPerSecondLimit, collisionsDumpInterval);
                 }
 
                 @Override public void onReadyToWrite() {
+                    System.out.println("onReadyToWrite longOperationsDumpTimeout " + dfltLongOpsDumpTimeout);
                     setDefaultValue(longOperationsDumpTimeout, dfltLongOpsDumpTimeout, log);
                     setDefaultValue(longTransactionTimeDumpThreshold, dfltLongTransactionTimeDumpThreshold, log);
                     setDefaultValue(transactionTimeDumpSamplesCoefficient, dfltTransactionTimeDumpSamplesCoefficient, log);
                     setDefaultValue(longTransactionTimeDumpSamplesPerSecondLimit, dfltLongTransactionTimeDumpSamplesPerSecondLimit, log);
                     setDefaultValue(collisionsDumpInterval, dfltCollisionsDumpInterval, log);
                     setDefaultValue(txOwnerDumpRequestsAllowed, dfltTxOwnerDumpRequestsAllowed, log);
+
+                    longOperationsDumpTimeout.addListener(longOperationsDumpTimeoutListener);
+                    collisionsDumpInterval.addListener(collisionsDumpIntervalListener);
                 }
             }
         );
     }
-
-    /**
-     *
-     */
-    public GridFutureAdapter<?> updateTxTimeoutOnPartitionMapExchangeAsync(long timeout) throws IgniteCheckedException {
-        return txTimeoutOnPartMapExchange.propagateAsync(timeout);
-    }
-
-    /**
-     *
-     */
-    public void updateTxTimeoutOnPartitionMapExchangeLocal(long timeout) {
-        txTimeoutOnPartMapExchange.localUpdate(timeout);
-    }
-
-    /**
-     *
-     */
-    public Boolean txTimeoutOnPartitionMapExchange() {
-        return txOwnerDumpRequestsAllowed.get();
-    }
-
 
     /**
      *
@@ -236,7 +216,7 @@ public class DistributedTransactionConfiguration {
      *
      */
     public Integer longTransactionTimeDumpSamplesPerSecondLimit() {
-        return longTransactionTimeDumpSamplesPerSecondLimit.get();
+        return longTransactionTimeDumpSamplesPerSecondLimit.getOrDefault(dfltLongTransactionTimeDumpSamplesPerSecondLimit);
     }
 
     public GridFutureAdapter<?> updateCollisionsDumpInterval(int limit) throws IgniteCheckedException {
@@ -254,7 +234,7 @@ public class DistributedTransactionConfiguration {
      *
      */
     public Integer collisionsDumpInterval() {
-        return collisionsDumpInterval.get();
+        return collisionsDumpInterval.getOrDefault(dfltCollisionsDumpInterval);
     }
 
     public GridFutureAdapter<?> updateTxOwnerDumpRequestsAllowed(boolean allowed) throws IgniteCheckedException {

@@ -342,11 +342,23 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         keyCollisionsInfo = new KeyCollisionsHolder();
 
-        longOperationsDumpTimeout(longOperationsDumpTimeout());
+        distrCfg = new DistributedTransactionConfiguration(cctx.kernalContext(), log,
+                (String name, Long oldVal, Long newVal) ->
+                        scheduleDumpTask(
+                                IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
+                                () -> cctx.kernalContext().closure().runLocalSafe(
+                                        () -> cctx.kernalContext().cache().context().exchange().dumpLongRunningOperations(newVal)),
+                                newVal),
+                (String name, Integer oldVal, Integer newVal) ->
+                        scheduleDumpTask(
+                                IGNITE_DUMP_TX_COLLISIONS_INTERVAL,
+                                this::collectTxCollisionsInfo,
+                                newVal)
+                );
 
-        txCollisionsDumpInterval(collisionsDumpInterval());
+       // longOperationsDumpTimeout(longOperationsDumpTimeout());
 
-        distrCfg = new DistributedTransactionConfiguration(cctx.kernalContext(), log);
+        //txCollisionsDumpInterval(collisionsDumpInterval());
     }
 
     /**
@@ -2037,7 +2049,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return Long operations dump timeout.
      */
     public long longOperationsDumpTimeout() {
-        return distrCfg.longOperationsDumpTimeout();
+        Long  r = distrCfg.longOperationsDumpTimeout();
+        log.info("!!!!!! " + r);
+        return r;
     }
 
     /**
@@ -2828,9 +2842,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param timeout Transaction timeout on partition map exchange in milliseconds.
      */
     public void setTxTimeoutOnPartitionMapExchange(long timeout) throws IgniteCheckedException {
-
-
-
         UUID reqId = UUID.randomUUID();
 
         TxTimeoutOnPartitionMapExchangeChangeFuture fut = new TxTimeoutOnPartitionMapExchangeChangeFuture(reqId);
@@ -2845,9 +2856,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         fut.get();
     }
 
-
-
-
     /**
      * Callback invoked from discovery thread when discovery custom message is received.
      *
@@ -2861,8 +2869,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             if (cfg.getTxTimeoutOnPartitionMapExchange() != msg.getTimeout())
                 cfg.setTxTimeoutOnPartitionMapExchange(msg.getTimeout());
-
-            distrCfg.updateTxTimeoutOnPartitionMapExchangeLocal(msg.getTimeout());
         }
         else {
             TxTimeoutOnPartitionMapExchangeChangeFuture fut = txTimeoutOnPartitionMapExchangeFuts.get(

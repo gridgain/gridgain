@@ -12326,7 +12326,7 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Broadcasts given job to nodes that match ignite feature.
+     * Broadcasts given job to nodes that match filter.
      *
      * @param kctx Kernal context.
      * @param job Ignite job.
@@ -12345,6 +12345,9 @@ public abstract class IgniteUtils {
             cl = cl.forServers();
 
         ClusterGroup grp = cl.forPredicate(nodeFilter);
+
+        if (grp.nodes().isEmpty())
+            return;
 
         IgniteCompute compute = kctx.grid().compute(grp);
 
