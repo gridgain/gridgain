@@ -218,10 +218,10 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         assertEquals(0, testNode.cache(CACHE_NAME).get(k));
 
-        IgniteEx owner = grid(1);
+        IgniteEx g1 = grid(1);
 
-        try (Transaction tx = grid(owner.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-            IgniteCache<Object, Object> cache2 = grid(owner.name()).cache(CACHE_NAME);
+        try (Transaction tx = grid(g1.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> cache2 = grid(g1.name()).cache(CACHE_NAME);
 
             cache2.put(k, 1);
 
@@ -234,8 +234,23 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
             tx.commit();
         }
-        catch (Throwable e) {
-            // Ignored.
+
+        //stopGrid(grid(3).name(), false, false);
+        grid(3).close();
+
+        try (Transaction tx = grid(g1.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> cache2 = grid(g1.name()).cache(CACHE_NAME);
+
+            cache2.put(k, 1);
+
+//            TransactionProxyImpl p = (TransactionProxyImpl) tx;
+//            p.tx().prepare(true);
+//
+//            nodes.remove(owner);
+//
+//            grid(owner).close();
+
+            tx.commit();
         }
 
 //        awaitPartitionMapExchange();
