@@ -63,9 +63,6 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      */
     private final Random rnd;
 
-    /** Helps to take hard decisions. */
-    private final Dice dice;
-
     /**
      * @param schema Schema based on which query will be generated.
      * @param seed Seed used to initialize random value generator.
@@ -76,7 +73,6 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
         this.schema = schema;
 
         rnd = new Random(seed);
-        dice = new Dice(rnd);
     }
 
     /** {@inheritDoc} */
@@ -101,7 +97,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      * @return Ast representing SELECT expression.
      */
     private Select rndSelect(RandomisedQueryContext rndQryCtx) {
-        return dice.roll() <= 3
+        return rndWithBound(2) == 1
             ? rndSingleTableSelect(rndQryCtx)
             : rndMultiTableSelect(rndQryCtx);
     }
@@ -124,7 +120,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
         Ast from;
         Ast where = null;
 
-        boolean tblList = dice.roll() <= 3;
+        boolean tblList = rndWithBound(2) == 1;
         from = tblList ? new TableList(rndQryCtx.scopeTables()) : rndQryCtx.scopeTables().get(0);
 
         List<TableRef> connScope = new ArrayList<>(rndQryCtx.scopeTables().size());
@@ -166,7 +162,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     private Ast[] rndColList(RandomisedQueryContext rndQryCtx) {
         Ast[] cols = EMPTY_AST_ARR;
 
-        if (dice.roll() == 1)
+        if (rndWithBound(6) == 1)
             return cols; // select * from...
 
         List<ColumnRef> cols0 = new ArrayList<>();
@@ -205,6 +201,8 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
     private Ast rndQueryFilter(RandomisedQueryContext rndQryCtx) {
         List<TableRef> scopeTbls = rndQryCtx.scopeTables();
 
+        // if current query is a subquery, then let's make it correlated,
+        // because for now we are interested only in corellated subqueries
         RandomisedQueryContext parentCtx = rndQryCtx.parentContext();
         if (parentCtx != null) {
             return new BiCondition(
@@ -214,14 +212,14 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
             );
         }
 
-        Ast cond1 = rndTableFilter(rndQryCtx, scopeTbls.get(rnd.nextInt(scopeTbls.size())));
+        Ast cond1 = rndTableFilter(rndQryCtx, pickRndItem(scopeTbls));
 
-        if (dice.roll() <= 2)
+        if (rndWithBound(3) == 1)
             return cond1;
 
-        Ast cond2 = rndTableFilter(rndQryCtx, scopeTbls.get(rnd.nextInt(scopeTbls.size())));
+        Ast cond2 = rndTableFilter(rndQryCtx, pickRndItem(scopeTbls));
 
-        return new BiCondition(cond1, cond2, dice.roll() <= 2 ? Operator.AND : Operator.OR);
+        return new BiCondition(cond1, cond2, rndWithBound(3) == 1 ? Operator.AND : Operator.OR);
     }
 
     /**
@@ -232,42 +230,76 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      * @return Ast representing table filter.
      */
     private Ast rndTableFilter(RandomisedQueryContext rndQryCtx, TableRef tbl) {
-        final int decision = dice.roll();
+        switch (rndWithBound(4)) {
+            case 0: {
+                Ast rigthOp;
+                if (rndWithBound(6) == 1)
+                    rigthOp = new Const(Integer.toString(rndParamValue()));
+                else {
+                    rigthOp = new Const("?");
 
-        if (decision <= 2) {
-            Ast rigthOp;
-            if (dice.roll() == 1)
-                rigthOp = new Const(Integer.toString(rnd.nextInt(100)));
-            else {
-                rigthOp = new Const("?");
+                    rndQryCtx.addQueryParam(rndParamValue());
+                }
 
-                rndQryCtx.addQueryParam(rnd.nextInt(100));
+                return new BiCondition(
+                    pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER),
+                    rigthOp,
+                    Operator.EQUALS
+                );
             }
+            case 1: {
+                Ast[] conds = new Ast[2];
+                Ast leftOp = pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER);
 
-            return new BiCondition(
-                pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER),
-                rigthOp,
-                Operator.EQUALS
-            );
+                for (int i = 0; i < 2; i++) {
+                    Ast rigthOp;
+                    if (rndWithBound(6) == 1)
+                        rigthOp = new Const(Integer.toString(rndParamValue()));
+                    else {
+                        rigthOp = new Const("?");
+
+                        rndQryCtx.addQueryParam(rndParamValue());
+                    }
+
+                    conds[i] = new BiCondition(
+                        leftOp,
+                        rigthOp,
+                        Operator.EQUALS
+                    );
+                }
+
+                return new BiCondition(
+                    conds[0],
+                    conds[1],
+                    Operator.OR
+                );
+            }
+            case 2: {
+                int inArrSize = 1 + rndWithBound(6);
+
+                Ast[] inArr = new Ast[inArrSize];
+
+                for (int i = 0; i < inArrSize; i++)
+                    inArr[i] = new Const(Integer.toString(rndParamValue()));
+
+                return new InCondition(
+                    pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER),
+                    inArr
+                );
+            }
+            case 3:
+                return new ExistsCondition(
+                    new SubSelect(rndSingleTableSelect(new RandomisedQueryContext(rndQryCtx)))
+                );
+
+            default:
+                throw new IllegalStateException();
         }
-        else if (decision <= 4) {
-            int inArrSize = dice.roll();
+    }
 
-            Ast[] inArr = new Ast[inArrSize];
-
-            for (int i = 0; i < inArrSize; i++)
-                inArr[i] = new Const(Integer.toString(rnd.nextInt(100)));
-
-            return new InCondition(
-                pickRndItem(tbl.cols(), NUMERICAL_COLUMN_FILTER),
-                inArr
-            );
-        }
-        else {
-            return new ExistsCondition(
-                new SubSelect(rndSingleTableSelect(new RandomisedQueryContext(rndQryCtx)))
-            );
-        }
+    /** */
+    private int rndParamValue() {
+        return rnd.nextInt(100);
     }
 
     /**
@@ -323,10 +355,7 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
         if (F.isEmpty(filteredItems))
             return null;
 
-        if (filteredItems.size() > 1)
-            Collections.shuffle(filteredItems, rnd);
-
-        return filteredItems.get(0);
+        return filteredItems.get(rnd.nextInt(filteredItems.size()));
     }
 
     /**
@@ -337,5 +366,10 @@ public class RandomQuerySupplier implements Supplier<QueryWithParams> {
      */
     private <T> T pickRndItem(Collection<T> items) {
         return pickRndItem(items, i -> true);
+    }
+
+    /** */
+    private int rndWithBound(int bound) {
+        return rnd.nextInt(bound);
     }
 }
