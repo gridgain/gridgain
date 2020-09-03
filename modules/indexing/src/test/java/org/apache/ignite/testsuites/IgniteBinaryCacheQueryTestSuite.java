@@ -127,7 +127,6 @@ import org.apache.ignite.internal.processors.cache.index.BasicIndexMultinodeTest
 import org.apache.ignite.internal.processors.cache.index.BasicIndexTest;
 import org.apache.ignite.internal.processors.cache.index.BasicJavaTypesIndexTest;
 import org.apache.ignite.internal.processors.cache.index.BasicSqlTypesIndexTest;
-import org.apache.ignite.internal.processors.cache.index.ComplexPrimaryKeyUnwrapSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DecimalIndexTest;
 import org.apache.ignite.internal.processors.cache.index.DuplicateKeyValueClassesSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexClientBasicSelfTest;
@@ -293,7 +292,6 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     AffinityKeyNameAndValueFieldNameConflictTest.class,
     DmlInsideTransactionTest.class,
-    ComplexPrimaryKeyUnwrapSelfTest.class,
     SqlNestedQuerySelfTest.class,
     ExplainSelfTest.class,
     RunningQueriesTest.class,
