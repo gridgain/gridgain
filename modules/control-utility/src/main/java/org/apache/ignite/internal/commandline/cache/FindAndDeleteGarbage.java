@@ -121,7 +121,6 @@ public class FindAndDeleteGarbage implements Command<FindAndDeleteGarbage.Argume
         );
 
         try (GridClient client = Command.startClient(clientCfg, logger)) {
-
             VisorFindAndDeleteGarbageInPersistenceTaskResult taskRes = executeTask(
                 client, VisorFindAndDeleteGarbageInPersistenceTask.class, taskArg, clientCfg);
 

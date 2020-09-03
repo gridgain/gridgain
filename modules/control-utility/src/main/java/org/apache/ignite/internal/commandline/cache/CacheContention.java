@@ -116,7 +116,7 @@ public class CacheContention implements Command<CacheContention.Arguments> {
 
         VisorContentionTaskResult res;
 
-        try (GridClient client = Command.startClient(clientCfg, logger);) {
+        try (GridClient client = Command.startClient(clientCfg, logger)) {
             res = executeTaskByNameOnNode(client, VisorContentionTask.class.getName(), taskArg, nodeId, clientCfg);
         }
 

@@ -20,7 +20,11 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.client.*;
+import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientClusterState;
+import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientException;
+import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
@@ -95,13 +99,12 @@ public interface Command<T> {
      * @return Cluster information to show user for.
      */
     static ClusterInfo getClusterInfo(GridClientClusterState clientCfg) {
-        String clusterName = null;
-
         try {
             if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE))
                 return new ClusterInfo(clientCfg.id(), clientCfg.tag());
         }
         catch (GridClientException ignored) {
+            // No-op.
         }
 
         return null;

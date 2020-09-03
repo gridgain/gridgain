@@ -214,7 +214,6 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         );
 
         try (GridClient client = Command.startClient(clientCfg, logger)) {
-
             VisorValidateIndexesTaskResult taskRes = executeTaskByNameOnNode(
                 client, "org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask", taskArg, null, clientCfg);
 

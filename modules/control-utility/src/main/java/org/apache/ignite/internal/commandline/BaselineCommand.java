@@ -92,7 +92,6 @@ public class BaselineCommand implements Command<BaselineArguments> {
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg, logger)) {
-
             UUID coordinatorId = client.compute()
                 //Only non client node can be coordinator.
                 .nodes(node -> !node.isClient())

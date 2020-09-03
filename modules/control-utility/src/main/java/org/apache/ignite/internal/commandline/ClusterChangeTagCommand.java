@@ -52,7 +52,6 @@ public class ClusterChangeTagCommand implements Command<String> {
             return null;
 
         try (GridClient client = Command.startClient(clientCfg, logger)) {
-
             UUID coordinatorId = client.compute().nodes().stream()
                 .min(Comparator.comparingLong(GridClientNode::order))
                 .map(GridClientNode::nodeId)
