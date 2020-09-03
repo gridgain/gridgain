@@ -105,6 +105,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.compute.flow.FlowProcessor;
 import org.apache.ignite.internal.managers.GridManager;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManager;
@@ -1178,6 +1179,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 startProcessor(new DistributedConfigurationProcessor(ctx));
                 startProcessor(new DurableBackgroundTasksProcessor(ctx));
+                startProcessor(new FlowProcessor(ctx));
 
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));

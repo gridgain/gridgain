@@ -37,6 +37,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.compute.flow.FlowProcessor;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManager;
 import org.apache.ignite.internal.managers.collision.GridCollisionManager;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
@@ -411,6 +412,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** */
     @GridToStringExclude
     private DurableBackgroundTasksProcessor durableBackgroundTasksProcessor;
+
+    @GridToStringExclude
+    private FlowProcessor flowProcessor;
 
     /** */
     private Thread.UncaughtExceptionHandler hnd;
@@ -1295,5 +1299,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridKernalContextImpl.class, this);
+    }
+
+    @Override public FlowProcessor flowProcessor() {
+        return flowProcessor;
     }
 }
