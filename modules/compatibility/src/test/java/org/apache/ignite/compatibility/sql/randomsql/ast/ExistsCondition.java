@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.compatibility.testsuites;
-
-import org.apache.ignite.compatibility.sql.RandomQuerySupplierSelfTest;
-import org.apache.ignite.compatibility.sql.SqlQueryRegressionsTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.compatibility.sql.randomsql.ast;
 
 /**
- * Sql query regression basic test suite.
+ * EXISTS condition.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    RandomQuerySupplierSelfTest.class,
-    SqlQueryRegressionsTest.class,
-})
-public class IgniteSqlRegressionBasicTestSuite {
+public class ExistsCondition implements Ast {
+    /** */
+    private final SubSelect select;
+
+    /**
+     * @param select Subquery.
+     */
+    public ExistsCondition(SubSelect select) {
+        this.select = select;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void writeTo(StringBuilder out) {
+        out.append("EXISTS ");
+
+        select.writeTo(out);
+    }
 }

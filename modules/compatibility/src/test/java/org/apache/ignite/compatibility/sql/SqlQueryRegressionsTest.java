@@ -60,6 +60,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.Collections.emptyList;
@@ -95,7 +96,7 @@ import static java.util.Collections.unmodifiableList;
 @SuppressWarnings("TypeMayBeWeakened")
 public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /*
-    If you are wanted to troubleshoot particular run, you have to set following defaults to the required values
+     * If you are wanted to troubleshoot particular run, you have to set following defaults to the required values
      */
     /**
      * If set to non-null value, it will be used in random generator, otherwise generator will be
@@ -195,14 +196,21 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /** */
     private int seed;
 
-    /** Current dependecy list. */
-    private DependencyContext currDep;
+    /** Current context for start external JVM. */
+    private ExternalJvmContext currCtx;
 
     /** {@inheritDoc} */
     @Override protected Collection<Dependency> getDependencies(String igniteVer) {
-        assert currDep != null;
+        assert currCtx != null;
 
-        return currDep.deps();
+        return currCtx.deps();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Collection<String> getJvmParams() {
+        assert currCtx != null;
+
+        return currCtx.jvmArgs();
     }
 
     /** {@inheritDoc} */
@@ -285,7 +293,7 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      */
     private void startBaseAndNewClusters(int seed) throws Exception {
         // Base cluster.
-        try (DependencyContext ignored = createContext(baseVer, baseIsIgnite)) {
+        try (ExternalJvmContext ignored = createContext(baseVer, baseIsIgnite)) {
             startGrid(3, baseVer, new NodeConfigurationClosure("1", BASE_DISCOVERY_PORT, BASE_JDBC_PORT),
                 ignite -> createTablesAndPopulateData(ignite, seed));
             startGrid(4, baseVer, new NodeConfigurationClosure("2", BASE_DISCOVERY_PORT, BASE_JDBC_PORT));
@@ -294,7 +302,7 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         rmJvmInstance = null; // clear remote instance because we are going to start separate cluster now
 
         // Target cluster
-        try (DependencyContext ignored = createContext(targetVer, targetIsIgnite)) {
+        try (ExternalJvmContext ignored = createContext(targetVer, targetIsIgnite)) {
             startGrid(1, targetVer, new NodeConfigurationClosure("1", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT),
                 ignite -> createTablesAndPopulateData(ignite, seed));
             startGrid(2, targetVer, new NodeConfigurationClosure("2", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT));
@@ -474,8 +482,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /**
      * @param ver Version.
      * @param isIgnite Is ignite.
+     * @param jvmArgs Additional args for JVM.
      */
-    private DependencyContext createContext(String ver, boolean isIgnite) {
+    private ExternalJvmContext createContext(String ver, boolean isIgnite, @Nullable List<String> jvmArgs) {
         List<Dependency> dependencies = new ArrayList<>();
 
         String grpId = groupId(isIgnite);
@@ -486,7 +495,15 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
 
         dependencies.add(h2Dependency(ver, isIgnite));
 
-        return (currDep = new DependencyContext(dependencies));
+        return (currCtx = new ExternalJvmContext(dependencies, jvmArgs));
+    }
+
+    /**
+     * @param ver Version.
+     * @param isIgnite Is ignite.
+     */
+    private ExternalJvmContext createContext(String ver, boolean isIgnite) {
+        return createContext(ver, isIgnite, null);
     }
 
     /**
@@ -510,15 +527,22 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     }
 
     /** */
-    private class DependencyContext implements AutoCloseable {
+    private class ExternalJvmContext implements AutoCloseable {
         /** */
         private final List<Dependency> deps;
+
+        /** */
+        private final List<String> jvmArgs;
 
         /**
          * @param deps Deps.
          */
-        public DependencyContext(List<Dependency> deps) {
+        public ExternalJvmContext(
+            @Nullable List<Dependency> deps,
+            @Nullable List<String> jvmArgs
+        ) {
             this.deps = F.isEmpty(deps) ? emptyList() : unmodifiableList(deps);
+            this.jvmArgs = F.isEmpty(jvmArgs) ? emptyList() : unmodifiableList(jvmArgs);
         }
 
         /** */
@@ -526,9 +550,14 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
             return deps;
         }
 
+        /** */
+        public List<String> jvmArgs() {
+            return jvmArgs;
+        }
+
         /** {@inheritDoc} */
         @Override public void close() throws Exception {
-            currDep = null;
+            currCtx = null;
         }
     }
 }

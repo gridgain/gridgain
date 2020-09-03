@@ -90,7 +90,8 @@ public class Department {
                     .addQueryField("id", Long.class.getName(), null)
                     .setIndexes(Arrays.asList(
                         new QueryIndex("companyId", QueryIndexType.SORTED),
-                        new QueryIndex(Arrays.asList("cityId", "headCnt"), QueryIndexType.SORTED)
+                        new QueryIndex(Arrays.asList("cityId", "headCnt"), QueryIndexType.SORTED),
+                        new QueryIndex(Arrays.asList("companyId", "cityId", "headCnt"), QueryIndexType.SORTED)
                     ))
                     .setTableName(TABLE_NAME)
             );

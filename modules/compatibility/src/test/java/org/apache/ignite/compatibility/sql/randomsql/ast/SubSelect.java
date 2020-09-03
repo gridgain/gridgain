@@ -14,20 +14,37 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.compatibility.testsuites;
-
-import org.apache.ignite.compatibility.sql.RandomQuerySupplierSelfTest;
-import org.apache.ignite.compatibility.sql.SqlQueryRegressionsTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.compatibility.sql.randomsql.ast;
 
 /**
- * Sql query regression basic test suite.
+ * Wrapper on select query.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    RandomQuerySupplierSelfTest.class,
-    SqlQueryRegressionsTest.class,
-})
-public class IgniteSqlRegressionBasicTestSuite {
+public class SubSelect implements Ast {
+    /** */
+    private final Select select;
+
+    /**
+     * @param select Target select expression.
+     */
+    public SubSelect(Select select) {
+        this.select = select;
+    }
+
+    /**
+     * Returns target select expression.
+     *
+     * @return Select expression.
+     */
+    public Select select() {
+        return select;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void writeTo(StringBuilder out) {
+        out.append('(');
+
+        select.writeTo(out);
+
+        out.append(')');
+    }
 }
