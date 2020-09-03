@@ -84,8 +84,9 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void testWorkDirectory1() {
-        executeGenericTest(true, false, false,
-            USER_WORK_DIR);
+//        executeGenericTest(true, false, false,
+//            USER_WORK_DIR);
+        System.exit(137);
 //        List<Object> x = new LinkedList<>();
 //        while (true) {
 //            x.add(new Long[Integer.MAX_VALUE]);
