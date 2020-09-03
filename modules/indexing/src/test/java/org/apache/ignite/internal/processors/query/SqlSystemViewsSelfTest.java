@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -311,7 +312,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
             Object[] expRow = expectedResults[i];
 
-            assertEquals(expRow.length, resRow.size());
+            assertEquals(Arrays.toString(expRow), expRow.length, resRow.size());
 
             for (int j = 0; j < expRow.length; j++)
                 assertEquals(expRow[j], resRow.get(j));
@@ -500,7 +501,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         GridTestUtils.assertThrows(log,
             () ->
                 cache.query(new SqlFieldsQuery(sql).setSchema(SCHEMA_NAME)).getAll(),
-                CacheException.class,
+            CacheException.class,
             "Exception calling user-defined function");
 
         String sqlHist = "SELECT SCHEMA_NAME, SQL, LOCAL, EXECUTIONS, FAILURES, DURATION_MIN, DURATION_MAX, LAST_START_TIME, ENFORCE_JOIN_ORDER " +
@@ -714,7 +715,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         List<List<?>> resSrv = execSql(
             "SELECT NODE_ID, NODE_ORDER FROM " +
-                    sysSchemaName() + ".NODES WHERE IS_CLIENT = FALSE AND IS_DAEMON = FALSE"
+                sysSchemaName() + ".NODES WHERE IS_CLIENT = FALSE AND IS_DAEMON = FALSE"
         );
 
         assertEquals(1, resSrv.size());
@@ -759,8 +760,8 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         // Check joins
         assertEquals(nodeId0, execSql("SELECT N1.NODE_ID FROM " + sysSchemaName() + ".NODES N1 JOIN " +
-                sysSchemaName() + ".NODES N2 ON N1.NODE_ORDER = N2.NODE_ORDER JOIN " +
-                sysSchemaName() + ".NODES N3 ON N2.NODE_ID = N3.NODE_ID WHERE N3.NODE_ORDER = 1")
+            sysSchemaName() + ".NODES N2 ON N1.NODE_ORDER = N2.NODE_ORDER JOIN " +
+            sysSchemaName() + ".NODES N3 ON N2.NODE_ID = N3.NODE_ID WHERE N3.NODE_ORDER = 1")
             .get(0).get(0));
 
         // Check sub-query
@@ -969,7 +970,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         ignite.cluster().active(true);
 
         List<List<?>> res = execSql("SELECT CONSISTENT_ID, ONLINE FROM " +
-                sysSchemaName() + ".BASELINE_NODES ORDER BY CONSISTENT_ID");
+            sysSchemaName() + ".BASELINE_NODES ORDER BY CONSISTENT_ID");
 
         assertColumnTypes(res.get(0), String.class, Boolean.class);
 
@@ -994,7 +995,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         assertEquals(2, execSql(ignite2, "SELECT CONSISTENT_ID FROM " + sysSchemaName() + ".BASELINE_NODES").size());
 
         res = execSql("SELECT CONSISTENT_ID FROM " + sysSchemaName() + ".NODES N WHERE NOT EXISTS (SELECT 1 FROM " +
-                sysSchemaName() + ".BASELINE_NODES B WHERE B.CONSISTENT_ID = N.CONSISTENT_ID)");
+            sysSchemaName() + ".BASELINE_NODES B WHERE B.CONSISTENT_ID = N.CONSISTENT_ID)");
 
         assertEquals(1, res.size());
 
@@ -1034,7 +1035,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             execSql("INSERT INTO TST(id, name, age) VALUES (" + i + ",'name-" + i + "'," + i + 1 + ")");
 
         String sql1 = "SELECT CACHE_GROUP_ID, CACHE_GROUP_NAME, PHYSICAL_READS, LOGICAL_READS FROM " +
-                sysSchemaName() + ".LOCAL_CACHE_GROUPS_IO";
+            sysSchemaName() + ".LOCAL_CACHE_GROUPS_IO";
 
         List<List<?>> res1 = execSql(sql1);
 
@@ -1049,7 +1050,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         assertTrue(map.containsKey(DEFAULT_CACHE_NAME));
 
         sql1 = "SELECT CACHE_GROUP_ID, CACHE_GROUP_NAME, PHYSICAL_READS, LOGICAL_READS FROM " +
-                sysSchemaName() + ".LOCAL_CACHE_GROUPS_IO WHERE CACHE_GROUP_NAME='SQL_PUBLIC_TST'";
+            sysSchemaName() + ".LOCAL_CACHE_GROUPS_IO WHERE CACHE_GROUP_NAME='SQL_PUBLIC_TST'";
 
         assertEquals(1, execSql(sql1).size());
     }
@@ -1372,21 +1373,21 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         awaitPartitionMapExchange();
 
         List<List<?>> resAll = execSql("SELECT CACHE_GROUP_ID, CACHE_GROUP_NAME, CACHE_ID, CACHE_NAME, CACHE_TYPE," +
-                "CACHE_MODE, ATOMICITY_MODE, IS_ONHEAP_CACHE_ENABLED, IS_COPY_ON_READ, IS_LOAD_PREVIOUS_VALUE, " +
-                "IS_READ_FROM_BACKUP, PARTITION_LOSS_POLICY, NODE_FILTER, TOPOLOGY_VALIDATOR, IS_EAGER_TTL, " +
-                "WRITE_SYNCHRONIZATION_MODE, IS_INVALIDATE, IS_EVENTS_DISABLED, IS_STATISTICS_ENABLED, " +
-                "IS_MANAGEMENT_ENABLED, BACKUPS, AFFINITY, AFFINITY_MAPPER, " +
-                "REBALANCE_MODE, REBALANCE_BATCH_SIZE, REBALANCE_TIMEOUT, REBALANCE_DELAY, REBALANCE_THROTTLE, " +
-                "REBALANCE_BATCHES_PREFETCH_COUNT, REBALANCE_ORDER, " +
-                "EVICTION_FILTER, EVICTION_POLICY_FACTORY, " +
-                "IS_NEAR_CACHE_ENABLED, NEAR_CACHE_EVICTION_POLICY_FACTORY, NEAR_CACHE_START_SIZE, " +
-                "DEFAULT_LOCK_TIMEOUT, INTERCEPTOR, CACHE_STORE_FACTORY, " +
-                "IS_STORE_KEEP_BINARY, IS_READ_THROUGH, IS_WRITE_THROUGH, " +
-                "IS_WRITE_BEHIND_ENABLED, WRITE_BEHIND_COALESCING, WRITE_BEHIND_FLUSH_SIZE, " +
-                "WRITE_BEHIND_FLUSH_FREQUENCY, WRITE_BEHIND_FLUSH_THREAD_COUNT, WRITE_BEHIND_BATCH_SIZE, " +
-                "MAX_CONCURRENT_ASYNC_OPERATIONS, CACHE_LOADER_FACTORY, CACHE_WRITER_FACTORY, EXPIRY_POLICY_FACTORY, " +
-                "IS_SQL_ESCAPE_ALL, SQL_SCHEMA, SQL_INDEX_MAX_INLINE_SIZE, IS_SQL_ONHEAP_CACHE_ENABLED, " +
-                "SQL_ONHEAP_CACHE_MAX_SIZE, QUERY_DETAIL_METRICS_SIZE, QUERY_PARALLELISM, MAX_QUERY_ITERATORS_COUNT, " +
+            "CACHE_MODE, ATOMICITY_MODE, IS_ONHEAP_CACHE_ENABLED, IS_COPY_ON_READ, IS_LOAD_PREVIOUS_VALUE, " +
+            "IS_READ_FROM_BACKUP, PARTITION_LOSS_POLICY, NODE_FILTER, TOPOLOGY_VALIDATOR, IS_EAGER_TTL, " +
+            "WRITE_SYNCHRONIZATION_MODE, IS_INVALIDATE, IS_EVENTS_DISABLED, IS_STATISTICS_ENABLED, " +
+            "IS_MANAGEMENT_ENABLED, BACKUPS, AFFINITY, AFFINITY_MAPPER, " +
+            "REBALANCE_MODE, REBALANCE_BATCH_SIZE, REBALANCE_TIMEOUT, REBALANCE_DELAY, REBALANCE_THROTTLE, " +
+            "REBALANCE_BATCHES_PREFETCH_COUNT, REBALANCE_ORDER, " +
+            "EVICTION_FILTER, EVICTION_POLICY_FACTORY, " +
+            "IS_NEAR_CACHE_ENABLED, NEAR_CACHE_EVICTION_POLICY_FACTORY, NEAR_CACHE_START_SIZE, " +
+            "DEFAULT_LOCK_TIMEOUT, INTERCEPTOR, CACHE_STORE_FACTORY, " +
+            "IS_STORE_KEEP_BINARY, IS_READ_THROUGH, IS_WRITE_THROUGH, " +
+            "IS_WRITE_BEHIND_ENABLED, WRITE_BEHIND_COALESCING, WRITE_BEHIND_FLUSH_SIZE, " +
+            "WRITE_BEHIND_FLUSH_FREQUENCY, WRITE_BEHIND_FLUSH_THREAD_COUNT, WRITE_BEHIND_BATCH_SIZE, " +
+            "MAX_CONCURRENT_ASYNC_OPERATIONS, CACHE_LOADER_FACTORY, CACHE_WRITER_FACTORY, EXPIRY_POLICY_FACTORY, " +
+            "IS_SQL_ESCAPE_ALL, SQL_SCHEMA, SQL_INDEX_MAX_INLINE_SIZE, IS_SQL_ONHEAP_CACHE_ENABLED, " +
+            "SQL_ONHEAP_CACHE_MAX_SIZE, QUERY_DETAIL_METRICS_SIZE, QUERY_PARALLELISM, MAX_QUERY_ITERATORS_COUNT, " +
             "DATA_REGION_NAME FROM " + sysSchemaName() + ".CACHES");
 
         assertColumnTypes(resAll.get(0),
@@ -1490,17 +1491,17 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         // Check join by indexed column.
         assertEquals("cache_tx_repl", execSql("SELECT CG.CACHE_GROUP_NAME FROM " + sysSchemaName() + ".CACHES C JOIN " +
-                sysSchemaName() + ".CACHE_GROUPS CG ON C.CACHE_GROUP_ID = CG.CACHE_GROUP_ID WHERE C.CACHE_NAME = 'cache_tx_repl'")
+            sysSchemaName() + ".CACHE_GROUPS CG ON C.CACHE_GROUP_ID = CG.CACHE_GROUP_ID WHERE C.CACHE_NAME = 'cache_tx_repl'")
             .get(0).get(0));
 
         // Check join by non-indexed column.
         assertEquals("cache_grp", execSql("SELECT CG.CACHE_GROUP_NAME FROM " + sysSchemaName() + ".CACHES C JOIN " +
-                sysSchemaName() + ".CACHE_GROUPS CG ON C.CACHE_GROUP_NAME = CG.CACHE_GROUP_NAME WHERE C.CACHE_NAME = 'cache_tx_part'")
+            sysSchemaName() + ".CACHE_GROUPS CG ON C.CACHE_GROUP_NAME = CG.CACHE_GROUP_NAME WHERE C.CACHE_NAME = 'cache_tx_part'")
             .get(0).get(0));
 
         // Check configuration equality for cache and cache group views.
         assertEquals(5L, execSql("SELECT COUNT(*) FROM " + sysSchemaName() + ".CACHES C JOIN " +
-                sysSchemaName() + ".CACHE_GROUPS CG " +
+            sysSchemaName() + ".CACHE_GROUPS CG " +
             "ON C.CACHE_NAME = CG.CACHE_GROUP_NAME WHERE C.CACHE_NAME like 'cache%' " +
             "AND C.CACHE_MODE = CG.CACHE_MODE " +
             "AND C.ATOMICITY_MODE = CG.ATOMICITY_MODE " +
