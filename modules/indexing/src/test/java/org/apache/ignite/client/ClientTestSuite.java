@@ -17,7 +17,12 @@
 package org.apache.ignite.client;
 
 import org.apache.ignite.internal.client.thin.ClusterApiTest;
-import org.apache.ignite.internal.client.thin.*;
+import org.apache.ignite.internal.client.thin.ClusterGroupTest;
+import org.apache.ignite.internal.client.thin.ComputeTaskTest;
+import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessConnectionTest;
+import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessStableTopologyTest;
+import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessUnstableTopologyTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -42,6 +47,7 @@ import org.junit.runners.Suite;
     AsyncChannelTest.class,
     ComputeTaskTest.class,
     ClusterApiTest.class,
+    ClusterGroupTest.class,
     ThinClientTxMissingBackupsFailover.class,
     ThinClientAffinityAwarenessConnectionTest.class,
     ThinClientAffinityAwarenessStableTopologyTest.class,
