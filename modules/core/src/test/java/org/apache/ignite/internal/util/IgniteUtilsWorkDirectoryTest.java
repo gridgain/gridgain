@@ -19,6 +19,8 @@ package org.apache.ignite.internal.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.LinkedList;
+import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.X;
@@ -82,8 +84,12 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void testWorkDirectory1() {
-        executeGenericTest(true, false, false,
-            USER_WORK_DIR);
+//        executeGenericTest(true, false, false,
+//            USER_WORK_DIR);
+        List<Object> x = new LinkedList<>();
+        while (true) {
+            x.add(new Long[Integer.MAX_VALUE]);
+        }
     }
 
     /**
