@@ -235,7 +235,7 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testTopologyValidatorWithCacheGroup() throws Exception {
         testTopologyValidator0(true);
     }
@@ -271,91 +271,91 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
 
         // Force segmentation.
         splitAndWait();
-
-        try {
-            tryPut(seg0, seg1);
-
-            fail();
-        }
-        catch (Exception e) {
-            // No-op.
-        }
-
-        // Repair split by adding activator node in topology.
-        resolveSplit();
-
-        tryPut(seg0);
-
-        clearAll();
-
-        try {
-            tryPut(seg1);
-
-            fail();
-        }
-        catch (Exception e) {
-            // No-op.
-        }
-
-        stopGrids(seg1);
-
-        // Fix split by adding node from second DC.
-        unsplit();
-
-        startGrid(CONFIGLESS_GRID_IDX);
-
-        awaitPartitionMapExchange();
-
-        tryPut(seg0);
-
-        tryPut(CONFIGLESS_GRID_IDX);
-
-        clearAll();
-
-        // Force split by removing last node from second DC.
-        stopGrid(CONFIGLESS_GRID_IDX);
-
-        awaitPartitionMapExchange();
-
-        try {
-            tryPut(seg0);
-
-            fail();
-        }
-        catch (Exception e) {
-            // No-op.
-        }
-
-        // Repair split with concurrent server node join race.
-        resolveSplitWithRace(CONFIGLESS_GRID_IDX);
-
-        // Repair split by adding activator node in topology.
-        resolveSplit();
-
-        tryPut(seg0);
-
-        clearAll();
-
-        // Removing one node from segmented DC, shouldn't reset repair state.
-        stopGrid(0);
-
-        awaitPartitionMapExchange();
-
-        for (int idx : seg0) {
-            if (idx == 0)
-                continue;
-
-            assertEquals("Expecting put count", CACHES_CNT, tryPut(idx));
-        }
-
-        clearAll(2);
-
-        // Add node to segmented DC, shouldn't reset repair state.
-        startGrid(0);
-
-        awaitPartitionMapExchange();
-
-        assertEquals("Expecting put count", CACHES_CNT * seg0.length, tryPut(seg0));
+//
+//        try {
+//            tryPut(seg0, seg1);
+//
+//            fail();
+//        }
+//        catch (Exception e) {
+//            // No-op.
+//        }
+//
+//        // Repair split by adding activator node in topology.
+//        resolveSplit();
+//
+//        tryPut(seg0);
+//
+//        clearAll();
+//
+//        try {
+//            tryPut(seg1);
+//
+//            fail();
+//        }
+//        catch (Exception e) {
+//            // No-op.
+//        }
+//
+//        stopGrids(seg1);
+//
+//        // Fix split by adding node from second DC.
+//        unsplit();
+//
+//        startGrid(CONFIGLESS_GRID_IDX);
+//
+//        awaitPartitionMapExchange();
+//
+//        tryPut(seg0);
+//
+//        tryPut(CONFIGLESS_GRID_IDX);
+//
+//        clearAll();
+//
+//        // Force split by removing last node from second DC.
+//        stopGrid(CONFIGLESS_GRID_IDX);
+//
+//        awaitPartitionMapExchange();
+//
+//        try {
+//            tryPut(seg0);
+//
+//            fail();
+//        }
+//        catch (Exception e) {
+//            // No-op.
+//        }
+//
+//        // Repair split with concurrent server node join race.
+//        resolveSplitWithRace(CONFIGLESS_GRID_IDX);
+//
+//        // Repair split by adding activator node in topology.
+//        resolveSplit();
+//
+//        tryPut(seg0);
+//
+//        clearAll();
+//
+//        // Removing one node from segmented DC, shouldn't reset repair state.
+//        stopGrid(0);
+//
+//        awaitPartitionMapExchange();
+//
+//        for (int idx : seg0) {
+//            if (idx == 0)
+//                continue;
+//
+//            assertEquals("Expecting put count", CACHES_CNT, tryPut(idx));
+//        }
+//
+//        clearAll(2);
+//
+//        // Add node to segmented DC, shouldn't reset repair state.
+//        startGrid(0);
+//
+//        awaitPartitionMapExchange();
+//
+//        assertEquals("Expecting put count", CACHES_CNT * seg0.length, tryPut(seg0));
     }
 
     /**
