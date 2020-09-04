@@ -74,8 +74,8 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
 
             if (exchFut != null && !exchFut.isDone()) {
                 try {
-                    if (log.isDebugEnabled())
-                        log.debug("Waiting for topology exchange future [grid=" + grid.name() + ", ver="
+                    if (log.isInfoEnabled())
+                        log.info("Waiting for topology exchange future [grid=" + grid.name() + ", ver="
                             + topVer + ", curTopVer=" + grid.cluster().topologyVersion() + "]" );
 
                     exchFut.get();
@@ -86,8 +86,8 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
                 }
             }
 
-            if (log.isDebugEnabled())
-                log.debug("Finished topology exchange future [grid=" + grid.name() + ", curTopVer="
+            if (log.isInfoEnabled())
+                log.info("Finished topology exchange future [grid=" + grid.name() + ", curTopVer="
                     + grid.cluster().topologyVersion() + "]" );
         }
     }
