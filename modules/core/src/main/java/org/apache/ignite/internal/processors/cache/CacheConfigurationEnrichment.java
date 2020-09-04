@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Object that contains serialized values for fields marked with {@link org.apache.ignite.configuration.SerializeSeparately}
@@ -39,9 +38,6 @@ public class CacheConfigurationEnrichment implements Serializable {
     /** Field name -> Field value class name. */
     @GridToStringInclude
     private final Map<String, String> fieldClassNames;
-
-    /** Enrichment fields for {@link org.apache.ignite.configuration.NearCacheConfiguration}. */
-    private volatile @Nullable CacheConfigurationEnrichment nearCacheCfgEnrichment;
 
     /**
      * Creates a new instance of CacheConfigurationEnrichment.
@@ -66,7 +62,7 @@ public class CacheConfigurationEnrichment implements Serializable {
     }
 
     /**
-     * Returns all fields name which will be enrichment.
+     * Returns all field names that can be potentially enriched.
      *
      * @return Set of field names.
      */
@@ -83,27 +79,13 @@ public class CacheConfigurationEnrichment implements Serializable {
     }
 
     /**
-     * Checks that a field presents among of fields for enshrinement.
+     * Returns {@code true} if this enrichment contains serialized valued for the specified field.
      *
      * @param name Field name.
      * @return True when field presents, false otherwise.
      */
     public boolean hasField(String name) {
         return fieldClassNames.containsKey(name);
-    }
-
-    /**
-     * @param nearCacheCfgEnrichment Enrichment configured for {@link org.apache.ignite.configuration.NearCacheConfiguration}.
-     */
-    public void nearCacheConfigurationEnrichment(CacheConfigurationEnrichment nearCacheCfgEnrichment) {
-        this.nearCacheCfgEnrichment = nearCacheCfgEnrichment;
-    }
-
-    /**
-     * @return Enrichment for configured {@link org.apache.ignite.configuration.NearCacheConfiguration}.
-     */
-    public CacheConfigurationEnrichment nearCacheConfigurationEnrichment() {
-        return nearCacheCfgEnrichment;
     }
 
     /**

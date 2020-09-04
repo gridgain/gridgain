@@ -218,9 +218,6 @@ public class GridCacheAttributes implements Serializable {
         if (nearCfg == null)
             return null;
 
-        if (enrichment != null && enrichment.nearCacheConfigurationEnrichment() != null)
-            return enrichment.nearCacheConfigurationEnrichment().getFieldClassName("nearEvictPlcFactory");
-
         return className(nearCfg.getNearEvictionPolicyFactory());
     }
 
