@@ -117,7 +117,7 @@ public class TcpIgniteClient implements IgniteClient {
 
         cluster = new ClientClusterImpl(ch, marsh);
 
-        compute = new ClientComputeImpl(ch, marsh, cluster);
+        compute = new ClientComputeImpl(ch, marsh, cluster.defaultClusterGroup());
     }
 
     /** {@inheritDoc} */
