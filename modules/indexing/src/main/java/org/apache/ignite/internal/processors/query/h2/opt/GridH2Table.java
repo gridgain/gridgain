@@ -265,7 +265,7 @@ public class GridH2Table extends TableBase {
             new IndexInformation(false,
                 true, PK_HASH_IDX_NAME,
                 H2IndexType.HASH,
-                H2Utils.indexColumnsSql(wrappedKeyCols.toArray(H2Utils.EMPTY_COLUMNS)),
+                H2Utils.indexColumnsSql(H2Utils.unwrapKeyColumns(this, wrappedKeyCols.toArray(H2Utils.EMPTY_COLUMNS))),
             null));
 
         //explicit add SCAN index, due to we know all their parameters and it depends on affinity node or not.
@@ -278,7 +278,7 @@ public class GridH2Table extends TableBase {
                     idx.getIndexType().isUnique(),
                     idx.getName(),
                     H2IndexType.BTREE,
-                    H2Utils.indexColumnsSql(idx.getIndexColumns()),
+                    H2Utils.indexColumnsSql(H2Utils.unwrapKeyColumns(this, idx.getIndexColumns())),
                     ((H2TreeIndexBase)idx).inlineSize()
                 ));
             }

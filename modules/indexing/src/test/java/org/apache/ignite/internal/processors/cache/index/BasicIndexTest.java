@@ -292,6 +292,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+<<<<<<< HEAD
      * Checks that fields in primary index have correct order.
      *
      * @throws Exception If failed.
@@ -447,6 +448,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+=======
+>>>>>>> GG-30653 fix tests & columns info
      * Tests mixed dynamic and static caches with indexes creation.
      *
      * @throws Exception If failed.
@@ -743,29 +746,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     *  Checks index usage with correct pk fields enumeration.
-     */
-    @Test
-    public void testCorrectFieldsSequenceInPk() throws Exception {
-        inlineSize = 10;
-
-        srvLog = new ListeningTestLogger(false, log);
-
-        IgniteEx ig0 = startGrid(0);
-
-        GridQueryProcessor qryProc = ig0.context().query();
-
-        populateTable(qryProc, TEST_TBL_NAME, -2, "FIRST_NAME", "LAST_NAME",
-            "ADDRESS", "LANG");
-
-        assertFalse(checkIdxAlreadyExistLog(
-            qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
-
-        assertTrue(checkIdxAlreadyExistLog(
-            qryProc, "idx2", TEST_TBL_NAME, "LAST_NAME", "FIRST_NAME"));
-    }
-
-    /**
      *  Checks index usage for full coverage.
      */
     @Test
@@ -785,9 +765,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
-
-        assertTrue(checkIdxAlreadyExistLog(
-            qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
 
         String sqlIdx2 = String.format("create index \"idx2\" on %s(LANG, ADDRESS)", TEST_TBL_NAME);
 
