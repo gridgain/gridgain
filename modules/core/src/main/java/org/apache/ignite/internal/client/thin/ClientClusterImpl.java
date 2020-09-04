@@ -27,11 +27,16 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
  * Implementation of {@link ClientCluster}.
  */
 class ClientClusterImpl extends ClientClusterGroupImpl implements ClientCluster {
+    /** Default cluster group. */
+    private final ClientClusterGroupImpl dfltClusterGrp;
+
     /**
      * Constructor.
      */
     ClientClusterImpl(ReliableChannel ch, ClientBinaryMarshaller marsh) {
         super(ch, marsh);
+
+        dfltClusterGrp = (ClientClusterGroupImpl)forServers();
     }
 
     /** {@inheritDoc} */
@@ -133,5 +138,12 @@ class ClientClusterImpl extends ClientClusterGroupImpl implements ClientCluster 
         if (!protocolCtx.isFeatureSupported(ProtocolVersionFeature.CLUSTER_API) &&
             !protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CLUSTER_API))
             throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.CLUSTER_API);
+    }
+
+    /**
+     * Default cluster group ("for servers").
+     */
+    ClientClusterGroupImpl defaultClusterGroup() {
+        return dfltClusterGrp;
     }
 }

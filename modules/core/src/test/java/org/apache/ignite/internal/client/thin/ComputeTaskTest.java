@@ -79,7 +79,8 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName).setClientConnectorConfiguration(
             new ClientConnectorConfiguration().setThinClientConfiguration(
                 new ThinClientConfiguration().setMaxActiveComputeTasksPerConnection(
-                    getTestIgniteInstanceIndex(igniteInstanceName) <= 1 ? ACTIVE_TASKS_LIMIT : 0)));
+                    getTestIgniteInstanceIndex(igniteInstanceName) <= 1 ? ACTIVE_TASKS_LIMIT : 0)))
+            .setClientMode(getTestIgniteInstanceIndex(igniteInstanceName) == 3);
     }
 
     /**
@@ -117,7 +118,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
             T2<UUID, Set<UUID>> val = client.compute().execute(TestTask.class.getName(), null);
 
             assertEquals(nodeId(0), val.get1());
-            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
         }
     }
 
@@ -144,7 +145,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
             T2<UUID, Set<UUID>> val = client.compute().execute(TEST_TASK_NAME, null);
 
             assertEquals(nodeId(0), val.get1());
-            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
         }
     }
 
@@ -173,7 +174,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             assertTrue(fut.isDone());
             assertEquals(nodeId(0), val.get1());
-            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
         }
     }
 
@@ -249,9 +250,24 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             assertEquals(nodeId(0), val.get1());
             assertEquals(nodeIds(1, 2), val.get2());
+
+            // Compute on client node defined explicitly.
+            grp = client.cluster().forNodeIds(nodeIds(3));
+
+            val = client.compute(grp).execute(TestTask.class.getName(), null);
+
+            assertEquals(nodeId(0), val.get1());
+            assertEquals(nodeIds(3), val.get2());
+
+            // Compute on all nodes (clients + servers).
+            grp = client.cluster();
+
+            val = client.compute(grp).execute(TestTask.class.getName(), null);
+
+            assertEquals(nodeId(0), val.get1());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
         }
     }
-
 
     /**
      *
