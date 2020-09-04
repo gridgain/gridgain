@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.Comparator;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Basic interface for inlined index columns.

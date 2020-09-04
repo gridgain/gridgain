@@ -31,7 +31,7 @@ import org.apache.ignite.examples.ExamplesUtils;
 import org.apache.ignite.examples.model.Person;
 import org.apache.ignite.examples.util.DbH2ServerStartup;
 import org.apache.ignite.transactions.Transaction;
-import org.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
@@ -90,7 +90,7 @@ public class CacheJdbcStoreExample {
                 @Override public CacheStoreSessionListener create() {
                     CacheJdbcStoreSessionListener lsnr = new CacheJdbcStoreSessionListener();
 
-                    lsnr.setDataSource(JdbcConnectionPool.create("jdbc:h2:tcp://localhost/mem:ExampleDb", "sa", ""));
+                    lsnr.setDataSource(JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", ""));
 
                     return lsnr;
                 }

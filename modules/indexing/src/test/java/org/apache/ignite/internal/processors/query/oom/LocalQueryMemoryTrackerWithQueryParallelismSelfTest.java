@@ -29,8 +29,8 @@ import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.value.ValueInt;
-import org.h2.value.ValueString;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueString;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.summarizingLong;

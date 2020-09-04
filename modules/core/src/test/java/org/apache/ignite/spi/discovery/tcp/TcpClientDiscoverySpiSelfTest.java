@@ -1462,6 +1462,8 @@ public class TcpClientDiscoverySpiSelfTest extends GridCommonAbstractTest {
 
         startServerNodes(srvs);
 
+        awaitPartitionMapExchange(true, true, null);
+
         afterWrite = new CIX2<TcpDiscoveryAbstractMessage, Socket>() {
             private boolean first = true;
 

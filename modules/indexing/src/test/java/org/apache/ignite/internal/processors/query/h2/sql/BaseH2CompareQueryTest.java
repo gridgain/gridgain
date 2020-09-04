@@ -318,7 +318,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
         // TODO uncomment and investigate (Rows count has to be equal.: Expected :2500, Actual :900)
 //        compareQueryRes0("select p1.firstName, a2.street from \"part\".Person p1, \"repl\".Address a1, \"part\".Person p2, \"repl\".Address a2");
 
-        //TODO look at it (org.h2.jdbc.JdbcSQLException: Feature not supported: "VARCHAR +" // at H2)
+        //TODO look at it (org.gridgain.internal.h2.jdbc.JdbcSQLException: Feature not supported: "VARCHAR +" // at H2)
 //        compareQueryRes0("select p.firstName n, a.street s from \"part\".Person p, \"repl\".Address a");
         compareQueryRes0(cachePers, "select p.firstName, 1 as i, 'aaa' s from \"pers\".Person p");
 

@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.h2.util.LocalDateTimeUtils;
-import org.h2.value.DataType;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
+import org.gridgain.internal.h2.value.DataType;
 
 import java.math.BigDecimal;
 import java.sql.Time;

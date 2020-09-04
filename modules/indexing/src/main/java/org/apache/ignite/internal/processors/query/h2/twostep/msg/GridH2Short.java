@@ -20,8 +20,8 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueShort;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueShort;
 
 /**
  * H2 Short.

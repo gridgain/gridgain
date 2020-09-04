@@ -35,11 +35,11 @@ import org.apache.ignite.internal.util.lang.GridIteratorAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.h2.api.ErrorCode;
-import org.h2.engine.Session;
-import org.h2.jdbc.JdbcResultSet;
-import org.h2.result.ResultInterface;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.jdbc.JdbcResultSet;
+import org.gridgain.internal.h2.result.ResultInterface;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Iterator over result set.

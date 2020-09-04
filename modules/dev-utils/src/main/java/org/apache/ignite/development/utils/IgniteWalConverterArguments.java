@@ -41,10 +41,10 @@ public class IgniteWalConverterArguments {
     private static final String PAGE_SIZE = "pageSize";
 
     /** */
-    private static final String BINARY_METADATA_FILE_STORE_DIR = "binaryMetadataFileStoreDir";
+    private static final String BINARY_METADATA_DIR = "binaryMetadataDir";
 
     /** */
-    private static final String MARSHALLER_MAPPING_FILE_STORE_DIR = "marshallerMappingFileStoreDir";
+    private static final String MARSHALLER_MAPPING_DIR = "marshallerMappingDir";
 
     /** */
     private static final String KEEP_BINARY = "keepBinary";
@@ -59,10 +59,10 @@ public class IgniteWalConverterArguments {
     private static final String WAL_TIME_TO_MILLIS = "walTimeToMillis";
 
     /** */
-    private static final String RECORD_CONTAINS_TEXT = "recordContainsText";
+    private static final String HAS_TEXT = "hasText";
 
     /** */
-    private static final String PROCESS_SENSITIVE_DATA = "processSensitiveData";
+    private static final String INCLUDE_SENSITIVE = "includeSensitive";
 
     /** */
     private static final String PRINT_STAT = "printStat";
@@ -80,10 +80,10 @@ public class IgniteWalConverterArguments {
     private final int pageSize;
 
     /** Path to binary metadata dir. */
-    private final File binaryMetadataFileStoreDir;
+    private final File binaryMetadataDir;
 
     /** Path to marshaller dir. */
-    private final File marshallerMappingFileStoreDir;
+    private final File marshallerMappingDir;
 
     /** Keep binary flag. */
     private final boolean keepBinary;
@@ -98,10 +98,10 @@ public class IgniteWalConverterArguments {
     private final Long toTime;
 
     /** Filter by substring in the WAL record. */
-    private final String recordContainsText;
+    private final String hasText;
 
     /** Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). */
-    private final ProcessSensitiveData processSensitiveData;
+    private final ProcessSensitiveData includeSensitive;
 
     /** Write summary statistics for WAL */
     private final boolean printStat;
@@ -113,33 +113,43 @@ public class IgniteWalConverterArguments {
      * @param walDir                        Path to dir with wal files.
      * @param walArchiveDir                 Path to dir with archive wal files.
      * @param pageSize                      Size of pages, which was selected for file store (1024, 2048, 4096, etc).
-     * @param binaryMetadataFileStoreDir    Path to binary metadata dir.
-     * @param marshallerMappingFileStoreDir Path to marshaller dir.
+     * @param binaryMetadataDir             Path to binary metadata dir.
+     * @param marshallerMappingDir          Path to marshaller dir.
      * @param keepBinary                    Keep binary flag.
      * @param recordTypes                   WAL record types (TX_RECORD, DATA_RECORD, etc).
      * @param fromTime                      The start time interval for the record time in milliseconds.
      * @param toTime                        The end time interval for the record time in milliseconds.
-     * @param recordContainsText            Filter by substring in the WAL record.
-     * @param processSensitiveData          Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
+     * @param hasText                       Filter by substring in the WAL record.
+     * @param includeSensitive              Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
      * @param printStat                     Write summary statistics for WAL.
      * @param skipCrc                       Skip CRC calculation/check flag.
      */
-    public IgniteWalConverterArguments(File walDir, File walArchiveDir, int pageSize,
-        File binaryMetadataFileStoreDir, File marshallerMappingFileStoreDir, boolean keepBinary,
-        Set<WALRecord.RecordType> recordTypes, Long fromTime, Long toTime, String recordContainsText,
-        ProcessSensitiveData processSensitiveData,
-        boolean printStat, boolean skipCrc) {
+    public IgniteWalConverterArguments(
+        File walDir,
+        File walArchiveDir,
+        int pageSize,
+        File binaryMetadataDir,
+        File marshallerMappingDir,
+        boolean keepBinary,
+        Set<WALRecord.RecordType> recordTypes,
+        Long fromTime,
+        Long toTime,
+        String hasText,
+        ProcessSensitiveData includeSensitive,
+        boolean printStat,
+        boolean skipCrc
+    ) {
         this.walDir = walDir;
         this.walArchiveDir = walArchiveDir;
         this.pageSize = pageSize;
-        this.binaryMetadataFileStoreDir = binaryMetadataFileStoreDir;
-        this.marshallerMappingFileStoreDir = marshallerMappingFileStoreDir;
+        this.binaryMetadataDir = binaryMetadataDir;
+        this.marshallerMappingDir = marshallerMappingDir;
         this.keepBinary = keepBinary;
         this.recordTypes = recordTypes;
         this.fromTime = fromTime;
         this.toTime = toTime;
-        this.recordContainsText = recordContainsText;
-        this.processSensitiveData = processSensitiveData;
+        this.hasText = hasText;
+        this.includeSensitive = includeSensitive;
         this.printStat = printStat;
         this.skipCrc = skipCrc;
     }
@@ -176,8 +186,8 @@ public class IgniteWalConverterArguments {
      *
      * @return binaryMetadataFileStoreD
      */
-    public File getBinaryMetadataFileStoreDir() {
-        return binaryMetadataFileStoreDir;
+    public File getBinaryMetadataDir() {
+        return binaryMetadataDir;
     }
 
     /**
@@ -185,8 +195,8 @@ public class IgniteWalConverterArguments {
      *
      * @return marshallerMappingFileStoreD
      */
-    public File getMarshallerMappingFileStoreDir() {
-        return marshallerMappingFileStoreDir;
+    public File getMarshallerMappingDir() {
+        return marshallerMappingDir;
     }
 
     /**
@@ -228,19 +238,19 @@ public class IgniteWalConverterArguments {
     /**
      * Filter by substring in the WAL record.
      *
-     * @return recordContainsText
+     * @return Filter substring.
      */
-    public String getRecordContainsText() {
-        return recordContainsText;
+    public String hasText() {
+        return hasText;
     }
 
     /**
      * Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5).
      *
-     * @return processSensitiveData
+     * @return Mode of sensitive data including.
      */
-    public ProcessSensitiveData getProcessSensitiveData() {
-        return processSensitiveData;
+    public ProcessSensitiveData includeSensitive() {
+        return includeSensitive;
     }
 
     /**
@@ -274,28 +284,28 @@ public class IgniteWalConverterArguments {
             out.println("    walDir                           Path to dir with wal files.");
             out.println("    walArchiveDir                    Path to dir with archive wal files. walDir or walArchiveDir must be specified.");
             out.println("    pageSize                         Size of pages, which was selected for file store (1024, 2048, 4096, etc). Default 4096.");
-            out.println("    binaryMetadataFileStoreDir       (Optional) Path to binary meta.");
-            out.println("    marshallerMappingFileStoreDir    (Optional) Path to marshaller dir.");
+            out.println("    binaryMetadataDir                (Optional) Path to binary meta.");
+            out.println("    marshallerMappingDir             (Optional) Path to marshaller dir.");
             out.println("    keepBinary                       Keep binary flag. Default true.");
             out.println("    recordTypes                      (Optional) Comma-separated WAL record types (TX_RECORD, DATA_RECORD, etc). Default all.");
             out.println("    walTimeFromMillis                (Optional) The start time interval for the record time in milliseconds.");
             out.println("    walTimeToMillis                  (Optional) The end time interval for the record time in milliseconds.");
-            out.println("    recordContainsText               (Optional) Filter by substring in the WAL record.");
-            out.println("    processSensitiveData             (Optional) Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default SHOW.");
+            out.println("    hasText                          (Optional) Filter by substring in the WAL record.");
+            out.println("    includeSensitive                 (Optional) Strategy for the processing of sensitive data (SHOW, HIDE, HASH, MD5). Default MD5.");
             out.println("    printStat                        Write summary statistics for WAL. Default false.");
             out.println("    skipCrc                          Skip CRC calculation/check flag. Default false.");
             out.println("For example:");
             out.println("    walDir=/work/db/wal");
             out.println("    walArchiveDir=/work/db/wal_archive");
             out.println("    pageSize=4096");
-            out.println("    binaryMetadataFileStoreDir=/work/db/nodeId-consistentId");
-            out.println("    marshallerMappingFileStoreDir=/work/db/marshaller");
+            out.println("    binaryMetadataDir=/work/db/nodeId-consistentId");
+            out.println("    marshallerMappingDir=/work/db/marshaller");
             out.println("    keepBinary=true");
             out.println("    recordTypes=DataRecord,TxRecord");
             out.println("    walTimeFromMillis=1575158400000");
             out.println("    walTimeToMillis=1577836740999");
-            out.println("    recordContainsText=search string");
-            out.println("    processSensitiveData=SHOW");
+            out.println("    hasText=search string");
+            out.println("    includeSensitive=SHOW");
             out.println("    skipCrc=true");
             return null;
         }
@@ -303,14 +313,14 @@ public class IgniteWalConverterArguments {
         File walDir = null;
         File walArchiveDir = null;
         int pageSize = 4096;
-        File binaryMetadataFileStoreDir = null;
-        File marshallerMappingFileStoreDir = null;
+        File binaryMetadataDir = null;
+        File marshallerMappingDir = null;
         boolean keepBinary = true;
         final Set<WALRecord.RecordType> recordTypes = new HashSet<>();
         Long fromTime = null;
         Long toTime = null;
-        String recordContainsText = null;
-        ProcessSensitiveData processSensitiveData = ProcessSensitiveData.SHOW;
+        String hasText = null;
+        ProcessSensitiveData includeSensitive = ProcessSensitiveData.MD5;
         boolean printStat = false;
         boolean skipCrc = false;
 
@@ -341,21 +351,21 @@ public class IgniteWalConverterArguments {
                     throw new IllegalArgumentException("Incorrect page size. Error parse: " + pageSizeStr);
                 }
             }
-            else if (arg.startsWith(BINARY_METADATA_FILE_STORE_DIR + "=")) {
-                final String binaryMetadataFileStorePath = arg.substring(BINARY_METADATA_FILE_STORE_DIR.length() + 1);
+            else if (arg.startsWith(BINARY_METADATA_DIR + "=")) {
+                final String binaryMetadataPath = arg.substring(BINARY_METADATA_DIR.length() + 1);
 
-                binaryMetadataFileStoreDir = new File(binaryMetadataFileStorePath);
+                binaryMetadataDir = new File(binaryMetadataPath);
 
-                if (!binaryMetadataFileStoreDir.isDirectory())
-                    throw new IllegalArgumentException("Incorrect path to dir with binary meta files: " + binaryMetadataFileStorePath);
+                if (!binaryMetadataDir.isDirectory())
+                    throw new IllegalArgumentException("Incorrect path to dir with binary meta files: " + binaryMetadataPath);
             }
-            else if (arg.startsWith(MARSHALLER_MAPPING_FILE_STORE_DIR + "=")) {
-                final String marshallerMappingFileStorePath = arg.substring(MARSHALLER_MAPPING_FILE_STORE_DIR.length() + 1);
+            else if (arg.startsWith(MARSHALLER_MAPPING_DIR + "=")) {
+                final String marshallerMappingPath = arg.substring(MARSHALLER_MAPPING_DIR.length() + 1);
 
-                marshallerMappingFileStoreDir = new File(marshallerMappingFileStorePath);
+                marshallerMappingDir = new File(marshallerMappingPath);
 
-                if (!marshallerMappingFileStoreDir.isDirectory())
-                    throw new IllegalArgumentException("Incorrect path to dir with marshaller files: " + marshallerMappingFileStorePath);
+                if (!marshallerMappingDir.isDirectory())
+                    throw new IllegalArgumentException("Incorrect path to dir with marshaller files: " + marshallerMappingPath);
             }
             else if (arg.startsWith(KEEP_BINARY + "=")) {
                 keepBinary = parseBoolean(KEEP_BINARY, arg.substring(KEEP_BINARY.length() + 1));
@@ -400,16 +410,16 @@ public class IgniteWalConverterArguments {
                     throw new IllegalArgumentException("Incorrect walTimeToMillis. Error parse: " + toTimeStr);
                 }
             }
-            else if (arg.startsWith(RECORD_CONTAINS_TEXT + "=")) {
-                recordContainsText = arg.substring(RECORD_CONTAINS_TEXT.length() + 1);
+            else if (arg.startsWith(HAS_TEXT + "=")) {
+                hasText = arg.substring(HAS_TEXT.length() + 1);
             }
-            else if (arg.startsWith(PROCESS_SENSITIVE_DATA + "=")) {
-                final String processSensitiveDataStr = arg.substring(PROCESS_SENSITIVE_DATA.length() + 1);
+            else if (arg.startsWith(INCLUDE_SENSITIVE + "=")) {
+                final String includeSensitiveStr = arg.substring(INCLUDE_SENSITIVE.length() + 1);
                 try {
-                    processSensitiveData = ProcessSensitiveData.valueOf(processSensitiveDataStr);
+                    includeSensitive = ProcessSensitiveData.valueOf(includeSensitiveStr);
                 }
                 catch (Exception e) {
-                    throw new IllegalArgumentException("Unknown processSensitiveData: " + processSensitiveDataStr +
+                    throw new IllegalArgumentException("Unknown includeSensitive: " + includeSensitiveStr +
                         ". Supported: " + Arrays.toString(ProcessSensitiveData.values()));
                 }
             }
@@ -434,11 +444,11 @@ public class IgniteWalConverterArguments {
 
         out.printf("\t%s = %d\n", PAGE_SIZE, pageSize);
 
-        if (binaryMetadataFileStoreDir != null)
-            out.printf("\t%s = %s\n", BINARY_METADATA_FILE_STORE_DIR, binaryMetadataFileStoreDir);
+        if (binaryMetadataDir != null)
+            out.printf("\t%s = %s\n", BINARY_METADATA_DIR, binaryMetadataDir);
 
-        if (marshallerMappingFileStoreDir != null)
-            out.printf("\t%s = %s\n", MARSHALLER_MAPPING_FILE_STORE_DIR, marshallerMappingFileStoreDir);
+        if (marshallerMappingDir != null)
+            out.printf("\t%s = %s\n", MARSHALLER_MAPPING_DIR, marshallerMappingDir);
 
         out.printf("\t%s = %s\n", KEEP_BINARY, keepBinary);
 
@@ -451,16 +461,16 @@ public class IgniteWalConverterArguments {
         if (toTime != null)
             out.printf("\t%s = %s\n", WAL_TIME_TO_MILLIS, new Date(toTime));
 
-        if (recordContainsText != null)
-            out.printf("\t%s = %s\n", RECORD_CONTAINS_TEXT, recordContainsText);
+        if (hasText != null)
+            out.printf("\t%s = %s\n", HAS_TEXT, hasText);
 
         out.printf("\t%s = %b\n", PRINT_STAT, printStat);
 
         out.printf("\t%s = %b\n", SKIP_CRC, skipCrc);
 
         return new IgniteWalConverterArguments(walDir, walArchiveDir, pageSize,
-            binaryMetadataFileStoreDir, marshallerMappingFileStoreDir,
-            keepBinary, recordTypes, fromTime, toTime, recordContainsText, processSensitiveData, printStat, skipCrc);
+            binaryMetadataDir, marshallerMappingDir,
+            keepBinary, recordTypes, fromTime, toTime, hasText, includeSensitive, printStat, skipCrc);
     }
 
     /**
