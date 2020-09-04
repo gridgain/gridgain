@@ -126,6 +126,12 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
             }
         });
 
+        if (log.isInfoEnabled())
+            log.info(">>> await exchange seg0. topVer: " + topVer + ", seg1.size():" + seg1.size());
+
+        if (log.isInfoEnabled())
+            log.info(">>> await exchange seg1. topVer: " + topVer + ", seg0.size():" + seg1.size());
+
         awaitExchangeVersionFinished(seg0, topVer + seg1.size());
         awaitExchangeVersionFinished(seg1, topVer + seg0.size());
 
