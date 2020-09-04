@@ -36,6 +36,9 @@ public enum ProtocolBitmaskFeature {
      */
     CLUSTER_API(2),
 
+    /** Cluster groups. */
+    CLUSTER_GROUPS(4),
+
     /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
     DEFAULT_QRY_TIMEOUT(6);
 
