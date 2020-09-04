@@ -126,8 +126,8 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
             }
         });
 
-        awaitExchangeVersionFinished(seg0, topVer + seg0.size());
-        awaitExchangeVersionFinished(seg1, topVer + seg1.size());
+        awaitExchangeVersionFinished(seg0, topVer + seg1.size());
+        awaitExchangeVersionFinished(seg1, topVer + seg0.size());
 
         if (log.isInfoEnabled())
             log.info(">>> Finished waiting for split");
