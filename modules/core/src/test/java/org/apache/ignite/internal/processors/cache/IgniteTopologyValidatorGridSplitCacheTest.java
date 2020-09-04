@@ -63,7 +63,7 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
     private static final String ACTIVATOR_NODE_ATTR = "split.resolved";
 
     /** */
-    private static final int GRID_CNT = 12;//GridTestUtils.SF.applyLB(28, 16);
+    private static final int GRID_CNT = 14;//GridTestUtils.SF.applyLB(28, 16);
 
     /** */
     private static final int CACHES_CNT = GridTestUtils.SF.applyLB(50, 20);
@@ -263,6 +263,12 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
 
         for (int i = 0; i < seg0.length; ++i)
             seg0[i] = i * 2;
+
+        if (log.isInfoEnabled())
+            log.info(">>> seg0: " + seg0);
+
+        if (log.isInfoEnabled())
+            log.info(">>> seg1: " + seg1);
 
         // Tests what each node is able to do puts.
         tryPut(seg0, seg1);
