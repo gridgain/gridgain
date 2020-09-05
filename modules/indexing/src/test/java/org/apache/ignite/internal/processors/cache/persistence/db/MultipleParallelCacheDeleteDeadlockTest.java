@@ -56,7 +56,7 @@ import static java.util.Arrays.asList;
 /**
  *
  */
-public class H2TreeSynchronousDestroyDeadlockTest extends GridCommonAbstractTest {
+public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractTest {
     /** Latch that blocks test completion. */
     private CountDownLatch testCompletionBlockingLatch = new CountDownLatch(1);
 
