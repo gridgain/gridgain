@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.compute.ComputeTaskFuture;
+import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -72,6 +73,9 @@ public class GridTaskFlowContext {
                 }
             }
 
+            if (taskAndSubtasksCompleteFut.futures().isEmpty() && !result.successfull())
+                flow.aggregator().accept(result);
+
             taskAndSubtasksCompleteFut.markInitialized();
         }
         else {
@@ -118,6 +122,9 @@ public class GridTaskFlowContext {
                     R taskResult = future.get();
 
                     res = flowNode.result(taskResult);
+                }
+                catch (ComputeUserUndeclaredException e) {
+                    res = new GridFlowTaskTransferObject(e.getCause());
                 }
                 catch (IgniteException e) {
                     res = new GridFlowTaskTransferObject(e);

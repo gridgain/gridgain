@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ignite.lang.IgniteBiTuple;
 
+import static java.util.stream.Collectors.toList;
+
 public class GridTaskFlowBuilder {
     private FlowResultAggregator aggregator;
     private GridFlowTempNode rootNode;
@@ -50,7 +52,14 @@ public class GridTaskFlowBuilder {
     }
 
     public GridTaskFlow build() {
-        return new GridTaskFlow(new GridFlowElement(rootNode.name, rootNode.node, rootNode.childNodes), aggregator);
+        return new GridTaskFlow(tempNodeToFlowElement(rootNode), aggregator);
+    }
+
+    private GridFlowElement tempNodeToFlowElement(GridFlowTempNode tempNode) {
+        return new GridFlowElement(
+            tempNode.name,
+            tempNode.node,
+            tempNode.childNodes.stream().map(c -> new IgniteBiTuple(c.get1(), tempNodeToFlowElement(c.get2()))).collect(toList()));
     }
 
     private static class GridFlowTempNode {

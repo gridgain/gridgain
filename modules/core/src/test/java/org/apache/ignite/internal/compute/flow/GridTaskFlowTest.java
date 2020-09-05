@@ -34,43 +34,103 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.compute.ComputeJobResultPolicy.WAIT;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 public class GridTaskFlowTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName);
     }
 
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
+    }
+
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        super.afterTest();
+    }
+
     @Test
     public void test() throws Exception {
-        IgniteEx ignite = startGrids(3);
+        int nodeCnt = 3;
+
+        IgniteEx ignite = startGrids(nodeCnt);
 
         GridTaskFlow flow = new GridTaskFlowBuilder(new AnyResultAggregator())
-            .addTask()
+            .addTask("str", null, new StringHashTaskAdapter(), null)
+            .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
             .build();
 
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
-        IgniteFuture<GridFlowTaskTransferObject> fut = ignite.context().flowProcessor().executeFlow("asd");
+        IgniteFuture<GridFlowTaskTransferObject> fut = ignite.context().flowProcessor()
+            .executeFlow("asd", new GridFlowTaskTransferObject(new IgniteBiTuple<>("string", "zxc_")));
 
         GridFlowTaskTransferObject res = fut.get();
 
+        int r = (int)res.data().get("int");
+
+        int expected = expectedRes(nodeCnt);
+
         assertTrue(res.successfull());
+
+        assertEquals(expected, r);
+    }
+
+    @Test
+    public void testFailingTask() throws Exception {
+        int nodeCnt = 3;
+
+        IgniteEx ignite = startGrids(nodeCnt);
+
+        GridTaskFlow flow = new GridTaskFlowBuilder(new AnyResultAggregator())
+            .addTask("str", null, new StringHashTaskAdapter(), null)
+            .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
+            .build();
+
+        ignite.context().flowProcessor().addFlow("asd", flow, false);
+
+        IgniteFuture<GridFlowTaskTransferObject> fut = ignite.context().flowProcessor()
+            .executeFlow("asd", new GridFlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
+
+        assertThrows(log, () -> fut.get(), IgniteException.class, "qwe not allowed");
+    }
+
+    private int expectedRes(int nodeCnt) {
+        int a = 0;
+
+        for (int i = 0; i < nodeCnt; i++)
+            a += ("zxc_" + grid(i).cluster().localNode().id().toString()).hashCode();
+
+        return a * a;
     }
 
     private static class StringHashTask implements FlowTask<String, Integer> {
         AtomicInteger hashSum = new AtomicInteger(0);
+        IgniteException ex;
 
         @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, String arg) throws IgniteException {
-            return subgrid.stream().collect(toMap(n -> new StringHashJob(arg), n -> n));
+            return subgrid.stream().collect(toMap(n -> new StringHashJob(arg + n.id().toString()), n -> n));
         }
 
         @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) throws IgniteException {
-            hashSum.addAndGet(res.getData());
+            log.info("zzz adding " + res.getData());
+
+            if (res.getData() != null)
+                hashSum.addAndGet(res.getData());
+            else
+                ex = res.getException();
 
             return WAIT;
         }
 
         @Override public Integer reduce(List<ComputeJobResult> list) throws IgniteException {
+            if (ex != null)
+                throw ex;
+
             return hashSum.get();
         }
     }
@@ -87,6 +147,11 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
         }
 
         @Override public Object execute() throws IgniteException {
+            log.info("zzz calculated from " + arg + " value " + arg.hashCode());
+
+            if (arg.startsWith("qwe"))
+                throw new IgniteException("qwe not allowed");
+
             return arg.hashCode();
         }
     }
@@ -110,9 +175,12 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
     }
 
     private static class SqrIntTask implements FlowTask<Integer, Integer> {
+        private volatile int res;
 
         @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Integer arg) throws IgniteException {
             Map<SqrIntJob, ClusterNode> res = new HashMap<>();
+
+            log.info("zzz sqr arg: " + arg);
 
             res.put(new SqrIntJob(arg), subgrid.get(0));
 
@@ -121,11 +189,13 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
 
         @Override
         public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) throws IgniteException {
+            this.res = res.getData();
+
             return WAIT;
         }
 
         @Override public Integer reduce(List<ComputeJobResult> results) throws IgniteException {
-            return null;
+            return res;
         }
     }
 
@@ -142,6 +212,24 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
 
         @Override public Integer execute() throws IgniteException {
             return arg * arg;
+        }
+    }
+
+    private static class SqrIntTaskAdapter implements GridFlowTaskAdapter<SqrIntTask, Integer, Integer> {
+        @Override public Class<SqrIntTask> taskClass() {
+            return SqrIntTask.class;
+        }
+
+        @Override public Integer arguments(GridFlowTaskTransferObject parentResult) {
+            return (Integer)parentResult.data().get("int");
+        }
+
+        @Override public GridFlowTaskTransferObject result(Integer r) {
+            return new GridFlowTaskTransferObject(new IgniteBiTuple<>("int", r));
+        }
+
+        @Override public IgnitePredicate<ClusterNode> nodeFilter() {
+            return null;
         }
     }
 }

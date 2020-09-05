@@ -704,6 +704,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
         else if (comp instanceof DurableBackgroundTasksProcessor)
             durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
+        else if (comp instanceof FlowProcessor)
+            flowProcessor = (FlowProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();

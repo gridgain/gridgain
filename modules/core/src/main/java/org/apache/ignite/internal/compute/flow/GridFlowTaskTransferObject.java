@@ -17,13 +17,12 @@ package org.apache.ignite.internal.compute.flow;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.lang.IgniteBiTuple;
 
 public class GridFlowTaskTransferObject {
     private final Map<String, Object> data;
 
-    private final IgniteException exception;
+    private final Throwable exception;
 
     public GridFlowTaskTransferObject(IgniteBiTuple<String, Object> data) {
         this.data = new HashMap<>();
@@ -36,7 +35,7 @@ public class GridFlowTaskTransferObject {
         this.exception = null;
     }
 
-    public GridFlowTaskTransferObject(IgniteException exception) {
+    public GridFlowTaskTransferObject(Throwable exception) {
         this.data = null;
         this.exception = exception;
     }
@@ -49,7 +48,7 @@ public class GridFlowTaskTransferObject {
         return exception == null;
     }
 
-    public IgniteException exception() {
+    public Throwable exception() {
         return exception;
     }
 }
