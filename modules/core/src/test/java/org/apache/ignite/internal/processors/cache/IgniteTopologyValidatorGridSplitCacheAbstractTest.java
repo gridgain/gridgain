@@ -223,26 +223,6 @@ public class IgniteTopologyValidatorGridSplitCacheAbstractTest extends IgniteCac
     /**
      * Tests topology split scenario.
      *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testTopologyValidator() throws Exception {
-        testTopologyValidator0(false);
-    }
-
-    /**
-     * Tests topology split scenario.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testTopologyValidatorWithCacheGroup() throws Exception {
-        testTopologyValidator0(true);
-    }
-
-    /**
-     * Tests topology split scenario.
-     *
      * @param useCacheGrp Use cache group.
      * @throws Exception If failed.
      */
