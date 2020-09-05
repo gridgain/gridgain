@@ -142,7 +142,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Whether index was created from scratch during owning node lifecycle. */
     private final boolean created;
 
-    /** */
+    /** Whether to allow doing {@link #temporaryReleaseLock()}. */
     private volatile boolean allowTempReleaseLock = false;
 
     /**
@@ -908,11 +908,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
     }
 
+    /**
+     * @param val Whether to allow doing {@link #temporaryReleaseLock()}.
+     */
     public void allowTempReleaseLock(boolean val) {
         allowTempReleaseLock = val;
-    }
-
-    public boolean allowTempReleaseLock() {
-        return allowTempReleaseLock;
     }
 }

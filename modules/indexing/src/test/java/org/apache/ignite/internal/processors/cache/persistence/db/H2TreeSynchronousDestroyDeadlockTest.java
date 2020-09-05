@@ -66,9 +66,17 @@ public class H2TreeSynchronousDestroyDeadlockTest extends GridCommonAbstractTest
     /** We imitate long index destroy in these tests, so this is delay for each page to destroy. */
     private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 300;
 
-    private static final String CACHE_1 = "cache_1"
+    /** */
+    private static final String CACHE_1 = "cache_1";
 
-    private static final String CACHE_2 = "cache_2"
+    /** */
+    private static final String CACHE_2 = "cache_2";
+
+    /** */
+    private static final String CACHE_GRP_1 = "cache_grp_1";
+
+    /** */
+    private static final String CACHE_GRP_2 = "cache_grp_2";
 
     /** */
     private H2TreeIndex.H2TreeFactory regularH2TreeFactory;
@@ -87,14 +95,13 @@ public class H2TreeSynchronousDestroyDeadlockTest extends GridCommonAbstractTest
                 .setCheckpointFrequency(Integer.MAX_VALUE)
             )
             .setCacheConfiguration(
-                new CacheConfiguration(DEFAULT_CACHE_NAME)
-                    .setGroupName(DEFAULT_CACHE_NAME + "_grp")
+                new CacheConfiguration(CACHE_1)
+                    .setGroupName(CACHE_GRP_1)
                     .setSqlSchema("PUBLIC"),
-                new CacheConfiguration("test")
-                    .setGroupName("test_grp")
+                new CacheConfiguration(CACHE_2)
+                    .setGroupName(CACHE_GRP_2)
                     .setSqlSchema("PUBLIC")
-            )
-            .setSystemThreadPoolSize(16);
+            );
     }
 
     /** {@inheritDoc} */
@@ -126,20 +133,20 @@ public class H2TreeSynchronousDestroyDeadlockTest extends GridCommonAbstractTest
 
         ignite.cluster().active(true);
 
-        IgniteCache defaultCache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
-        IgniteCache testCache = ignite.getOrCreateCache("test");
+        IgniteCache cache1 = ignite.getOrCreateCache(CACHE_1);
+        IgniteCache cache2 = ignite.getOrCreateCache(CACHE_2);
 
-        query(defaultCache, "create table t1(id integer primary key, f integer) with \"CACHE_GROUP=default_grp\"");
-        query(defaultCache, "create index idx1 on t1(f)");
-
-        for (int i = 0; i < 500; i++)
-            query(defaultCache, "insert into t1 (id, f) values (?, ?)", i, i);
-
-        query(testCache, "create table t2(id integer primary key, f integer) with \"CACHE_GROUP=test_grp\"");
-        query(testCache, "create index idx2 on t2(f)");
+        query(cache1, "create table t1(id integer primary key, f integer) with \"CACHE_GROUP=" + CACHE_GRP_1 + "\"");
+        query(cache1, "create index idx1 on t1(f)");
 
         for (int i = 0; i < 500; i++)
-            query(testCache, "insert into t2 (id, f) values (?, ?)", i, i);
+            query(cache1, "insert into t1 (id, f) values (?, ?)", i, i);
+
+        query(cache2, "create table t2(id integer primary key, f integer) with \"CACHE_GROUP=" + CACHE_GRP_2 + "\"");
+        query(cache2, "create index idx2 on t2(f)");
+
+        for (int i = 0; i < 500; i++)
+            query(cache2, "insert into t2 (id, f) values (?, ?)", i, i);
 
         Thread checkpointer = new Thread(() -> {
             try {
