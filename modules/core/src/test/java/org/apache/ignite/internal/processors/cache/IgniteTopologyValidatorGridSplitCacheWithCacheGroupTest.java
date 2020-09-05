@@ -19,14 +19,14 @@ package org.apache.ignite.internal.processors.cache;
 import org.junit.Test;
 
 /** */
-public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteTopologyValidatorGridSplitCacheAbstractTest {
+public class IgniteTopologyValidatorGridSplitCacheWithCacheGroupTest extends IgniteTopologyValidatorGridSplitCacheAbstractTest {
     /**
      * Tests topology split scenario.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testTopologyValidator() throws Exception {
-        testTopologyValidator0(false);
+    public void testTopologyValidatorWithCacheGroup() throws Exception {
+        testTopologyValidator0(true);
     }
 }
