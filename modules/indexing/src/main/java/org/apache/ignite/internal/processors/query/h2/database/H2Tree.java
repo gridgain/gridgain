@@ -75,7 +75,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
     /** Cache context. */
-    private final GridCacheContext cctx;
+    protected final GridCacheContext cctx;
 
     /** Owning table. */
     private final GridH2Table table;
@@ -910,5 +910,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     public void allowTempReleaseLock(boolean val) {
         allowTempReleaseLock = val;
+    }
+
+    public boolean allowTempReleaseLock() {
+        return allowTempReleaseLock;
     }
 }
