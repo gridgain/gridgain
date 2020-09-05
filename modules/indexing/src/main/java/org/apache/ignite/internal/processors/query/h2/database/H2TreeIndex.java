@@ -558,6 +558,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     if (async) {
                         tree.markDestroyed();
 
+                        tree.allowTempReleaseLock(true);
+
                         rootPages.add(tree.getMetaPageId());
                         trees.add(tree);
                     }
