@@ -235,7 +235,7 @@ public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteCacheTopolo
      *
      * @throws Exception If failed.
      */
-//    @Test
+    @Test
     public void testTopologyValidatorWithCacheGroup() throws Exception {
         testTopologyValidator0(true);
     }
