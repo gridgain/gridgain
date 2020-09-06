@@ -25,10 +25,11 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
     /// <summary>
     /// Thin client services benchmark.
     /// <para />
-    /// |        Method  |     Mean |    Error |   StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-    /// |--------------- |---------:|---------:|---------:|-------:|------:|------:|----------:|
-    /// | IntMethodThin  | 31.61 us | 0.627 us | 1.539 us | 0.3052 |     - |     - |   1.85 KB |
-    /// | IntMethodThick | 130.5 us | 27.65 us | 79.33 us | 0.1221 |     - |     - |   1.47 KB |
+    /// .NET Core 3.1.7
+    /// |         Method |      Mean |     Error |    StdDev |    Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+    /// |--------------- |----------:|----------:|----------:|----------:|-------:|------:|------:|----------:|
+    /// |  IntMethodThin |  32.10 us |  0.640 us |  1.496 us |  31.86 us | 0.3052 |     - |     - |   1.85 KB |
+    /// | IntMethodThick | 153.68 us | 32.444 us | 94.641 us | 117.63 us | 0.1221 |     - |     - |   1.47 KB |
     /// </summary>
     [MemoryDiagnoser]
     public class ThinClientServicesBenchmark : ThinClientBenchmarkBase
