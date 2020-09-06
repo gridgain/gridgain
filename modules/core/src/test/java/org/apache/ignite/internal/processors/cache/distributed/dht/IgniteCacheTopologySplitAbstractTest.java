@@ -74,8 +74,8 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
 
             if (exchFut != null && !exchFut.isDone()) {
                 try {
-                    if (log.isInfoEnabled())
-                        log.info("Waiting for topology exchange future [grid=" + grid.name() + ", ver="
+                    if (log.isDebugEnabled())
+                        log.debug("Waiting for topology exchange future [grid=" + grid.name() + ", ver="
                             + topVer + ", curTopVer=" + grid.cluster().topologyVersion() + "]" );
 
                     exchFut.get();
@@ -86,8 +86,8 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
                 }
             }
 
-            if (log.isInfoEnabled())
-                log.info("Finished topology exchange future [grid=" + grid.name() + ", curTopVer="
+            if (log.isDebugEnabled())
+                log.debug("Finished topology exchange future [grid=" + grid.name() + ", curTopVer="
                     + grid.cluster().topologyVersion() + "]" );
         }
     }
@@ -125,12 +125,6 @@ public abstract class IgniteCacheTopologySplitAbstractTest extends GridCommonAbs
                 return segment(ignite.cluster().localNode()) == 1;
             }
         });
-
-        if (log.isInfoEnabled())
-            log.info(">>> await exchange seg0. topVer: " + topVer + ", seg1.size():" + seg1.size());
-
-        if (log.isInfoEnabled())
-            log.info(">>> await exchange seg1. topVer: " + topVer + ", seg0.size():" + seg1.size());
 
         awaitExchangeVersionFinished(seg0, topVer + seg1.size());
         awaitExchangeVersionFinished(seg1, topVer + seg0.size());

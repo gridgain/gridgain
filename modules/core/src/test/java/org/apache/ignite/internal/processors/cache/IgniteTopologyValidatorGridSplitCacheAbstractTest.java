@@ -44,7 +44,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.junit.Assume;
-import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
@@ -63,7 +62,7 @@ public class IgniteTopologyValidatorGridSplitCacheAbstractTest extends IgniteCac
     private static final String ACTIVATOR_NODE_ATTR = "split.resolved";
 
     /** */
-    private static final int GRID_CNT = 24;//GridTestUtils.SF.applyLB(28, 16);
+    private static final int GRID_CNT = GridTestUtils.SF.applyLB(24, 16);
 
     /** */
     private static final int CACHES_CNT = GridTestUtils.SF.applyLB(50, 20);
@@ -243,12 +242,6 @@ public class IgniteTopologyValidatorGridSplitCacheAbstractTest extends IgniteCac
 
         for (int i = 0; i < seg0.length; ++i)
             seg0[i] = i * 2;
-
-        if (log.isInfoEnabled())
-            log.info(">>> seg0: " + seg0);
-
-        if (log.isInfoEnabled())
-            log.info(">>> seg1: " + seg1);
 
         // Tests what each node is able to do puts.
         tryPut(seg0, seg1);

@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import org.junit.Test;
 
-/** */
+/** {@inheritDoc} */
 public class IgniteTopologyValidatorGridSplitCacheTest extends IgniteTopologyValidatorGridSplitCacheAbstractTest {
     /**
      * Tests topology split scenario.
