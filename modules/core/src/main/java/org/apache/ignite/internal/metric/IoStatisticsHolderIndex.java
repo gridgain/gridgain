@@ -99,7 +99,7 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         this.statCache = statCache;
     }
 
-    private static final boolean DISABLE_PAGE_STATS=Boolean.getBoolean("DISABLE_PAGE_STATS");
+    private static final boolean DISABLE_PAGE_STATS=true;
 
     /** {@inheritDoc} */
     @Override public void trackLogicalRead(long pageAddr) {
