@@ -24,53 +24,48 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import static java.util.stream.Collectors.toList;
 
 public class GridTaskFlowBuilder {
-    private FlowResultAggregator aggregator;
-    private GridFlowTempNode rootNode;
-    private Map<String, GridFlowTempNode> nodes = new HashMap<>();
+    private GridFlowTempElement rootElement;
+    private Map<String, GridFlowTempElement> elements = new HashMap<>();
 
-    public GridTaskFlowBuilder(FlowResultAggregator aggregator) {
-        this.aggregator = aggregator;
-    }
-
-    public GridTaskFlowBuilder addTask(String name, String parentName, GridFlowTaskAdapter node, FlowCondition condition) {
+    public GridTaskFlowBuilder addTask(String name, String parentName, GridFlowTaskAdapter taskAdapter, FlowCondition condition) {
         if (parentName == null) {
-            rootNode = new GridFlowTempNode(name, node);
+            rootElement = new GridFlowTempElement(name, taskAdapter);
 
-            nodes.put(name, rootNode);
+            elements.put(name, rootElement);
         }
         else {
-            GridFlowTempNode parent = nodes.get(parentName);
+            GridFlowTempElement parent = elements.get(parentName);
 
-            GridFlowTempNode newNode = new GridFlowTempNode(name, node);
+            GridFlowTempElement newElement = new GridFlowTempElement(name, taskAdapter);
 
-            parent.childNodes.add(new IgniteBiTuple<>(condition, newNode));
+            parent.childElements.add(new IgniteBiTuple<>(condition, newElement));
 
-            nodes.put(name, newNode);
+            elements.put(name, newElement);
         }
 
         return this;
     }
 
     public GridTaskFlow build() {
-        return new GridTaskFlow(tempNodeToFlowElement(rootNode), aggregator);
+        return new GridTaskFlow(tempElementToFlowElement(rootElement));
     }
 
-    private GridFlowElement tempNodeToFlowElement(GridFlowTempNode tempNode) {
+    private GridFlowElement tempElementToFlowElement(GridFlowTempElement tempElement) {
         return new GridFlowElement(
-            tempNode.name,
-            tempNode.node,
-            tempNode.childNodes.stream().map(c -> new IgniteBiTuple(c.get1(), tempNodeToFlowElement(c.get2()))).collect(toList()));
+            tempElement.name,
+            tempElement.taskAdapter,
+            tempElement.childElements.stream().map(c -> new IgniteBiTuple(c.get1(), tempElementToFlowElement(c.get2()))).collect(toList()));
     }
 
-    private static class GridFlowTempNode {
+    private static class GridFlowTempElement {
         final String name;
-        final GridFlowTaskAdapter node;
-        final List<IgniteBiTuple<FlowCondition, GridFlowTempNode>> childNodes;
+        final GridFlowTaskAdapter taskAdapter;
+        final List<IgniteBiTuple<FlowCondition, GridFlowTempElement>> childElements;
 
-        public GridFlowTempNode(String name, GridFlowTaskAdapter node) {
+        public GridFlowTempElement(String name, GridFlowTaskAdapter taskAdapter) {
             this.name = name;
-            this.node = node;
-            this.childNodes = new LinkedList<>();
+            this.taskAdapter = taskAdapter;
+            this.childElements = new LinkedList<>();
         }
     }
 }

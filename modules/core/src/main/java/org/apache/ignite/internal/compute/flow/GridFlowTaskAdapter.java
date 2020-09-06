@@ -23,4 +23,8 @@ public interface GridFlowTaskAdapter<T extends FlowTask<A, R>, A, R> {
     A arguments(GridFlowTaskTransferObject parentResult);
     GridFlowTaskTransferObject result(R r);
     IgnitePredicate<ClusterNode> nodeFilter();
+
+    default FlowResultAggregator resultAggregator() {
+        return new AnyResultReducer();
+    }
 }

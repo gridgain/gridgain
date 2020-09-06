@@ -25,14 +25,14 @@ import static java.util.Collections.unmodifiableList;
 public class GridFlowElement<T extends FlowTask<A, R>, A, R> implements Serializable {
     private final String name;
 
-    private final GridFlowTaskAdapter<T, A, R> node;
+    private final GridFlowTaskAdapter<T, A, R> taskAdapter;
 
     private final Collection<IgniteBiTuple<FlowCondition, GridFlowElement>> childElements;
 
-    public GridFlowElement(String name, GridFlowTaskAdapter<T, A, R> node,
+    public GridFlowElement(String name, GridFlowTaskAdapter<T, A, R> taskAdapter,
         List<IgniteBiTuple<FlowCondition, GridFlowElement>> childElements) {
         this.name = name;
-        this.node = node;
+        this.taskAdapter = taskAdapter;
         this.childElements = unmodifiableList(childElements);
     }
 
@@ -40,8 +40,8 @@ public class GridFlowElement<T extends FlowTask<A, R>, A, R> implements Serializ
         return name;
     }
 
-    public GridFlowTaskAdapter<T, A, R> node() {
-        return node;
+    public GridFlowTaskAdapter<T, A, R> taskAdapter() {
+        return taskAdapter;
     }
 
     public Collection<IgniteBiTuple<FlowCondition, GridFlowElement>> childElements() {

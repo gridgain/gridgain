@@ -16,23 +16,13 @@
 package org.apache.ignite.internal.compute.flow;
 
 public class GridTaskFlow {
-    private final GridFlowElement rootNode;
+    private final GridFlowElement rootElement;
 
-    private final FlowResultAggregator aggregator;
-
-    public GridTaskFlow(
-        GridFlowElement rootNode,
-        FlowResultAggregator aggregator
-    ) {
-        this.rootNode = rootNode;
-        this.aggregator = aggregator;
+    public GridTaskFlow(GridFlowElement rootElement) {
+        this.rootElement = rootElement;
     }
 
-    public GridFlowElement rootNode() {
-        return rootNode;
-    }
-
-    public FlowResultAggregator aggregator() {
-        return aggregator;
+    public GridFlowElement rootElement() {
+        return rootElement;
     }
 }

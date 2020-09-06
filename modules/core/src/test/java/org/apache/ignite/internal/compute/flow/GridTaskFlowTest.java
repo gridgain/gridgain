@@ -59,7 +59,7 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrids(nodeCnt);
 
-        GridTaskFlow flow = new GridTaskFlowBuilder(new AnyResultAggregator())
+        GridTaskFlow flow = new GridTaskFlowBuilder()
             .addTask("str", null, new StringHashTaskAdapter(), null)
             .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
             .build();
@@ -86,7 +86,7 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrids(nodeCnt);
 
-        GridTaskFlow flow = new GridTaskFlowBuilder(new AnyResultAggregator())
+        GridTaskFlow flow = new GridTaskFlowBuilder()
             .addTask("str", null, new StringHashTaskAdapter(), null)
             .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
             .build();
