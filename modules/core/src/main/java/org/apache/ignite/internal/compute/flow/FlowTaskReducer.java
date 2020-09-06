@@ -15,18 +15,7 @@
  */
 package org.apache.ignite.internal.compute.flow;
 
-import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.lang.IgniteReducer;
 
-public class AnyResultReducer implements FlowTaskReducer {
-    private final transient AtomicReference<GridFlowTaskTransferObject> resultRef = new AtomicReference<>();
-
-    @Override public GridFlowTaskTransferObject reduce() {
-        return resultRef.get();
-    }
-
-    @Override public boolean collect(GridFlowTaskTransferObject object) {
-        resultRef.compareAndSet(null, object);
-
-        return true;
-    }
+public interface FlowTaskReducer extends IgniteReducer<GridFlowTaskTransferObject, GridFlowTaskTransferObject> {
 }

@@ -29,7 +29,6 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.lang.IgniteReducer;
 
 public class GridTaskFlowContext {
     private final GridKernalContext ctx;
@@ -52,17 +51,23 @@ public class GridTaskFlowContext {
     public IgniteInternalFuture<GridFlowTaskTransferObject> start() {
         assert isStarted.compareAndSet(false, true);
 
-        IgniteReducer resultAggregator = flow.rootElement().taskAdapter().resultAggregator();
+        FlowTaskReducer resultReducer = flow.rootElement().taskAdapter().resultReducer();
 
-        IgniteInternalFuture rootTaskFut = executeFlowTaskAsync(flow.rootElement(), flowParams, resultAggregator);
+        IgniteInternalFuture<GridFlowTaskTransferObject> rootTaskFut =
+            executeFlowTaskAsync(flow.rootElement(), flowParams, resultReducer);
 
-        rootTaskFut.listen(new IgniteInClosure<IgniteInternalFuture>() {
-            @Override public void apply(IgniteInternalFuture future) {
+        rootTaskFut.listen(new IgniteInClosure<IgniteInternalFuture<GridFlowTaskTransferObject>>() {
+            @Override public void apply(IgniteInternalFuture<GridFlowTaskTransferObject> future) {
                 try {
-                    completeFlow(future.get());
+                    GridFlowTaskTransferObject res = future.get();
+
+                    if (res.successfull())
+                        completeFut.onDone(res);
+                    else
+                        completeFut.onDone(res.exception());
                 }
                 catch (IgniteCheckedException e) {
-                    e.printStackTrace();
+                    completeFut.onDone(e);
                 }
             }
         });
@@ -70,36 +75,43 @@ public class GridTaskFlowContext {
         return completeFut;
     }
 
-    private IgniteInternalFuture completeTask(GridFlowElement flowElement, GridFlowTaskTransferObject result, FlowResultAggregator resultAggregator) {
-        GridCompoundFuture taskAndSubtasksCompleteFut = new GridCompoundFuture();
+    private IgniteInternalFuture<GridFlowTaskTransferObject> completeTask(GridFlowElement flowElement, GridFlowTaskTransferObject result, FlowTaskReducer resultReducer) {
+        GridCompoundFuture<GridFlowTaskTransferObject, GridFlowTaskTransferObject> taskAndSubtasksCompleteFut =
+            new GridCompoundFuture<>(resultReducer);
 
         if (!flowElement.childElements().isEmpty()) {
             for (IgniteBiTuple<FlowCondition, GridFlowElement> childElementsInfo : (Collection<IgniteBiTuple<FlowCondition, GridFlowElement>>)flowElement.childElements()) {
                 if (childElementsInfo.get1().test(result)) {
-                    FlowResultAggregator childResultAggregator = childElementsInfo.get2().taskAdapter().resultAggregator();
+                    FlowTaskReducer childResultReducer = childElementsInfo.get2().taskAdapter().resultReducer();
 
-                    IgniteInternalFuture fut = executeFlowTaskAsync(childElementsInfo.get2(), result, childResultAggregator);
+                    IgniteInternalFuture<GridFlowTaskTransferObject> fut =
+                        executeFlowTaskAsync(childElementsInfo.get2(), result, childResultReducer);
 
                     fut.listen(new IgniteInClosure<IgniteInternalFuture<GridFlowTaskTransferObject>>() {
                         @Override public void apply(IgniteInternalFuture<GridFlowTaskTransferObject> future) {
-                            resultAggregator.accept(childResultAggregator.result());
+                            try {
+                                resultReducer.collect(future.get());
+                            }
+                            catch (IgniteCheckedException e) {
+                                resultReducer.collect(new GridFlowTaskTransferObject(e));
+                            }
                         }
                     });
 
                     taskAndSubtasksCompleteFut.add(fut);
                 }
             }
-
-            if (taskAndSubtasksCompleteFut.futures().isEmpty() && !result.successfull())
-                resultAggregator.accept(result);
-
-            taskAndSubtasksCompleteFut.markInitialized();
         }
-        else {
-            resultAggregator.accept(result);
 
-            taskAndSubtasksCompleteFut.onDone();
+        if (taskAndSubtasksCompleteFut.futures().isEmpty()) {
+            GridFutureAdapter<GridFlowTaskTransferObject> f0 = new GridFutureAdapter<>();
+
+            taskAndSubtasksCompleteFut.add(f0);
+
+            f0.onDone(result);
         }
+
+        taskAndSubtasksCompleteFut.markInitialized();
 
         return taskAndSubtasksCompleteFut;
     }
@@ -114,7 +126,7 @@ public class GridTaskFlowContext {
     private <T extends FlowTask<A, R>, A, R> IgniteInternalFuture<GridFlowTaskTransferObject> executeFlowTaskAsync(
         GridFlowElement<T, A, R> flowElement,
         GridFlowTaskTransferObject params,
-        FlowResultAggregator resultAggregator
+        FlowTaskReducer resultReducer
     ) {
         GridFlowTaskAdapter<T, A, R> taskAdapter = flowElement.taskAdapter();
 
@@ -128,7 +140,7 @@ public class GridTaskFlowContext {
 
         ComputeTaskFuture<R> fut = ctx.grid().compute(group).executeAsync(taskCls, args);
 
-        GridFutureAdapter resultFut = new GridFutureAdapter();
+        GridFutureAdapter<GridFlowTaskTransferObject> resultFut = new GridFutureAdapter();
 
         fut.listen(new IgniteInClosure<IgniteFuture<R>>() {
             @Override public void apply(IgniteFuture<R> future) {
@@ -146,14 +158,12 @@ public class GridTaskFlowContext {
                     res = new GridFlowTaskTransferObject(e);
                 }
 
-                IgniteInternalFuture taskCompleteFut = completeTask(flowElement, res, resultAggregator);
+                IgniteInternalFuture<GridFlowTaskTransferObject> taskCompleteFut = completeTask(flowElement, res, resultReducer);
 
-                taskCompleteFut.listen(new IgniteInClosure<IgniteInternalFuture>() {
-                    @Override public void apply(IgniteInternalFuture future) {
+                taskCompleteFut.listen(new IgniteInClosure<IgniteInternalFuture<GridFlowTaskTransferObject>>() {
+                    @Override public void apply(IgniteInternalFuture<GridFlowTaskTransferObject> future) {
                         try {
-                            future.get();
-
-                            resultFut.onDone(resultAggregator);
+                            resultFut.onDone(future.get());
                         }
                         catch (Throwable e) {
                             resultFut.onDone(e);

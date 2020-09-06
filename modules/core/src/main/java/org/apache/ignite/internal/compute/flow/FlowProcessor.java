@@ -51,6 +51,6 @@ public class FlowProcessor extends GridProcessorAdapter {
 
         IgniteInternalFuture<GridFlowTaskTransferObject> fut = flowContext.start();
 
-        return new IgniteFutureImpl(fut);
+        return new IgniteFutureImpl<>(fut);
     }
 }
