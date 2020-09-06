@@ -24,7 +24,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Net;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
-    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
@@ -285,7 +284,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var reqs = GetLoggers()
                 .Select(l => new
                 {
-                    Logger = l, 
+                    Logger = l,
                     Requests = GetServerRequestNames(l, RequestNamePrefixCache).ToArray()
                 })
                 .Where(r => r.Requests.Length > 0)
