@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.IgniteTopologyValidatorGridSplitCacheTest;
-import org.apache.ignite.internal.processors.cache.IgniteTopologyValidatorGridSplitCacheWithCacheGroupTest;
 import org.apache.ignite.internal.processors.cache.IgniteTopologyValidatorNearPartitionedAtomicCacheGroupsTest;
 import org.apache.ignite.internal.processors.cache.IgniteTopologyValidatorNearPartitionedAtomicCacheTest;
 import org.apache.ignite.internal.processors.cache.IgniteTopologyValidatorNearPartitionedTxCacheGroupsTest;
@@ -61,7 +60,6 @@ public class IgniteTopologyValidatorTestSuite {
         GridTestUtils.addTestIfNeeded(suite, IgniteTopologyValidatorReplicatedTxCacheGroupsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteTopologyValidatorGridSplitCacheTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteTopologyValidatorGridSplitCacheWithCacheGroupTest.class, ignoredTests);
 
         return suite;
     }
