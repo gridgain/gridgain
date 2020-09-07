@@ -419,7 +419,7 @@ public class CycleDetectingLockFactory {
         void checkAcquiredLocks(Policy policy, List<LockGraphNode> acquiredLocks) throws IgniteCheckedException {
             for (int i = 0, size = acquiredLocks.size(); i < size; i++)
                 checkAcquiredLock(policy, acquiredLocks.get(i));
-            System.out.println("allowedPriorLocks.size() = " + allowedPriorLocks.size());
+            //System.out.println("allowedPriorLocks.size() = " + allowedPriorLocks.size());
         }
 
 
