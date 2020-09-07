@@ -162,7 +162,7 @@ public class IgniteTopologyValidatorGridSplitCacheAbstractTest extends IgniteCac
         cfg.setUserAttributes(userAttrs);
 
         cfg.setMemoryConfiguration(new MemoryConfiguration().
-            setDefaultMemoryPolicySize((50L << 20) + (80L << 20) * CACHES_CNT / GRID_CNT));
+            setDefaultMemoryPolicySize((50L << 20) + (120L << 20) * CACHES_CNT / GRID_CNT));
 
         return cfg;
     }
