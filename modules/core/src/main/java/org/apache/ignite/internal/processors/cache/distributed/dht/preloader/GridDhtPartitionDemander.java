@@ -1220,7 +1220,7 @@ public class GridDhtPartitionDemander {
         private final GridDhtPreloaderAssignments assignments;
 
         /** Partitions which have been scheduled for rebalance from specific supplier. */
-        private final Map<ClusterNode, Set<Integer>> rebalancingParts;
+        private final Map<UUID, Set<Integer>> rebalancingParts;
 
         /** Received keys for full rebalance by supplier. */
         private final Map<UUID, LongAdder> fullReceivedKeys = new ConcurrentHashMap<>();
@@ -1273,7 +1273,7 @@ public class GridDhtPartitionDemander {
 
                 partitionsLeft.addAndGet(v.partitions().size());
 
-                rebalancingParts.put(k, new HashSet<Integer>(v.partitions().size()) {{
+                rebalancingParts.put(k.id(), new HashSet<Integer>(v.partitions().size()) {{
                     addAll(v.partitions().historicalSet());
                     addAll(v.partitions().fullSet());
                 }});
@@ -1864,8 +1864,8 @@ public class GridDhtPartitionDemander {
             Set<Integer> p1 = new HashSet<>();
 
             // Not compatible if a supplier has left.
-            for (ClusterNode node : rebalancingParts.keySet()) {
-                if (!grp.cacheObjectContext().kernalContext().discovery().alive(node))
+            for (UUID nodeId : rebalancingParts.keySet()) {
+                if (!grp.cacheObjectContext().kernalContext().discovery().alive(nodeId))
                     return false;
             }
 
@@ -2007,7 +2007,7 @@ public class GridDhtPartitionDemander {
             int remainingRoutines = remaining.size() - 1;
 
             try {
-                Map<Boolean, Long> partCnts = rebalancingParts.get(ctx.node(nodeId)).stream()
+                Map<Boolean, Long> partCnts = rebalancingParts.getOrDefault(nodeId, Collections.emptySet()).stream()
                     .collect(partitioningBy(historical::contains, counting()));
 
                 int fullParts = partCnts.getOrDefault(Boolean.FALSE, 0L).intValue();

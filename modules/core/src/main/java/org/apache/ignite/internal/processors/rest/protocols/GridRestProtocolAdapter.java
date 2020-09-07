@@ -163,7 +163,7 @@ public abstract class GridRestProtocolAdapter implements GridRestProtocol {
                 ) :
                 Collections.<IgniteBiTuple<String, Object>>emptyList();
         }
-        catch (IgniteCheckedException | IOException ignored) {
+        catch (IOException ignored) {
             return null;
         }
     }
