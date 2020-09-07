@@ -25,7 +25,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
-
 /**
  * Reservation mechanism for multiple partitions allowing to do a reservation in one operation.
  */
@@ -195,8 +194,7 @@ public class GridDhtPartitionsReservation implements GridReservable {
             if (reservations.compareAndSet(r, r - 1)) {
                 // If it was the last reservation and topology version changed -> attempt to evict partitions.
                 if (r == 1 && !cctx.kernalContext().isStopping() &&
-                    !topVer.equals(cctx.shared().exchange().lastAffinityChangedTopologyVersion(
-                        cctx.topology().lastTopologyChangeVersion())))
+                    !topVer.equals(cctx.topology().lastTopologyChangeVersion()))
                     tryContinueClearing(parts.get());
 
                 return;
