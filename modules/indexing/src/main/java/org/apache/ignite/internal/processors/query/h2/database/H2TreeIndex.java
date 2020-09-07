@@ -533,7 +533,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
-     * Internal method for destroying index with async option.
+     * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
      *
      * @param rmvIdx Flag remove.
      */
