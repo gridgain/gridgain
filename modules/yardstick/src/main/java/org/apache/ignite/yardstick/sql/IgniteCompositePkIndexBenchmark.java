@@ -16,14 +16,17 @@
 
 package org.apache.ignite.yardstick.sql;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSemaphore;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
@@ -34,6 +37,8 @@ import static org.yardstickframework.BenchmarkUtils.println;
  * Ignite benchmark for composite PK.
  */
 public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
+    /** Cache name. */
+    private static final String cacheName = "TEST";
 
     /**
      * Enum of key types possible for testing
@@ -51,55 +56,50 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         SMALL_DECIMAL
     }
 
-    /* List of double keys generated before execution */
-    private final List<Double> doubleKeys = new ArrayList<>();
-
-    /** Cache name for benchmark. */
-    private String cacheName;
-
-    /** */
-    private Class<?> keyCls;
-
     /** How many entries should be preloaded and within which range. */
     private int range;
 
-    /** Type of the key object for the test */
-    private TestedType testedType;
+    /** Key class. */
+    private Class<?> keyCls;
+
+    /** Value class. */
+    private Class<?> valCls;
+
+    private Function<Integer, Object> keyCreator;
+
+    private Function<Integer, Object> valCreator;
 
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
         super.setUp(cfg);
 
         range = args.range();
-        testedType = TestedType.valueOf(args.getStringParameter("testedType", TestedType.PRIMITIVE.toString()));
+        String keyClsName = args.getStringParameter("keyClass", TestKey2Integers.class.getSimpleName());
+        String valClsName = args.getStringParameter("valClass", Value.class.getSimpleName());
 
-        switch (testedType) {
-            case JAVA_OBJECT:
-                cacheName = "CACHE_POJO";
-                keyCls = TestKey.class;
-                break;
-            case PRIMITIVE:
-                cacheName = "CACHE_LONG";
-                keyCls = Integer.class;
-                break;
-            case DECIMAL:
-                generateDoublekeys(doubleKeys);
-                cacheName = "CACHE_DECIMAL";
-                keyCls = BigDecimal.class;
-                break;
-            case LARGE_DECIMAL:
-                generateDoublekeys(doubleKeys);
-                cacheName = "CACHE_LARGE_DECIMAL";
-                keyCls = BigDecimal.class;
-                break;
-            case SMALL_DECIMAL:
-                generateDoublekeys(doubleKeys);
-                cacheName = "CACHE_SMALL_DECIMAL";
-                keyCls = BigDecimal.class;
-                break;
-            default:
-                throw new Exception(testedType + "is not expected type");
-        }
+        keyCls = Class.forName(IgniteCompositePkIndexBenchmark.class.getName() + "$" + keyClsName);
+        final Constructor<?> keyConstructor = keyCls.getConstructor(int.class);
+
+        keyCreator = (key) -> {
+            try {
+                return keyConstructor.newInstance(key);
+            }
+            catch (Exception e) {
+                throw new IgniteException("Unexpected exception", e);
+            }
+        };
+
+        valCls = Class.forName(IgniteCompositePkIndexBenchmark.class.getName() + "$" + valClsName);
+        final Constructor<?> valConstructor = valCls.getConstructor(int.class);
+
+        valCreator = (key) -> {
+            try {
+                return valConstructor.newInstance(key);
+            }
+            catch (Exception e) {
+                throw new IgniteException("Unexpected exception", e);
+            }
+        };
 
         printParameters();
 
@@ -123,74 +123,157 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
         }
     }
 
-    private void generateDoublekeys(List<Double> keys) {
-        while (keys.size() < range)
-            keys.add(ThreadLocalRandom.current().nextDouble(range));
-    }
-
     /**
      *
      */
     private void init() {
         ignite().createCache(
-            new CacheConfiguration<Object, Integer>(cacheName)
-                .setIndexedTypes(keyCls, Integer.class)
+            new CacheConfiguration(cacheName)
+                .setSqlSchema("PUBLIC")
+                .setQueryEntities(Collections.singleton(
+                    new QueryEntity(keyCls, valCls)
+                        .setTableName("TEST")
+                )
+            )
         );
 
-        println(cfg, "Populate cache: " + cacheName + ", range: " + range);
+        println(cfg, "Populate cache, range: " + range);
 
-        try (IgniteDataStreamer<Object, Integer> stream = ignite().dataStreamer(cacheName)) {
+        try (IgniteDataStreamer<Object, Object> stream = ignite().dataStreamer(cacheName)) {
             stream.allowOverwrite(false);
 
-            for (long k = 0; k < range; ++k)
-                stream.addData(nextKey(), ThreadLocalRandom.current().nextInt());
+            for (int k = 0; k < range; ++k)
+                stream.addData(keyCreator.apply(k), valCreator.apply(k));
         }
 
-        println(cfg, "Cache populated: " + cacheName);
+        println(cfg, "Cache populated. ");
     }
 
     /** {@inheritDoc} */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
-        ignite().<Object, Integer>cache(cacheName).put(nextKey(), ThreadLocalRandom.current().nextInt());
+        int k = ThreadLocalRandom.current().nextInt(range);
+        int v = ThreadLocalRandom.current().nextInt(range);
+
+        ignite().cache(cacheName).put(keyCreator.apply(k), valCreator.apply(v));
 
         return true;
     }
 
-    /** Creates next random key. */
-    private Object nextKey() {
-        switch (testedType) {
-            case JAVA_OBJECT:
-                return new TestKey(ThreadLocalRandom.current().nextInt(range));
-            case PRIMITIVE:
-                return ThreadLocalRandom.current().nextInt(range);
-            case DECIMAL:
-                return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range)));
-            case LARGE_DECIMAL:
-                return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range))).pow(3);
-            case SMALL_DECIMAL:
-                // low enough to use intCompact of BigDecimal
-                return BigDecimal.valueOf(doubleKeys.get(ThreadLocalRandom.current().nextInt(range))).
-                    divide(BigDecimal.TEN, RoundingMode.HALF_DOWN).setScale(2, RoundingMode.HALF_UP);
-            default:
-                return null;
-        }
-    }
 
     /** */
     private void printParameters() {
         println("Benchmark parameter:");
         println("    range: " + range);
-        println("    testedType: " + testedType);
+        println("    key: " + keyCls.getSimpleName());
+        println("    val: " + valCls.getSimpleName());
     }
 
-    /** Pojo that used as key value for object's inlining benchmark. */
-    static class TestKey {
+    /** */
+    public static class TestKey2Integers {
         /** */
-        private final int id;
+        @QuerySqlField
+        private final int id0;
+
+        @QuerySqlField
+        private final int id1;
 
         /** */
-        public TestKey(int id) {
-            this.id = id;
+        public TestKey2Integers(int key) {
+            this.id0 = key;
+            this.id1 = key;
+        }
+    }
+
+    /** */
+    public static class TestKeyHugeStringAndInteger {
+        /** Prefix. */
+        private static final String PREFIX = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+        /** */
+        @QuerySqlField
+        private final String id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        /** */
+        public TestKeyHugeStringAndInteger(int key) {
+            this.id0 = PREFIX + key;
+            this.id1 = key;
+        }
+    }
+
+    /** */
+    public static class TestKey8Integers {
+        /** */
+        @QuerySqlField
+        private final int id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        @QuerySqlField
+        private final int id2;
+
+        @QuerySqlField
+        private final int id3;
+
+        @QuerySqlField
+        private final int id4;
+
+        @QuerySqlField
+        private final int id5;
+
+        @QuerySqlField
+        private final int id6;
+
+        @QuerySqlField
+        private final int id7;
+
+        /** */
+        public TestKey8Integers(int key) {
+            this.id0 = key;
+            this.id1 = key;
+            this.id2 = key;
+            this.id3 = key;
+            this.id4 = key;
+            this.id5 = key;
+            this.id6 = key;
+            this.id7 = key;
+        }
+    }
+
+    /** */
+    public static class Value {
+        /** */
+        @QuerySqlField
+        private final int valInt;
+
+        @QuerySqlField
+        private final String valStr;
+
+        /** */
+        public Value(int key) {
+            this.valInt = key;
+            this.valStr = "val_str" + key;
+        }
+    }
+
+    /** */
+    public static class ValueIndexed {
+        /** */
+        @QuerySqlField(index = true)
+        private final int valInt;
+
+        @QuerySqlField(index = true)
+        private final String valStr;
+
+        /** */
+        public ValueIndexed(int key) {
+            this.valInt = key;
+            this.valStr = "val_str" + key;
         }
     }
 }
