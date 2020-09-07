@@ -1283,7 +1283,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                 rebalancedCntrs[i] = updatedPartCntr.get(p);
 
-                partMap.setInitialUpdateCounterAt(i, rebalancedCntrs[i]);
+                partMap.initialUpdateCounterAt(i, rebalancedCntrs[i]);
             }
 
             reservePartitions();
