@@ -37,7 +37,7 @@ public interface ClientListenerRequestHandler {
      * @param req Request.
      * @return Error response.
      */
-    ClientListenerResponse handleException(Exception e, ClientListenerRequest req);
+    ClientListenerResponse handleException(Throwable e, ClientListenerRequest req);
 
     /**
      * Write successful handshake response.
