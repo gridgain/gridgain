@@ -75,7 +75,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
     /** Cache context. */
-    protected final GridCacheContext cctx;
+    private final GridCacheContext cctx;
 
     /** Owning table. */
     private final GridH2Table table;

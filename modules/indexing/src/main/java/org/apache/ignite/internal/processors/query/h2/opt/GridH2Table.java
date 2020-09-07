@@ -1124,16 +1124,8 @@ public class GridH2Table extends TableBase {
 
                     GridCacheContext cctx0 = cacheInfo.cacheContext();
 
-                    if (cctx0 != null && idx0 instanceof GridH2IndexBase) {
-                        cctx0.shared().database().checkpointReadLock();
-
-                        try {
-                            ((GridH2IndexBase)idx0).destroy(rmIndex);
-                        }
-                        finally {
-                            cctx0.shared().database().checkpointReadUnlock();
-                        }
-                    }
+                    if (cctx0 != null && idx0 instanceof GridH2IndexBase)
+                        ((GridH2IndexBase)idx0).destroy(rmIndex);
 
                     continue;
                 }

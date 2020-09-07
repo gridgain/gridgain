@@ -154,7 +154,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
     private final QueryContextRegistry qryCtxRegistry;
 
     /** If {code true} then this index is already marked as destroyed. */
-    private final AtomicBoolean destroyed = new AtomicBoolean(false);
+    private final AtomicBoolean destroyed = new AtomicBoolean();
 
     /**
      * @param cctx Cache context.
@@ -543,20 +543,25 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         try {
             if (cctx.affinityNode() && rmvIdx) {
-                assert cctx.shared().database().checkpointLockIsHeldByThread();
-
                 List<Long> rootPages = new ArrayList<>(segments.length);
                 List<H2Tree> trees = new ArrayList<>(segments.length);
 
-                for (int i = 0; i < segments.length; i++) {
-                    H2Tree tree = segments[i];
+                cctx.shared().database().checkpointReadLock();
 
-                    tree.markDestroyed();
+                try {
+                    for (int i = 0; i < segments.length; i++) {
+                        H2Tree tree = segments[i];
 
-                    rootPages.add(tree.getMetaPageId());
-                    trees.add(tree);
+                        tree.markDestroyed();
 
-                    dropMetaPage(i);
+                        rootPages.add(tree.getMetaPageId());
+                        trees.add(tree);
+
+                        dropMetaPage(i);
+                    }
+                }
+                finally {
+                    cctx.shared().database().checkpointReadUnlock();
                 }
 
                 DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
