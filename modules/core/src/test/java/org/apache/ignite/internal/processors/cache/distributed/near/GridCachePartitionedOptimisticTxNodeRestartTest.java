@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
@@ -181,13 +182,13 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     @Test
     public void testZzz() throws Exception {
         backups = 2;
-        nodeCnt = 4;
+        nodeCnt = 5;
         keyCnt = 10;
         partitions = 128;
         rebalancMode = ASYNC;
         evict = false;
 
-        IgniteEx crd = startGrids(3);
+        IgniteEx crd = startGrids(nodeCnt - 1);
 
         awaitPartitionMapExchange();
 
@@ -196,7 +197,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         List<Integer> primary = IntStream.of(grid(0).affinity(CACHE_NAME).primaryPartitions(testNode.localNode())).boxed().collect(Collectors.toList());
         List<Integer> backups = IntStream.of(grid(0).affinity(CACHE_NAME).backupPartitions(testNode.localNode())).boxed().collect(Collectors.toList());
 
-        IgniteEx g3 = startGrid(3);
+        IgniteEx g4 = startGrid(nodeCnt - 1);
 
         awaitPartitionMapExchange(true, true, null);
 
@@ -228,11 +229,25 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
             TransactionProxyImpl p = (TransactionProxyImpl) tx;
             p.tx().prepare(true);
 
-            System.out.println();
+            Collection<ClusterNode> txNodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(k);
+            txNodes.add(testNode.localNode());
+
+            ClusterNode nonTxNode =
+                crd.cluster().nodes().stream().filter(n -> !txNodes.contains(n)).findFirst().orElseGet(null);
+
+            assertNotNull(nonTxNode);
+
+            IgniteEx nonTxIgnite = (IgniteEx) grid(nonTxNode);
+            assertTrue(nonTxIgnite.context().cache().context().tm().activeTransactions().isEmpty());
+
+            nonTxIgnite.close();
+
+            doSleep(100000);
+
 //
 //            nodes.remove(owner);
 //
-//            grid(owner).close();
+//            nonTxIgnite(owner).close();
 
             //tx.commit();
         }
