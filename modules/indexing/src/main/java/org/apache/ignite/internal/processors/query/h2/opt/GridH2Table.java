@@ -1128,7 +1128,7 @@ public class GridH2Table extends TableBase {
                         cctx0.shared().database().checkpointReadLock();
 
                         try {
-                            ((GridH2IndexBase)idx0).asyncDestroy(rmIndex);
+                            ((GridH2IndexBase)idx0).destroy(rmIndex);
                         }
                         finally {
                             cctx0.shared().database().checkpointReadUnlock();

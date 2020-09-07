@@ -142,9 +142,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Whether index was created from scratch during owning node lifecycle. */
     private final boolean created;
 
-    /** Whether to allow doing {@link #temporaryReleaseLock()}. */
-    private volatile boolean allowTempReleaseLock = false;
-
     /**
      * Constructor.
      *
@@ -894,10 +891,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected void temporaryReleaseLock() {
-        if (allowTempReleaseLock) {
-            cctx.kernalContext().cache().context().database().checkpointReadUnlock();
-            cctx.kernalContext().cache().context().database().checkpointReadLock();
-        }
+        cctx.kernalContext().cache().context().database().checkpointReadUnlock();
+        cctx.kernalContext().cache().context().database().checkpointReadLock();
     }
 
     /** {@inheritDoc} */
@@ -906,12 +901,5 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
         return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
-    }
-
-    /**
-     * @param val Whether to allow doing {@link #temporaryReleaseLock()}.
-     */
-    public void allowTempReleaseLock(boolean val) {
-        allowTempReleaseLock = val;
     }
 }

@@ -144,8 +144,6 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                         0
                     );
 
-                    tree.allowTempReleaseLock(true);
-
                     trees0.add(tree);
                 }
                 catch (IgniteCheckedException e) {

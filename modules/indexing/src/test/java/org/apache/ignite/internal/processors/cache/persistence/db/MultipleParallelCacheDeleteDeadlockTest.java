@@ -197,11 +197,6 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
         return cache.query(new SqlFieldsQuery(qry).setArgs(args)).getAll();
     }
 
-    /** */
-    private static boolean isInsideOfAsyncTask() {
-        return Thread.currentThread().getName().contains("async-durable-background-task-executor");
-    }
-
     /**
      * Test H2 tree.
      */
@@ -303,8 +298,7 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
             long lockMaxTime,
             Deque<GridTuple3<Long, Long, Long>> lockedPages
         ) throws IgniteCheckedException {
-            if (!isInsideOfAsyncTask())
-                doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
+            doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
             return super.destroyDownPages(bag, pageId, lvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
         }
@@ -315,8 +309,7 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
         @Override protected void temporaryReleaseLock() {
             super.temporaryReleaseLock();
 
-            if (!isInsideOfAsyncTask())
-                checkpointBlockingLatch.countDown();
+            checkpointBlockingLatch.countDown();
         }
 
         /** {@inheritDoc} */
