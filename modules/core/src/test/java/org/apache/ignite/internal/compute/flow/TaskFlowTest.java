@@ -36,7 +36,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.compute.ComputeJobResultPolicy.WAIT;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
-public class GridTaskFlowTest extends GridCommonAbstractTest {
+public class TaskFlowTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName);
     }
@@ -59,17 +59,17 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrids(nodeCnt);
 
-        GridTaskFlow flow = new GridTaskFlowBuilder()
+        TaskFlow flow = new TaskFlowBuilder()
             .addTask("str", null, new StringHashTaskAdapter(), null)
             .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
             .build();
 
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
-        IgniteFuture<GridFlowTaskTransferObject> fut = ignite.context().flowProcessor()
-            .executeFlow("asd", new GridFlowTaskTransferObject(new IgniteBiTuple<>("string", "zxc_")));
+        IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
+            .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "zxc_")));
 
-        GridFlowTaskTransferObject res = fut.get();
+        FlowTaskTransferObject res = fut.get();
 
         int r = (int)res.data().get("int");
 
@@ -86,15 +86,15 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrids(nodeCnt);
 
-        GridTaskFlow flow = new GridTaskFlowBuilder()
+        TaskFlow flow = new TaskFlowBuilder()
             .addTask("str", null, new StringHashTaskAdapter(), null)
             .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
             .build();
 
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
-        IgniteFuture<GridFlowTaskTransferObject> fut = ignite.context().flowProcessor()
-            .executeFlow("asd", new GridFlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
+        IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
+            .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
 
         assertThrows(log, () -> fut.get(), IgniteException.class, "qwe not allowed");
     }
@@ -156,17 +156,17 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
         }
     }
 
-    private static class StringHashTaskAdapter implements GridFlowTaskAdapter<StringHashTask, String, Integer> {
+    private static class StringHashTaskAdapter implements FlowTaskAdapter<StringHashTask, String, Integer> {
         @Override public Class<StringHashTask> taskClass() {
             return StringHashTask.class;
         }
 
-        @Override public String arguments(GridFlowTaskTransferObject parentResult) {
+        @Override public String arguments(FlowTaskTransferObject parentResult) {
             return (String)parentResult.data().get("string");
         }
 
-        @Override public GridFlowTaskTransferObject result(Integer integer) {
-            return new GridFlowTaskTransferObject(new IgniteBiTuple<>("int", integer));
+        @Override public FlowTaskTransferObject result(Integer integer) {
+            return new FlowTaskTransferObject(new IgniteBiTuple<>("int", integer));
         }
 
         @Override public IgnitePredicate<ClusterNode> nodeFilter() {
@@ -215,17 +215,17 @@ public class GridTaskFlowTest extends GridCommonAbstractTest {
         }
     }
 
-    private static class SqrIntTaskAdapter implements GridFlowTaskAdapter<SqrIntTask, Integer, Integer> {
+    private static class SqrIntTaskAdapter implements FlowTaskAdapter<SqrIntTask, Integer, Integer> {
         @Override public Class<SqrIntTask> taskClass() {
             return SqrIntTask.class;
         }
 
-        @Override public Integer arguments(GridFlowTaskTransferObject parentResult) {
+        @Override public Integer arguments(FlowTaskTransferObject parentResult) {
             return (Integer)parentResult.data().get("int");
         }
 
-        @Override public GridFlowTaskTransferObject result(Integer r) {
-            return new GridFlowTaskTransferObject(new IgniteBiTuple<>("int", r));
+        @Override public FlowTaskTransferObject result(Integer r) {
+            return new FlowTaskTransferObject(new IgniteBiTuple<>("int", r));
         }
 
         @Override public IgnitePredicate<ClusterNode> nodeFilter() {

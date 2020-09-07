@@ -23,11 +23,11 @@ import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.util.stream.Collectors.toList;
 
-public class GridTaskFlowBuilder {
+public class TaskFlowBuilder {
     private GridFlowTempElement rootElement;
     private Map<String, GridFlowTempElement> elements = new HashMap<>();
 
-    public GridTaskFlowBuilder addTask(String name, String parentName, GridFlowTaskAdapter taskAdapter, FlowCondition condition) {
+    public TaskFlowBuilder addTask(String name, String parentName, FlowTaskAdapter taskAdapter, FlowCondition condition) {
         if (parentName == null) {
             rootElement = new GridFlowTempElement(name, taskAdapter);
 
@@ -46,12 +46,12 @@ public class GridTaskFlowBuilder {
         return this;
     }
 
-    public GridTaskFlow build() {
-        return new GridTaskFlow(tempElementToFlowElement(rootElement));
+    public TaskFlow build() {
+        return new TaskFlow(tempElementToFlowElement(rootElement));
     }
 
-    private GridFlowElement tempElementToFlowElement(GridFlowTempElement tempElement) {
-        return new GridFlowElement(
+    private TaskFlowElement tempElementToFlowElement(GridFlowTempElement tempElement) {
+        return new TaskFlowElement(
             tempElement.name,
             tempElement.taskAdapter,
             tempElement.childElements.stream().map(c -> new IgniteBiTuple(c.get1(), tempElementToFlowElement(c.get2()))).collect(toList()));
@@ -59,10 +59,10 @@ public class GridTaskFlowBuilder {
 
     private static class GridFlowTempElement {
         final String name;
-        final GridFlowTaskAdapter taskAdapter;
+        final FlowTaskAdapter taskAdapter;
         final List<IgniteBiTuple<FlowCondition, GridFlowTempElement>> childElements;
 
-        public GridFlowTempElement(String name, GridFlowTaskAdapter taskAdapter) {
+        public GridFlowTempElement(String name, FlowTaskAdapter taskAdapter) {
             this.name = name;
             this.taskAdapter = taskAdapter;
             this.childElements = new LinkedList<>();

@@ -17,5 +17,5 @@ package org.apache.ignite.internal.compute.flow;
 
 import org.apache.ignite.lang.IgniteReducer;
 
-public interface FlowTaskReducer extends IgniteReducer<GridFlowTaskTransferObject, GridFlowTaskTransferObject> {
+public interface FlowTaskReducer extends IgniteReducer<FlowTaskTransferObject, FlowTaskTransferObject> {
 }

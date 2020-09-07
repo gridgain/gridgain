@@ -22,15 +22,15 @@ import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.util.Collections.unmodifiableList;
 
-public class GridFlowElement<T extends FlowTask<A, R>, A, R> implements Serializable {
+public class TaskFlowElement<T extends FlowTask<A, R>, A, R> implements Serializable {
     private final String name;
 
-    private final GridFlowTaskAdapter<T, A, R> taskAdapter;
+    private final FlowTaskAdapter<T, A, R> taskAdapter;
 
-    private final Collection<IgniteBiTuple<FlowCondition, GridFlowElement>> childElements;
+    private final Collection<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements;
 
-    public GridFlowElement(String name, GridFlowTaskAdapter<T, A, R> taskAdapter,
-        List<IgniteBiTuple<FlowCondition, GridFlowElement>> childElements) {
+    public TaskFlowElement(String name, FlowTaskAdapter<T, A, R> taskAdapter,
+        List<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements) {
         this.name = name;
         this.taskAdapter = taskAdapter;
         this.childElements = unmodifiableList(childElements);
@@ -40,11 +40,11 @@ public class GridFlowElement<T extends FlowTask<A, R>, A, R> implements Serializ
         return name;
     }
 
-    public GridFlowTaskAdapter<T, A, R> taskAdapter() {
+    public FlowTaskAdapter<T, A, R> taskAdapter() {
         return taskAdapter;
     }
 
-    public Collection<IgniteBiTuple<FlowCondition, GridFlowElement>> childElements() {
+    public Collection<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements() {
         return childElements;
     }
 }

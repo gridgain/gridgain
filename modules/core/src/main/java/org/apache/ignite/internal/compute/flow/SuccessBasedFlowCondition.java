@@ -15,8 +15,8 @@
  */
 package org.apache.ignite.internal.compute.flow;
 
-public class SuccessBasedFlowCondition implements FlowCondition{
-    @Override public boolean test(GridFlowTaskTransferObject parentResult) {
+public class SuccessBasedFlowCondition implements FlowCondition {
+    @Override public boolean test(FlowTaskTransferObject parentResult) {
         return parentResult.successfull();
     }
 }

@@ -19,23 +19,23 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.lang.IgniteBiTuple;
 
-public class GridFlowTaskTransferObject {
+public class FlowTaskTransferObject {
     private final Map<String, Object> data;
 
     private final Throwable exception;
 
-    public GridFlowTaskTransferObject(IgniteBiTuple<String, Object> data) {
+    public FlowTaskTransferObject(IgniteBiTuple<String, Object> data) {
         this.data = new HashMap<>();
         this.data.put(data.getKey(), data.getValue());
         this.exception = null;
     }
 
-    public GridFlowTaskTransferObject(Map<String, Object> data) {
+    public FlowTaskTransferObject(Map<String, Object> data) {
         this.data = data;
         this.exception = null;
     }
 
-    public GridFlowTaskTransferObject(Throwable exception) {
+    public FlowTaskTransferObject(Throwable exception) {
         this.data = null;
         this.exception = exception;
     }

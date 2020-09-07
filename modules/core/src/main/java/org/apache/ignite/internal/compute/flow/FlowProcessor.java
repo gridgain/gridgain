@@ -24,7 +24,7 @@ import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.lang.IgniteFuture;
 
 public class FlowProcessor extends GridProcessorAdapter {
-    private final Map<String, GridTaskFlow> flows = new ConcurrentHashMap<>();
+    private final Map<String, TaskFlow> flows = new ConcurrentHashMap<>();
     /**
      * @param ctx Kernal context.
      */
@@ -32,7 +32,7 @@ public class FlowProcessor extends GridProcessorAdapter {
         super(ctx);
     }
 
-    public void addFlow(String name, GridTaskFlow flow, boolean replaceExisting) {
+    public void addFlow(String name, TaskFlow flow, boolean replaceExisting) {
         flows.put(name, flow);
     }
 
@@ -40,16 +40,16 @@ public class FlowProcessor extends GridProcessorAdapter {
         flows.remove(name);
     }
 
-    public GridTaskFlow flow(String name) {
+    public TaskFlow flow(String name) {
         return flows.get(name);
     }
 
-    public IgniteFuture<GridFlowTaskTransferObject> executeFlow(String name, GridFlowTaskTransferObject initialParams) {
-        GridTaskFlow flow = flow(name);
+    public IgniteFuture<FlowTaskTransferObject> executeFlow(String name, FlowTaskTransferObject initialParams) {
+        TaskFlow flow = flow(name);
 
-        GridTaskFlowContext flowContext = new GridTaskFlowContext(ctx, flow, initialParams);
+        TaskFlowContext flowContext = new TaskFlowContext(ctx, flow, initialParams);
 
-        IgniteInternalFuture<GridFlowTaskTransferObject> fut = flowContext.start();
+        IgniteInternalFuture<FlowTaskTransferObject> fut = flowContext.start();
 
         return new IgniteFutureImpl<>(fut);
     }

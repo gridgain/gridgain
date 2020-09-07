@@ -15,14 +15,16 @@
  */
 package org.apache.ignite.internal.compute.flow;
 
-public class GridTaskFlow {
-    private final GridFlowElement rootElement;
+import java.io.Serializable;
 
-    public GridTaskFlow(GridFlowElement rootElement) {
+public class TaskFlow implements Serializable {
+    private final TaskFlowElement rootElement;
+
+    public TaskFlow(TaskFlowElement rootElement) {
         this.rootElement = rootElement;
     }
 
-    public GridFlowElement rootElement() {
+    public TaskFlowElement rootElement() {
         return rootElement;
     }
 }

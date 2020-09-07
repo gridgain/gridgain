@@ -18,5 +18,5 @@ package org.apache.ignite.internal.compute.flow;
 import java.io.Serializable;
 import java.util.function.Predicate;
 
-public interface FlowCondition extends Predicate<GridFlowTaskTransferObject>, Serializable {
+public interface FlowCondition extends Predicate<FlowTaskTransferObject>, Serializable {
 }
