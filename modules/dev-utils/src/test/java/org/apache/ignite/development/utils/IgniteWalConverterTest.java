@@ -156,7 +156,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             DataStorageConfiguration.DFLT_PAGE_SIZE,
             new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false), nodeFolder),
             U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
-            false,
+            true,
             null,
             null, null, null, null, true,true
         );
@@ -343,7 +343,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             DataStorageConfiguration.DFLT_PAGE_SIZE,
             new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false), nodeFolder),
             U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
-            false,
+            true,
             null,
             null, null, null, null, true,true
         );
@@ -455,7 +455,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
             DataStorageConfiguration.DFLT_PAGE_SIZE,
             new File(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH, false), nodeFolder),
             U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false),
-            false,
+            true,
             null,
             null, null, null, null, true,true
         );
