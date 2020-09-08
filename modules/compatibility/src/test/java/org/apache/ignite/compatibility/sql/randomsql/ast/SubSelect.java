@@ -17,42 +17,33 @@
 package org.apache.ignite.compatibility.sql.randomsql.ast;
 
 /**
- * Binary condition.
+ * Wrapper on select query.
  */
-public class BiCondition implements Ast {
+public class SubSelect implements Ast {
     /** */
-    private final Ast left;
-
-    /** */
-    private final Ast right;
-
-    /** */
-    private final Operator op;
+    private final Select select;
 
     /**
-     * @param left Left operand.
-     * @param right Right operand.
-     * @param op Operator.
+     * @param select Target select expression.
      */
-    public BiCondition(Ast left, Ast right, Operator op) {
-        this.left = left;
-        this.right = right;
-        this.op = op;
+    public SubSelect(Select select) {
+        this.select = select;
+    }
+
+    /**
+     * Returns target select expression.
+     *
+     * @return Select expression.
+     */
+    public Select select() {
+        return select;
     }
 
     /** {@inheritDoc} */
     @Override public void writeTo(StringBuilder out) {
         out.append('(');
 
-        left.writeTo(out);
-
-        out.append(' ');
-
-        op.writeTo(out);
-
-        out.append(' ');
-
-        right.writeTo(out);
+        select.writeTo(out);
 
         out.append(')');
     }

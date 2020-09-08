@@ -17,27 +17,23 @@
 package org.apache.ignite.compatibility.sql.randomsql.ast;
 
 /**
- * Binary condition.
+ * IN condition.
  */
-public class BiCondition implements Ast {
+public class InCondition implements Ast {
     /** */
     private final Ast left;
 
     /** */
-    private final Ast right;
-
-    /** */
-    private final Operator op;
+    private final Ast[] right;
 
     /**
      * @param left Left operand.
-     * @param right Right operand.
-     * @param op Operator.
+     * @param right Possible values.
      */
-    public BiCondition(Ast left, Ast right, Operator op) {
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    public InCondition(Ast left, Ast[] right) {
         this.left = left;
         this.right = right;
-        this.op = op;
     }
 
     /** {@inheritDoc} */
@@ -46,14 +42,15 @@ public class BiCondition implements Ast {
 
         left.writeTo(out);
 
-        out.append(' ');
+        out.append(" IN (");
 
-        op.writeTo(out);
+        for (int i = 0; i < right.length; i++) {
+            right[i].writeTo(out);
 
-        out.append(' ');
+            if (i < right.length - 1)
+                out.append(", ");
+        }
 
-        right.writeTo(out);
-
-        out.append(')');
+        out.append("))");
     }
 }
