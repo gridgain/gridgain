@@ -23,15 +23,12 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -143,9 +140,8 @@ public class ScanQueriesTopologyMappingTest extends GridCommonAbstractTest {
                 res = new ArrayList<>();
 
                 //check iterator
-                for (Cache.Entry<Object, Object> entry : cache) {
+                for (Cache.Entry<Object, Object> entry : cache)
                     res.add(entry);
-                }
 
                 assertEquals(1, res.size());
                 assertEquals(1, res.get(0).getKey());
@@ -214,9 +210,8 @@ public class ScanQueriesTopologyMappingTest extends GridCommonAbstractTest {
 
                 res = new ArrayList<>();
 
-                for (Cache.Entry<Object, Object> entry : cache) {
+                for (Cache.Entry<Object, Object> entry : cache)
                     res.add(entry);
-                }
 
                 assertEquals(1, res.size());
                 assertEquals(1, res.get(0).getKey());
@@ -258,17 +253,15 @@ public class ScanQueriesTopologyMappingTest extends GridCommonAbstractTest {
         int grpId = sndNode.cachex(cacheName).context().groupId();
 
         TestRecordingCommunicationSpi comm0 = (TestRecordingCommunicationSpi)sndNode.configuration().getCommunicationSpi();
-        comm0.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode node, Message msg) {
-                String dstName = node.attribute(ATTR_IGNITE_INSTANCE_NAME);
+        comm0.blockMessages((node, msg) -> {
+            String dstName = node.attribute(ATTR_IGNITE_INSTANCE_NAME);
 
-                if (dstNodeName.equals(dstName) && msg instanceof GridDhtPartitionSupplyMessage) {
-                    GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
-                    return msg0.groupId() == grpId;
-                }
-
-                return false;
+            if (dstNodeName.equals(dstName) && msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage)msg;
+                return msg0.groupId() == grpId;
             }
+
+            return false;
         });
     }
 }
