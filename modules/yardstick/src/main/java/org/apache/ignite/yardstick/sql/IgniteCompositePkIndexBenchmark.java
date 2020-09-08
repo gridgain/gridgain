@@ -179,7 +179,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         /** */
         public TestKey2Integers(int key) {
-            this.id0 = key;
+            this.id0 = 0;
             this.id1 = key;
         }
     }
@@ -234,13 +234,13 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
 
         /** */
         public TestKey8Integers(int key) {
-            this.id0 = key;
-            this.id1 = key;
-            this.id2 = key;
-            this.id3 = key;
-            this.id4 = key;
-            this.id5 = key;
-            this.id6 = key;
+            this.id0 = 0;
+            this.id1 = key / 100_000;
+            this.id2 = key / 10_000;
+            this.id3 = key / 1_000;
+            this.id4 = key / 1000;
+            this.id5 = key / 100;
+            this.id6 = key / 10;
             this.id7 = key;
         }
     }
