@@ -96,7 +96,7 @@ public class CacheConfigurationSplitterImpl implements CacheConfigurationSplitte
         Map<String, String> fieldClsNames = new HashMap<>();
 
         for (Field field : cfgCls.getDeclaredFields()) {
-            if (isSplitterSupports(field)) {
+            if (supports(field)) {
                 field.setAccessible(true);
 
                 Object val = field.get(cfg);
@@ -121,7 +121,7 @@ public class CacheConfigurationSplitterImpl implements CacheConfigurationSplitte
      * @param field Field.
      * @return True if splitter serialization is supported, false otherwise.
      */
-    private boolean isSplitterSupports(Field field) {
+    private boolean supports(Field field) {
         if (field.getDeclaredAnnotation(SerializeSeparately.class) == null)
             return false;
 
