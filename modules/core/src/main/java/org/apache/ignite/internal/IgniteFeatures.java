@@ -206,7 +206,7 @@ public enum IgniteFeatures {
         if (ctx != null) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
+            if (status.enabled() && !status.forcedModeEnabled())
                 return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
         }
 

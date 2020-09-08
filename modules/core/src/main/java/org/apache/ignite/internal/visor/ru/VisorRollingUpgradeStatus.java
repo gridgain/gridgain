@@ -20,10 +20,9 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 
 /**
  * Represents a wrapper class for a value of {@link RollingUpgradeStatus}.
@@ -76,7 +75,7 @@ public class VisorRollingUpgradeStatus extends IgniteDataTransferObject {
      *
      * @param status Rolling upgrade status to be copied.
      */
-    public VisorRollingUpgradeStatus(IgniteRollingUpgradeStatus status) {
+    public VisorRollingUpgradeStatus(RollingUpgradeStatus status) {
         this(
             status.enabled(),
             status.forcedModeEnabled(),
