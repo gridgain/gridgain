@@ -21,6 +21,7 @@
 #include <string>
 
 #include "impl/data_router.h"
+#include "impl/transactions/transactions_impl.h"
 
 namespace ignite
 {
@@ -57,6 +58,7 @@ namespace ignite
                      */
                     CacheClientImpl(
                         const SP_DataRouter& router,
+                        const transactions::SP_TransactionsImpl& tx,
                         const std::string& name,
                         int32_t id);
 
@@ -296,6 +298,9 @@ namespace ignite
                     template<typename ReqT, typename RspT>
                     void SyncCacheKeyMessage(const WritableKey& key, const ReqT& req, RspT& rsp);
 
+                    template<typename ReqT>
+                    void checkTransactional(ReqT& req);
+
                     /**
                      * Synchronously send message and receive response.
                      *
@@ -308,6 +313,9 @@ namespace ignite
 
                     /** Data router. */
                     SP_DataRouter router;
+
+                    /** Transactions. */
+                    transactions::SP_TransactionsImpl tx;
 
                     /** Cache name. */
                     std::string name;

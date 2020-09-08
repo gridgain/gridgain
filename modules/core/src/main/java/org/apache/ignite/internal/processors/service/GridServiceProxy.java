@@ -67,10 +67,16 @@ public class GridServiceProxy<T> implements Serializable {
     /** */
     private static final Method PLATFORM_SERVICE_INVOKE_METHOD;
 
+    /** */
+    private static final Method PLATFORM_SERVICE_INVOKE_METHOD2;
+
     static {
         try {
             PLATFORM_SERVICE_INVOKE_METHOD = PlatformService.class.getMethod("invokeMethod", String.class,
                     boolean.class, Object[].class);
+
+            PLATFORM_SERVICE_INVOKE_METHOD2 = PlatformService.class.getMethod("invokeMethod", String.class,
+                    boolean.class, boolean.class, Object[].class);
         }
         catch (NoSuchMethodException e) {
             throw new ExceptionInInitializerError("'invokeMethod' is not defined in " + PlatformService.class.getName());
@@ -190,8 +196,14 @@ public class GridServiceProxy<T> implements Serializable {
                         if (svcCtx != null) {
                             Service svc = svcCtx.service();
 
-                            if (svc != null)
-                                return callServiceLocally(svc, mtd, args);
+                            if (svc != null) {
+                                try {
+                                    return callServiceLocally(svc, mtd, args);
+                                }
+                                catch (InvocationTargetException e) {
+                                    throw e.getTargetException();
+                                }
+                            }
                         }
                     }
                     else {
@@ -266,7 +278,9 @@ public class GridServiceProxy<T> implements Serializable {
      * @return Invocation result.
      */
     private Object callServiceLocally(Service svc, Method mtd, Object[] args) throws Exception {
-        if (svc instanceof PlatformService && !PLATFORM_SERVICE_INVOKE_METHOD.equals(mtd))
+        if (svc instanceof PlatformService &&
+                !PLATFORM_SERVICE_INVOKE_METHOD.equals(mtd) &&
+                !PLATFORM_SERVICE_INVOKE_METHOD2.equals(mtd))
             return ((PlatformService)svc).invokeMethod(methodName(mtd), false, true, args);
         else
             return mtd.invoke(svc, args);
