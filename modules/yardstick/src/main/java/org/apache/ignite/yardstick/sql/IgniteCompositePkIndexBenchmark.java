@@ -17,17 +17,18 @@
 package org.apache.ignite.yardstick.sql;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 
@@ -127,7 +128,7 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
      *
      */
     private void init() {
-        ignite().createCache(
+        IgniteCache c = ignite().createCache(
             new CacheConfiguration(cacheName)
                 .setSqlSchema("PUBLIC")
                 .setQueryEntities(Collections.singleton(
@@ -136,6 +137,8 @@ public class IgniteCompositePkIndexBenchmark extends IgniteAbstractBenchmark {
                 )
             )
         );
+
+        println(cfg, "Cache entities: " + ((IgniteEx)ignite()).cachex(cacheName).configuration().getQueryEntities());
 
         println(cfg, "Populate cache, range: " + range);
 
