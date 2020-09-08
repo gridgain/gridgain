@@ -17,14 +17,27 @@ package org.apache.ignite.internal.compute.flow;
 
 import java.io.Serializable;
 
+/**
+ *
+ */
 public class TaskFlow implements Serializable {
-    private final TaskFlowElement rootElement;
+    private static final long serialVersionUID = 0L;
 
-    public TaskFlow(TaskFlowElement rootElement) {
+    private final FlowElement rootElement;
+
+    /**
+     * Constructor.
+     *
+     * @param rootElement
+     */
+    public TaskFlow(FlowElement rootElement) {
         this.rootElement = rootElement;
     }
 
-    public TaskFlowElement rootElement() {
+    /**
+     * @return Returns a root element.
+     */
+    public FlowElement rootElement() {
         return rootElement;
     }
 }

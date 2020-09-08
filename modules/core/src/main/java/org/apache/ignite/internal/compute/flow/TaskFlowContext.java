@@ -27,7 +27,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 
@@ -76,17 +75,17 @@ public class TaskFlowContext {
         return completeFut;
     }
 
-    private IgniteInternalFuture<FlowTaskTransferObject> completeTask(TaskFlowElement flowElement, FlowTaskTransferObject result, FlowTaskReducer resultReducer) {
+    private IgniteInternalFuture<FlowTaskTransferObject> completeTask(FlowElement flowElement, FlowTaskTransferObject result, FlowTaskReducer resultReducer) {
         GridCompoundFuture<FlowTaskTransferObject, FlowTaskTransferObject> taskAndSubtasksCompleteFut =
             new GridCompoundFuture<>(resultReducer);
 
         if (!flowElement.childElements().isEmpty()) {
-            for (IgniteBiTuple<FlowCondition, TaskFlowElement> childElementsInfo : (Collection<IgniteBiTuple<FlowCondition, TaskFlowElement>>)flowElement.childElements()) {
-                if (childElementsInfo.get1().test(result)) {
-                    FlowTaskReducer childResultReducer = childElementsInfo.get2().reducer();
+            for (FlowElement childElement : (Collection<FlowElement>)flowElement.childElements()) {
+                if (childElement.condition().test(result)) {
+                    FlowTaskReducer childResultReducer = childElement.reducer();
 
                     IgniteInternalFuture<FlowTaskTransferObject> fut =
-                        executeFlowTaskAsync(childElementsInfo.get2(), result, childResultReducer);
+                        executeFlowTaskAsync(childElement, result, childResultReducer);
 
                     fut.listen(new IgniteInClosure<IgniteInternalFuture<FlowTaskTransferObject>>() {
                         @Override public void apply(IgniteInternalFuture<FlowTaskTransferObject> future) {
@@ -118,7 +117,7 @@ public class TaskFlowContext {
     }
 
     private <T extends ComputeTask<A, R>, A, R> IgniteInternalFuture<FlowTaskTransferObject> executeFlowTaskAsync(
-        TaskFlowElement<T, A, R> flowElement,
+        FlowElement<T, A, R> flowElement,
         FlowTaskTransferObject params,
         FlowTaskReducer resultReducer
     ) {
@@ -126,7 +125,7 @@ public class TaskFlowContext {
 
         Class<T> taskCls = taskAdapter.taskClass();
 
-        A args = taskAdapter.arguments(params);
+        A args = taskAdapter.parameters(params);
 
         ClusterGroup group = taskAdapter.nodeFilter() == null
             ? ctx.grid().cluster()

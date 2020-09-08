@@ -15,8 +15,10 @@
  */
 package org.apache.ignite.internal.compute.flow;
 
-public class SuccessBasedFlowCondition implements FlowCondition {
+public class OnFailFlowCondition implements FlowCondition {
+    private static final long serialVersionUID = 0L;
+
     @Override public boolean test(FlowTaskTransferObject parentResult) {
-        return parentResult.successfull();
+        return !parentResult.successfull();
     }
 }

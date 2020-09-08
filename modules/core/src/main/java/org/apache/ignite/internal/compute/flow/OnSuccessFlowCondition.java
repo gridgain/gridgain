@@ -15,20 +15,10 @@
  */
 package org.apache.ignite.internal.compute.flow;
 
-import java.util.concurrent.atomic.AtomicReference;
-
-public class AnyResultReducer implements FlowTaskReducer {
+public class OnSuccessFlowCondition implements FlowCondition {
     private static final long serialVersionUID = 0L;
 
-    private final transient AtomicReference<FlowTaskTransferObject> resultRef = new AtomicReference<>();
-
-    @Override public FlowTaskTransferObject reduce() {
-        return resultRef.get();
-    }
-
-    @Override public boolean collect(FlowTaskTransferObject object) {
-        resultRef.compareAndSet(null, object);
-
-        return true;
+    @Override public boolean test(FlowTaskTransferObject parentResult) {
+        return parentResult.successfull();
     }
 }

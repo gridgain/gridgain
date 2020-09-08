@@ -20,9 +20,40 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.lang.IgnitePredicate;
 
+/**
+ * Adapter for ComputeTask to execute it in flow.
+ *
+ * @param <T> Compute task class.
+ * @param <A> Compute task parameters type.
+ * @param <R> Compute task result type.
+ */
 public interface ComputeTaskFlowAdapter<T extends ComputeTask<A, R>, A, R> extends Serializable {
+    /**
+     * @return Compute task class.
+     */
     Class<T> taskClass();
-    A arguments(FlowTaskTransferObject parentResult);
+
+    /**
+     * Transforms input (e.g. result of previous task execution) from {@link FlowTaskTransferObject} to
+     * compute task parameters object.
+     *
+     * @param input Input as {@link FlowTaskTransferObject}.
+     * @return Compute task parameters object.
+     */
+    A parameters(FlowTaskTransferObject input);
+
+    /**
+     * Transforms compute task output from result object to {@link FlowTaskTransferObject}.
+     *
+     * @param r Compute task result object.
+     * @return Transfer object.
+     */
     FlowTaskTransferObject result(R r);
+
+    /**
+     * Predicate to filter nodes where compute job should run.
+     *
+     * @return Predicate.
+     */
     IgnitePredicate<ClusterNode> nodeFilter();
 }

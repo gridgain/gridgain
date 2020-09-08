@@ -60,16 +60,21 @@ public class TaskFlowTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrids(nodeCnt);
 
-        TaskFlow flow = new TaskFlowBuilder()
-            .addTask("str", null, new StringHashTaskAdapter(), null)
-            .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
-            .build();
+        // Build a flow.
+        TaskFlow flow = new TaskFlow(
+            FlowElement.builder("str", new StringHashTaskAdapter())
+                .add(FlowElement.builder("int", new SqrIntTaskAdapter()).build())
+                .build()
+        );
 
+        // Save it.
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
+        // Execute.
         IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
             .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "zxc_")));
 
+        // Execution result is wrapped in FlowTaskTransferObject.
         FlowTaskTransferObject res = fut.get();
 
         int r = (int)res.data().get("int");
@@ -87,10 +92,11 @@ public class TaskFlowTest extends GridCommonAbstractTest {
 
         IgniteEx ignite = startGrids(nodeCnt);
 
-        TaskFlow flow = new TaskFlowBuilder()
-            .addTask("str", null, new StringHashTaskAdapter(), null)
-            .addTask("int", "str", new SqrIntTaskAdapter(), new SuccessBasedFlowCondition())
-            .build();
+        TaskFlow flow = new TaskFlow(
+            FlowElement.builder("str", new StringHashTaskAdapter())
+                .add(FlowElement.builder("int", new SqrIntTaskAdapter()).build())
+                .build()
+        );
 
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
@@ -98,6 +104,33 @@ public class TaskFlowTest extends GridCommonAbstractTest {
             .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
 
         assertThrows(log, () -> fut.get(), IgniteException.class, "qwe not allowed");
+    }
+
+    @Test
+    public void testFailingTaskWithExceptionCatcher() throws Exception {
+        int nodeCnt = 3;
+
+        IgniteEx ignite = startGrids(nodeCnt);
+
+        TaskFlow flow = new TaskFlow(
+            FlowElement.builder("str", new StringHashTaskAdapter())
+                .add(FlowElement.builder("int", new SqrIntTaskAdapter()).build())
+                .exceptionally(FlowElement.builder("exc", new OnExceptionTaskAdapter()).build())
+                .build()
+        );
+
+        ignite.context().flowProcessor().addFlow("asd", flow, false);
+
+        IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
+            .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
+
+        FlowTaskTransferObject res = fut.get();
+
+        String r = (String)res.data().get("str");
+
+        assertTrue(res.successfull());
+
+        assertEquals("qwe not allowed", r);
     }
 
     private int expectedRes(int nodeCnt) {
@@ -162,8 +195,8 @@ public class TaskFlowTest extends GridCommonAbstractTest {
             return StringHashTask.class;
         }
 
-        @Override public String arguments(FlowTaskTransferObject parentResult) {
-            return (String)parentResult.data().get("string");
+        @Override public String parameters(FlowTaskTransferObject input) {
+            return (String)input.data().get("string");
         }
 
         @Override public FlowTaskTransferObject result(Integer integer) {
@@ -221,12 +254,68 @@ public class TaskFlowTest extends GridCommonAbstractTest {
             return SqrIntTask.class;
         }
 
-        @Override public Integer arguments(FlowTaskTransferObject parentResult) {
-            return (Integer)parentResult.data().get("int");
+        @Override public Integer parameters(FlowTaskTransferObject input) {
+            return (Integer)input.data().get("int");
         }
 
         @Override public FlowTaskTransferObject result(Integer r) {
             return new FlowTaskTransferObject(new IgniteBiTuple<>("int", r));
+        }
+
+        @Override public IgnitePredicate<ClusterNode> nodeFilter() {
+            return null;
+        }
+    }
+
+    private static class OnExceptionTask implements ComputeTask<Throwable, String> {
+        String res;
+        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Throwable arg) throws IgniteException {
+            Map<OnExceptionJob, ClusterNode> res = new HashMap<>();
+
+            res.put(new OnExceptionJob(arg), subgrid.get(0));
+
+            return res;
+        }
+
+        @Override
+        public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) throws IgniteException {
+            this.res = res.getData();
+
+            return WAIT;
+        }
+
+        @Override public String reduce(List<ComputeJobResult> results) throws IgniteException {
+            return res;
+        }
+    }
+
+    private static class OnExceptionJob implements ComputeJob {
+        Throwable e;
+
+        public OnExceptionJob(Throwable e) {
+            this.e = e;
+        }
+
+        @Override public void cancel() {
+
+        }
+
+        @Override public String execute() throws IgniteException {
+            return e.getMessage();
+        }
+    }
+
+    private static class OnExceptionTaskAdapter implements ComputeTaskFlowAdapter<OnExceptionTask, Throwable, String> {
+        @Override public Class<OnExceptionTask> taskClass() {
+            return OnExceptionTask.class;
+        }
+
+        @Override public Throwable parameters(FlowTaskTransferObject input) {
+            return input.exception();
+        }
+
+        @Override public FlowTaskTransferObject result(String r) {
+            return new FlowTaskTransferObject(new IgniteBiTuple<>("str", r));
         }
 
         @Override public IgnitePredicate<ClusterNode> nodeFilter() {
