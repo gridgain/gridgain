@@ -37,16 +37,25 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheAbstractNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -191,6 +200,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     }
 
     @Test
+    @Ignore
     public void testZzz() throws Exception {
         backups = 2;
         nodeCnt = 5;
@@ -272,16 +282,37 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         GridNearTxRemote tx1 = (GridNearTxRemote) it.next();
         GridNearTxRemote tx2 = (GridNearTxRemote) it.next();
 
+        IgniteTxEntry entry = tx1.writeEntries().iterator().next();
+        GridCacheEntryEx cached = entry.cached();
+
+        List<GridCacheMvccCandidate> rmts = new ArrayList<>(cached.remoteMvccSnapshot());
+
+        GridCacheVersion ver0 = rmts.get(1).version();
+
+        // Release commit messages out of order.
+        TestRecordingCommunicationSpi.spi(prim).stopBlock(true, new IgnitePredicate<T2<ClusterNode, GridIoMessage>>() {
+            @Override public boolean apply(T2<ClusterNode, GridIoMessage> pair) {
+                GridIoMessage ioMsg = pair.get2();
+                GridDhtTxFinishRequest req = (GridDhtTxFinishRequest) ioMsg.message();
+
+                return req.version().equals(ver0);
+            }
+        });
+
+        doSleep(1000);
+
+
         IgniteEx nonTxNode = stopNode2(crd, testNode, k);
         nonTxNode.close();
 
         doSleep(1000);
 
+
         Collection<IgniteInternalTx> txs = testNode.context().cache().context().tm().activeTransactions();
 
         assertTrue(txs.isEmpty());
-
-        TestRecordingCommunicationSpi.spi(prim).stopBlock();
+//
+//        TestRecordingCommunicationSpi.spi(prim).stopBlock();
 
         fut.get();
     }

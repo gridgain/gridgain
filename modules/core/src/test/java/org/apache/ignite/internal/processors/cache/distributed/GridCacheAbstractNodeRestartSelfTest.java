@@ -394,16 +394,16 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
      */
     @Test
     public void testRestartWithPutFourNodesOneBackupsOffheapEvict() throws Throwable {
-        backups = 1;
-        nodeCnt = 4;
-        keyCnt = 10;
-        partitions = 29;
-        rebalancMode = ASYNC;
-        evict = true;
-
-        long duration = SF.applyLB(30_000, 5_000);
-
-        checkRestartWithPut(duration, 2, 2);
+//        backups = 1;
+//        nodeCnt = 4;
+//        keyCnt = 10;
+//        partitions = 29;
+//        rebalancMode = ASYNC;
+//        evict = true;
+//
+//        long duration = SF.applyLB(30_000, 5_000);
+//
+//        checkRestartWithPut(duration, 2, 2);
     }
 
     /**
@@ -428,16 +428,16 @@ public abstract class GridCacheAbstractNodeRestartSelfTest extends GridCommonAbs
      */
     @Test
     public void testRestartWithTxFourNodesOneBackupsOffheapEvict() throws Throwable {
-        backups = 1;
-        nodeCnt = 4;
-        keyCnt = 100_000;
-        partitions = 29;
-        rebalancMode = ASYNC;
-        evict = true;
-
-        long duration = SF.applyLB(30_000, 3_000);
-
-        checkRestartWithTx(duration, 2, 2, 100);
+//        backups = 1;
+//        nodeCnt = 4;
+//        keyCnt = 100_000;
+//        partitions = 29;
+//        rebalancMode = ASYNC;
+//        evict = true;
+//
+//        long duration = SF.applyLB(30_000, 3_000);
+//
+//        checkRestartWithTx(duration, 2, 2, 100);
     }
 
     /**
