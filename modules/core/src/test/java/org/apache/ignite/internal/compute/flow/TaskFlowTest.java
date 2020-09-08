@@ -24,6 +24,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
+import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -108,7 +109,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         return a * a;
     }
 
-    private static class StringHashTask implements FlowTask<String, Integer> {
+    private static class StringHashTask implements ComputeTask<String, Integer> {
         AtomicInteger hashSum = new AtomicInteger(0);
         IgniteException ex;
 
@@ -156,7 +157,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         }
     }
 
-    private static class StringHashTaskAdapter implements FlowTaskAdapter<StringHashTask, String, Integer> {
+    private static class StringHashTaskAdapter implements ComputeTaskFlowAdapter<StringHashTask, String, Integer> {
         @Override public Class<StringHashTask> taskClass() {
             return StringHashTask.class;
         }
@@ -174,7 +175,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         }
     }
 
-    private static class SqrIntTask implements FlowTask<Integer, Integer> {
+    private static class SqrIntTask implements ComputeTask<Integer, Integer> {
         private volatile int res;
 
         @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Integer arg) throws IgniteException {
@@ -215,7 +216,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         }
     }
 
-    private static class SqrIntTaskAdapter implements FlowTaskAdapter<SqrIntTask, Integer, Integer> {
+    private static class SqrIntTaskAdapter implements ComputeTaskFlowAdapter<SqrIntTask, Integer, Integer> {
         @Override public Class<SqrIntTask> taskClass() {
             return SqrIntTask.class;
         }

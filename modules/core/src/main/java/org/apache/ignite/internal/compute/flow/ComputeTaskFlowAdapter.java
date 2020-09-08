@@ -17,15 +17,12 @@ package org.apache.ignite.internal.compute.flow;
 
 import java.io.Serializable;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.lang.IgnitePredicate;
 
-public interface FlowTaskAdapter<T extends FlowTask<A, R>, A, R> extends Serializable {
+public interface ComputeTaskFlowAdapter<T extends ComputeTask<A, R>, A, R> extends Serializable {
     Class<T> taskClass();
     A arguments(FlowTaskTransferObject parentResult);
     FlowTaskTransferObject result(R r);
     IgnitePredicate<ClusterNode> nodeFilter();
-
-    default FlowTaskReducer resultReducer() {
-        return new AnyResultReducer();
-    }
 }

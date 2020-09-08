@@ -18,33 +18,51 @@ package org.apache.ignite.internal.compute.flow;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.util.Collections.unmodifiableList;
 
-public class TaskFlowElement<T extends FlowTask<A, R>, A, R> implements Serializable {
+public class TaskFlowElement<T extends ComputeTask<A, R>, A, R> implements Serializable {
     private final String name;
 
-    private final FlowTaskAdapter<T, A, R> taskAdapter;
+    private final ComputeTaskFlowAdapter<T, A, R> taskAdapter;
 
     private final Collection<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements;
 
-    public TaskFlowElement(String name, FlowTaskAdapter<T, A, R> taskAdapter,
-        List<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements) {
+    private final FlowTaskReducer reducer;
+
+    public TaskFlowElement(String name,
+        ComputeTaskFlowAdapter<T, A, R> taskAdapter,
+        List<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements
+    ) {
+        this(name, taskAdapter, childElements, new AnyResultReducer());
+    }
+
+    public TaskFlowElement(String name,
+        ComputeTaskFlowAdapter<T, A, R> taskAdapter,
+        List<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements,
+        FlowTaskReducer reducer
+    ) {
         this.name = name;
         this.taskAdapter = taskAdapter;
         this.childElements = unmodifiableList(childElements);
+        this.reducer = reducer;
     }
 
     public String name() {
         return name;
     }
 
-    public FlowTaskAdapter<T, A, R> taskAdapter() {
+    public ComputeTaskFlowAdapter<T, A, R> taskAdapter() {
         return taskAdapter;
     }
 
     public Collection<IgniteBiTuple<FlowCondition, TaskFlowElement>> childElements() {
         return childElements;
+    }
+
+    public FlowTaskReducer reducer() {
+        return reducer;
     }
 }

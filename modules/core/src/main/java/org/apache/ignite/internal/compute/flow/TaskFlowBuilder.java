@@ -27,7 +27,7 @@ public class TaskFlowBuilder {
     private GridFlowTempElement rootElement;
     private Map<String, GridFlowTempElement> elements = new HashMap<>();
 
-    public TaskFlowBuilder addTask(String name, String parentName, FlowTaskAdapter taskAdapter, FlowCondition condition) {
+    public TaskFlowBuilder addTask(String name, String parentName, ComputeTaskFlowAdapter taskAdapter, FlowCondition condition) {
         if (parentName == null) {
             rootElement = new GridFlowTempElement(name, taskAdapter);
 
@@ -59,13 +59,17 @@ public class TaskFlowBuilder {
 
     private static class GridFlowTempElement {
         final String name;
-        final FlowTaskAdapter taskAdapter;
+        final ComputeTaskFlowAdapter taskAdapter;
         final List<IgniteBiTuple<FlowCondition, GridFlowTempElement>> childElements;
 
-        public GridFlowTempElement(String name, FlowTaskAdapter taskAdapter) {
+        public GridFlowTempElement(String name, ComputeTaskFlowAdapter taskAdapter) {
             this.name = name;
             this.taskAdapter = taskAdapter;
             this.childElements = new LinkedList<>();
         }
+    }
+
+    public TaskFlowBuilder andThen(String name, ComputeTaskFlowAdapter taskAdapter) {
+
     }
 }

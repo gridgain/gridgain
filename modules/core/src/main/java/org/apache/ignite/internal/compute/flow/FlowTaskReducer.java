@@ -15,7 +15,8 @@
  */
 package org.apache.ignite.internal.compute.flow;
 
+import java.io.Serializable;
 import org.apache.ignite.lang.IgniteReducer;
 
-public interface FlowTaskReducer extends IgniteReducer<FlowTaskTransferObject, FlowTaskTransferObject> {
+public interface FlowTaskReducer extends IgniteReducer<FlowTaskTransferObject, FlowTaskTransferObject>, Serializable {
 }

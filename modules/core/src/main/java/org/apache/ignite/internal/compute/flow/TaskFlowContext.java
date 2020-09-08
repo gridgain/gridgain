@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -51,7 +52,7 @@ public class TaskFlowContext {
     public IgniteInternalFuture<FlowTaskTransferObject> start() {
         assert isStarted.compareAndSet(false, true);
 
-        FlowTaskReducer resultReducer = flow.rootElement().taskAdapter().resultReducer();
+        FlowTaskReducer resultReducer = flow.rootElement().reducer();
 
         IgniteInternalFuture<FlowTaskTransferObject> rootTaskFut =
             executeFlowTaskAsync(flow.rootElement(), flowParams, resultReducer);
@@ -82,7 +83,7 @@ public class TaskFlowContext {
         if (!flowElement.childElements().isEmpty()) {
             for (IgniteBiTuple<FlowCondition, TaskFlowElement> childElementsInfo : (Collection<IgniteBiTuple<FlowCondition, TaskFlowElement>>)flowElement.childElements()) {
                 if (childElementsInfo.get1().test(result)) {
-                    FlowTaskReducer childResultReducer = childElementsInfo.get2().taskAdapter().resultReducer();
+                    FlowTaskReducer childResultReducer = childElementsInfo.get2().reducer();
 
                     IgniteInternalFuture<FlowTaskTransferObject> fut =
                         executeFlowTaskAsync(childElementsInfo.get2(), result, childResultReducer);
@@ -116,19 +117,12 @@ public class TaskFlowContext {
         return taskAndSubtasksCompleteFut;
     }
 
-    private void completeFlow(FlowTaskTransferObject res) {
-        if (res.successfull())
-            completeFut.onDone(res);
-        else
-            completeFut.onDone(res.exception());
-    }
-
-    private <T extends FlowTask<A, R>, A, R> IgniteInternalFuture<FlowTaskTransferObject> executeFlowTaskAsync(
+    private <T extends ComputeTask<A, R>, A, R> IgniteInternalFuture<FlowTaskTransferObject> executeFlowTaskAsync(
         TaskFlowElement<T, A, R> flowElement,
         FlowTaskTransferObject params,
         FlowTaskReducer resultReducer
     ) {
-        FlowTaskAdapter<T, A, R> taskAdapter = flowElement.taskAdapter();
+        ComputeTaskFlowAdapter<T, A, R> taskAdapter = flowElement.taskAdapter();
 
         Class<T> taskCls = taskAdapter.taskClass();
 
