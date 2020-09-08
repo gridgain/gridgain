@@ -462,8 +462,8 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
-                            if (log.isDebugEnabled())
-                                log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +
+                            if (log.isInfoEnabled() && near())
+                                log.info("DBG: Transaction does not own lock for entry (will wait) [entry=" + entry + ", ver=" + ver + ", xidVer=" + xidVer +
                                     ", tx=" + this + ']');
 
                             return;
@@ -472,13 +472,16 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         break; // While.
                     }
                     catch (GridCacheEntryRemovedException ignore) {
-                        if (log.isDebugEnabled())
-                            log.debug("Got removed entry while committing (will retry): " + txEntry);
+                        if (log.isInfoEnabled() && near())
+                            log.info("DBG: Got removed entry while committing (will retry): " + txEntry);
 
                         try {
                             txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), topologyVersion()));
                         }
                         catch (GridDhtInvalidPartitionException e) {
+                            if (log.isInfoEnabled() && near())
+                                log.info("DBG: Got GridDhtInvalidPartitionException: " + txEntry);
+
                             break;
                         }
                     }

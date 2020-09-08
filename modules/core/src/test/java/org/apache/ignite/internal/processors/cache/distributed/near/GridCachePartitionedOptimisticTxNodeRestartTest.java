@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,6 +39,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheAbstractNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
@@ -236,8 +238,6 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         IgniteEx prim = (IgniteEx) grid(crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(k).iterator().next());
 
-        //IgniteEx nonTxNode = stopNode2(crd, testNode, k);
-
         TestRecordingCommunicationSpi.spi(prim).blockMessages(GridDhtTxFinishRequest.class, testNode.name());
 
         int finalK = k;
@@ -259,34 +259,31 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
                     tx.commit();
                 }
                 catch (Throwable t) {
-                    fail(X.getFullStackTrace(t));
+                    // No-op.
                 }
             }
         }, 2, "tx-thread");
 
         TestRecordingCommunicationSpi.spi(prim).waitForBlocked(2);
 
+        Collection<IgniteInternalTx> txs0 = testNode.context().cache().context().tm().activeTransactions();
+
+        Iterator<IgniteInternalTx> it = txs0.iterator();
+        GridNearTxRemote tx1 = (GridNearTxRemote) it.next();
+        GridNearTxRemote tx2 = (GridNearTxRemote) it.next();
+
+        IgniteEx nonTxNode = stopNode2(crd, testNode, k);
+        nonTxNode.close();
+
+        doSleep(1000);
+
+        Collection<IgniteInternalTx> txs = testNode.context().cache().context().tm().activeTransactions();
+
+        assertTrue(txs.isEmpty());
+
+        TestRecordingCommunicationSpi.spi(prim).stopBlock();
+
         fut.get();
-
-
-        //stopGrid(grid(3).name(), false, false);
-//        grid(3).close();
-//
-//        try (Transaction tx = grid(g1.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-//            IgniteCache<Object, Object> cache2 = grid(g1.name()).cache(CACHE_NAME);
-//
-//            cache2.put(k, 1);
-//
-//            tx.commit();
-//        }
-
-//        awaitPartitionMapExchange();
-//
-//        assertEquals(1, grid(nodes.iterator().next()).cache(CACHE_NAME).get(k));
-//
-//        checkFutures();
-
-        System.out.println();
     }
 
     private IgniteEx stopNode2(IgniteEx crd, IgniteEx testNode, int k) {
