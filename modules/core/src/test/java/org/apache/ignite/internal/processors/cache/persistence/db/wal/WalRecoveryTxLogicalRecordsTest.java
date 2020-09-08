@@ -572,19 +572,26 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
             parts.addHistorical(partId2, 0, 200, PARTS);
             parts.addHistorical(partId3, 0, 300, PARTS);
 
-            IgniteRebalanceIterator iter = offh.rebalanceIterator(parts, topVer);
+            GridTestUtils.setFieldValue(grp.shared().database(), "reservedForPreloading",
+                new FileWALPointer(0, 0, 0));
 
-            int exp = 0;
-            while (iter.hasNext()) {
-                iter.next();
+            try (IgniteRebalanceIterator iter = offh.rebalanceIterator(parts, topVer)) {
 
-                exp++;
+                int exp = 0;
+                while (iter.hasNext()) {
+                    iter.next();
+
+                    exp++;
+                }
+
+                assertEquals(100 + 200 + 300 - 20 - 3, exp);
+                assertTrue(iter.isPartitionDone(partId1));
+                assertTrue(iter.isPartitionDone(partId2));
+                assertTrue(iter.isPartitionDone(partId3));
             }
-
-            assertEquals(100 + 200 + 300 - 20 - 3, exp);
-            assertTrue(iter.isPartitionDone(partId1));
-            assertTrue(iter.isPartitionDone(partId2));
-            assertTrue(iter.isPartitionDone(partId3));
+            finally {
+                GridTestUtils.setFieldValue(grp.shared().database(), "reservedForPreloading", null);
+            }
         }
         finally {
             stopAllGrids();
