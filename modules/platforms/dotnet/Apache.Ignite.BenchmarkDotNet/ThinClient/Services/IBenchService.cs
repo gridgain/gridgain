@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.BenchmarkDotNet
+namespace Apache.Ignite.BenchmarkDotNet.ThinClient.Services
 {
-    using Apache.Ignite.BenchmarkDotNet.ThinClient;
-    using global::BenchmarkDotNet.Running;
-
     /// <summary>
-    /// Benchmark runner.
+    /// Benchmark service interface.
     /// </summary>
-    public static class Program
+    public interface IBenchService
     {
-        /// <summary>
-        /// Main.
-        /// </summary>
-        public static void Main()
-        {
-            BenchmarkRunner.Run<ThinClientServicesBenchmark>();
-        }
+        int Add(int x, int y);
     }
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.BenchmarkDotNet
+namespace Apache.Ignite.Core.Tests.Client.Services
 {
-    using Apache.Ignite.BenchmarkDotNet.ThinClient;
-    using global::BenchmarkDotNet.Running;
-
     /// <summary>
-    /// Benchmark runner.
+    /// Test service interface with generic methods.
     /// </summary>
-    public static class Program
+    public interface ITestServiceGenericMethods
     {
-        /// <summary>
-        /// Main.
-        /// </summary>
-        public static void Main()
-        {
-            BenchmarkRunner.Run<ThinClientServicesBenchmark>();
-        }
+        /** */
+        T GetGeneric<T>(T x);
     }
 }
