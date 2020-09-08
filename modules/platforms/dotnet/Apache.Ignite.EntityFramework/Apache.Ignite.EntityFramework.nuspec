@@ -27,34 +27,43 @@ Creating NuGet package:
 
 <package >
     <metadata>
-        <id>Apache.Ignite.EntityFramework</id>
-        <title>Apache Ignite Entity Framework Integration</title>
+        <id>GridGain.Ignite.EntityFramework</id>
+        <title>GridGain Ignite Entity Framework Integration</title>
         <!-- -->
         <version>$version$</version>
-        <authors>Apache Ignite</authors>
-        <owners>Apache Software Foundation</owners>
-        <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
-        <projectUrl>https://ignite.apache.org/</projectUrl>
-        <iconUrl>https://ignite.apache.org/images/logo_ignite_32_32.png</iconUrl>
+        <authors>GridGain</authors>
+        <owners>GridGain</owners>
+        <license type="file">LICENSE</license>
+        <projectUrl>https://gridgain.com/</projectUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>
-Apache Ignite EntityFramework Second Level Cache: caches EF query results in a distributed in-memory cache.
+GridGain Ignite EntityFramework Second Level Cache: caches EF query results in a distributed in-memory cache.
             
-More info: https://apacheignite-net.readme.io/
+More info: https://docs.gridgain.com/
         </description>
         <summary>
-            Apache Ignite EntityFramework Integration
+            GridGain Ignite EntityFramework Integration
         </summary>
-        <releaseNotes></releaseNotes>
         <copyright>Copyright 2019</copyright>
-        <tags>EntityFramework Second-Level Apache Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache</tags>
+        <tags>EntityFramework Second-Level GridGain Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache</tags>
+        <repository type="git" url="https://github.com/gridgain/gridgain.git" />
+        
         <dependencies>
-            <dependency id="Apache.Ignite" version="[$version$]" />
-            <dependency id="EntityFramework" version="[6.1.0,7.0.0)" />
+            <group targetFramework=".NETFramework4.0">
+                <dependency id="GridGain.Ignite" version="[$version$]" />
+                <dependency id="EntityFramework" version="[6.1.0,7.0.0)" />
+            </group>
         </dependencies>    
     </metadata>
     <files>
 	    <file src="bin\$configuration$\Apache.Ignite.EntityFramework.dll" target="lib\net40" />
 		<file src="bin\$configuration$\Apache.Ignite.EntityFramework.xml" target="lib\net40" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="LICENSE" />
     </files>
 </package>

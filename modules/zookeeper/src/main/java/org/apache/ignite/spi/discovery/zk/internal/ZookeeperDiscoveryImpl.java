@@ -48,19 +48,24 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CommunicationFailureResolver;
 import org.apache.ignite.events.EventType;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpiInternalListener;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -71,6 +76,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.MarshallerUtils;
@@ -80,6 +86,7 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiTimeoutObject;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
+import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiDataExchange;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
@@ -473,12 +480,17 @@ public class ZookeeperDiscoveryImpl {
         if (rtState.joined) {
             assert rtState.evtsData != null;
 
-            lsnr.onDiscovery(EVT_CLIENT_NODE_DISCONNECTED,
-                rtState.evtsData.topVer,
-                locNode,
-                rtState.top.topologySnapshot(),
-                Collections.emptyMap(),
-                null).get();
+            lsnr.onDiscovery(
+                new DiscoveryNotification(
+                    EVT_CLIENT_NODE_DISCONNECTED,
+                    rtState.evtsData.topVer,
+                    locNode,
+                    rtState.top.topologySnapshot(),
+                    Collections.emptyMap(),
+                    null,
+                    null
+                )
+            ).get();
         }
 
         try {
@@ -541,12 +553,17 @@ public class ZookeeperDiscoveryImpl {
         if (nodes.isEmpty())
             nodes = Collections.singletonList(locNode);
 
-        lsnr.onDiscovery(EVT_NODE_SEGMENTED,
-            rtState.evtsData != null ? rtState.evtsData.topVer : 1L,
-            locNode,
-            nodes,
-            Collections.emptyMap(),
-            null).get();
+        lsnr.onDiscovery(
+            new DiscoveryNotification(
+                EVT_NODE_SEGMENTED,
+                rtState.evtsData != null ? rtState.evtsData.topVer : 1L,
+                locNode,
+                nodes,
+                Collections.emptyMap(),
+                null,
+                null
+            )
+        ).get();
     }
 
     /**
@@ -560,12 +577,16 @@ public class ZookeeperDiscoveryImpl {
 
     /**
      * @param feature Feature to check.
+     * @param nodesPred  Predicate to filter cluster nodes.
      * @return {@code true} if all nodes support the given feature, {@code false} otherwise.
      */
-    public boolean allNodesSupport(IgniteFeatures feature) {
+    public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         checkState();
 
-        return rtState != null && rtState.top.isAllNodes(n -> IgniteFeatures.nodeSupports(n, feature));
+        GridKernalContext ctx = (spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
+
+        return rtState != null
+            && rtState.top.isAllNodes(n -> !nodesPred.apply(n) || IgniteFeatures.nodeSupports(ctx, n, feature));
     }
 
     /**
@@ -625,6 +646,11 @@ public class ZookeeperDiscoveryImpl {
      */
     public void sendCustomMessage(DiscoverySpiCustomMessage msg) {
         assert msg != null;
+
+        List<ClusterNode> nodes = rtState.top.topologySnapshot();
+
+        if (nodes.stream().allMatch(ClusterNode::isClient))
+            throw new IgniteException("Failed to send custom message: no server nodes in topology.");
 
         byte[] msgBytes;
 
@@ -1076,7 +1102,7 @@ public class ZookeeperDiscoveryImpl {
      * @param locCred Local security credentials for authentication.
      * @throws IgniteSpiException If any error occurs.
      */
-    private void localAuthentication(DiscoverySpiNodeAuthenticator nodeAuth, SecurityCredentials locCred){
+    private void localAuthentication(DiscoverySpiNodeAuthenticator nodeAuth, SecurityCredentials locCred) {
         assert nodeAuth != null;
         assert locCred != null;
 
@@ -1361,7 +1387,7 @@ public class ZookeeperDiscoveryImpl {
                 log.info("Discovery coordinator already exists, watch for previous server node [" +
                     "locId=" + locNode.id() +
                     ", watchPath=" + prevE.getValue() + ']');
-             }
+            }
 
             PreviousNodeWatcher watcher = new ServerPreviousNodeWatcher(rtState);
 
@@ -1399,7 +1425,7 @@ public class ZookeeperDiscoveryImpl {
         }
 
         // This situation may appear while reconnection and this callback can be skipped.
-        if(!aliveClients.containsKey(locInternalOrder))
+        if (!aliveClients.containsKey(locInternalOrder))
             return;
 
         Map.Entry<Long, String> oldest = aliveClients.firstEntry();
@@ -2098,6 +2124,18 @@ public class ZookeeperDiscoveryImpl {
             return new ZkNodeValidateResult("Authentication failed");
         }
 
+        try {
+            // Stick in authentication subject to node (use security-safe attributes for copy).
+            Map<String, Object> attrs = new HashMap<>(node.getAttributes());
+
+            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
+            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(subj, 1));
+
+            node.setAttributes(attrs);
+        } catch (IgniteCheckedException e) {
+            U.warn(log, "Security subject cannot be created.", e);
+        }
+
         if (!(subj instanceof Serializable)) {
             U.warn(log, "Authentication subject is not Serializable [nodeId=" + node.id() +
                 ", addrs=" + U.addressesAsString(node) + ']');
@@ -2117,6 +2155,22 @@ public class ZookeeperDiscoveryImpl {
         }
 
         return new ZkNodeValidateResult(secSubjZipBytes);
+    }
+
+    /**
+     * @param obj Object.
+     * @param ver Security serialize version.
+     * @return Marshaled object.
+     */
+    private byte[] marshalWithSecurityVersion(Object obj, int ver) throws IgniteCheckedException {
+        try {
+            SecurityUtils.serializeVersion(ver);
+
+            return U.marshal(marsh, obj);
+        }
+        finally {
+            SecurityUtils.restoreDefaultSerializeVersion();
+        }
     }
 
     /**
@@ -2316,12 +2370,17 @@ public class ZookeeperDiscoveryImpl {
         final List<ClusterNode> topSnapshot = Collections.singletonList((ClusterNode)locNode);
 
         try {
-            lsnr.onDiscovery(EVT_NODE_JOINED,
-                1L,
-                locNode,
-                topSnapshot,
-                Collections.emptyMap(),
-                null).get();
+            lsnr.onDiscovery(
+                new DiscoveryNotification(
+                    EVT_NODE_JOINED,
+                    1L,
+                    locNode,
+                    topSnapshot,
+                    Collections.emptyMap(),
+                    null,
+                    null
+                )
+            ).get();
         }
         catch (IgniteException e) {
             joinFut.onDone(e);
@@ -3016,20 +3075,30 @@ public class ZookeeperDiscoveryImpl {
 
             final List<ClusterNode> topSnapshot = rtState.top.topologySnapshot();
 
-            lsnr.onDiscovery(EVT_NODE_JOINED,
-                joinedEvtData.topVer,
-                locNode,
-                topSnapshot,
-                Collections.emptyMap(),
-                null).get();
-
-            if (rtState.reconnect) {
-                lsnr.onDiscovery(EVT_CLIENT_NODE_RECONNECTED,
+            lsnr.onDiscovery(
+                new DiscoveryNotification(
+                    EVT_NODE_JOINED,
                     joinedEvtData.topVer,
                     locNode,
                     topSnapshot,
                     Collections.emptyMap(),
-                    null).get();
+                    null,
+                    null
+                )
+            ).get();
+
+            if (rtState.reconnect) {
+                lsnr.onDiscovery(
+                    new DiscoveryNotification(
+                        EVT_CLIENT_NODE_RECONNECTED,
+                        joinedEvtData.topVer,
+                        locNode,
+                        topSnapshot,
+                        Collections.emptyMap(),
+                        null,
+                        null
+                    )
+                ).get();
 
                 U.quietAndWarn(log, "Client node was reconnected after it was already considered failed [locId=" + locNode.id() + ']');
             }
@@ -3480,12 +3549,15 @@ public class ZookeeperDiscoveryImpl {
         final List<ClusterNode> topSnapshot = rtState.top.topologySnapshot();
 
         IgniteFuture<?> fut = lsnr.onDiscovery(
-            DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
-            evtData.topologyVersion(),
-            sndNode,
-            topSnapshot,
-            Collections.emptyMap(),
-            msg
+            new DiscoveryNotification(
+                DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT,
+                evtData.topologyVersion(),
+                sndNode,
+                topSnapshot,
+                Collections.emptyMap(),
+                msg,
+                null
+            )
         );
 
         if (msg != null && msg.isMutable())
@@ -3506,12 +3578,17 @@ public class ZookeeperDiscoveryImpl {
 
         final List<ClusterNode> topSnapshot = rtState.top.topologySnapshot();
 
-        lsnr.onDiscovery(EVT_NODE_JOINED,
-            joinedEvtData.topVer,
-            joinedNode,
-            topSnapshot,
-            Collections.emptyMap(),
-            null).get();
+        lsnr.onDiscovery(
+            new DiscoveryNotification(
+                EVT_NODE_JOINED,
+                joinedEvtData.topVer,
+                joinedNode,
+                topSnapshot,
+                Collections.emptyMap(),
+                null,
+                null
+            )
+        ).get();
     }
 
     /**
@@ -3537,12 +3614,17 @@ public class ZookeeperDiscoveryImpl {
 
         final List<ClusterNode> topSnapshot = rtState.top.topologySnapshot();
 
-        lsnr.onDiscovery(EVT_NODE_FAILED,
-            topVer,
-            failedNode,
-            topSnapshot,
-            Collections.emptyMap(),
-            null).get();
+        lsnr.onDiscovery(
+            new DiscoveryNotification(
+                EVT_NODE_FAILED,
+                topVer,
+                failedNode,
+                topSnapshot,
+                Collections.emptyMap(),
+                null,
+                null
+            )
+        ).get();
 
         stats.onNodeFailed();
     }
@@ -3961,7 +4043,7 @@ public class ZookeeperDiscoveryImpl {
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    IgnitionEx.stop(igniteInstanceName, true, true);
+                    IgnitionEx.stop(igniteInstanceName, true, ShutdownPolicy.IMMEDIATE, true);
 
                     U.log(log, "Stopped the node successfully in response to fatal error in ZookeeperDiscoverySpi.");
                 }

@@ -16,11 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.NestedTxMode;
-
 import java.util.List;
+import org.apache.ignite.internal.processors.query.NestedTxMode;
 
 /**
  * Query parameters which vary between requests having the same execution plan. Essentially, these are the arguments
@@ -55,39 +52,13 @@ public class QueryParameters {
     private final List<Object[]> batchedArgs;
 
     /**
-     * Create parameters from query.
-     *
-     * @param qry Query.
-     * @return Parameters.
+     * Update internal batch size.
+     * Default is 1 to prevent deadlock on update where keys sequence are different in several concurrent updates.
      */
-    public static QueryParameters fromQuery(SqlFieldsQuery qry) {
-        NestedTxMode nestedTxMode = NestedTxMode.DEFAULT;
-        boolean autoCommit = true;
-        List<Object[]> batchedArgs = null;
+    private final int updateBatchSize;
 
-        if (qry instanceof SqlFieldsQueryEx) {
-            SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
-
-            if (qry0.getNestedTxMode() != null)
-                nestedTxMode = qry0.getNestedTxMode();
-
-            autoCommit = qry0.isAutoCommit();
-
-            batchedArgs = qry0.batchedArguments();
-        }
-
-        return new QueryParameters(
-            qry.getArgs(),
-            qry.getPartitions(),
-            qry.getTimeout(),
-            qry.isLazy(),
-            qry.getPageSize(),
-            qry.isDataPageScanEnabled(),
-            nestedTxMode,
-            autoCommit,
-            batchedArgs
-        );
-    }
+    /** Memory limit for query results. */
+    private final long maxMem;
 
     /**
      * Constructor.
@@ -97,32 +68,38 @@ public class QueryParameters {
      * @param timeout Timeout.
      * @param lazy Lazy flag.
      * @param pageSize Page size.
+     * @param maxMem Query memory limit.
      * @param dataPageScanEnabled Data page scan enabled flag.
      * @param nestedTxMode Nested TX mode.
      * @param autoCommit Auto-commit flag.
      * @param batchedArgs Batched arguments.
+     * @param updateBatchSize Update internal batch size.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    private QueryParameters(
+    QueryParameters(
         Object[] args,
         int[] parts,
         int timeout,
         boolean lazy,
         int pageSize,
+        long maxMem,
         Boolean dataPageScanEnabled,
         NestedTxMode nestedTxMode,
         boolean autoCommit,
-        List<Object[]> batchedArgs
+        List<Object[]> batchedArgs,
+        int updateBatchSize
     ) {
         this.args = args;
         this.parts = parts;
         this.timeout = timeout;
         this.lazy = lazy;
         this.pageSize = pageSize;
+        this.maxMem = maxMem;
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.nestedTxMode = nestedTxMode;
         this.autoCommit = autoCommit;
         this.batchedArgs = batchedArgs;
+        this.updateBatchSize = updateBatchSize;
     }
 
     /**
@@ -192,6 +169,25 @@ public class QueryParameters {
     }
 
     /**
+     * Gets update internal bach size.
+     * Default is 1 to prevent deadlock on update where keys sequance are different in several concurrent updates.
+     *
+     * @return Update internal batch size
+     */
+    public int updateBatchSize() {
+        return updateBatchSize;
+    }
+
+    /**
+     * Returns max memory available for query.
+     * .
+     * @return Memory limit in bytes.
+     */
+    public long maxMemory() {
+        return maxMem;
+    }
+
+    /**
      * Convert current batched arguments to a form with single arguments.
      *
      * @param args Arguments.
@@ -204,10 +200,12 @@ public class QueryParameters {
             this.timeout,
             this.lazy,
             this.pageSize,
+            this.maxMem,
             this.dataPageScanEnabled,
             this.nestedTxMode,
             this.autoCommit,
-            null
+            null,
+            this.updateBatchSize
         );
     }
 }

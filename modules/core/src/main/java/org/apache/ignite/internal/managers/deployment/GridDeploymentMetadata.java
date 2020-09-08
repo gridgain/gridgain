@@ -28,7 +28,7 @@ import org.apache.ignite.lang.IgniteUuid;
 /**
  * Deployment metadata.
  */
-class GridDeploymentMetadata {
+public class GridDeploymentMetadata {
     /** Deployment mode. */
     private DeploymentMode depMode;
 
@@ -202,7 +202,7 @@ class GridDeploymentMetadata {
      *
      * @param clsLdrId Property clsLdrId.
      */
-    void classLoaderId(IgniteUuid clsLdrId) {
+    public void classLoaderId(IgniteUuid clsLdrId) {
         this.clsLdrId = clsLdrId;
     }
 

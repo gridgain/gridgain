@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
+import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -26,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Thread local SQL query context which is intended to be accessible from everywhere.
  */
-public class QueryContext {
+public class QueryContext implements H2QueryContext {
     /** Segment ID. */
     private final int segment;
 
@@ -42,13 +43,16 @@ public class QueryContext {
     /** */
     private final PartitionReservation reservations;
 
+    /** {@code True} for local queries, {@code false} for distributed ones. */
+    private final boolean loc;
+
     /**
      * Constructor.
-     *
      * @param segment Index segment ID.
      * @param filter Filter.
      * @param distributedJoinCtx Distributed join context.
      * @param mvccSnapshot MVCC snapshot.
+     * @param loc {@code True} for local queries, {@code false} for distributed ones.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public QueryContext(
@@ -56,13 +60,29 @@ public class QueryContext {
         @Nullable IndexingQueryFilter filter,
         @Nullable DistributedJoinContext distributedJoinCtx,
         @Nullable MvccSnapshot mvccSnapshot,
-        @Nullable PartitionReservation reservations
-    ) {
+        @Nullable PartitionReservation reservations,
+        boolean loc) {
         this.segment = segment;
         this.filter = filter;
         this.distributedJoinCtx = distributedJoinCtx;
         this.mvccSnapshot = mvccSnapshot;
         this.reservations = reservations;
+        this.loc = loc;
+    }
+
+    /**
+     * @param filter Filter.
+     * @param local Local query flag.
+     * @return Context for parsing.
+     */
+    public static QueryContext parseContext(@Nullable IndexingQueryFilter filter, boolean local) {
+        return new QueryContext(
+            0,
+            filter,
+            null,
+            null,
+            null,
+            local);
     }
 
     /**
@@ -103,6 +123,13 @@ public class QueryContext {
      */
     public IndexingQueryFilter filter() {
         return filter;
+    }
+
+    /**
+     * @return {@code True} for local queries, {@code false} for distributed ones.
+     */
+    public boolean local() {
+        return loc;
     }
 
     /** {@inheritDoc} */

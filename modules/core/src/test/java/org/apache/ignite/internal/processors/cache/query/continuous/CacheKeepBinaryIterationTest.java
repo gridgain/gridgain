@@ -143,7 +143,6 @@ public class CacheKeepBinaryIterationTest extends GridCommonAbstractTest {
         doTestLocalEntries(ccfg, false, false);
     }
 
-
     /**
      * @param ccfg Cache configuration.
      */

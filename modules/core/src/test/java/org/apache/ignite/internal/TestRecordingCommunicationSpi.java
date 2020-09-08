@@ -17,10 +17,10 @@
 package org.apache.ignite.internal;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +29,9 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -63,7 +65,7 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
     private Map<Class<?>, Set<String>> blockCls = new HashMap<>();
 
     /** */
-    private IgniteBiPredicate<ClusterNode, Message> blockP;
+    private volatile IgniteBiPredicate<ClusterNode, Message> blockP;
 
     /** */
     private volatile IgniteBiInClosure<ClusterNode, Message> c;
@@ -299,7 +301,7 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * Stops block messages and sends all already blocked messages.
      */
     public void stopBlock() {
-        stopBlock(true, null);
+        stopBlock(true, null, true, true);
     }
 
     /**
@@ -308,7 +310,7 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * @param sndMsgs {@code True} to send blocked messages.
      */
     public void stopBlock(boolean sndMsgs) {
-        stopBlock(sndMsgs, null);
+        stopBlock(sndMsgs, null, true, true);
     }
 
     /**
@@ -319,15 +321,37 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * @param unblockPred If not null unblocks only messages allowed by predicate.
      */
     public void stopBlock(boolean sndMsgs, @Nullable IgnitePredicate<T2<ClusterNode, GridIoMessage>> unblockPred) {
+        stopBlock(sndMsgs, unblockPred, true, true);
+    }
+
+    /**
+     * Stops block messages and sends all already blocked messages if sndMsgs is 'true' optionally filtered by
+     * unblockPred.
+     *
+     * @param sndMsgs If {@code true} sends blocked messages.
+     * @param unblockPred If not null unblocks only messages allowed by predicate.
+     * @param clearFilters {@code true} to clear filters.
+     * @param rmvBlockedMsgs {@code true} to remove blocked messages. Sometimes useful in conjunction with {@code
+     * sndMsgs=false}.
+     */
+    public void stopBlock(boolean sndMsgs, @Nullable IgnitePredicate<T2<ClusterNode, GridIoMessage>> unblockPred,
+        boolean clearFilters, boolean rmvBlockedMsgs) {
         synchronized (this) {
-            blockCls.clear();
-            blockP = null;
+            if (clearFilters) {
+                blockCls.clear();
+                blockP = null;
+            }
 
-            Collection<T2<ClusterNode, GridIoMessage>> msgs =
-                unblockPred == null ? blockedMsgs : F.view(blockedMsgs, unblockPred);
+            Iterator<T2<ClusterNode, GridIoMessage>> iter = blockedMsgs.iterator();
 
-            if (sndMsgs) {
-                for (T2<ClusterNode, GridIoMessage> msg : msgs) {
+            while (iter.hasNext()) {
+                T2<ClusterNode, GridIoMessage> msg = iter.next();
+
+                // It is important what predicate if called only once for each message.
+                if (unblockPred != null && !unblockPred.apply(msg))
+                    continue;
+
+                if (sndMsgs) {
                     try {
                         ignite.log().info("Send blocked message [node=" + msg.get1().id() +
                             ", order=" + msg.get1().order() +
@@ -339,9 +363,66 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
                         U.error(ignite.log(), "Failed to send blocked message: " + msg, e);
                     }
                 }
-            }
 
-            msgs.clear();
+                if (rmvBlockedMsgs)
+                    iter.remove();
+            }
         }
     }
+
+    /**
+     * Stop blocking all messages.
+     */
+    public static void stopBlockAll() {
+        for (Ignite ignite : G.allGrids())
+            spi(ignite).stopBlock(true);
+    }
+
+    /**
+     * @param grpId Group id.
+     */
+    public static IgniteBiPredicate<ClusterNode, Message> blockDemandMessageForGroup(int grpId) {
+        return new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage) {
+                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
+
+                    return msg0.groupId() == grpId;
+                }
+
+                return false;
+            }
+        };
+    }
+
+    /** */
+    public static IgniteBiPredicate<ClusterNode, Message> blockSingleExhangeMessage() {
+        return new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() != null;
+                }
+
+                return false;
+            }
+        };
+    }
+
+    /** */
+    public static IgniteBiPredicate<ClusterNode, Message> blockSinglePartitionStateMessage() {
+        return new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                if (msg instanceof GridDhtPartitionsSingleMessage) {
+                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+
+                    return msg0.exchangeId() == null;
+                }
+
+                return false;
+            }
+        };
+    }
+
 }

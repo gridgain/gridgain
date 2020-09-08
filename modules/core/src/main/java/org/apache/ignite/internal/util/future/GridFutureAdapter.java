@@ -27,6 +27,9 @@ import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.NoopSpan;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -35,6 +38,8 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 
 /**
  * Future adapter.
@@ -52,6 +57,10 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
     /** */
     private static final AtomicReferenceFieldUpdater<GridFutureAdapter, Object> stateUpdater =
         AtomicReferenceFieldUpdater.newUpdater(GridFutureAdapter.class, Object.class, "state");
+
+    /** Tracing span. */
+    @GridToStringExclude
+    protected volatile Span span = NoopSpan.INSTANCE;
 
     /*
      * https://bugs.openjdk.java.net/browse/JDK-8074773
@@ -126,7 +135,7 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
     @Override public R result() {
         Object state0 = state;
 
-        if(state0 == null ||                           // It is DONE state
+        if (state0 == null ||                           // It is DONE state
            (state0.getClass() != Node.class &&         // It is not INIT state
             state0.getClass() != ErrorWrapper.class && // It is not FAILED
             state0 != CANCELLED))                      // It is not CANCELLED
@@ -272,10 +281,10 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
             if (isDone(oldState))
                 return false;
 
-            if(node == null)
+            if (node == null)
                 node = new Node(waiter);
 
-            if(oldState != INIT && oldState.getClass() == Node.class)
+            if (oldState != INIT && oldState.getClass() == Node.class)
                 node.next = (Node)oldState;
 
             if (compareAndSetState(oldState, node))
@@ -291,7 +300,7 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
         Object cur = state;
 
         while (cur != null) {
-            if(cur.getClass() != Node.class)
+            if (cur.getClass() != Node.class)
                 return;
 
             Object curWaiter = ((Node)cur).val;
@@ -496,20 +505,22 @@ public class GridFutureAdapter<R> implements IgniteInternalFuture<R> {
      * @return {@code True} if result was set by this call.
      */
     protected boolean onDone(@Nullable R res, @Nullable Throwable err, boolean cancel) {
-        Object newState = cancel ? CANCELLED : err != null ? new ErrorWrapper(err) : res;
+        try (TraceSurroundings ignored = MTC.support(span)) {
+            Object newState = cancel ? CANCELLED : err != null ? new ErrorWrapper(err) : res;
 
-        while (true) {
-            final Object oldState = state;
+            while (true) {
+                final Object oldState = state;
 
-            if (isDone(oldState))
-                return false;
+                if (isDone(oldState))
+                    return false;
 
-            if (compareAndSetState(oldState, newState)) {
+                if (compareAndSetState(oldState, newState)) {
 
-                if(oldState != INIT)
-                    unblockAll((Node)oldState);
+                    if (oldState != INIT)
+                        unblockAll((Node)oldState);
 
-                return true;
+                    return true;
+                }
             }
         }
     }

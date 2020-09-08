@@ -20,27 +20,36 @@ import org.apache.ignite.internal.processors.cache.BinaryTypeMismatchLoggingTest
 import org.apache.ignite.internal.processors.cache.BinaryTypeRegistrationTest;
 import org.apache.ignite.internal.processors.cache.CacheBinaryKeyConcurrentQueryTest;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationP2PTest;
+import org.apache.ignite.internal.processors.cache.CacheGroupMetricsWithIndexTest;
 import org.apache.ignite.internal.processors.cache.CacheIndexStreamerTest;
 import org.apache.ignite.internal.processors.cache.CacheOperationsWithExpirationTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryAfterDynamicCacheStartFailureTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryFilterExpiredTest;
 import org.apache.ignite.internal.processors.cache.CacheRandomOperationsMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
+import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeDoesNotBreakSqlSelectTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexEntryEvictTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexGetSelfTest;
+import org.apache.ignite.internal.processors.cache.GridCacheSqlDdlClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.cache.GridIndexingWithNoopSwapSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheConfigurationPrimitiveTypesSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheStarvationOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IgniteClientReconnectQueriesTest;
+import org.apache.ignite.internal.processors.cache.WrongIndexedTypesTest;
+import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExceptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicPartitionedSelfTest;
+import org.apache.ignite.internal.processors.cache.ttl.CacheTtlReadOnlyModeSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalLocalSelfTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPartitionedSelfTest;
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
-import org.apache.ignite.internal.processors.query.h2.database.InlineIndexHelperTest;
+import org.apache.ignite.internal.processors.query.h2.database.H2ComputeInlineSizeTest;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnTest;
+import org.apache.ignite.internal.visor.VisorQueryTaskSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -49,7 +58,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    InlineIndexHelperTest.class,
+    InlineIndexColumnTest.class,
+    H2ComputeInlineSizeTest.class,
 
     GridIndexingWithNoopSwapSelfTest.class,
     GridCacheOffHeapSelfTest.class,
@@ -58,6 +68,7 @@ import org.junit.runners.Suite;
     CacheTtlTransactionalPartitionedSelfTest.class,
     CacheTtlAtomicLocalSelfTest.class,
     CacheTtlAtomicPartitionedSelfTest.class,
+    CacheTtlReadOnlyModeSelfTest.class,
 
     GridCacheOffheapIndexGetSelfTest.class,
     GridCacheOffheapIndexEntryEvictTest.class,
@@ -85,7 +96,20 @@ import org.junit.runners.Suite;
 
     BinaryTypeRegistrationTest.class,
 
-    ClusterReadOnlyModeSqlTest.class
+    ClusterReadOnlyModeSqlTest.class,
+    GridCacheSqlDdlClusterReadOnlyModeTest.class,
+
+    ClusterReadOnlyModeDoesNotBreakSqlSelectTest.class,
+
+    CacheGroupMetricsWithIndexTest.class,
+
+    RebuildIndexLogMessageTest.class,
+
+    H2TreeCorruptedTreeExceptionTest.class,
+
+    VisorQueryTaskSelfTest.class,
+
+    WrongIndexedTypesTest.class
 })
 public class IgniteCacheWithIndexingTestSuite {
 }

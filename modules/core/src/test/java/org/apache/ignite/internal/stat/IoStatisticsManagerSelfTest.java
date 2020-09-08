@@ -24,20 +24,27 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsType;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.stat.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
+import static org.apache.ignite.internal.metric.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
 
 /**
  * Tests for IO statistic manager.
  */
 public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
-
     /** */
     private static final int RECORD_COUNT = 5000;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -117,7 +124,7 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
         long physicalReadsCnt = ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null);
 
         if (isPersistent)
-            Assert.assertTrue(physicalReadsCnt>0);
+            Assert.assertTrue(physicalReadsCnt > 0);
         else
             Assert.assertEquals(0, physicalReadsCnt);
 
@@ -126,6 +133,23 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
         Assert.assertNotNull(logicalReads);
 
         Assert.assertEquals(RECORD_COUNT, logicalReads.longValue());
+
+        // We expect pages to be rotated with disk.
+        for (int i = 0; i < RECORD_COUNT; i++)
+            ignite(0).cache(DEFAULT_CACHE_NAME).get("KEY-" + i);
+
+        if (isPersistent) {
+            // Check that physical reads grows, but not infinitely.
+            assertTrue(physicalReadsCnt < ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+
+            // There should be no more than 3 page rotations per read (data page, index level 1 page and index level 2 page).
+            assertTrue(physicalReadsCnt + 3 * RECORD_COUNT > ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+        }
+        else
+            assertEquals(0, (long)ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+
+        assertTrue(logicalReads < (long)ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
+        assertTrue(logicalReads + 3 * RECORD_COUNT > ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
     }
 
     /**
@@ -135,17 +159,17 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
      * @return IO statistic manager.
      * @throws Exception In case of failure.
      */
-    @NotNull private IoStatisticsManager prepareData(boolean isPersistent) throws Exception {
+    private IoStatisticsManager prepareData(boolean isPersistent) throws Exception {
         IgniteEx ign = prepareIgnite(isPersistent);
 
         IoStatisticsManager ioStatMgr = ign.context().ioStats();
 
-        IgniteCache cache = ign.getOrCreateCache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = ign.getOrCreateCache(DEFAULT_CACHE_NAME);
 
         ioStatMgr.reset();
 
         for (int i = 0; i < RECORD_COUNT; i++)
-            cache.put("KEY-" + i, "VAL-" + i);
+            cache.put("KEY-" + i, "VALUE-" + i);
 
         return ioStatMgr;
     }
@@ -158,7 +182,7 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
      * @throws Exception In case of failure.
      */
     private IgniteConfiguration getConfiguration(boolean isPersist) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration();
+        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(0));
 
         if (isPersist) {
             DataStorageConfiguration dsCfg = new DataStorageConfiguration()

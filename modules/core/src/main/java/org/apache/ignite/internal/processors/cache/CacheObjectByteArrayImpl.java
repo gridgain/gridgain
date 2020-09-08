@@ -82,7 +82,7 @@ public class CacheObjectByteArrayImpl implements CacheObject, Externalizable {
 
     /** {@inheritDoc} */
     @Override public int putValue(long addr) throws IgniteCheckedException {
-        return CacheObjectAdapter.putValue(addr, cacheObjectType(), val, 0);
+        return CacheObjectAdapter.putValue(addr, cacheObjectType(), val);
     }
 
     /** {@inheritDoc} */

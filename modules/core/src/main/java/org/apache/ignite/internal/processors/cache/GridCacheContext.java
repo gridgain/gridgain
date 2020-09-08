@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.Cache;
 import javax.cache.configuration.Factory;
 import javax.cache.expiry.EternalExpiryPolicy;
@@ -52,6 +53,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -62,6 +64,7 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.datastructures.CacheDataStructuresManager;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
@@ -89,6 +92,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManag
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
+import org.apache.ignite.internal.processors.platform.cache.PlatformCacheManager;
 import org.apache.ignite.internal.processors.plugin.CachePluginManager;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.F0;
@@ -281,6 +285,9 @@ public class GridCacheContext<K, V> implements Externalizable {
     private final boolean disableTriggeringCacheInterceptorOnConflict =
         Boolean.parseBoolean(System.getProperty(IGNITE_DISABLE_TRIGGERING_CACHE_INTERCEPTOR_ON_CONFLICT, "false"));
 
+    /** Last remove all job future. */
+    private AtomicReference<IgniteInternalFuture<Boolean>> lastRmvAllJobFut = new AtomicReference<>();
+
     /**
      * Empty constructor required for {@link Externalizable}.
      */
@@ -339,7 +346,8 @@ public class GridCacheContext<K, V> implements Externalizable {
         GridCacheDrManager drMgr,
         CacheConflictResolutionManager<K, V> rslvrMgr,
         CachePluginManager pluginMgr,
-        GridCacheAffinityManager affMgr
+        GridCacheAffinityManager affMgr,
+        PlatformCacheManager platformMgr
     ) {
         assert ctx != null;
         assert sharedCtx != null;
@@ -381,10 +389,11 @@ public class GridCacheContext<K, V> implements Externalizable {
         this.contQryMgr = add(contQryMgr);
         this.dataStructuresMgr = add(dataStructuresMgr);
         this.ttlMgr = add(ttlMgr);
-        this.drMgr = add(drMgr);
         this.rslvrMgr = add(rslvrMgr);
+        this.drMgr = add(drMgr);
         this.pluginMgr = add(pluginMgr);
         this.affMgr = add(affMgr);
+        add(platformMgr);
 
         log = ctx.log(getClass());
 
@@ -594,7 +603,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      */
     public boolean systemTx() {
         return cacheType == CacheType.UTILITY ||
-            ((cacheType == CacheType.INTERNAL || cacheType == CacheType.DATA_STRUCTURES)&& transactional());
+            ((cacheType == CacheType.INTERNAL || cacheType == CacheType.DATA_STRUCTURES) && transactional());
     }
 
     /**
@@ -674,14 +683,14 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @return {@code True} if cache is replicated cache.
      */
     public boolean isReplicated() {
-        return cacheCfg.getCacheMode() == CacheMode.REPLICATED;
+        return config().getCacheMode() == CacheMode.REPLICATED;
     }
 
     /**
      * @return {@code True} if cache is partitioned cache.
      */
     public boolean isPartitioned() {
-        return cacheCfg.getCacheMode() == CacheMode.PARTITIONED;
+        return config().getCacheMode() == CacheMode.PARTITIONED;
     }
 
     /**
@@ -695,7 +704,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @return {@code True} in case cache supports query.
      */
     public boolean isQueryEnabled() {
-        return !F.isEmpty(cacheCfg.getQueryEntities());
+        return !F.isEmpty(config().getQueryEntities());
     }
 
     /**
@@ -820,7 +829,7 @@ public class GridCacheContext<K, V> implements Externalizable {
         if (CU.isSystemCache(name()))
             return;
 
-        ctx.security().authorize(name(), op, null);
+        ctx.security().authorize(name(), op);
     }
 
     /**
@@ -848,21 +857,23 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @return {@code True} if atomic.
      */
     public boolean atomic() {
-        return cacheCfg.getAtomicityMode() == ATOMIC;
+        return config().getAtomicityMode() == ATOMIC;
     }
 
     /**
      * @return {@code True} if transactional.
      */
     public boolean transactional() {
-        return cacheCfg.getAtomicityMode() == TRANSACTIONAL || cacheCfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
+        CacheConfiguration cfg = config();
+
+        return cfg.getAtomicityMode() == TRANSACTIONAL || cfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
     }
 
     /**
      * @return {@code True} if transactional snapshot.
      */
     public boolean transactionalSnapshot() {
-        return cacheCfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
+        return config().getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
     }
 
     /**
@@ -1042,9 +1053,15 @@ public class GridCacheContext<K, V> implements Externalizable {
 
     /**
      * @return Cache configuration for given cache instance.
+     * @throws IllegalStateException If this cache context was cleaned up.
      */
     public CacheConfiguration config() {
-        return cacheCfg;
+        CacheConfiguration res = cacheCfg;
+
+        if (res == null)
+            throw new IllegalStateException((new CacheStoppedException(name())));
+
+        return res;
     }
 
     /**
@@ -1053,7 +1070,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      *      are set to {@code true} or the store is local.
      */
     public boolean writeToStoreFromDht() {
-        return store().isLocal() || cacheCfg.isWriteBehindEnabled();
+        return store().isLocal() || config().isWriteBehindEnabled();
     }
 
     /**
@@ -1487,56 +1504,56 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @return {@code True} if store read-through mode is enabled.
      */
     public boolean readThrough() {
-        return cacheCfg.isReadThrough() && !skipStore();
+        return config().isReadThrough() && !skipStore();
     }
 
     /**
      * @return {@code True} if store and read-through mode are enabled in configuration.
      */
     public boolean readThroughConfigured() {
-        return store().configured() && cacheCfg.isReadThrough();
+        return store().configured() && config().isReadThrough();
     }
 
     /**
      * @return {@code True} if {@link CacheConfiguration#isLoadPreviousValue()} flag is set.
      */
     public boolean loadPreviousValue() {
-        return cacheCfg.isLoadPreviousValue();
+        return config().isLoadPreviousValue();
     }
 
     /**
      * @return {@code True} if store write-through is enabled.
      */
     public boolean writeThrough() {
-        return cacheCfg.isWriteThrough() && !skipStore();
+        return config().isWriteThrough() && !skipStore();
     }
 
     /**
      * @return {@code True} if invalidation is enabled.
      */
     public boolean isInvalidate() {
-        return cacheCfg.isInvalidate();
+        return config().isInvalidate();
     }
 
     /**
      * @return {@code True} if synchronous commit is enabled.
      */
     public boolean syncCommit() {
-        return cacheCfg.getWriteSynchronizationMode() == FULL_SYNC;
+        return config().getWriteSynchronizationMode() == FULL_SYNC;
     }
 
     /**
      * @return {@code True} if synchronous rollback is enabled.
      */
     public boolean syncRollback() {
-        return cacheCfg.getWriteSynchronizationMode() == FULL_SYNC;
+        return config().getWriteSynchronizationMode() == FULL_SYNC;
     }
 
     /**
      * @return {@code True} if only primary node should be updated synchronously.
      */
     public boolean syncPrimary() {
-        return cacheCfg.getWriteSynchronizationMode() == PRIMARY_SYNC;
+        return config().getWriteSynchronizationMode() == PRIMARY_SYNC;
     }
 
     /**
@@ -1683,13 +1700,6 @@ public class GridCacheContext<K, V> implements Externalizable {
     }
 
     /**
-     * @return Data center ID.
-     */
-    public byte dataCenterId() {
-        return dr().dataCenterId();
-    }
-
-    /**
      * @param entry Entry.
      * @param ver Version.
      */
@@ -1752,7 +1762,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * of {@link CacheConfiguration#isCopyOnRead()}.
      */
     public boolean needValueCopy() {
-        return affNode && cacheCfg.isCopyOnRead();
+        return affNode && config().isCopyOnRead();
     }
 
     /**
@@ -2252,7 +2262,7 @@ public class GridCacheContext<K, V> implements Externalizable {
             }
         }
 
-        if (!readFromBackup){
+        if (!readFromBackup) {
             ClusterNode first = affNodes.get(0);
 
             return !invalidNodes.contains(first) ? first : null;
@@ -2328,6 +2338,13 @@ public class GridCacheContext<K, V> implements Externalizable {
     public boolean hasContinuousQueryListeners(@Nullable IgniteInternalTx tx) {
         return grp.sharedGroup() ? grp.hasContinuousQueryCaches() :
             contQryMgr.notifyContinuousQueries(tx) && !F.isEmpty(contQryMgr.updateListeners(false, false));
+    }
+
+    /**
+     * Returns future that assigned to last performing {@link GridDistributedCacheAdapter.GlobalRemoveAllJob}
+     */
+    public AtomicReference<IgniteInternalFuture<Boolean>> lastRemoveAllJobFut() {
+        return lastRmvAllJobFut;
     }
 
     /** {@inheritDoc} */

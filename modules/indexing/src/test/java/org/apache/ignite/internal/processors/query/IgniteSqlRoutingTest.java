@@ -41,6 +41,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -91,6 +92,8 @@ public class IgniteSqlRoutingTest extends AbstractIndexingCommonTest {
             c.setClientMode(true);
 
         c.setCacheKeyConfiguration(new CacheKeyConfiguration(CallKey.class));
+
+        c.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return c;
     }
@@ -493,14 +496,14 @@ public class IgniteSqlRoutingTest extends AbstractIndexingCommonTest {
     }
 
     /** */
-    private void checkResultsRow(List<List<?>> results, int rowId, Object ... expected) throws Exception {
+    private void checkResultsRow(List<List<?>> results, int rowId, Object... expected) throws Exception {
         assertTrue(rowId < results.size());
 
         List<?> row = results.get(rowId);
 
         assertEquals(expected.length, row.size());
 
-        for(int col = 0; col < expected.length; ++col)
+        for (int col = 0; col < expected.length; ++col)
             assertEquals(expected[col], row.get(col));
     }
 

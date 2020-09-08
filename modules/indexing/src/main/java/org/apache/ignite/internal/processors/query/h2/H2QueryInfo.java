@@ -16,21 +16,25 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
+import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.engine.Session;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.engine.Session;
 
 /**
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
  */
 public class H2QueryInfo {
+    /** Query id assigned by {@link RunningQueryManager}. */
+    private final Long runningQryId;
+
     /** Type. */
     private final QueryType type;
 
@@ -52,17 +56,22 @@ public class H2QueryInfo {
     /** Lazy mode. */
     private final boolean lazy;
 
+    /** Prepared statement. */
+    private final Prepared stmt;
+
     /**
      * @param type Query type.
      * @param stmt Query statement.
      * @param sql Query statement.
+     * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
-    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql) {
+    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long runningQryId) {
         try {
             assert stmt != null;
 
             this.type = type;
             this.sql = sql;
+            this.runningQryId = runningQryId;
 
             beginTs = U.currentTimeMillis();
 
@@ -73,6 +82,7 @@ public class H2QueryInfo {
             enforceJoinOrder = s.isForceJoinOrder();
             distributedJoin = s.isJoinBatchEnabled();
             lazy = s.isLazyQueryExecution();
+            this.stmt = GridSqlQueryParser.prepared(stmt);
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Cannot collect query info", IgniteQueryErrorCode.UNKNOWN, e);
@@ -98,24 +108,42 @@ public class H2QueryInfo {
     /**
      * @param log Logger.
      * @param msg Log message
-     * @param connMgr Connection manager.
+     * @param additionalInfo Additional query info.
      */
-    public void printLogMessage(IgniteLogger log, ConnectionManager connMgr, String msg) {
+    public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
+        printLogMessage(log, null, msg, additionalInfo);
+    }
+
+    /** @return Query id assigned by {@link RunningQueryManager}. */
+    public Long runningQueryId() {
+        return runningQryId;
+    }
+
+    /**
+     * @param log Logger.
+     * @param msg Log message
+     * @param connMgr Connection manager.
+     * @param additionalInfo Additional query info.
+     */
+    public void printLogMessage(IgniteLogger log, ConnectionManager connMgr, String msg, String additionalInfo) {
         StringBuilder msgSb = new StringBuilder(msg + " [");
 
-        msgSb.append("time=").append(time()).append("ms")
+        if (additionalInfo != null)
+            msgSb.append(additionalInfo).append(", ");
+
+        msgSb.append("duration=").append(time()).append("ms")
             .append(", type=").append(type)
             .append(", distributedJoin=").append(distributedJoin)
             .append(", enforceJoinOrder=").append(enforceJoinOrder)
-            .append(", lazy=").append(lazy);
-
-        printInfo(msgSb);
+            .append(", lazy=").append(lazy)
+            .append(", schema=").append(schema);
 
         msgSb.append(", sql='")
             .append(sql);
 
-        if (type != QueryType.REDUCE)
-            msgSb.append("', plan=").append(queryPlan(log, connMgr));
+        msgSb.append("', plan=").append(stmt.getPlanSQL(false));
+
+        printInfo(msgSb);
 
         msgSb.append(']');
 
@@ -123,28 +151,18 @@ public class H2QueryInfo {
     }
 
     /**
-     * @param log Logger.
-     * @param connMgr Connection manager.
-     * @return Query plan.
+     * Returns description of this query info.
      */
-    protected String queryPlan(IgniteLogger log, ConnectionManager connMgr) {
-        Connection c = connMgr.connectionForThread().connection(schema);
-
-        H2Utils.setupConnection(c, distributedJoin, enforceJoinOrder);
-
-        try (PreparedStatement pstmt = c.prepareStatement("EXPLAIN " + sql)) {
-
-            try (ResultSet plan = pstmt.executeQuery()) {
-                plan.next();
-
-                return plan.getString(1) + U.nl();
-            }
-        }
-        catch (Exception e) {
-            log.warning("Cannot get plan for long query: " + sql, e);
-
-            return "[error on calculate plan: " + e.getMessage() + ']';
-        }
+    public String description() {
+        return "H2QueryInfo ["
+            + "type=" + type
+            + ", runningQryId=" + runningQryId
+            + ", beginTs=" + beginTs
+            + ", distributedJoin=" + distributedJoin
+            + ", enforceJoinOrder=" + enforceJoinOrder
+            + ", lazy=" + lazy
+            + ", schema=" + schema
+            + ", sql='" + sql + "']";
     }
 
     /**

@@ -33,6 +33,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -118,7 +119,7 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
         IgniteCache<Object, Object> cache = ignite(0).cache(ORG_CACHE_NAME);
 
         // Unequal entries distribution among partitions.
-        int expSize = nodesCount() * QRY_PARALLELISM_LVL *  3 / 2;
+        int expSize = nodesCount() * QRY_PARALLELISM_LVL * 3 / 2;
 
         for (int i = 0; i < expSize; i++)
             cache.put(i, new Organization("org-" + i));
@@ -126,7 +127,7 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
         String select0 = "select * from \"org\".Organization o";
 
         // Check for stable results.
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             List<List<?>> res = cache.query(new SqlFieldsQuery(select0)).getAll();
 
             assertEquals(expSize, res.size());
@@ -143,7 +144,7 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
         IgniteCache<Object, Object> cache = ignite(0).cache(ORG_CACHE_NAME);
 
         // Unequal entries distribution among partitions.
-        long expSize = nodesCount() * QRY_PARALLELISM_LVL *  3 / 2;
+        long expSize = nodesCount() * QRY_PARALLELISM_LVL * 3 / 2;
 
         for (int i = 0; i < expSize; i++)
             cache.put(i, new Organization("org-" + i));
@@ -151,7 +152,7 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
         String select0 = "select count(*) from \"org\".Organization o";
 
         // Check for stable results.
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             List<List<?>> res = cache.query(new SqlFieldsQuery(select0)).getAll();
 
             assertEquals(expSize, res.get(0).get(0));
@@ -209,6 +210,7 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
      *
      * @throws Exception If failed.
      */
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-11839")
     @Test
     public void testSegmentedPartitionedWithReplicated() throws Exception {
         ignite(0).createCache(cacheConfig(PERSON_CAHE_NAME, true, PersonKey.class, Person.class));
@@ -352,7 +354,6 @@ public class IgniteSqlSegmentedIndexSelfTest extends AbstractIndexingCommonTest 
         /** */
         @QuerySqlField
         String name;
-
 
         /**
          * @param name Name.

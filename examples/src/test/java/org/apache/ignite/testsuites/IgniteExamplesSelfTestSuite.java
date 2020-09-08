@@ -34,7 +34,6 @@ import org.apache.ignite.examples.DeploymentExamplesSelfTest;
 import org.apache.ignite.examples.EncryptedCacheExampleSelfTest;
 import org.apache.ignite.examples.EventsExamplesMultiNodeSelfTest;
 import org.apache.ignite.examples.EventsExamplesSelfTest;
-import org.apache.ignite.examples.IgfsExamplesSelfTest;
 import org.apache.ignite.examples.LifecycleExamplesSelfTest;
 import org.apache.ignite.examples.MemcacheRestExamplesMultiNodeSelfTest;
 import org.apache.ignite.examples.MemcacheRestExamplesSelfTest;
@@ -70,7 +69,6 @@ import org.junit.runners.Suite;
     TaskExamplesSelfTest.class,
     SpringBeanExamplesSelfTest.class,
     SpringDataExampleSelfTest.class,
-    IgfsExamplesSelfTest.class,
     CheckpointExamplesSelfTest.class,
     ClusterGroupExampleSelfTest.class,
     CacheContinuousQueryExamplesSelfTest.class,
@@ -89,9 +87,6 @@ import org.junit.runners.Suite;
     // Binary.
     CacheClientBinaryExampleTest.class,
     ComputeClientBinaryExampleTest.class,
-
-    // ML Grid.
-    IgniteExamplesMLTestSuite.class,
 
     // Encryption.
     EncryptedCacheExampleSelfTest.class,

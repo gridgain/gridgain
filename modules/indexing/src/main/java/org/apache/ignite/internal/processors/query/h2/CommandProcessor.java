@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMode;
@@ -109,16 +113,16 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.h2.command.Prepared;
-import org.h2.command.ddl.AlterTableAlterColumn;
-import org.h2.command.ddl.CreateIndex;
-import org.h2.command.ddl.CreateTable;
-import org.h2.command.ddl.DropIndex;
-import org.h2.command.ddl.DropTable;
-import org.h2.command.dml.NoOperation;
-import org.h2.table.Column;
-import org.h2.value.DataType;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.command.ddl.AlterTableAlterColumn;
+import org.gridgain.internal.h2.command.ddl.CreateIndex;
+import org.gridgain.internal.h2.command.ddl.CreateTable;
+import org.gridgain.internal.h2.command.ddl.DropIndex;
+import org.gridgain.internal.h2.command.ddl.DropTable;
+import org.gridgain.internal.h2.command.dml.NoOperation;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -308,10 +312,11 @@ public class CommandProcessor {
         if (err == null) {
             try {
                 runningQryInfo.cancel();
-            } catch (Exception e){
+            }
+            catch (Exception e) {
                 U.warn(log, "Cancellation of query failed: [qryId=" + qryId + "]", e);
 
-                if(!msg.asyncResponse())
+                if (!msg.asyncResponse())
                     sendKillResponse(msg, node, e.getMessage());
 
                 return;
@@ -406,7 +411,7 @@ public class CommandProcessor {
             }
             else if (cmdNative instanceof SqlSetStreamingCommand)
                 processSetStreamingCommand((SqlSetStreamingCommand)cmdNative, cliCtx);
-            else if(cmdNative instanceof SqlKillQueryCommand)
+            else if (cmdNative instanceof SqlKillQueryCommand)
                 processKillQueryCommand((SqlKillQueryCommand) cmdNative);
             else
                 processTxCommand(cmdNative, params);
@@ -426,6 +431,8 @@ public class CommandProcessor {
      * @param cmd Command.
      */
     private void processKillQueryCommand(SqlKillQueryCommand cmd) {
+        ctx.security().authorize(SecurityPermission.KILL_QUERY);
+
         GridFutureAdapter<String> fut = new GridFutureAdapter<>();
 
         lock.readLock().lock();
@@ -455,7 +462,7 @@ public class CommandProcessor {
                     null,
                     locNodeMsgHnd,
                     GridIoPolicy.MANAGEMENT_POOL,
-                    false
+                    cmd.async()
                 );
 
                 if (!snd) {
@@ -694,9 +701,9 @@ public class CommandProcessor {
                 }
             }
             else if (cmdH2 instanceof GridSqlCreateTable) {
-                ctx.security().authorize(null, SecurityPermission.CACHE_CREATE, null);
-
                 GridSqlCreateTable cmd = (GridSqlCreateTable)cmdH2;
+
+                ctx.security().authorize(cmd.cacheName(), SecurityPermission.CACHE_CREATE);
 
                 isDdlOnSchemaSupported(cmd.schemaName());
 
@@ -739,8 +746,6 @@ public class CommandProcessor {
                 }
             }
             else if (cmdH2 instanceof GridSqlDropTable) {
-                ctx.security().authorize(null, SecurityPermission.CACHE_DESTROY, null);
-
                 GridSqlDropTable cmd = (GridSqlDropTable)cmdH2;
 
                 isDdlOnSchemaSupported(cmd.schemaName());
@@ -752,8 +757,11 @@ public class CommandProcessor {
                         throw new SchemaOperationException(SchemaOperationException.CODE_TABLE_NOT_FOUND,
                             cmd.tableName());
                 }
-                else
+                else {
+                    ctx.security().authorize(tbl.cacheName(), SecurityPermission.CACHE_DESTROY);
+
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
+                }
             }
             else if (cmdH2 instanceof GridSqlAlterTableAddColumn) {
                 GridSqlAlterTableAddColumn cmd = (GridSqlAlterTableAddColumn)cmdH2;
@@ -893,7 +901,7 @@ public class CommandProcessor {
      * @param schemaName Schema name.
      */
     private static void isDdlOnSchemaSupported(String schemaName) {
-        if (F.eq(QueryUtils.SCHEMA_SYS, schemaName))
+        if (F.eq(QueryUtils.sysSchemaName(), schemaName))
             throw new IgniteSQLException("DDL statements are not supported on " + schemaName + " schema",
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
     }
@@ -973,7 +981,7 @@ public class CommandProcessor {
                 sqlCode = IgniteQueryErrorCode.UNKNOWN;
         }
 
-        return new IgniteSQLException(e.getMessage(), sqlCode);
+        return new IgniteSQLException(e.getMessage(), sqlCode, e);
     }
 
     /**
@@ -1011,19 +1019,19 @@ public class CommandProcessor {
             if (dfltVal != null)
                 dfltValues.put(e.getKey(), dfltVal);
 
-            if (col.getType() == Value.DECIMAL) {
-                if (col.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getPrecision());
+            if (col.getType().getValueType() == Value.DECIMAL) {
+                if (col.getType().getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
+                    precision.put(e.getKey(), (int)col.getType().getPrecision());
 
-                if (col.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
-                    scale.put(e.getKey(), col.getScale());
+                if (col.getType().getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
+                    scale.put(e.getKey(), col.getType().getScale());
             }
 
-            if (col.getType() == Value.STRING ||
-                col.getType() == Value.STRING_FIXED ||
-                col.getType() == Value.STRING_IGNORECASE)
-                if (col.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getPrecision());
+            if (col.getType().getValueType() == Value.STRING ||
+                col.getType().getValueType() == Value.STRING_FIXED ||
+                col.getType().getValueType() == Value.STRING_IGNORECASE)
+                if (col.getType().getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
+                    precision.put(e.getKey(), (int)col.getType().getPrecision());
         }
 
         if (!F.isEmpty(dfltValues))
@@ -1035,7 +1043,9 @@ public class CommandProcessor {
         if (!F.isEmpty(scale))
             res.setFieldsScale(scale);
 
-        String valTypeName = QueryUtils.createTableValueTypeName(createTbl.schemaName(), createTbl.tableName());
+        String digest = createFieldsDigest(createTbl);
+        String valTypeName = QueryUtils.createTableValueTypeName(createTbl.schemaName(), createTbl.tableName(), digest);
+
         String keyTypeName = QueryUtils.createTableKeyTypeName(valTypeName);
 
         if (!F.isEmpty(createTbl.keyTypeName()))
@@ -1107,13 +1117,51 @@ public class CommandProcessor {
     }
 
     /**
+     * Creates table digest as MD5 hash from sorted list of column names and types.
+     *
+     * @param tbl Create table command.
+     * @return Digest from sorted list of column names and types.
+     */
+    private static String createFieldsDigest(GridSqlCreateTable tbl) {
+        try {
+            String concatedFields = concatFields(tbl);
+
+           return U.calculateMD5(new ByteArrayInputStream(concatedFields.getBytes()));
+        }
+        catch (NoSuchAlgorithmException | IOException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * @param tbl Table.
+     * @return Concated table fields and their types.
+     */
+    private static String concatFields(GridSqlCreateTable tbl) {
+        List<String> fieldDigests = new ArrayList<>(tbl.columns().size());
+
+        for (Map.Entry<String, GridSqlColumn> e : tbl.columns().entrySet()) {
+            String colName = e.getKey();
+            String colType = getTypeClassName(e.getValue());
+
+            String fd = "[" + colName + ":" + colType + "]";
+
+            fieldDigests.add(fd.toUpperCase());
+        }
+
+        Collections.sort(fieldDigests);
+
+        return String.join(", ", fieldDigests);
+    }
+
+    /**
      * Helper function for obtaining type class name for H2.
      *
      * @param col Column.
      * @return Type class name.
      */
     private static String getTypeClassName(GridSqlColumn col) {
-        int type = col.column().getType();
+        int type = col.column().getType().getValueType();
 
         switch (type) {
             case Value.UUID :
@@ -1121,7 +1169,7 @@ public class CommandProcessor {
                     return UUID.class.getName();
 
             default:
-                return DataType.getTypeClassName(type);
+                return DataType.getTypeClassName(type, false);
         }
     }
 

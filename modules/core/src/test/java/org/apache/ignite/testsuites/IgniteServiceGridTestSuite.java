@@ -16,10 +16,13 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.ComputeJobCancelWithServiceSelfTest;
 import org.apache.ignite.internal.processors.service.ClosureServiceClientsNodesTest;
 import org.apache.ignite.internal.processors.service.GridServiceClientNodeTest;
+import org.apache.ignite.internal.processors.service.GridServiceClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.service.GridServiceContinuousQueryRedeployTest;
+import org.apache.ignite.internal.processors.service.GridServiceDeployClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.service.GridServiceDeploymentCompoundFutureSelfTest;
 import org.apache.ignite.internal.processors.service.GridServiceDeploymentExceptionPropagationTest;
 import org.apache.ignite.internal.processors.service.GridServicePackagePrivateSelfTest;
@@ -58,6 +61,9 @@ import org.apache.ignite.internal.processors.service.ServicePredicateAccessCache
 import org.apache.ignite.internal.processors.service.ServiceReassignmentFunctionSelfTest;
 import org.apache.ignite.internal.processors.service.SystemCacheNotConfiguredTest;
 import org.apache.ignite.services.ServiceThreadPoolSelfTest;
+import org.apache.ignite.tools.junit.JUnitTeamcityReporter;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -110,6 +116,31 @@ import org.junit.runners.Suite;
     ServiceInfoSelfTest.class,
     ServiceDeploymentProcessIdSelfTest.class,
     ServiceHotRedeploymentViaDeploymentSpiTest.class,
+    GridServiceDeployClusterReadOnlyModeTest.class,
+    GridServiceClusterReadOnlyModeTest.class,
 })
 public class IgniteServiceGridTestSuite {
+    /** Old service grid property. */
+    private static String oldSrvcGridProp;
+
+    /** If needed, activate service grid in order to test it. */
+    @BeforeClass
+    public static void init() {
+        JUnitTeamcityReporter.suite = IgniteServiceGridTestSuite.class.getName();
+
+        oldSrvcGridProp = System.getProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
+
+        // Enable event-driven service grid implementation unless legacy implementation is directly enforced.
+        if (oldSrvcGridProp == null)
+            System.setProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, "true");
+    }
+
+    /**
+     * Returns previous value of service grid property.
+     */
+    @AfterClass
+    public static void cleanUp() {
+        if (oldSrvcGridProp == null)
+            System.clearProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
+    }
 }

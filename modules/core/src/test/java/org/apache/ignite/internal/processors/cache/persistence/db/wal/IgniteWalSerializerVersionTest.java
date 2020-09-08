@@ -125,7 +125,7 @@ public class IgniteWalSerializerVersionTest extends GridCommonAbstractTest {
             @Override public List<WALRecord> call() throws Exception {
                 WALRecord rec0 = new DataRecord(Collections.<DataEntry>emptyList());
 
-                WALRecord rec1 = new TxRecord(PREPARED,null,null,null);
+                WALRecord rec1 = new TxRecord(PREPARED, null, null, null);
 
                 return Arrays.asList(rec0, rec1);
             }
@@ -217,7 +217,7 @@ public class IgniteWalSerializerVersionTest extends GridCommonAbstractTest {
 
                 if (exp == 0L)
                     assertTrue(act0.timestamp() == 0L);
-                else{
+                else {
                     long diff = Math.abs(exp - act0.timestamp());
 
                     assertTrue(String.valueOf(diff), diff < 10_000);

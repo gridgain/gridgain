@@ -16,11 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -30,19 +32,29 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
+import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_RECONNECTED;
 
 /**
  * Test for customer scenario.
@@ -69,11 +81,27 @@ public class IgniteCacheClientReconnectTest extends GridCommonAbstractTest {
     /** */
     private boolean forceServerMode;
 
+    /** */
+    private boolean testCommunicationSpi;
+
+    /** */
+    private IgniteBiPredicate<ClusterNode, Message> spiBlockPred;
+
+    /** */
+    private volatile TestRecordingCommunicationSpi spi;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setPeerClassLoadingEnabled(false);
+
+        if (testCommunicationSpi) {
+            spi = new TestRecordingCommunicationSpi();
+            spi.blockMessages(spiBlockPred);
+
+            cfg.setCommunicationSpi(spi);
+        }
 
         if (!client) {
             CacheConfiguration[] ccfgs = new CacheConfiguration[CACHES];
@@ -123,29 +151,23 @@ public class IgniteCacheClientReconnectTest extends GridCommonAbstractTest {
      * @throws Exception If failed
      */
     @Test
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, value = "1")
     public void testClientReconnectOnExchangeHistoryExhaustion() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, "1");
+        startGrids(SRV_CNT);
 
-        try {
-            startGrids(SRV_CNT);
+        client = true;
 
-            client = true;
+        startGridsMultiThreaded(SRV_CNT, CLIENTS_CNT);
 
-            startGridsMultiThreaded(SRV_CNT, CLIENTS_CNT);
+        waitForTopology(SRV_CNT + CLIENTS_CNT);
 
-            waitForTopology(SRV_CNT + CLIENTS_CNT);
+        awaitPartitionMapExchange();
 
-            awaitPartitionMapExchange();
+        verifyPartitionToNodeMappings();
 
-            verifyPartitionToNodeMappings();
+        verifyAffinityTopologyVersions();
 
-            verifyAffinityTopologyVersions();
-
-            verifyCacheOperationsOnClients();
-        }
-        finally {
-            System.clearProperty(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE);
-        }
+        verifyCacheOperationsOnClients();
     }
 
     /**
@@ -156,35 +178,77 @@ public class IgniteCacheClientReconnectTest extends GridCommonAbstractTest {
      * @throws Exception If failed
      */
     @Test
-    public void testClientInForceServerModeStopsOnExchangeHistoryExhaustion() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, "1");
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20850")
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, value = "1")
+    public void testClientInForceServerModeStopsOnExchangeHistoryExhaustionManyClients() throws Exception {
+        startGrids(SRV_CNT);
+
+        client = true;
+
+        forceServerMode = true;
+
+        int clientNodes = 24;
 
         try {
-            startGrids(SRV_CNT);
-
-            client = true;
-
-            forceServerMode = true;
-
-            int clientNodes = 10;
-
-            try {
-                startGridsMultiThreaded(SRV_CNT, clientNodes);
-            }
-            catch (IgniteCheckedException e) {
-                //Ignored: it is expected to get exception here
-            }
-
-            awaitPartitionMapExchange();
-
-            int topSize = G.allGrids().size();
-
-            assertTrue("Actual size: " + topSize, topSize < SRV_CNT + clientNodes);
-
+            startGridsMultiThreaded(SRV_CNT, clientNodes);
         }
-        finally {
-            System.clearProperty(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE);
+        catch (IgniteCheckedException e) {
+            //Ignored: it is expected to get exception here
         }
+
+        awaitPartitionMapExchange();
+
+        int topSize = G.allGrids().size();
+
+        assertTrue("Actual size: " + topSize, topSize < SRV_CNT + clientNodes);
+    }
+
+    /**
+     * Verifies that in case of exchange history exhaustion
+     * (refer to javadoc at {@link #testClientReconnectOnExchangeHistoryExhaustion()} for more info about it)
+     * clients with forceServerMode=true flag don't try to reconnect to the cluster and stop.
+     *
+     * @throws Exception If failed
+     */
+    @Test
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, value = "1")
+    public void testClientInForceServerModeStopsOnExchangeHistoryExhaustion() throws Exception {
+        testCommunicationSpi = true;
+
+        startGrids(SRV_CNT);
+
+        awaitPartitionMapExchange();
+
+        client = true;
+
+        forceServerMode = true;
+
+        CountDownLatch latch = new CountDownLatch(1);
+
+        spiBlockPred = (n,m) -> {
+            if (m.getClass() == GridDhtPartitionsSingleMessage.class) {
+                latch.countDown();
+
+                return true;
+            }
+
+            return false;
+        };
+
+        IgniteInternalFuture<IgniteEx> fut = GridTestUtils.runAsync(() -> startGrid(SRV_CNT));
+
+        assertTrue(latch.await(5000, MILLISECONDS));
+
+        TestRecordingCommunicationSpi spi = this.spi;
+
+        spiBlockPred = null;
+
+        startGrid(SRV_CNT + 1);
+        startGrid(SRV_CNT + 2);
+
+        spi.stopBlock();
+
+        GridTestUtils.assertThrows(log(), () -> fut.get(5000), IgniteCheckedException.class, "Client node in forceServerMode is not allowed to reconnect to the cluster and will be stopped.");
     }
 
     /**
@@ -318,6 +382,67 @@ public class IgniteCacheClientReconnectTest extends GridCommonAbstractTest {
         finally {
             stop.set(true);
         }
+    }
+
+    /**
+     * Verifies that new node ID generated by client on disconnect replaces old ID only on RECONNECTED event.
+     *
+     * Old node ID is still available on DISCONNECTED event.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClientIdUpdateOnReconnect() throws Exception {
+        startGrid(0);
+
+        client = true;
+
+        IgniteEx clNode = startGrid(1);
+        UUID oldNodeId = clNode.localNode().id();
+
+        awaitPartitionMapExchange();
+
+        stopGrid(0);
+
+        AtomicReference<UUID> idOnDisconnect = new AtomicReference<>();
+        AtomicReference<UUID> idOnReconnect = new AtomicReference<>();
+
+        CountDownLatch disconnectedLatch = new CountDownLatch(1);
+        CountDownLatch reconnectedLatch = new CountDownLatch(1);
+
+        clNode.events().localListen(new IgnitePredicate<Event>() {
+            @Override public boolean apply(Event event) {
+                switch (event.type()) {
+                    case EVT_CLIENT_NODE_DISCONNECTED: {
+                        idOnDisconnect.set(event.node().id());
+
+                        disconnectedLatch.countDown();
+
+                        break;
+                    }
+
+                    case EVT_CLIENT_NODE_RECONNECTED: {
+                        idOnReconnect.set(event.node().id());
+
+                        reconnectedLatch.countDown();
+
+                        break;
+                    }
+                }
+
+                return true;
+            }
+        }, EVT_CLIENT_NODE_DISCONNECTED, EVT_CLIENT_NODE_RECONNECTED);
+
+        assertTrue(GridTestUtils.waitForCondition(() -> disconnectedLatch.getCount() == 0, 10_000));
+        assertEquals(oldNodeId, idOnDisconnect.get());
+
+        client = false;
+
+        startGrid(0);
+
+        assertTrue(GridTestUtils.waitForCondition(() -> reconnectedLatch.getCount() == 0, 10_000));
+        assertEquals(grid(1).localNode().id(), idOnReconnect.get());
     }
 
     /**

@@ -23,7 +23,9 @@ import javax.cache.expiry.TouchedExpiryPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -52,6 +54,11 @@ public abstract class GridCacheBasicOpAbstractTest extends GridCommonAbstractTes
 
     /** Grid 3. */
     private static Ignite ignite3;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName).setIncludeEventTypes(EventType.EVTS_ALL);
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -192,7 +199,6 @@ public abstract class GridCacheBasicOpAbstractTest extends GridCommonAbstractTes
             IgniteFuture<String> f2 = cache2.getAsync("async1");
 
             IgniteFuture<String> f3 = cache3.getAsync("async1");
-
 
             String v2 = f2.get();
             String v3 = f3.get();

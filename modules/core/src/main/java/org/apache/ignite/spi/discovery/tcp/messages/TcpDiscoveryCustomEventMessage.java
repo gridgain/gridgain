@@ -17,6 +17,9 @@
 package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.UUID;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
+import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -30,12 +33,15 @@ import org.jetbrains.annotations.Nullable;
  */
 @TcpDiscoveryRedirectToClient
 @TcpDiscoveryEnsureDelivery
-public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage {
+public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceableMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
     private transient volatile DiscoverySpiCustomMessage msg;
+
+    /** */
+    private transient volatile Class<?> msgClass;
 
     /** */
     private byte[] msgBytes;
@@ -62,6 +68,7 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
 
         this.msgBytes = msg.msgBytes;
         this.msg = msg.msg;
+        this.msgClass = msg.msgClass;
     }
 
     /**
@@ -76,6 +83,17 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
      */
     public byte[] messageBytes() {
         return msgBytes;
+    }
+
+    /**
+     * @return Class of DiscoveryCustomMessage enclosed in this discovery custom event.
+     * @throws IgniteCheckedException If message was not deserialized from byte array.
+     */
+    public Class<?> messageClass() throws IgniteCheckedException {
+        if (msgClass == null)
+            throw new IgniteCheckedException("Message has not been deserialized yet: " + this);
+
+        return msgClass;
     }
 
     /**
@@ -95,10 +113,22 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
      */
     @Nullable public DiscoverySpiCustomMessage message(@NotNull Marshaller marsh, ClassLoader ldr) throws Throwable {
         if (msg == null) {
-            msg = U.unmarshal(marsh, msgBytes, ldr);
+            try {
+                msg = U.unmarshal(marsh, msgBytes, ldr);
+            }
+            catch (IgniteCheckedException e) {
+                // Try to resurrect a message in a case of deserialization failure
+                if (e.getCause() instanceof IncompleteDeserializationException)
+                    return new CustomMessageWrapper(((IncompleteDeserializationException)e.getCause()).message());
+
+                throw e;
+            }
 
             assert msg != null;
         }
+
+        if (msg instanceof CustomMessageWrapper)
+            msgClass = ((CustomMessageWrapper)msg).delegate().getClass();
 
         return msg;
     }

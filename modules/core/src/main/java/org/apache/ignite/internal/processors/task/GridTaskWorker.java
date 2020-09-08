@@ -50,7 +50,6 @@ import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
-import org.apache.ignite.igfs.IgfsOutOfSpaceException;
 import org.apache.ignite.internal.ComputeTaskInternalFuture;
 import org.apache.ignite.internal.GridInternalException;
 import org.apache.ignite.internal.GridJobCancelRequest;
@@ -70,6 +69,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.closure.AffinityTask;
 import org.apache.ignite.internal.processors.service.GridServiceNotFoundException;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CO;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -1002,7 +1002,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
             if (waitForAffTop && affFut != null) {
                 affFut.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                     @Override public void apply(IgniteInternalFuture<?> fut0) {
-                        ctx.closure().runLocalSafe(new Runnable() {
+                        ctx.closure().runLocalSafe(new GridPlainRunnable() {
                             @Override public void run() {
                                 onResponse(failoverRes);
                             }
@@ -1021,13 +1021,13 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
     private void sendRetryRequest(final long waitms, final GridJobResultImpl jRes, final GridJobExecuteResponse resp) {
         ctx.timeout().schedule(new Runnable() {
             @Override public void run() {
-                ctx.closure().runLocalSafe(new Runnable() {
+                ctx.closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         try {
                             ClusterNode newNode = ctx.affinity().mapPartitionToNode(affCacheName, affPartId,
                                 mapTopVer);
 
-                            if(!checkTargetNode(resp, jRes, newNode))
+                            if (!checkTargetNode(resp, jRes, newNode))
                                 return;
 
                             sendRequest(jRes);
@@ -1080,8 +1080,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
                     return plc;
                 }
                 catch (IgniteException e) {
-                    if (X.hasCause(e, GridInternalException.class) ||
-                        X.hasCause(e, IgfsOutOfSpaceException.class)) {
+                    if (X.hasCause(e, GridInternalException.class)) {
                         // Print internal exceptions only if debug is enabled.
                         if (log.isDebugEnabled())
                             U.error(log, "Failed to obtain remote job result policy for result from " +
@@ -1180,7 +1179,7 @@ class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObject {
 
             U.error(log, errMsg, e);
 
-            userE = new ComputeUserUndeclaredException(errMsg ,e);
+            userE = new ComputeUserUndeclaredException(errMsg, e);
 
             if (e instanceof Error)
                 throw e;

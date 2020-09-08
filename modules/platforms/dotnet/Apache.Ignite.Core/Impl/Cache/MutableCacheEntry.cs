@@ -32,6 +32,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Initializes a new instance of the <see cref="MutableCacheEntry{K, V}"/> class.
         /// </summary>
         /// <param name="key">The key.</param>
+        // ReSharper disable once UnusedMember.Global (used from Reflection)
         public MutableCacheEntry(TK key)
         {
             Key = key;
@@ -42,6 +43,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         /// <param name="key">The key.</param>
         /// <param name="value">The value.</param>
+        // ReSharper disable once UnusedMember.Global (used from Reflection)
         public MutableCacheEntry(TK key, TV value)
         {
             Key = key;
@@ -58,7 +60,9 @@ namespace Apache.Ignite.Core.Impl.Cache
             get { return Key; }
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Gets or sets the value.
+        /// </summary>
         public TV Value
         {
             get { return _value; }
@@ -76,7 +80,9 @@ namespace Apache.Ignite.Core.Impl.Cache
             get { return Value; }
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Gets a value indicating whether cache entry exists in cache.
+        /// </summary>
         public bool Exists { get; private set; }
 
         /** <inheritdoc /> */

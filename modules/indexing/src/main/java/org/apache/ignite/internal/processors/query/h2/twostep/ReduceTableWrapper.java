@@ -20,22 +20,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import javax.cache.CacheException;
-import org.h2.engine.DbObject;
-import org.h2.engine.Session;
-import org.h2.index.Index;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.result.SortOrder;
-import org.h2.schema.Schema;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.PlanItem;
-import org.h2.table.Table;
-import org.h2.table.TableFilter;
-import org.h2.table.TableType;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.DbObject;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.schema.Schema;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.PlanItem;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.table.TableType;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Thread local table wrapper for real reducer table. All reduce queries share the same small set of this fake tables.
@@ -69,8 +70,8 @@ public class ReduceTableWrapper extends Table {
     /**
      * @return Inner table.
      */
-    private Table innerTable() {
-        Table t = tbl.get();
+    public ReduceTable innerTable() {
+        ReduceTable t = tbl.get();
 
         if (t == null)
             throw new CacheException("Table `" + getName() + "` can be accessed only within Ignite query context.");
@@ -90,8 +91,8 @@ public class ReduceTableWrapper extends Table {
 
     /** {@inheritDoc} */
     @Override public PlanItem getBestPlanItem(Session session, int[] masks, TableFilter[] filters, int filter,
-        SortOrder sortOrder, HashSet<Column> cols) {
-        return innerTable().getBestPlanItem(session, masks, filters, filter, sortOrder, cols);
+        SortOrder sortOrder, AllColumnsForPlan allColumnsSet, boolean isEquiJoined) {
+        return innerTable().getBestPlanItem(session, masks, filters, filter, sortOrder, allColumnsSet, isEquiJoined);
     }
 
     /** {@inheritDoc} */
@@ -178,7 +179,7 @@ public class ReduceTableWrapper extends Table {
 
     /** {@inheritDoc} */
     @Override public TableType getTableType() {
-        return TableType.EXTERNAL_TABLE_ENGINE;
+        return TableType.TABLE;
     }
 
     /** {@inheritDoc} */
@@ -227,10 +228,10 @@ public class ReduceTableWrapper extends Table {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
+    @Override public long getRowCountApproximation(Session ses) {
         Table t = tbl.get();
 
-        return t == null ? 0 : t.getRowCountApproximation();
+        return t == null ? 0 : t.getRowCountApproximation(ses);
     }
 
     /** {@inheritDoc} */

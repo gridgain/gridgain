@@ -22,13 +22,26 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.UUID;
+import java.util.Objects;
+import java.util.Map;
 import java.util.Random;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.configuration.BinaryConfiguration;
+import org.apache.ignite.internal.ThinProtocolFeature;
+import org.apache.ignite.internal.binary.BinaryContext;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.MarshallerContextImpl;
+import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
+import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.BinaryThreadLocalContext;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
@@ -38,7 +51,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBatchExecuteRequest;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcOrderedBatchExecuteRequest;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcProtocolContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQuery;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryCancelRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryCloseRequest;
@@ -47,6 +60,9 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryFetchRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -59,17 +75,11 @@ import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBoolean
  * JDBC IO layer implementation based on blocking IPC streams.
  */
 public class JdbcThinTcpIo {
+    /** Version 0.0.0. Used when server responded with authorization error. */
+    private static final ClientListenerProtocolVersion VER_0_0_0 = ClientListenerProtocolVersion.create(0, 0, 0);
+
     /** Version 2.1.0. */
     private static final ClientListenerProtocolVersion VER_2_1_0 = ClientListenerProtocolVersion.create(2, 1, 0);
-
-    /** Version 2.1.5: added "lazy" flag. */
-    private static final ClientListenerProtocolVersion VER_2_1_5 = ClientListenerProtocolVersion.create(2, 1, 5);
-
-    /** Version 2.3.1. */
-    private static final ClientListenerProtocolVersion VER_2_3_0 = ClientListenerProtocolVersion.create(2, 3, 0);
-
-    /** Version 2.4.0. */
-    private static final ClientListenerProtocolVersion VER_2_4_0 = ClientListenerProtocolVersion.create(2, 4, 0);
 
     /** Version 2.5.0. */
     private static final ClientListenerProtocolVersion VER_2_5_0 = ClientListenerProtocolVersion.create(2, 5, 0);
@@ -80,8 +90,17 @@ public class JdbcThinTcpIo {
     /** Version 2.8.0. */
     private static final ClientListenerProtocolVersion VER_2_8_0 = ClientListenerProtocolVersion.create(2, 8, 0);
 
+    /** Version 2.8.1. */
+    private static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
+
+    /** Version 2.8.2. Adds features flags support. */
+    private static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
+    /** Version 2.8.3. Add User Attributes. */
+    private static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_0;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_3;
 
     /** Initial output stream capacity for handshake. */
     private static final int HANDSHAKE_MSG_SIZE = 13;
@@ -120,7 +139,7 @@ public class JdbcThinTcpIo {
     private final BufferedInputStream in;
 
     /** Connected flag. */
-    private boolean connected;
+    private volatile boolean connected;
 
     /** Ignite server version. */
     private final IgniteProductVersion igniteVer;
@@ -134,20 +153,28 @@ public class JdbcThinTcpIo {
     /** Current protocol version used to connection to Ignite. */
     private final ClientListenerProtocolVersion srvProtoVer;
 
+    /** Protocol context (version, supported features, etc). */
+    private JdbcProtocolContext protoCtx;
+
+    /** Binary context for serialization/deserialization of binary objects. */
+    private final BinaryContext ctx;
+
     /**
      * Start connection and perform handshake.
      *
      * @param connProps Connection properties.
      * @param sockAddr Socket address.
+     * @param ctx Binary context for proper serialization/deserialization of binary objects.
      * @param timeout Socket connection timeout in ms.
      *
      * @throws SQLException On connection error or reject.
      * @throws IOException On IO error in handshake.
      */
-    public JdbcThinTcpIo(ConnectionProperties connProps, InetSocketAddress sockAddr, int timeout)
+    public JdbcThinTcpIo(ConnectionProperties connProps, InetSocketAddress sockAddr, BinaryContext ctx, int timeout)
         throws SQLException, IOException {
         this.connProps = connProps;
         this.sockAddr = sockAddr;
+        this.ctx = ctx;
 
         Socket sock = null;
 
@@ -214,6 +241,9 @@ public class JdbcThinTcpIo {
         nodeId = handshakeRes.nodeId();
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
+
+        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features(), handshakeRes.serverTimezone(), true,
+            connProps.isKeepBinary());
     }
 
     /**
@@ -224,7 +254,15 @@ public class JdbcThinTcpIo {
      * @throws SQLException On connection reject.
      */
     private HandshakeResult handshake(ClientListenerProtocolVersion ver) throws IOException, SQLException {
-        BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
+        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration(), null);
+
+        BinaryMarshaller marsh = new BinaryMarshaller();
+
+        marsh.setContext(new MarshallerContextImpl(null, null));
+
+        ctx.configure(marsh, new BinaryConfiguration());
+
+        BinaryWriterExImpl writer = new BinaryWriterExImpl(ctx, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
             null, null);
 
         writer.writeByte((byte)ClientListenerRequest.HANDSHAKE);
@@ -246,8 +284,38 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_7_0) >= 0)
             writer.writeString(connProps.nestedTxMode());
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (ver.compareTo(VER_2_8_0) > 0 || (ver.compareTo(VER_2_8_0) == 0 && !connProps.isLimitedV2_8_0Enabled())) {
             writer.writeByte(nullableBooleanToByte(connProps.isDataPageScanEnabled()));
+
+            JdbcUtils.writeNullableInteger(writer, connProps.getUpdateBatchSize());
+        }
+
+        if (ver.compareTo(VER_2_8_1) >= 0)
+            JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
+
+        if (ver.compareTo(VER_2_8_2) >= 0) {
+            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(enabledFeatures()));
+        }
+
+        if (ver.compareTo(VER_2_8_3) >= 0) {
+            String userAttrs = connProps.getUserAttributesFactory();
+
+            if (F.isEmpty(userAttrs))
+                writer.writeMap(null);
+            else {
+                try {
+                    Class<Factory<Map<String, String>>> cls = (Class<Factory<Map<String, String>>>)
+                            JdbcThinSSLUtil.class.getClassLoader().loadClass(userAttrs);
+
+                    Map<String, String> attrs = cls.newInstance().create();
+
+                    writer.writeMap(attrs);
+                } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                    throw new SQLException("Could not found user attributes factory class: " + userAttrs,
+                            SqlStateCode.CLIENT_CONNECTION_FAILED, e);
+                }
+            }
+        }
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -258,7 +326,7 @@ public class JdbcThinTcpIo {
 
         send(writer.array());
 
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(null, new BinaryHeapInputStream(read()),
+        BinaryReaderExImpl reader = new BinaryReaderExImpl(ctx, new BinaryHeapInputStream(read()),
             null, null, false);
 
         boolean accepted = reader.readBoolean();
@@ -276,10 +344,18 @@ public class JdbcThinTcpIo {
                 long ts = reader.readLong();
                 byte[] hash = reader.readByteArray();
 
-                if (ver.compareTo(VER_2_8_0) >= 0)
+                if (ver.compareTo(VER_2_8_0) > 0 || (ver.compareTo(VER_2_8_0) == 0 && !connProps.isLimitedV2_8_0Enabled()))
                     handshakeRes.nodeId(reader.readUuid());
 
                 handshakeRes.igniteVersion(new IgniteProductVersion(maj, min, maintenance, stage, ts, hash));
+
+                if (ver.compareTo(VER_2_8_2) >= 0) {
+                    byte[] srvFeatures = reader.readByteArray();
+
+                    EnumSet<JdbcThinFeature> features = JdbcThinFeature.enumSet(srvFeatures);
+
+                    handshakeRes.features(features);
+                }
             }
             else {
                 handshakeRes.igniteVersion(
@@ -287,6 +363,12 @@ public class JdbcThinTcpIo {
             }
 
             handshakeRes.serverProtocolVersion(ver);
+
+            if (handshakeRes.features().contains(JdbcThinFeature.TIME_ZONE)) {
+                String srvTzId = reader.readString();
+
+                handshakeRes.serverTimezone(TimeZone.getTimeZone(srvTzId));
+            }
 
             return handshakeRes;
         }
@@ -297,22 +379,31 @@ public class JdbcThinTcpIo {
 
             String err = reader.readString();
 
+            int status = ClientStatus.FAILED;
+            try {
+                status = reader.readInt();
+            }
+            catch (Exception ignored) {
+            }
+
             ClientListenerProtocolVersion srvProtoVer0 = ClientListenerProtocolVersion.create(maj, min, maintenance);
 
-            if (srvProtoVer0.compareTo(VER_2_5_0) < 0 && !F.isEmpty(connProps.getUsername())) {
+            if (status == ClientStatus.AUTH_FAILED && srvProtoVer0.compareTo(VER_2_5_0) < 0 && !F.isEmpty(connProps.getUsername())) {
                 throw new SQLException("Authentication doesn't support by remote server[driverProtocolVer="
                     + CURRENT_VER + ", remoteNodeProtocolVer=" + srvProtoVer0 + ", err=" + err
                     + ", url=" + connProps.getUrl() + " address=" + sockAddr + ']', SqlStateCode.CONNECTION_REJECTED);
             }
 
-            if (VER_2_7_0.equals(srvProtoVer0)
-                || VER_2_5_0.equals(srvProtoVer0)
-                || VER_2_4_0.equals(srvProtoVer0)
-                || VER_2_3_0.equals(srvProtoVer0)
-                || VER_2_1_5.equals(srvProtoVer0))
-                return handshake(srvProtoVer0);
-            else if (VER_2_1_0.equals(srvProtoVer0))
+            if (status == ClientStatus.SECURITY_VIOLATION)
+                throw new SQLException(err);
+
+            if (VER_2_1_0.equals(srvProtoVer0))
                 return handshake_2_1_0();
+            else if (CURRENT_VER.compareTo(srvProtoVer0) > 0
+                // server responds with a zero version of the protocol in case of an authorization error
+                // so we should not fallback to this version
+                && VER_0_0_0.compareTo(srvProtoVer0) < 0)
+                return handshake(srvProtoVer0);
             else {
                 throw new SQLException("Handshake failed [driverProtocolVer=" + CURRENT_VER +
                     ", remoteNodeProtocolVer=" + srvProtoVer0 + ", err=" + err + ']',
@@ -381,7 +472,7 @@ public class JdbcThinTcpIo {
      * @throws IOException In case of IO error.
      * @throws SQLException On error.
      */
-    void sendBatchRequestNoWaitResponse(JdbcOrderedBatchExecuteRequest req) throws IOException, SQLException {
+    void sendRequestNoWaitResponse(JdbcRequest req) throws IOException, SQLException {
         if (!isUnorderedStreamSupported()) {
             throw new SQLException("Streaming without response doesn't supported by server [driverProtocolVer="
                 + CURRENT_VER + ", remoteNodeVer=" + igniteVer + ']', SqlStateCode.INTERNAL_ERROR);
@@ -417,10 +508,9 @@ public class JdbcThinTcpIo {
 
         JdbcResponse resp = readResponse();
 
-        if (stmt != null && stmt.isCancelled())
-            return new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG);
-        else
-            return resp;
+        return stmt != null && stmt.isCancelled() ?
+            new JdbcResponse(IgniteQueryErrorCode.QUERY_CANCELED, QueryCancelledException.ERR_MSG) :
+            resp;
     }
 
     /**
@@ -438,12 +528,11 @@ public class JdbcThinTcpIo {
      * @throws IOException In case of IO error.
      */
     JdbcResponse readResponse() throws IOException {
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(null, new BinaryHeapInputStream(read()), null,
-            null, false);
+        BinaryReaderExImpl reader = new BinaryReaderExImpl(ctx, new BinaryHeapInputStream(read()), null, true);
 
         JdbcResponse res = new JdbcResponse();
 
-        res.readBinary(reader, srvProtoVer);
+        res.readBinary(reader, protoCtx);
 
         return res;
     }
@@ -484,10 +573,10 @@ public class JdbcThinTcpIo {
     private void sendRequestRaw(JdbcRequest req) throws IOException {
         int cap = guessCapacity(req);
 
-        BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(cap),
-            null, null);
+        BinaryWriterExImpl writer = new BinaryWriterExImpl(ctx, new BinaryHeapOutputStream(cap),
+            BinaryThreadLocalContext.get().schemaHolder(), null);
 
-        req.writeBinary(writer, srvProtoVer);
+        req.writeBinary(writer, protoCtx);
 
         synchronized (connMux) {
             send(writer.array());
@@ -596,12 +685,21 @@ public class JdbcThinTcpIo {
     }
 
     /**
-     * @return True if affinity awareness supported, false otherwise.
+     * @return True if Partition Awareness supported, false otherwise.
      */
-    boolean isAffinityAwarenessSupported() {
+    boolean isPartitionAwarenessSupported() {
         assert srvProtoVer != null;
 
         return srvProtoVer.compareTo(VER_2_8_0) >= 0;
+    }
+
+    /**
+     * Whether custom objects are supported by the server or not.
+     *
+     * @return {@code true} if custom objects are supported, {@code false} otherwise.
+     */
+    boolean isCustomObjectSupported() {
+        return protoCtx.isFeatureSupported(JdbcThinFeature.CUSTOM_OBJECT);
     }
 
     /**
@@ -644,5 +742,37 @@ public class JdbcThinTcpIo {
      */
     public UUID nodeId() {
         return nodeId;
+    }
+
+    /**
+     * @return Socket address.
+     */
+    public InetSocketAddress socketAddress() {
+        return sockAddr;
+    }
+
+    /**
+     * @return Connected flag.
+     */
+    public boolean connected() {
+        return connected;
+    }
+
+    /**
+     * Set of features enabled on clien side. To get features
+     * supported by both sides use {@link #protoCtx}.
+     */
+    private EnumSet<JdbcThinFeature> enabledFeatures() {
+        EnumSet<JdbcThinFeature> features = JdbcThinFeature.allFeaturesAsEnumSet();
+
+        String disabledFeaturesStr = connProps.disabledFeatures();
+
+        if (Objects.isNull(disabledFeaturesStr))
+            return features;
+
+        for (String f : disabledFeaturesStr.split("\\W+"))
+            features.remove(JdbcThinFeature.valueOf(f.toUpperCase()));
+
+        return features;
     }
 }

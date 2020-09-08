@@ -91,6 +91,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridCursor;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -307,7 +308,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             String errMsg = "Failed to add node to topology. MVCC is enabled on the cluster, but " +
                 "the node doesn't support MVCC [nodeId=" + node.id() + ']';
 
-            return new IgniteNodeValidationResult(node.id(), errMsg, errMsg);
+            return new IgniteNodeValidationResult(node.id(), errMsg);
         }
 
         return null;
@@ -403,7 +404,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
 
         //noinspection ConstantConditions
         ctx.cache().context().pageStore().initialize(TX_LOG_CACHE_ID, 0,
-            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics());
+            TX_LOG_CACHE_NAME, mgr.dataRegion(TX_LOG_CACHE_NAME).memoryMetrics().totalAllocatedPages());
     }
 
     /** {@inheritDoc} */
@@ -505,25 +506,27 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             // 2. Notify previous queries.
             prevQueries.onNodeFailed(nodeId);
 
-            // 3. Recover transactions started by the failed node.
-            recoveryBallotBoxes.forEach((nearNodeId, ballotBox) -> {
-                // Put synthetic vote from another failed node
-                ballotBox.vote(nodeId);
+            if (mvccEnabled) {
+                // 3. Recover transactions started by the failed node.
+                recoveryBallotBoxes.forEach((nearNodeId, ballotBox) -> {
+                    // Put synthetic vote from another failed node
+                    ballotBox.vote(nodeId);
 
-                tryFinishRecoveryVoting(nearNodeId, ballotBox);
-            });
+                    tryFinishRecoveryVoting(nearNodeId, ballotBox);
+                });
 
-            if (evt.eventNode().isClient()) {
-                RecoveryBallotBox ballotBox = recoveryBallotBoxes
-                    .computeIfAbsent(nodeId, uuid -> new RecoveryBallotBox());
+                if (evt.eventNode().isClient()) {
+                    RecoveryBallotBox ballotBox = recoveryBallotBoxes
+                        .computeIfAbsent(nodeId, uuid -> new RecoveryBallotBox());
 
-                ballotBox.voters(evt.topologyNodes().stream()
-                    // Nodes not supporting MVCC will never send votes to us. So, filter them away.
-                    .filter(this::supportsMvcc)
-                    .map(ClusterNode::id)
-                    .collect(Collectors.toList()));
+                    ballotBox.voters(evt.topologyNodes().stream()
+                        // Nodes not supporting MVCC will never send votes to us. So, filter them away.
+                        .filter(this::supportsMvcc)
+                        .map(ClusterNode::id)
+                        .collect(Collectors.toList()));
 
-                tryFinishRecoveryVoting(nodeId, ballotBox);
+                    tryFinishRecoveryVoting(nodeId, ballotBox);
+                }
             }
         }
     }
@@ -590,12 +593,14 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
             prevQueries.init(nodes, ctx.discovery()::alive);
         }
         else if (sndQrys) {
-            try {
-                sendMessage(newCrd.nodeId(), new MvccActiveQueriesMessage(qryIds));
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Failed to send active queries to mvcc coordinator: " + e);
-            }
+            ctx.getSystemExecutorService().submit(() -> {
+                try {
+                    sendMessage(newCrd.nodeId(), new MvccActiveQueriesMessage(qryIds));
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Failed to send active queries to mvcc coordinator: " + e);
+                }
+            });
         }
     }
 
@@ -649,7 +654,11 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
 
         // Complete init future if local node is a new coordinator. All previous txs have been already completed here.
         if (curCrd0.local())
-            ctx.closure().runLocalSafe(initFut::onDone);
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                @Override public void run() {
+                    initFut.onDone();
+                }
+            });
     }
 
     /** {@inheritDoc} */
@@ -1819,6 +1828,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
     private static class RecoveryBallotBox {
         /** */
         private List<UUID> voters;
+
         /** */
         private final Set<UUID> ballots = new HashSet<>();
 
@@ -1854,6 +1864,9 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
      * @param msg Message.
      */
     private void processRecoveryFinishedMessage(UUID nodeId, MvccRecoveryFinishedMessage msg) {
+        if (!mvccEnabled)
+            return;
+
         UUID nearNodeId = msg.nearNodeId();
 
         RecoveryBallotBox ballotBox = recoveryBallotBoxes.computeIfAbsent(nearNodeId, uuid -> new RecoveryBallotBox());
@@ -1921,6 +1934,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
     private static class LockFuture extends GridFutureAdapter<Void> implements Waiter, Runnable {
         /** */
         private final byte plc;
+
         /** */
         private final MvccVersion waitingTxVer;
 
@@ -2444,6 +2458,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
     private static class ActiveTx {
         /** */
         private final long tracking;
+
         /** */
         private final UUID nearNodeId;
 

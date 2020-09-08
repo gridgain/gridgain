@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -38,6 +37,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -193,7 +193,7 @@ class ServiceDeploymentTask {
                         Map<IgniteUuid, ServiceInfo> services = srvcProc.deployedServices();
 
                         if (!services.isEmpty()) {
-                            Map<Integer, Map<Integer, List<UUID>>> change = msg0.assignmentChange();
+                            Map<Integer, IgniteUuid> change = msg0.cacheDeploymentIds();
 
                             if (change != null) {
                                 Set<String> names = new HashSet<>();
@@ -457,48 +457,50 @@ class ServiceDeploymentTask {
             if (isCompleted())
                 return;
 
-            ctx.closure().runLocalSafe(() -> {
-                try {
-                    ServiceDeploymentActions depResults = msg.servicesDeploymentActions();
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                @Override public void run() {
+                    try {
+                        ServiceDeploymentActions depResults = msg.servicesDeploymentActions();
 
-                    assert depResults != null : "Services deployment actions should be attached.";
+                        assert depResults != null : "Services deployment actions should be attached.";
 
-                    final Map<IgniteUuid, Map<UUID, Integer>> fullTops = depResults.deploymentTopologies();
-                    final Map<IgniteUuid, Collection<byte[]>> fullErrors = depResults.deploymentErrors();
+                        final Map<IgniteUuid, Map<UUID, Integer>> fullTops = depResults.deploymentTopologies();
+                        final Map<IgniteUuid, Collection<byte[]>> fullErrors = depResults.deploymentErrors();
 
-                    depActions.deploymentTopologies(fullTops);
-                    depActions.deploymentErrors(fullErrors);
+                        depActions.deploymentTopologies(fullTops);
+                        depActions.deploymentErrors(fullErrors);
 
-                    srvcProc.updateServicesTopologies(fullTops);
+                        srvcProc.updateServicesTopologies(fullTops);
 
-                    final Map<IgniteUuid, ServiceInfo> services = srvcProc.deployedServices();
+                        final Map<IgniteUuid, ServiceInfo> services = srvcProc.deployedServices();
 
-                    fullTops.forEach((srvcId, top) -> {
-                        Integer expCnt = top.getOrDefault(ctx.localNodeId(), 0);
+                        fullTops.forEach((srvcId, top) -> {
+                            Integer expCnt = top.getOrDefault(ctx.localNodeId(), 0);
 
-                        if (expCnt < srvcProc.localInstancesCount(srvcId)) { // Undeploy exceed instances
-                            ServiceInfo desc = services.get(srvcId);
+                            if (expCnt < srvcProc.localInstancesCount(srvcId)) { // Undeploy exceed instances
+                                ServiceInfo desc = services.get(srvcId);
 
-                            assert desc != null;
+                                assert desc != null;
 
-                            ServiceConfiguration cfg = desc.configuration();
+                                ServiceConfiguration cfg = desc.configuration();
 
-                            try {
-                                srvcProc.redeploy(srvcId, cfg, top);
+                                try {
+                                    srvcProc.redeploy(srvcId, cfg, top);
+                                }
+                                catch (IgniteCheckedException e) {
+                                    log.error("Error occured during cancel exceed service instances: " +
+                                        "[srvcId=" + srvcId + ", name=" + desc.name() + ']', e);
+                                }
                             }
-                            catch (IgniteCheckedException e) {
-                                log.error("Error occured during cancel exceed service instances: " +
-                                    "[srvcId=" + srvcId + ", name=" + desc.name() + ']', e);
-                            }
-                        }
-                    });
+                        });
 
-                    completeSuccess();
-                }
-                catch (Throwable t) {
-                    log.error("Failed to process services full deployments message, msg=" + msg, t);
+                        completeSuccess();
+                    }
+                    catch (Throwable t) {
+                        log.error("Failed to process services full deployments message, msg=" + msg, t);
 
-                    completeError(t);
+                        completeError(t);
+                    }
                 }
             });
         });

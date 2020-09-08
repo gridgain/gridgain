@@ -232,7 +232,6 @@ public final class GridifyUtils {
             }
         }
 
-
         return false;
     }
 

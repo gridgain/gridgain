@@ -26,6 +26,7 @@
     <ClCompile Include="..\..\src\teamcity\teamcity_boost.cpp" />
     <ClCompile Include="..\..\src\teamcity\teamcity_messages.cpp" />
     <ClCompile Include="..\..\src\test_utils.cpp" />
+    <ClCompile Include="..\..\src\tx_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\ignite\complex_type.h" />
@@ -56,6 +57,9 @@
     <None Include="..\..\config\cache-32.xml" />
     <None Include="..\..\config\cache-default.xml" />
     <None Include="..\..\config\cache.xml" />
+    <None Include="..\..\config\non-ssl-32.xml" />
+    <None Include="..\..\config\non-ssl-default.xml" />
+    <None Include="..\..\config\non-ssl.xml" />
     <None Include="..\..\config\ssl-32.xml" />
     <None Include="..\..\config\ssl-default.xml" />
     <None Include="..\..\config\ssl.xml" />

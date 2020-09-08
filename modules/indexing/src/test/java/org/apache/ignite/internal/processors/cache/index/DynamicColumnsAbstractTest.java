@@ -38,7 +38,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.value.DataType;
+import org.gridgain.internal.h2.value.DataType;
 
 import static org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest.connect;
 
@@ -75,7 +75,7 @@ public abstract class DynamicColumnsAbstractTest extends AbstractIndexingCommonT
 
                     short type = rs.getShort("DATA_TYPE");
 
-                    String typeClsName = DataType.getTypeClassName(DataType.convertSQLTypeToValueType(type));
+                    String typeClsName = DataType.getTypeClassName(DataType.convertSQLTypeToValueType(type), false);
 
                     short nullable = rs.getShort("NULLABLE");
 
@@ -123,7 +123,7 @@ public abstract class DynamicColumnsAbstractTest extends AbstractIndexingCommonT
 
                     short type = rs.getShort("DATA_TYPE");
 
-                    String typeClsName = DataType.getTypeClassName(DataType.convertSQLTypeToValueType(type));
+                    String typeClsName = DataType.getTypeClassName(DataType.convertSQLTypeToValueType(type), false);
 
                     short nullable = rs.getShort("NULLABLE");
 

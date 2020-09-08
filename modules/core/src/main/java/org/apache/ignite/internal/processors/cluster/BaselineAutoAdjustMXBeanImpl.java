@@ -31,12 +31,16 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
 
     private final GridClusterStateProcessor state;
 
+    /** Context. */
+    private final GridKernalContext ctx;
+
     /**
      * @param ctx Context.
      */
     public BaselineAutoAdjustMXBeanImpl(GridKernalContext ctx) {
         baselineConfiguration = ctx.state().baselineConfiguration();
         state = ctx.state();
+        this.ctx = ctx;
     }
 
     /** {@inheritDoc} */
@@ -62,7 +66,7 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     /** {@inheritDoc} */
     @Override public void setAutoAdjustmentEnabled(boolean enabled) {
         try {
-            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(enabled).get();
+            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(ctx, enabled).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -72,7 +76,7 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     /** {@inheritDoc} */
     @Override public void setAutoAdjustmentTimeout(long timeout) {
         try {
-            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(timeout).get();
+            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(ctx, timeout).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

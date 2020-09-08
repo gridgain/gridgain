@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -247,7 +246,7 @@ public class BinaryEnumsSelfTest extends GridCommonAbstractTest {
     private void checkInstanceFromBytes(BinaryContext binCtx, int ord, int typeId, String clsName)
         throws IgniteCheckedException {
 
-        BinaryEnumObjectImpl srcBinEnum =new BinaryEnumObjectImpl(binCtx, typeId, clsName, ord);
+        BinaryEnumObjectImpl srcBinEnum = new BinaryEnumObjectImpl(binCtx, typeId, clsName, ord);
 
         Marshaller marsh = node1.configuration().getMarshaller();
 
@@ -474,7 +473,7 @@ public class BinaryEnumsSelfTest extends GridCommonAbstractTest {
     public void testEnumWrongBinaryConfig() throws Exception {
         this.register = true;
 
-        GridTestUtils.assertThrows(log, new Callable<Object> (){
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 startGrid(WRONG_CONF_NODE_NAME);
 
@@ -492,7 +491,7 @@ public class BinaryEnumsSelfTest extends GridCommonAbstractTest {
     public void testEnumValidation() throws Exception {
         startUp(false);
 
-        GridTestUtils.assertThrows(log, new Callable<Object> (){
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
 
             @Override public Object call() throws Exception {
 
@@ -519,7 +518,7 @@ public class BinaryEnumsSelfTest extends GridCommonAbstractTest {
         node1.binary().registerEnum(enumName,
                 F.asMap(EnumType.ONE.name(), EnumType.ONE.ordinal()));
 
-        GridTestUtils.assertThrows(log, new Callable<Object> (){
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
 
             @Override public Object call() throws Exception {
 
@@ -530,7 +529,7 @@ public class BinaryEnumsSelfTest extends GridCommonAbstractTest {
             }
         }, BinaryObjectException.class, "Conflicting enum values. Name ");
 
-        GridTestUtils.assertThrows(log, new Callable<Object> (){
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
 
                 node2.binary().registerEnum(enumName,

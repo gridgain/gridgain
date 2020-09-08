@@ -17,7 +17,9 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.value.Value;
 
 /**
  * Row of two values.
@@ -60,8 +62,22 @@ public class H2PlainRowPair extends H2Row {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean hasSharedData(Row other) {
+        if (other.getClass() == H2PlainRowPair.class)
+            return v1 == ((H2PlainRowPair) other).v1 && v2 == ((H2PlainRowPair) other).v2;
+
+        return false;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean indexSearchRow() {
         return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getMemory() {
+        return Constants.MEMORY_OBJECT + (v1 == null ? 0 : v1.getMemory())
+            + (v2 == null ? 0 : v2.getMemory());
     }
 
     /** {@inheritDoc} */

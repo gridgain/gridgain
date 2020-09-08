@@ -22,9 +22,9 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.value.Value;
 
-import static org.h2.util.StringUtils.convertBytesToHex;
+import static org.gridgain.internal.h2.util.StringUtils.convertBytesToHex;
 
 /**
  * H2 Geometry.
@@ -38,7 +38,7 @@ public class GridH2Geometry extends GridH2ValueMessage {
      */
     static {
         try {
-            GEOMETRY_FROM_BYTES = Class.forName("org.h2.value.ValueGeometry").getMethod("get", byte[].class);
+            GEOMETRY_FROM_BYTES = Class.forName("org.gridgain.internal.h2.value.ValueGeometry").getMethod("get", byte[].class);
         }
         catch (NoSuchMethodException | ClassNotFoundException ignored) {
             throw new IllegalStateException("Check H2 version in classpath.");
@@ -59,7 +59,7 @@ public class GridH2Geometry extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2Geometry(Value val) {
-        assert val.getType() == Value.GEOMETRY : val.getType();
+        assert val.getType().getValueType() == Value.GEOMETRY : val.getType();
 
         b = val.getBytesNoCopy();
     }

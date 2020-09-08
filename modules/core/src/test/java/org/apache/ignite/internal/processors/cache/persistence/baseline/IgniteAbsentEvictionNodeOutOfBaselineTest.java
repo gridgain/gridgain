@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.baseline;
 
+import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -27,8 +27,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 
 /**
  * Test absenting eviction for joined node if it is out of baseline.
@@ -72,14 +70,10 @@ public class IgniteAbsentEvictionNodeOutOfBaselineTest extends GridCommonAbstrac
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         super.beforeTestsStarted();
     }
 
@@ -89,13 +83,14 @@ public class IgniteAbsentEvictionNodeOutOfBaselineTest extends GridCommonAbstrac
     @Test
     public void testPartitionsRemovedIfJoiningNodeNotInBaseline() throws Exception {
         //given: start 3 nodes with data
-        Ignite ignite0 = startGrids(3);
+        IgniteEx ignite0 = startGrids(3);
 
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
         ignite0.cluster().active(true);
 
         IgniteCache<Object, Object> cache = ignite0.getOrCreateCache(TEST_CACHE_NAME);
 
-        for(int i = 0; i< 100; i++)
+        for (int i = 0; i < 100; i++)
             cache.put(i, i);
 
         //when: stop one node and reset baseline topology
@@ -103,9 +98,11 @@ public class IgniteAbsentEvictionNodeOutOfBaselineTest extends GridCommonAbstrac
 
         resetBaselineTopology();
 
+        ignite0.resetLostPartitions(Collections.singleton(TEST_CACHE_NAME));
+
         awaitPartitionMapExchange();
 
-        for(int i = 0; i< 200; i++)
+        for (int i = 0; i < 200; i++)
             cache.put(i, i);
 
         //then: after returning stopped node to grid its partitions should be removed

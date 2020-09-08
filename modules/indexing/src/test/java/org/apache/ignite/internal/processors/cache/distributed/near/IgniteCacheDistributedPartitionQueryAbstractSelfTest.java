@@ -430,7 +430,7 @@ public abstract class IgniteCacheDistributedPartitionQueryAbstractSelfTest exten
 
             int off = rnd.nextInt(parts.length);
 
-            int p1 = parts[off], p2 = parts[(off + (1 + rnd.nextInt(parts.length-1))) % parts.length];
+            int p1 = parts[off], p2 = parts[(off + (1 + rnd.nextInt(parts.length - 1))) % parts.length];
 
             log().info("Parts: " + p1 + " " + p2);
 

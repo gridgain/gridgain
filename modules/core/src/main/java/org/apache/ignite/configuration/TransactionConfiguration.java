@@ -22,6 +22,7 @@ import javax.cache.configuration.Factory;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.internal.util.TransientSerializable;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -36,7 +37,7 @@ public class TransactionConfiguration implements Serializable {
     private static final IgniteProductVersion TX_PME_TIMEOUT_SINCE = IgniteProductVersion.fromString("2.5.1");
 
     /** */
-    private static final IgniteProductVersion DEADLOCK_TIMEOUT_SINCE = IgniteProductVersion.fromString("2.7.3");
+    private static final IgniteProductVersion DEADLOCK_TIMEOUT_SINCE = IgniteProductVersion.fromString("8.7.3");
 
     /** */
     private static final long serialVersionUID = 0L;
@@ -254,6 +255,8 @@ public class TransactionConfiguration implements Serializable {
     }
 
     /**
+     * <b>This is an experimental feature. Transactional SQL is currently in a beta status.</b>
+     * <p>
      * Transaction deadlocks occurred for caches configured with {@link CacheAtomicityMode#TRANSACTIONAL_SNAPSHOT}
      * can be resolved automatically.
      * <p>
@@ -265,11 +268,14 @@ public class TransactionConfiguration implements Serializable {
      *
      * @return Timeout before starting deadlock detection.
      */
+    @IgniteExperimental
     public long getDeadlockTimeout() {
         return deadlockTimeout;
     }
 
     /**
+     * <b>This is an experimental feature. Transactional SQL is currently in a beta status.</b>
+     * <p>
      * Sets a timeout before starting deadlock detection for caches configured with
      * {@link CacheAtomicityMode#TRANSACTIONAL_SNAPSHOT}.
      * <p>
@@ -279,6 +285,7 @@ public class TransactionConfiguration implements Serializable {
      * @param deadlockTimeout Timeout value in milliseconds.
      * @return {@code this} for chaining.
      */
+    @IgniteExperimental
     public TransactionConfiguration setDeadlockTimeout(long deadlockTimeout) {
         this.deadlockTimeout = deadlockTimeout;
 

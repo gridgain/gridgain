@@ -24,7 +24,7 @@ import javax.transaction.UserTransaction;
 import org.apache.commons.dbcp.managed.BasicManagedDataSource;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.h2.jdbcx.JdbcDataSource;
+import org.gridgain.internal.h2.jdbcx.JdbcDataSource;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.engine.transaction.internal.jta.JtaTransactionFactory;
 import org.hibernate.engine.transaction.spi.TransactionFactory;

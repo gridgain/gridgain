@@ -17,18 +17,22 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -46,13 +50,16 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestDelayingCommunicationSpi;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
@@ -67,7 +74,10 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -75,6 +85,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -84,6 +95,8 @@ import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.LogListener.matches;
 
 /**
  *
@@ -113,9 +126,12 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     /** */
     private static ExecutorService executor;
 
+    /** Logger for listen messages. */
+    private final ListeningTestLogger listeningLog = new ListeningTestLogger(false, log);
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName).setGridLogger(listeningLog);
 
         if (testSpi)
             cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
@@ -145,11 +161,21 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                 cacheConfiguration("c8", TRANSACTIONAL, PARTITIONED, 2),
                 cacheConfiguration("c9", TRANSACTIONAL, PARTITIONED, 10),
                 cacheConfiguration("c10", TRANSACTIONAL, REPLICATED, 0),
-                cacheConfiguration("c11", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 0),
-                cacheConfiguration("c12", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 1),
-                cacheConfiguration("c13", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 2),
-                cacheConfiguration("c14", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 10),
-                cacheConfiguration("c15", TRANSACTIONAL_SNAPSHOT, REPLICATED, 0)
+                cacheConfiguration("c11", ATOMIC, PARTITIONED, 0),
+                cacheConfiguration("c12", ATOMIC, PARTITIONED, 1),
+                cacheConfiguration("c13", ATOMIC, PARTITIONED, 2),
+                cacheConfiguration("c14", ATOMIC, PARTITIONED, 10),
+                cacheConfiguration("c15", ATOMIC, REPLICATED, 0),
+                cacheConfiguration("c16", TRANSACTIONAL, PARTITIONED, 0),
+                cacheConfiguration("c17", TRANSACTIONAL, PARTITIONED, 1),
+                cacheConfiguration("c18", TRANSACTIONAL, PARTITIONED, 2),
+                cacheConfiguration("c19", TRANSACTIONAL, PARTITIONED, 10),
+                cacheConfiguration("c20", TRANSACTIONAL, REPLICATED, 0),
+                cacheConfiguration("c21", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 0),
+                cacheConfiguration("c22", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 1),
+                cacheConfiguration("c23", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 2),
+                cacheConfiguration("c24", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 10),
+                cacheConfiguration("c25", TRANSACTIONAL_SNAPSHOT, REPLICATED, 0)
             );
         }
 
@@ -160,7 +186,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
+            new IgniteThreadFactory("testscope", "cache-exchange-metge-tests"));
     }
 
     /** {@inheritDoc} */
@@ -171,6 +198,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        listeningLog.clearListeners();
+
         stopAllGrids();
 
         super.afterTest();
@@ -779,7 +808,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMergeServersFail1_1() throws Exception {
-        mergeServersFail1(false);
+        mergeServersFail1(false, false, 8);
     }
 
     /**
@@ -787,35 +816,117 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMergeServersFail1_2() throws Exception {
-        mergeServersFail1(true);
+        mergeServersFail1(true, false, 8);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMergeServersFail1_3() throws Exception {
+        mergeServersFail1(false, true, 8);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMergeServersFail1_4() throws Exception {
+        mergeServersFail1(true, true, 8);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMergeServersFail1_5() throws Exception {
+        mergeServersFail1(false, false, 7);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMergeServersFail1_6() throws Exception {
+        mergeServersFail1(true, false, 7);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMergeServersFail1_7() throws Exception {
+        mergeServersFail1(false, true, 7);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMergeServersFail1_8() throws Exception {
+        mergeServersFail1(true, true, 7);
     }
 
     /**
      * @param waitRebalance Wait for rebalance end before start tested topology change.
+     * @param delayRebalance Delay rebalancing before checking caches.
+     * @param mergeTopVer Merge topology version (7 or 8).
      * @throws Exception If failed.
      */
-    private void mergeServersFail1(boolean waitRebalance) throws Exception {
+    private void mergeServersFail1(boolean waitRebalance, boolean delayRebalance, int mergeTopVer) throws Exception {
+        testSpi = true;
+
         final Ignite srv0 = startGrids(5);
 
         if (waitRebalance)
             awaitPartitionMapExchange();
 
+        if (delayRebalance) {
+            for (Ignite allGrid : G.allGrids()) {
+                TestRecordingCommunicationSpi.spi(allGrid).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                    @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                        return msg instanceof GridDhtPartitionDemandMessage;
+                    }
+                });
+            }
+        }
+
         final List<DiscoveryEvent> mergedEvts = new ArrayList<>();
 
-        mergeExchangeWaitVersion(srv0, 8, mergedEvts);
+        mergeExchangeWaitVersion(srv0, mergeTopVer, mergedEvts);
 
         UUID grid3Id = grid(3).localNode().id();
         UUID grid2Id = grid(2).localNode().id();
 
         stopGrid(getTestIgniteInstanceName(4), true, false);
         stopGrid(getTestIgniteInstanceName(3), true, false);
+
+        if (mergeTopVer == 7) {
+            waitForReadyTopology(grid(0).cachex(cacheNames[0]).context().topology(),
+                    new AffinityTopologyVersion(7, 0));
+        }
+
         stopGrid(getTestIgniteInstanceName(2), true, false);
 
-        checkCaches();
+        checkAffinity();
+
+        checkCaches0();
+
+        checkAffinity();
+
+        if (delayRebalance) {
+            for (Ignite allGrid : G.allGrids())
+                TestRecordingCommunicationSpi.spi(allGrid).stopBlock();
+        }
 
         awaitPartitionMapExchange();
 
-        assertTrue("Unexpected number of merged disco events: " + mergedEvts.size(), mergedEvts.size() == 2);
+        checkTopologiesConsistency();
+
+        checkCaches0();
+
+        assertTrue("Unexpected number of merged disco events: " + mergedEvts.size(),
+                mergedEvts.size() == mergeTopVer - 6);
 
         for (DiscoveryEvent discoEvt : mergedEvts) {
             ClusterNode evtNode = discoEvt.eventNode();
@@ -1291,9 +1402,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception If failed.
      */
-    private void checkAffinity() throws Exception {
+    private void checkAffinity() {
         List<Ignite> nodes = G.allGrids();
 
         ClusterNode crdNode = null;
@@ -1305,7 +1415,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                 crdNode = locNode;
         }
 
-        AffinityTopologyVersion topVer = ((IgniteKernal)grid(crdNode)).
+        AffinityTopologyVersion topVer = ((IgniteEx)grid(crdNode)).
             context().cache().context().exchange().readyAffinityVersion();
 
         Map<String, List<List<ClusterNode>>> affMap = new HashMap<>();
@@ -1313,7 +1423,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         for (Ignite node : nodes) {
             IgniteKernal node0 = (IgniteKernal)node;
 
-            for (IgniteInternalCache cache : node0.context().cache().caches()) {
+            for (IgniteInternalCache<?, ?> cache : node0.context().cache().caches()) {
                 List<List<ClusterNode>> aff = affMap.get(cache.name());
                 List<List<ClusterNode>> aff0 = cache.context().affinity().assignments(topVer);
 
@@ -1599,10 +1709,92 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     static class TestDelayExchangeMessagesSpi extends TestDelayingCommunicationSpi {
         /** {@inheritDoc} */
         @Override protected boolean delayMessage(Message msg, GridIoMessage ioMsg) {
-            if (msg instanceof GridDhtPartitionsAbstractMessage)
-                return ((GridDhtPartitionsAbstractMessage)msg).exchangeId() != null || (msg instanceof GridDhtPartitionsSingleRequest);
-
-            return false;
+            return delay(msg);
         }
+    }
+
+    /**
+     * Return {@code true} if need to delay message to emulate merge exchanges.
+     *
+     * @param msg Message.
+     * @return {@code True} if need to delay message.
+     */
+    private static boolean delay(Message msg) {
+        if (!GridDhtPartitionsAbstractMessage.class.isInstance(msg))
+            return false;
+
+        GridDhtPartitionsAbstractMessage dhtMsg = (GridDhtPartitionsAbstractMessage)msg;
+        return nonNull(dhtMsg.exchangeId()) || GridDhtPartitionsSingleRequest.class.isInstance(dhtMsg);
+    }
+
+    /**
+     * Test checks that there will be no {@link ConcurrentModificationException}
+     * when merging exchanges and iterating over {@link ExchangeDiscoveryEvents#events} at the same time.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNoConcurrentModificationExceptionAfterMergeExchanges() throws Exception {
+        testSpi = true;
+
+        LogListener logLsnr = matches("Merge exchange future on finish [").build();
+        listeningLog.registerAllListeners(logLsnr);
+
+        AtomicBoolean stop = new AtomicBoolean();
+        Collection<Exception> exceptions = new ConcurrentLinkedQueue<>();
+
+        try {
+            startGrid(0);
+
+            for (int i = 1; i < 9; i++) {
+                IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(i));
+                TestRecordingCommunicationSpi spi = ((TestRecordingCommunicationSpi)cfg.getCommunicationSpi());
+
+                spi.blockMessages((node, msg) -> delay(msg));
+                runAsync(() -> startGrid(cfg), "create-node-" + cfg.getIgniteInstanceName());
+                spi.waitForBlocked();
+            }
+
+            List<Ignite> allNodes = IgnitionEx.allGridsx();
+            CountDownLatch latch = new CountDownLatch(allNodes.size());
+
+            for (Ignite gridEx : allNodes) {
+                runAsync(() -> {
+                    Collection<DiscoveryEvent> evts = ((IgniteEx)gridEx).context().cache().context().exchange()
+                        .lastTopologyFuture().events().events();
+
+                    latch.countDown();
+
+                    int i = 0;
+                    while (!stop.get()) {
+                        try {
+                            for (DiscoveryEvent evt : evts) {
+                                if (nonNull(evt))
+                                    i++;
+                            }
+                        }
+                        catch (ConcurrentModificationException e) {
+                            exceptions.add(e);
+
+                            log.error("i = " + i, e);
+
+                            break;
+                        }
+                    }
+                }, "get-ex-" + gridEx.configuration().getIgniteInstanceName());
+            }
+
+            for (Ignite node : allNodes)
+                TestRecordingCommunicationSpi.spi(node).stopBlock();
+
+            latch.await();
+            awaitPartitionMapExchange();
+        }
+        finally {
+            stop.set(true);
+        }
+
+        assertTrue(logLsnr.check());
+        assertTrue(exceptions.isEmpty());
     }
 }

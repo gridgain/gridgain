@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
@@ -101,6 +103,12 @@ class OptimizedObjectInputStream extends ObjectInputStream {
     /** Dummy object for HashSet. */
     private static final Object DUMMY = new Object();
 
+    /** Suppress errors on this type due to compatibility. */
+    private static final Set<String> EXCLUDED_MARSHALLING_ERROR_TYPES =
+        Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        "org.gridgain.grid.internal.processors.security.SecuritySubjectAdapter",
+            "org.gridgain.grid.internal.processors.cache.database.snapshot.schedule.SnapshotSchedule")));
+
     /** */
     private final HandleTable handles = new HandleTable(10);
 
@@ -128,12 +136,16 @@ class OptimizedObjectInputStream extends ObjectInputStream {
     /** */
     private ConcurrentMap<Class, OptimizedClassDescriptor> clsMap;
 
+    /** The flag shown, the reader uses class loader cache used or not. */
+    private boolean useCache;
+
     /**
      * @param in Input.
      * @throws IOException In case of error.
      */
     OptimizedObjectInputStream(GridDataInput in) throws IOException {
         this.in = in;
+        this.useCache = true;
     }
 
     /**
@@ -141,17 +153,20 @@ class OptimizedObjectInputStream extends ObjectInputStream {
      * @param ctx Context.
      * @param mapper ID mapper.
      * @param clsLdr Class loader.
+     * @param useCache True if class loader cache will be used, false otherwise.
      */
     void context(
         ConcurrentMap<Class, OptimizedClassDescriptor> clsMap,
         MarshallerContext ctx,
         OptimizedMarshallerIdMapper mapper,
-        ClassLoader clsLdr)
+        ClassLoader clsLdr,
+        boolean useCache)
     {
         this.clsMap = clsMap;
         this.ctx = ctx;
         this.mapper = mapper;
         this.clsLdr = clsLdr;
+        this.useCache = useCache;
     }
 
     /**
@@ -336,15 +351,15 @@ class OptimizedObjectInputStream extends ObjectInputStream {
                 int typeId = readInt();
 
                 OptimizedClassDescriptor desc = typeId == 0 ?
-                    classDescriptor(clsMap, U.forName(readUTF(), clsLdr, ctx.classNameFilter()), ctx, mapper):
-                    classDescriptor(clsMap, typeId, clsLdr, ctx, mapper);
+                    classDescriptor(clsMap, U.forName(readUTF(), clsLdr, ctx.classNameFilter()), useCache, ctx, mapper) :
+                    classDescriptor(clsMap, typeId, clsLdr, useCache, ctx, mapper);
 
                 curCls = desc.describedClass();
 
                 try {
                     return desc.read(this);
                 }
-                catch (IOException e){
+                catch (IOException e) {
                     throw new IOException("Failed to deserialize object [typeName=" +
                         desc.describedClass().getName() + ']', e);
                 }
@@ -372,8 +387,8 @@ class OptimizedObjectInputStream extends ObjectInputStream {
     private Class<?> readClass() throws ClassNotFoundException, IOException {
         int compTypeId = readInt();
 
-        return compTypeId == 0 ? U.forName(readUTF(), clsLdr) :
-            classDescriptor(clsMap, compTypeId, clsLdr, ctx, mapper).describedClass();
+        return compTypeId == 0 ? U.forName(readUTF(), clsLdr, null, useCache) :
+            classDescriptor(clsMap, compTypeId, clsLdr, useCache, ctx, mapper).describedClass();
     }
 
     /**
@@ -520,6 +535,9 @@ class OptimizedObjectInputStream extends ObjectInputStream {
                 }
             }
             catch (IOException e) {
+                if (EXCLUDED_MARSHALLING_ERROR_TYPES.contains(obj.getClass().getName()))
+                    return;
+
                 throw new IOException("Failed to deserialize field [name=" + t.name() + ']', e);
             }
         }

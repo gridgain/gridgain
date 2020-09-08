@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.sql.PreparedStatement;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Map query info.
@@ -38,13 +40,14 @@ public class MapH2QueryInfo extends H2QueryInfo {
      * @param node Originator node ID
      * @param reqId Request ID.
      * @param segment Segment.
+     * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
     public MapH2QueryInfo(PreparedStatement stmt, String sql,
-        ClusterNode node, long reqId, int segment) {
-        super(QueryType.MAP, stmt, sql);
+        ClusterNode node, long reqId, int segment, @Nullable Long runningQryId) {
+        super(QueryType.MAP, stmt, sql, runningQryId);
 
         this.node = node;
-        this.reqId= reqId;
+        this.reqId = reqId;
         this.segment = segment;
     }
 

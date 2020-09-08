@@ -34,6 +34,7 @@ nobase_include_HEADERS = \
 	ignite/date.h \
 	ignite/guid.h \
 	ignite/ignite_error.h \
+	ignite/ignite_predicate.h \
 	ignite/timestamp.h \
 	ignite/time.h \
 	ignite/reference.h \

@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Cache.Configuration
 {
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Common;
 
     /// <summary>
     /// Cache atomicity mode.
@@ -58,6 +59,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
         Atomic,
 
         /// <summary>
+        /// This is an experimental feature. Transactional SQL is currently in a beta status.
+        /// <para/>
         /// Specifies fully ACID-compliant transactional cache behavior for both key-value API and SQL transactions.
         /// <para/>
         /// This atomicity mode enables multiversion concurrency control (MVCC) for the cache. In MVCC-enabled caches,
@@ -76,6 +79,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// If a transaction is executed over multiple caches, all caches must have the same atomicity mode,
         /// either TRANSACTIONAL_SNAPSHOT or TRANSACTIONAL.
         /// </summary>
+        [IgniteExperimentalAttribute]
         TransactionalSnapshot,
     }
 }

@@ -23,8 +23,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteIllegalStateException;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsHolderCache;
+import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
+import org.apache.ignite.internal.metric.IoStatisticsType;
 
 /**
  * IO statistics manager to manage of gathering IO statistics.
@@ -55,8 +58,8 @@ public class IoStatisticsManager {
      * @param grpId Cache group id.
      * @return created statistics holder.
      */
-    public IoStatisticsHolder registerCacheGroup(String name, int grpId) {
-        return register(IoStatisticsType.CACHE_GROUP, name, grpId);
+    public IoStatisticsHolder onCacheGroupRegistered(String name, int grpId, IoStatisticsHolderCache statCache) {
+        return register(new IoStatisticsHolderKey(name), IoStatisticsType.CACHE_GROUP, statCache);
     }
 
     /**
@@ -67,44 +70,23 @@ public class IoStatisticsManager {
      * @param idxName Name of index.
      * @return created statistics holder.
      */
-    public IoStatisticsHolder registerIndex(IoStatisticsType type, String name, String idxName) {
+    public IoStatisticsHolder onIndexRegistered(IoStatisticsType type, String name, String idxName, IoStatisticsHolderIndex statIdx) {
         assert type == IoStatisticsType.HASH_INDEX || type == IoStatisticsType.SORTED_INDEX : type;
 
-        return register(type, name, idxName);
+        return register(new IoStatisticsHolderKey(name, idxName), type, statIdx);
     }
 
     /**
-     * Create and register statistics holder.
+     * Register statistics holder in the statistics map.
      *
+     * @param statKey Statistics key to register.
      * @param type Type of statistics.
-     * @param name Name of element of statistics.
-     * @param param second parameter of statistic's element.
+     * @param stat Statistics holder.
      * @return created statistics holder.
      */
-    private IoStatisticsHolder register(IoStatisticsType type, String name, Object param) {
+    private IoStatisticsHolder register(IoStatisticsHolderKey statKey, IoStatisticsType type, IoStatisticsHolder stat) {
         if (statByType.isEmpty())
             throw new IgniteIllegalStateException("IO Statistics manager has been stopped and can'be used");
-
-        IoStatisticsHolder stat;
-        IoStatisticsHolderKey statKey;
-
-        switch (type) {
-            case CACHE_GROUP:
-                stat = new IoStatisticsHolderCache(name, (Integer)param);
-                statKey = new IoStatisticsHolderKey(name);
-
-                break;
-
-            case HASH_INDEX:
-            case SORTED_INDEX:
-                stat = new IoStatisticsHolderIndex(name, (String)param);
-                statKey = new IoStatisticsHolderKey(name, (String)param);
-
-                break;
-
-            default:
-                throw new IgniteException("Gathering IO statistics for " + type + "doesn't support");
-        }
 
         IoStatisticsHolder existedStatisitcHolder = statByType.get(type).putIfAbsent(statKey, stat);
 
@@ -218,7 +200,7 @@ public class IoStatisticsManager {
      * @param statType Type of statistics which need to take.
      * @return All tracked statistics for given type.
      */
-    public Map<IoStatisticsHolderKey, IoStatisticsHolder> statistics(IoStatisticsType statType){
+    public Map<IoStatisticsHolderKey, IoStatisticsHolder> statistics(IoStatisticsType statType) {
         return Collections.unmodifiableMap(statByType.get(statType));
     }
 }

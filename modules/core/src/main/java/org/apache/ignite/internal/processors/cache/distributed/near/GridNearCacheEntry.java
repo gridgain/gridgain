@@ -109,6 +109,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 return false;
             }
 
+            // As a result of topology change, this node is now a backup for the key - no more need for a Near entry.
             if (cctx.affinity().backupByPartition(cctx.localNode(), part, topVer)) {
                 this.topVer = AffinityTopologyVersion.NONE;
 
@@ -260,7 +261,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 // If we are here, then we already tried to evict this entry.
                 // If cannot evict, then update.
                 if (this.dhtVer == null) {
-                    if (!markObsolete(cctx.versions().next())) {
+                    if (!markObsolete(cctx.cache().nextVersion())) {
                         value(val);
 
                         ttlAndExpireTimeExtras((int) ttl, expireTime);
@@ -412,6 +413,9 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
                 update(val, expireTime, ttl, ver, true);
 
+                // Special case for platform cache: start tracking near entry.
+                updatePlatformCache(val, topVer);
+
                 if (cctx.deferredDelete() && !isInternal()) {
                     boolean deleted = val == null;
 
@@ -455,8 +459,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean storeValue(CacheObject val, long expireTime, GridCacheVersion ver) {
-        return false;
+    @Override protected void storeValue(CacheObject val, long expireTime, GridCacheVersion ver) {
         // No-op: queries are disabled for near cache.
     }
 
@@ -472,7 +475,18 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr)
+    @Override protected void logOutOfOrderUpdate(
+        GridCacheOperation op,
+        CacheObject val,
+        GridCacheVersion writeVer,
+        long expireTime,
+        Long updCntr
+    ) throws IgniteCheckedException {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr, boolean walEnabled)
         throws IgniteCheckedException {
         return null;
     }
@@ -552,7 +566,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 mvccExtras(mvcc);
             }
 
-            GridCacheMvccCandidate c = mvcc.localCandidate(locId, threadId);
+            GridCacheMvccCandidate c = mvcc.localCandidateByThreadOrVer(locId, threadId, ver);
 
             if (c != null)
                 return reenter ? c.reenter() : null;
@@ -751,6 +765,12 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         return evictReservations > 0;
     }
 
+    /** {@inheritDoc} */
+    @Override public void onMarkedObsolete() {
+        // GridCacheMapEntry.onMarkedObsolete is called immediately after performing operation for any non-primary key.
+        updatePlatformCache(null, null);
+    }
+
     /**
      * @param nodeId Primary node ID.
      * @param topVer Topology version.
@@ -780,13 +800,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        lockEntry();
-
-        try {
-            return S.toString(GridNearCacheEntry.class, this, "super", super.toString());
-        }
-        finally {
-            unlockEntry();
-        }
+        return toStringWithTryLock(() -> S.toString(GridNearCacheEntry.class, this, "super", super.toString()));
     }
 }

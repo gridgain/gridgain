@@ -33,6 +33,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -46,7 +47,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
@@ -99,16 +99,12 @@ public class CacheDataLossOnPartitionMoveTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         super.beforeTestsStarted();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
     }
 
     /**
@@ -136,12 +132,13 @@ public class CacheDataLossOnPartitionMoveTest extends GridCommonAbstractTest {
     @Test
     public void testDataLossOnPartitionMove() throws Exception {
         try {
-            Ignite ignite = startGridsMultiThreaded(GRIDS_CNT / 2, false);
+            IgniteEx ignite = (IgniteEx)startGridsMultiThreaded(GRIDS_CNT / 2, false);
 
+            ignite.cluster().baselineAutoAdjustEnabled(false);
             ignite.cluster().active(true);
 
             List<Integer> toCp = movingKeysAfterJoin(ignite, DEFAULT_CACHE_NAME, 1,
-                node -> ((GridTestNode)node).setAttribute(GRP_ATTR, ODD_GRP));
+                node -> ((GridTestNode)node).setAttribute(GRP_ATTR, ODD_GRP), null);
 
             int blockPartId = ignite.affinity(DEFAULT_CACHE_NAME).partition(toCp.get(0));
 
@@ -189,7 +186,7 @@ public class CacheDataLossOnPartitionMoveTest extends GridCommonAbstractTest {
 
             int i = 0;
 
-            while(i < GRIDS_CNT / 2) {
+            while (i < GRIDS_CNT / 2) {
                 stopGrid(GRIDS_CNT / 2 + i);
 
                 i++;

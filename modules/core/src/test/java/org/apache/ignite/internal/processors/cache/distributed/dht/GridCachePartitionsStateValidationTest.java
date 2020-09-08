@@ -56,12 +56,18 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+
 /**
  *
  */
 public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** */
     private boolean clientMode;
@@ -106,6 +112,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     public void testValidationIfPartitionCountersAreInconsistent() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrids(2);
         ignite.cluster().active(true);
+        ignite.cluster().baselineAutoAdjustEnabled(false);
 
         awaitPartitionMapExchange();
 
@@ -121,6 +128,9 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
 
         // Trigger exchange.
         startGrid(2);
+
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
 
         awaitPartitionMapExchange();
 
@@ -139,8 +149,9 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     public void testPartitionCountersConsistencyOnExchange() throws Exception {
         // Reopen https://issues.apache.org/jira/browse/IGNITE-10766 if starts failing with forced MVCC
 
-        IgniteEx ignite = (IgniteEx) startGrids(4);
+        IgniteEx ignite = startGrids(4);
         ignite.cluster().active(true);
+        ignite.cluster().baselineAutoAdjustEnabled(false);
 
         awaitPartitionMapExchange();
 
@@ -167,7 +178,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
 
-        for (int it = 0; it < 10; it++) {
+        for (int it = 0; it < GridTestUtils.SF.applyLB(10, 4); it++) {
             SingleMessageInterceptorCommunicationSpi spi = (SingleMessageInterceptorCommunicationSpi) ignite.configuration().getCommunicationSpi();
             spi.clear();
 
@@ -213,7 +224,14 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             spi.blockFullMessage();
 
             // Trigger exchange.
-            IgniteInternalFuture nodeStopFuture = GridTestUtils.runAsync(() -> stopGrid(3));
+            IgniteInternalFuture nodeStopFuture = GridTestUtils.runAsync(new Runnable() {
+                @Override public void run() {
+                    stopGrid(3);
+
+                    if (bltForInMemoryCachesSup)
+                        resetBaselineTopology();
+                }
+            });
 
             try {
                 spi.waitUntilAllSingleMessagesAreSent();
@@ -244,6 +262,9 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
 
             // Return grid to initial state.
             startGrid(3);
+
+            if (bltForInMemoryCachesSup)
+                resetBaselineTopology();
 
             awaitPartitionMapExchange();
         }
@@ -277,8 +298,8 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             if (((GridIoMessage) msg).message() instanceof GridDhtPartitionsSingleMessage) {
                 GridDhtPartitionsSingleMessage singleMsg = (GridDhtPartitionsSingleMessage) ((GridIoMessage) msg).message();
 
-                // We're interesting for only exchange messages and when node is stopped.
-                if (singleMsg.exchangeId() != null && singleMsg.exchangeId().isLeft() && !singleMsg.client()) {
+                // We're interesting for only exchange messages and when baseline is changed or node left.
+                if (singleMsg.exchangeId() != null && !singleMsg.exchangeId().isJoined() && !singleMsg.client()) {
                     messages.add(singleMsg);
 
                     if (messages.size() == singleMessagesThreshold)

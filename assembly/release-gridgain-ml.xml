@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ Copyright 2019 GridGain Systems, Inc. and Contributors.
+
+ Licensed under the GridGain Community Edition License (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2
+          http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+    <id>gridgain-ml</id>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <formats>
+        <format>dir</format>
+    </formats>
+
+    <files>
+        <file>
+            <source>assembly/LICENSE_IGNITE</source>
+            <destName>LICENSE</destName>
+            <outputDirectory>/</outputDirectory>
+        </file>
+
+        <file>
+            <source>assembly/NOTICE_IGNITE</source>
+            <destName>NOTICE</destName>
+            <outputDirectory>/</outputDirectory>
+        </file>
+
+        <file>
+            <source>examples-ml/pom-standalone.xml</source>
+            <outputDirectory>/examples-ml</outputDirectory>
+            <destName>pom.xml</destName>
+        </file>
+
+        <file>
+            <source>examples-ml/README.txt</source>
+            <outputDirectory>/examples-ml</outputDirectory>
+            <destName>README.txt</destName>
+        </file>
+    </files>
+
+    <fileSets>
+        <fileSet>
+            <directory>examples-ml</directory>
+            <outputDirectory>/examples-ml</outputDirectory>
+            <includes>
+                <include>config/**</include>
+                <include>src/**</include>
+            </includes>
+            <excludes>
+                <exclude>**/package.html</exclude>
+                <exclude>src/test/**</exclude>
+            </excludes>
+        </fileSet>
+    </fileSets>
+</assembly>

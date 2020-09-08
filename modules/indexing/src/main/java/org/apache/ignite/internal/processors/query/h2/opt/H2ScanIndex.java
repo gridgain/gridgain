@@ -17,24 +17,23 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-
-import org.h2.engine.Database;
-import org.h2.engine.DbObject;
-import org.h2.engine.Session;
-import org.h2.index.BaseIndex;
-import org.h2.index.Cursor;
-import org.h2.index.IndexLookupBatch;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.result.SortOrder;
-import org.h2.schema.Schema;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.Table;
-import org.h2.table.TableFilter;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Database;
+import org.gridgain.internal.h2.engine.DbObject;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.BaseIndex;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.schema.Schema;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableFilter;
 
 /**
  * Scan index. Do not actually store any information, but rather delegate to some underlying index. The only reason
@@ -50,8 +49,12 @@ public class H2ScanIndex<D extends BaseIndex> extends BaseIndex {
 
     /**
      * @param delegate Delegate.
+     * @param tbl Table.
+     * @param name  Index name.
      */
-    public H2ScanIndex(D delegate) {
+    public H2ScanIndex(D delegate, Table tbl, String name) {
+        super(tbl, 0, name, null, IndexType.createScan(false));
+
         this.delegate = delegate;
     }
 
@@ -89,11 +92,6 @@ public class H2ScanIndex<D extends BaseIndex> extends BaseIndex {
 
     /** {@inheritDoc} */
     @Override public final void close(Session ses) {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public void commit(int operation, Row row) {
         // No-op.
     }
 
@@ -153,8 +151,8 @@ public class H2ScanIndex<D extends BaseIndex> extends BaseIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
-        return delegate().getRowCountApproximation();
+    @Override public long getRowCountApproximation(Session ses) {
+        return delegate().getRowCountApproximation(ses);
     }
 
     /** {@inheritDoc} */
@@ -248,8 +246,8 @@ public class H2ScanIndex<D extends BaseIndex> extends BaseIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public String getSQL() {
-        return delegate().getSQL();
+    @Override public String getSQL(boolean alwaysQuote) {
+        return delegate().getSQL(alwaysQuote);
     }
 
     /** {@inheritDoc} */
@@ -283,9 +281,9 @@ public class H2ScanIndex<D extends BaseIndex> extends BaseIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public double getCost(Session session, int[] masks, TableFilter[] filters, int filter,
-        SortOrder sortOrder, HashSet<Column> allColumnsSet) {
-        long rows = getRowCountApproximation();
+    @Override public double getCost(Session ses, int[] masks, TableFilter[] filters, int filter, SortOrder sortOrder,
+        AllColumnsForPlan allColumnsSet) {
+        long rows = getRowCountApproximation(ses);
 
         return getCostRangeIndex(masks, rows, filters, filter, sortOrder, true, allColumnsSet);
     }

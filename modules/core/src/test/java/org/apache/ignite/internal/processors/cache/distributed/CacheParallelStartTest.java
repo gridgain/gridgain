@@ -30,6 +30,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -41,7 +42,6 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
 
     /** */
     private static final int GROUPS_COUNT = 50;
-
 
     /** */
     private static final String STATIC_CACHE_PREFIX = "static-cache-";
@@ -125,7 +125,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test
+    @Test(timeout = 2 * 300000)
     public void testParallelStartAndStop() throws Exception {
         testParallelStartAndStop(true);
     }
@@ -134,6 +134,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-19619")
     public void testSequentialStartAndStop() throws Exception {
         testParallelStartAndStop(false);
     }

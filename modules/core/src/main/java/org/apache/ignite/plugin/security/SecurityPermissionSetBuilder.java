@@ -66,13 +66,16 @@ public class SecurityPermissionSetBuilder {
     /** Default allow all.*/
     private boolean dfltAllowAll;
 
+    /** */
+    public static final SecurityPermissionSet ALLOW_ALL = create().build();
+
     /**
      * Static factory method for create new permission builder.
      *
      * @return SecurityPermissionSetBuilder
      */
-    public static SecurityPermissionSetBuilder create(){
-        return new SecurityPermissionSetBuilder();
+    public static SecurityPermissionSetBuilder create() {
+        return new SecurityPermissionSetBuilder().defaultAllowAll(true);
     }
 
     /**
@@ -125,11 +128,6 @@ public class SecurityPermissionSetBuilder {
      * @return {@link SecurityPermissionSetBuilder} refer to same permission builder.
      */
     public SecurityPermissionSetBuilder appendCachePermissions(String name, SecurityPermission... perms) {
-        for (SecurityPermission perm : perms) {
-            if (perm == SecurityPermission.CACHE_CREATE || perm == SecurityPermission.CACHE_DESTROY)
-                throw new IgniteException(perm + " should be assigned as system permission, not cache permission");
-        }
-
         validate(toCollection("CACHE_"), perms);
 
         append(cachePerms, name, toCollection(perms));
@@ -144,9 +142,27 @@ public class SecurityPermissionSetBuilder {
      * @return {@link SecurityPermissionSetBuilder} refer to same permission builder.
      */
     public SecurityPermissionSetBuilder appendSystemPermissions(SecurityPermission... perms) {
-        validate(toCollection("EVENTS_", "ADMIN_", "CACHE_CREATE", "CACHE_DESTROY", "JOIN_AS_SERVER"), perms);
+        validate(toCollection("EVENTS_", "ADMIN_", "CACHE_CREATE", "CACHE_DESTROY", "JOIN_AS_SERVER",
+            "SET_QUERY_MEMORY_QUOTA", "GET_QUERY_VIEWS", "KILL_QUERY"), perms);
 
         sysPerms.addAll(toCollection(perms));
+
+        return this;
+    }
+
+    /**
+     * Append permission set.
+     *
+     * @param permSet Permission set.
+     * @return {@link SecurityPermissionSetBuilder} refer to same permission builder.
+     */
+    public SecurityPermissionSetBuilder appendPermissionSet(SecurityPermissionSet permSet) {
+        append(cachePerms, permSet.cachePermissions());
+        append(taskPerms, permSet.taskPermissions());
+        append(srvcPerms, permSet.servicePermissions());
+
+        if (permSet.systemPermissions() != null)
+            sysPerms.addAll(permSet.systemPermissions());
 
         return this;
     }
@@ -206,6 +222,22 @@ public class SecurityPermissionSetBuilder {
     }
 
     /**
+     * @param target Permissions map to append to.
+     * @param source Permissions than need to be appended.
+     */
+    private void append(
+        Map<String, Collection<SecurityPermission>> target,
+        Map<String, Collection<SecurityPermission>> source
+    ) {
+        assert target != null;
+
+        if (source != null) {
+            for (Map.Entry<String, Collection<SecurityPermission>> e : source.entrySet())
+                append(target, e.getKey(), e.getValue());
+        }
+    }
+
+    /**
      * @param permsMap Permissions map.
      * @param name Name.
      * @param perms Permission.
@@ -221,8 +253,19 @@ public class SecurityPermissionSetBuilder {
 
         Collection<SecurityPermission> col = permsMap.get(name);
 
-        if (col == null)
+        if (col == null) {
+            if (!(perms instanceof Set)) {
+                Set<SecurityPermission> set = U.newLinkedHashSet(perms.size());
+
+                set.addAll(perms);
+
+                perms = set;
+            }
+
+            assert perms instanceof Set;
+
             permsMap.put(name, perms);
+        }
         else
             col.addAll(perms);
     }

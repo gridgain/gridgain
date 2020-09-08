@@ -39,11 +39,12 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutor;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridReduceQueryExecutor;
@@ -94,10 +95,12 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         c.setCacheConfiguration(ccfgs.toArray(new CacheConfiguration[ccfgs.size()]));
 
-        c.setLongQueryWarningTimeout(10000);
+        c.setSqlConfiguration(new SqlConfiguration().setLongQueryWarningTimeout(10000));
 
         if (gridName.equals(NODE_CLIENT))
             c.setClientMode(true);
+
+        c.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return c;
     }
@@ -200,7 +203,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         Position p = cache.get(1);
 
-        List<List<?>> r = cache.query(new SqlFieldsQueryEx("UPDATE Position p SET name = CONCAT('A ', name)", false)
+        List<List<?>> r = cache.query(new SqlFieldsQuery("UPDATE Position p SET name = CONCAT('A ', name)")
             .setSkipReducerOnUpdate(true)).getAll();
 
         assertEquals((long)cache.size(), r.get(0).get(0));
@@ -218,8 +221,8 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         IgniteCache<PersonKey, Person> cache = grid(NODE_CLIENT).cache(CACHE_PERSON);
 
-        List<List<?>> r = cache.query(new SqlFieldsQueryEx(
-            "UPDATE Person SET position = CASEWHEN(position = 1, 1, position - 1)", false)
+        List<List<?>> r = cache.query(new SqlFieldsQuery(
+            "UPDATE Person SET position = CASEWHEN(position = 1, 1, position - 1)")
             .setSkipReducerOnUpdate(true)).getAll();
 
         assertEquals((long)cache.size(), r.get(0).get(0));
@@ -238,7 +241,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() {
-                return cache.query(new SqlFieldsQueryEx("UPDATE Organization SET rate = Modify(_key, rate - 1)", false)
+                return cache.query(new SqlFieldsQuery("UPDATE Organization SET rate = Modify(_key, rate - 1)")
                     .setSkipReducerOnUpdate(true));
             }
         }, CacheException.class, "Failed to update some keys because they had been modified concurrently");
@@ -256,10 +259,10 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() {
-                return cache.query(new SqlFieldsQueryEx("UPDATE Person SET name = Fail(name)", false)
+                return cache.query(new SqlFieldsQuery("UPDATE Person SET name = Fail(name)")
                     .setSkipReducerOnUpdate(true));
             }
-        }, CacheException.class, "Failed to execute SQL query");
+        }, CacheException.class, "Failed to run SQL update query.");
     }
 
     /**
@@ -280,8 +283,8 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
         for (int i = 0; i < 1024; i++)
             cache.put(i, new Organization("Acme Inc #" + i, 0));
 
-        List<List<?>> r = cache.query(new SqlFieldsQueryEx("UPDATE \"" + cacheName +
-            "\".Organization o SET name = UPPER(name)", false).setSkipReducerOnUpdate(true)).getAll();
+        List<List<?>> r = cache.query(new SqlFieldsQuery("UPDATE \"" + cacheName +
+            "\".Organization o SET name = UPPER(name)").setSkipReducerOnUpdate(true)).getAll();
 
         assertEquals((long)cache.size(), r.get(0).get(0));
     }
@@ -316,7 +319,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
         for (int i = 0; i < 1024; i++)
             cache.put(i, new Organization("Acme Inc #" + i, 0));
 
-        cache.query(new SqlFieldsQueryEx("UPDATE \"org\".Organization o SET name = UPPER(name)", false)
+        cache.query(new SqlFieldsQuery("UPDATE \"org\".Organization o SET name = UPPER(name)")
             .setSkipReducerOnUpdate(true)).getAll();
 
         assertTrue(latch.await(5000, MILLISECONDS));
@@ -344,7 +347,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
         IgniteCache<PersonKey, Person> cache = grid(NODE_CLIENT).cache(CACHE_PERSON);
 
         // UPDATE over even partitions
-        cache.query(new SqlFieldsQueryEx("UPDATE Person SET position = 0", false)
+        cache.query(new SqlFieldsQuery("UPDATE Person SET position = 0")
                 .setSkipReducerOnUpdate(true)
                 .setPartitions(parts));
 
@@ -373,7 +376,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         final IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(new Callable<Object>() {
             @Override public Object call() {
-                return cache.query(new SqlFieldsQueryEx("UPDATE Organization SET name = WAIT(name)", false)
+                return cache.query(new SqlFieldsQuery("UPDATE Organization SET name = WAIT(name)")
                     .setSkipReducerOnUpdate(true));
             }
         });
@@ -420,7 +423,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         final IgniteInternalFuture<Object> fut = GridTestUtils.runAsync(new Callable<Object>() {
             @Override public Object call() {
-                return cache.query(new SqlFieldsQueryEx("UPDATE Organization SET name = WAIT(name)", false)
+                return cache.query(new SqlFieldsQuery("UPDATE Organization SET name = WAIT(name)")
                     .setSkipReducerOnUpdate(true));
             }
         });
@@ -621,6 +624,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
         /** */
         @QuerySqlField
         int amount;
+
         /** */
         @QuerySqlField
         Date updated;
@@ -642,7 +646,7 @@ public class IgniteSqlSkipReducerOnUpdateDmlSelfTest extends AbstractIndexingCom
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return (name==null? 0: name.hashCode()) ^ position ^ amount ^ (updated == null ? 0 : updated.hashCode());
+            return (name == null ? 0 : name.hashCode()) ^ position ^ amount ^ (updated == null ? 0 : updated.hashCode());
         }
 
         /** {@inheritDoc} */

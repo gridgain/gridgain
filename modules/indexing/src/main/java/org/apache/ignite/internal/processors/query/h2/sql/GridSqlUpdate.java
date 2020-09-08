@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import org.h2.util.StatementBuilder;
-import org.h2.util.StringUtils;
+import org.gridgain.internal.h2.command.Parser;
+import org.gridgain.internal.h2.util.StringUtils;
 
 /** */
 public class GridSqlUpdate extends GridSqlStatement {
@@ -57,7 +57,6 @@ public class GridSqlUpdate extends GridSqlStatement {
         return cols;
     }
 
-
     /** */
     public GridSqlUpdate set(LinkedHashMap<String, GridSqlElement> set) {
         this.set = set;
@@ -82,15 +81,19 @@ public class GridSqlUpdate extends GridSqlStatement {
 
     /** {@inheritDoc} */
     @Override public String getSQL() {
-        StatementBuilder buff = new StatementBuilder(explain() ? "EXPLAIN " : "");
+        StringBuilder buff = new StringBuilder(explain() ? "EXPLAIN " : "");
         buff.append("UPDATE ")
             .append(target.getSQL())
             .append("\nSET\n");
 
-        for (GridSqlColumn c : cols) {
+        for (int i = 0; i < cols.size(); i++) {
+            GridSqlColumn c = cols.get(i);
+
             GridSqlElement e = set.get(c.columnName());
-            buff.appendExceptFirst(",\n    ");
-            buff.append(c.columnName()).append(" = ").append(e != null ? e.getSQL() : "DEFAULT");
+            if (i > 0)
+                buff.append(",\n    ");
+
+            buff.append(Parser.quoteIdentifier(c.columnName(), true)).append(" = ").append(e != null ? e.getSQL() : "DEFAULT");
         }
 
         if (where != null)

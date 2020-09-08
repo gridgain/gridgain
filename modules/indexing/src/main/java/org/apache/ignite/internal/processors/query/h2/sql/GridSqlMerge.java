@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.List;
-import org.h2.util.StatementBuilder;
 
 /** */
 public class GridSqlMerge extends GridSqlStatement {
@@ -28,9 +27,6 @@ public class GridSqlMerge extends GridSqlStatement {
     private GridSqlColumn[] cols;
 
     /** */
-    private GridSqlColumn[] keys;
-
-    /** */
     private List<GridSqlElement[]> rows;
 
     /** Insert subquery. */
@@ -38,38 +34,39 @@ public class GridSqlMerge extends GridSqlStatement {
 
     /** {@inheritDoc} */
     @Override public String getSQL() {
-        StatementBuilder buff = new StatementBuilder(explain() ? "EXPLAIN " : "");
+        StringBuilder buff = new StringBuilder(explain() ? "EXPLAIN " : "");
         buff.append("MERGE INTO ")
             .append(into.getSQL())
             .append("(");
 
-        for (GridSqlColumn col : cols) {
-            buff.appendExceptFirst(", ");
+        for (int i = 0; i < cols.length; i++) {
+            if (i > 0)
+                buff.append(", ");
+
             buff.append('\n')
-                .append(col.getSQL());
+                .append(cols[i].getSQL());
         }
         buff.append("\n)\n");
 
-        if (keys != null) {
-            buff.append("KEY(\n");
-            buff.resetCount();
-            for (GridSqlColumn c : keys) {
-                buff.appendExceptFirst(",\n");
-                buff.append(c.getSQL());
-            }
-            buff.append(")\n");
-        }
-
         if (!rows.isEmpty()) {
             buff.append("VALUES\n");
-            StatementBuilder valuesBuff = new StatementBuilder();
+            StringBuilder valuesBuff = new StringBuilder();
 
-            for (GridSqlElement[] row : rows()) {
-                valuesBuff.appendExceptFirst(",\n");
-                StatementBuilder rowBuff = new StatementBuilder("(");
-                for (GridSqlElement e : row) {
-                    rowBuff.appendExceptFirst(", ");
-                    rowBuff.append(e != null ? e.getSQL() : "DEFAULT");
+            List<GridSqlElement[]> rows = rows();
+
+            for (int i = 0; i < rows.size(); i++) {
+                GridSqlElement[] row = rows.get(i);
+
+                if (i > 0)
+                    valuesBuff.append(",\n");
+
+                StringBuilder rowBuff = new StringBuilder("(");
+
+                for (int j = 0; j < row.length; j++) {
+                    if (j > 0)
+                        rowBuff.append(", ");
+
+                    rowBuff.append(row[j] != null ? row[j].getSQL() : "DEFAULT");
                 }
                 rowBuff.append(')');
                 valuesBuff.append(rowBuff.toString());
@@ -125,17 +122,6 @@ public class GridSqlMerge extends GridSqlStatement {
     /** */
     public GridSqlMerge columns(GridSqlColumn[] cols) {
         this.cols = cols;
-        return this;
-    }
-
-    /** */
-    public GridSqlColumn[] keys() {
-        return keys;
-    }
-
-    /** */
-    public GridSqlMerge keys(GridSqlColumn[] keys) {
-        this.keys = keys;
         return this;
     }
 }

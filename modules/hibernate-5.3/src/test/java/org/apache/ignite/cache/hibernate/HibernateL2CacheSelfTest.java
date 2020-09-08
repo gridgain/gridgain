@@ -85,7 +85,7 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
 
     /** */
-    public static final String CONNECTION_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    public static final String CONNECTION_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** */
     public static final String ENTITY_NAME = Entity.class.getName();
@@ -184,8 +184,8 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
         /**
          * @return Children.
          */
-        @OneToMany(cascade=javax.persistence.CascadeType.ALL, fetch=FetchType.LAZY)
-        @JoinColumn(name="ENTITY_ID")
+        @OneToMany(cascade = javax.persistence.CascadeType.ALL, fetch = FetchType.LAZY)
+        @JoinColumn(name = "ENTITY_ID")
         public Collection<ChildEntity> getChildren() {
             return children;
         }
@@ -1801,7 +1801,7 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
         Session ses = sesFactory.openSession();
 
         try {
-            for(Map.Entry<Integer, Integer> e : idToChildCnt.entrySet()) {
+            for (Map.Entry<Integer, Integer> e : idToChildCnt.entrySet()) {
                 Entity entity = (Entity)ses.load(Entity.class, e.getKey());
 
                 assertEquals((int)e.getValue(), entity.getChildren().size());

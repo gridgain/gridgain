@@ -17,6 +17,8 @@
 package org.apache.ignite.client;
 
 import java.io.Serializable;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
@@ -25,6 +27,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /** Cache configuration. */
@@ -60,10 +63,10 @@ public final class ClientCacheConfiguration implements Serializable {
     private boolean readFromBackup = CacheConfiguration.DFLT_READ_FROM_BACKUP;
 
     /** @serial Rebalance batch size. */
-    private int rebalanceBatchSize = CacheConfiguration.DFLT_REBALANCE_BATCH_SIZE;
+    private int rebalanceBatchSize = IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
 
     /** @serial Rebalance batches prefetch count. */
-    private long rebalanceBatchesPrefetchCnt = CacheConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
+    private long rebalanceBatchesPrefetchCnt = IgniteConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
 
     /** @serial Rebalance delay. */
     private long rebalanceDelay = 0;
@@ -75,10 +78,10 @@ public final class ClientCacheConfiguration implements Serializable {
     private int rebalanceOrder = 0;
 
     /** @serial Rebalance throttle. */
-    private long rebalanceThrottle = CacheConfiguration.DFLT_REBALANCE_THROTTLE;
+    private long rebalanceThrottle = IgniteConfiguration.DFLT_REBALANCE_THROTTLE;
 
     /** @serial @serial Rebalance timeout. */
-    private long rebalanceTimeout = CacheConfiguration.DFLT_REBALANCE_TIMEOUT;
+    private long rebalanceTimeout = IgniteConfiguration.DFLT_REBALANCE_TIMEOUT;
 
     /** @serial Write synchronization mode. */
     private CacheWriteSynchronizationMode writeSynchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
@@ -113,14 +116,25 @@ public final class ClientCacheConfiguration implements Serializable {
     /** @serial Sql index max inline size. */
     private int sqlIdxMaxInlineSize = CacheConfiguration.DFLT_SQL_INDEX_MAX_INLINE_SIZE;
 
-    /** @serial Sql schema. */
+    /**
+     * @serial Sql schema.
+     */
     private String sqlSchema = null;
 
-    /** @serial Key config. */
+    /**
+     * @serial Key config.
+     */
     private CacheKeyConfiguration[] keyCfg = null;
 
-    /** @serial Query entities. */
+    /**
+     * @serial Query entities.
+     */
     private QueryEntity[] qryEntities = null;
+
+    /**
+     * @serial Expiry policy.
+     */
+    private ExpiryPolicy expiryPlc;
 
     /**
      * @return Cache name.
@@ -438,7 +452,6 @@ public final class ClientCacheConfiguration implements Serializable {
         return this;
     }
 
-
     /**
      * @return Copy on read.
      */
@@ -615,7 +628,6 @@ public final class ClientCacheConfiguration implements Serializable {
         return this;
     }
 
-
     /**
      * @return Cache key configuration.
      */
@@ -648,7 +660,25 @@ public final class ClientCacheConfiguration implements Serializable {
         return this;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @return Expire policy.
+     */
+    public ExpiryPolicy getExpiryPolicy() {
+        return expiryPlc;
+    }
+
+    /**
+     * @param expiryPlc Expiry policy.
+     */
+    public ClientCacheConfiguration setExpiryPolicy(ExpiryPolicy expiryPlc) {
+        this.expiryPlc = expiryPlc;
+
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override public String toString() {
         return S.toString(ClientCacheConfiguration.class, this);
     }

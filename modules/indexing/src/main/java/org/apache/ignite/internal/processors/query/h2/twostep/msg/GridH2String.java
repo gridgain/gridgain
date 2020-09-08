@@ -20,8 +20,8 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueString;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueString;
 
 /**
  * H2 String.
@@ -41,9 +41,9 @@ public class GridH2String extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2String(Value val) {
-        assert val.getType() == Value.STRING ||
-            val.getType() == Value.STRING_FIXED ||
-            val.getType() == Value.STRING_IGNORECASE : val.getType();
+        assert val.getType().getValueType() == Value.STRING ||
+            val.getType().getValueType() == Value.STRING_FIXED ||
+            val.getType().getValueType() == Value.STRING_IGNORECASE : val.getType();
 
         x = val.getString();
     }

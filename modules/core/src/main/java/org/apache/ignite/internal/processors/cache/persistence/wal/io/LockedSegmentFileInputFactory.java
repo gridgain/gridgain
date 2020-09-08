@@ -32,8 +32,10 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentRouter
 public class LockedSegmentFileInputFactory implements SegmentFileInputFactory {
     /** Holder of actual information of latest manipulation on WAL segments. */
     private final SegmentAware segmentAware;
+
     /** Manager of segment location. */
     private final SegmentRouter segmentRouter;
+
     /** {@link FileIO} factory definition.*/
     private final FileIOFactory fileIOFactory;
 
@@ -60,7 +62,7 @@ public class LockedSegmentFileInputFactory implements SegmentFileInputFactory {
             id -> {
                 FileDescriptor segment = segmentRouter.findSegment(id);
 
-                return segment.toIO(fileIOFactory);
+                return segment.toReadOnlyIO(fileIOFactory);
             }
         );
     }

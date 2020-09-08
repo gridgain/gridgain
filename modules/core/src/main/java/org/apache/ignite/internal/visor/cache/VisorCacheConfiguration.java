@@ -36,7 +36,6 @@ import org.apache.ignite.internal.visor.query.VisorQueryEntity;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
-
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.compactClass;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.compactIterable;
 
@@ -226,16 +225,15 @@ public class VisorCacheConfiguration extends VisorDataTransferObject {
         evictFilter = compactClass(ccfg.getEvictionFilter());
         lsnrConfigurations = compactIterable(ccfg.getCacheEntryListenerConfigurations());
         loadPrevVal = ccfg.isLoadPreviousValue();
-        dataRegName = ccfg.getDataRegionName();
+        dataRegName = ccfg.getDataRegionName() != null
+            ? ccfg.getDataRegionName()
+            : ignite.configuration().getDataStorageConfiguration().getDefaultDataRegionConfiguration().getName();
         sqlIdxMaxInlineSize = ccfg.getSqlIndexMaxInlineSize();
         nodeFilter = compactClass(ccfg.getNodeFilter());
         qryDetailMetricsSz = ccfg.getQueryDetailMetricsSize();
         readFromBackup = ccfg.isReadFromBackup();
         tmLookupClsName = ccfg.getTransactionManagerLookupClassName();
         topValidator = compactClass(ccfg.getTopologyValidator());
-
-        diskPageCompression = ccfg.getDiskPageCompression();
-        diskPageCompressionLevel = ccfg.getDiskPageCompressionLevel();
     }
 
     /**

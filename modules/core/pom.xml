@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-core</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <repositories>
@@ -74,6 +74,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>mx4j</groupId>
             <artifactId>mx4j-tools</artifactId>
             <version>3.0.1</version>
@@ -90,7 +97,7 @@
         <dependency>
             <groupId>commons-dbcp</groupId>
             <artifactId>commons-dbcp</artifactId>
-            <version>1.4</version>
+            <version>${commons.dbcp.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -116,16 +123,16 @@
         </dependency>
 
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>${h2.version}</version>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-h2</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -160,7 +167,7 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-shmem</artifactId>
-            <version>1.0.0</version>
+            <version>8.7.3</version>
         </dependency>
 
         <dependency>
@@ -186,7 +193,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.4</version>
+            <version>${commons.io.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -215,6 +222,13 @@
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
             <version>${javassist.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -324,7 +338,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.7</version>
+                        <version>3.0.0</version>
                         <inherited>false</inherited>
                         <executions>
                             <execution>
@@ -341,11 +355,6 @@
                                         </tstamp>
 
                                         <property name="props.file" value="../../modules/core/target/classes/ignite.properties" />
-
-                                        <replaceregexp file="${props.file}" byline="true">
-                                            <regexp pattern="ignite.update.notifier.enabled.by.default=.*" />
-                                            <substitution expression="ignite.update.notifier.enabled.by.default=${update.notifier.enabled.by.default}" />
-                                        </replaceregexp>
 
                                         <replaceregexp file="${props.file}" byline="true">
                                             <regexp pattern="ignite.rel.date=.*" />
@@ -400,6 +409,26 @@
 
             <dependencies>
                 <dependency>
+                    <groupId>org.mockito</groupId>
+                    <artifactId>mockito-core</artifactId>
+                    <version>${mockito.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <artifactId>hamcrest-core</artifactId>
+                            <groupId>org.hamcrest</groupId>
+                        </exclusion>
+                    </exclusions>
+                    <scope>test</scope>
+                </dependency>
+
+                <dependency>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-library</artifactId>
+                    <version>${hamcrest.version}</version>
+                    <scope>test</scope>
+                </dependency>
+
+                <dependency>
                     <groupId>javax.cache</groupId>
                     <artifactId>cache-tests</artifactId>
                     <version>${javax.cache.tck.version}</version>
@@ -410,13 +439,6 @@
                     <artifactId>cache-tests</artifactId>
                     <classifier>tests</classifier>
                     <version>${javax.cache.tck.version}</version>
-                    <scope>test</scope>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.hamcrest</groupId>
-                    <artifactId>hamcrest-library</artifactId>
-                    <version>${hamcrest.version}</version>
                     <scope>test</scope>
                 </dependency>
             </dependencies>

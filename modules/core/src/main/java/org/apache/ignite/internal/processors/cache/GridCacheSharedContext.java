@@ -58,13 +58,11 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionMetri
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
-import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
@@ -143,6 +141,9 @@ public class GridCacheSharedContext<K, V> {
 
     /** Tx metrics. */
     private final TransactionMetricsAdapter txMetrics;
+
+    /** Cache diagnostic manager. */
+    private CacheDiagnosticManager diagnosticMgr;
 
     /** Store session listeners. */
     private Collection<CacheStoreSessionListener> storeSesLsnrs;
@@ -223,7 +224,8 @@ public class GridCacheSharedContext<K, V> {
         CacheJtaManagerAdapter jtaMgr,
         Collection<CacheStoreSessionListener> storeSesLsnrs,
         MvccCachingManager mvccCachingMgr,
-        DeadlockDetectionManager deadlockDetectionMgr
+        DeadlockDetectionManager deadlockDetectionMgr,
+        CacheDiagnosticManager diagnosticMgr
     ) {
         this.kernalCtx = kernalCtx;
 
@@ -245,7 +247,8 @@ public class GridCacheSharedContext<K, V> {
             ttlMgr,
             evictMgr,
             mvccCachingMgr,
-            deadlockDetectionMgr
+            deadlockDetectionMgr,
+            diagnosticMgr
         );
 
         this.storeSesLsnrs = storeSesLsnrs;
@@ -294,8 +297,6 @@ public class GridCacheSharedContext<K, V> {
 
         if (msgLog.isInfoEnabled())
             msgLog.info("Components activation performed in " + (System.currentTimeMillis() - time) + " ms.");
-
-        ((DistributedMetaStorageImpl)kernalCtx.distributedMetastorage()).inMemoryReadyForWrite();
     }
 
     /**
@@ -362,7 +363,15 @@ public class GridCacheSharedContext<K, V> {
         this.rebalanceEnabled = rebalanceEnabled;
 
         if (rebalanceEnabled)
-            cache().enableRebalance();
+            enableRebalance();
+    }
+
+    /**
+     * Gets all caches having cache proxy and starts on them force rebalance.
+     */
+    private void enableRebalance() {
+        for (IgniteCacheProxy c : cache().publicCaches())
+            c.rebalance();
     }
 
     /**
@@ -415,7 +424,9 @@ public class GridCacheSharedContext<K, V> {
             ttlMgr,
             evictMgr,
             mvccCachingMgr,
-            deadlockDetectionMgr);
+            deadlockDetectionMgr,
+            diagnosticMgr
+        );
 
         this.mgrs = mgrs;
 
@@ -462,7 +473,10 @@ public class GridCacheSharedContext<K, V> {
         GridCacheSharedTtlCleanupManager ttlMgr,
         PartitionsEvictManager evictMgr,
         MvccCachingManager mvccCachingMgr,
-        DeadlockDetectionManager deadlockDetectionMgr) {
+        DeadlockDetectionManager deadlockDetectionMgr,
+        CacheDiagnosticManager diagnosticMgr
+    ) {
+        this.diagnosticMgr = add(mgrs, diagnosticMgr);
         this.mvccMgr = add(mgrs, mvccMgr);
         this.verMgr = add(mgrs, verMgr);
         this.txMgr = add(mgrs, txMgr);
@@ -631,16 +645,6 @@ public class GridCacheSharedContext<K, V> {
      */
     public boolean deploymentEnabled() {
         return kernalContext().deploy().enabled();
-    }
-
-    /**
-     * @return Data center ID.
-     */
-    public byte dataCenterId() {
-        // Data center ID is same for all caches, so grab the first one.
-        GridCacheContext<?, ?> cacheCtx = F.first(cacheContexts());
-
-        return cacheCtx.dataCenterId();
     }
 
     /**
@@ -833,6 +837,13 @@ public class GridCacheSharedContext<K, V> {
     }
 
     /**
+     * @return Diagnostic manager.
+     */
+    public CacheDiagnosticManager diagnostic() {
+        return diagnosticMgr;
+    }
+
+    /**
      * @return Deadlock detection manager.
      */
     public DeadlockDetectionManager deadlockDetectionMgr() {
@@ -917,7 +928,7 @@ public class GridCacheSharedContext<K, V> {
         f.add(mvcc().finishAtomicUpdates(topVer));
         f.add(mvcc().finishDataStreamerUpdates(topVer));
 
-        IgniteInternalFuture<?> finishLocalTxsFuture = tm().finishLocalTxs(topVer);
+        IgniteInternalFuture<?> finishLocalTxsFuture = tm().finishLocalTxs(topVer, null);
         // To properly track progress of finishing local tx updates we explicitly add this future to compound set.
         f.add(finishLocalTxsFuture);
         f.add(tm().finishAllTxs(finishLocalTxsFuture, topVer));
@@ -925,6 +936,21 @@ public class GridCacheSharedContext<K, V> {
         f.markInitialized();
 
         return f;
+    }
+
+    /**
+     * Captures all prepared operations that we need to wait before we able to perform PME-free switch.
+     * This method must be called only after {@link GridDhtPartitionTopology#updateTopologyVersion}
+     * method is called so that all new updates will wait to switch to the new version.
+     * <p>
+     * Captured updates are wrapped in a future that will be completed once pending objects are released.
+     *
+     * @param topVer Topology version.
+     * @param node Failed node.
+     * @return {@code True} if waiting was successful.
+     */
+    public IgniteInternalFuture<?> partitionRecoveryFuture(AffinityTopologyVersion topVer, ClusterNode node) {
+        return tm().finishLocalTxs(topVer, node);
     }
 
     /**
@@ -1045,10 +1071,9 @@ public class GridCacheSharedContext<K, V> {
 
     /**
      * @param tx Transaction to rollback.
-     * @throws IgniteCheckedException If failed.
      * @return Rollback future.
      */
-    public IgniteInternalFuture rollbackTxAsync(GridNearTxLocal tx) throws IgniteCheckedException {
+    public IgniteInternalFuture rollbackTxAsync(GridNearTxLocal tx) {
         boolean clearThreadMap = txMgr.threadLocalTx(null) == tx;
 
         if (clearThreadMap)

@@ -49,7 +49,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /** URL. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1/";
 
-    /** Server thread pull size. */
+    /** Server thread pool size. */
     private static final int SERVER_THREAD_POOL_SIZE = 4;
 
     /** Nodes count. */
@@ -143,7 +143,6 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testSettingNegativeConnectionTimeout() {
-
         GridTestUtils.assertThrows(log,
             () -> {
                 conn.setNetworkTimeout(EXECUTOR_STUB, -1);
@@ -153,12 +152,31 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     }
 
     /**
+     *
+     */
+    @Test
+    public void testNegativeConnectionTimeout() {
+        GridTestUtils.assertThrows(log,
+            () -> {
+                try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=-1")) {
+                    return null;
+                }
+            },
+            SQLException.class, "Property cannot be lower than 0 [name=connectionTimeout, value=-1]");
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
     public void testConnectionTimeoutRetrieval() throws Exception {
-        conn.setNetworkTimeout(EXECUTOR_STUB, 2000);
-        assertEquals(2000, conn.getNetworkTimeout());
+        try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=1000")) {
+            assertEquals(1000, conn.getNetworkTimeout());
+
+            conn.setNetworkTimeout(EXECUTOR_STUB, 2000);
+
+            assertEquals(2000, conn.getNetworkTimeout());
+        }
     }
 
     /**
@@ -166,7 +184,6 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testConnectionTimeout() throws Exception {
-
         conn.setNetworkTimeout(EXECUTOR_STUB, 1000);
 
         GridTestUtils.assertThrows(log,
@@ -188,16 +205,46 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      * @throws Exception If failed.
      */
     @Test
+    public void testUrlConnectionTimeoutProperty() throws Exception {
+        try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=1000")) {
+            conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
+
+            try (final Statement stmt = conn.createStatement()) {
+                GridTestUtils.assertThrows(log,
+                    () -> {
+                        stmt.execute("select sleep_func(2000)");
+
+                        return null;
+                    },
+                    SQLException.class, "Connection timed out.");
+
+                GridTestUtils.assertThrows(log,
+                    () -> {
+                        stmt.execute("select 1");
+
+                        return null;
+                    },
+                    SQLException.class, "Statement is closed.");
+            }
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testQueryTimeoutOccursBeforeConnectionTimeout() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 10_000);
 
-        stmt.setQueryTimeout(1);
+        final int QRY_TIMEOUT = 1;
+
+        stmt.setQueryTimeout(QRY_TIMEOUT);
 
         GridTestUtils.assertThrows(log, () -> {
-            stmt.executeQuery("select sleep_func(10) from Integer;");
+            stmt.executeQuery("select sleep_func(3) from Integer;");
 
             return null;
-        }, SQLTimeoutException.class, "The query was cancelled while executing.");
+        }, SQLTimeoutException.class, "The query was cancelled while executing due to timeout. Query timeout was : " + QRY_TIMEOUT);
 
         stmt.execute("select 1");
     }
@@ -206,17 +253,48 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      * @throws Exception If failed.
      */
     @Test
+    public void testUrlQueryTimeoutProperty() throws Exception {
+        final int QRY_TIMEOUT = 1;
+
+        try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=10000&queryTimeout="
+            + QRY_TIMEOUT)) {
+            conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
+
+            final Statement stmt = conn.createStatement();
+
+            GridTestUtils.assertThrows(log, () -> {
+                    stmt.executeQuery("select sleep_func(3) from Integer;");
+
+                    return null;
+                },
+                SQLTimeoutException.class,
+                "The query was cancelled while executing due to timeout. Query timeout was : " + QRY_TIMEOUT);
+
+            stmt.execute("select 1");
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testConnectionTimeoutUpdate() throws Exception {
-        conn.setNetworkTimeout(EXECUTOR_STUB, 5000);
+        try (final Connection conn = DriverManager.getConnection(URL +
+            "?connectionTimeout=5000")) {
+            conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
-        stmt.execute("select sleep_func(1000)");
+            final Statement stmt = conn.createStatement();
 
-        conn.setNetworkTimeout(EXECUTOR_STUB, 500);
-
-        GridTestUtils.assertThrows(log, () -> {
             stmt.execute("select sleep_func(1000)");
-            return null;
-        }, SQLException.class, "Connection timed out.");
+
+            conn.setNetworkTimeout(EXECUTOR_STUB, 500);
+
+            GridTestUtils.assertThrows(log, () -> {
+                stmt.execute("select sleep_func(1000)");
+
+                return null;
+            }, SQLException.class, "Connection timed out.");
+        }
     }
 
     /**
@@ -234,6 +312,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
                     GridTestUtils.assertThrows(log,
                         () -> {
                             stmt.cancel();
+
                             return null;
                         },
                         SQLException.class, "Statement is closed.");

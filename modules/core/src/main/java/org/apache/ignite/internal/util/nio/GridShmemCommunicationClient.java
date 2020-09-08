@@ -25,6 +25,8 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryClientEndpoint;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -32,6 +34,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
+import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
 
 /**
  *
@@ -46,9 +51,12 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
     /** */
     private final MessageFormatter formatter;
 
+    /** Sent bytes count metric. */
+    @Nullable protected final AtomicLongMetric sentBytesCntMetric;
+
     /**
      * @param connIdx Connection index.
-     * @param metricsLsnr Metrics listener.
+     * @param mreg Metrics registry.
      * @param port Shared memory IPC server port.
      * @param connTimeout Connection timeout.
      * @param log Logger.
@@ -57,15 +65,15 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
      */
     public GridShmemCommunicationClient(
         int connIdx,
-        GridNioMetricsListener metricsLsnr,
+        MetricRegistry mreg,
         int port,
         long connTimeout,
         IgniteLogger log,
-        MessageFormatter formatter)
-        throws IgniteCheckedException {
-        super(connIdx, metricsLsnr);
+        MessageFormatter formatter
+    ) throws IgniteCheckedException {
+        super(connIdx);
 
-        assert metricsLsnr != null;
+        assert mreg != null;
         assert port > 0 && port < 0xffff;
         assert connTimeout >= 0;
 
@@ -76,6 +84,8 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
         writeBuf.order(ByteOrder.nativeOrder());
 
         this.formatter = formatter;
+
+        sentBytesCntMetric = mreg.findMetric(SENT_BYTES_METRIC_NAME);
     }
 
     /** {@inheritDoc} */
@@ -110,7 +120,7 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
         try {
             shmem.outputStream().write(data, 0, len);
 
-            metricsLsnr.onBytesSent(len);
+            sentBytesCntMetric.add(len);
         }
         catch (IOException e) {
             throw new IgniteCheckedException("Failed to send message to remote node: " + shmem, e);
@@ -132,7 +142,7 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
         try {
             int cnt = U.writeMessageFully(msg, shmem.outputStream(), writeBuf, formatter.writer(nodeId));
 
-            metricsLsnr.onBytesSent(cnt);
+            sentBytesCntMetric.add(cnt);
         }
         catch (IOException e) {
             throw new IgniteCheckedException("Failed to send message to remote node: " + shmem, e);

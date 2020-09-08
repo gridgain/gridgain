@@ -20,8 +20,8 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueUuid;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueUuid;
 
 /**
  * H2 Uuid.
@@ -44,7 +44,7 @@ public class GridH2Uuid extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2Uuid(Value val) {
-        assert val.getType() == Value.UUID : val.getType();
+        assert val.getType().getValueType() == Value.UUID : val.getType();
 
         ValueUuid uuid = (ValueUuid)val;
 

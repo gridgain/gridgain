@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -64,9 +63,12 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -88,6 +90,8 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_SIBLINGS;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK_CANCEL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SKIP_AUTH;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID_PREDICATE;
@@ -99,6 +103,9 @@ import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKe
  * This class defines task processor.
  */
 public class GridTaskProcessor extends GridProcessorAdapter implements IgniteChangeGlobalStateSupport {
+    /** Total executed tasks metric name. */
+    public static final String TOTAL_EXEC_TASKS = "TotalExecutedTasks";
+
     /** Wait for 5 seconds to allow discovery to take effect (best effort). */
     private static final long DISCO_TIMEOUT = 5000;
 
@@ -121,8 +128,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     /** */
     private final GridLocalEventListener discoLsnr;
 
-    /** Total executed tasks. */
-    private final LongAdder execTasks = new LongAdder();
+    /** Total executed tasks metric. */
+    private final LongAdderMetric execTasks;
 
     /** */
     private final ThreadLocal<Map<GridTaskThreadContextKey, Object>> thCtx = new ThreadLocal<>();
@@ -137,6 +144,11 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
     /**
+     * {@code true} if local node has persistent region in configuration and is not a client.
+     */
+    private final boolean isPersistenceEnabled;
+
+    /**
      * @param ctx Kernal context.
      */
     public GridTaskProcessor(GridKernalContext ctx) {
@@ -145,6 +157,12 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         marsh = ctx.config().getMarshaller();
 
         discoLsnr = new TaskDiscoveryListener();
+
+        MetricRegistry sysreg = ctx.metric().registry(SYS_METRICS);
+
+        execTasks = sysreg.longAdderMetric(TOTAL_EXEC_TASKS, "Total executed tasks.");
+
+        isPersistenceEnabled = !ctx.clientNode() && isPersistenceEnabled(ctx.config());
     }
 
     /** {@inheritDoc} */
@@ -343,7 +361,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      *      if value with given {@code key} doesn't exist.
      */
     @Nullable public <T> T getThreadContext(GridTaskThreadContextKey key) {
-        assert(key != null);
+        assert (key != null);
 
         Map<GridTaskThreadContextKey, Object> map = thCtx.get();
 
@@ -487,6 +505,9 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * @return Task name or {@code null} if not found.
      */
     public String resolveTaskName(int taskNameHash) {
+        assert !isPersistenceEnabled || !ctx.cache().context().database().checkpointLockIsHeldByThread() :
+            "Resolving a task name should not be executed under the checkpoint lock.";
+
         if (taskNameHash == 0)
             return null;
 
@@ -578,7 +599,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             thCtx.set(null);
 
         if (map.get(TC_SKIP_AUTH) == null)
-            ctx.security().authorize(taskClsName, SecurityPermission.TASK_EXECUTE, null);
+            ctx.security().authorize(taskClsName, SecurityPermission.TASK_EXECUTE);
 
         Long timeout = (Long)map.get(TC_TIMEOUT);
 
@@ -702,6 +723,9 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         UUID subjId = (UUID)map.get(TC_SUBJ_ID);
+
+        if (subjId == null && ctx.security().enabled())
+            subjId = ctx.security().securityContext().subject().id();
 
         if (subjId == null)
             subjId = getThreadContext(TC_SUBJ_ID);
@@ -1057,7 +1081,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                             false);
                     }
                     catch (IgniteCheckedException e) {
-                        node = e instanceof  ClusterTopologyCheckedException ? null : ctx.discovery().node(nodeId);
+                        node = e instanceof ClusterTopologyCheckedException ? null : ctx.discovery().node(nodeId);
 
                         if (node != null) {
                             try {
@@ -1216,19 +1240,10 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     }
 
     /**
-     * @return Number of executed tasks.
-     */
-    public int getTotalExecutedTasks() {
-        return execTasks.intValue();
-    }
-
-    /**
      * Resets processor metrics.
      */
     public void resetMetrics() {
-        // Can't use 'reset' method because it is not thread-safe
-        // according to javadoc.
-        execTasks.add(-execTasks.sum());
+        execTasks.reset();
     }
 
     /** {@inheritDoc} */
@@ -1374,7 +1389,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
             final UUID nodeId = ((DiscoveryEvent)evt).eventNode().id();
 
-            ctx.closure().runLocalSafe(new Runnable() {
+            ctx.closure().runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     if (!lock.tryReadLock())
                         return;

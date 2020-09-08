@@ -46,12 +46,11 @@ import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
- * Tests situation when two nodes in cluster simultaneously propose different classes with the same typeId
- * (which is actually class name's <b>hashCode</b> ).
+ * Tests situation when two nodes in cluster simultaneously propose different classes with the same typeId (which is
+ * actually class name's <b>hashCode</b> ).
  *
- * In that case one of the propose requests should be rejected
- * and {@link org.apache.ignite.internal.processors.marshaller.MappingProposedMessage} is sent
- * with not-null <b>conflictingClsName</b> field.
+ * In that case one of the propose requests should be rejected and {@link org.apache.ignite.internal.processors.marshaller.MappingProposedMessage}
+ * is sent with not-null <b>conflictingClsName</b> field.
  */
 public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstractTest {
     /** */
@@ -123,7 +122,8 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
 
                 try {
                     startLatch.await();
-                } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
@@ -144,7 +144,8 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
 
                 try {
                     startLatch.await();
-                } catch (InterruptedException e) {
+                }
+                catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
@@ -195,15 +196,14 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
 
             /** {@inheritDoc} */
             @Override public IgniteFuture<?> onDiscovery(
-                    int type,
-                    long topVer,
-                    ClusterNode node,
-                    Collection<ClusterNode> topSnapshot,
-                    @Nullable Map<Long, Collection<ClusterNode>> topHist,
-                    @Nullable DiscoverySpiCustomMessage spiCustomMsg
+                int type,
+                long topVer,
+                ClusterNode node,
+                Collection<ClusterNode> topSnapshot,
+                Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
             ) {
-                DiscoveryCustomMessage customMsg = spiCustomMsg == null ? null
-                        : (DiscoveryCustomMessage) U.field(spiCustomMsg, "delegate");
+                DiscoveryCustomMessage customMsg = data == null ? null
+                    : (DiscoveryCustomMessage)U.field(data, "delegate");
 
                 if (customMsg != null) {
                     //don't want to make this class public, using equality of class name instead of instanceof operator
@@ -220,7 +220,7 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
 
                 return new IgniteFinishedFutureImpl<>();
             }

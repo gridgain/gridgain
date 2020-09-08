@@ -17,14 +17,11 @@
 package org.apache.ignite.logger.log4j;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.Enumeration;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -34,14 +31,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 /**
  * Tests that several grids log to files with correct names.
  */
 @GridCommonTest(group = "Logger")
-public class GridLog4jCorrectFileNameTest {
+public class GridLog4jCorrectFileNameTest extends GridCommonAbstractTest {
     /** Appender */
     private Log4jRollingFileAppender appender;
 
@@ -63,6 +57,8 @@ public class GridLog4jCorrectFileNameTest {
     /** */
     @After
     public void tearDown() {
+        stopAllGrids();
+
         if (appender != null) {
             Logger.getRootLogger().removeAppender(Log4jRollingFileAppender.class.getSimpleName());
 
@@ -89,19 +85,24 @@ public class GridLog4jCorrectFileNameTest {
      * @throws Exception If error occurred.
      */
     private void checkOneNode(int id) throws Exception {
-        try (Ignite ignite = G.start(getConfiguration("grid" + id))) {
-            String id8 = U.id8(ignite.cluster().localNode().id());
+        String id8;
+        File logFile;
+
+        try (Ignite ignite = startGrid("grid" + id)) {
+            id8 = U.id8(ignite.cluster().localNode().id());
+
             String logPath = "work/log/ignite-" + id8 + ".log";
-            File logFile = U.resolveIgnitePath(logPath);
+
+            logFile = U.resolveIgnitePath(logPath);
 
             assertNotNull("Failed to resolve path: " + logPath, logFile);
             assertTrue("Log file does not exist: " + logFile, logFile.exists());
-
-            String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
-
-            assertTrue("Log file does not contain it's node ID: " + logFile,
-                logContent.contains(">>> Local node [ID=" + id8.toUpperCase()));
         }
+
+        String logContent = U.readFileToString(logFile.getAbsolutePath(), "UTF-8");
+
+        assertTrue("Log file does not contain it's node ID: " + logFile,
+            logContent.contains(">>> Local node [ID=" + id8.toUpperCase()));
     }
 
     /**
@@ -110,22 +111,11 @@ public class GridLog4jCorrectFileNameTest {
      * @param igniteInstanceName Ignite instance name.
      * @return Grid configuration.
      */
-    private static IgniteConfiguration getConfiguration(String igniteInstanceName) {
-        IgniteConfiguration cfg = new IgniteConfiguration();
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setIgniteInstanceName(igniteInstanceName);
         cfg.setGridLogger(new Log4JLogger());
         cfg.setConnectorConfiguration(null);
-
-        TcpDiscoverySpi disco = new TcpDiscoverySpi();
-
-        TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder(false);
-
-        ipFinder.setAddresses(Collections.singleton("127.0.0.1:47500..47502"));
-
-        disco.setIpFinder(ipFinder);
-
-        cfg.setDiscoverySpi(disco);
 
         return cfg;
     }

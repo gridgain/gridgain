@@ -152,16 +152,16 @@ public abstract class JdbcThinDynamicIndexAbstractSelfTest extends JdbcThinAbstr
         jdbcRun(CREATE_INDEX);
 
         // Test that local queries on all server nodes use new index.
-        for (int i = 0 ; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             List<List<?>> locRes = ignite(i).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("explain select id from " +
                 "Person where id = 5").setLocal(true)).getAll();
 
             assertEquals(F.asList(
                 Collections.singletonList("SELECT\n" +
-                    "    ID\n" +
-                    "FROM \"" + DEFAULT_CACHE_NAME + "\".PERSON\n" +
-                    "    /* \"" + DEFAULT_CACHE_NAME + "\".IDX: ID = 5 */\n" +
-                    "WHERE ID = 5")
+                    "    \"ID\"\n" +
+                    "FROM \"" + DEFAULT_CACHE_NAME + "\".\"PERSON\"\n" +
+                    "    /* " + DEFAULT_CACHE_NAME + ".IDX: ID = 5 */\n" +
+                    "WHERE \"ID\" = 5")
             ), locRes);
         }
 
@@ -214,16 +214,16 @@ public abstract class JdbcThinDynamicIndexAbstractSelfTest extends JdbcThinAbstr
         jdbcRun(DROP_INDEX);
 
         // Test that no local queries on server nodes use new index.
-        for (int i = 0 ; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             List<List<?>> locRes = ignite(i).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("explain select id from " +
                 "Person where id = 5").setLocal(true)).getAll();
 
             assertEquals(F.asList(
                 Collections.singletonList("SELECT\n" +
-                    "    ID\n" +
-                    "FROM \"" + DEFAULT_CACHE_NAME + "\".PERSON\n" +
-                    "    /* \"" + DEFAULT_CACHE_NAME + "\".PERSON.__SCAN_ */\n" +
-                    "WHERE ID = 5")
+                    "    \"ID\"\n" +
+                    "FROM \"" + DEFAULT_CACHE_NAME + "\".\"PERSON\"\n" +
+                    "    /* " + DEFAULT_CACHE_NAME + ".PERSON.__SCAN_ */\n" +
+                    "WHERE \"ID\" = 5")
             ), locRes);
         }
 

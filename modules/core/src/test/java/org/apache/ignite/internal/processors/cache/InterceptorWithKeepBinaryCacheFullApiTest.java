@@ -55,6 +55,11 @@ public class InterceptorWithKeepBinaryCacheFullApiTest extends WithKeepBinaryCac
         super.afterTest();
     }
 
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        stopAllGrids();
+    }
+
     /**
      *
      */

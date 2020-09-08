@@ -20,7 +20,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -78,6 +77,15 @@ public class JdbcResult implements JdbcRawBinarylizable {
     /** A result of the processing cache partitions distributions request. */
     static final byte CACHE_PARTITIONS = 19;
 
+    /** A result of the successfully updated binary schema.  */
+    static final byte UPDATE_BINARY_SCHEMA_ACK = 20;
+
+    /** Get binary type schema result. */
+    static final byte BINARY_TYPE_GET = 21;
+
+    /** Get binary type name result. */
+    static final byte BINARY_TYPE_NAME_GET = 22;
+
     /** Success status. */
     private byte type;
 
@@ -92,23 +100,23 @@ public class JdbcResult implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeByte(type);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
     }
 
     /**
      * @param reader Binary reader.
-     * @param ver Protocol verssion.
+     * @param protoCtx Binary context.
      * @return Request object.
      * @throws BinaryObjectException On error.
      */
     public static JdbcResult readResult(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         int resId = reader.readByte();
 
         JdbcResult res;
@@ -199,11 +207,26 @@ public class JdbcResult implements JdbcRawBinarylizable {
 
                 break;
 
+            case UPDATE_BINARY_SCHEMA_ACK:
+                res = new JdbcUpdateBinarySchemaResult();
+
+                break;
+
+            case BINARY_TYPE_GET:
+                res = new JdbcBinaryTypeGetResult();
+
+                break;
+
+            case BINARY_TYPE_NAME_GET:
+                res = new JdbcBinaryTypeNameGetResult();
+
+                break;
+
             default:
                 throw new IgniteException("Unknown SQL listener request ID: [request ID=" + resId + ']');
         }
 
-        res.readBinary(reader, ver);
+        res.readBinary(reader, protoCtx);
 
         return res;
     }

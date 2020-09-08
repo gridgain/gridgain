@@ -67,6 +67,7 @@ public class CacheResultIsNotNullOnPartitionLossTest extends GridCommonAbstractT
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setActiveOnStart(false);
         cfg.setIncludeEventTypes(EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
 
         cfg.setCacheConfiguration(
@@ -96,6 +97,9 @@ public class CacheResultIsNotNullOnPartitionLossTest extends GridCommonAbstractT
 
         for (Integer i : list)
             startGrid(i);
+
+        grid(0).cluster().active(true);
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
 
         isClient = true;
 
@@ -139,6 +143,7 @@ public class CacheResultIsNotNullOnPartitionLossTest extends GridCommonAbstractT
     public void testCacheResultIsNotNullOnServer() throws Exception {
         testCacheResultIsNotNull0(grid(SERVERS - 2));
     }
+
     /**
      * @throws Exception If failed.
      */

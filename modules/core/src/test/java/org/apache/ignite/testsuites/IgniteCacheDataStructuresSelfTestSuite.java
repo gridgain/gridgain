@@ -20,11 +20,21 @@ import org.apache.ignite.internal.processors.cache.AtomicCacheAffinityConfigurat
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueCleanupSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueClientDisconnectTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueMultiNodeConsistencySelfTest;
+import org.apache.ignite.internal.processors.cache.datastructures.GridCacheSetRebalanceTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteAtomicLongClusterReadOnlyTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteAtomicReferenceClusterReadOnlyTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteAtomicSequenceClusterReadOnlyTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteAtomicStampedClusterReadOnlyTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDataStructuresTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDiscoveryDataStructuresTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteCountDownLatchClusterReadOnlyTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureUniqueNameTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureWithJobTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructuresCreateDeniedInClusterReadOnlyMode;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteQueueClusterReadOnlyTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteSequenceInternalCleanupTest;
+import org.apache.ignite.internal.processors.cache.datastructures.OutOfMemoryVolatileRegionTest;
+import org.apache.ignite.internal.processors.cache.datastructures.IgniteSetClusterReadOnlyTest;
 import org.apache.ignite.internal.processors.cache.datastructures.SemaphoreFailoverNoWaitingAcquirerTest;
 import org.apache.ignite.internal.processors.cache.datastructures.SemaphoreFailoverSafeReleasePermitsTest;
 import org.apache.ignite.internal.processors.cache.datastructures.local.GridCacheLocalAtomicQueueApiSelfTest;
@@ -83,6 +93,7 @@ import org.apache.ignite.internal.processors.cache.datastructures.replicated.Ign
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedLockSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedSemaphoreSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheAtomicReplicatedNodeRestartSelfTest;
+import org.apache.ignite.internal.processors.datastructures.GridCacheReplicatedQueueRemoveSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -116,6 +127,8 @@ import org.junit.runners.Suite;
     IgniteReplicatedSemaphoreSelfTest.class,
     IgniteReplicatedLockSelfTest.class,
     IgniteCacheAtomicReplicatedNodeRestartSelfTest.class,
+    GridCacheReplicatedQueueRemoveSelfTest.class,
+    OutOfMemoryVolatileRegionTest.class,
 
     GridCachePartitionedSequenceApiSelfTest.class,
     GridCachePartitionedSequenceMultiNodeSelfTest.class,
@@ -142,6 +155,7 @@ import org.junit.runners.Suite;
 
     GridCachePartitionedSetFailoverSelfTest.class,
     GridCachePartitionedAtomicSetFailoverSelfTest.class,
+    GridCacheSetRebalanceTest.class,
 
     GridCachePartitionedQueueRotativeMultiNodeTest.class,
     GridCachePartitionedAtomicQueueRotativeMultiNodeTest.class,
@@ -183,7 +197,16 @@ import org.junit.runners.Suite;
 
     AtomicCacheAffinityConfigurationTest.class,
 
-    IgniteCacheDataStructuresBinarySelfTestSuite.class
+    IgniteCacheDataStructuresBinarySelfTestSuite.class,
+
+    IgniteAtomicLongClusterReadOnlyTest.class,
+    IgniteAtomicReferenceClusterReadOnlyTest.class,
+    IgniteAtomicSequenceClusterReadOnlyTest.class,
+    IgniteAtomicStampedClusterReadOnlyTest.class,
+    IgniteCountDownLatchClusterReadOnlyTest.class,
+    IgniteDataStructuresCreateDeniedInClusterReadOnlyMode.class,
+    IgniteQueueClusterReadOnlyTest.class,
+    IgniteSetClusterReadOnlyTest.class
 })
 public class IgniteCacheDataStructuresSelfTestSuite {
 }

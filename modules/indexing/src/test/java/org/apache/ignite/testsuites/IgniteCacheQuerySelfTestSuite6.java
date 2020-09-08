@@ -20,6 +20,8 @@ import org.apache.ignite.internal.processors.cache.index.StaticCacheDdlKeepStati
 import org.apache.ignite.internal.processors.cache.index.StaticCacheDdlTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousBatchAckTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryAsyncFilterListenerTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryFilterDeploymentFailedTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryDeploymentToClientTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryOperationP2PTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryOrderingEventTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryRandomOperationsTest;
@@ -28,7 +30,9 @@ import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinu
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheKeepBinaryIterationNearEnabledTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheKeepBinaryIterationStoreEnabledTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheKeepBinaryIterationTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.ContinuousQueryBufferCleanupTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.ContinuousQueryMarshallerTest;
+import org.apache.ignite.internal.processors.cache.query.continuous.ContinuousQueryWithTransformerBufferCleanupTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryLocalAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryMultiNodesFilteringTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryPartitionAtomicOneNodeTest;
@@ -36,6 +40,8 @@ import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheCon
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicOneNodeTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.IgniteCacheContinuousQueryClientTest;
+import org.apache.ignite.internal.processors.query.HashJoinQueryTest;
+import org.apache.ignite.internal.processors.query.MemLeakOnSqlWithClientReconnectTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -63,7 +69,13 @@ import org.junit.runners.Suite;
     CacheContinuousWithTransformerRandomOperationsTest.class,
     CacheContinuousQueryRandomOperationsTest.class,
     StaticCacheDdlTest.class,
-    StaticCacheDdlKeepStaticConfigurationTest.class
+    StaticCacheDdlKeepStaticConfigurationTest.class,
+    MemLeakOnSqlWithClientReconnectTest.class,
+    HashJoinQueryTest.class,
+    ContinuousQueryBufferCleanupTest.class,
+    ContinuousQueryWithTransformerBufferCleanupTest.class,
+    CacheContinuousQueryFilterDeploymentFailedTest.class,
+    CacheContinuousQueryDeploymentToClientTest.class,
 })
 public class IgniteCacheQuerySelfTestSuite6 {
 }

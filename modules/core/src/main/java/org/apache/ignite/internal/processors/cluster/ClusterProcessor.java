@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import javax.management.JMException;
+import javax.management.ObjectName;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,12 +32,17 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.GridKernalGatewayImpl;
 import org.apache.ignite.internal.IgniteDiagnosticInfo;
 import org.apache.ignite.internal.IgniteDiagnosticMessage;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -44,9 +51,15 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridTimerTask;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -54,6 +67,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -61,28 +75,41 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.mxbean.IgniteClusterMXBean;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_TAG_UPDATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  *
  */
-public class ClusterProcessor extends GridProcessorAdapter {
+public class ClusterProcessor extends GridProcessorAdapter implements DistributedMetastorageLifecycleListener {
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
+
+    /** */
+    private static final String CLUSTER_ID_TAG_KEY =
+        DistributedMetaStorage.IGNITE_INTERNAL_KEY_PREFIX + "cluster.id.tag";
+
+    /** */
+    private static final String M_BEAN_NAME = "IgniteCluster";
 
     /** Periodic version check delay. */
     private static final long PERIODIC_VER_CHECK_DELAY = 1000 * 60 * 60; // Every hour.
@@ -95,6 +122,9 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
     /** */
     private final AtomicBoolean notifyEnabled = new AtomicBoolean();
+
+    /** */
+    private final AtomicReference<String> updateNotifierUrl = new AtomicReference<>();
 
     /** */
     @GridToStringExclude
@@ -123,6 +153,84 @@ public class ClusterProcessor extends GridProcessorAdapter {
     /** */
     private boolean sndMetrics;
 
+    /** Cluster ID is stored in local variable before activation when it goes to distributed metastorage. */
+    private volatile UUID locClusterId;
+
+    /** Cluster tag is stored in local variable before activation when it goes to distributed metastorage. */
+    private volatile String locClusterTag;
+
+    /** */
+    private volatile DistributedMetaStorage metastorage;
+
+    /** Flag is used to detect and manage case when new node (this one) joins old cluster. */
+    private volatile boolean compatibilityMode;
+
+    /**
+     * Flag indicates that the feature is disabled.
+     * No values should be stored in metastorage nor passed in joining node discovery data.
+     */
+    private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
+
+    /**
+     * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
+     */
+    private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
+        @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
+            if (!compatibilityMode)
+                return;
+
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+                IgniteFeatures.CLUSTER_ID_AND_TAG)
+            ) {
+                // Only coordinator initializes ID and tag.
+                if (U.isLocalNodeCoordinator(ctx.discovery())) {
+                    locClusterId = locClusterId == null ? UUID.randomUUID() : locClusterId;
+
+                    locClusterTag = locClusterTag == null ? ClusterTagGenerator.generateTag() : locClusterTag;
+
+                    if (metastorage != null) {
+                        IgniteInternalFuture<?> clusterIdTagFut = null;
+
+                        try {
+                            ClusterIdAndTag idAndTag = new ClusterIdAndTag(locClusterId, locClusterTag);
+
+                            if (log.isInfoEnabled())
+                                log.info(
+                                    "Writing cluster ID and tag to metastorage " +
+                                        "on leaving compatibility mode " +
+                                        idAndTag
+                                );
+
+                            clusterIdTagFut = metastorage.writeAsync(CLUSTER_ID_TAG_KEY,
+                                idAndTag);
+                        }
+                        catch (IgniteCheckedException e) {
+                            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                        }
+
+                        if (clusterIdTagFut != null) {
+                            clusterIdTagFut.listen(fut -> {
+                                if (fut.error() != null)
+                                    log.error("Write to metastorage failed unexpectedly", fut.error());
+                            });
+                        }
+                    }
+
+                    cluster.setId(locClusterId);
+
+                    cluster.setTag(locClusterTag);
+
+                    compatibilityMode = false;
+                }
+
+                ctx.event().removeDiscoveryEventListener(discoLsnr);
+            }
+        }
+    };
+
+    /** */
+    private ObjectName mBean;
+
     /**
      * @param ctx Kernal context.
      */
@@ -130,6 +238,8 @@ public class ClusterProcessor extends GridProcessorAdapter {
         super(ctx);
 
         notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, true));
+
+        updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL, GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
         cluster = new IgniteClusterImpl(ctx);
 
@@ -141,6 +251,236 @@ public class ClusterProcessor extends GridProcessorAdapter {
      */
     public boolean diagnosticEnabled() {
         return getBoolean(IGNITE_DIAGNOSTIC_ENABLED, true);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start() throws IgniteCheckedException {
+        if (ctx.isDaemon())
+            return;
+
+        GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
+
+        isp.registerDistributedMetastorageListener(this);
+
+        cluster.start();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+        if (!clusterIdAndTagSupport)
+            return;
+
+        ClusterIdAndTag idAndTag = readKey(metastorage, CLUSTER_ID_TAG_KEY, "Reading cluster ID and tag from metastorage failed, " +
+            "default values will be generated");
+
+        if (log.isInfoEnabled())
+            log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
+
+        if (idAndTag != null) {
+            locClusterId = idAndTag.id();
+            locClusterTag = idAndTag.tag();
+        }
+
+        metastorage.listen(
+            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
+            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
+                if (log.isInfoEnabled())
+                    log.info(
+                        "Cluster tag will be set to new value: " +
+                            newVal != null ? newVal.tag() : "null" +
+                            ", previous value was: " +
+                            oldVal != null ? oldVal.tag() : "null");
+
+                if (oldVal != null && newVal != null) {
+                    if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
+                        String msg = "Tag of cluster with id " +
+                            oldVal.id() +
+                            " has been updated to new value: " +
+                            newVal.tag() +
+                            ", previous value was " +
+                            oldVal.tag();
+
+                        ctx.closure().runLocalSafe(() -> ctx.event().record(
+                            new ClusterTagUpdatedEvent(
+                                ctx.discovery().localNode(),
+                                msg,
+                                oldVal.id(),
+                                oldVal.tag(),
+                                newVal.tag()
+                            )
+                        ));
+                    }
+                }
+
+                cluster.setTag(newVal != null ? newVal.tag() : null);
+
+                if (compatibilityMode) {
+                    // In compatibility mode ID and tag
+                    // will be stored to metastorage on coordinator instead of receiving them on join.
+                    assert oldVal == null;
+
+                    if (log.isInfoEnabled())
+                        log.info("Cluster ID will be initialized to the value: " + newVal.id());
+
+                    cluster.setId(newVal.id());
+
+                    compatibilityMode = false;
+                }
+            }
+        );
+    }
+
+    /**
+     * @param metastorage Metastorage.
+     * @param key Key.
+     * @param errMsg Err message.
+     */
+    private <T extends Serializable> T readKey(ReadableDistributedMetaStorage metastorage, String key, String errMsg) {
+        try {
+            return metastorage.read(key);
+        }
+        catch (IgniteCheckedException e) {
+            U.warn(log, errMsg, e);
+
+            return null;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
+        this.metastorage = metastorage;
+
+        // Fast and dirty workaround for tests.
+        if (ctx.clientNode()) {
+            try {
+                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+                if (idAndTag != null) {
+                    locClusterId = idAndTag.id();
+                    locClusterTag = idAndTag.tag();
+
+                    cluster.setId(locClusterId);
+                    cluster.setTag(locClusterTag);
+                }
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, e);
+            }
+
+            return;
+        }
+
+        if (!clusterIdAndTagSupport)
+            return;
+
+        //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
+
+        // Should not write to metastorage before exiting compatibility mode.
+        // On coordinator this happens in disco listener, on other nodes in metastorage update listener.
+        if (!compatibilityMode) {
+            ctx.closure().runLocalSafe(
+                () -> {
+                    try {
+                        ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
+
+                        if (log.isInfoEnabled())
+                            log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
+
+                        metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
+                    }
+                    catch (IgniteCheckedException e) {
+                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                    }
+                }
+            );
+        }
+    }
+
+    /**
+     * Method is called when user requests updating tag through public API.
+     *
+     * @param newTag New tag.
+     */
+    public void updateTag(String newTag) throws IgniteCheckedException {
+        if (compatibilityMode)
+            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+
+        ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+        if (oldTag == null)
+            throw new IgniteCheckedException("Cannot change tag as default tag has not been set yet. " +
+                "Please try again later.");
+
+        if (!metastorage.compareAndSet(CLUSTER_ID_TAG_KEY, oldTag, new ClusterIdAndTag(oldTag.id(), newTag))) {
+            ClusterIdAndTag concurrentValue = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+            throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
+                concurrentValue.tag());
+        }
+        else
+            cluster.setTag(newTag);
+    }
+
+    /**
+     * Node makes ID and tag available through public API on local join event.
+     *
+     * Effectively no-op if working in compatibility mode (see javadoc for {@link ClusterProcessor#compatibilityMode})
+     *
+     * Two cases.
+     * <ul>
+     *     <li>In in-memory scenario very first node of the cluster generates ID and tag,
+     *     other nodes receives them on join.</li>
+     *     <li>When persistence is enabled each node reads ID and tag from metastorage
+     *     when it becomes ready for read.</li>
+     * </ul>
+     */
+    public void onLocalJoin() {
+        if (!clusterIdAndTagSupport)
+            return;
+
+        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+            IgniteFeatures.CLUSTER_ID_AND_TAG)
+        ) {
+            compatibilityMode = true;
+
+            ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
+
+            return;
+        }
+
+        if (!ctx.discovery().localNode().isClient()) {
+            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+
+            cluster.setTag(locClusterTag != null ? locClusterTag :
+                ClusterTagGenerator.generateTag());
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
+        if (!clusterIdAndTagSupport)
+            return;
+
+        assert ctx.clientNode();
+
+        locClusterId = null;
+        locClusterTag = null;
+
+        cluster.setId(null);
+        cluster.setTag(null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
+        if (!clusterIdAndTagSupport)
+            return null;
+
+        assert ctx.clientNode();
+
+        cluster.setId(locClusterId);
+        cluster.setTag(locClusterTag);
+
+        return null;
     }
 
     /**
@@ -303,13 +643,19 @@ public class ClusterProcessor extends GridProcessorAdapter {
     /** {@inheritDoc} */
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
+
+        if (!clusterIdAndTagSupport)
+            return;
+
+        if (!compatibilityMode && !dataBag.isJoiningNodeClient())
+            dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 
     /**
      * @return Discovery data.
      */
     private Serializable getDiscoveryData() {
-        HashMap<String, Object> map = new HashMap<>();
+        HashMap<String, Object> map = new HashMap<>(2);
 
         map.put(ATTR_UPDATE_NOTIFIER_STATUS, notifyEnabled.get());
 
@@ -325,6 +671,31 @@ public class ClusterProcessor extends GridProcessorAdapter {
 
             if (lstFlag != null)
                 notifyEnabled.set(lstFlag);
+        }
+
+        if (!clusterIdAndTagSupport)
+            return;
+
+        ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
+
+        if (commonData != null) {
+            Serializable remoteClusterId = commonData.id();
+
+            if (remoteClusterId != null) {
+                if (locClusterId != null && !locClusterId.equals(remoteClusterId)) {
+                    log.warning("Received cluster ID differs from locally stored cluster ID " +
+                        "and will be rewritten. " +
+                        "Received cluster ID: " + remoteClusterId +
+                        ", local cluster ID: " + locClusterId);
+                }
+
+                locClusterId = (UUID)remoteClusterId;
+            }
+
+            String remoteClusterTag = commonData.tag();
+
+            if (remoteClusterTag != null)
+                locClusterTag = remoteClusterTag;
         }
     }
 
@@ -350,7 +721,13 @@ public class ClusterProcessor extends GridProcessorAdapter {
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
         if (notifyEnabled.get()) {
             try {
-                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(), VER_STR, false);
+                verChecker = new GridUpdateNotifier(ctx.igniteInstanceName(),
+                    VER_STR,
+                    new GridKernalGatewayImpl(ctx.igniteInstanceName()),
+                    ctx.discovery(),
+                    U.allPluginProviders(),
+                    false,
+                    new HttpIgniteUpdatesChecker(updateNotifierUrl.get(), GridUpdateNotifier.CHARSET));
 
                 updateNtfTimer = new Timer("ignite-update-notifier-timer", true);
 
@@ -371,6 +748,58 @@ public class ClusterProcessor extends GridProcessorAdapter {
             long updateFreq = ctx.config().getMetricsUpdateFrequency();
 
             ctx.timeout().addTimeoutObject(new MetricsUpdateTimeoutObject(updateFreq));
+        }
+
+        if (!clusterIdAndTagSupport)
+            return;
+
+        IgniteClusterMXBeanImpl mxBeanImpl = new IgniteClusterMXBeanImpl(cluster);
+
+        if (!U.IGNITE_MBEANS_DISABLED) {
+            try {
+                mBean = U.registerMBean(
+                    ctx.config().getMBeanServer(),
+                    ctx.igniteInstanceName(),
+                    M_BEAN_NAME,
+                    mxBeanImpl.getClass().getSimpleName(),
+                    mxBeanImpl,
+                    IgniteClusterMXBean.class);
+
+                if (log.isDebugEnabled())
+                    log.debug("Registered " + M_BEAN_NAME + " MBean: " + mBean);
+            }
+            catch (Throwable e) {
+                U.error(log, "Failed to register MBean for cluster: ", e);
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStop(boolean cancel) {
+        unregisterMBean();
+    }
+
+    /**
+     * Unregister IgniteCluster MBean.
+     */
+    private void unregisterMBean() {
+        ObjectName mBeanName = mBean;
+
+        if (mBeanName == null)
+            return;
+
+        assert !U.IGNITE_MBEANS_DISABLED;
+
+        try {
+            ctx.config().getMBeanServer().unregisterMBean(mBeanName);
+
+            mBean = null;
+
+            if (log.isDebugEnabled())
+                log.debug("Unregistered " + M_BEAN_NAME + " MBean: " + mBeanName);
+        }
+        catch (JMException e) {
+            U.error(log, "Failed to unregister " + M_BEAN_NAME + " MBean: " + mBeanName, e);
         }
     }
 
@@ -524,6 +953,13 @@ public class ClusterProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Sets updates notifier url.
+     */
+    public void setUpdateNotifierUrl(String url) {
+        updateNotifierUrl.set(url);
+    }
+
+    /**
      * @return Update notifier status.
      */
     public boolean updateNotifierEnabled() {
@@ -531,10 +967,29 @@ public class ClusterProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * @return Get update notifier url.
+     */
+    public String updateNotifierUrl() {
+        return updateNotifierUrl.get();
+    }
+
+    /**
      * @return Latest version string.
      */
     public String latestVersion() {
         return verChecker != null ? verChecker.latestVersion() : null;
+    }
+
+    /**
+     * Get cluster name.
+     *
+     * @return Cluster name.
+     * */
+    public String clusterName() {
+        return IgniteSystemProperties.getString(
+            IGNITE_CLUSTER_NAME,
+            ctx.cache().utilityCache().context().dynamicDeploymentId().toString()
+        );
     }
 
     /**
@@ -672,7 +1127,7 @@ public class ClusterProcessor extends GridProcessorAdapter {
             if (!notifyEnabled.get())
                 return;
 
-            verChecker.checkForNewVersion(log, first);
+            verChecker.checkForNewVersion(log);
 
             // Just wait for 10 secs.
             Thread.sleep(PERIODIC_VER_CHECK_CONN_TIMEOUT);

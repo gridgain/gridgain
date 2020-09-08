@@ -22,16 +22,18 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Pluggable Ignite component.
  * <p>
- * Ignite plugins are loaded using JDK {@link ServiceLoader}.
+ * Ignite plugins can be loaded using JDK {@link ServiceLoader} or set up explicitly via
+ * {@link IgniteConfiguration#setPluginProviders(PluginProvider[])}.
  * First method called to initialize plugin is {@link PluginProvider#initExtensions(PluginContext, ExtensionRegistry)}.
- * If plugin requires configuration it can be set in {@link IgniteConfiguration} using
+ * If {@link ServiceLoader} approach of plugin loading is chosen, fully-qualified {@link PluginProvider} class name is
+ * used as the service type. And required plugin configuration in this case can be set up via
  * {@link IgniteConfiguration#setPluginConfigurations(PluginConfiguration...)}.
  *
+ * @see IgniteConfiguration#setPluginProviders(PluginProvider[])
  * @see IgniteConfiguration#setPluginConfigurations(PluginConfiguration...)
  * @see PluginContext
  */
@@ -69,9 +71,9 @@ public interface PluginProvider<C extends PluginConfiguration> {
      *
      * @param ctx Plugin context.
      * @param cls Ignite component class.
-     * @return Ignite component or {@code null} if component is not supported.
+     * @return Ignite component or {@code null} if component is not supported (default Ignite component will be used).
      */
-    @Nullable public <T> T createComponent(PluginContext ctx, Class<T> cls);
+    public <T> T createComponent(PluginContext ctx, Class<T> cls);
 
     /**
      * Creates cache plugin provider.
@@ -121,7 +123,7 @@ public interface PluginProvider<C extends PluginConfiguration> {
      * @return Discovery data object or {@code null} if there is nothing
      *      to send for this component.
      */
-    @Nullable public Serializable provideDiscoveryData(UUID nodeId);
+    public Serializable provideDiscoveryData(UUID nodeId);
 
     /**
      * Receives plugin discovery data object from remote nodes (called
@@ -155,7 +157,7 @@ public interface PluginProvider<C extends PluginConfiguration> {
      * sent for this component.
      * @throws PluginValidationException If cluster-wide plugin validation failed.
      */
-    public default void validateNewNode(ClusterNode node, Serializable data)  {
+    public default void validateNewNode(ClusterNode node, Serializable data) {
         validateNewNode(node);
     }
 }

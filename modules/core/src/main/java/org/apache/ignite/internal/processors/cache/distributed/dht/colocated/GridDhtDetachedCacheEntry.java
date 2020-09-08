@@ -64,10 +64,9 @@ public class GridDhtDetachedCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean storeValue(CacheObject val,
+    @Override protected void storeValue(CacheObject val,
         long expireTime,
         GridCacheVersion ver) throws IgniteCheckedException {
-        return false;
         // No-op for detached entries, index is updated on primary nodes.
     }
 
@@ -77,7 +76,7 @@ public class GridDhtDetachedCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr)
+    @Override protected WALPointer logTxUpdate(IgniteInternalTx tx, CacheObject val, long expireTime, long updCntr, boolean walEnabled)
         throws IgniteCheckedException {
         return null;
     }
@@ -94,14 +93,7 @@ public class GridDhtDetachedCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        lockEntry();
-
-        try {
-            return S.toString(GridDhtDetachedCacheEntry.class, this, "super", super.toString());
-        }
-        finally {
-            unlockEntry();
-        }
+        return toStringWithTryLock(() -> S.toString(GridDhtDetachedCacheEntry.class, this, "super", super.toString()));
     }
 
     /** {@inheritDoc} */

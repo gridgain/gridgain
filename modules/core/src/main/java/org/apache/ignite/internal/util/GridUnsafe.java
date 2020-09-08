@@ -1361,6 +1361,26 @@ public abstract class GridUnsafe {
     }
 
     /**
+     * Atomically increments value stored in an integer pointed by {@code ptr}.
+     *
+     * @param ptr Pointer to an integer.
+     * @return Updated value.
+     */
+    public static int incrementAndGetInt(long ptr) {
+        return UNSAFE.getAndAddInt(null, ptr, 1) + 1;
+    }
+
+    /**
+     * Atomically increments value stored in an integer pointed by {@code ptr}.
+     *
+     * @param ptr Pointer to an integer.
+     * @return Updated value.
+     */
+    public static int decrementAndGetInt(long ptr) {
+        return UNSAFE.getAndAddInt(null, ptr, -1) - 1;
+    }
+
+    /**
      * Gets byte value with volatile semantic.
      *
      * @param obj Object.
@@ -1506,8 +1526,8 @@ public abstract class GridUnsafe {
         }
         catch (SecurityException ignored) {
             try {
-                return AccessController.doPrivileged
-                    (new PrivilegedExceptionAction<Unsafe>() {
+                return AccessController.doPrivileged(
+                    new PrivilegedExceptionAction<Unsafe>() {
                         @Override public Unsafe run() throws Exception {
                             Field f = Unsafe.class.getDeclaredField("theUnsafe");
 
@@ -1647,7 +1667,6 @@ public abstract class GridUnsafe {
             throw new RuntimeException("Unable to set up byte buffer creation using reflections :" + e.getMessage(), e);
         }
     }
-
 
     /**
      * @param obj Object.
@@ -1951,5 +1970,48 @@ public abstract class GridUnsafe {
             UNSAFE.putByte(addr + 1, (byte)(val >> 8));
             UNSAFE.putByte(addr, (byte)(val));
         }
+    }
+
+    /**
+     * @param ptr1 First pointer.
+     * @param ptr2 Second pointer.
+     * @param size Memory size.
+     * @return {@code True} if equals.
+     */
+    public static boolean compare(long ptr1, long ptr2, int size) {
+        assert ptr1 > 0 : ptr1;
+        assert ptr2 > 0 : ptr2;
+        assert size > 0 : size;
+
+        if (ptr1 == ptr2)
+            return true;
+
+        int words = size / 8;
+
+        for (int i = 0; i < words; i++) {
+            long w1 = getLong(ptr1);
+            long w2 = getLong(ptr2);
+
+            if (w1 != w2)
+                return false;
+
+            ptr1 += 8;
+            ptr2 += 8;
+        }
+
+        int left = size % 8;
+
+        for (int i = 0; i < left; i++) {
+            byte b1 = getByte(ptr1);
+            byte b2 = getByte(ptr2);
+
+            if (b1 != b2)
+                return false;
+
+            ptr1++;
+            ptr2++;
+        }
+
+        return true;
     }
 }

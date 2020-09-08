@@ -233,6 +233,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         IgniteEx ignite3 = startGrid(3);
 
+        awaitPartitionMapExchange();
+
         log.info("Stop block1.");
 
         spi.stopBlock();
@@ -588,6 +590,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         IgniteEx ignite3 = startGrid(3);
 
+        awaitPartitionMapExchange();
+
         log.info("Stop block1.");
 
         spi.stopBlock();
@@ -636,6 +640,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
         spi.stopBlock();
 
         putFut.get();
+
+        awaitPartitionMapExchange();
 
         checkData(map, null, cache, 4);
 
@@ -1257,6 +1263,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
         client = false;
 
         startGrid(3);
+
+        awaitPartitionMapExchange();
 
         log.info("Stop block.");
 
@@ -1912,7 +1920,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
                 }
             }, THREADS, "update-thread");
 
-            long stopTime = System.currentTimeMillis() + 60_000;
+            long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(60_000, 20_000);
 
             while (System.currentTimeMillis() < stopTime) {
                 boolean restartClient = ThreadLocalRandom.current().nextBoolean();

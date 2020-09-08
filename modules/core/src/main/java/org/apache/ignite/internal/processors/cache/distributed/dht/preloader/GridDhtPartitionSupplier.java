@@ -17,10 +17,12 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,9 +30,10 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -46,7 +49,9 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionAware;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -60,7 +65,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 /**
  * Class for supplying partitions to demanding nodes.
  */
-class GridDhtPartitionSupplier {
+public class GridDhtPartitionSupplier {
     /** */
     private final CacheGroupContext grp;
 
@@ -76,7 +81,11 @@ class GridDhtPartitionSupplier {
     /** Supply context map. T3: nodeId, topicId, topVer. */
     private final Map<T3<UUID, Integer, AffinityTopologyVersion>, SupplyContext> scMap = new HashMap<>();
 
-    /** Override for rebalance throttle. */
+    /**
+     * Override for rebalance throttle.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceThrottle()} instead.
+     */
+    @Deprecated
     private long rebalanceThrottleOverride =
         IgniteSystemProperties.getLong(IgniteSystemProperties.IGNITE_REBALANCE_THROTTLE_OVERRIDE, 0);
 
@@ -170,10 +179,19 @@ class GridDhtPartitionSupplier {
     }
 
     /**
+     * Check is cache having any active context for supply.
+     *
+     * @return True if a node supplies a cache to some other, otherwise is false.
+     */
+    public boolean isSupply() {
+        return !F.isEmpty(scMap);
+    }
+
+    /**
      * For each demand message method lookups (or creates new) supply context and starts to iterate entries across requested partitions.
      * Each entry in iterator is placed to prepared supply message.
      *
-     * If supply message size in bytes becomes greater than {@link CacheConfiguration#getRebalanceBatchSize()}
+     * If supply message size in bytes becomes greater than {@link IgniteConfiguration#getRebalanceBatchSize()}
      * method sends this message to demand node and saves partial state of iterated entries to supply context,
      * then restores the context again after new demand message with the same context id is arrived.
      *
@@ -185,14 +203,14 @@ class GridDhtPartitionSupplier {
         assert demandMsg != null;
         assert nodeId != null;
 
-        T3<UUID, Integer, AffinityTopologyVersion> contextId = new T3<>(nodeId, topicId, demandMsg.topologyVersion());
+        T3<UUID, Integer, AffinityTopologyVersion> ctxId = new T3<>(nodeId, topicId, demandMsg.topologyVersion());
 
         if (demandMsg.rebalanceId() < 0) { // Demand node requested context cleanup.
             synchronized (scMap) {
-                SupplyContext sctx = scMap.get(contextId);
+                SupplyContext sctx = scMap.get(ctxId);
 
                 if (sctx != null && sctx.rebalanceId == -demandMsg.rebalanceId()) {
-                    clearContext(scMap.remove(contextId), log);
+                    clearContext(scMap.remove(ctxId), log);
 
                     if (log.isDebugEnabled())
                         log.debug("Supply context cleaned [" + supplyRoutineInfo(topicId, nodeId, demandMsg)
@@ -222,15 +240,24 @@ class GridDhtPartitionSupplier {
 
         SupplyContext sctx = null;
 
+        Set<Integer> remainingParts = null;
+
         Map<Integer, Long> initUpdateCntrs;
+
+        GridDhtPartitionSupplyMessage supplyMsg = new GridDhtPartitionSupplyMessage(
+                demandMsg.rebalanceId(),
+                grp.groupId(),
+                demandMsg.topologyVersion(),
+                grp.deploymentEnabled()
+        );
 
         try {
             synchronized (scMap) {
-                sctx = scMap.remove(contextId);
+                sctx = scMap.remove(ctxId);
 
                 if (sctx != null && demandMsg.rebalanceId() < sctx.rebalanceId) {
                     // Stale message, return context back and return.
-                    scMap.put(contextId, sctx);
+                    scMap.put(ctxId, sctx);
 
                     if (log.isDebugEnabled())
                         log.debug("Stale demand message [" + supplyRoutineInfo(topicId, nodeId, demandMsg) +
@@ -253,9 +280,16 @@ class GridDhtPartitionSupplier {
                 log.debug("Demand message accepted ["
                     + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
 
-            assert !(sctx != null && !demandMsg.partitions().isEmpty());
+            assert sctx == null || demandMsg.partitions().isEmpty() :
+                "sctx=" + sctx + ", topicId=" + topicId + ", demanderId=" + nodeId + ", msg=" + demandMsg;
 
-            long maxBatchesCnt = grp.config().getRebalanceBatchesPrefetchCount();
+            // Saturate remote thread pool for first demand request.
+            Integer rmtThreadPoolSize = demanderNode.attribute(IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE);
+
+            if (rmtThreadPoolSize == null)
+                rmtThreadPoolSize = 1;
+
+            long maxBatchesCnt = grp.preloader().batchesPrefetchCount() * rmtThreadPoolSize;
 
             if (sctx == null) {
                 if (log.isDebugEnabled())
@@ -265,15 +299,6 @@ class GridDhtPartitionSupplier {
             }
             else
                 maxBatchesCnt = 1;
-
-            GridDhtPartitionSupplyMessage supplyMsg = new GridDhtPartitionSupplyMessage(
-                    demandMsg.rebalanceId(),
-                    grp.groupId(),
-                    demandMsg.topologyVersion(),
-                    grp.deploymentEnabled()
-            );
-
-            Set<Integer> remainingParts;
 
             if (sctx == null || sctx.iterator == null) {
                 remainingParts = new HashSet<>(demandMsg.partitions().fullSet());
@@ -331,7 +356,7 @@ class GridDhtPartitionSupplier {
                 initUpdateCntrs = sctx.initUpdateCntrs;
             }
 
-            final int msgMaxSize = grp.config().getRebalanceBatchSize();
+            final int msgMaxSize = grp.preloader().batchSize();
 
             long batchesCnt = 0;
 
@@ -347,19 +372,19 @@ class GridDhtPartitionSupplier {
 
                 if (canFlushHistory && supplyMsg.messageSize() >= msgMaxSize) {
                     if (++batchesCnt >= maxBatchesCnt) {
-                        saveSupplyContext(contextId,
+                        saveSupplyContext(ctxId,
                             iter,
                             remainingParts,
                             demandMsg.rebalanceId(),
                             initUpdateCntrs
                         );
 
-                        reply(topicId, demanderNode, demandMsg, supplyMsg, contextId);
+                        reply(topicId, demanderNode, demandMsg, supplyMsg, ctxId);
 
                         return;
                     }
                     else {
-                        if (!reply(topicId, demanderNode, demandMsg, supplyMsg, contextId))
+                        if (!reply(topicId, demanderNode, demandMsg, supplyMsg, ctxId))
                             return;
 
                         supplyMsg = new GridDhtPartitionSupplyMessage(demandMsg.rebalanceId(),
@@ -457,12 +482,21 @@ class GridDhtPartitionSupplier {
             else
                 iter.close();
 
-            reply(topicId, demanderNode, demandMsg, supplyMsg, contextId);
+            reply(topicId, demanderNode, demandMsg, supplyMsg, ctxId);
 
             if (log.isInfoEnabled())
                 log.info("Finished supplying rebalancing [" + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
         }
         catch (Throwable t) {
+            if (iter != null && !iter.isClosed()) {
+                try {
+                    iter.close();
+                }
+                catch (IgniteCheckedException e) {
+                    t.addSuppressed(e);
+                }
+            }
+
             if (grp.shared().kernalContext().isStopping())
                 return;
 
@@ -478,42 +512,65 @@ class GridDhtPartitionSupplier {
             }
             else
                 U.error(log, "Failed to continue supplying ["
-                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]", t);
+                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + ']', t);
 
             try {
                 if (sctx != null)
                     clearContext(sctx, log);
-                else if (iter != null)
-                    iter.close();
             }
             catch (Throwable t1) {
                 U.error(log, "Failed to cleanup supplying context ["
-                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]", t1);
+                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + ']', t1);
             }
 
             if (!sendErrMsg)
                 return;
 
-            try {
-                GridDhtPartitionSupplyMessageV2 errMsg = new GridDhtPartitionSupplyMessageV2(
-                    demandMsg.rebalanceId(),
-                    grp.groupId(),
-                    demandMsg.topologyVersion(),
-                    grp.deploymentEnabled(),
-                    t
-                );
+            boolean fallbackToFullRebalance = X.hasCause(t, IgniteHistoricalIteratorException.class);
 
-                reply(topicId, demanderNode, demandMsg, errMsg, contextId);
+            try {
+                GridDhtPartitionSupplyMessage errMsg;
+
+                if (fallbackToFullRebalance) {
+                    // Mark the last checkpoint as not applicable for WAL rebalance.
+                    grp.shared().database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
+
+                    // Mark all remaining partitions as missed to trigger full rebalance.
+                    if (iter == null && F.isEmpty(remainingParts)) {
+                        remainingParts = new HashSet<>(demandMsg.partitions().fullSet());
+                        remainingParts.addAll(demandMsg.partitions().historicalSet());
+                    }
+
+                    for (int p : Optional.ofNullable(remainingParts).orElseGet(Collections::emptySet))
+                        supplyMsg.missed(p);
+
+                    errMsg = supplyMsg;
+                }
+                else {
+                    errMsg = new GridDhtPartitionSupplyMessageV2(
+                        demandMsg.rebalanceId(),
+                        grp.groupId(),
+                        demandMsg.topologyVersion(),
+                        grp.deploymentEnabled(),
+                        t
+                    );
+                }
+
+                reply(topicId, demanderNode, demandMsg, errMsg, ctxId);
             }
             catch (Throwable t1) {
                 U.error(log, "Failed to send supply error message ["
-                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]", t1);
+                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + ']', t1);
             }
 
-            grp.shared().kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR,
-                new IgniteCheckedException("Failed to continue supplying ["
-                    + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]", t)
-            ));
+            // If fallback to full rebalance is possible then let's try to switch to it
+            // instead of triggering failure handler.
+            if (!fallbackToFullRebalance) {
+                grp.shared().kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR,
+                    new IgniteCheckedException("Failed to continue supplying ["
+                        + supplyRoutineInfo(topicId, nodeId, demandMsg) + ']', t)
+                ));
+            }
         }
     }
 
@@ -559,7 +616,7 @@ class GridDhtPartitionSupplier {
      * @param demander Recipient of supply message.
      * @param demandMsg Demand message.
      * @param supplyMsg Supply message.
-     * @param contextId Supply context id.
+     * @param ctxId Supply context id.
      * @return {@code True} if message was sent, {@code false} if recipient left grid.
      * @throws IgniteCheckedException If failed.
      */
@@ -568,7 +625,7 @@ class GridDhtPartitionSupplier {
         ClusterNode demander,
         GridDhtPartitionDemandMessage demandMsg,
         GridDhtPartitionSupplyMessage supplyMsg,
-        T3<UUID, Integer, AffinityTopologyVersion> contextId
+        T3<UUID, Integer, AffinityTopologyVersion> ctxId
     ) throws IgniteCheckedException {
         try {
             if (log.isDebugEnabled())
@@ -579,8 +636,8 @@ class GridDhtPartitionSupplier {
             // Throttle preloading.
             if (rebalanceThrottleOverride > 0)
                 U.sleep(rebalanceThrottleOverride);
-            else if (grp.config().getRebalanceThrottle() > 0)
-                U.sleep(grp.config().getRebalanceThrottle());
+            else if (grp.preloader().throttle() > 0)
+                U.sleep(grp.preloader().throttle());
 
             return true;
         }
@@ -589,7 +646,7 @@ class GridDhtPartitionSupplier {
                 log.debug("Failed to send supply message (demander left): [" + supplyRoutineInfo(topicId, demander.id(), demandMsg) + "]");
 
             synchronized (scMap) {
-                clearContext(scMap.remove(contextId), log);
+                clearContext(scMap.remove(ctxId), log);
             }
 
             return false;
@@ -604,29 +661,32 @@ class GridDhtPartitionSupplier {
      * @param demandMsg Demand message.
      */
     private String supplyRoutineInfo(int topicId, UUID demander, GridDhtPartitionDemandMessage demandMsg) {
-        return "grp=" + grp.cacheOrGroupName() + ", demander=" + demander + ", topVer=" + demandMsg.topologyVersion() + ", topic=" + topicId;
+        return "grp=" + grp.cacheOrGroupName() +
+            ", demander=" + demander +
+            ", topVer=" + demandMsg.topologyVersion() +
+            (topicId > 0 ? ", topic=" + topicId : "");
     }
 
     /**
      * Saves supply context with given parameters to {@code scMap}.
      *
-     * @param contextId Supply context id.
+     * @param ctxId Supply context id.
      * @param entryIt Entries rebalance iterator.
      * @param remainingParts Set of partitions that weren't sent yet.
      * @param rebalanceId Rebalance id.
      * @param initUpdateCntrs Collection of update counters that corresponds to the beginning of rebalance.
      */
     private void saveSupplyContext(
-        T3<UUID, Integer, AffinityTopologyVersion> contextId,
+        T3<UUID, Integer, AffinityTopologyVersion> ctxId,
         IgniteRebalanceIterator entryIt,
         Set<Integer> remainingParts,
         long rebalanceId,
         Map<Integer, Long> initUpdateCntrs
     ) {
         synchronized (scMap) {
-            assert scMap.get(contextId) == null;
+            assert scMap.get(ctxId) == null;
 
-            scMap.put(contextId, new SupplyContext(entryIt, remainingParts, rebalanceId, initUpdateCntrs));
+            scMap.put(ctxId, new SupplyContext(entryIt, remainingParts, rebalanceId, initUpdateCntrs));
         }
     }
 

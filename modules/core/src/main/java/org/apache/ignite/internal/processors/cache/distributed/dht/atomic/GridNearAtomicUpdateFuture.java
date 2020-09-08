@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -46,7 +47,9 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopolo
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.dr.GridCacheDrInfo;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -61,6 +64,8 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_UPDATE_MAP;
 
 /**
  * DHT atomic cache near update future.
@@ -497,9 +502,12 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
         fut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
             @Override public void apply(final IgniteInternalFuture<AffinityTopologyVersion> fut) {
-                cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+                cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
-                        mapOnTopology();
+                        try (TraceSurroundings ignored =
+                                MTC.support(cctx.kernalContext().tracing().create(CACHE_API_UPDATE_MAP, MTC.span()))) {
+                            mapOnTopology();
+                        }
                     }
                 });
             }
@@ -625,8 +633,8 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
         if (cache.topology().stopping()) {
             completeFuture(
                 null,
-                cctx.shared().cache().isCacheRestarting(cache.name())?
-                    new IgniteCacheRestartingException(cache.name()):
+                cctx.shared().cache().isCacheRestarting(cache.name()) ?
+                    new IgniteCacheRestartingException(cache.name()) :
                     new CacheStoppedException(cache.name()),
                 null);
 
@@ -651,7 +659,7 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
             fut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
                 @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> t) {
-                    cctx.kernalContext().closure().runLocalSafe(new Runnable() {
+                    cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
                         @Override public void run() {
                             mapOnTopology();
                         }
@@ -727,6 +735,8 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
     /** {@inheritDoc} */
     @Override protected void map(AffinityTopologyVersion topVer) {
+        span.addTag("topology.version", () -> Objects.toString(topVer));
+
         map(topVer, null);
     }
 
@@ -735,6 +745,8 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
      * @param remapKeys Keys to remap.
      */
     private void map(AffinityTopologyVersion topVer, @Nullable Collection<KeyCacheObject> remapKeys) {
+        MTC.span().addSensitiveTag("remap.keys", () -> Objects.toString(remapKeys));
+
         Collection<ClusterNode> topNodes = CU.affinityNodes(cctx, topVer);
 
         if (F.isEmpty(topNodes)) {

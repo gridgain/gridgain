@@ -50,6 +50,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
@@ -334,7 +335,7 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
      * @return True if nodes equal by consistent id.
      */
     private boolean equalsTopologies(Collection<ClusterNode> nodes1, Collection<ClusterNode> nodes2) {
-        if(nodes1.size() != nodes2.size())
+        if (nodes1.size() != nodes2.size())
             return false;
 
         Set<Object> consistentIds1 = nodes1.stream()
@@ -520,6 +521,8 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
 
         if (commFailureRslvr != null)
             cfg.setCommunicationFailureResolver(commFailureRslvr.apply());
+
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return cfg;
     }
@@ -744,10 +747,12 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
          * @param setBitIdxs Bits indexes to set in check result.
          */
         void initCheckResult(int nodes, Integer... setBitIdxs) {
-            checkRes = new BitSet(nodes);
+            BitSet res = new BitSet(nodes);
 
             for (Integer bitIdx : setBitIdxs)
-                checkRes.set(bitIdx);
+                res.set(bitIdx);
+
+            checkRes = res;
         }
 
         /** {@inheritDoc} */

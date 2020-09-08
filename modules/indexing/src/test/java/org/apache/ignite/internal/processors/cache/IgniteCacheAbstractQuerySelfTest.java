@@ -69,6 +69,7 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.events.CacheQueryReadEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
@@ -144,6 +145,8 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
 
             c.setDataStorageConfiguration(new DataStorageConfiguration());
         }
+
+        c.setIncludeEventTypes(EventType.EVTS_ALL);
 
         return c;
     }
@@ -260,7 +263,7 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        for(String cacheName : ignite().cacheNames())
+        for (String cacheName : ignite().cacheNames())
             ignite().cache(cacheName).destroy();
     }
 
@@ -274,6 +277,8 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         store.reset();
+
+        stopAllGrids();
     }
 
     /**
@@ -458,7 +463,7 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
 
         U.sleep(300); // Less than minimal amount of time that must pass before a cache entry is considered expired.
 
-        qry =  cache.query(new SqlQuery<Integer, Integer>(Integer.class, "1=1")).getAll();
+        qry = cache.query(new SqlQuery<Integer, Integer>(Integer.class, "1=1")).getAll();
 
         res = F.first(qry);
 
@@ -598,17 +603,31 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
 
     /**
      * JUnit.
-     *
-     * @throws Exception In case of error.
      */
     @Test
-    public void testSelectQuery() throws Exception {
+    public void testSelectQuery() {
         IgniteCache<Integer, String> cache = jcache(Integer.class, String.class);
 
         cache.put(10, "value");
 
-        QueryCursor<Cache.Entry<Integer, String>> qry =
-            cache.query(new SqlQuery<Integer, String>(String.class, "true"));
+        try (QueryCursor<Cache.Entry<Integer, String>> qry = cache.query(new SqlQuery<>(String.class, "true"))) {
+            Iterator<Cache.Entry<Integer, String>> iter = qry.iterator();
+
+            assert iter != null;
+            assert iter.next() != null;
+        }
+    }
+
+    /**
+     * JUnit.
+     */
+    @Test
+    public void testSelectQueryNoClose() {
+        IgniteCache<Integer, String> cache = jcache(Integer.class, String.class);
+
+        cache.put(10, "value");
+
+        QueryCursor<Cache.Entry<Integer, String>> qry = cache.query(new SqlQuery<>(String.class, "true"));
 
         Iterator<Cache.Entry<Integer, String>> iter = qry.iterator();
 
@@ -733,41 +752,42 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
 
     /**
      * JUnit.
-     *
-     * @throws Exception In case of error.
      */
     @Test
-    public void testObjectQuery() throws Exception {
+    public void testObjectQuery() {
         IgniteCache<Integer, ObjectValue> cache = jcache(Integer.class, ObjectValue.class);
 
         ObjectValue val = new ObjectValue("test", 0);
 
         cache.put(1, val);
 
-        QueryCursor<Cache.Entry<Integer, ObjectValue>> qry =
-            cache.query(new SqlQuery<Integer, ObjectValue>(ObjectValue.class, "_val=?").setArgs(val));
-
-        Iterator<Cache.Entry<Integer, ObjectValue>> iter = qry.iterator();
-
-        assert iter != null;
-
         int expCnt = 1;
 
-        for (int i = 0; i < expCnt; i++)
-            assert iter.next() != null;
+        try (QueryCursor<Cache.Entry<Integer, ObjectValue>> qry =
+            cache.query(new SqlQuery<Integer, ObjectValue>(ObjectValue.class, "_val=?").setArgs(val))) {
 
-        assert !iter.hasNext();
+            Iterator<Cache.Entry<Integer, ObjectValue>> iter = qry.iterator();
 
-        qry = cache.query(new TextQuery<Integer, ObjectValue>(ObjectValue.class, "test"));
+            assert iter != null;
 
-        iter = qry.iterator();
+            for (int i = 0; i < expCnt; i++)
+                assert iter.next() != null;
 
-        assert iter != null;
+            assert !iter.hasNext();
+        }
 
-        for (int i = 0; i < expCnt; i++)
-            assert iter.next() != null;
+        try (QueryCursor<Cache.Entry<Integer, ObjectValue>> qry =
+            cache.query(new TextQuery<>(ObjectValue.class, "test"))) {
 
-        assert !iter.hasNext();
+            Iterator<Cache.Entry<Integer, ObjectValue>> iter = qry.iterator();
+
+            assert iter != null;
+
+            for (int i = 0; i < expCnt; i++)
+                assert iter.next() != null;
+
+            assert !iter.hasNext();
+        }
     }
 
     /**
@@ -816,7 +836,6 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
 
         for (long i = 0; i < 50; i++)
             cache.put(i, new EnumObject(i, i % 2 == 0 ? EnumType.TYPE_A : EnumType.TYPE_B));
-
 
         assertEnumQry("type = ?", EnumType.TYPE_A, EnumType.TYPE_A, cache, 25);
         assertEnumQry("type > ?", EnumType.TYPE_A, EnumType.TYPE_B, cache, 25);
@@ -977,7 +996,6 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
             }
         }
 
-
         QueryCursor<Cache.Entry<Integer, ObjectValue>> qry =
             cache.query(new SqlQuery<Integer, ObjectValue>(ObjectValue.class, "intVal >= ? order by intVal").
                 setArgs(0));
@@ -1093,7 +1111,7 @@ public abstract class IgniteCacheAbstractQuerySelfTest extends GridCommonAbstrac
     public void testScanQuery() throws Exception {
         IgniteCache<Integer, String> c1 = jcache(Integer.class, String.class);
 
-        Map<Integer, String> map = new HashMap<Integer, String>(){{
+        Map<Integer, String> map = new HashMap<Integer, String>() {{
             for (int i = 0; i < 5000; i++)
                 put(i, "str" + i);
         }};

@@ -29,11 +29,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface CacheContinuousQueryListener<K, V> {
     /**
-     * Query execution callback.
-     */
-    public void onExecution();
-
-    /**
      * Entry update callback.
      *
      * @param evt Event
@@ -45,8 +40,18 @@ public interface CacheContinuousQueryListener<K, V> {
         boolean recordIgniteEvt, @Nullable GridDhtAtomicAbstractUpdateFuture fut);
 
     /**
+     *
+     */
+    public void onBeforeRegister();
+
+    /**
+     *
+     */
+    public void onAfterRegister();
+
+    /**
      * Listener registration callback.
-     * NOTE: This method should be called under the {@link CacheGroupContext#listenerLock} write lock held.
+     * NOTE: This method should be called under the {@link CacheGroupContext#listenerLock()}} write lock held.
      */
     public void onRegister();
 
@@ -91,6 +96,7 @@ public interface CacheContinuousQueryListener<K, V> {
      * @param part Partition.
      * @param cntr Counter to skip.
      * @param topVer Topology version.
+     * @param primary {@code True} if called on primary node.
      * @return Context.
      */
     @Nullable public CounterSkipContext skipUpdateCounter(

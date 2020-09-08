@@ -167,7 +167,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Override public int putValue(long addr) throws IgniteCheckedException {
-        return CacheObjectAdapter.putValue(addr, cacheObjectType(), arr, start);
+        return CacheObjectAdapter.putValue(addr, cacheObjectType(), arr, start, length());
     }
 
     /** {@inheritDoc} */
@@ -190,7 +190,11 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Override public void finishUnmarshal(CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-        this.ctx = ((CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects()).binaryContext();
+        CacheObjectBinaryProcessorImpl binaryProc = (CacheObjectBinaryProcessorImpl)ctx.kernalContext().cacheObjects();
+
+        this.ctx = binaryProc.binaryContext();
+
+        binaryProc.waitMetadataWriteIfNeeded(typeId());
     }
 
     /** {@inheritDoc} */
@@ -628,6 +632,21 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
+    @Nullable @Override public <T> T deserialize(@Nullable ClassLoader ldr) throws BinaryObjectException {
+        if (ldr == null)
+            return deserialize();
+
+        GridBinaryMarshaller.USE_CACHE.set(Boolean.FALSE);
+
+        try {
+            return (T)reader(null, ldr, true).deserialize();
+        }
+        finally {
+            GridBinaryMarshaller.USE_CACHE.set(Boolean.TRUE);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public <T> T deserialize() throws BinaryObjectException {
         Object obj0 = obj;
 
@@ -695,6 +714,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
         start = in.readInt();
     }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -827,6 +847,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
             BinaryHeapInputStream.create(arr, start),
             ldr,
             rCtx,
+            false,
             forUnmarshal);
     }
 

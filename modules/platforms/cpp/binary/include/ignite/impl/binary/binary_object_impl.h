@@ -238,6 +238,9 @@ namespace ignite
 
                 /** Type manager. */
                 BinaryTypeManager* metaMgr;
+
+                /** If object is in binary wrapper. */
+                bool binary;
             };
 
             /* Specialization */

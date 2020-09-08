@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DeploymentMode;
@@ -60,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.processors.platform.services.PlatformService;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -402,7 +404,14 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      * {@inheritDoc}
      */
     @Override public void onDeActivate(GridKernalContext kctx) {
-        opsLock.writeLock().lock();
+        try {
+            opsLock.writeLock().lockInterruptibly();
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            throw new IgniteInterruptedException(e);
+        }
 
         try {
             if (log.isDebugEnabled()) {
@@ -603,7 +612,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      */
     private SecurityException checkPermissions(String name, SecurityPermission perm) {
         try {
-            ctx.security().authorize(name, perm, null);
+            ctx.security().authorize(name, perm);
 
             return null;
         }
@@ -857,7 +866,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             return null;
 
         try {
-            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
             Collection<ServiceContextImpl> ctxs = serviceContexts(name);
 
@@ -928,7 +937,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
     @Override public <T> T serviceProxy(ClusterGroup prj, String name, Class<? super T> srvcCls, boolean sticky,
         long timeout)
         throws IgniteException {
-        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
         if (hasLocalNode(prj)) {
             ServiceContextImpl ctx = serviceContext(name);
@@ -937,11 +946,12 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                 Service srvc = ctx.service();
 
                 if (srvc != null) {
-                    if (!srvcCls.isAssignableFrom(srvc.getClass()))
-                        throw new IgniteException("Service does not implement specified interface [srvcCls=" +
-                            srvcCls.getName() + ", srvcCls=" + srvc.getClass().getName() + ']');
-
-                    return (T)srvc;
+                    if (srvcCls.isAssignableFrom(srvc.getClass()))
+                        return (T)srvc;
+                    else if (!PlatformService.class.isAssignableFrom(srvc.getClass())) {
+                        throw new IgniteException("Service does not implement specified interface [srvcCls="
+                                + srvcCls.getName() + ", srvcCls=" + srvc.getClass().getName() + ']');
+                    }
                 }
             }
         }
@@ -968,7 +978,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             return null;
 
         try {
-            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+            ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
             Collection<ServiceContextImpl> ctxs = serviceContexts(name);
 

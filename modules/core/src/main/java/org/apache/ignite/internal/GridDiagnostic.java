@@ -87,17 +87,6 @@ final class GridDiagnostic {
                 }
             });
 
-            exec.execute(new GridWorker(igniteInstanceName, "grid-diagnostic-4", log) {
-                @Override public void body() {
-                    // Sufficiently tested OS.
-                    if (!U.isSufficientlyTestedOs()) {
-                        U.warn(log, "This operating system has been tested less rigorously: " + U.osString() +
-                            ". Our team will appreciate the feedback if you experience any problems running " +
-                            "ignite in this environment.");
-                    }
-                }
-            });
-
             exec.execute(new GridWorker(igniteInstanceName, "grid-diagnostic-5", log) {
                 @Override public void body() {
                     // Fix for GG-1075.
@@ -129,14 +118,14 @@ final class GridDiagnostic {
                 }
             });
 
-            final long HALF_GB = 512L/*MB*/ * 1024 * 1024;
+            final long MIN_INIT_HEAP_SIZE = 480L/*MB*/ * 1024 * 1024;
 
             exec.execute(new GridWorker(igniteInstanceName, "grid-diagnostic-7", log) {
                 @Override public void body() {
                     long initBytes = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getInit();
                     long initMb = initBytes / 1024 / 1024;
 
-                    if (initBytes < HALF_GB)
+                    if (initBytes < MIN_INIT_HEAP_SIZE)
                         U.quietAndWarn(log,
                             String.format("Initial heap size is %dMB (should be no less than 512MB, " +
                                 "use -Xms512m -Xmx512m).", initMb));

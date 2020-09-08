@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -48,7 +47,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
 /**
@@ -85,20 +83,6 @@ public class IgniteRebalanceScheduleResendPartitionsTest extends GridCommonAbstr
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -121,8 +105,9 @@ public class IgniteRebalanceScheduleResendPartitionsTest extends GridCommonAbstr
      */
     @Test
     public void test() throws Exception {
-        Ignite ig0 = startGrids(3);
+        IgniteEx ig0 = startGrids(3);
 
+        ig0.cluster().baselineAutoAdjustEnabled(false);
         ig0.cluster().active(true);
 
         int entries = 100_000;
@@ -138,16 +123,19 @@ public class IgniteRebalanceScheduleResendPartitionsTest extends GridCommonAbstr
 
         AtomicInteger cnt = new AtomicInteger();
 
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch awaitlatch = new CountDownLatch(1);
+        AtomicBoolean done = new AtomicBoolean();
 
         runAsync(() -> {
             try {
-                latch.await();
+                awaitlatch.await();
 
                 // Sleep should be less that full awaitPartitionMapExchange().
                 Thread.sleep(super.getPartitionMapExchangeTimeout());
 
                 log.info("Await completed, continue rebalance.");
+
+                done.set(true);
 
                 unwrapSPI(ig3).resume();
             }
@@ -165,10 +153,13 @@ public class IgniteRebalanceScheduleResendPartitionsTest extends GridCommonAbstr
 
             // Continue after baseline changed exchange occurred.
             if (msg.exchangeId() != null)
-                latch.countDown();
+                awaitlatch.countDown();
 
-            if (prevMessageComparator.prevEquals(msg))
+            if (!done.get() && prevMessageComparator.prevEquals(msg)) {
+                System.out.println("Equals messages, prev=" + prevMessageComparator.prev + " , curr=" + msg);
+
                 cnt.incrementAndGet();
+            }
         });
 
         ig3.cluster().setBaselineTopology(ig3.context().discovery().topologyVersion());

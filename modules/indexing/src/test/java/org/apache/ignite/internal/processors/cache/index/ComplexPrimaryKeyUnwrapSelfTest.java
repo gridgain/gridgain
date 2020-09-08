@@ -215,7 +215,7 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
 
         String explainPlan = (String)results.get(0).get(0);
 
-        assertTrue(explainPlan.contains("\"_key_PK"));
+        assertTrue(explainPlan.contains("_key_PK"));
 
         assertFalse(explainPlan.contains("_SCAN_"));
     }
@@ -232,7 +232,7 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
 
         System.out.println(explainPlan);
 
-        assertFalse(explainPlan.contains("\"_key_PK\""));
+        assertFalse(explainPlan.contains("_key_PK"));
 
         assertTrue(explainPlan.contains("_SCAN_"));
     }
@@ -317,12 +317,15 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
         /** */
         @QuerySqlField()
         private String name;
+
         /** */
         @QuerySqlField()
         private String company;
+
         /** */
         @QuerySqlField()
         private String city;
+
         /** */
         @QuerySqlField()
         private int age;

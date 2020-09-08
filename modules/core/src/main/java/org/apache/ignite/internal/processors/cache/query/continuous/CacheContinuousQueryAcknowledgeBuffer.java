@@ -19,17 +19,15 @@ package org.apache.ignite.internal.processors.cache.query.continuous;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.continuous.GridContinuousBatch;
 import org.apache.ignite.internal.processors.continuous.GridContinuousQueryBatch;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
-/** */
+/**
+ * Buffer for collecting CQ acknowledges before CQ buffer cleanup.
+ */
 class CacheContinuousQueryAcknowledgeBuffer {
     /** */
     private int size;
@@ -38,16 +36,12 @@ class CacheContinuousQueryAcknowledgeBuffer {
     @GridToStringInclude
     private Map<Integer, Long> updateCntrs = new HashMap<>();
 
-    /** */
-    @GridToStringInclude
-    private Set<AffinityTopologyVersion> topVers = U.newHashSet(1);
-
     /**
      * @param batch Batch.
-     * @return Non-null tuple if acknowledge should be sent to backups.
+     * @return Update counters per partition map if acknowledge should be sent.
      */
     @SuppressWarnings("unchecked")
-    @Nullable synchronized IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>>onAcknowledged(
+    @Nullable synchronized Map<Integer, Long> onAcknowledged(
         GridContinuousBatch batch) {
         assert batch instanceof GridContinuousQueryBatch;
 
@@ -58,28 +52,13 @@ class CacheContinuousQueryAcknowledgeBuffer {
         for (CacheContinuousQueryEntry e : entries)
             addEntry(e);
 
-        return size >= CacheContinuousQueryHandler.BACKUP_ACK_THRESHOLD ? acknowledgeData() : null;
-    }
-
-    /**
-     * @param e Entry.
-     * @return Non-null tuple if acknowledge should be sent to backups.
-     */
-    @Nullable synchronized IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>>
-    onAcknowledged(CacheContinuousQueryEntry e) {
-        size++;
-
-        addEntry(e);
-
-        return size >= CacheContinuousQueryHandler.BACKUP_ACK_THRESHOLD ? acknowledgeData() : null;
+        return size >= CacheContinuousQueryHandler.ACK_THRESHOLD ? acknowledgeData() : null;
     }
 
     /**
      * @param e Entry.
      */
     private void addEntry(CacheContinuousQueryEntry e) {
-        topVers.add(e.topologyVersion());
-
         Long cntr0 = updateCntrs.get(e.partition());
 
         if (cntr0 == null || e.updateCounter() > cntr0)
@@ -87,29 +66,18 @@ class CacheContinuousQueryAcknowledgeBuffer {
     }
 
     /**
-     * @return Non-null tuple if acknowledge should be sent to backups.
+     * @return Update counters per partition information.
      */
-    @Nullable synchronized IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>>
-        acknowledgeOnTimeout() {
-        return size > 0 ? acknowledgeData() : null;
-    }
-
-    /**
-     * @return Tuple with acknowledge information.
-     */
-    private IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>> acknowledgeData() {
+    private Map<Integer, Long> acknowledgeData() {
         assert size > 0;
 
         Map<Integer, Long> cntrs = new HashMap<>(updateCntrs);
 
-        IgniteBiTuple<Map<Integer, Long>, Set<AffinityTopologyVersion>> res =
-            new IgniteBiTuple<>(cntrs, topVers);
-
-        topVers = U.newHashSet(1);
+        updateCntrs.clear();
 
         size = 0;
 
-        return res;
+        return cntrs;
     }
 
     /** {@inheritDoc} */

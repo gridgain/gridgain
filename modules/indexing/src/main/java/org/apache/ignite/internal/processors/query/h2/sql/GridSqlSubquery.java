@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.ArrayList;
 
-
 /**
  * Subquery expression.
  */
@@ -32,7 +31,7 @@ public class GridSqlSubquery extends GridSqlElement {
         addChild(subQry);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
         return "(" + subquery().getSQL() + ")";
     }

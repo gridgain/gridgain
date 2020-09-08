@@ -45,8 +45,13 @@ public class JettyRestProcessorSignedSelfTest extends JettyRestProcessorAbstract
     }
 
     /** {@inheritDoc} */
-    @Override protected int restPort() {
-        return 8092;
+    @Override protected TestRestClient createRestClient() {
+        return new TestRestClient(this::signature) {
+            /** {@inheritDoc} */
+            @Override public int restPort() {
+                return 8092;
+            }
+        };
     }
 
     /**

@@ -18,6 +18,7 @@ package org.apache.ignite.marshaller;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.MarshallerContextImpl;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
@@ -160,7 +162,7 @@ public class MarshallerContextSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testOnUpdated() throws Exception {
-        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false);
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false);
         MarshallerContextImpl ctx = new MarshallerContextImpl(null, null);
 
         ctx.onMarshallerProcessorStarted(this.ctx, null);
@@ -207,7 +209,7 @@ public class MarshallerContextSelfTest extends GridCommonAbstractTest {
 
         List list = U.field(ctx, "allCaches");
 
-        assertNotNull("Mapping cache is null for platformId: 0" , list.get(0));
+        assertNotNull("Mapping cache is null for platformId: 0", list.get(0));
         assertNull("Mapping cache is not null for platformId: 1", list.get(1));
         assertNotNull("Mapping cache is null for platformId: 2", list.get(2));
 
@@ -241,7 +243,7 @@ public class MarshallerContextSelfTest extends GridCommonAbstractTest {
 
         List list = U.field(ctx, "allCaches");
 
-        assertNotNull("Mapping cache is null for platformId: 0" , list.get(0));
+        assertNotNull("Mapping cache is null for platformId: 0", list.get(0));
         assertNotNull("Mapping cache is null for platformId: 1", list.get(1));
 
         boolean excObserved = false;
@@ -265,6 +267,6 @@ public class MarshallerContextSelfTest extends GridCommonAbstractTest {
 
         assert fileContent != null && fileContent.length > 0;
 
-        assertEquals(expected, new String(fileContent));
+        assertEquals(expected, new String(fileContent, StandardCharsets.UTF_8));
     }
 }

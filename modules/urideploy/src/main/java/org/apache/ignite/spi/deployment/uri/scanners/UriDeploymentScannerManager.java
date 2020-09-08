@@ -107,7 +107,7 @@ public class UriDeploymentScannerManager implements UriDeploymentScannerContext 
         scannerThread = new IgniteSpiThread(igniteInstanceName, "grid-uri-scanner", log) {
             /** {@inheritDoc} */
             @SuppressWarnings({"BusyWait"})
-            @Override protected void body() throws InterruptedException  {
+            @Override protected void body() throws InterruptedException {
                 try {
                     while (!isInterrupted()) {
                         try {

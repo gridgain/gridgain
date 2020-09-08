@@ -17,10 +17,14 @@ package org.apache.ignite.mxbean;
 
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 
 /**
  * This interface defines a JMX view on {@link DataRegionMetrics}.
+ *
+ * @deprecated Use {@link GridMetricManager} instead.
  */
+@Deprecated
 @MXBeanDescription("MBean that provides access to DataRegionMetrics of a local Apache Ignite node.")
 public interface DataRegionMetricsMXBean extends DataRegionMetrics {
     /** {@inheritDoc} */
@@ -59,6 +63,14 @@ public interface DataRegionMetricsMXBean extends DataRegionMetrics {
     /** {@inheritDoc} */
     @MXBeanDescription("Total number of used pages.")
     @Override public long getTotalUsedPages();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Total size of allocated pages in bytes.")
+    @Override public long getTotalAllocatedSize();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Total size of used pages in bytes.")
+    @Override public long getTotalUsedSize();
 
     /** {@inheritDoc} */
     @MXBeanDescription("Allocation rate (pages per second) averaged across rateTimeInternal.")

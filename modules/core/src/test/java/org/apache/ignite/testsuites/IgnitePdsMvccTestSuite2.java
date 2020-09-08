@@ -30,12 +30,15 @@ import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsReser
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsReserveWalSegmentsWithCompactionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteShutdownOnSupplyMessageFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.filename.IgniteUidAsConsistentIdMigrationTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.CorruptedCheckpointReservationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.FsyncWalRolloverDoesNotBlockTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWALTailIsReachedDuringIterationOverArchiveTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalFormatFileFailoverTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalIteratorExceptionDuringReadTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalIteratorSwitchSegmentTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalRebalanceLoggingTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalSerializerVersionTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionNoArchiverTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionSwitchOnTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalRolloverTypesTest;
@@ -86,6 +89,7 @@ public class IgnitePdsMvccTestSuite2 {
         ignoredTests.add(IgniteUidAsConsistentIdMigrationTest.class);
         ignoredTests.add(IgniteWalSerializerVersionTest.class);
         ignoredTests.add(WalCompactionTest.class);
+        ignoredTests.add(WalCompactionNoArchiverTest.class);
         ignoredTests.add(WalCompactionSwitchOnTest.class);
         ignoredTests.add(IgniteWalIteratorSwitchSegmentTest.class);
         ignoredTests.add(IgniteWalIteratorExceptionDuringReadTest.class);
@@ -93,6 +97,8 @@ public class IgnitePdsMvccTestSuite2 {
         ignoredTests.add(IgniteWALTailIsReachedDuringIterationOverArchiveTest.class);
         ignoredTests.add(WalRolloverTypesTest.class);
         ignoredTests.add(FsyncWalRolloverDoesNotBlockTest.class);
+        ignoredTests.add(IgniteWalRebalanceLoggingTest.class);
+        ignoredTests.add(CorruptedCheckpointReservationTest.class);
 
         return IgnitePdsTestSuite2.suite(ignoredTests);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package org.apache.ignite.internal.managers;
 
+import javax.management.JMException;
+import javax.management.ObjectName;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import javax.management.JMException;
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.ClusterLocalNodeMetricsMXBeanImpl;
@@ -33,6 +33,7 @@ import org.apache.ignite.internal.ThreadPoolMXBeanAdapter;
 import org.apache.ignite.internal.TransactionMetricsMxBeanImpl;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMXBeanImpl;
+import org.apache.ignite.internal.processors.cache.warmup.WarmUpMXBeanImpl;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustMXBeanImpl;
 import org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImpl;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -50,9 +51,15 @@ import org.apache.ignite.mxbean.StripedExecutorMXBean;
 import org.apache.ignite.mxbean.ThreadPoolMXBean;
 import org.apache.ignite.mxbean.TransactionMetricsMxBean;
 import org.apache.ignite.mxbean.TransactionsMXBean;
+import org.apache.ignite.mxbean.WarmUpMXBean;
 import org.apache.ignite.mxbean.WorkersControlMXBean;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Class that registers and unregisters MBeans for kernal.
@@ -80,7 +87,7 @@ public class IgniteMBeansManager {
     }
 
     /**
-     * Registers all kernal MBeans (for kernal, metrics, thread pools).
+     * Registers kernal MBeans (for kernal, metrics, thread pools) after node start.
      *
      * @param utilityCachePool Utility cache pool.
      * @param execSvc Executor service.
@@ -89,7 +96,6 @@ public class IgniteMBeansManager {
      * @param stripedExecSvc Striped executor.
      * @param p2pExecSvc P2P executor service.
      * @param mgmtExecSvc Management executor service.
-     * @param igfsExecSvc IGFS executor service.
      * @param dataStreamExecSvc data stream executor service.
      * @param restExecSvc Reset executor service.
      * @param affExecSvc Affinity executor service.
@@ -97,11 +103,12 @@ public class IgniteMBeansManager {
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      * @param workersRegistry Worker registry.
      * @throws IgniteCheckedException if fails to register any of the MBeans.
      */
-    public void registerAllMBeans(
+    public void registerMBeansAfterNodeStarted(
         ExecutorService utilityCachePool,
         final ExecutorService execSvc,
         final ExecutorService svcExecSvc,
@@ -109,7 +116,6 @@ public class IgniteMBeansManager {
         final StripedExecutor stripedExecSvc,
         ExecutorService p2pExecSvc,
         ExecutorService mgmtExecSvc,
-        ExecutorService igfsExecSvc,
         StripedExecutor dataStreamExecSvc,
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
@@ -117,6 +123,7 @@ public class IgniteMBeansManager {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         WorkersRegistry workersRegistry
     ) throws IgniteCheckedException {
@@ -149,9 +156,11 @@ public class IgniteMBeansManager {
         registerMBean("DataStorage", dataStorageMXBean.getClass().getSimpleName(), dataStorageMXBean, DataStorageMXBean.class);
 
         // Baseline configuration
-        BaselineAutoAdjustMXBean baselineAutoAdjustMXBean = new BaselineAutoAdjustMXBeanImpl(ctx);
-        registerMBean("Baseline", baselineAutoAdjustMXBean.getClass().getSimpleName(), baselineAutoAdjustMXBean,
-            BaselineAutoAdjustMXBean.class);
+        if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            BaselineAutoAdjustMXBean baselineAutoAdjustMXBean = new BaselineAutoAdjustMXBeanImpl(ctx);
+            registerMBean("Baseline", baselineAutoAdjustMXBean.getClass().getSimpleName(), baselineAutoAdjustMXBean,
+                BaselineAutoAdjustMXBean.class);
+        }
 
         // Executors
         registerExecutorMBean("GridUtilityCacheExecutor", utilityCachePool);
@@ -160,12 +169,12 @@ public class IgniteMBeansManager {
         registerExecutorMBean("GridSystemExecutor", sysExecSvc);
         registerExecutorMBean("GridClassLoadingExecutor", p2pExecSvc);
         registerExecutorMBean("GridManagementExecutor", mgmtExecSvc);
-        registerExecutorMBean("GridIgfsExecutor", igfsExecSvc);
         registerExecutorMBean("GridDataStreamExecutor", dataStreamExecSvc);
         registerExecutorMBean("GridAffinityExecutor", affExecSvc);
         registerExecutorMBean("GridCallbackExecutor", callbackExecSvc);
         registerExecutorMBean("GridQueryExecutor", qryExecSvc);
         registerExecutorMBean("GridSchemaExecutor", schemaExecSvc);
+        registerExecutorMBean("GridRebalanceExecutor", rebalanceExecSvc);
 
         if (idxExecSvc != null)
             registerExecutorMBean("GridIndexingExecutor", idxExecSvc);
@@ -186,7 +195,7 @@ public class IgniteMBeansManager {
                 registerExecutorMBean(entry.getKey(), entry.getValue());
         }
 
-        if (U.IGNITE_TEST_FEATURES_ENABLED) {
+        if (getBoolean(IGNITE_TEST_FEATURES_ENABLED, false)) {
             WorkersControlMXBean workerCtrlMXBean = new WorkersControlMXBeanImpl(workersRegistry);
 
             registerMBean("Kernal", workerCtrlMXBean.getClass().getSimpleName(),
@@ -201,6 +210,23 @@ public class IgniteMBeansManager {
 
         if (ctx.query().moduleEnabled())
             ctx.query().getIndexing().registerMxBeans(this);
+    }
+
+    /**
+     * Registers kernal MBeans during init phase.
+     *
+     * @throws IgniteCheckedException if fails to register any of the MBeans.
+     */
+    public void registerMBeansDuringInitPhase() throws IgniteCheckedException {
+        if (U.IGNITE_MBEANS_DISABLED)
+            return;
+
+        // Warm-up.
+        registerMBean("WarmUp",
+            WarmUpMXBeanImpl.class.getSimpleName(),
+            new WarmUpMXBeanImpl(ctx.cache()),
+            WarmUpMXBean.class
+        );
     }
 
     /**

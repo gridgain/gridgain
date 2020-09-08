@@ -16,6 +16,12 @@
 
 package org.apache.ignite.spi.discovery;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -29,21 +35,15 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddFinishedMessage;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 import org.junit.Test;
 
 /**
- * Test client connects to two nodes cluster during time more than the
- * {@link org.apache.ignite.configuration.IgniteConfiguration#clientFailureDetectionTimeout}.
+ * Test client connects to two nodes cluster during time more than the {@link org.apache.ignite.configuration.IgniteConfiguration#clientFailureDetectionTimeout}.
  */
 public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
     /** Client instance name. */
     public static final String CLIENT_INSTANCE_NAME = "client";
+
     /** Client metrics update count. */
     private static volatile int clientMetricsUpdateCnt;
 
@@ -116,8 +116,7 @@ public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
                 long topVer,
                 ClusterNode node,
                 Collection<ClusterNode> topSnapshot,
-                @Nullable Map<Long, Collection<ClusterNode>> topHist,
-                @Nullable DiscoverySpiCustomMessage spiCustomMsg
+                Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
             ) {
                 if (EventType.EVT_NODE_METRICS_UPDATED == type) {
                     log.info("Metrics update message catched from node " + node);
@@ -129,7 +128,7 @@ public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
 
                 return new IgniteFinishedFutureImpl<>();
             }

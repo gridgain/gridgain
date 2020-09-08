@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.management.JMException;
+import org.apache.ignite.cluster.ClusterState;
 
 /**
  * This interface defines JMX view on kernal.
@@ -143,9 +144,20 @@ public interface IgniteMXBean {
      * Gets a formatted instance of fully configured thread pool that is used in grid.
      *
      * @return Thread pool implementation that is used in grid.
+     * TODO GG-28441 make the return value match method's name
+     * @deprecated Use {@link #getPublicThreadPoolSize()} instead.
      */
+    @Deprecated
     @MXBeanDescription("Formatted instance of fully configured thread pool that is used in grid.")
     public String getExecutorServiceFormatted();
+
+    /**
+     * Gets a public thread pool size to be used in grid.
+     *
+     * @return Thread pool size.
+     */
+    @MXBeanDescription("Public thread pool size.")
+    public int getPublicThreadPoolSize();
 
     /**
      * Gets Ignite installation home folder.
@@ -494,4 +506,42 @@ public interface IgniteMXBean {
      */
     @MXBeanDescription("Clears local node map.")
     void clearNodeLocalMap();
+
+    /**
+     * Resets metrics for of a given registry.
+     *
+     * @param registry Metrics registry name.
+     */
+    @MXBeanDescription("Resets metrics of a given registry.")
+    @MXBeanParametersNames("registry")
+    @MXBeanParametersDescriptions("Metrics registry.")
+    public void resetMetrics(String registry);
+
+    /**
+     * Checks cluster state.
+     *
+     * @return String representation of current cluster state.
+     * See {@link ClusterState}.
+     */
+    @MXBeanDescription("Checks cluster state.")
+    public String clusterState();
+
+    /**
+     * Changes current cluster state.
+     *
+     * @param state String representation of new cluster state.
+     * See {@link ClusterState}
+     */
+    @MXBeanDescription("Changes current cluster state.")
+    @MXBeanParametersNames("state")
+    @MXBeanParametersDescriptions("New cluster state.")
+    public void clusterState(String state);
+
+    /**
+     * Gets last cluster state change operation.
+     *
+     * @return Unix time of last cluster state change operation.
+     */
+    @MXBeanDescription("Unix time of last cluster state change operation.")
+    public long lastClusterStateChangeTime();
 }

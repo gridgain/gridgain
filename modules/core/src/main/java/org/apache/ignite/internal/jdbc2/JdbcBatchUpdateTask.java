@@ -25,11 +25,14 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteJdbcDriver;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
@@ -145,8 +148,16 @@ class JdbcBatchUpdateTask implements IgniteCallable<int[]> {
                     updCntrs[idx] = doSingleUpdate(cache, sql, batchArgs.get(idx));
             }
         }
-        catch (Exception ex) {
-            throw new BatchUpdateException(Arrays.copyOf(updCntrs, idx), ex);
+        catch (Exception e) {
+            IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
+            if (sqlEx != null)
+                throw new BatchUpdateException(sqlEx.getMessage(), sqlEx.sqlState(), Arrays.copyOf(updCntrs, idx), e);
+
+            SqlCacheException ex = X.cause(e, SqlCacheException.class);
+            if (ex != null)
+                throw new BatchUpdateException(ex.getMessage(), ex.sqlState(), Arrays.copyOf(updCntrs, idx), e);
+
+            throw new BatchUpdateException(Arrays.copyOf(updCntrs, idx), e);
         }
 
         return updCntrs;

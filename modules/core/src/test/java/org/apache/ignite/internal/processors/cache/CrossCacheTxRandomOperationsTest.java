@@ -34,6 +34,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -203,7 +204,7 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
         if (MvccFeatureChecker.forcedMvcc()) {
             assert !nearCacheEnabled();
 
-            if(writeSync != CacheWriteSynchronizationMode.FULL_SYNC)
+            if (writeSync != CacheWriteSynchronizationMode.FULL_SYNC)
                 return;
         }
 
@@ -216,7 +217,7 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
             txOperations(PESSIMISTIC, REPEATABLE_READ, crossCacheTx, false);
             txOperations(PESSIMISTIC, REPEATABLE_READ, crossCacheTx, true);
 
-            if(!MvccFeatureChecker.forcedMvcc()) {
+            if (!MvccFeatureChecker.forcedMvcc()) {
                 txOperations(OPTIMISTIC, REPEATABLE_READ, crossCacheTx, false);
                 txOperations(OPTIMISTIC, REPEATABLE_READ, crossCacheTx, true);
 
@@ -293,7 +294,7 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
 
             long stopTime = System.currentTimeMillis() + 10_000;
 
-            for (int i = 0; i < 10_000; i++) {
+            for (int i = 0; i < GridTestUtils.SF.apply(10_000); i++) {
                 if (i % 100 == 0) {
                     if (System.currentTimeMillis() > stopTime) {
                         log.info("Stop on timeout, iteration: " + i);

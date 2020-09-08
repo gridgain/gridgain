@@ -61,6 +61,11 @@ public abstract class AbstractWalRecordsIterator
     protected IgniteBiTuple<WALPointer, WALRecord> curRec;
 
     /**
+     * The exception which can be thrown during reading next record. It holds until the next calling of next record.
+     */
+    private IgniteCheckedException curException;
+
+    /**
      * Current WAL segment absolute index. <br> Determined as lowest number of file at start, is changed during advance
      * segment
      */
@@ -121,9 +126,17 @@ public abstract class AbstractWalRecordsIterator
 
     /** {@inheritDoc} */
     @Override protected IgniteBiTuple<WALPointer, WALRecord> onNext() throws IgniteCheckedException {
+        if (curException != null)
+            throw curException;
+
         IgniteBiTuple<WALPointer, WALRecord> ret = curRec;
 
-        advance();
+        try {
+            advance();
+        }
+        catch (IgniteCheckedException e) {
+            curException = e;
+        }
 
         return ret;
     }
@@ -261,7 +274,10 @@ public abstract class AbstractWalRecordsIterator
             if (e instanceof WalSegmentTailReachedException) {
                 throw new WalSegmentTailReachedException(
                     "WAL segment tail reached. [idx=" + hnd.idx() +
-                        ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() + "]", e);
+                        ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() +
+                        ", actualFilePtr=" + actualFilePtr + ']',
+                    e
+                );
             }
 
             if (!(e instanceof SegmentEofException) && !(e instanceof EOFException)) {
@@ -388,7 +404,7 @@ public abstract class AbstractWalRecordsIterator
         SegmentIO fileIO = null;
 
         try {
-            fileIO = desc.toIO(ioFactory);
+            fileIO = desc.toReadOnlyIO(ioFactory);
 
             SegmentHeader segmentHeader;
 
@@ -455,10 +471,16 @@ public abstract class AbstractWalRecordsIterator
 
         /** {@inheritDoc} */
         @Override public boolean apply(WALRecord.RecordType type, WALPointer pointer) {
-            if (start.fileOffset() == ((FileWALPointer)pointer).fileOffset())
-                startReached = true;
+            FileWALPointer filePointer = (FileWALPointer)pointer;
 
-            return startReached;
+            if (filePointer.index() == start.index()) {
+                if (start.fileOffset() == filePointer.fileOffset())
+                    startReached = true;
+
+                return startReached;
+            }
+            else
+                return filePointer.index() > start.index();
         }
     }
 
@@ -500,6 +522,6 @@ public abstract class AbstractWalRecordsIterator
          * @return One of implementation of {@link FileIO}.
          * @throws IOException if creation of fileIo was not success.
          */
-        SegmentIO toIO(FileIOFactory fileIOFactory) throws IOException;
+        SegmentIO toReadOnlyIO(FileIOFactory fileIOFactory) throws IOException;
     }
 }

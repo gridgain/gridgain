@@ -30,6 +30,8 @@ git-patch-prop-local.sh
 *.classname*
 *.exe
 .mvn/
+mvnw
+mvnw.cmd
 
 #Ignore all Intellij IDEA files (except default inspections config)
 .idea/
@@ -65,7 +67,6 @@ ipch/
 !/bin
 !/modules/core/src/test/bin
 !/modules/sqlline/bin
-!/modules/web-console/web-agent/bin
 [Dd]ebug*/
 [Rr]elease*/
 packages
@@ -99,6 +100,9 @@ packages
 /modules/platforms/cpp/odbc-test/ignite-odbc-tests
 /modules/platforms/cpp/stamp-h1
 /modules/platforms/cpp/thin-client-test/ignite-thin-client-tests
+
+#CMake temp files
+/modules/platforms/cpp/**/cmake-build*
 
 #Files related to ML manual-runnable tests
 /modules/ml/src/test/resources/manualrun/trees/columntrees.manualrun.properties

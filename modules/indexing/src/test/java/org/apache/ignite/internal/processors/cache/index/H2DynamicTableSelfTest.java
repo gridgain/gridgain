@@ -66,8 +66,8 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.jdbc.JdbcSQLException;
-import org.h2.value.DataType;
+import org.gridgain.internal.h2.jdbc.JdbcSQLSyntaxErrorException;
+import org.gridgain.internal.h2.value.DataType;
 import org.junit.Test;
 
 /**
@@ -335,7 +335,8 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
         try {
             GridTestUtils.assertThrows(null, new Callable<Object>() {
                 @Override public Object call() throws Exception {
-                    doTestCustomNames("new", null, null);return null;
+                    doTestCustomNames("new", null, null);
+                    return null;
                 }
             }, IgniteSQLException.class, "Table already exists: NameTest");
         }
@@ -491,14 +492,14 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
                 return null;
             }
-        }, JdbcSQLException.class);
+        }, JdbcSQLSyntaxErrorException.class);
 
         GridTestUtils.assertThrows(null, new Callable<Object>() {
             @SuppressWarnings("ConstantConditions")
             @Override public Object call() throws Exception {
                 throw (Exception)e.getCause();
             }
-        }, JdbcSQLException.class, "Table \"" + checkedTblName + "\" not found");
+        }, JdbcSQLSyntaxErrorException.class, "Table \"" + checkedTblName + "\" not found");
     }
 
     /**
@@ -585,13 +586,13 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
      * @param expParallelism Expected degree of parallelism.
      */
     @SuppressWarnings("unchecked")
-    private void assertQueryParallelism(String tblName, final int expParallelism  ) {
+    private void assertQueryParallelism(String tblName, final int expParallelism) {
         final String cacheName = "SQL_PUBLIC_" + tblName;
 
         testAllNodes(node -> {
             CacheConfiguration cfg = node.cache(cacheName).getConfiguration(CacheConfiguration.class);
 
-            assertEquals("Node: " + node + "; Query parallelism is wrong.", expParallelism  , cfg.getQueryParallelism());
+            assertEquals("Node: " + node + "; Query parallelism is wrong.", expParallelism, cfg.getQueryParallelism());
         });
     }
 
@@ -674,7 +675,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
                         try {
                             colTypes.add(Class.forName(DataType.getTypeClassName(DataType
-                                .convertSQLTypeToValueType(rs.getInt("DATA_TYPE")))));
+                                .convertSQLTypeToValueType(rs.getInt("DATA_TYPE")), false)));
                         }
                         catch (ClassNotFoundException e) {
                             throw new AssertionError(e);
@@ -829,7 +830,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
         //only one City table should be created.
         List<List<?>> cityTabs = cache.query(new SqlFieldsQuery(
-            "SELECT SCHEMA_NAME, TABLE_NAME FROM SYS.TABLES WHERE TABLE_NAME = 'CITY';")).getAll();
+            "SELECT SCHEMA_NAME, TABLE_NAME FROM IGNITE.TABLES WHERE TABLE_NAME = 'CITY';")).getAll();
 
         assertEqualsCollections(Collections.singletonList(Arrays.asList("test", "CITY")), cityTabs);
     }
@@ -1057,7 +1058,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
         execute(grid(0), "CREATE TABLE \"Person\" (id int primary key, name varchar)");
 
         GridTestUtils.assertThrows(null, new Callable<Object>() {
-            @Override  public Object call() throws Exception {
+            @Override public Object call() throws Exception {
                 execute(client(), "CREATE TABLE \"Person\" (id int primary key, name varchar)");
 
                 return null;
@@ -1522,7 +1523,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
             execute(sql);
 
-            if(testUuid)
+            if (testUuid)
                 execute("INSERT INTO T(\"id\", \"x\") values('" + guid.toString() + "', '" + guid.toString() + "')");
             else
                 execute("INSERT INTO T(\"id\", \"x\") values(1, 'a')");
@@ -1532,11 +1533,11 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
             List<Object> resData = new ArrayList<>();
 
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
-                try (ResultSet colsRs = conn.getMetaData().getColumns(null, QueryUtils.DFLT_SCHEMA, "T", ".*")) {
+                try (ResultSet colsRs = conn.getMetaData().getColumns(null, QueryUtils.DFLT_SCHEMA, "T", "%")) {
                     while (colsRs.next())
                         resCols.put(colsRs.getString("COLUMN_NAME"),
                             DataType.getTypeClassName(DataType.convertSQLTypeToValueType(colsRs
-                                .getShort("DATA_TYPE"))));
+                                .getShort("DATA_TYPE")), false));
                 }
 
                 try (PreparedStatement ps = conn.prepareStatement("SELECT * FROM T")) {
@@ -1562,8 +1563,7 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
 
             assertEquals(expCols, resCols);
 
-            assertEqualsCollections(testUuid ? Arrays.asList(guid, guid) : Arrays.asList(1, "a")
-                    , resData);
+            assertEqualsCollections(testUuid ? Arrays.asList(guid, guid) : Arrays.asList(1, "a"), resData);
 
             Object key = createKeyForWrapTest(testUuid ? guid : 1, wrapKey);
 

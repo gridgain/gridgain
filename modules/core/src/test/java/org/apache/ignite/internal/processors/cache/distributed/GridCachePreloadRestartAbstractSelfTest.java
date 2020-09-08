@@ -34,8 +34,8 @@ import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.configuration.CacheConfiguration.DFLT_REBALANCE_BATCH_SIZE;
 import static org.apache.ignite.configuration.DeploymentMode.CONTINUOUS;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
 
 /**
  * Test node restart.
@@ -152,7 +152,7 @@ public abstract class GridCachePreloadRestartAbstractSelfTest extends GridCommon
     /**
      * @throws Exception If failed.
      */
-    private void startGrids() throws  Exception {
+    private void startGrids() throws Exception {
         for (int i = 0; i < nodeCnt; i++) {
             startGrid(i);
 
@@ -164,7 +164,7 @@ public abstract class GridCachePreloadRestartAbstractSelfTest extends GridCommon
     /**
      * @throws Exception If failed.
      */
-    private void stopGrids() throws  Exception {
+    private void stopGrids() throws Exception {
         for (int i = 0; i < nodeCnt; i++)
             stopGrid(i);
     }

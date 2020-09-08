@@ -19,12 +19,16 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Collections;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
 
 /**
  * Management bean that provides access to {@link IgniteCache IgniteCache}.
+ *
+ * @deprecated Use {@link GridMetricManager} instead.
  */
-class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
+@Deprecated
+public class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
     /** Cache. */
     private GridCacheAdapter<?, ?> cache;
 
@@ -505,5 +509,20 @@ class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
         catch (IgniteCheckedException e) {
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getTxKeyCollisions() {
+        return cache.metrics0().getTxKeyCollisions();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isIndexRebuildInProgress() {
+        return cache.metrics0().isIndexRebuildInProgress();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getIndexRebuildKeysProcessed() {
+        return cache.metrics0().getIndexRebuildKeysProcessed();
     }
 }

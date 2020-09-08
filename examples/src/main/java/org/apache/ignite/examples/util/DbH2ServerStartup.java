@@ -20,9 +20,9 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteException;
-import org.h2.jdbcx.JdbcConnectionPool;
-import org.h2.tools.RunScript;
-import org.h2.tools.Server;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.tools.RunScript;
+import org.gridgain.internal.h2.tools.Server;
 
 /**
  * Start H2 database TCP server in order to access sample in-memory database from other processes.
@@ -49,7 +49,7 @@ public class DbH2ServerStartup {
      */
     public static void populateDatabase() throws SQLException {
         // Try to connect to database TCP server.
-        JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:h2:tcp://localhost/mem:ExampleDb", "sa", "");
+        JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", "");
 
         // Create Person table in database.
         RunScript.execute(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
@@ -67,12 +67,12 @@ public class DbH2ServerStartup {
     public static void main(String[] args) throws IgniteException {
         try {
             // Start H2 database TCP server in order to access sample in-memory database from other processes.
-            Server.createTcpServer("-tcpDaemon").start();
+            Server.createTcpServer("-tcpDaemon", "-ifNotExists").start();
 
             populateDatabase();
 
             // Try to connect to database TCP server.
-            JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:h2:tcp://localhost/mem:ExampleDb", "sa", "");
+            JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", "");
 
             // Create Person table in database.
             RunScript.execute(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));

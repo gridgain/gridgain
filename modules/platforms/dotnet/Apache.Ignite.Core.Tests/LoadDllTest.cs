@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#if !NETCOREAPP
 namespace Apache.Ignite.Core.Tests
 {
     using System;
@@ -30,7 +31,7 @@ namespace Apache.Ignite.Core.Tests
     public class LoadDllTest
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [SetUp]
         public void SetUp()
@@ -39,7 +40,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [TearDown]
         public void TearDown()
@@ -48,7 +49,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Test]
         public void TestLoadFromGac()
@@ -59,7 +60,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Test]
         public void TestLoadFromCurrentDir()
@@ -71,13 +72,13 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Test]
         public void TestLoadAllDllInDir()
         {
             var dirInfo = Directory.CreateDirectory(Path.GetTempPath() + "/testDlls");
-            
+
             Assert.False(IsLoaded("dllFromDir1"));
             Assert.False(IsLoaded("dllFromDir2"));
 
@@ -92,7 +93,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Test]
         public void TestLoadFromCurrentDirByName()
@@ -104,7 +105,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Test]
         public void TestLoadByAbsoluteUri()
@@ -117,7 +118,7 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         [Test]
         public void TestLoadUnexistingLibrary()
@@ -136,12 +137,12 @@ namespace Apache.Ignite.Core.Tests
             {
                 Assemblies = new[] {dll}
             });
-            
+
             Assert.IsNotNull(ignite);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="outputPath"></param>
         private void GenerateDll(string outputPath)
@@ -177,3 +178,4 @@ namespace Apache.Ignite.Core.Tests
         }
     }
 }
+#endif

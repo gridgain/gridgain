@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
@@ -20,14 +19,14 @@ package org.apache.ignite.springdata.misc;
 import java.util.Collection;
 import java.util.List;
 import javax.cache.Cache;
+import org.apache.ignite.springdata20.repository.IgniteRepository;
 import org.apache.ignite.springdata20.repository.config.Query;
 import org.apache.ignite.springdata20.repository.config.RepositoryConfig;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.apache.ignite.springdata20.repository.IgniteRepository;
 
 /**
- *
+ * Test repository.
  */
 @RepositoryConfig(cacheName = "PersonCache")
 public interface PersonRepository extends IgniteRepository<Person, Integer> {
@@ -100,17 +99,17 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     /** Remove Query */
     public List<Person> removeByFirstName(String firstName);
 
-    /** Delete using @Query */
-    @Query("DELETE FROM Person WHERE secondName = ?")
-    public void deleteBySecondNameQuery(String secondName);
+    /** Delete using @Query with keyword in lower-case*/
+    @Query("delete FROM Person WHERE secondName = ?")
+    public void deleteBySecondNameLowerCase(String secondName);
 
     /** Delete using @Query but with errors on the query */
     @Query("DELETE FROM Person WHERE firstName = ? AND ERRORS = 'ERRORS'")
     public void deleteWrongByFirstNameQuery(String firstName);
 
-    /** Update using @Query */
-    @Query("UPDATE Person SET secondName = ? WHERE firstName = ?")
-    public int setFixedSecondNameFor(String secondName, String firstName);
+    /** Update using @Query with keyword in mixed-case*/
+    @Query("upDATE Person SET secondName = ? WHERE firstName = ?")
+    public int setFixedSecondNameMixedCase(String secondName, String firstName);
 
     /** Update using @Query but with errors on the query */
     @Query("UPDATE Person SET secondName = ? WHERE firstName = ? AND ERRORS = 'ERRORS'")

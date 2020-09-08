@@ -72,7 +72,22 @@ public enum SecurityPermission {
     CACHE_DESTROY,
 
     /** Join as server node permission. */
-    JOIN_AS_SERVER;
+    JOIN_AS_SERVER,
+
+    /** Change snapshot security level. */
+    CHANGE_SNAPSHOT_SECURITY_LEVEL,
+
+    /** */
+    SET_QUERY_MEMORY_QUOTA,
+
+    /** Permission to request any views containing query. */
+    GET_QUERY_VIEWS,
+
+    /** Permission to execute KILL QUERY command.*/
+    KILL_QUERY,
+
+    /** Administration operation with cluster metadata (REMOVE, UPDATE). */
+    ADMIN_METADATA_OPS;
 
     /** Enumerated values. */
     private static final SecurityPermission[] VALS = values();

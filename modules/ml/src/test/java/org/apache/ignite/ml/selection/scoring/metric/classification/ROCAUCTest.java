@@ -110,7 +110,7 @@ public class ROCAUCTest {
 
         LabelPairCursor<Double> cursor = new TestLabelPairCursor<>(
             Arrays.asList(1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0),
-            Arrays.asList(0.40209054, 0.33697626, 0.5449324 , 0.13010869, 0.19019675, 0.39767829, 0.9686739 , 0.91783275, 0.7503783 , 0.5306605)
+            Arrays.asList(0.40209054, 0.33697626, 0.5449324, 0.13010869, 0.19019675, 0.39767829, 0.9686739, 0.91783275, 0.7503783, 0.5306605)
         );
 
         double score = scoreCalculator.score(cursor.iterator());

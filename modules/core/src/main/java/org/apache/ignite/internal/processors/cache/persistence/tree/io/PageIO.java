@@ -29,7 +29,8 @@ import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLogLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageBPlusIO;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastoreDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataInnerIO;
@@ -44,8 +45,8 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwa
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataLeafIO;
-import org.apache.ignite.internal.stat.IndexPageType;
-import org.apache.ignite.internal.stat.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IndexPageType;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 
@@ -250,6 +251,12 @@ public abstract class PageIO {
     /** */
     public static final short T_TX_LOG_INNER = 31;
 
+    /** */
+    public static final short T_DATA_PART = 32;
+
+    /** */
+    public static final short T_MARKER_PAGE = 33;
+
     /** Index for payload == 1. */
     public static final short T_H2_EX_REF_LEAF_START = 10_000;
 
@@ -405,6 +412,14 @@ public abstract class PageIO {
     }
 
     /**
+     * @param pageAddr Page address.
+     * @return Compression type.
+     */
+    public static byte getCompressionType(long pageAddr) {
+        return PageUtils.getByte(pageAddr, COMPRESSION_TYPE_OFF);
+    }
+
+    /**
      * @param page Page buffer.
      * @param compressedSize Compressed size.
      */
@@ -421,6 +436,14 @@ public abstract class PageIO {
     }
 
     /**
+     * @param pageAddr Page address.
+     * @return Compressed size.
+     */
+    public static short getCompressedSize(long pageAddr) {
+        return PageUtils.getShort(pageAddr, COMPRESSED_SIZE_OFF);
+    }
+
+    /**
      * @param page Page buffer.
      * @param compactedSize Compacted size.
      */
@@ -434,6 +457,14 @@ public abstract class PageIO {
      */
     public static short getCompactedSize(ByteBuffer page) {
         return page.getShort(COMPACTED_SIZE_OFF);
+    }
+
+    /**
+     * @param pageAddr Page address.
+     * @return Compacted size.
+     */
+    public static short getCompactedSize(long pageAddr) {
+        return PageUtils.getShort(pageAddr, COMPACTED_SIZE_OFF);
     }
 
     /**
@@ -642,7 +673,13 @@ public abstract class PageIO {
                 return (Q)TrackingPageIO.VERSIONS.forVersion(ver);
 
             case T_DATA_METASTORAGE:
+                return (Q)MetastoreDataPageIO.VERSIONS.forVersion(ver);
+
+            case T_DATA_PART:
                 return (Q)SimpleDataPageIO.VERSIONS.forVersion(ver);
+
+            case T_MARKER_PAGE:
+                return (Q)MarkerPageIO.VERSIONS.forVersion(ver);
 
             default:
                 if (testIO != null) {
@@ -759,10 +796,10 @@ public abstract class PageIO {
                 return (Q)CacheIdAwarePendingEntryLeafIO.VERSIONS.forVersion(ver);
 
             case T_DATA_REF_METASTORAGE_INNER:
-                return (Q)MetastorageTree.MetastorageInnerIO.VERSIONS.forVersion(ver);
+                return (Q)MetastorageBPlusIO.INNER_IO_VERSIONS.forVersion(ver);
 
             case T_DATA_REF_METASTORAGE_LEAF:
-                return (Q)MetastorageTree.MetastoreLeafIO.VERSIONS.forVersion(ver);
+                return (Q)MetastorageBPlusIO.LEAF_IO_VERSIONS.forVersion(ver);
 
             default:
                 // For tests.
@@ -839,25 +876,36 @@ public abstract class PageIO {
         assert pageSize <= out.remaining();
         assert pageSize == page.remaining();
 
-        page.mark();
-        out.put(page).flip();
-        page.reset();
+        PageHandler.copyMemory(page, 0, out, 0, pageSize);
+        out.limit(pageSize);
     }
 
     /**
      * @param addr Address.
      */
-    public static String printPage(long addr, int pageSize) throws IgniteCheckedException {
-        PageIO io = getPageIO(addr);
-
+    public static String printPage(long addr, int pageSize) {
         GridStringBuilder sb = new GridStringBuilder("Header [\n\ttype=");
 
-        sb.a(getType(addr)).a(" (").a(io.getClass().getSimpleName())
-            .a("),\n\tver=").a(getVersion(addr)).a(",\n\tcrc=").a(getCrc(addr))
-            .a(",\n\t").a(PageIdUtils.toDetailString(getPageId(addr)))
-            .a("\n],\n");
+        try {
+            PageIO io = getPageIO(addr);
 
-        io.printPage(addr, pageSize, sb);
+            sb.a(getType(addr)).a(" (").a(io.getClass().getSimpleName())
+                .a("),\n\tver=").a(getVersion(addr)).a(",\n\tcrc=").a(getCrc(addr))
+                .a(",\n\t").a(PageIdUtils.toDetailString(getPageId(addr)))
+                .a("\n],\n");
+
+            if (getCompressionType(addr) != 0) {
+                sb.a("CompressedPage[\n\tcompressionType=").a(getCompressionType(addr))
+                    .a(",\n\tcompressedSize=").a(getCompressedSize(addr))
+                    .a(",\n\tcompactedSize=").a(getCompactedSize(addr))
+                    .a("\n]");
+            }
+            else
+                io.printPage(addr, pageSize, sb);
+        }
+        catch (IgniteCheckedException e) {
+            sb.a("Failed to print page: ").a(e.getMessage());
+        }
 
         return sb.toString();
     }

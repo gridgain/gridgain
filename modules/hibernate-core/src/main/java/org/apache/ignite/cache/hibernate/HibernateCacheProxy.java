@@ -82,7 +82,7 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
     /**
      * @return HibernateKeyTransformer
      */
-    public HibernateKeyTransformer keyTransformer(){
+    public HibernateKeyTransformer keyTransformer() {
         return keyTransformer;
     }
 
@@ -593,16 +593,6 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<Map<Object, Object>> getAllOutTxAsync(Set keys) {
         return delegate.get().getAllOutTxAsync((Set<?>)transform(keys));
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isIgfsDataCache() {
-        return delegate.get().isIgfsDataCache();
-    }
-
-    /** {@inheritDoc} */
-    @Override public long igfsDataSpaceUsed() {
-        return delegate.get().igfsDataSpaceUsed();
     }
 
     /** {@inheritDoc} */

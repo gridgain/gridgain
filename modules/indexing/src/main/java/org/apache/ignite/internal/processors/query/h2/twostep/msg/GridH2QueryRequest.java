@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -159,6 +160,16 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** TX details holder for {@code SELECT FOR UPDATE}, or {@code null} if not applicable. */
     private GridH2SelectForUpdateTxDetails txReq;
 
+    /** Memory available for query. */
+    private long maxMem;
+
+    /** Id of the query assigned by {@link RunningQueryManager}. */
+    @GridDirectTransient
+    private Long runningQryId;
+
+    /** */
+    private boolean explicitTimeout;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -185,6 +196,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         schemaName = req.schemaName;
         mvccSnapshot = req.mvccSnapshot;
         txReq = req.txReq;
+        maxMem = req.maxMem;
+        runningQryId = req.runningQryId;
+        explicitTimeout = req.explicitTimeout;
     }
 
     /**
@@ -369,7 +383,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      * @return {@code this}.
      */
     public GridH2QueryRequest flags(int flags) {
-        assert flags >= 0 && flags <= 255: flags;
+        assert flags >= 0 && flags <= 255 : flags;
 
         this.flags = (byte)flags;
 
@@ -397,6 +411,23 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public GridH2QueryRequest timeout(int timeout) {
         this.timeout = timeout;
+
+        return this;
+    }
+
+    /**
+     * @return {@code true} if query timeout is set explicitly.
+     */
+    public boolean explicitTimeout() {
+        return explicitTimeout;
+    }
+
+    /**
+     * @param explicitTimeout Explicit timeout flag.
+     * @return {@code this}.
+     */
+    public GridH2QueryRequest explicitTimeout(boolean explicitTimeout) {
+        this.explicitTimeout = explicitTimeout;
 
         return this;
     }
@@ -448,6 +479,79 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
+     * Build query flags.
+     *
+     * @return  Query flags.
+     */
+    public static int queryFlags(boolean distributedJoins,
+        boolean enforceJoinOrder,
+        boolean lazy,
+        boolean replicatedOnly,
+        boolean explain,
+        Boolean dataPageScanEnabled) {
+        int flags = enforceJoinOrder ? FLAG_ENFORCE_JOIN_ORDER : 0;
+
+        // Distributed joins flag is set if it is either reald
+        if (distributedJoins)
+            flags |= FLAG_DISTRIBUTED_JOINS;
+
+        if (explain)
+            flags |= FLAG_EXPLAIN;
+
+        if (replicatedOnly)
+            flags |= FLAG_REPLICATED;
+
+        if (lazy)
+            flags |= FLAG_LAZY;
+
+        flags = setDataPageScanEnabled(flags, dataPageScanEnabled);
+
+        return flags;
+    }
+
+    /**
+     * Return memory limit for query.
+     *
+     * @return Memory size in bytes.
+     */
+    public long maxMemory() {
+        return maxMem;
+    }
+
+    /**
+     * Sets memory limit for query.
+     *
+     * @param maxMem Memory size in bytes.
+     * @return {@code this} for chaining.
+     */
+    public GridH2QueryRequest maxMemory(long maxMem) {
+        this.maxMem = maxMem;
+
+        return this;
+    }
+
+    /**
+     * Id of the query assigned by {@link RunningQueryManager}.
+     *
+     * @return Running query id.
+     */
+    public Long runningQryId() {
+        return runningQryId;
+    }
+
+    /**
+     * Sets id of the query assigned by {@link RunningQueryManager}.
+     *
+     * @param runningQryId Running query id.
+     * @return {@code this} for chaining.
+     */
+    public GridH2QueryRequest runningQryId(Long runningQryId) {
+        this.runningQryId = runningQryId;
+
+        return this;
+    }
+
+    /**
      * Checks if data page scan enabled.
      *
      * @return {@code true} If data page scan enabled, {@code false} if not, and {@code null} if not set.
@@ -492,9 +596,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** {@inheritDoc} */
     @SuppressWarnings("IfMayBeConditional")
     @Override public void unmarshall(Marshaller m, GridKernalContext ctx) {
-        if (params != null)
-            return;
-
         assert paramsBytes != null;
 
         try {
@@ -607,6 +708,17 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 writer.incrementState();
 
+            case 14:
+                if (!writer.writeLong("maxMem", maxMem))
+                    return false;
+
+                writer.incrementState();
+
+            case 15:
+                if (!writer.writeBoolean("explicitTimeout", explicitTimeout))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -732,6 +844,21 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 reader.incrementState();
 
+            case 14:
+                maxMem = reader.readLong("maxMem");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 15:
+                explicitTimeout = reader.readBoolean("explicitTimeout");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -744,7 +871,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 14;
+        return 16;
     }
 
     /** {@inheritDoc} */

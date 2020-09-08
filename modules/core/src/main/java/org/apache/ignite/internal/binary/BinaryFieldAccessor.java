@@ -159,7 +159,7 @@ public abstract class BinaryFieldAccessor {
             throw ex;
         }
         catch (Exception ex) {
-            if (S.INCLUDE_SENSITIVE && !F.isEmpty(name))
+            if (S.includeSensitive() && !F.isEmpty(name))
                 throw new BinaryObjectException("Failed to write field [name=" + name + ']', ex);
             else
                 throw new BinaryObjectException("Failed to write field [id=" + id + ']', ex);
@@ -187,7 +187,7 @@ public abstract class BinaryFieldAccessor {
             read0(obj, reader);
         }
         catch (Exception ex) {
-            if (S.INCLUDE_SENSITIVE && !F.isEmpty(name))
+            if (S.includeSensitive() && !F.isEmpty(name))
                 throw new BinaryObjectException("Failed to read field [name=" + name + ']', ex);
             else
                 throw new BinaryObjectException("Failed to read field [id=" + id + ']', ex);

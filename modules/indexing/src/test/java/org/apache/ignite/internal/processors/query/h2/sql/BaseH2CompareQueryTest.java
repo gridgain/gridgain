@@ -183,7 +183,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
         for (int i = 0; i < PROD_CNT; i++) {
             int id = idGen++;
 
-            Product product = new Product(id, "Product" + id, id*1000);
+            Product product = new Product(id, "Product" + id, id * 1000);
 
             products.add(product);
 
@@ -318,7 +318,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
         // TODO uncomment and investigate (Rows count has to be equal.: Expected :2500, Actual :900)
 //        compareQueryRes0("select p1.firstName, a2.street from \"part\".Person p1, \"repl\".Address a1, \"part\".Person p2, \"repl\".Address a2");
 
-        //TODO look at it (org.h2.jdbc.JdbcSQLException: Feature not supported: "VARCHAR +" // at H2)
+        //TODO look at it (org.gridgain.internal.h2.jdbc.JdbcSQLException: Feature not supported: "VARCHAR +" // at H2)
 //        compareQueryRes0("select p.firstName n, a.street s from \"part\".Person p, \"repl\".Address a");
         compareQueryRes0(cachePers, "select p.firstName, 1 as i, 'aaa' s from \"pers\".Person p");
 
@@ -616,7 +616,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
      * @throws SQLException If exception.
      */
     private void insertInDb(Organization org) throws SQLException {
-        try(PreparedStatement st = conn.prepareStatement(
+        try (PreparedStatement st = conn.prepareStatement(
             "insert into \"org\".ORGANIZATION (_key, _val, id, name) values(?, ?, ?, ?)")) {
             st.setObject(1, org.id);
             st.setObject(2, org);
@@ -634,7 +634,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
      * @throws SQLException If exception.
      */
     private void insertInDb(Person p) throws SQLException {
-        try(PreparedStatement st = conn.prepareStatement("insert into \"pers\".PERSON " +
+        try (PreparedStatement st = conn.prepareStatement("insert into \"pers\".PERSON " +
             "(_key, _val, id, firstName, lastName, orgId, salary, addrId, old, date) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             st.setObject(1, p.key());
             st.setObject(2, p);
@@ -658,7 +658,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
      * @throws SQLException If exception.
      */
     private void insertInDb(Product p) throws SQLException {
-        try(PreparedStatement st = conn.prepareStatement(
+        try (PreparedStatement st = conn.prepareStatement(
             "insert into \"prod\".PRODUCT (_key, _val, id, name, price) values(?, ?, ?, ?, ?)")) {
             st.setObject(1, p.id);
             st.setObject(2, p);
@@ -677,7 +677,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
      * @throws SQLException If exception.
      */
     private void insertInDb(Purchase p) throws SQLException {
-        try(PreparedStatement st = conn.prepareStatement(
+        try (PreparedStatement st = conn.prepareStatement(
             "insert into \"purch\".PURCHASE (_key, _val, id, personId, productId, organizationId) values(?, ?, ?, ?, ?, ?)")) {
             st.setObject(1, p.key());
             st.setObject(2, p);
@@ -697,7 +697,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
      * @throws SQLException If exception.
      */
     private void insertInDb(Address a) throws SQLException {
-        try(PreparedStatement st = conn.prepareStatement(
+        try (PreparedStatement st = conn.prepareStatement(
             "insert into \"addr\".ADDRESS (_key, _val, id, street) values(?, ?, ?, ?)")) {
             st.setObject(1, a.id);
             st.setObject(2, a);
@@ -715,7 +715,7 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
 
     @QuerySqlFunction
     public static ResultSet table0(Connection c, String a, int b) throws SQLException {
-        return c.createStatement().executeQuery("select '" + a + "' as a, " +  b + " as b");
+        return c.createStatement().executeQuery("select '" + a + "' as a, " + b + " as b");
     }
 
     /**
@@ -753,7 +753,6 @@ public class BaseH2CompareQueryTest extends AbstractH2CompareQueryTest {
         /** Old. */
         @QuerySqlField(index = true)
         public int old = 17;
-
 
         /**
          * Constructs person record.

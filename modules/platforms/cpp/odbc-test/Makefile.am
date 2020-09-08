@@ -60,6 +60,7 @@ ignite_odbc_tests_SOURCES = \
     src/teamcity/teamcity_boost.cpp \
     src/teamcity/teamcity_messages.cpp \
     src/parser_test.cpp \
+    src/cursor_binding_test.cpp \
     src/cursor_test.cpp \
     src/connection_info_test.cpp \
     src/connection_test.cpp \
@@ -73,6 +74,7 @@ ignite_odbc_tests_SOURCES = \
     src/queries_ssl_test.cpp \
     src/test_utils.cpp \
     src/sql_test_suite_fixture.cpp \
+    src/sql_schema_test.cpp \
     src/sql_string_functions_test.cpp \
     src/sql_numeric_functions_test.cpp \
     src/sql_aggregate_functions_test.cpp \
@@ -93,6 +95,7 @@ ignite_odbc_tests_SOURCES = \
     src/authentication_test.cpp \
     src/sql_parsing_test.cpp \
     src/streaming_test.cpp \
+    src/test_server.cpp \
     ../odbc/src/log.cpp \
     ../odbc/src/cursor.cpp \
     ../odbc/src/diagnostic/diagnostic_record.cpp \

@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandle
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.lang.GridPlainCallable;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -226,6 +227,13 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
                 );
         }
 
+        if (req.command() != FETCH_SQL_QUERY && req.command() != CLOSE_SQL_QUERY) {
+            if (((RestQueryRequest)req).cacheName() == null)
+                return new GridFinishedFuture<>(
+                    new IgniteCheckedException(GridRestCommandHandlerAdapter.missingParameter("cacheName"))
+                );
+        }
+
         switch (req.command()) {
             case EXECUTE_SQL_QUERY:
             case EXECUTE_SQL_FIELDS_QUERY:
@@ -251,7 +259,7 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
     /**
      * Execute query callable.
      */
-    private static class ExecuteQueryCallable implements Callable<GridRestResponse> {
+    private static class ExecuteQueryCallable implements GridPlainCallable<GridRestResponse> {
         /** Kernal context. */
         private GridKernalContext ctx;
 
@@ -313,13 +321,11 @@ public class QueryCommandHandler extends GridRestCommandHandlerAdapter {
                         throw new IgniteException("Incorrect query type [type=" + req.queryType() + "]");
                 }
 
-                String cacheName = req.cacheName() == null ? DFLT_CACHE_NAME : req.cacheName();
-
-                IgniteCache<Object, Object> cache = ctx.grid().cache(cacheName);
+                IgniteCache<Object, Object> cache = ctx.grid().cache(req.cacheName());
 
                 if (cache == null)
                     return new GridRestResponse(GridRestResponse.STATUS_FAILED,
-                        "Failed to find cache with name: " + cacheName);
+                        "Failed to find cache with name: " + req.cacheName());
 
                 final QueryCursor qryCur = cache.query(qry);
 

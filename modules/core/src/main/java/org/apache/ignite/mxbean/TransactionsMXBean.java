@@ -127,4 +127,143 @@ public interface TransactionsMXBean {
         "whether to allow"
     )
     public void setTxOwnerDumpRequestsAllowed(boolean allowed);
+
+    /**
+     * Returns threshold timeout in milliseconds for long transactions, if transaction exceeds it,
+     * it will be dumped in log with information about how much time did
+     * it spent in system time (time while aquiring locks, preparing, commiting, etc.)
+     * and user time (time when client node runs some code while holding transaction).
+     * Returns 0 if not set. No transactions are dumped in log if this parameter is not set.
+     *
+     * @return Threshold.
+     */
+    @MXBeanDescription(
+        "Returns threshold timeout in milliseconds for long transactions, if transaction exceeds it, " +
+        "it will be dumped in log with information about how much time did " +
+        "it spent in system time (time while aquiring locks, preparing, commiting, etc.)" +
+        "and user time (time when client node runs some code while holding transaction). " +
+        "Returns 0 if not set. No transactions are dumped in log if this parameter is not set."
+    )
+    public long getLongTransactionTimeDumpThreshold();
+
+    /**
+     * Sets threshold timeout in milliseconds for long transactions, if transaction exceeds it,
+     * it will be dumped in log with information about how much time did
+     * it spent in system time (time while aquiring locks, preparing, commiting, etc.)
+     * and user time (time when client node runs some code while holding transaction).
+     * Can be set to 0 - no transactions will be dumped in log in this case.
+     *
+     * @param threshold Threshold.
+     */
+    @MXBeanDescription(
+        "Sets threshold timeout in milliseconds for long transactions, if transaction exceeds it, " +
+        "it will be dumped in log with information about how much time did " +
+        "it spent in system time (time while aquiring locks, preparing, commiting, etc.) " +
+        "and user time (time when client node runs some code while holding transaction). " +
+        "Can be set to 0 - no transactions will be dumped in log in this case."
+    )
+    @MXBeanParametersNames("threshold")
+    @MXBeanParametersDescriptions("threshold timeout")
+    public void setLongTransactionTimeDumpThreshold(long threshold);
+
+    /**
+     * Returns the coefficient for samples of completed transactions that will be dumped in log.
+     *
+     * @return Coefficient current value.
+     */
+    @MXBeanDescription(
+        "Returns the coefficient for samples of completed transactions that will be dumped in log."
+    )
+    public double getTransactionTimeDumpSamplesCoefficient();
+
+    /**
+     * Sets the coefficient for samples of completed transactions that will be dumped in log.
+     *
+     * @param coefficient Coefficient.
+     */
+    @MXBeanDescription(
+        "Sets the coefficient for samples of completed transactions that will be dumped in log."
+    )
+    @MXBeanParametersNames("coefficient")
+    @MXBeanParametersDescriptions("Samples coefficient.")
+    public void setTransactionTimeDumpSamplesCoefficient(double coefficient);
+
+    /**
+     * Returns the limit of samples of completed transactions that will be dumped in log per second,
+     * if {@link #getTransactionTimeDumpSamplesCoefficient} is above <code>0.0</code>.
+     * Must be integer value greater than <code>0</code>.
+     *
+     * @return Limit value.
+     */
+    @MXBeanDescription(
+        "Returns the limit of samples of completed transactions that will be dumped in log per second, " +
+        "if {@link #getTransactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. " +
+        "Must be integer value greater than <code>0</code>."
+    )
+    public int getTransactionTimeDumpSamplesPerSecondLimit();
+
+    /**
+     * Sets the limit of samples of completed transactions that will be dumped in log per second,
+     * if {@link #getTransactionTimeDumpSamplesCoefficient} is above <code>0.0</code>.
+     * Must be integer value greater than <code>0</code>.
+     *
+     * @param limit Limit value.
+     */
+    @MXBeanDescription(
+        "Sets the limit of samples of completed transactions that will be dumped in log per second, " +
+        "if {@link #getTransactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. " +
+        "Must be integer value greater than <code>0</code>."
+    )
+    @MXBeanParametersNames("limit")
+    @MXBeanParametersDescriptions("Samples per second limit.")
+    public void setTransactionTimeDumpSamplesPerSecondLimit(int limit);
+
+    /**
+     * Setting a timeout (in millis) for printing to log long-running
+     * transactions as well as transactions that cannot receive locks for all
+     * their keys for a long time. Set less than or equal {@code 0} to disable.
+     *
+     * @param timeout Frequency of output of long (running longer than this
+     *      time) transactions to log.
+     */
+    @MXBeanDescription(
+        "Setting a timeout (in millis) for printing to log long-running transactions as well as transactions that " +
+            "cannot receive locks for all their keys for a long time. Set less than or equal {@code 0} to disable."
+    )
+    @MXBeanParametersNames("timeout")
+    @MXBeanParametersDescriptions("Timeout threshold (in millis) for printing to log long-running transactions.")
+    void setLongOperationsDumpTimeout(long timeout);
+
+    /**
+     * Returns a timeout (in millis) for printing to log long-running
+     * transactions as well as transactions that cannot receive locks for all
+     * their keys for a long time. Returns {@code 0} or less if not set.
+     *
+     * @return Timeout.
+     */
+    @MXBeanDescription(
+        "Returns a timeout (in millis) for printing to log long-running transactions as well as transactions that " +
+            "cannot receive locks for all their keys for a long time. Returns {@code 0} or less if not set."
+    )
+    long getLongOperationsDumpTimeout();
+
+    /**
+     * Set timeout interval for tx key contention analysis.
+     * @param timeout Interval in millis.
+     */
+    @MXBeanParametersNames("timeout")
+    @MXBeanDescription("Timeout interval (in millis) for printing tx key contention queue size info. Each transaction " +
+        "besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons per key lock queue may " +
+        "rise. This property sets the interval during which keys and appropriate queue size statistics has been " +
+        "collected.")
+    void setTxKeyCollisionsInterval(int timeout);
+
+    /**
+     * @return Current interval in millis.
+     */
+    @MXBeanDescription("Returns a timeout (in millis) for printing tx key contention queue size info. Each transaction " +
+        "besides OPTIMISTIC SERIALIZABLE capture locks on all enlisted keys, for some reasons per key lock queue may " +
+        "rise. Returns the interval during which keys and appropriate queue size statistics has been " +
+        "collected.")
+    int getTxKeyCollisionsInterval();
 }

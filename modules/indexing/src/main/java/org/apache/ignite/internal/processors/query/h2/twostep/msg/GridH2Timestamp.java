@@ -20,8 +20,8 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueTimestamp;
 
 /**
  * H2 Timestamp.
@@ -44,7 +44,7 @@ public class GridH2Timestamp extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2Timestamp(Value val) {
-        assert val.getType() == Value.TIMESTAMP : val.getType();
+        assert val.getType().getValueType() == Value.TIMESTAMP : val.getType();
 
         ValueTimestamp t = (ValueTimestamp)val;
 

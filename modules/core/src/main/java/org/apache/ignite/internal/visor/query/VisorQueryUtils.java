@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
@@ -39,9 +40,14 @@ import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
+import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -359,8 +365,17 @@ public class VisorQueryUtils {
         final VisorQueryTaskArg arg,
         final GridQueryCancel cancel
     ) {
+        IgniteSecurity security = ignite.context().security();
+
+        SecurityContext initCtx = security.securityContext();
+
         ignite.context().closure().runLocalSafe(() -> {
-            try {
+            IgniteLogger log = ignite.log();
+
+            try (OperationSecurityContext ignored = security.withContext(initCtx)) {
+                if (log.isDebugEnabled() && security.enabled())
+                    log.debug("Operation started with subject: " + security.securityContext().subject());
+
                 SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
                 qry.setPageSize(arg.getPageSize());
@@ -373,15 +388,25 @@ public class VisorQueryUtils {
 
                 String cacheName = arg.getCacheName();
 
-                if (!F.isEmpty(cacheName))
+                GridCacheContext cctx = null;
+
+                if (!F.isEmpty(cacheName)) {
                     qry.setSchema(cacheName);
+
+                    IgniteInternalCache<Object, Object> cache = ignite.cachex(cacheName);
+
+                    if (cache == null)
+                        throw new IgniteException("Failed to find a cache with the specified name to use as the default schema.");
+
+                    cctx = cache.context();
+                }
 
                 long start = U.currentTimeMillis();
 
                 List<FieldsQueryCursor<List<?>>> qryCursors = ignite
                     .context()
                     .query()
-                    .querySqlFields(null, qry, null, true, false, cancel);
+                    .querySqlFields(cctx, qry, null, true, false, cancel);
 
                 // In case of multiple statements leave opened only last cursor.
                 for (int i = 0; i < qryCursors.size() - 1; i++)
@@ -422,6 +447,8 @@ public class VisorQueryUtils {
                 }
             }
             catch (Throwable e) {
+                log.warning("Fail to execute query.", e);
+
                 holder.setError(e);
             }
         }, MANAGEMENT_POOL);
@@ -502,7 +529,7 @@ public class VisorQueryUtils {
         @Override public List<T> getAll() {
             List<T> all = new ArrayList<>();
 
-            while(it.hasNext())
+            while (it.hasNext())
                 all.add(it.next());
 
             return all;

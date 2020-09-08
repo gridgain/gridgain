@@ -16,9 +16,9 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import javax.cache.Cache;
 import java.lang.management.ManagementFactory;
 import java.util.Iterator;
-import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteLogger;
@@ -54,7 +54,6 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
 
         cfg.setFailureDetectionTimeout(120000);
         cfg.setClientFailureDetectionTimeout(120000);
-        cfg.setClientMode("client".equals(gridName));
 
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
@@ -102,9 +101,9 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
     @Test
     public void testFreezingClient() throws Exception {
         try {
-            final IgniteEx srv = startGrid(0);
+            final IgniteEx srv = startGrids(2);
 
-            final IgniteEx client = startGrid("client");
+            final IgniteEx client = startClientGrid(3);
 
             final int keysCnt = 100_000;
 
@@ -122,6 +121,10 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
         }
         catch (ClusterTopologyException e) {
             // Expected.
+
+            e.printStackTrace();
+
+            System.out.println(e);
         }
         finally {
             stopAllGrids();
@@ -141,11 +144,7 @@ public class TcpCommunicationSpiFreezingClientTest extends GridCommonAbstractTes
 
         /** {@inheritDoc} */
         @Override public Integer call() throws Exception {
-            Thread loadThread = new Thread() {
-                @Override public void run() {
-                    log.info("result = " + simulateLoad());
-                }
-            };
+            Thread loadThread = new Thread(() -> log.info("result = " + simulateLoad()));
 
             loadThread.setName("load-thread");
             loadThread.start();

@@ -77,7 +77,12 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestStartupOutput()
         {
-            using (Ignition.Start(TestUtils.GetTestConfiguration()))
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                Logger = null
+            };
+            
+            using (Ignition.Start(cfg))
             {
                 Assert.AreEqual(1, Regex.Matches(_outSb.ToString(), "ver=1, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
             }
@@ -108,12 +113,14 @@ namespace Apache.Ignite.Core.Tests
                     CommunicationSpi = new TcpCommunicationSpi
                     {
                         IdleConnectionTimeout = TimeSpan.MinValue
-                    }
+                    },
+                    Logger = null
                 }));
 
-            Assert.IsTrue(_errSb.ToString().Contains("SPI parameter failed condition check: idleConnTimeout > 0"));
+            StringAssert.Contains("SPI parameter failed condition check: idleConnTimeout > 0", _errSb.ToString());
         }
 
+#if !NETCOREAPP
         /// <summary>
         /// Tests the disabled redirect.
         /// </summary>
@@ -123,23 +130,29 @@ namespace Apache.Ignite.Core.Tests
             // Run test in new process because JVM is initialized only once.
             const string envVar = "ConsoleRedirectTest.TestDisabledRedirect";
 
-            if (Environment.GetEnvironmentVariable(envVar) == "true")
+            if (Environment.GetEnvironmentVariable(envVar) == bool.TrueString)
             {
-                var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration(false));
+                var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration(false))
+                {
+                    Logger = null
+                };
+                
                 Assert.IsTrue(cfg.RedirectJavaConsoleOutput);
 
                 cfg.RedirectJavaConsoleOutput = false;
 
                 using (Ignition.Start(cfg))
                 {
-                    Assert.AreEqual("", _errSb.ToString());
-                    Assert.AreEqual("", _outSb.ToString());
+                    Assert.AreEqual(string.Empty, _errSb.ToString());
+                    Assert.AreEqual(string.Empty, _outSb.ToString());
                 }
             }
             else
             {
-                Environment.SetEnvironmentVariable(envVar, "true");
-                TestUtils.RunTestInNewProcess(GetType().FullName, "TestDisabledRedirect");
+                using (EnvVar.Set(envVar, bool.TrueString))
+                {
+                    TestUtils.RunTestInNewProcess(GetType().FullName, "TestDisabledRedirect");
+                }
             }
         }
 
@@ -149,7 +162,12 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestMultipleDomains()
         {
-            using (var ignite = Ignition.Start(TestUtils.GetTestConfiguration()))
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                Logger = null
+            };
+            
+            using (var ignite = Ignition.Start(cfg))
             {
                 Assert.AreEqual(1, Regex.Matches(_outSb.ToString(), "ver=1, locNode=[a-fA-F0-9]{8,8}, servers=1, clients=0,").Count);
 
@@ -215,12 +233,14 @@ namespace Apache.Ignite.Core.Tests
             {
                 Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
                 {
-                    IgniteInstanceName = "newDomainGrid"
+                    IgniteInstanceName = "newDomainGrid",
+                    Logger = null
                 });
 
                 // Will be stopped automatically on domain unload.
             }
         }
+#endif
 
         private class MyStringWriter : StringWriter
         {

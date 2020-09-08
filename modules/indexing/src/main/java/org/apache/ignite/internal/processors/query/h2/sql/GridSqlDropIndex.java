@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import org.h2.command.Parser;
+import org.gridgain.internal.h2.command.Parser;
 
 /**
  * DROP INDEX statement.
@@ -75,7 +75,7 @@ public class GridSqlDropIndex extends GridSqlStatement {
 
     /** {@inheritDoc} */
     @Override public String getSQL() {
-        return "DROP INDEX " + (ifExists ? "IF EXISTS " : "") + Parser.quoteIdentifier(schemaName) + '.' +
-            Parser.quoteIdentifier(idxName);
+        return "DROP INDEX " + (ifExists ? "IF EXISTS " : "") + Parser.quoteIdentifier(schemaName, true) + '.' +
+            Parser.quoteIdentifier(idxName, true);
     }
 }

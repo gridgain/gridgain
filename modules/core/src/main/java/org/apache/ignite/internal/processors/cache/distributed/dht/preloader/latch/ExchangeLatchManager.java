@@ -42,6 +42,7 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -130,7 +131,11 @@ public class ExchangeLatchManager {
 
                 // Do not process from discovery thread.
                 // TODO: Should use queue to guarantee the order of processing left nodes.
-                ctx.closure().runLocalSafe(() -> processNodeLeft(cache.version(), e.eventNode()));
+                ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                    @Override public void run() {
+                        processNodeLeft(cache.version(), e.eventNode());
+                    }
+                });
             }, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
             ctx.event().addDiscoveryEventListener((e, cache) -> {
@@ -271,6 +276,7 @@ public class ExchangeLatchManager {
      *
      * @param topVer Topology version.
      * @return Collection of nodes with at least one cache configured.
+     * @throws IgniteException If nodes for the given {@code topVer} cannot be found in the discovery history.
      */
     private Collection<ClusterNode> aliveNodesForTopologyVer(AffinityTopologyVersion topVer) {
         if (topVer == AffinityTopologyVersion.NONE)
@@ -282,8 +288,8 @@ public class ExchangeLatchManager {
                 return histNodes.stream().filter(n -> !n.isClient() && !n.isDaemon() && discovery.alive(n))
                         .collect(Collectors.toList());
             else
-                throw new IgniteException("Topology " + topVer + " not found in discovery history "
-                        + "; consider increasing IGNITE_DISCOVERY_HISTORY_SIZE property. Current value is "
+                throw new IgniteException("Topology " + topVer + " not found in discovery history. "
+                        + "Consider increasing IGNITE_DISCOVERY_HISTORY_SIZE property. Current value is "
                         + IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_DISCOVERY_HISTORY_SIZE, -1));
         }
     }
@@ -347,11 +353,10 @@ public class ExchangeLatchManager {
      * Checks that latch manager can use V2 protocol and skip joining nodes from latch participants.
      *
      * @param topVer Topology version.
+     * @throws IgniteException If nodes for the given {@code topVer} cannot be found in the discovery history.
      */
     public boolean canSkipJoiningNodes(AffinityTopologyVersion topVer) {
-        Collection<ClusterNode> applicableNodes = topVer.equals(AffinityTopologyVersion.NONE)
-            ? discovery.aliveServerNodes()
-            : discovery.topology(topVer.topologyVersion());
+        Collection<ClusterNode> applicableNodes = aliveNodesForTopologyVer(topVer);
 
         return applicableNodes.stream()
             .allMatch(node -> node.version().compareTo(PROTOCOL_V2_VERSION_SINCE) >= 0);
@@ -371,18 +376,32 @@ public class ExchangeLatchManager {
         lock.lock();
 
         try {
+            CompletableLatchUid latchUid = new CompletableLatchUid(message.latchId(), message.topVer());
+
+            if (discovery.topologyVersionEx().compareTo(message.topVer()) < 0) {
+                // It means that this node doesn't receive changed topology version message yet
+                // but received ack message from client latch.
+                // It can happen when we don't have guarantees of received message order for example in ZookeeperSpi.
+                pendingAcks.computeIfAbsent(latchUid, id -> new GridConcurrentHashSet<>()).add(from);
+
+                return;
+            }
+
             ClusterNode coordinator = getLatchCoordinator(message.topVer());
 
             if (coordinator == null)
                 return;
 
-            CompletableLatchUid latchUid = new CompletableLatchUid(message.latchId(), message.topVer());
-
             if (message.isFinal()) {
                 if (log.isDebugEnabled())
                     log.debug("Process final ack [latch=" + latchUid + ", from=" + from + "]");
 
-                assert serverLatches.containsKey(latchUid) || clientLatches.containsKey(latchUid);
+                if (!serverLatches.containsKey(latchUid) && !clientLatches.containsKey(latchUid)) {
+                    log.warning("Latch for this acknowledge is completed or never have existed " +
+                        "[latch=" + latchUid + ", from=" + from + "]");
+
+                    return;
+                }
 
                 if (clientLatches.containsKey(latchUid)) {
                     ClientLatch latch = clientLatches.get(latchUid);

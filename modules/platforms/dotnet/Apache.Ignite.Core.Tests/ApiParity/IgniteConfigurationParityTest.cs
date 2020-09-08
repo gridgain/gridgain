@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
     /// <summary>
     /// Tests that .NET <see cref="IgniteConfiguration"/> has all properties from Java configuration APIs.
     /// </summary>
+    [Explicit(ParityTest.IgnoreReason)]
     public class IgniteConfigurationParityTest
     {
         /** Known property name mappings Java -> .NET. */
@@ -35,7 +36,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         private static readonly string[] UnneededProperties =
         {
             "PeerClassLoadingThreadPoolSize",
-            "IgfsThreadPoolSize",
             "UtilityCacheKeepAliveTime",
             "MBeanServer",
             "isPeerClassLoadingEnabled",
@@ -62,7 +62,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "ClassLoader",
             "CacheStoreSessionListenerFactories",
             "PlatformConfiguration",
-            "ExecutorConfiguration",
             "CommunicationFailureResolver",
             "EncryptionSpi"
         };
@@ -71,6 +70,10 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         private static readonly string[] MissingProperties =
         {
             "RebalanceThreadPoolSize",
+            "RebalanceTimeout",
+            "RebalanceBatchesPrefetchCount",
+            "RebalanceThrottle",
+            "RebalanceBatchSize",
             "SegmentationPolicy",
             "isWaitForSegmentOnStart",
             "isAllSegmentationResolversPassRequired",
@@ -81,7 +84,10 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "TimeServerPortRange",
             "IncludeProperties",
             "isAutoActivationEnabled",  // IGNITE-7301
-            "NetworkCompressionLevel"
+            "NetworkCompressionLevel",
+            "MetricExporterSpi",
+            "TracingSpi",
+            "PluginProviders"
         };
 
         /// <summary>
@@ -91,7 +97,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         public void TestIgniteConfiguration()
         {
             ParityTest.CheckConfigurationParity(
-                @"modules\core\src\main\java\org\apache\ignite\configuration\IgniteConfiguration.java", 
+                @"modules\core\src\main\java\org\apache\ignite\configuration\IgniteConfiguration.java",
                 typeof(IgniteConfiguration),
                 UnneededProperties,
                 MissingProperties,

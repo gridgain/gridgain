@@ -80,10 +80,12 @@ import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutor
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorSelfTest;
 import org.apache.ignite.internal.processors.compute.PublicThreadpoolStarvationTest;
 import org.apache.ignite.internal.util.StripedExecutorTest;
+import org.apache.ignite.internal.visor.VisorCacheRebalanceCollectorTaskSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeployContinuousModeSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeployIsolatedModeSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeployPrivateModeSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeploySharedModeSelfTest;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -170,7 +172,13 @@ import org.junit.runners.Suite;
 
     IgniteComputeJobOneThreadTest.class,
 
-    VisorManagementEventSelfTest.class
+    VisorManagementEventSelfTest.class,
+    VisorCacheRebalanceCollectorTaskSelfTest.class
 })
 public class IgniteComputeGridTestSuite {
+    /** Activate service grid for test it. */
+    @BeforeClass
+    public static void init() {
+        System.setProperty("IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED", "true");
+    }
 }

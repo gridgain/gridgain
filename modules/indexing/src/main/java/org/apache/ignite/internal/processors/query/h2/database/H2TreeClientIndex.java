@@ -17,17 +17,20 @@
 package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.List;
-
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.IndexType;
-import org.h2.result.SearchRow;
-import org.h2.table.IndexColumn;
+import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
+import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.IndexColumn;
 
 /**
  * We need indexes on an not affinity nodes. The index shouldn't contains any data.
@@ -37,26 +40,49 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
     private final int inlineSize;
 
     /**
-     * @param table Table.
+     * @param tbl Table.
      * @param name Index name.
-     * @param pk Primary key.
-     * @param colsList Index columns.
+     * @param cols Index columns.
+     * @param idxType Index type.
      * @param inlineSize Inline size.
      */
     @SuppressWarnings("ZeroLengthArrayAllocation")
-    public H2TreeClientIndex(GridH2Table table, String name, boolean pk, List<IndexColumn> colsList, int inlineSize) {
-        super(table);
+    private H2TreeClientIndex(GridH2Table tbl, String name, IndexColumn[] cols, IndexType idxType, int inlineSize) {
+        super(tbl, name, cols, idxType);
 
-        this.table = table;
+        this.inlineSize = inlineSize;
+    }
 
-        IndexColumn[] cols = colsList.toArray(new IndexColumn[0]);
+    /**
+     * @param tbl Table.
+     * @param idxName Index name.
+     * @param pk Primary key.
+     * @param colsList Indexed columns.
+     * @param inlineSize Inline size.
+     * @param log Logger.
+     * @return Index.
+     */
+    public static H2TreeClientIndex createIndex(
+        GridH2Table tbl,
+        String idxName,
+        boolean pk,
+        List<IndexColumn> colsList,
+        int inlineSize,
+        IgniteLogger log
+    ) {
+        IndexColumn[] cols = GridH2IndexBase.columnsArray(tbl, colsList);
 
-        this.inlineSize = calculateInlineSize(cols, inlineSize, table.cacheInfo().config());
+        IndexType idxType = pk ? IndexType.createPrimaryKey(false, false) :
+            IndexType.createNonUnique(false, false, false);
 
-        IndexColumn.mapColumns(cols, table);
+        CacheConfiguration ccfg = tbl.cacheInfo().config();
 
-        initBaseIndex(table, 0, name, cols,
-            pk ? IndexType.createPrimaryKey(false, false) : IndexType.createNonUnique(false, false, false));
+        List<InlineIndexColumn> inlineCols = getAvailableInlineColumns(false, ccfg.getName(),
+            idxName, log, pk, tbl, cols, new InlineIndexColumnFactory(tbl.getCompareMode()), true);
+
+        inlineSize = computeInlineSize(inlineCols, inlineSize, ccfg.getSqlIndexMaxInlineSize());
+
+        return new H2TreeClientIndex(tbl, idxName, cols, idxType, inlineSize);
     }
 
     /** {@inheritDoc} */
@@ -64,21 +90,14 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
         return inlineSize;
     }
 
-    /**
-     * @param cols Index columns.
-     * @param inlineSize Inline size.
-     * @param cacheConf Cache configuration.
-     * @return Calculated inline size for given indexed columns.
-     */
-    private int calculateInlineSize(IndexColumn[] cols, int inlineSize, CacheConfiguration<?, ?> cacheConf) {
-        List<InlineIndexHelper> inlineCols = getAvailableInlineColumns(cols);
-
-        return computeInlineSize(inlineCols, inlineSize, cacheConf);
-    }
-
     /** {@inheritDoc} */
     @Override public void refreshColumnIds() {
         // Do nothing.
+    }
+
+    /** {@inheritDoc} */
+    @Override public long totalRowCount(IndexingQueryCacheFilter partsFilter) {
+        throw unsupported();
     }
 
     /** {@inheritDoc} */

@@ -19,13 +19,10 @@ package org.apache.ignite.cache.query;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * SQL Fields query. This query can return specific fields of data based
@@ -49,6 +46,15 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Default value of the update internal batch size. */
+    private static final int DFLT_UPDATE_BATCH_SIZE = 1;
+
+    /** Threaded query originator. */
+    private static ThreadLocal<String> threadedQryInitiatorId = new ThreadLocal<>();
+
+    /** Default value of Query timeout. Default is -1 means no timeout is set. */
+    private static final int DFLT_QUERY_TIMEOUT = -1;
+
     /** Do not remove. For tests only. */
     @SuppressWarnings("NonConstantFieldWithUpperCaseName")
     private static boolean DFLT_LAZY;
@@ -64,7 +70,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private boolean collocated;
 
     /** Query timeout in millis. */
-    private int timeout;
+    private int timeout = DFLT_QUERY_TIMEOUT;
 
     /** */
     private boolean enforceJoinOrder;
@@ -84,8 +90,20 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Schema. */
     private String schema;
 
-    /** */
-    private Boolean dataPageScanEnabled;
+    /**
+     * Update internal batch size. Default is 1 to prevent deadlock on update where keys sequence are different in
+     * several concurrent updates.
+     */
+    private int updateBatchSize = DFLT_UPDATE_BATCH_SIZE;
+
+    /**
+     * Query's originator string (client host+port, user name,
+     * job name or any user's information about query initiator).
+     */
+    private String qryInitiatorId;
+
+    /** Whether server side DML should be enabled. */
+    private boolean skipReducerOnUpdate;
 
     /**
      * Copy constructs SQL fields query.
@@ -103,7 +121,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
         lazy = qry.lazy;
         parts = qry.parts;
         schema = qry.schema;
-        dataPageScanEnabled = qry.dataPageScanEnabled;
+        updateBatchSize = qry.updateBatchSize;
+        qryInitiatorId = qry.qryInitiatorId;
+        skipReducerOnUpdate = qry.skipReducerOnUpdate;
     }
 
     /**
@@ -189,6 +209,42 @@ public class SqlFieldsQuery extends Query<List<?>> {
         this.timeout = QueryUtils.validateTimeout(timeout, timeUnit);
 
         return this;
+    }
+
+    /**
+     * Switches update mode on server side.
+     * <p>
+     * By default, when processing DML command, Ignite first fetches all affected intermediate rows for analysis to the
+     * node which initiated the query and only then forms batches of updated values to be sent to remote nodes.
+     * For simple DML commands (that however affect great deal of rows) such approach may be an overkill in terms of
+     * network delays and memory usage on initiating node. Use this flag as hint for Ignite to do all intermediate rows
+     * analysis and updates in place on corresponding remote data nodes.
+     * <p>
+     * <b>IMPORTANT NOTE</b>: There are limitations to what DML command can be optimized this way. The command containing LIMIT, OFFSET,
+     * DISTINCT, ORDER BY, GROUP BY, sub-query or UNION will be processed the usual way despite this flag setting.
+     * <p>
+     * Defaults to {@code false}, meaning that intermediate results will be fetched to initiating node first.
+     * Only affects DML commands. Ignored when {@link #isLocal()} is {@code true}.
+     * Note that when set to {@code true}, the query may fail in the case of even single node failure.
+     *
+     * @param skipReducerOnUpdate Server side update flag.
+     * @return {@code this} For chaining.
+     */
+    public SqlFieldsQuery setSkipReducerOnUpdate(boolean skipReducerOnUpdate) {
+        this.skipReducerOnUpdate = skipReducerOnUpdate;
+
+        return this;
+    }
+
+    /**
+     * Gets server side update flag.
+     * <p>
+     * See {@link #setSkipReducerOnUpdate(boolean)} for more information.
+     *
+     * @return Server side update flag.
+     */
+    public boolean isSkipReducerOnUpdate() {
+        return skipReducerOnUpdate;
     }
 
     /**
@@ -337,7 +393,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /**
      * Gets partitions for query, in ascending order.
      */
-    @Nullable public int[] getPartitions() {
+    public int[] getPartitions() {
         return parts;
     }
 
@@ -350,7 +406,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
      * @param parts Partitions.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery setPartitions(@Nullable int... parts) {
+    public SqlFieldsQuery setPartitions(int... parts) {
         this.parts = prepare(parts);
 
         return this;
@@ -361,9 +417,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
      * If not set, current cache name is used, which means you can
      * omit schema name for tables within the current cache.
      *
-     * @return Schema. Null if schema is not set.
+     * @return Schema. {@code null} if schema is not set.
      */
-    @Nullable public String getSchema() {
+    public String getSchema() {
         return schema;
     }
 
@@ -372,39 +428,58 @@ public class SqlFieldsQuery extends Query<List<?>> {
      * If not set, current cache name is used, which means you can
      * omit schema name for tables within the current cache.
      *
-     * @param schema Schema. Null to unset schema.
+     * @param schema Schema. {@code null} to unset schema.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery setSchema(@Nullable String schema) {
+    public SqlFieldsQuery setSchema(String schema) {
         this.schema = schema;
 
         return this;
     }
 
     /**
-     * Sets data page scan enabled or disabled.
+     * Gets update internal bach size.
+     * Default is 1 to prevent deadlock on update where keys sequence are different in
+     * several concurrent updates.
      *
-     * Makes sense only with enabled {@link DataRegionConfiguration#setPersistenceEnabled persistence}
-     * and generally improves performance of full-scan SQL queries.
-     * When enabled, result may miss some concurrent updates or produce duplicates for the same key.
-     * To avoid these issues use with {@link CacheAtomicityMode#TRANSACTIONAL_SNAPSHOT}.
+     * @return Update internal batch size
+     */
+    public int getUpdateBatchSize() {
+        return updateBatchSize;
+    }
+
+    /**
+     * Sets update internal bach size.
+     * Default is 1 to prevent deadlock on update where keys sequence are different in
+     * several concurrent updates.
      *
-     * @param dataPageScanEnabled {@code true} If data page scan enabled, {@code false} if not, and {@code null} if not set.
+     * @param updateBatchSize Update internal batch size.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery setDataPageScanEnabled(Boolean dataPageScanEnabled) {
-        this.dataPageScanEnabled = dataPageScanEnabled;
+    public SqlFieldsQuery setUpdateBatchSize(int updateBatchSize) {
+        this.updateBatchSize = updateBatchSize;
 
         return this;
     }
 
     /**
-     * Checks if data page scan enabled.
-     *
-     * @return {@code true} If data page scan enabled, {@code false} if not, and {@code null} if not set.
+     * @return Query's initiator identifier string (client host+port, user name,
+     *       job name or any user's information about query initiator).
      */
-    public Boolean isDataPageScanEnabled() {
-        return dataPageScanEnabled;
+    public String getQueryInitiatorId() {
+        return qryInitiatorId;
+    }
+
+    /**
+     * @param qryInitiatorId Query's initiator identifier string (client host+port, user name,
+     *      job name or any user's information about query initiator).
+     *
+     * @return {@code this} for chaining.
+     */
+    public SqlFieldsQuery setQueryInitiatorId(String qryInitiatorId) {
+        this.qryInitiatorId = qryInitiatorId;
+
+        return this;
     }
 
     /**
@@ -412,6 +487,29 @@ public class SqlFieldsQuery extends Query<List<?>> {
      */
     public SqlFieldsQuery copy() {
         return new SqlFieldsQuery(this);
+    }
+
+    /**
+     * Used at the Job worker to setup originator by default for current thread.
+     *
+     * @param originator Query's originator string.
+     */
+    public static void setThreadedQueryInitiatorId(String originator) {
+        threadedQryInitiatorId.set(originator);
+    }
+
+    /**
+     * Used at the job worker to clear originator for current thread.
+     */
+    public static void resetThreadedQueryInitiatorId() {
+        threadedQryInitiatorId.remove();
+    }
+
+    /**
+     * @return originator set up by the job worker.
+     */
+    public static String threadedQueryInitiatorId() {
+        return threadedQryInitiatorId.get();
     }
 
     /** {@inheritDoc} */

@@ -42,8 +42,10 @@ import org.mockito.Mockito;
 public class GridCachePartitionsStateValidatorSelfTest extends GridCommonAbstractTest {
     /** Mocks and stubs. */
     private final UUID localNodeId = UUID.randomUUID();
+
     /** */
     private GridCacheSharedContext cctxMock;
+
     /** */
     private GridDhtPartitionTopology topologyMock;
 

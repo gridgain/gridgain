@@ -19,22 +19,17 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.OpenOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
@@ -43,7 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.testframework.MessageOrderLogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -53,7 +48,6 @@ import static java.util.Collections.singletonList;
 /**
  * Test async LFS cleanup during non-BLT node join.
  */
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
 public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implements Serializable {
     /** */
     private static class FilePageStoreManagerChild extends FilePageStoreManager {
@@ -111,60 +105,13 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
         }
     }
 
-    /**
-     * Checks the order of the messages in the log.
-     */
-    private static class MessageOrderLogListener extends LogListener {
-        /** */
-        private final LinkedHashSet<String> matchedMessages = new LinkedHashSet<>();
-
-        /** */
-        private final List<String> matchesList;
-
-        /** */
-        private final boolean doAddDuplicates;
-
-        /** */
-        MessageOrderLogListener(List<String> matchesList, boolean doAddDuplicates) {
-            this.matchesList = matchesList;
-
-            this.doAddDuplicates = doAddDuplicates;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean check() {
-            List<String> list = new ArrayList<>(matchedMessages);
-
-            return list.equals(matchesList);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void reset() {
-            matchedMessages.clear();
-        }
-
-        /** {@inheritDoc} */
-        @Override public void accept(String s) {
-            for (String match : matchesList)
-                if (s.matches(match)) {
-                    if (doAddDuplicates || !matchedMessages.contains(match))
-                        matchedMessages.add(match);
-
-                    break;
-                }
-        }
-    }
-
     /** */
     private static final String CACHE_NAME = "myCache";
 
     /** */
     private final LogListener logLsnr = new MessageOrderLogListener(
-        Arrays.asList(
-            "Cache stores cleanup started asynchronously",
-            "Cleanup cache stores .*? cleanFiles=true\\]"
-        ),
-        false
+        "Cache stores cleanup started asynchronously",
+        "Cleanup cache stores .*? cleanFiles=true\\]"
     );
 
     /** {@inheritDoc} */
@@ -196,6 +143,8 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         cleanPersistenceDir();
     }
 
@@ -204,6 +153,8 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /**
@@ -212,7 +163,9 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
      */
     @Test
     public void testCleanupSlow() throws Exception {
-        Ignite ignite = startGrids(2);
+        IgniteEx ignite = startGrids(2);
+
+        ignite.cluster().baselineAutoAdjustEnabled(false);
 
         ClusterNode cn0 = grid(0).cluster().localNode();
         ClusterNode cn1 = grid(1).cluster().localNode();

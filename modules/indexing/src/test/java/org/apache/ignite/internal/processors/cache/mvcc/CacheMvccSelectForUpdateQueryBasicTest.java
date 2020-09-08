@@ -59,7 +59,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  *
  */
 @RunWith(Parameterized.class)
-public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTest {
+public class CacheMvccSelectForUpdateQueryBasicTest extends CacheMvccAbstractTest {
     /** */
     private static final int CACHE_SIZE = 100;
 
@@ -89,13 +89,13 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
     public static Collection parameters() {
         return Arrays.asList(new Object[][] {
             // cacheMode, backups, from client, segmented
-            { REPLICATED,       0,      true,       false},
-            { REPLICATED,       0,      false,      false},
-            { PARTITIONED,      0,      true,       false},
-            { PARTITIONED,      0,      false,      true},
-            { PARTITIONED,      1,      true,       true},
-            { PARTITIONED,      1,      false,      false},
-            { PARTITIONED,      2,      true,       false},
+            {REPLICATED, 0, true, false},
+            {REPLICATED, 0, false, false},
+            {PARTITIONED, 0, true, false},
+            {PARTITIONED, 0, false, true},
+            {PARTITIONED, 1, true, true},
+            {PARTITIONED, 1, false, false},
+            {PARTITIONED, 2, true, false},
         });
     }
 
@@ -137,31 +137,34 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
     @Override public void beforeTest() throws Exception {
         Ignite client = grid(3);
 
-        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("dummy")
+        CacheConfiguration<Object, Object> dummyCfg = new CacheConfiguration<>("dummy")
             .setSqlSchema("PUBLIC").setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
         // Create dummy cache as entry point.
-        client.getOrCreateCache(ccfg);
+        client.getOrCreateCache(dummyCfg);
 
-        if (segmented) {
-            CacheConfiguration<Object, Object> seg = new CacheConfiguration<>("segmented*");
+        String templateName = String.valueOf(cacheMode) + backups + fromClient + segmented;
 
-            seg.setQueryParallelism(4);
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(templateName);
 
-            client.addCacheConfiguration(seg);
-        }
+        ccfg.setCacheMode(cacheMode);
+        ccfg.setBackups(backups);
+
+        if (segmented)
+            ccfg.setQueryParallelism(4);
+
+        client.addCacheConfiguration(ccfg);
 
         // Create MVCC table and cache.
         runSql(client, "CREATE TABLE person (id INT PRIMARY KEY, name VARCHAR, salary INT) " +
-            "WITH \"ATOMICITY=TRANSACTIONAL_SNAPSHOT, BACKUPS=" + backups +
-            (segmented ? ", TEMPLATE=segmented" : "") + "\"", false);
+            "WITH \"ATOMICITY=TRANSACTIONAL_SNAPSHOT, TEMPLATE=" + templateName + "\"", false);
 
         runSql(client, "CREATE INDEX salaryIdx ON person(salary)", false);
 
         // Populate MVCC cache. Salaries 0, 10, 20, 30,..., 990.
         for (int i = 0; i < CACHE_SIZE; i++)
             runSql(client, "INSERT INTO person (id, name, salary) VALUES ("
-                + i + ", 'name" + i + "', " +  i * 10 + ")", false);
+                + i + ", 'name" + i + "', " + i * 10 + ")", false);
     }
 
     /**
@@ -264,7 +267,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), false) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), false).getAll();
 
             checkLocks(keys);
 
@@ -359,7 +362,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -401,7 +404,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -570,7 +573,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -612,7 +615,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
             }
 
             // Run dummy DML.
-            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc) .getAll();
+            runSql(node, "UPDATE Person SET name='test' WHERE id=" + keys.get(0), loc).getAll();
 
             checkLocks(keys);
 
@@ -691,7 +694,7 @@ public class CacheMvccSelectForUpdateQueryBasicTest  extends CacheMvccAbstractTe
 //                                .getAll();
 //                        }
 //                        else {
-                            node.cache("dummy").query(new SqlFieldsQuery("SELECT * FROM person WHERE id="+ key +
+                            node.cache("dummy").query(new SqlFieldsQuery("SELECT * FROM person WHERE id=" + key +
                                 " FOR UPDATE")
                                 .setTimeout(1, TimeUnit.SECONDS))
                                 .getAll();

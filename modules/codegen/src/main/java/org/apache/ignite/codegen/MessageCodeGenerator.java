@@ -43,8 +43,8 @@ import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.mvcc.DeadlockProbe;
-import org.apache.ignite.internal.processors.cache.mvcc.ProbedTx;
+import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
+import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -169,8 +169,11 @@ public class MessageCodeGenerator {
 
         MessageCodeGenerator gen = new MessageCodeGenerator(srcDir);
 
-        gen.generateAndWrite(ProbedTx.class);
-        gen.generateAndWrite(DeadlockProbe.class);
+        gen.generateAndWrite(GridQueryKillRequest.class);
+        gen.generateAndWrite(GridQueryKillResponse.class);
+
+//        gen.generateAndWrite(ProbedTx.class);
+//        gen.generateAndWrite(DeadlockProbe.class);
 
 //        gen.generateAll(true);
 
@@ -567,9 +570,9 @@ public class MessageCodeGenerator {
 
         GridCodegenConverter fldPreproc = field.getAnnotation(GridCodegenConverter.class);
 
-        String getExp = (fldPreproc != null && !fldPreproc.get().isEmpty())? fldPreproc.get(): field.getName();
-        Class<?> writeType = (fldPreproc != null && !fldPreproc.type().equals(GridCodegenConverter.Default.class))?
-            fldPreproc.type(): field.getType();
+        String getExp = (fldPreproc != null && !fldPreproc.get().isEmpty()) ? fldPreproc.get() : field.getName();
+        Class<?> writeType = (fldPreproc != null && !fldPreproc.type().equals(GridCodegenConverter.Default.class)) ?
+            fldPreproc.type() : field.getType();
 
         returnFalseIfWriteFailed(writeType, field.getName(), colAnn != null ? colAnn.value() : null,
             mapAnn != null ? mapAnn.keyType() : null, mapAnn != null ? mapAnn.valueType() : null, false, getExp);
@@ -597,9 +600,9 @@ public class MessageCodeGenerator {
         indent++;
 
         GridCodegenConverter fldPreproc = field.getAnnotation(GridCodegenConverter.class);
-        String setExp = (fldPreproc != null && !fldPreproc.get().isEmpty())? fldPreproc.set(): "";
-        Class<?> writeType = (fldPreproc != null && !fldPreproc.type().equals(GridCodegenConverter.Default.class))?
-            fldPreproc.type(): field.getType();
+        String setExp = (fldPreproc != null && !fldPreproc.get().isEmpty()) ? fldPreproc.set() : "";
+        Class<?> writeType = (fldPreproc != null && !fldPreproc.type().equals(GridCodegenConverter.Default.class)) ?
+            fldPreproc.type() : field.getType();
 
         returnFalseIfReadFailed(writeType, field.getName(), colAnn != null ? colAnn.value() : null,
             mapAnn != null ? mapAnn.keyType() : null, mapAnn != null ? mapAnn.valueType() : null, setExp);
@@ -891,7 +894,7 @@ public class MessageCodeGenerator {
 
         ClassLoader ldr = getClass().getClassLoader();
 
-        for (URL url :  IgniteUtils.classLoaderUrls(ldr)) {
+        for (URL url : IgniteUtils.classLoaderUrls(ldr)) {
             File file = new File(url.toURI());
 
             int prefixLen = file.getPath().length() + 1;

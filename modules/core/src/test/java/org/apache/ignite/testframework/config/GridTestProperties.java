@@ -60,7 +60,10 @@ public final class GridTestProperties {
     public static final String TESTS_PROP_FILE = "tests.properties";
 
     /** */
-    public static final String TESTS_CFG_PATH = "modules/core/src/test/config";
+    public static final String TESTS_CFG_PATH = System.getProperty(
+        "IGNITE_TEST_PROP_CFG_PATH",
+        "modules/core/src/test/config"
+    );
 
     /** */
     private static final Pattern PROP_REGEX = Pattern.compile("[@$]\\{[^@${}]+\\}");
@@ -100,7 +103,7 @@ public final class GridTestProperties {
         assert cfgFile != null && cfgFile.exists();
         assert !cfgFile.isDirectory();
 
-        dfltProps = Collections.unmodifiableMap(loadFromFile(new HashMap<String, String>(), cfgFile));
+        dfltProps = Collections.unmodifiableMap(loadFromFile(new HashMap<>(), cfgFile));
 
         if ("false".equals(System.getProperty("IGNITE_TEST_PROP_DISABLE_LOG4J", "false"))) {
             String user = System.getProperty("user.name");

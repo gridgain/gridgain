@@ -39,19 +39,19 @@ public class QueryHistoryMetrics {
     /**
      * Constructor with metrics.
      *
-     * @param qry Textual query representation.
-     * @param schema Schema name.
-     * @param loc {@code true} for local query.
-     * @param startTime Start time of query execution.
-     * @param duration Duration of query execution.
      * @param failed {@code True} query executed unsuccessfully {@code false} otherwise.
      */
-    public QueryHistoryMetrics(String qry, String schema, boolean loc, long startTime, long duration, boolean failed) {
-        key = new QueryHistoryMetricsKey(qry, schema, loc);
+    public QueryHistoryMetrics(GridRunningQueryInfo info, boolean failed) {
+        key = new QueryHistoryMetricsKey(info.query(), info.schemaName(), info.local());
 
         long failures = failed ? 1 : 0;
+        long duration = System.currentTimeMillis() - info.startTime();
+        long reserved = info.memoryMetricProvider().maxReserved();
+        long allocatedOnDisk = info.memoryMetricProvider().maxWrittenOnDisk();
+        long totalWrittenOnDisk = info.memoryMetricProvider().totalWrittenOnDisk();
 
-        val = new QueryHistoryMetricsValue(1, failures, duration, duration, startTime);
+        val = new QueryHistoryMetricsValue(1, failures, duration, duration, info.startTime(),
+            reserved, reserved, allocatedOnDisk, allocatedOnDisk, totalWrittenOnDisk, totalWrittenOnDisk);
 
         linkRef = new AtomicReference<>();
     }
@@ -75,7 +75,14 @@ public class QueryHistoryMetrics {
             val.failures() + m.failures(),
             Math.min(val.minTime(), m.minimumTime()),
             Math.max(val.maxTime(), m.maximumTime()),
-            Math.max(val.lastStartTime(), m.lastStartTime()));
+            Math.max(val.lastStartTime(), m.lastStartTime()),
+            Math.min(val.minMemory(), m.minMemory()),
+            Math.max(val.maxMemory(), m.maxMemory()),
+            Math.min(val.minBytesAllocatedOnDisk(), m.minBytesAllocatedOnDisk()),
+            Math.max(val.maxBytesAllocatedOnDisk(), m.maxBytesAllocatedOnDisk()),
+            Math.min(val.minTotalBytesWrittenOnDisk(), m.minTotalBytesWrittenOnDisk()),
+            Math.max(val.maxTotalBytesWrittenOnDisk(), m.maxTotalBytesWrittenOnDisk())
+        );
 
         return this;
     }
@@ -135,6 +142,60 @@ public class QueryHistoryMetrics {
      */
     public long maximumTime() {
         return val.maxTime();
+    }
+
+    /**
+     * Gets minimum memory required by query.
+     *
+     * @return Minimum memory required by query.
+     */
+    public long minMemory() {
+        return val.minMemory();
+    }
+
+    /**
+     * Gets maximum memory required by query.
+     *
+     * @return Maximum memory required by query.
+     */
+    public long maxMemory() {
+        return val.maxMemory();
+    }
+
+    /**
+     * Gets minimum bytes on disk required by query.
+     *
+     * @return Minimum bytes on disk required by query.
+     */
+    public long minBytesAllocatedOnDisk() {
+        return val.minBytesAllocatedOnDisk();
+    }
+
+    /**
+     * Gets maximum bytes on disk required by query.
+     *
+     * @return Maximum bytes on disk required by query.
+     */
+    public long maxBytesAllocatedOnDisk() {
+        return val.maxBytesAllocatedOnDisk();
+    }
+
+    /**
+     * Gets minimum bytes written on disk in total by query.
+     *
+     * @return Minimum bytes written on disk in total by query.
+     */
+    public long minTotalBytesWrittenOnDisk() {
+        return val.minTotalBytesWrittenOnDisk();
+    }
+
+    /**
+     * Gets maximum bytes written on disk in total by query.
+     *
+     * @return Maximum bytes written on disk in total by query.
+     */
+    public long maxTotalBytesWrittenOnDisk() {
+        return val.maxTotalBytesWrittenOnDisk();
     }
 
     /**

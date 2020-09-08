@@ -88,12 +88,12 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        GridTestUtils.setFieldValue(null, TxDeadlockDetection.class, "DEADLOCK_TIMEOUT", (int)(getTestTimeout() * 2));
+        GridTestUtils.setFieldValue(TxDeadlockDetection.class, "deadLockTimeout", (int)(getTestTimeout() * 2));
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
-        GridTestUtils.setFieldValue(null, TxDeadlockDetection.class, "DEADLOCK_TIMEOUT",
+        GridTestUtils.setFieldValue(TxDeadlockDetection.class, "deadLockTimeout",
             getInteger(IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT, 60000));
     }
 
@@ -112,14 +112,14 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
         doTest(PESSIMISTIC);
 
         try {
-            GridTestUtils.setFieldValue(null, IgniteTxManager.class, "DEADLOCK_MAX_ITERS", 0);
+            GridTestUtils.setFieldValue(IgniteTxManager.class, "DEADLOCK_MAX_ITERS", 0);
 
             assertFalse(grid(0).context().cache().context().tm().deadlockDetectionEnabled());
 
             doTest(PESSIMISTIC);
         }
         finally {
-            GridTestUtils.setFieldValue(null, IgniteTxManager.class, "DEADLOCK_MAX_ITERS",
+            GridTestUtils.setFieldValue(IgniteTxManager.class, "DEADLOCK_MAX_ITERS",
                 IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000));
         }
     }
@@ -134,14 +134,14 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
         doTest(OPTIMISTIC);
 
         try {
-            GridTestUtils.setFieldValue(null, IgniteTxManager.class, "DEADLOCK_MAX_ITERS", 0);
+            GridTestUtils.setFieldValue(IgniteTxManager.class, "DEADLOCK_MAX_ITERS", 0);
 
             assertFalse(grid(0).context().cache().context().tm().deadlockDetectionEnabled());
 
             doTest(OPTIMISTIC);
         }
         finally {
-            GridTestUtils.setFieldValue(null, IgniteTxManager.class, "DEADLOCK_MAX_ITERS",
+            GridTestUtils.setFieldValue(IgniteTxManager.class, "DEADLOCK_MAX_ITERS",
                 IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000));
         }
     }
@@ -156,28 +156,26 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
         IgniteInternalFuture<Long> restartFut = null;
 
         try {
-            restartFut = GridTestUtils.runMultiThreadedAsync(new Runnable() {
-                @Override public void run() {
-                    while (!stop.get()) {
-                        try {
-                            U.sleep(500);
+            restartFut = GridTestUtils.runMultiThreadedAsync(() -> {
+                while (!stop.get()) {
+                    try {
+                        U.sleep(500);
 
-                            startGrid(NODES_CNT);
+                        startGrid(NODES_CNT);
 
-                            awaitPartitionMapExchange();
+                        awaitPartitionMapExchange();
 
-                            U.sleep(500);
+                        U.sleep(500);
 
-                            stopGrid(NODES_CNT);
-                        }
-                        catch (Exception ignored) {
-                            // No-op.
-                        }
+                        stopGrid(NODES_CNT);
+                    }
+                    catch (Exception ignored) {
+                        // No-op.
                     }
                 }
             }, 1, "restart-thread");
 
-            long stopTime = System.currentTimeMillis() + 2 * 60_000L;
+            long stopTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
             for (int i = 0; System.currentTimeMillis() < stopTime; i++) {
                 boolean detectionEnabled = grid(0).context().cache().context().tm().deadlockDetectionEnabled();
@@ -233,7 +231,7 @@ public class TxDeadlockDetectionNoHangsTest extends GridCommonAbstractTest {
      *
      */
     private void checkDetectionFutures() {
-        for (int i = 0; i < NODES_CNT ; i++) {
+        for (int i = 0; i < NODES_CNT; i++) {
             Ignite ignite = ignite(i);
 
             IgniteTxManager txMgr = ((IgniteKernal)ignite).context().cache().context().tm();

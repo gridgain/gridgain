@@ -20,10 +20,10 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueBytes;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueBytes;
 
-import static org.h2.util.StringUtils.convertBytesToHex;
+import static org.gridgain.internal.h2.util.StringUtils.convertBytesToHex;
 
 /**
  * H2 Bytes.
@@ -43,7 +43,7 @@ public class GridH2Bytes extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2Bytes(Value val) {
-        assert val.getType() == Value.BYTES : val.getType();
+        assert val.getType().getValueType() == Value.BYTES : val.getType();
 
         b = val.getBytesNoCopy();
     }

@@ -18,6 +18,9 @@ package org.apache.ignite.testframework.junits.common;
 
 import java.io.FileReader;
 import java.util.Properties;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.Ignition;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -66,6 +69,26 @@ public abstract class GridAbstractExamplesTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < RMT_NODES_CNT; i++)
             startGrid(getTestIgniteInstanceName(i), cfg);
+    }
+
+    /**
+     * Starts grid using provided Ignite instance name and spring config location.
+     * <p>
+     * Note that grids started this way should be stopped with {@code G.stop(..)} methods.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param springCfgPath Path to config file.
+     * @return Grid Started grid.
+     * @throws Exception If failed.
+     */
+    protected Ignite startGrid(String igniteInstanceName, String springCfgPath) throws Exception {
+        IgniteConfiguration cfg = Ignition.loadSpringBean(springCfgPath, "ignite.cfg");
+
+        cfg.setFailureHandler(getFailureHandler(igniteInstanceName));
+
+        cfg.setGridLogger(getTestResources().getLogger());
+
+        return startGrid(igniteInstanceName, cfg);
     }
 
     /**

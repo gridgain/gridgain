@@ -112,6 +112,7 @@ public class DynamicCacheDescriptor {
      * @param sql SQL flag - whether the cache is created by an SQL command such as {@code CREATE TABLE}.
      * @param deploymentId Deployment ID.
      * @param schema Query schema.
+     * @param cacheCfgEnrichment Cache configuration enrichment.
      */
     @SuppressWarnings("unchecked")
     public DynamicCacheDescriptor(GridKernalContext ctx,
@@ -404,10 +405,12 @@ public class DynamicCacheDescriptor {
         res.sql(sql());
 
         if (isConfigurationEnriched()) {
-            T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = splitter.split(this);
+            T2<CacheConfiguration, CacheConfigurationEnrichment> splitCfg = splitter.split(cacheCfg);
 
             res.config(splitCfg.get1());
-            res.cacheConfigurationEnrichment(splitCfg.get2());
+
+            // If original enrichment is present, it should be written instead of result of split.
+            res.cacheConfigurationEnrichment(cacheCfgEnrichment == null ? splitCfg.get2() : cacheCfgEnrichment);
         }
         else
             res.cacheConfigurationEnrichment(cacheCfgEnrichment);

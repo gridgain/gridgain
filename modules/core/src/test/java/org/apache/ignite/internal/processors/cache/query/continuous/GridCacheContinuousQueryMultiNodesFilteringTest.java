@@ -111,7 +111,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
             GridTestUtils.waitForCondition(new GridAbsPredicate() {
                 @Override public boolean apply() {
-                    return opCounts.get("qry"  + i0 + "_total").get() == expTotal;
+                    return opCounts.get("qry" + i0 + "_total").get() == expTotal;
                 }
             }, 5000);
 
@@ -121,7 +121,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
             int replUpdates = opCounts.get("repl" + i + "_upd").get();
             int partRemoves = opCounts.get("part" + i + "_rmv").get();
             int replRemoves = opCounts.get("repl" + i + "_rmv").get();
-            int totalQryOps = opCounts.get("qry"  + i + "_total").get();
+            int totalQryOps = opCounts.get("qry" + i + "_total").get();
 
             assertEquals(i, partInserts);
             assertEquals(i, replInserts);
@@ -201,7 +201,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
         client = true;
 
-        startGrid(nodesCnt);
+        startGrid(nodesCnt).cluster().active(true);
 
         awaitPartitionMapExchange();
 
@@ -299,6 +299,8 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setConsistentId(igniteInstanceName);
 
         cfg.setClientMode(client);
 
@@ -434,7 +436,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode clusterNode) {
-            return pattern.matcher(clusterNode.id().toString()).matches();
+            return pattern.matcher(clusterNode.consistentId().toString()).matches();
         }
     }
 }

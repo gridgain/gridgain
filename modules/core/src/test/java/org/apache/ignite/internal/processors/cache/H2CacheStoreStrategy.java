@@ -42,9 +42,9 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.resources.CacheStoreSessionResource;
-import org.h2.jdbcx.JdbcConnectionPool;
-import org.h2.tools.RunScript;
-import org.h2.tools.Server;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.tools.RunScript;
+import org.gridgain.internal.h2.tools.Server;
 
 /**
  * {@link TestCacheStoreStrategy} backed by H2 in-memory database.
@@ -72,7 +72,6 @@ public class H2CacheStoreStrategy implements TestCacheStoreStrategy {
         "delete from WRITES;\n" +
         "delete from REMOVES;";
 
-
     /**
      * @throws IgniteCheckedException If failed.
      */
@@ -80,7 +79,7 @@ public class H2CacheStoreStrategy implements TestCacheStoreStrategy {
         Server srv = null;
 
         try {
-            srv = Server.createTcpServer().start();
+            srv = Server.createTcpServer("-ifNotExists").start();
 
             port = srv.getPort();
 
@@ -282,7 +281,7 @@ public class H2CacheStoreStrategy implements TestCacheStoreStrategy {
          * @return Connection pool
          */
         static JdbcConnectionPool createDataSource(int port) {
-            JdbcConnectionPool pool = JdbcConnectionPool.create("jdbc:h2:tcp://localhost:" + port +
+            JdbcConnectionPool pool = JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost:" + port +
                 "/mem:TestDb;LOCK_MODE=0", "sa", "");
 
             pool.setMaxConnections(Integer.getInteger("H2_JDBC_CONNECTIONS", 100));

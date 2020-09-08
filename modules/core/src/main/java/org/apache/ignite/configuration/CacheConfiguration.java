@@ -32,7 +32,6 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheInterceptor;
@@ -56,13 +55,11 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
-import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DISK_PAGE_COMPRESSION;
 
 /**
  * This class defines grid cache configuration. This configuration is passed to
@@ -82,18 +79,33 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Maximum number of partitions. */
     public static final int MAX_PARTITIONS_COUNT = 65000;
 
-    /** Default size of rebalance thread pool. */
+    /**
+     * Default size of rebalance thread pool.
+     * @deprecated Use {@link IgniteConfiguration#DFLT_REBALANCE_THREAD_POOL_SIZE} instead.
+     */
     @Deprecated
-    public static final int DFLT_REBALANCE_THREAD_POOL_SIZE = 2;
+    public static final int DFLT_REBALANCE_THREAD_POOL_SIZE = IgniteConfiguration.DFLT_REBALANCE_THREAD_POOL_SIZE;
 
-    /** Default rebalance timeout (ms).*/
-    public static final long DFLT_REBALANCE_TIMEOUT = 10000;
+    /**
+     * Default rebalance timeout (ms).
+     * @deprecated Use {@link IgniteConfiguration#DFLT_REBALANCE_TIMEOUT} instead.
+     */
+    @Deprecated
+    public static final long DFLT_REBALANCE_TIMEOUT = IgniteConfiguration.DFLT_REBALANCE_TIMEOUT;
 
-    /** Default rebalance batches prefetch count. */
-    public static final long DFLT_REBALANCE_BATCHES_PREFETCH_COUNT = 2;
+    /**
+     * Default rebalance batches prefetch count.
+     * @deprecated Use {@link IgniteConfiguration#DFLT_REBALANCE_BATCHES_PREFETCH_COUNT} instead.
+     */
+    @Deprecated
+    public static final long DFLT_REBALANCE_BATCHES_PREFETCH_COUNT = IgniteConfiguration.DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
 
-    /** Time in milliseconds to wait between rebalance messages to avoid overloading CPU. */
-    public static final long DFLT_REBALANCE_THROTTLE = 0;
+    /**
+     * Time in milliseconds to wait between rebalance messages to avoid overloading CPU.
+     * @deprecated Use {@link IgniteConfiguration#DFLT_REBALANCE_THROTTLE} instead.
+     */
+    @Deprecated
+    public static final long DFLT_REBALANCE_THROTTLE = IgniteConfiguration.DFLT_REBALANCE_THROTTLE;
 
     /** Default number of backups. */
     public static final int DFLT_BACKUPS = 0;
@@ -122,8 +134,12 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Default rebalance mode for distributed cache. */
     public static final CacheRebalanceMode DFLT_REBALANCE_MODE = CacheRebalanceMode.ASYNC;
 
-    /** Default rebalance batch size in bytes. */
-    public static final int DFLT_REBALANCE_BATCH_SIZE = 512 * 1024; // 512K
+    /**
+     * Default rebalance batch size in bytes.
+     * @deprecated Use {@link IgniteConfiguration#DFLT_REBALANCE_BATCH_SIZE} instead.
+     */
+    @Deprecated
+    public static final int DFLT_REBALANCE_BATCH_SIZE = IgniteConfiguration.DFLT_REBALANCE_BATCH_SIZE;
 
     /** Default value for eager ttl flag. */
     public static final boolean DFLT_EAGER_TTL = true;
@@ -190,6 +206,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Default SQL on-heap cache size. */
     public static final int DFLT_SQL_ONHEAP_CACHE_MAX_SIZE = 0;
 
+    /** Default disk page compression algorithm. */
+    public static final DiskPageCompression DFLT_DISK_PAGE_COMPRESSION = DiskPageCompression.DISABLED;
+
     /** Cache name. */
     private String name;
 
@@ -207,6 +226,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private int rebalancePoolSize = DFLT_REBALANCE_THREAD_POOL_SIZE;
 
     /** Rebalance timeout. */
+    @Deprecated
     private long rebalanceTimeout = DFLT_REBALANCE_TIMEOUT;
 
     /** Cache eviction policy. */
@@ -238,6 +258,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /** Near cache configuration. */
     private NearCacheConfiguration<K, V> nearCfg;
+
+    /** Platform cache configuration. Enables native cache in platforms (.NET, ...). */
+    private PlatformCacheConfiguration platformCfg;
 
     /** Default value for 'copyOnRead' flag. */
     public static final boolean DFLT_COPY_ON_READ = true;
@@ -280,9 +303,11 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private int rebalanceOrder;
 
     /** Rebalance batch size. */
+    @Deprecated
     private int rebalanceBatchSize = DFLT_REBALANCE_BATCH_SIZE;
 
     /** Rebalance batches prefetch count. */
+    @Deprecated
     private long rebalanceBatchesPrefetchCnt = DFLT_REBALANCE_BATCHES_PREFETCH_COUNT;
 
     /** Maximum number of concurrent asynchronous operations. */
@@ -318,10 +343,12 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** */
     private long rebalanceDelay;
 
-    /** */
+    /** Time in milliseconds to wait between rebalance messages to avoid overloading CPU. */
+    @Deprecated
     private long rebalanceThrottle = DFLT_REBALANCE_THROTTLE;
 
     /** */
+    @SerializeSeparately
     private CacheInterceptor<K, V> interceptor;
 
     /** */
@@ -349,7 +376,10 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** */
     private boolean sqlEscapeAll;
 
-    /** */
+    /**
+     * @deprecated {@link #qryEntities} is used instead. This field is preserved for serialization compatibility.
+     * */
+    @Deprecated
     private transient Class<?>[] indexedTypes;
 
     /** Copy on read flag. */
@@ -388,13 +418,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @see KeystoreEncryptionSpi
      */
     private boolean encryptionEnabled;
-
-    /** */
-    private DiskPageCompression diskPageCompression = IgniteSystemProperties.getEnum(
-        DiskPageCompression.class, IGNITE_DEFAULT_DISK_PAGE_COMPRESSION);
-
-    /** */
-    private Integer diskPageCompressionLevel;
 
     /** Empty constructor (all values are initialized to their defaults). */
     public CacheConfiguration() {
@@ -454,10 +477,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         memPlcName = cc.getDataRegionName();
         name = cc.getName();
         nearCfg = cc.getNearConfiguration();
+        platformCfg = cc.getPlatformCacheConfiguration();
         nodeFilter = cc.getNodeFilter();
         onheapCache = cc.isOnheapCacheEnabled();
-        diskPageCompression = cc.getDiskPageCompression();
-        diskPageCompressionLevel = cc.getDiskPageCompressionLevel();
         partLossPlc = cc.getPartitionLossPolicy();
         pluginCfgs = cc.getPluginConfigurations();
         qryDetailMetricsSz = cc.getQueryDetailMetricsSize();
@@ -560,7 +582,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /**
      * @return {@link DataRegionConfiguration} name.
      */
-    @Nullable public String getDataRegionName() {
+    public String getDataRegionName() {
         return memPlcName;
     }
 
@@ -575,11 +597,11 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /**
      * Sets a name of {@link DataRegionConfiguration} for this cache.
      *
-     * @param dataRegionName DataRegionConfiguration name. Can be null (default DataRegionConfiguration will be used)
-     *                   but should not be empty.
+     * @param dataRegionName DataRegionConfiguration name. Can be {@code null} (default DataRegionConfiguration
+     * will be used), but should not be an empty string.
      * @return {@code this} for chaining.
      */
-    public CacheConfiguration<K, V> setDataRegionName(@Nullable String dataRegionName) {
+    public CacheConfiguration<K, V> setDataRegionName(String dataRegionName) {
         A.ensure(dataRegionName == null || !dataRegionName.isEmpty(), "Name cannot be empty.");
 
         this.memPlcName = dataRegionName;
@@ -605,20 +627,20 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     @Deprecated
     @SuppressWarnings({"unchecked"})
-    @Nullable public EvictionPolicy<K, V> getEvictionPolicy() {
+    public EvictionPolicy<K, V> getEvictionPolicy() {
         return evictPlc;
     }
 
     /**
      * Sets cache eviction policy.
      *
-     * @param evictPlc Cache eviction policy.
+     * @param evictPlc Cache eviction policy. If {@code null}, will clear prevously set eviction policy.
      * @return {@code this} for chaining.
      *
      * @deprecated Use {@link #setEvictionPolicyFactory(Factory)} instead.
      */
     @Deprecated
-    public CacheConfiguration<K, V> setEvictionPolicy(@Nullable EvictionPolicy evictPlc) {
+    public CacheConfiguration<K, V> setEvictionPolicy(EvictionPolicy evictPlc) {
         this.evictPlc = evictPlc;
 
         return this;
@@ -631,7 +653,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @return Cache eviction policy factory or {@code null} if evictions should be disabled
      * or if {@link #getEvictionPolicy()} should be used instead.
      */
-    @Nullable public Factory<EvictionPolicy<? super K, ? super V>> getEvictionPolicyFactory() {
+    public Factory<EvictionPolicy<? super K, ? super V>> getEvictionPolicyFactory() {
         return evictPlcFactory;
     }
 
@@ -639,11 +661,12 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Sets cache eviction policy factory.
      * Note: Eviction policy factory should be {@link Serializable}.
      *
-     * @param evictPlcFactory Cache eviction policy factory.
+     * @param evictPlcFactory Cache eviction policy factory. If {@code null}, will clear previously set
+     *      eviction policy factory.
      * @return {@code this} for chaining.
      */
     public CacheConfiguration<K, V> setEvictionPolicyFactory(
-        @Nullable Factory<? extends EvictionPolicy<? super K, ? super V>> evictPlcFactory) {
+        Factory<? extends EvictionPolicy<? super K, ? super V>> evictPlcFactory) {
         this.evictPlcFactory = evictPlcFactory;
 
         return this;
@@ -745,6 +768,38 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     }
 
     /**
+     * Gets platform cache configuration.
+     *
+     * @return Platform cache configuration or null.
+     */
+    @IgniteExperimental
+    public PlatformCacheConfiguration getPlatformCacheConfiguration() {
+        return platformCfg;
+    }
+
+    /**
+     * Sets platform cache configuration.
+     * Enables native platform (only .NET currently) cache when not null.
+     * Cache entries will be stored in deserialized form in native platform memory (e.g. .NET objects in CLR heap).
+     * <p>
+     * When enabled on server nodes, all primary keys will be stored in platform memory as well.
+     * <p>
+     * Same eviction policy applies to near cache entries for all keys on client nodes and
+     * non-primary keys on server nodes.
+     * <p>
+     * Enabling this can greatly improve performance for key-value operations and scan queries,
+     * at the expense of RAM usage.
+     *
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public CacheConfiguration<K, V> setPlatformCacheConfiguration(PlatformCacheConfiguration platformCfg) {
+        this.platformCfg = platformCfg;
+
+        return this;
+    }
+
+    /**
      * Gets write synchronization mode. This mode controls whether the main
      * caller should wait for update on other nodes to complete or not.
      *
@@ -779,6 +834,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /**
      * Sets filter which determines on what nodes the cache should be started.
+     *
+     * Note: Do not use {@link ClusterNode#id()} and {@link ClusterNode#order()}, they do not guarantee
+     * that they would return the same result on all nodes in all circumstances.
      *
      * @param nodeFilter Predicate specifying on which nodes the cache should be started.
      * @return {@code this} for chaining.
@@ -1167,14 +1225,15 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Gets cache rebalance order. Rebalance order can be set to non-zero value for caches with
      * {@link CacheRebalanceMode#SYNC SYNC} or {@link CacheRebalanceMode#ASYNC ASYNC} rebalance modes only.
      * <p/>
-     * If cache rebalance order is positive, rebalancing for this cache will be started only when rebalancing for
+     * The rebalance order guarantees that rebalancing for this cache will start only when rebalancing for
      * all caches with smaller rebalance order will be completed.
      * <p/>
-     * Note that cache with order {@code 0} does not participate in ordering. This means that cache with
-     * rebalance order {@code 0} will never wait for any other caches. All caches with order {@code 0} will
-     * be rebalanced right away concurrently with each other and ordered rebalance processes.
+     * Note that a cache with {@link CacheRebalanceMode#SYNC SYNC} rebalancing mode always takes precedence
+     * over caches with {@link CacheRebalanceMode#ASYNC ASYNC} rebalancing mode
+     * in the group of caches with the same rebalance order. This means caches with {@link CacheRebalanceMode#SYNC SYNC}
+     * rebalancing mode will be rebalanced in the first place.
      * <p/>
-     * If not set, cache order is 0, i.e. rebalancing is not ordered.
+     * If not set, cache order is 0.
      *
      * @return Cache rebalance order.
      */
@@ -1202,7 +1261,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * {@link #DFLT_REBALANCE_BATCH_SIZE}.
      *
      * @return Size in bytes of a single rebalance message.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceBatchSize()} instead.
      */
+    @Deprecated
     public int getRebalanceBatchSize() {
         return rebalanceBatchSize;
     }
@@ -1212,7 +1273,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param rebalanceBatchSize Rebalance batch size.
      * @return {@code this} for chaining.
+     * @deprecated Use {@link IgniteConfiguration#setRebalanceBatchSize(int)} instead.
      */
+    @Deprecated
     public CacheConfiguration<K, V> setRebalanceBatchSize(int rebalanceBatchSize) {
         this.rebalanceBatchSize = rebalanceBatchSize;
 
@@ -1227,7 +1290,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Minimum is 1.
      *
      * @return batches count
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceBatchesPrefetchCount()} instead.
      */
+    @Deprecated
     public long getRebalanceBatchesPrefetchCount() {
         return rebalanceBatchesPrefetchCnt;
     }
@@ -1241,7 +1306,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param rebalanceBatchesCnt batches count.
      * @return {@code this} for chaining.
+     * @deprecated Use {@link IgniteConfiguration#setRebalanceBatchesPrefetchCount(long)} instead.
      */
+    @Deprecated
     public CacheConfiguration<K, V> setRebalanceBatchesPrefetchCount(long rebalanceBatchesCnt) {
         this.rebalanceBatchesPrefetchCnt = rebalanceBatchesCnt;
 
@@ -1279,7 +1346,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /**
      * Gets maximum inline size for sql indexes. If -1 returned then
-     * {@code IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
+     * {@link IgniteSystemProperties#IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
      * <p>
      * If not set, default value is {@link #DFLT_SQL_INDEX_MAX_INLINE_SIZE}.
      *
@@ -1490,7 +1557,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Default value is {@link #DFLT_REBALANCE_TIMEOUT}.
      *
      * @return Rebalance timeout (ms).
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceTimeout()} instead.
      */
+    @Deprecated
     public long getRebalanceTimeout() {
         return rebalanceTimeout;
     }
@@ -1500,7 +1569,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param rebalanceTimeout Rebalance timeout (ms).
      * @return {@code this} for chaining.
+     * @deprecated Use {@link IgniteConfiguration#setRebalanceTimeout(long)} instead.
      */
+    @Deprecated
     public CacheConfiguration<K, V> setRebalanceTimeout(long rebalanceTimeout) {
         this.rebalanceTimeout = rebalanceTimeout;
 
@@ -1557,8 +1628,10 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * the default is defined by {@link #DFLT_REBALANCE_THROTTLE} constant.
      *
      * @return Time in milliseconds to wait between rebalance messages to avoid overloading of CPU,
-     *      {@code 0} to disable throttling.
+     * {@code 0} to disable throttling.
+     * @deprecated Use {@link IgniteConfiguration#getRebalanceThrottle()} instead.
      */
+    @Deprecated
     public long getRebalanceThrottle() {
         return rebalanceThrottle;
     }
@@ -1574,7 +1647,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @param rebalanceThrottle Time in milliseconds to wait between rebalance messages to avoid overloading of CPU,
      * {@code 0} to disable throttling.
      * @return {@code this} for chaining.
+     * @deprecated Use {@link IgniteConfiguration#setRebalanceThrottle(long)} instead.
      */
+    @Deprecated
     public CacheConfiguration<K, V> setRebalanceThrottle(long rebalanceThrottle) {
         this.rebalanceThrottle = rebalanceThrottle;
 
@@ -1638,7 +1713,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @return Cache interceptor.
      */
-    @Nullable public CacheInterceptor<K, V> getInterceptor() {
+    public CacheInterceptor<K, V> getInterceptor() {
         return interceptor;
     }
 
@@ -1726,7 +1801,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @return Classes with SQL functions.
      */
-    @Nullable public Class<?>[] getSqlFunctionClasses() {
+    public Class<?>[] getSqlFunctionClasses() {
         return sqlFuncCls;
     }
 
@@ -1734,7 +1809,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * Gets timeout in milliseconds after which long query warning will be printed.
      *
      * @return Timeout in milliseconds.
-     * @deprecated Use {@link IgniteConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
      */
     @Deprecated
     public long getLongQueryWarningTimeout() {
@@ -1746,7 +1821,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
-     * @deprecated Use {@link IgniteConfiguration#setLongQueryWarningTimeout(long)} instead.
+     * @deprecated Use {@link SqlConfiguration#setLongQueryWarningTimeout(long)} instead.
      */
     @Deprecated
     public CacheConfiguration<K, V> setLongQueryWarningTimeout(long longQryWarnTimeout) {
@@ -1784,7 +1859,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      *
      * @return Schema name for current cache according to SQL ANSI-99. Could be {@code null}.
      */
-    @Nullable public String getSqlSchema() {
+    public String getSqlSchema() {
         return sqlSchema;
     }
 
@@ -2306,54 +2381,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     public CacheConfiguration<K, V> setEncryptionEnabled(boolean encryptionEnabled) {
         this.encryptionEnabled = encryptionEnabled;
-        
-        return this;
-    }
-
-    /**
-     * Gets disk page compression algorithm.
-     * Makes sense only with enabled {@link DataRegionConfiguration#setPersistenceEnabled persistence}.
-     *
-     * @return Disk page compression algorithm.
-     * @see #getDiskPageCompressionLevel
-     */
-    public DiskPageCompression getDiskPageCompression() {
-        return diskPageCompression;
-    }
-
-    /**
-     * Sets disk page compression algorithm.
-     * Makes sense only with enabled {@link DataRegionConfiguration#setPersistenceEnabled persistence}.
-     *
-     * @param diskPageCompression Disk page compression algorithm.
-     * @return {@code this} for chaining.
-     * @see #setDiskPageCompressionLevel
-     */
-    public CacheConfiguration<K,V> setDiskPageCompression(DiskPageCompression diskPageCompression) {
-        this.diskPageCompression = diskPageCompression;
-
-        return this;
-    }
-
-    /**
-     * Gets {@link #getDiskPageCompression algorithm} specific disk page compression level.
-     *
-     * @return Disk page compression level or {@code null} for default.
-     */
-    public Integer getDiskPageCompressionLevel() {
-        return diskPageCompressionLevel;
-    }
-
-    /**
-     * Sets {@link #setDiskPageCompression algorithm} specific disk page compression level.
-     *
-     * @param diskPageCompressionLevel Disk page compression level or {@code null} to use default.
-     *                             {@link DiskPageCompression#ZSTD Zstd}: from {@code -131072} to {@code 22} (default {@code 3}).
-     *                             {@link DiskPageCompression#LZ4 LZ4}: from {@code 0} to {@code 17} (default {@code 0}).
-     * @return {@code this} for chaining.
-     */
-    public CacheConfiguration<K,V> setDiskPageCompressionLevel(Integer diskPageCompressionLevel) {
-        this.diskPageCompressionLevel = diskPageCompressionLevel;
 
         return this;
     }

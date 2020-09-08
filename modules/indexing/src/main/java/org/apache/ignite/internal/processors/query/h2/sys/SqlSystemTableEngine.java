@@ -21,9 +21,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemView;
-import org.h2.api.TableEngine;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.table.Table;
+import org.gridgain.internal.h2.api.TableEngine;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.table.Table;
 
 /**
  * H2 table engine for system views.
@@ -54,6 +54,6 @@ public class SqlSystemTableEngine implements TableEngine {
 
     /** {@inheritDoc} */
     @Override public Table createTable(CreateTableData data) {
-        return new SqlSystemTable(data, curView);
+        return new SystemViewH2Adapter(data, curView);
     }
 }

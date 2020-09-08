@@ -127,6 +127,8 @@ public abstract class GridCacheAbstractLocalStoreSelfTest extends GridCommonAbst
 
         cfg.setCacheConfiguration(cacheCfg, cacheBackup1Cfg, cacheBackup2Cfg);
 
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
+
         return cfg;
     }
 
@@ -430,7 +432,7 @@ public abstract class GridCacheAbstractLocalStoreSelfTest extends GridCommonAbst
                 startGrid(i);
 
             assertTrue(((IgniteCacheProxy)grid(1).cache(name)).context().isNear() ||
-                getCacheMode()  == REPLICATED);
+                getCacheMode() == REPLICATED);
 
             awaitPartitionMapExchange();
 
@@ -466,7 +468,7 @@ public abstract class GridCacheAbstractLocalStoreSelfTest extends GridCommonAbst
 
             for (int i = 1; i <= 6; i++) {
                 assertTrue(grid(i).cache(name).localSize(CachePeekMode.NEAR) > 0 ||
-                    getCacheMode()  == REPLICATED);
+                    getCacheMode() == REPLICATED);
             }
 
             checkLocalStore(grid(1), LOCAL_STORE_1, name);
@@ -486,7 +488,7 @@ public abstract class GridCacheAbstractLocalStoreSelfTest extends GridCommonAbst
             CacheConfiguration ccfg = grid(1).cache(name).getConfiguration(CacheConfiguration.class);
 
             assertEquals(
-                getCacheMode()  == REPLICATED ?
+                getCacheMode() == REPLICATED ?
                     KEYS * 6 :
                     ccfg.getBackups() * KEYS + KEYS,
                 fullStoreSize);
@@ -852,7 +854,7 @@ public abstract class GridCacheAbstractLocalStoreSelfTest extends GridCommonAbst
         /**
          * Clear store.
          */
-        public void clear(){
+        public void clear() {
             map.clear();
         }
     }

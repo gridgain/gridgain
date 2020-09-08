@@ -16,33 +16,38 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModelMultiplier;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel;
-import org.h2.engine.Session;
-import org.h2.index.BaseIndex;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.table.TableFilter;
-import org.h2.value.Value;
+import org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModelMultiplier;
+import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.value.Value;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Index base.
  */
-public abstract class GridH2IndexBase extends BaseIndex {
-    /** Underlying table. */
-    private final GridH2Table tbl;
-
+public abstract class GridH2IndexBase extends H2IndexCostedBase {
     /**
      * Constructor.
      *
      * @param tbl Table.
+     * @param name Index name.
+     * @param cols Indexed columns.
+     * @param type Index type.
      */
-    protected GridH2IndexBase(GridH2Table tbl) {
-        this.tbl = tbl;
+    protected GridH2IndexBase(GridH2Table tbl, String name, IndexColumn[] cols, IndexType type) {
+        super(tbl, name, cols, type);
     }
 
     /** {@inheritDoc} */
@@ -62,15 +67,23 @@ public abstract class GridH2IndexBase extends BaseIndex {
     }
 
     /**
+     * Attempts to asyncronously {@link #destroy} index and release all the resources.
+     *
+     * @param rmv Flag remove.
+     */
+    public void asyncDestroy(boolean rmv) {
+        // No-op.
+    }
+
+    /**
+     * @param qctx Query context.
      * @return Index segment ID for current query context.
      */
-    protected int threadLocalSegment() {
-        if(segmentsCount() == 1)
+    protected int segment(QueryContext qctx) {
+        if (segmentsCount() == 1)
             return 0;
 
-        QueryContext qctx = queryContextRegistry().getThreadLocal();
-
-        if(qctx == null)
+        if (qctx == null)
             throw new IllegalStateException("GridH2QueryContext is not initialized.");
 
         return qctx.segment();
@@ -173,7 +186,7 @@ public abstract class GridH2IndexBase extends BaseIndex {
      * @param partition Partition idx.
      * @return Segment ID for given key
      */
-    public int segmentForPartition(int partition){
+    public int segmentForPartition(int partition) {
         return segmentsCount() == 1 ? 0 : (partition % segmentsCount());
     }
 
@@ -218,13 +231,38 @@ public abstract class GridH2IndexBase extends BaseIndex {
      * @return Row descriptor.
      */
     protected GridH2RowDescriptor rowDescriptor() {
-        return tbl.rowDescriptor();
+        return ((GridH2Table)table).rowDescriptor();
     }
 
     /**
      * @return Query context registry.
      */
     protected QueryContextRegistry queryContextRegistry() {
-        return tbl.rowDescriptor().indexing().queryContextRegistry();
+        return ((GridH2Table)table).rowDescriptor().indexing().queryContextRegistry();
     }
+
+    /**
+     * @param tbl Table.
+     * @param colsList Columns list.
+     * @return Index column array.
+     */
+    @NotNull public static IndexColumn[] columnsArray(GridH2Table tbl, List<IndexColumn> colsList) {
+        IndexColumn[] cols = colsList.toArray(H2Utils.EMPTY_COLUMNS);
+
+        IndexColumn.mapColumns(cols, tbl);
+
+        return cols;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public long getRowCountApproximation(Session ses) {
+        return table.getRowCountApproximation(ses);
+    }
+
+    /**
+     * @param partsFilter Partitions filter.
+     * @return Total row count in the current index for filtered partitions.
+     */
+    public abstract long totalRowCount(IndexingQueryCacheFilter partsFilter);
 }

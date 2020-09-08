@@ -20,10 +20,14 @@ import javax.cache.management.CacheMXBean;
 import javax.cache.management.CacheStatisticsMXBean;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMetrics;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 
 /**
  * This interface defines JMX view on {@link IgniteCache}.
+ *
+ * @deprecated Use {@link GridMetricManager} instead.
  */
+@Deprecated
 @MXBeanDescription("MBean that provides access to cache descriptor.")
 public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, CacheMetrics {
     /** {@inheritDoc} */
@@ -271,6 +275,34 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     public boolean isStoreByValue();
 
     /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated number of keys to be rebalanced on current node.")
+    public long getKeysToRebalanceLeft();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated rebalancing speed in bytes.")
+    public long getRebalancingBytesRate();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated rebalancing speed in keys.")
+    public long getRebalancingKeysRate();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Number of currently rebalancing partitions on current node.")
+    public int getRebalancingPartitionsCount();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Rebalancing start time.")
+    public long getRebalancingStartTime();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Total number of partitions on current node.")
+    public int getTotalPartitionsCount();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated rebalancing finish time.")
+    public long getEstimatedRebalancingFinishTime();
+
+    /** {@inheritDoc} */
     @Override @MXBeanDescription("True if statistics collection is enabled.")
     public boolean isStatisticsEnabled();
 
@@ -283,16 +315,21 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     public boolean isReadThrough();
 
     /** {@inheritDoc} */
-    @Override @MXBeanDescription("True when a cache is in write-through mode.")
-    public boolean isWriteThrough();
+    @MXBeanDescription("True when a cache is in write-through mode.")
+    @Override public boolean isWriteThrough();
 
     /** {@inheritDoc} */
-    @Override @MXBeanDescription("True when a cache topology is valid for read operations.")
-    public boolean isValidForReading();
+    @MXBeanDescription("True when a cache topology is valid for read operations.")
+    @Override public boolean isValidForReading();
 
     /** {@inheritDoc} */
-    @Override @MXBeanDescription("True when a cache topology is valid for write operations.")
-    public boolean isValidForWriting();
+    @MXBeanDescription("True when a cache topology is valid for write operations.")
+    @Override public boolean isValidForWriting();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Tx key collisions. Show key and appropriate collisions queue size for the last " +
+        "IGNITE_DUMP_TX_COLLISIONS_INTERVAL.")
+    @Override public String getTxKeyCollisions();
 
     /**
      * Enable statistic collection for the cache.
@@ -305,4 +342,13 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
      */
     @MXBeanDescription("Disable statistic collection for the cache.")
     public void disableStatistics();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("True if index rebuilding in progress.")
+    @Override public boolean isIndexRebuildInProgress();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Number of keys processed during index rebuilding. To get remaining number of keys for " +
+        "rebuilding, subtract current value from cache size.")
+    @Override public long getIndexRebuildKeysProcessed();
 }

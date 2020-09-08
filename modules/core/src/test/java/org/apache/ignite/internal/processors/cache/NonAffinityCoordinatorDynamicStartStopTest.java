@@ -24,10 +24,14 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  *
@@ -38,6 +42,9 @@ public class NonAffinityCoordinatorDynamicStartStopTest extends GridCommonAbstra
 
     /** Dummy grid name. */
     private static final String DUMMY_GRID_NAME = "dummy";
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** Cache configuration. */
     private static final CacheConfiguration<Integer, Integer> CCFG = new CacheConfiguration<Integer, Integer>("cache")
@@ -76,7 +83,7 @@ public class NonAffinityCoordinatorDynamicStartStopTest extends GridCommonAbstra
 
         final Ignite crd = startGrid(DUMMY_GRID_NAME);
 
-        crd.active(true);
+        crd.cluster().active(true);
 
         startGrid("client");
     }
@@ -91,7 +98,12 @@ public class NonAffinityCoordinatorDynamicStartStopTest extends GridCommonAbstra
      */
     @Test
     public void testStartStop() throws Exception {
-        startGrids(2);
+        IgniteEx ig0 = startGrids(2);
+
+        ig0.cluster().baselineAutoAdjustEnabled(false);
+
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
 
         awaitPartitionMapExchange();
 

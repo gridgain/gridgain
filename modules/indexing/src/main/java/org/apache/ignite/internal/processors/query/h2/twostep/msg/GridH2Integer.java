@@ -20,8 +20,8 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueInt;
 
 /**
  * H2 Integer.
@@ -41,7 +41,7 @@ public class GridH2Integer extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2Integer(Value val) {
-        assert val.getType() == Value.INT : val.getType();
+        assert val.getType().getValueType() == Value.INT : val.getType();
 
         x = val.getInt();
     }

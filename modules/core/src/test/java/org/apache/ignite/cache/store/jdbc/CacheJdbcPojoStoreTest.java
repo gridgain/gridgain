@@ -48,7 +48,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.cache.GridAbstractCacheStoreSelfTest;
-import org.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
 import org.junit.Test;
 
 /**
@@ -56,7 +56,7 @@ import org.junit.Test;
  */
 public class CacheJdbcPojoStoreTest extends GridAbstractCacheStoreSelfTest<CacheJdbcPojoStore<Object, Object>> {
     /** DB connection URL. */
-    private static final String DFLT_CONN_URL = "jdbc:h2:mem:autoCacheStore;DB_CLOSE_DELAY=-1";
+    private static final String DFLT_CONN_URL = "jdbc:gg-h2:mem:autoCacheStore;DB_CLOSE_DELAY=-1";
 
     /** Organization count. */
     protected static final int ORGANIZATION_CNT = 1000;
@@ -355,7 +355,7 @@ public class CacheJdbcPojoStoreTest extends GridAbstractCacheStoreSelfTest<Cache
 
         IgniteBiInClosure<Object, Object> c = new CI2<Object, Object>() {
             @Override public void apply(Object k, Object v) {
-                if (binaryEnable){
+                if (binaryEnable) {
                     if (k instanceof BinaryObject && v instanceof BinaryObject) {
                         BinaryObject key = (BinaryObject)k;
                         BinaryObject val = (BinaryObject)v;
@@ -379,7 +379,7 @@ public class CacheJdbcPojoStoreTest extends GridAbstractCacheStoreSelfTest<Cache
                             && BinaryTest.class.getName().equals(valType))
                             binaryTestVals.add(val.field("bytes"));
                     }
-                }else {
+                } else {
                     if (k instanceof OrganizationKey && v instanceof Organization)
                         orgKeys.add(k);
                     else if (k instanceof PersonKey && v instanceof Person)

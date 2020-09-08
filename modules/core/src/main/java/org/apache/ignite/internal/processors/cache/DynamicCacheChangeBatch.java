@@ -109,7 +109,7 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     /**
      * @return Cache updates to be executed on exchange.
      */
-    ExchangeActions exchangeActions() {
+    public ExchangeActions exchangeActions() {
         return exchangeActions;
     }
 

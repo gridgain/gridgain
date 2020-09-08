@@ -78,6 +78,7 @@ public class CacheData implements Serializable {
      * @param sql {@code True} if cache was created by an SQL command such as {@code CREATE TABLE}.
      * @param template {@code True} if this is cache template.
      * @param flags Flags (added for future usage).
+     * @param cacheCfgEnrichment Cache configuration enrichment.
      */
     CacheData(CacheConfiguration cacheCfg,
         int cacheId,
@@ -190,7 +191,7 @@ public class CacheData implements Serializable {
     }
 
     /**
-     *
+     * @return Cache configuration enrichment.
      */
     public CacheConfigurationEnrichment cacheConfigurationEnrichment() {
         return cacheCfgEnrichment;

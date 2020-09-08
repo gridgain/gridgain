@@ -231,8 +231,16 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
 
         // Unwind immediately for local and replicate caches.
         // We go through preloader for proper synchronization.
-        if (ctx.isLocal())
-            ctx.preloader().unwindUndeploys();
+        if (ctx.isLocal()) {
+            ctx.preloader().pause();
+
+            try {
+                ctx.group().unwindUndeploys();
+            }
+            finally {
+                ctx.preloader().resume();
+            }
+        }
     }
 
     /**
@@ -366,7 +374,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
         String userVer,
         DeploymentMode mode,
         Map<UUID, IgniteUuid> participants
-    ) {
+    ) throws IgnitePeerToPeerClassLoadingException {
         localLdrId.set(ldrId);
 
         assert depEnabled;
@@ -376,7 +384,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
 
             if (node == null) {
                 if (log.isDebugEnabled())
-                    log.debug("Ignoring p2p context (sender has left) [sndId=" + sndId + ", ldrId=" +  ldrId +
+                    log.debug("Ignoring p2p context (sender has left) [sndId=" + sndId + ", ldrId=" + ldrId +
                         ", userVer=" + userVer + ", mode=" + mode + ", participants=" + participants + ']');
 
                 return;
@@ -408,7 +416,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         if (log.isDebugEnabled())
-            log.debug("Setting p2p context [sndId=" + sndId + ", ldrId=" +  ldrId + ", userVer=" + userVer +
+            log.debug("Setting p2p context [sndId=" + sndId + ", ldrId=" + ldrId + ", userVer=" + userVer +
                 ", seqNum=" + ldrId.localId() + ", mode=" + mode + ", participants=" + participants +
                 ", locDepOwner=false]");
 
@@ -418,6 +426,12 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
             depInfo = deps.get(ldrId);
 
             if (depInfo == null) {
+                if (!sndId.equals(ldrId.globalId()) && participants == null) {
+                    throw new IgnitePeerToPeerClassLoadingException("Unable to load class using class loader with id=" +
+                        ldrId + ", senderId=" + sndId + ", participants=null (loader id doesn't match sender id " +
+                        "and there are no more participants)");
+                }
+
                 depInfo = new CachedDeploymentInfo<>(sndId, ldrId, userVer, mode, participants);
 
                 CachedDeploymentInfo<K, V> old = deps.putIfAbsent(ldrId, depInfo);
@@ -451,7 +465,6 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
                 if (cctx.discovery().node(id) == null) {
                     if (depInfo.removeParticipant(id))
                         deps.remove(ldrId, depInfo);
-
 
                     allParticipants.remove(id);
                 }
@@ -660,7 +673,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
      *
      * @param deployable Deployable object.
      */
-    public void prepare(GridCacheDeployable deployable) {
+    public void prepare(GridCacheDeployable deployable) throws IgnitePeerToPeerClassLoadingException {
         assert depEnabled;
 
         // Only set deployment info if it was not set automatically.
@@ -676,11 +689,32 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
                 }
             }
 
-            if (dep != null)
+            if (dep != null) {
+                checkDeploymentIsCorrect(dep, deployable);
+
                 deployable.prepare(dep);
+            }
 
             if (log.isDebugEnabled())
                 log.debug("Prepared grid cache deployable [dep=" + dep + ", deployable=" + deployable + ']');
+        }
+    }
+
+    /**
+     * Checks if given deployment is correct to prepare a message.
+     *
+     * @param deployment Deployment.
+     * @param deployable Deployable message.
+     * @throws IgnitePeerToPeerClassLoadingException If deployment is incorrect.
+     */
+    private void checkDeploymentIsCorrect(GridDeploymentInfoBean deployment, GridCacheDeployable deployable)
+        throws IgnitePeerToPeerClassLoadingException {
+        if (deployment.participants() == null
+            && !cctx.localNode().id().equals(deployment.classLoaderId().globalId())) {
+            throw new IgnitePeerToPeerClassLoadingException("Could not use deployment to prepare deployable, " +
+                "because local node id does not correspond with class loader id, and there are no more participants, " +
+                "localNodeId=" + cctx.localNode().id() + ", deployment=" + deployment + ", deployable=" + deployable +
+                ", locDep=" + locDep.get());
         }
     }
 
@@ -831,7 +865,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
             if (cls != null)
                 return cls;
 
-            throw new ClassNotFoundException("Failed to load class [name=" + name+ ", ctx=" + deps + ']');
+            throw new ClassNotFoundException("Failed to load class [name=" + name + ", ctx=" + deps + ']');
         }
 
         /**

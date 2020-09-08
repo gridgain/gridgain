@@ -16,10 +16,12 @@
 
 package org.apache.ignite.testframework;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
@@ -61,8 +63,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
+import javax.management.Attribute;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -74,6 +78,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -81,6 +86,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
+import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
+import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -103,16 +110,25 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Utility class for tests.
@@ -124,6 +140,15 @@ public final class GridTestUtils {
     /** */
     public static final long DFLT_TEST_TIMEOUT = 5 * 60 * 1000;
 
+    /** yyyy-MM-dd. */
+    public static final String LOCAL_DATE_REGEXP = "[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))";
+
+    /** HH:mm:ss.SSS. */
+    public static final String LOCAL_TIME_REGEXP = "(20|21|22|23|[01]\\d|\\d)((:[0-5]\\d){1,2})\\.\\d{3}";
+
+    /** yyyy-MM-dd'T'HH:mm:ss.SSS. */
+    public static final String LOCAL_DATETIME_REGEXP = LOCAL_DATE_REGEXP + "T" + LOCAL_TIME_REGEXP;
+
     /** */
     static final String ALPHABETH = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890_";
 
@@ -133,9 +158,41 @@ public final class GridTestUtils {
      */
     public static class DiscoveryHook {
         /**
-         * @param msg Message.
+         * Handles discovery message before {@link DiscoverySpiListener#onDiscovery} invocation.
+         *
+         * @param msg Intercepted discovery message.
          */
-        public void handleDiscoveryMessage(DiscoverySpiCustomMessage msg) {
+        public void beforeDiscovery(DiscoverySpiCustomMessage msg) {
+            if (msg instanceof CustomMessageWrapper)
+                beforeDiscovery(unwrap((CustomMessageWrapper)msg));
+        }
+
+        /**
+         * Handles {@link DiscoveryCustomMessage} before {@link DiscoverySpiListener#onDiscovery} invocation.
+         *
+         * @param customMsg Intercepted {@link DiscoveryCustomMessage}.
+         */
+        public void beforeDiscovery(DiscoveryCustomMessage customMsg) {
+            // No-op.
+        }
+
+        /**
+         * Handles discovery message after {@link DiscoverySpiListener#onDiscovery} completion.
+         *
+         * @param msg Intercepted discovery message.
+         */
+        public void afterDiscovery(DiscoverySpiCustomMessage msg) {
+            if (msg instanceof CustomMessageWrapper)
+                afterDiscovery(unwrap((CustomMessageWrapper)msg));
+        }
+
+        /**
+         * Handles {@link DiscoveryCustomMessage} after {@link DiscoverySpiListener#onDiscovery} completion.
+         *
+         * @param customMsg Intercepted {@link DiscoveryCustomMessage}.
+         */
+        public void afterDiscovery(DiscoveryCustomMessage customMsg) {
+            // No-op.
         }
 
         /**
@@ -143,6 +200,16 @@ public final class GridTestUtils {
          */
         public void ignite(IgniteEx ignite) {
             // No-op.
+        }
+
+        /**
+         * Obtains {@link DiscoveryCustomMessage} from {@link CustomMessageWrapper}.
+         *
+         * @param wrapper Wrapper of {@link DiscoveryCustomMessage}.
+         * @return Unwrapped {@link DiscoveryCustomMessage}.
+         */
+        private DiscoveryCustomMessage unwrap(CustomMessageWrapper wrapper) {
+            return U.field(wrapper, "delegate");
         }
     }
 
@@ -153,12 +220,12 @@ public final class GridTestUtils {
         /** */
         private final DiscoverySpiListener delegate;
 
-        /** */
+        /** Interceptor of discovery messages. */
         private final DiscoveryHook hook;
 
         /**
          * @param delegate Delegate.
-         * @param hook Hook.
+         * @param hook Interceptor of discovery messages.
          */
         private DiscoverySpiListenerWrapper(DiscoverySpiListener delegate, DiscoveryHook hook) {
             this.hook = hook;
@@ -166,10 +233,21 @@ public final class GridTestUtils {
         }
 
         /** {@inheritDoc} */
-        @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node, Collection<ClusterNode> topSnapshot, @Nullable Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage spiCustomMsg) {
-            hook.handleDiscoveryMessage(spiCustomMsg);
+        @Override public IgniteFuture<?> onDiscovery(
+            int type,
+            long topVer,
+            ClusterNode node,
+            Collection<ClusterNode> topSnapshot,
+            @Nullable Map<Long, Collection<ClusterNode>> topHist,
+            @Nullable DiscoverySpiCustomMessage spiCustomMsg
+        ) {
+            hook.beforeDiscovery(spiCustomMsg);
 
-            return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+            IgniteFuture<?> fut = delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, spiCustomMsg);
+
+            fut.listen(f -> hook.afterDiscovery(spiCustomMsg));
+
+            return fut;
         }
 
         /** {@inheritDoc} */
@@ -179,10 +257,10 @@ public final class GridTestUtils {
 
         /**
          * @param delegate Delegate.
-         * @param discoveryHook Discovery hook.
+         * @param discoHook Interceptor of discovery messages.
          */
-        public static DiscoverySpiListener wrap(DiscoverySpiListener delegate, DiscoveryHook discoveryHook) {
-            return new DiscoverySpiListenerWrapper(delegate, discoveryHook);
+        public static DiscoverySpiListener wrap(DiscoverySpiListener delegate, DiscoveryHook discoHook) {
+            return new DiscoverySpiListenerWrapper(delegate, discoHook);
         }
     }
 
@@ -297,6 +375,149 @@ public final class GridTestUtils {
 //    }
 
     /**
+     * Checks that string {@param str} matches given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param regexp Regular expression.
+     */
+    public static void assertMatches(@Nullable IgniteLogger log, String str, String regexp) {
+        try {
+            assertTrue(Pattern.compile(regexp).matcher(str).find());
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String does not matches regexp: '%s':", regexp));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} doesn't match given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if matches.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param regexp Regular expression.
+     */
+    public static void assertNotMatches(@Nullable IgniteLogger log, String str, String regexp) {
+        try {
+            assertFalse(Pattern.compile(regexp).matcher(str).find());
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String matches regexp: '%s', but shouldn't:", regexp));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} doesn't contains substring {@param substr}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if contains.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param substr Substring.
+     */
+    public static void assertNotContains(@Nullable IgniteLogger log, String str, String substr) {
+        try {
+            assertFalse(str.contains(substr));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String contain substring: '%s', but shouldn't:", substr));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that string {@param str} contains substring {@param substr}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param str String.
+     * @param substr Substring.
+     */
+    public static void assertContains(@Nullable IgniteLogger log, String str, String substr) {
+        try {
+            assertTrue(str != null && str.contains(substr));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("String does not contain substring: '%s':", substr));
+            U.warn(log, "String:");
+            U.warn(log, str);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that collection {@param col} contains element {@param elem}. Logs collection, element
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param col Collection.
+     * @param elem Element.
+     */
+    public static <C extends Collection<T>, T> void assertContains(@Nullable IgniteLogger log, C col, T elem) {
+        try {
+            assertTrue(col.contains(elem));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("Collection does not contain: '%s':", elem));
+            U.warn(log, "Collection:");
+            U.warn(log, col);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks that collection {@param col} doesn't contains element {@param str}. Logs collection, element
+     * and throws {@link java.lang.AssertionError}, if contains.
+     *
+     * @param log Logger (optional).
+     * @param col Collection.
+     * @param elem Element.
+     */
+    public static <C extends Collection<T>, T> void assertNotContains(@Nullable IgniteLogger log, C col, T elem) {
+        try {
+            assertFalse(col.contains(elem));
+        } catch (AssertionError e) {
+            U.warn(log, String.format("Collection contain element: '%s' but shouldn't:", elem));
+            U.warn(log, "Collection:");
+            U.warn(log, col);
+
+            throw e;
+        }
+    }
+
+    /**
+     * Checks whether runnable throws expected exception or not.
+     *
+     * @param log Logger (optional).
+     * @param run Runnable.
+     * @param cls Exception class.
+     * @param msg Exception message (optional). If provided exception message
+     *      and this message should be equal.
+     * @return Thrown throwable.
+     */
+    public static <T extends Throwable> T assertThrows(
+        @Nullable IgniteLogger log,
+        RunnableX run,
+        Class<? extends T> cls,
+        @Nullable String msg
+    ) {
+        return assertThrows(log, () -> {
+            run.run();
+
+            return null;
+        }, cls, msg);
+    }
+
+    /**
      * Checks whether callable throws expected exception or not.
      *
      * @param log Logger (optional).
@@ -306,8 +527,12 @@ public final class GridTestUtils {
      *      and this message should be equal.
      * @return Thrown throwable.
      */
-    public static Throwable assertThrows(@Nullable IgniteLogger log, Callable<?> call,
-        Class<? extends Throwable> cls, @Nullable String msg) {
+    public static <T extends Throwable> T assertThrows(
+        @Nullable IgniteLogger log,
+        Callable<?> call,
+        Class<? extends T> cls,
+        @Nullable String msg
+    ) {
         assert call != null;
         assert cls != null;
 
@@ -338,7 +563,7 @@ public final class GridTestUtils {
             else
                 X.println("Caught expected exception: " + e.getMessage());
 
-            return e;
+            return (T) e;
         }
 
         throw new AssertionError("Exception has not been thrown.");
@@ -1026,6 +1251,31 @@ public final class GridTestUtils {
     }
 
     /**
+     * Wait for all passed futures to complete even if they fail.
+     *
+     * @param futs Futures.
+     * @throws AssertionError Suppresses underlying exceptions if some futures failed.
+     */
+    public static void waitForAllFutures(IgniteInternalFuture<?>... futs) {
+        AssertionError err = null;
+
+        for (IgniteInternalFuture<?> fut : futs) {
+            try {
+                fut.get();
+            }
+            catch (Throwable t) {
+                if (err == null)
+                    err = new AssertionError("One or several futures threw the exception.");
+
+                err.addSuppressed(t);
+            }
+        }
+
+        if (err != null)
+            throw err;
+    }
+
+    /**
      * Interrupts and waits for termination of all the threads started
      * so far by current test.
      *
@@ -1461,6 +1711,18 @@ public final class GridTestUtils {
 
             Field field = cls.getDeclaredField(fieldName);
 
+            boolean isFinal = (field.getModifiers() & Modifier.FINAL) != 0;
+
+            boolean isStatic = (field.getModifiers() & Modifier.STATIC) != 0;
+
+            /**
+             * http://java.sun.com/docs/books/jls/third_edition/html/memory.html#17.5.3
+             * If a final field is initialized to a compile-time constant in the field declaration,
+             *   changes to the final field may not be observed.
+             */
+            if (isFinal && isStatic)
+                throw new IgniteException("Modification of static final field through reflection.");
+
             boolean accessible = field.isAccessible();
 
             if (!accessible)
@@ -1494,6 +1756,16 @@ public final class GridTestUtils {
                 field.setAccessible(true);
 
             boolean isFinal = (field.getModifiers() & Modifier.FINAL) != 0;
+
+            boolean isStatic = (field.getModifiers() & Modifier.STATIC) != 0;
+
+            /**
+             * http://java.sun.com/docs/books/jls/third_edition/html/memory.html#17.5.3
+             * If a final field is initialized to a compile-time constant in the field declaration,
+             *   changes to the final field may not be observed.
+             */
+            if (isFinal && isStatic)
+                throw new IgniteException("Modification of static final field through reflection.");
 
             if (isFinal) {
                 Field modifiersField = Field.class.getDeclaredField("modifiers");
@@ -1561,7 +1833,6 @@ public final class GridTestUtils {
 
             cls = cls.getSuperclass();
         } while (cls != Object.class);
-
 
         throw new RuntimeException("Failed to find method" +
             " [obj=" + obj + ", mtd=" + mtd + ", params=" + Arrays.toString(params) + ']');
@@ -1642,6 +1913,26 @@ public final class GridTestUtils {
     }
 
     /**
+     * Reads resource into byte array.
+     *
+     * @param classLoader Classloader.
+     * @param resourceName Resource name.
+     * @return Content of resorce in byte array.
+     * @throws IOException If failed.
+     */
+    public static byte[] readResource(ClassLoader classLoader, String resourceName) throws IOException {
+        try (InputStream is = classLoader.getResourceAsStream(resourceName)) {
+            assertNotNull("Resource is missing: " + resourceName, is);
+
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                U.copy(is, baos);
+
+                return baos.toByteArray();
+            }
+        }
+    }
+
+    /**
      * Sleeps and increments an integer.
      * <p>
      * Allows for loops like the following:
@@ -1668,10 +1959,11 @@ public final class GridTestUtils {
      *
      * @param cond Condition to wait for.
      * @param timeout Max time to wait in milliseconds.
+     * @param checkInterval Time interval between two consecutive condition checks.
      * @return {@code true} if condition was achieved, {@code false} otherwise.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
      */
-    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout, long checkInterval) throws IgniteInterruptedCheckedException {
         long curTime = U.currentTimeMillis();
         long endTime = curTime + timeout;
 
@@ -1682,12 +1974,25 @@ public final class GridTestUtils {
             if (cond.apply())
                 return true;
 
-            U.sleep(DFLT_BUSYWAIT_SLEEP_INTERVAL);
+            if (checkInterval > 0)
+                U.sleep(checkInterval);
 
             curTime = U.currentTimeMillis();
         }
 
         return false;
+    }
+
+    /**
+     * Waits for condition, polling in busy wait loop.
+     *
+     * @param cond Condition to wait for.
+     * @param timeout Max time to wait in milliseconds.
+     * @return {@code true} if condition was achieved, {@code false} otherwise.
+     * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
+     */
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout) throws IgniteInterruptedCheckedException {
+        return waitForCondition(cond, timeout, DFLT_BUSYWAIT_SLEEP_INTERVAL);
     }
 
     /**
@@ -1698,13 +2003,13 @@ public final class GridTestUtils {
      * @throws IOException If keystore cannot be accessed.
      */
     public static SSLContext sslContext() throws GeneralSecurityException, IOException {
-        SSLContext ctx = SSLContext.getInstance("TLS");
+        SSLContext ctx = SSLContext.getInstance(DFLT_SSL_PROTOCOL);
 
         char[] storePass = keyStorePassword().toCharArray();
 
-        KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance("SunX509");
+        KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(DFLT_KEY_ALGORITHM);
 
-        KeyStore keyStore = KeyStore.getInstance("JKS");
+        KeyStore keyStore = KeyStore.getInstance(DFLT_STORE_TYPE);
 
         keyStore.load(new FileInputStream(U.resolveIgnitePath(GridTestProperties.getProperty("ssl.keystore.path"))),
             storePass);
@@ -1733,7 +2038,6 @@ public final class GridTestUtils {
 
         return factory;
     }
-
 
     /**
      * Creates test-purposed SSL context factory from test key store with disabled trust manager.
@@ -1938,6 +2242,17 @@ public final class GridTestUtils {
     }
 
     /**
+     * Deletes index.bin for all cach groups for given {@code igniteInstanceName}
+     */
+    public static void deleteIndexBin(String igniteInstanceName) throws IgniteCheckedException {
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
+        for (File grp : new File(workDir, U.maskForFileName(igniteInstanceName)).listFiles()) {
+            new File(grp, "index.bin").delete();
+        }
+    }
+
+    /**
      * {@link Class#getSimpleName()} does not return outer class name prefix for inner classes, for example,
      * getSimpleName() returns "RegularDiscovery" instead of "GridDiscoveryManagerSelfTest$RegularDiscovery"
      * This method return correct simple name for inner classes.
@@ -1975,7 +2290,22 @@ public final class GridTestUtils {
      * @return Random string object.
      */
     public static String randomString(Random rnd, int maxLen) {
-        int len = rnd.nextInt(maxLen);
+        return randomString(rnd, 0, maxLen);
+    }
+
+    /**
+     * Generate random alphabetical string.
+     *
+     * @param rnd Random object.
+     * @param maxLen Maximal length of string
+     * @param minLen Minimum length of string
+     * @return Random string object.
+     */
+    public static String randomString(Random rnd, int minLen, int maxLen) {
+        assert minLen >= 0 : "minLen >= 0";
+        assert maxLen >= minLen : "maxLen >= minLen";
+
+        int len = maxLen == minLen ? minLen : minLen + rnd.nextInt(maxLen - minLen);
 
         StringBuilder b = new StringBuilder(len);
 
@@ -2001,6 +2331,26 @@ public final class GridTestUtils {
     public static void mergeExchangeWaitVersion(Ignite node, long topVer, List mergedEvts) {
         ((IgniteEx)node).context().cache().context().exchange().mergeExchangesTestWaitVersion(
             new AffinityTopologyVersion(topVer, 0), mergedEvts);
+    }
+
+    /**
+     * Checks that {@code state} is active.
+     *
+     * @param state Passed cluster state.
+     * @see ClusterState#active(ClusterState)
+     */
+    public static void assertActive(ClusterState state) {
+        assertTrue(state + " isn't active state", ClusterState.active(state));
+    }
+
+    /**
+     * Checks that {@code state} isn't active.
+     *
+     * @param state Passed cluster state.
+     * @see ClusterState#active(ClusterState)
+     */
+    public static void assertInactive(ClusterState state) {
+        assertFalse(state + " isn't inactive state", ClusterState.active(state));
     }
 
     /** Test parameters scale factor util. */
@@ -2086,9 +2436,37 @@ public final class GridTestUtils {
             f.delete();
     }
 
+    /**
+     * @param grid Node.
+     * @param grp Group name.
+     * @param name Object name.
+     * @param attr Attribute name.
+     * @param val Attribute value.
+     * @throws Exception On error.
+     */
+    public static void setJmxAttribute(IgniteEx grid, String grp, String name, String attr, Object val) throws Exception {
+        grid.context().config().getMBeanServer().setAttribute(U.makeMBeanName(grid.name(), grp, name),
+            new Attribute(attr, val));
+    }
+
+    /**
+     * @param grid Node.
+     * @param grp Group name.
+     * @param name Object name.
+     * @param attr Attribute name.
+     * @return Attribute's value.
+     * @throws Exception On error.
+     */
+    public static Object getJmxAttribute(IgniteEx grid, String grp, String name, String attr) throws Exception {
+        return grid.context().config().getMBeanServer().getAttribute(U.makeMBeanName(grid.name(), grp, name), attr);
+    }
+
+    /**
+     */
     public static class SqlTestFunctions {
         /** Sleep milliseconds. */
         public static volatile long sleepMs;
+
         /** Fail flag. */
         public static volatile boolean fail;
 
@@ -2102,7 +2480,7 @@ public final class GridTestUtils {
         public static long sleep() {
             long end = System.currentTimeMillis() + sleepMs;
 
-            long remainTime =sleepMs;
+            long remainTime = sleepMs;
 
             do {
                 try {
@@ -2115,6 +2493,24 @@ public final class GridTestUtils {
             while ((remainTime = end - System.currentTimeMillis()) > 0);
 
             return sleepMs;
+        }
+
+        /**
+         * Delays execution for {@code duration} milliseconds.
+         *
+         * @param duration Duration.
+         * @return amount of milliseconds to delay.
+         */
+        @QuerySqlFunction
+        public static long delay(long duration) {
+            try {
+                Thread.sleep(duration);
+            }
+            catch (InterruptedException ignored) {
+                // No-op
+            }
+
+            return duration;
         }
 
         /**
@@ -2143,5 +2539,81 @@ public final class GridTestUtils {
 
             return sleep;
         }
+    }
+
+    /**
+     * Runnable that can throw exceptions.
+     */
+    @FunctionalInterface
+    public interface RunnableX extends Runnable {
+        /**
+         * Runnable body.
+         *
+         * @throws Exception If failed.
+         */
+        void runx() throws Exception;
+
+        /** {@inheritdoc} */
+        @Override default void run() {
+            try {
+                runx();
+            }
+            catch (RuntimeException e) {
+                throw e;
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+        }
+    }
+
+    /**
+     * IgniteRunnable that can throw exceptions.
+     */
+    @FunctionalInterface
+    public interface IgniteRunnableX extends IgniteRunnable {
+        /**
+         * Runnable body.
+         *
+         * @throws Exception If failed.
+         */
+        void runx() throws Exception;
+
+        /** {@inheritdoc} */
+        @Override default void run() {
+            try {
+                runx();
+            }
+            catch (RuntimeException e) {
+                throw e;
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+        }
+    }
+
+    /**
+     * @param lowerBound Lower bound.
+     * @param upperBound Upper bound.
+     */
+    public static <T extends Comparable<? super T>> Matcher<T> inRange(T lowerBound, T upperBound) {
+        Objects.requireNonNull(lowerBound, "lowerBound");
+        Objects.requireNonNull(upperBound, "upperBound");
+
+        return new CustomMatcher<T>("should be in range [" + lowerBound + ", " + upperBound + "]") {
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            @Override public boolean matches(Object item) {
+                return lowerBound != null && upperBound != null && item instanceof Comparable
+                    && ((Comparable)item).compareTo(lowerBound) >= 0 && ((Comparable)item).compareTo(upperBound) <= 0;
+            }
+        };
+    }
+
+    /**
+     * @param runnableX Runnable with exception.
+     */
+    public static void suppressException(RunnableX runnableX) {
+        runnableX.run();
     }
 }

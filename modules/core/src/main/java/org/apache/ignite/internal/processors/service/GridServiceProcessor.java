@@ -72,6 +72,7 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.processors.platform.services.PlatformService;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridEmptyIterator;
@@ -80,6 +81,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -255,7 +257,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             else { // Listener for client nodes is registered in onContinuousProcessorStarted method.
                 assert !ctx.isDaemon();
 
-                ctx.closure().runLocalSafe(new Runnable() {
+                ctx.closure().runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         try {
                             Iterable<CacheEntryEvent<?, ?>> entries =
@@ -537,7 +539,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
 
             if (err == null) {
                 try {
-                    ctx.security().authorize(cfg.getName(), SecurityPermission.SERVICE_DEPLOY, null);
+                    ctx.security().authorize(cfg.getName(), SecurityPermission.SERVICE_DEPLOY);
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to authorize service creation [name=" + cfg.getName() +
@@ -580,12 +582,12 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
     @Override public IgniteInternalFuture<?> deployAll(ClusterGroup prj, Collection<ServiceConfiguration> cfgs) {
         if (prj == null)
             // Deploy to servers by default if no projection specified.
-            return deployAll(cfgs,  ctx.cluster().get().forServers().predicate());
+            return deployAll(cfgs, ctx.cluster().get().forServers().predicate());
         else if (prj.predicate() == F.<ClusterNode>alwaysTrue())
-            return deployAll(cfgs,  null);
+            return deployAll(cfgs, null);
         else
             // Deploy to predicate nodes by default.
-            return deployAll(cfgs,  prj.predicate());
+            return deployAll(cfgs, prj.predicate());
     }
 
     /**
@@ -865,7 +867,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
      */
     private CancelResult removeServiceFromCache(String name) throws IgniteCheckedException {
         try {
-            ctx.security().authorize(name, SecurityPermission.SERVICE_CANCEL, null);
+            ctx.security().authorize(name, SecurityPermission.SERVICE_CANCEL);
         }
         catch (SecurityException e) {
             return new CancelResult(new GridFinishedFuture<>(e), false);
@@ -966,7 +968,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
 
     /** {@inheritDoc} */
     @Override public <T> T service(String name) {
-        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
         Collection<ServiceContextImpl> ctxs;
 
@@ -1020,7 +1022,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
     @Override public <T> T serviceProxy(ClusterGroup prj, String name, Class<? super T> srvcCls, boolean sticky,
         long timeout)
         throws IgniteException {
-        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
         if (hasLocalNode(prj)) {
             ServiceContextImpl ctx = serviceContext(name);
@@ -1029,11 +1031,12 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                 Service svc = ctx.service();
 
                 if (svc != null) {
-                    if (!srvcCls.isAssignableFrom(svc.getClass()))
+                    if (srvcCls.isAssignableFrom(svc.getClass()))
+                        return (T)svc;
+                    else if (!PlatformService.class.isAssignableFrom(svc.getClass())) {
                         throw new IgniteException("Service does not implement specified interface [svcItf=" +
-                            srvcCls.getName() + ", svcCls=" + svc.getClass().getName() + ']');
-
-                    return (T)svc;
+                                srvcCls.getName() + ", svcCls=" + svc.getClass().getName() + ']');
+                    }
                 }
             }
         }
@@ -1056,7 +1059,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
 
     /** {@inheritDoc} */
     @Override public <T> Collection<T> services(String name) {
-        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE, null);
+        ctx.security().authorize(name, SecurityPermission.SERVICE_INVOKE);
 
         Collection<ServiceContextImpl> ctxs;
 

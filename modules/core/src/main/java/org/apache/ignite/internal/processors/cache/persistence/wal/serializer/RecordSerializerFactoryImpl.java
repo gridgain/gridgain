@@ -51,6 +51,7 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
     public RecordSerializerFactoryImpl(GridCacheSharedContext cctx) {
         this(cctx, null);
     }
+
     /**
      * @param cctx Cctx.
      */
@@ -152,7 +153,6 @@ public class RecordSerializerFactoryImpl implements RecordSerializerFactory {
     /** {@inheritDoc} */
     @Override public RecordSerializerFactory clearSegmentLocalState() {
         skipPositionCheck = false;
-        recordDeserializeFilter = null;
 
         return this;
     }

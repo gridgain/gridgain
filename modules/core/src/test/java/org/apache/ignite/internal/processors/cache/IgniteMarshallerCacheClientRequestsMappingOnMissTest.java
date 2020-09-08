@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridComponent;
 import org.apache.ignite.internal.GridKernalContext;
@@ -103,7 +105,7 @@ public class IgniteMarshallerCacheClientRequestsMappingOnMissTest extends GridCo
      *
      */
     private void cleanupMarshallerFileStore() throws IOException {
-        Path marshCache = Paths.get(TMP_DIR, "marshaller");
+        Path marshCache = Paths.get(TMP_DIR, DataStorageConfiguration.DFLT_MARSHALLER_PATH);
 
         for (File file : marshCache.toFile().listFiles())
             Files.delete(file.toPath());
@@ -132,14 +134,14 @@ public class IgniteMarshallerCacheClientRequestsMappingOnMissTest extends GridCo
 
         stopGrid(1);
 
-        File[] files = Paths.get(TMP_DIR, "marshaller").toFile().listFiles();
+        File[] files = Paths.get(TMP_DIR, DataStorageConfiguration.DFLT_MARSHALLER_PATH).toFile().listFiles();
 
         assertNotNull(TMP_DIR + "/marshaller directory should contain at least one file", files);
 
         boolean orgClsMarshalled = false;
 
         for (File f : files) {
-            if (clsName.equals(new String(Files.readAllBytes(f.toPath())))) {
+            if (clsName.equals(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8))) {
                 orgClsMarshalled = true;
                 break;
             }

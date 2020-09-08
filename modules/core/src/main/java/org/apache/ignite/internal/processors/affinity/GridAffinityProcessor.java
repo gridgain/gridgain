@@ -246,7 +246,6 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
             log.debug("Affinity cached values were cleared: " + (oldSize - affMap.size()));
     }
 
-
     /**
      * Maps keys to nodes for given cache.
      *
@@ -413,6 +412,9 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
         throws IgniteCheckedException {
         assert cacheName != null;
 
+        if (topVer == null)
+            topVer = ctx.cache().context().exchange().readyAffinityVersion();
+
         IgniteInternalFuture<AffinityInfo> locFetchFut = localAffinityInfo(cacheName, topVer);
 
         if (locFetchFut != null)
@@ -432,10 +434,9 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<AffinityInfo> localAffinityInfo(
         String cacheName,
-        @Nullable AffinityTopologyVersion topVer
+        AffinityTopologyVersion topVer
     ) throws IgniteCheckedException {
-        if (topVer == null)
-            topVer = ctx.cache().context().exchange().readyAffinityVersion();
+        assert topVer != null;
 
         AffinityAssignmentKey key = new AffinityAssignmentKey(cacheName, topVer);
 
@@ -496,10 +497,9 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
      */
     private IgniteInternalFuture<AffinityInfo> remoteAffinityInfo(
         String cacheName,
-        @Nullable AffinityTopologyVersion topVer
+        AffinityTopologyVersion topVer
     ) {
-        if (topVer == null)
-            topVer = ctx.discovery().topologyVersionEx();
+        assert topVer != null;
 
         AffinityAssignmentKey key = new AffinityAssignmentKey(cacheName, topVer);
 
@@ -1170,7 +1170,7 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
             int hash = backups;
             hash = 31 * hash + affFuncCls.hashCode();
             hash = 31 * hash + filterCls.hashCode();
-            hash= 31 * hash + partsCnt;
+            hash = 31 * hash + partsCnt;
 
             this.hash = hash;
         }

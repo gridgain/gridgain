@@ -16,9 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import org.h2.api.TableEngine;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.table.Table;
+import org.gridgain.internal.h2.api.TableEngine;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.table.Table;
 
 import java.sql.Connection;
 import java.sql.SQLException;

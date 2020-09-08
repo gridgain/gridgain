@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
@@ -36,11 +37,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.ReaderArguments;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.LostPolicyValidator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridCompoundIdentityFuture;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
@@ -55,10 +56,11 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Collections.singleton;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.OperationType.READ;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_DHT_GET_FUTURE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CACHE_API_GET_MAP;
 
 /**
  *
@@ -180,7 +182,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
 
         futId = IgniteUuid.randomUuid();
 
-        ver = cctx.versions().next();
+        ver = cctx.cache().nextVersion();
 
         if (log == null)
             log = U.logger(cctx.kernalContext(), logRef, GridDhtGetFuture.class);
@@ -190,43 +192,48 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
      * Initializes future.
      */
     void init() {
-        // TODO get rid of force keys request https://issues.apache.org/jira/browse/IGNITE-10251
-        GridDhtFuture<Object> fut = cctx.group().preloader().request(cctx, keys.keySet(), topVer);
+        try (TraceSurroundings ignored =
+                 MTC.supportContinual(span = cctx.kernalContext().tracing().
+                     create(CACHE_API_DHT_GET_FUTURE, MTC.span()))) {
+            // TODO get rid of force keys request https://issues.apache.org/jira/browse/IGNITE-10251
+            GridDhtFuture<Object> fut = cctx.group().preloader().request(cctx, keys.keySet(), topVer);
 
-        assert !cctx.mvccEnabled() || fut == null; // Should not happen with MVCC enabled.
+            assert !cctx.mvccEnabled() || fut == null; // Should not happen with MVCC enabled.
 
-        if (fut != null) {
-            if (!F.isEmpty(fut.invalidPartitions())) {
-                if (retries == null)
-                    retries = new HashSet<>();
+            if (fut != null) {
+                if (!F.isEmpty(fut.invalidPartitions())) {
+                    if (retries == null)
+                        retries = new HashSet<>();
 
-                retries.addAll(fut.invalidPartitions());
-            }
-
-            fut.listen(new CI1<IgniteInternalFuture<Object>>() {
-                @Override public void apply(IgniteInternalFuture<Object> fut) {
-                    try {
-                        fut.get();
-                    }
-                    catch (IgniteCheckedException e) {
-                        if (log.isDebugEnabled())
-                            log.debug("Failed to request keys from preloader [keys=" + keys + ", err=" + e + ']');
-
-                        onDone(e);
-
-                        return;
-                    }
-
-                    map0(keys, true);
-
-                    markInitialized();
+                    retries.addAll(fut.invalidPartitions());
                 }
-            });
-        }
-        else {
-            map0(keys, false);
 
-            markInitialized();
+                fut.listen(new CI1<IgniteInternalFuture<Object>>() {
+                    @Override public void apply(IgniteInternalFuture<Object> fut) {
+                        try {
+                            fut.get();
+                        }
+                        catch (IgniteCheckedException e) {
+                            if (log.isDebugEnabled())
+                                log.debug("Failed to request keys from preloader [keys=" + keys + ", err=" +
+                                    e + ']');
+
+                            onDone(e);
+
+                            return;
+                        }
+
+                        map0(keys, true);
+
+                        markInitialized();
+                    }
+                });
+            }
+            else {
+                map0(keys, false);
+
+                markInitialized();
+            }
         }
     }
 
@@ -266,51 +273,56 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
      * @param keys Keys to map.
      */
     private void map0(Map<KeyCacheObject, Boolean> keys, boolean forceKeys) {
-        Map<KeyCacheObject, Boolean> mappedKeys = null;
+        try (TraceSurroundings ignored =
+                 MTC.support(cctx.kernalContext().tracing().create(CACHE_API_GET_MAP, span))) {
+            MTC.span().addTag("topology.version", () -> Objects.toString(topVer));
 
-        // Assign keys to primary nodes.
-        for (Map.Entry<KeyCacheObject, Boolean> key : keys.entrySet()) {
-            int part = cctx.affinity().partition(key.getKey());
+            Map<KeyCacheObject, Boolean> mappedKeys = null;
 
-            if (retries == null || !retries.contains(part)) {
-                if (!map(key.getKey(), forceKeys)) {
-                    if (retries == null)
-                        retries = new HashSet<>();
+            // Assign keys to primary nodes.
+            for (Map.Entry<KeyCacheObject, Boolean> key : keys.entrySet()) {
+                int part = cctx.affinity().partition(key.getKey());
 
-                    retries.add(part);
+                if (retries == null || !retries.contains(part)) {
+                    if (!map(key.getKey(), forceKeys)) {
+                        if (retries == null)
+                            retries = new HashSet<>();
 
-                    if (mappedKeys == null) {
-                        mappedKeys = U.newLinkedHashMap(keys.size());
+                        retries.add(part);
 
-                        for (Map.Entry<KeyCacheObject, Boolean> key1 : keys.entrySet()) {
-                            if (key1.getKey() == key.getKey())
-                                break;
+                        if (mappedKeys == null) {
+                            mappedKeys = U.newLinkedHashMap(keys.size());
 
-                            mappedKeys.put(key.getKey(), key1.getValue());
+                            for (Map.Entry<KeyCacheObject, Boolean> key1 : keys.entrySet()) {
+                                if (key1.getKey() == key.getKey())
+                                    break;
+
+                                mappedKeys.put(key.getKey(), key1.getValue());
+                            }
                         }
                     }
+                    else if (mappedKeys != null)
+                        mappedKeys.put(key.getKey(), key.getValue());
                 }
-                else if (mappedKeys != null)
-                    mappedKeys.put(key.getKey(), key.getValue());
             }
+
+            // Add new future.
+            IgniteInternalFuture<Collection<GridCacheEntryInfo>> fut = getAsync(mappedKeys == null ? keys : mappedKeys);
+
+            // Optimization to avoid going through compound future,
+            // if getAsync() has been completed and no other futures added to this
+            // compound future.
+            if (fut.isDone() && !hasFutures()) {
+                if (fut.error() != null)
+                    onDone(fut.error());
+                else
+                    onDone(fut.result());
+
+                return;
+            }
+
+            add(fut);
         }
-
-        // Add new future.
-        IgniteInternalFuture<Collection<GridCacheEntryInfo>> fut = getAsync(mappedKeys == null ? keys : mappedKeys);
-
-        // Optimization to avoid going through compound future,
-        // if getAsync() has been completed and no other futures added to this
-        // compound future.
-        if (fut.isDone() && !hasFutures()) {
-            if (fut.error() != null)
-                onDone(fut.error());
-            else
-                onDone(fut.result());
-
-            return;
-        }
-
-        add(fut);
     }
 
     /**
@@ -339,16 +351,6 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
 
             if (part == null)
                 return false;
-
-            if (!forceKeys && part.state() == LOST && !recovery) {
-                Throwable error = LostPolicyValidator.validate(cctx, key, READ, singleton(part.id()));
-
-                if (error != null) {
-                    onDone(null, error);
-
-                    return false;
-                }
-            }
 
             if (parts == null || !F.contains(parts, part.id())) {
                 // By reserving, we make sure that partition won't be unloaded while processed.

@@ -33,7 +33,7 @@
     </parent>
 
     <artifactId>ignite-ml</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <build>
@@ -49,6 +49,7 @@
                         </goals>
                         <configuration>
                             <excludeTransitive>false</excludeTransitive>
+                            <excludeScope>provided</excludeScope>
                         </configuration>
                     </execution>
                 </executions>
@@ -72,9 +73,22 @@
         </dependency>
 
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>${h2.version}</version>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-indexing</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-h2</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -101,7 +115,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>${spring.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -140,19 +153,12 @@
             <artifactId>commons-math3</artifactId>
             <version>${commons.math.version}</version>
         </dependency>
-    </dependencies>
 
-    <profiles>
-        <profile>
-            <id>lgpl</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.github.fommil.netlib</groupId>
-                    <artifactId>all</artifactId>
-                    <version>${netlibjava.version}</version>
-                    <type>pom</type>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
+        <dependency>
+            <groupId>com.github.fommil.netlib</groupId>
+            <artifactId>all</artifactId>
+            <version>${netlibjava.version}</version>
+            <type>pom</type>
+        </dependency>
+    </dependencies>
 </project>

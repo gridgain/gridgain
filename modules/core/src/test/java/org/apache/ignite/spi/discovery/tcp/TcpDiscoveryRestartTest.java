@@ -148,7 +148,6 @@ public class TcpDiscoveryRestartTest extends GridCommonAbstractTest {
         }
     }
 
-
     /**
      * @param msg Message.
      */

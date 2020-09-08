@@ -59,6 +59,7 @@ import org.apache.ignite.internal.client.impl.connection.GridClientTopology;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.CycleThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
@@ -349,8 +350,8 @@ public class GridClientImpl implements GridClient {
     }
 
     /** {@inheritDoc} */
-    @Override public void throwLastError() throws GridClientException {
-        top.nodes();
+    @Override public GridClientException checkLastError() {
+        return top.lastError();
     }
 
     /**
@@ -478,9 +479,13 @@ public class GridClientImpl implements GridClient {
                         connSrvs.addAll(resolvedEndpoints);
                     }
                     else {
-                        for (InetSocketAddress endpoint : resolvedEndpoints)
+                        for (InetSocketAddress endpoint : resolvedEndpoints) {
                             if (!endpoint.getAddress().isLoopbackAddress())
                                 connSrvs.add(endpoint);
+                        }
+
+                        if (connSrvs.isEmpty())
+                            connSrvs.addAll(resolvedEndpoints);
                     }
                 }
             }
@@ -509,35 +514,24 @@ public class GridClientImpl implements GridClient {
     /**
      * Thread that updates topology according to refresh interval specified in configuration.
      */
-    @SuppressWarnings("BusyWait")
-    private class TopologyUpdaterThread extends Thread {
+    private class TopologyUpdaterThread extends CycleThread {
         /**
          * Creates topology refresh thread.
          */
         private TopologyUpdaterThread() {
-            super(id + "-topology-update");
+            super(id + "-topology-update", cfg.getTopologyRefreshFrequency());
         }
 
         /** {@inheritDoc} */
-        @Override public void run() {
+        @Override public void iteration() throws InterruptedException {
             try {
-                while (!isInterrupted()) {
-                    Thread.sleep(cfg.getTopologyRefreshFrequency());
-
-                    try {
-                        tryInitTopology();
-                    }
-                    catch (GridClientException e) {
-                        top.fail(e);
-
-                        if (log.isLoggable(Level.FINE))
-                            log.fine("Failed to update topology: " + e.getMessage());
-                    }
-                }
+                tryInitTopology();
             }
-            catch (InterruptedException ignored) {
-                // Client is shutting down.
-                Thread.currentThread().interrupt();
+            catch (GridClientException e) {
+                top.fail(e);
+
+                if (log.isLoggable(Level.FINE))
+                    log.fine("Failed to update topology: " + e.getMessage());
             }
         }
     }

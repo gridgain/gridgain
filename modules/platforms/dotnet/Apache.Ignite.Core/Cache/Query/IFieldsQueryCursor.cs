@@ -29,5 +29,10 @@ namespace Apache.Ignite.Core.Cache.Query
         /// Gets the field names.
         /// </summary>
         IList<string> FieldNames { get; }
+
+        /// <summary>
+        /// Gets fields metadata.
+        /// </summary>
+        IList<IQueryCursorField> Fields { get; }
     }
 }

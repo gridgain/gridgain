@@ -25,11 +25,11 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteAsyncSupport;
-import org.apache.ignite.lang.IgniteAsyncSupported;
 import org.apache.ignite.lang.IgniteFuture;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents whole cluster (all available nodes) and also provides a handle on {@link #nodeLocalMap()} which
@@ -132,7 +132,6 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *      and error message (if any).
      * @throws IgniteException In case of error.
      */
-    @IgniteAsyncSupported
     public Collection<ClusterStartNodeResult> startNodes(File file, boolean restart, int timeout,
         int maxConn) throws IgniteException;
 
@@ -250,7 +249,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * Supports asynchronous execution (see {@link IgniteAsyncSupport}).
      *
      * @param hosts Startup parameters.
-     * @param dflts Default values.
+     * @param dflts Optional default values.
      * @param restart Whether to stop existing nodes. If {@code true}, all existing
      *      nodes on the host will be stopped before starting new ones. If
      *      {@code false}, nodes will be started only if there are less
@@ -261,9 +260,8 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *      and error message (if any).
      * @throws IgniteException In case of error.
      */
-    @IgniteAsyncSupported
     public Collection<ClusterStartNodeResult> startNodes(Collection<Map<String, Object>> hosts,
-        @Nullable Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s) asynchronously.
@@ -350,7 +348,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * node logs for details.
      *
      * @param hosts Startup parameters.
-     * @param dflts Default values.
+     * @param dflts Options default values.
      * @param restart Whether to stop existing nodes. If {@code true}, all existing
      *      nodes on the host will be stopped before starting new ones. If
      *      {@code false}, nodes will be started only if there are less
@@ -361,7 +359,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(Collection<Map<String, Object>> hosts,
-        @Nullable Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Stops nodes satisfying optional set of predicates.
@@ -438,15 +436,17 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * If local client node disconnected from cluster returns future
      * that will be completed when client reconnected.
      *
-     * @return Future that will be completed when client reconnected.
+     * @return Future that will be completed when client reconnected ({@code null} if client is connected).
      */
-    @Nullable public IgniteFuture<?> clientReconnectFuture();
+    public IgniteFuture<?> clientReconnectFuture();
 
     /**
      * Checks Ignite grid is active or not active.
      *
      * @return {@code True} if grid is active. {@code False} If grid is not active.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean active();
 
     /**
@@ -454,15 +454,33 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *
      * @param active If {@code True} start activation process. If {@code False} start deactivation process.
      * @throws IgniteException If there is an already started transaction or lock in the same thread.
+     * @deprecated Use {@link #state(ClusterState)} instead.
      */
+    @Deprecated
     public void active(boolean active);
+
+    /**
+     * Gets current cluster state.
+     *
+     * @return Current cluster state.
+     */
+    public ClusterState state();
+
+    /**
+     * Changes current cluster state to given {@code newState} cluster state.
+     *
+     * @param newState New cluster state.
+     * @throws IgniteException If there is an already started transaction or lock in the same thread.
+     */
+    public void state(ClusterState newState) throws IgniteException;
 
     /**
      * Gets current baseline topology. If baseline topology was not set, will return {@code null}.
      *
-     * @return Collection of nodes included to the current baseline topology.
+     * @return Collection of nodes included to the current baseline topology
+     *      (or {@code null} if baseline topology is not set).
      */
-    @Nullable public Collection<BaselineNode> currentBaselineTopology();
+    public Collection<BaselineNode> currentBaselineTopology();
 
     /**
      * Sets baseline topology. The cluster must be activated for this method to be called.
@@ -533,7 +551,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
 
     /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
-     * {@code False} If cluster in manuale.
+     * {@code False} If cluster in manual.
      */
     public boolean isBaselineAutoAdjustEnabled();
 
@@ -562,4 +580,21 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+
+    /**
+     * Returns a policy of shutdown or default value {@code IgniteConfiguration.DFLT_SHUTDOWN_POLICY}
+     * if the property is not set.
+     *
+     * @return Shutdown policy.
+     */
+    public ShutdownPolicy shutdownPolicy();
+
+    /**
+     * Sets a shutdown policy on a cluster.
+     * If a policy is specified here the value will override static configuration on
+     * {@link IgniteConfiguration#setShutdownPolicy(ShutdownPolicy)} and persists to cluster meta storage.
+     *
+     * @param policy Shutdown policy.
+     */
+    public void shutdownPolicy(ShutdownPolicy policy);
 }

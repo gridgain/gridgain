@@ -16,10 +16,9 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.jetbrains.annotations.Nullable;
-
-import java.nio.ByteBuffer;
 
 /**
  * Client NIO server buffer.
@@ -63,20 +62,19 @@ public class ClientListenerNioServerBuffer {
 
     /**
      * @param buf Buffer.
-     * @param checkHandshake Check handshake.
      * @return Message bytes or {@code null} if message is not fully read yet.
      * @throws IgniteCheckedException If failed to parse message.
      */
-    @Nullable public byte[] read(ByteBuffer buf, boolean checkHandshake) throws IgniteCheckedException {
+    @Nullable public byte[] read(ByteBuffer buf, int msgLenLimit) throws IgniteCheckedException {
         if (cnt < 0) {
             for (; cnt < 0 && buf.hasRemaining(); cnt++)
-                msgSize |= (buf.get() & 0xFF) << (8*(4 + cnt));
+                msgSize |= (buf.get() & 0xFF) << (8 * (4 + cnt));
 
             if (cnt < 0)
                 return null;
 
             // If count is 0 then message size should be inited.
-            if (msgSize <= 0)
+            if (msgSize <= 0 || (msgLenLimit > 0 && msgSize > msgLenLimit))
                 throw new IgniteCheckedException("Invalid message size: " + msgSize);
 
             data = new byte[msgSize];
@@ -108,12 +106,7 @@ public class ClientListenerNioServerBuffer {
 
             return data0;
         }
-        else {
-            if (checkHandshake && cnt > 0 && (msgSize > ClientListenerNioListener.MAX_HANDSHAKE_MSG_SIZE
-                || data[0] != ClientListenerRequest.HANDSHAKE))
-                throw new IgniteCheckedException("Invalid handshake message");
 
-            return null;
-        }
+        return null;
     }
 }

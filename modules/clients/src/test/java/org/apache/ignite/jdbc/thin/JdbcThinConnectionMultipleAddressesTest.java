@@ -346,7 +346,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
     }
 
     /**
-     * Check failover on restart cluster ar stop one node.
+     * Check failover on restart cluster or stop one node.
      *
      * @param url Connection URL.
      * @param allNodes Restart all nodes flag.
@@ -356,7 +356,9 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
         try (Connection conn = DriverManager.getConnection(url)) {
             DatabaseMetaData meta = conn.getMetaData();
 
-            ResultSet rs0 = meta.getTables(null, null, null, null);
+            final String[] types = {"TABLES"};
+
+            ResultSet rs0 = meta.getTables(null, null, null, types);
 
             assertFalse(rs0.next());
 
@@ -372,7 +374,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             restart(allNodes);
 
-            rs0 = meta.getTables(null, null, null, null);
+            rs0 = meta.getTables(null, null, null, types);
             assertFalse(rs0.next());
         }
     }
@@ -486,7 +488,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             stop(conn, allNodes);
 
-            final int [] id = {0};
+            final int[] id = {0};
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -534,7 +536,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stopAllGrids();
         else {
 
-            if (affinityAwareness) {
+            if (partitionAwareness) {
                 for (int i = 0; i < NODES_CNT - 1; i++)
                     stopGrid(i);
             }

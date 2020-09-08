@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.UTILITY_CACHE_POOL;
 
@@ -29,7 +32,7 @@ public enum CacheType {
     USER(true, SYSTEM_POOL),
 
     /**
-     * Internal cache, should not be visible via public API (caches used by IGFS, Hadoop).
+     * Internal cache, should not be visible via public API.
      */
     INTERNAL(false, SYSTEM_POOL),
 
@@ -56,6 +59,19 @@ public enum CacheType {
     CacheType(boolean userCache, byte ioPlc) {
         this.userCache = userCache;
         this.ioPlc = ioPlc;
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @return Cache type.
+     */
+    public static CacheType cacheType(String cacheName) {
+        if (CU.isUtilityCache(cacheName))
+            return UTILITY;
+        else if (DataStructuresProcessor.isDataStructureCache(cacheName))
+            return DATA_STRUCTURES;
+        else
+            return USER;
     }
 
     /**

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-set -o nounset
-set -o errexit
-set -o pipefail
-set -o errtrace
-set -o functrace
+if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
+then
+    set -o nounset
+    set -o errexit
+    set -o pipefail
+    set -o errtrace
+    set -o functrace
+fi
+
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
 #
@@ -33,7 +37,11 @@ set -o functrace
 
 # Extract java version to `version` variable.
 javaVersion() {
-    version=$("$1" -version 2>&1 | awk -F '"' '/version/ {print $2}')
+    if ! $(type -p awk >/dev/null); then
+        echo "${0}, [ERROR]: awk is not found"
+        exit 1
+    fi
+    version=$("$1" -version 2>&1 | awk -F[\"\-] '/version/ {print $2}')
 }
 
 # Extract only major version of java to `version` variable.
@@ -44,12 +52,7 @@ javaMajorVersion() {
     if [ ${version} -eq 1 ]; then
         # Version seems starts from 1, we need second number.
         javaVersion "$1"
-        backIFS=$IFS
-
-        IFS=. ver=(${version##*-})
-        version=${ver[1]}
-
-        IFS=$backIFS
+        version=$(awk -F[\"\.] '{print $2}' <<< ${version})
     fi
 }
 
@@ -60,16 +63,16 @@ javaMajorVersion() {
 checkJava() {
     # Check JAVA_HOME.
     if [ "${JAVA_HOME:-}" = "" ]; then
-        JAVA=`type -p java`
-        RETCODE=$?
 
-        if [ $RETCODE -ne 0 ]; then
-            echo $0", ERROR:"
+        if ! type -p java > /dev/null; then
+            echo $0", [ERROR]:"
             echo "JAVA_HOME environment variable is not found."
             echo "Please point JAVA_HOME variable to location of JDK 1.8 or later."
             echo "You can also download latest JDK at http://java.com/download"
 
             exit 1
+        else
+            JAVA=$(type -p java)
         fi
 
         JAVA_HOME=

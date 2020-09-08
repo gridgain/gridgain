@@ -39,13 +39,12 @@ import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
-import org.h2.message.DbException;
-import org.h2.result.SearchRow;
-import org.h2.value.DataType;
-import org.h2.value.Value;
-import org.h2.value.ValueInt;
-import org.h2.value.ValueLong;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -94,8 +93,8 @@ public class GridH2RowDescriptor {
         this.tbl = tbl;
         this.type = type;
 
-        keyType = DataType.getTypeFromClass(type.keyClass());
-        valType = DataType.getTypeFromClass(type.valueClass());
+        keyType = H2Utils.getTypeFromClass(type.keyClass());
+        valType = H2Utils.getTypeFromClass(type.valueClass());
 
         refreshMetadataFromTypeDescriptor();
     }
@@ -105,7 +104,7 @@ public class GridH2RowDescriptor {
      *
      * @return Table descriptor.
      */
-    public H2TableDescriptor tableDescriptor(){
+    public H2TableDescriptor tableDescriptor() {
         return tbl;
     }
 
@@ -124,7 +123,7 @@ public class GridH2RowDescriptor {
         Class[] classes = allFields.values().toArray(new Class[fields.length]);
 
         for (int i = 0; i < fieldTypes.length; i++)
-            fieldTypes[i] = DataType.getTypeFromClass(classes[i]);
+            fieldTypes[i] = H2Utils.getTypeFromClass(classes[i]);
 
         props = new GridQueryProperty[fields.length];
 
@@ -175,7 +174,6 @@ public class GridH2RowDescriptor {
     public GridQueryTypeDescriptor type() {
         return type;
     }
-
 
     /**
      * Gets cache context info for this row descriptor.

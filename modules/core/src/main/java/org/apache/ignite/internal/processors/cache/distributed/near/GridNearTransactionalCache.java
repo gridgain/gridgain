@@ -128,8 +128,7 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
         if (F.isEmpty(keys))
             return new GridFinishedFuture<>(Collections.<K, V>emptyMap());
 
-        if (keyCheck)
-            validateCacheKeys(keys);
+        warnIfUnordered(keys, BulkOperation.GET);
 
         GridNearTxLocal tx = ctx.tm().threadLocalTx(ctx);
 
@@ -216,7 +215,7 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
     public void clearLocks(UUID nodeId, GridDhtUnlockRequest req) {
         assert nodeId != null;
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = ctx.cache().nextVersion();
 
         List<KeyCacheObject> keys = req.nearKeys();
 

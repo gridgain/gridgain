@@ -103,7 +103,11 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
 
         gate = ctx.gate();
 
-        aff = new GridCacheAffinityProxy<>(ctx, ctx.cache().affinity());
+        GridCacheAdapter adapter = ctx.cache();
+        if (adapter == null)
+            throw new IllegalStateException(new CacheStoppedException(ctx.name()));
+
+        aff = new GridCacheAffinityProxy<>(ctx, adapter.affinity());
     }
 
     /**
@@ -451,30 +455,6 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
 
         try {
             return delegate.getAllOutTxAsync(keys);
-        }
-        finally {
-            gate.leave(prev);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isIgfsDataCache() {
-        CacheOperationContext prev = gate.enter(opCtx);
-
-        try {
-            return delegate.isIgfsDataCache();
-        }
-        finally {
-            gate.leave(prev);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public long igfsDataSpaceUsed() {
-        CacheOperationContext prev = gate.enter(opCtx);
-
-        try {
-            return delegate.igfsDataSpaceUsed();
         }
         finally {
             gate.leave(prev);

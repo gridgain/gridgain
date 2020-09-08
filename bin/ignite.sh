@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-set -o nounset
-set -o errexit
-set -o pipefail
-set -o errtrace
-set -o functrace
+if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
+then
+    set -o nounset
+    set -o errexit
+    set -o pipefail
+    set -o errtrace
+    set -o functrace
+fi
 
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
@@ -128,15 +131,6 @@ if [ "${ENABLE_ASSERTIONS}" = "1" ]; then
 fi
 
 #
-# If this is a Hadoop edition, and HADOOP_HOME set, add the native library location:
-#
-if [ -d "${IGNITE_HOME}/libs/ignite-hadoop/" ] && [ -n "${HADOOP_HOME}" ] && [ -d "${HADOOP_HOME}/lib/native/" ]; then
-   if [[ "${JVM_OPTS}${JVM_XOPTS}" != *-Djava.library.path=* ]]; then
-      JVM_OPTS="${JVM_OPTS} -Djava.library.path=${HADOOP_HOME}/lib/native/"
-   fi
-fi
-
-#
 # Set main class to start service (grid node by default).
 #
 if [ "${MAIN_CLASS:-}" = "" ]; then
@@ -152,8 +146,6 @@ fi
 #
 # Final JVM_OPTS for Java 9+ compatibility
 #
-javaMajorVersion "${JAVA}"
-
 if [ $version -eq 8 ] ; then
     JVM_OPTS="\
         -XX:+AggressiveOpts \
@@ -168,7 +160,6 @@ elif [ $version -gt 8 ] && [ $version -lt 11 ]; then
         --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
         --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
         --illegal-access=permit \
-        --add-modules=java.transaction \
         --add-modules=java.xml.bind \
         ${JVM_OPTS}"
 
@@ -179,6 +170,7 @@ elif [ $version -ge 11 ] ; then
         --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
         --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
         --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+        --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
         --illegal-access=permit \
         ${JVM_OPTS}"
 fi
@@ -191,12 +183,17 @@ do
     if [ "${INTERACTIVE}" == "1" ] ; then
         case $osname in
             Darwin*)
-                "$JAVA" ${JVM_OPTS} ${QUIET} "${DOCK_OPTS}" "${RESTART_SUCCESS_OPT}" ${JMX_MON} \
+                "$JAVA" ${JVM_OPTS} ${QUIET} "${DOCK_OPTS}" "${RESTART_SUCCESS_OPT}" ${JMX_MON:-} \
                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
+            OS/390*)
+                "$JAVA" ${JVM_OPTS} ${QUIET} "${RESTART_SUCCESS_OPT}" ${JMX_MON:-} \
+                -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
+                -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
+            ;;
             *)
-                "$JAVA" ${JVM_OPTS} ${QUIET} "${RESTART_SUCCESS_OPT}" ${JMX_MON} \
+                "$JAVA" ${JVM_OPTS} ${QUIET} "${RESTART_SUCCESS_OPT}" ${JMX_MON:-} \
                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
@@ -204,12 +201,17 @@ do
     else
         case $osname in
             Darwin*)
-                "$JAVA" ${JVM_OPTS} ${QUIET} "${DOCK_OPTS}" "${RESTART_SUCCESS_OPT}" ${JMX_MON} \
+                "$JAVA" ${JVM_OPTS} ${QUIET} "${DOCK_OPTS}" "${RESTART_SUCCESS_OPT}" ${JMX_MON:-} \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
+            OS/390*)
+                "$JAVA" ${JVM_OPTS} ${QUIET} "${RESTART_SUCCESS_OPT}" ${JMX_MON:-} \
+                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
+                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
+            ;;
             *)
-                "$JAVA" ${JVM_OPTS} ${QUIET} "${RESTART_SUCCESS_OPT}" ${JMX_MON} \
+                "$JAVA" ${JVM_OPTS} ${QUIET} "${RESTART_SUCCESS_OPT}" ${JMX_MON:-} \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;

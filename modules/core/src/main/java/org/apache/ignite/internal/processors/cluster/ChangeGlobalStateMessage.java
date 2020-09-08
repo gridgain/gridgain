@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cluster;
 
 import java.util.List;
 import java.util.UUID;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -29,6 +30,9 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 
 /**
  * Message represent request for change cluster global state.
@@ -47,7 +51,11 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     private UUID initiatingNodeId;
 
     /** If true activate else deactivate. */
+    @Deprecated
     private boolean activate;
+
+    /** Cluster state */
+    private ClusterState state;
 
     /** Configurations read from persistent store. */
     private List<StoredCacheData> storedCfgs;
@@ -73,7 +81,7 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
      * @param reqId State change request ID.
      * @param initiatingNodeId Node initiated state change.
      * @param storedCfgs Configurations read from persistent store.
-     * @param activate New cluster state.
+     * @param state New cluster state.
      * @param baselineTopology Baseline topology.
      * @param forceChangeBaselineTopology Force change baseline topology flag.
      * @param timestamp Timestamp.
@@ -82,17 +90,19 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
         UUID reqId,
         UUID initiatingNodeId,
         @Nullable List<StoredCacheData> storedCfgs,
-        boolean activate,
+        ClusterState state,
         BaselineTopology baselineTopology,
         boolean forceChangeBaselineTopology,
-        long timestamp) {
+        long timestamp
+    ) {
         assert reqId != null;
         assert initiatingNodeId != null;
 
         this.reqId = reqId;
         this.initiatingNodeId = initiatingNodeId;
         this.storedCfgs = storedCfgs;
-        this.activate = activate;
+        this.state = state;
+        this.activate = ClusterState.active(state);
         this.baselineTopology = baselineTopology;
         this.forceChangeBaselineTopology = forceChangeBaselineTopology;
         this.timestamp = timestamp;
@@ -156,8 +166,11 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     }
 
     /** {@inheritDoc} */
-    @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr, AffinityTopologyVersion topVer,
-        DiscoCache discoCache) {
+    @Override public DiscoCache createDiscoCache(
+        GridDiscoveryManager mgr,
+        AffinityTopologyVersion topVer,
+        DiscoCache discoCache
+    ) {
         return mgr.createDiscoCacheOnCacheChange(topVer, discoCache);
     }
 
@@ -169,10 +182,20 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     }
 
     /**
-     * @return New cluster state.
+     * @return {@code False} if new cluster state is {@link ClusterState#INACTIVE}, and {@code True} otherwise.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean activate() {
         return activate;
+    }
+
+    /**
+     * @return New cluster state.
+     */
+    public ClusterState state() {
+        // Backward compatibility.
+        return state != null ? state : (activate ? ACTIVE : INACTIVE);
     }
 
     /**

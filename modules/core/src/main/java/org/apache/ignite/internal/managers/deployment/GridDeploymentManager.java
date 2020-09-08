@@ -286,13 +286,13 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
             // Check for nested execution. In that case, if task
             // is available locally by name, then we should ignore
             // class loader ID.
-            GridDeployment dep = locStore.getDeployment(meta);
+            GridDeployment dep = checkDeployment(locStore.getDeployment(meta), "local");
 
             if (dep == null) {
-                dep = ldrStore.getDeployment(ldr.classLoaderId());
+                dep = checkDeployment(ldrStore.getDeployment(ldr.classLoaderId()), "perLoader");
 
                 if (dep == null)
-                    dep = verStore.getDeployment(ldr.classLoaderId());
+                    dep = checkDeployment(verStore.getDeployment(ldr.classLoaderId()), "perVersion");
             }
 
             return dep;
@@ -309,6 +309,25 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
         }
         else
             return locStore.explicitDeploy(cls, clsLdr);
+    }
+
+    /**
+     * Checks and logs possibly incorrect deployments.
+     *
+     * @param deployment Deployment.
+     * @param store Store name.
+     * @return Deployment.
+     */
+    private GridDeployment checkDeployment(GridDeployment deployment, String store) {
+        if (deployment != null
+            && deployment.participants() == null
+            && !ctx.discovery().localNode().id().equals(deployment.classLoaderId().globalId())) {
+            log.warning("Possibly incorrect deployment detected in '" + store + "', can't be used to deserialize " +
+                "message on target node, participants=null, localNodeId=" + ctx.discovery().localNode().id() +
+                ", deployment=" + deployment);
+        }
+
+        return deployment;
     }
 
     /**
@@ -457,6 +476,11 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
                 }
             }
 
+            GridDeployment dep = verStore.searchDeploymentCache(meta);
+
+            if (dep != null)
+                return dep;
+
             if (reuse) {
                 GridDeployment locDep = locStore.getDeployment(meta);
 
@@ -495,7 +519,12 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
         // Private or Isolated mode.
         meta.record(false);
 
-        GridDeployment dep = locStore.getDeployment(meta);
+        GridDeployment dep = ldrStore.searchDeploymentCache(meta);
+
+        if (dep != null)
+            return dep;
+
+        dep = locStore.getDeployment(meta);
 
         if (sndNodeId.equals(ctx.localNodeId())) {
             if (dep == null)
@@ -549,7 +578,6 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
     public boolean isGlobalLoader(ClassLoader ldr) {
         return ldr instanceof GridDeploymentClassLoader;
     }
-
 
     /**
      * @throws IgniteCheckedException If failed.

@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClientCacheMode;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
@@ -122,6 +123,18 @@ public class ClientTcpUnreachableMultiNodeSelfTest extends ClientTcpMultiNodeSel
 
                 @Override public long order() {
                     return node.order();
+                }
+
+                @Override public boolean isClient() {
+                    return node.isClient();
+                }
+
+                @Override public boolean isDaemon() {
+                    return node.isDaemon();
+                }
+
+                @Override public boolean supports(IgniteFeatures feature) {
+                    return node.supports(feature);
                 }
             };
         }

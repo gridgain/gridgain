@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -32,6 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 public abstract class IgniteTxLocalStateAdapter implements IgniteTxLocalState {
     /** */
     private static final Function<Integer, Set<Integer>> CREATE_INT_SET = k -> new HashSet<>();
+
     /** */
     private Map<Integer, Set<Integer>> touchedParts;
 
@@ -42,7 +42,7 @@ public abstract class IgniteTxLocalStateAdapter implements IgniteTxLocalState {
      */
     protected final void onTxEnd(GridCacheContext cacheCtx, IgniteInternalTx tx, boolean commit) {
         if (cacheCtx.statisticsEnabled()) {
-            long durationNanos = TimeUnit.MILLISECONDS.toNanos(U.currentTimeMillis() - tx.startTime());
+            long durationNanos = U.millisToNanos(U.currentTimeMillis() - tx.startTime());
 
             if (commit)
                 cacheCtx.cache().metrics0().onTxCommit(durationNanos);

@@ -160,7 +160,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         File db = U.resolveWorkDirectory(workDir, DFLT_STORE_DIR, false);
         File wal = new File(db, "wal");
 
-        if(setWalAndArchiveToSameVal) {
+        if (setWalAndArchiveToSameVal) {
             String walAbsPath = wal.getAbsolutePath();
 
             dsCfg.setWalPath(walAbsPath);
@@ -618,7 +618,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         TestStringContainerToBePrinted val = new TestStringContainerToBePrinted(search2);
 
-        ctrlStringsToSearch.add(val.toString()); //will validate original toString() was called
+        ctrlStringsToSearch.add("v = [ " + val.getClass().getSimpleName() + "{data='" + search2 + "'}]"); //will validate original toString() was called
         ctrlStringsForBinaryObjSearch.add(search2);
 
         addlCache.put("SearchValue", val);
@@ -626,7 +626,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         String search3 = "SomeTestStringContainerToBePrintedLongLine2";
 
         TestStringContainerToBePrinted key = new TestStringContainerToBePrinted(search3);
-        ctrlStringsToSearch.add(key.toString()); //will validate original toString() was called
+
+        ctrlStringsToSearch.add("k = " + key.getClass().getSimpleName() + "{data='" + search3 + "'}"); //will validate original toString() was called
         ctrlStringsForBinaryObjSearch.add(search3); //validate only string itself
 
         addlCache.put(key, "SearchKey");
@@ -676,8 +677,10 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
             for (Iterator<String> iter = ctrlStringsToSearch.iterator(); iter.hasNext(); ) {
                 final String next = iter.next();
+
                 if (strRepresentation.contains(next)) {
                     iter.remove();
+
                     break;
                 }
             }
@@ -1278,7 +1281,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             }
         }
 
-        log.info("Check REPLAY BETWEEN:" + exp2First + " " + exp2Last+ "\n" +
+        log.info("Check REPLAY BETWEEN:" + exp2First + " " + exp2Last + "\n" +
             "expFirst=" + exp2First + " actlFirst=" + actl2First + ", " +
             "expLast=" + exp2Last + " actlLast=" + actl2Last);
 
@@ -1302,9 +1305,10 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         String workDir,
         String subfolderName
     ) throws IgniteCheckedException {
-        File binaryMeta = U.resolveWorkDirectory(workDir, "binary_meta", false);
+        File binaryMeta = U.resolveWorkDirectory(workDir, DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
+            false);
         File binaryMetaWithConsId = new File(binaryMeta, subfolderName);
-        File marshallerMapping = U.resolveWorkDirectory(workDir, "marshaller", false);
+        File marshallerMapping = U.resolveWorkDirectory(workDir, DataStorageConfiguration.DFLT_MARSHALLER_PATH, false);
 
         return new IteratorParametersBuilder()
             .binaryMetadataFileStoreDir(binaryMetaWithConsId)
@@ -1624,6 +1628,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
     private static class Organization {
         /** Key. */
         private final int key;
+
         /** Name. */
         private final String name;
 

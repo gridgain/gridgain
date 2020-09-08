@@ -44,6 +44,9 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
+import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.exceptions.SqlCacheException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -64,6 +67,7 @@ import org.apache.ignite.internal.processors.query.property.QueryPropertyAccesso
 import org.apache.ignite.internal.processors.query.property.QueryReadOnlyMethodsAccessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
@@ -95,8 +99,8 @@ public class QueryUtils {
     /** Default schema. */
     public static final String DFLT_SCHEMA = "PUBLIC";
 
-    /** Schema for system view. */
-    public static final String SCHEMA_SYS = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, false) ? "IGNITE" : "SYS";
+    /** Schema for monitoring views. */
+    public static final String SCHEMA_MONITORING = "MONITORING";
 
     /** Schema for system view. */
     public static final String SCHEMA_INFORMATION = "INFORMATION_SCHEMA";
@@ -121,6 +125,21 @@ public class QueryUtils {
 
     /** */
     private static final Set<Class<?>> SQL_TYPES = createSqlTypes();
+
+    /** Schema for system view. */
+    private static String schemaSys;
+
+    /**
+     * Schema for system view.
+     *
+     * @return Name of the system schema.
+     */
+    public static String sysSchemaName() {
+        if (schemaSys == null)
+            schemaSys = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, true) ? "IGNITE" : "SYS";
+
+        return schemaSys;
+    }
 
     /**
      * Creates SQL types set.
@@ -183,7 +202,6 @@ public class QueryUtils {
     public static String indexName(QueryEntity entity, QueryIndex idx) {
         return indexName(tableName(entity), idx);
     }
-
 
     /**
      * Get index name.
@@ -577,7 +595,7 @@ public class QueryUtils {
         Set<String> keyFields = qryEntity.getKeyFields();
         Set<String> notNulls = qryEntity.getNotNullFields();
         Map<String, Object> dlftVals = qryEntity.getDefaultFieldValues();
-        Map<String, Integer> precision  = qryEntity.getFieldsPrecision();
+        Map<String, Integer> precision = qryEntity.getFieldsPrecision();
         Map<String, Integer> scale = qryEntity.getFieldsScale();
 
         boolean hasKeyFields = (keyFields != null);
@@ -622,26 +640,17 @@ public class QueryUtils {
             d.addProperty(prop, false);
         }
 
+        if (!isKeyClsSqlType)
+            d.primaryKeyFields(keyFields);
+
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
-        String keyFieldName = qryEntity.getKeyFieldName();
+        // Also if fields are not set then _KEY and _VAL will be created as visible,
+        // so we have to add binary properties for them
+        if ((qryEntity.getKeyFieldName() == null && F.mapContainsKey(precision, KEY_FIELD_NAME)) || F.isEmpty(fields))
+            addKeyValueProperty(ctx, qryEntity, d, KEY_FIELD_NAME, true);
 
-        if (keyFieldName == null)
-            keyFieldName = KEY_FIELD_NAME;
-
-        if (!F.isEmpty(precision) && precision.containsKey(keyFieldName) &&
-            !fields.containsKey(keyFieldName)) {
-            addKeyValueValidationProperty(ctx, qryEntity, d, keyFieldName, true);
-        }
-
-        String valFieldName = qryEntity.getValueFieldName();
-
-        if (valFieldName == null)
-            valFieldName = VAL_FIELD_NAME;
-
-        if (!F.isEmpty(precision) && precision.containsKey(valFieldName) &&
-            !fields.containsKey(valFieldName)) {
-            addKeyValueValidationProperty(ctx, qryEntity, d, valFieldName, false);
-        }
+        if ((qryEntity.getValueFieldName() == null && F.mapContainsKey(precision, VAL_FIELD_NAME)) || F.isEmpty(fields))
+            addKeyValueProperty(ctx, qryEntity, d, VAL_FIELD_NAME, false);
 
         processIndexes(qryEntity, d);
     }
@@ -655,11 +664,11 @@ public class QueryUtils {
      * @param name Field name.
      * @throws IgniteCheckedException
      */
-    private static void addKeyValueValidationProperty(GridKernalContext ctx, QueryEntity qryEntity, QueryTypeDescriptorImpl d,
+    private static void addKeyValueProperty(GridKernalContext ctx, QueryEntity qryEntity, QueryTypeDescriptorImpl d,
         String name, boolean isKey) throws IgniteCheckedException {
 
         Map<String, Object> dfltVals = qryEntity.getDefaultFieldValues();
-        Map<String, Integer> precision  = qryEntity.getFieldsPrecision();
+        Map<String, Integer> precision = qryEntity.getFieldsPrecision();
         Map<String, Integer> scale = qryEntity.getFieldsScale();
 
         String typeName = isKey ? qryEntity.getKeyType() : qryEntity.getValueType();
@@ -787,7 +796,7 @@ public class QueryUtils {
 
             d.addIndex(idxDesc);
         }
-        else if (idxTyp == QueryIndexType.FULLTEXT){
+        else if (idxTyp == QueryIndexType.FULLTEXT) {
             for (String field : idx.getFields().keySet()) {
                 String alias = d.aliases().get(field);
 
@@ -820,9 +829,17 @@ public class QueryUtils {
      * @param scale Scale.
      * @return Binary property.
      */
-    public static QueryBinaryProperty buildBinaryProperty(GridKernalContext ctx, String pathStr,
-        Class<?> resType, Map<String, String> aliases, boolean isKeyField, boolean notNull, Object dlftVal,
-        int precision, int scale) {
+    public static QueryBinaryProperty buildBinaryProperty(
+        GridKernalContext ctx,
+        String pathStr,
+        Class<?> resType,
+        Map<String, String> aliases,
+        boolean isKeyField,
+        boolean notNull,
+        Object dlftVal,
+        int precision,
+        int scale
+    ) {
         String[] path = pathStr.split("\\.");
 
         QueryBinaryProperty res = null;
@@ -1194,7 +1211,7 @@ public class QueryUtils {
      * @param e Original exception.
      * @return Schema exception.
      */
-    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Exception e) {
+    @Nullable public static SchemaOperationException wrapIfNeeded(@Nullable Throwable e) {
         if (e == null)
             return null;
 
@@ -1348,10 +1365,11 @@ public class QueryUtils {
      *
      * @param schemaName Schema name.
      * @param tblName Table name.
+     * @param tblDigest Table digest.
      * @return Value type name.
      */
-    public static String createTableValueTypeName(String schemaName, String tblName) {
-        return createTableCacheName(schemaName, tblName) + "_" + UUID.randomUUID().toString().replace("-", "_");
+    public static String createTableValueTypeName(String schemaName, String tblName, String tblDigest) {
+        return createTableCacheName(schemaName, tblName) + "_" + tblDigest;
     }
 
     /**
@@ -1479,6 +1497,37 @@ public class QueryUtils {
     }
 
     /**
+     * @param reason exception to check.
+     * @return {@code true} if exception happened during local query or reduce step execution due to OOM protection,
+     * {@code false} otherwise.
+     */
+    public static boolean isLocalOrReduceOom(Throwable reason) {
+        boolean isRemoteFail = X.hasCause(reason, IgniteSQLMapStepException.class);
+
+        if (isRemoteFail)
+            return false;
+
+        IgniteSQLException cause0 = X.cause(reason, IgniteSQLException.class);
+
+        if (cause0 != null && cause0.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY)
+            return true;
+
+        SqlCacheException cause1 = X.cause(reason, SqlCacheException.class);
+
+        return cause1 != null && cause1.statusCode() == IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY;
+    }
+
+    /**
+     * Returns true if the exception is triggered by query cancel.
+     *
+     * @param e Exception.
+     * @return {@code true} if exception is caused by cancel.
+     */
+    public static boolean wasCancelled(Throwable e) {
+        return X.cause(e, QueryCancelledException.class) != null;
+    }
+
+    /**
      * Converts exception in to IgniteSqlException.
      * @param e Exception.
      * @return IgniteSqlException.
@@ -1493,17 +1542,22 @@ public class QueryUtils {
 
             code = ((IgniteSQLException)e).statusCode();
         }
-        else if (e instanceof TransactionDuplicateKeyException){
+        else if (e instanceof SqlCacheException) {
+            sqlState = ((SqlCacheException)e).sqlState();
+
+            code = ((SqlCacheException)e).statusCode();
+        }
+        else if (e instanceof TransactionDuplicateKeyException) {
             code = IgniteQueryErrorCode.DUPLICATE_KEY;
 
             sqlState = IgniteQueryErrorCode.codeToSqlState(code);
         }
-        else if (e instanceof TransactionSerializationException){
+        else if (e instanceof TransactionSerializationException) {
             code = IgniteQueryErrorCode.TRANSACTION_SERIALIZATION_ERROR;
 
             sqlState = IgniteQueryErrorCode.codeToSqlState(code);
         }
-        else if (e instanceof TransactionAlreadyCompletedException){
+        else if (e instanceof TransactionAlreadyCompletedException) {
             code = IgniteQueryErrorCode.TRANSACTION_COMPLETED;
 
             sqlState = IgniteQueryErrorCode.codeToSqlState(code);
@@ -1574,6 +1628,19 @@ public class QueryUtils {
      */
     public static boolean removeField(QueryEntity entity, String alias) {
         return entity.getFields().remove(fieldNameByAlias(entity, alias)) != null;
+    }
+
+    /**
+     * @param qry Query.
+     * @param timeout Timeout.
+     * @param timeUnit Time units.
+     * @return Query with timeout.
+     */
+    public static SqlFieldsQuery withQueryTimeout(SqlFieldsQuery qry, int timeout, TimeUnit timeUnit) {
+        if (timeout >= 0)
+            qry.setTimeout(timeout, timeUnit);
+
+        return qry;
     }
 
     /**

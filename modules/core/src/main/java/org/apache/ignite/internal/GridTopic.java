@@ -68,7 +68,10 @@ public enum GridTopic {
     /** */
     TOPIC_REPLICATION,
 
-    /** */
+    /**
+     * @deprecated Should be removed.
+     */
+    @Deprecated
     TOPIC_IGFS,
 
     /** */
@@ -89,7 +92,10 @@ public enum GridTopic {
     /** */
     TOPIC_TIME_SYNC,
 
-    /** */
+    /**
+     * @deprecated Should be removed.
+     */
+    @Deprecated
     TOPIC_HADOOP,
 
     /** */
@@ -144,7 +150,10 @@ public enum GridTopic {
     TOPIC_DEADLOCK_DETECTION,
 
     /** */
-    TOPIC_TXDR;
+    TOPIC_TXDR,
+
+    /** */
+    TOPIC_COMM_SYSTEM;
 
     /** Enum values. */
     private static final GridTopic[] VALS = values();
@@ -625,7 +634,7 @@ public enum GridTopic {
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return topic.ordinal() + id1.hashCode () + (int)(id2 ^ (id2 >>> 32));
+            return topic.ordinal() + id1.hashCode() + (int)(id2 ^ (id2 >>> 32));
         }
 
         /** {@inheritDoc} */

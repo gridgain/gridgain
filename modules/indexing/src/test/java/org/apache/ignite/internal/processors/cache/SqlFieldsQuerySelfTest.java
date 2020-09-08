@@ -31,9 +31,6 @@ import org.junit.Test;
  *
  */
 public class SqlFieldsQuerySelfTest extends GridCommonAbstractTest {
-    /** INSERT statement. */
-    private static final String INSERT = "insert into Person(_key, name) values (5, 'x')";
-
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
@@ -83,7 +80,6 @@ public class SqlFieldsQuerySelfTest extends GridCommonAbstractTest {
 
         assertEquals("AGE", qryCursor.getFieldName(1));
     }
-
 
     /**
      *

@@ -36,6 +36,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.GridTestClassLoader;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
@@ -100,7 +101,7 @@ public class GridP2PRemoteClassLoadersSelfTest extends GridCommonAbstractTest {
             // One remote p2p class loader
             assert res1 != null : "res1 != null";
             assert res1 instanceof Long : "res1 instanceof Long != true";
-            assert res1.equals(0L): "Expected 0, got " + res1;
+            assert res1.equals(0L) : "Expected 0, got " + res1;
 
             // The same remote p2p class loader.
             assert res2 != null : "res2 != null";
@@ -157,7 +158,7 @@ public class GridP2PRemoteClassLoadersSelfTest extends GridCommonAbstractTest {
             // One remote p2p class loader
             assert res1 != null : "res1 != null";
             assert res1 instanceof Long : "res1 instanceof Long != true";
-            assert res1.equals(0L): "Invalid res2 value: " + res1;
+            assert res1.equals(0L) : "Invalid res2 value: " + res1;
 
             // Another remote p2p class loader.
             assert res2 != null : "res2 == null";
@@ -259,12 +260,12 @@ public class GridP2PRemoteClassLoadersSelfTest extends GridCommonAbstractTest {
         private Ignite ignite;
 
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Serializable arg) {
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Serializable arg) {
             Map<ComputeJob, ClusterNode> map = new HashMap<>(subgrid.size());
 
             for (ClusterNode node : subgrid) {
                 if (!node.id().equals(ignite.configuration().getNodeId()))
-                    map.put(new GridP2PRemoteTestJob(null) , node);
+                    map.put(new GridP2PRemoteTestJob(null), node);
             }
 
             return map;

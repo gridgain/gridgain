@@ -22,17 +22,20 @@ import org.apache.ignite.ml.Exportable;
 import org.apache.ignite.ml.Exporter;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.composition.predictionsaggregator.PredictionsAggregator;
+import org.apache.ignite.ml.environment.deploy.DeployableObject;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.util.ModelTrace;
 
 /**
  * Model consisting of several models and prediction aggregation strategy.
  */
-public class ModelsComposition implements IgniteModel<Vector, Double>, Exportable<ModelsCompositionFormat> {
+public class ModelsComposition implements IgniteModel<Vector, Double>, Exportable<ModelsCompositionFormat>,
+    DeployableObject {
     /**
      * Predictions aggregator.
      */
     private final PredictionsAggregator predictionsAggregator;
+
     /**
      * Models.
      */
@@ -95,5 +98,10 @@ public class ModelsComposition implements IgniteModel<Vector, Double>, Exportabl
             .addField("aggregator", predictionsAggregator.toString(pretty))
             .addField("models", models)
             .toString();
+    }
+
+    /** {@inheritDoc} */
+    @Override public List<Object> getDependencies() {
+        return Collections.singletonList(predictionsAggregator);
     }
 }

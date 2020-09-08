@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeExecutionRejectedException;
 import org.apache.ignite.compute.ComputeJob;
@@ -37,7 +38,6 @@ import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.igfs.IgfsOutOfSpaceException;
 import org.apache.ignite.internal.GridInternalException;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridJobExecuteResponse;
@@ -506,6 +506,8 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
         // Make sure flag is not set for current thread.
         HOLD.set(false);
 
+        SqlFieldsQuery.setThreadedQueryInitiatorId("task:" + ses.getTaskName() + ":" + getJobId());
+
         try {
             if (partsReservation != null) {
                 try {
@@ -588,7 +590,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                     assert ex != null;
                 }
                 else {
-                    if (X.hasCause(e, GridInternalException.class) || X.hasCause(e, IgfsOutOfSpaceException.class)) {
+                    if (X.hasCause(e, GridInternalException.class)) {
                         // Print exception for internal errors only if debug is enabled.
                         if (log.isDebugEnabled())
                             U.error(log, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);
@@ -641,6 +643,8 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
             }
         }
         finally {
+            SqlFieldsQuery.resetThreadedQueryInitiatorId();
+
             if (partsReservation != null)
                 partsReservation.release();
         }

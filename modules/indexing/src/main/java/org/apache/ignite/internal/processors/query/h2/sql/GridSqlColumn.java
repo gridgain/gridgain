@@ -18,9 +18,9 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.Collections;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.command.Parser;
-import org.h2.expression.Expression;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.command.Parser;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.table.Column;
 
 /**
  * Column.
@@ -60,7 +60,7 @@ public class GridSqlColumn extends GridSqlElement {
     public GridSqlColumn(Column col, GridSqlAst from, String schema, String tblAlias, String colName) {
         super(Collections.<GridSqlAst>emptyList());
 
-        assert !F.isEmpty(colName): colName;
+        assert !F.isEmpty(colName) : colName;
 
         this.col = col;
         this.from = from;
@@ -98,17 +98,25 @@ public class GridSqlColumn extends GridSqlElement {
         return tblAlias;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}  */
     @Override public String getSQL() {
-        String sql = Parser.quoteIdentifier(colName);
+        StringBuilder sb = new StringBuilder();
 
-        if (tblAlias != null)
-            sql = Parser.quoteIdentifier(tblAlias) + "." + sql;
+        if (schema != null) {
+            Parser.quoteIdentifier(sb, schema, true);
 
-        if (schema != null)
-            sql = Parser.quoteIdentifier(schema) + "." + sql;
+            sb.append(".");
+        }
 
-        return sql;
+        if (tblAlias != null) {
+            Parser.quoteIdentifier(sb, tblAlias, true);
+
+            sb.append(".");
+        }
+
+        Parser.quoteIdentifier(sb, colName, true);
+
+        return sb.toString();
     }
 
     /**
@@ -138,14 +146,14 @@ public class GridSqlColumn extends GridSqlElement {
      * @return Precision.
      */
     public int precision() {
-        return (int) col.getPrecision();
+        return (int) col.getType().getPrecision();
     }
 
     /**
      * @return Scale.
      */
     public int scale() {
-        return col.getScale();
+        return col.getType().getScale();
     }
 
     /**

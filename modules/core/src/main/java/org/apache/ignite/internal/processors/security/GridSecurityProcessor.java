@@ -26,10 +26,21 @@ import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecuritySubject;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * This interface defines a grid authentication processor.
+ * This interface is responsible for:
+ * <ul>
+ *     <li>Node authentication;</li>
+ *     <li>Thin client authentication;</li>
+ *     <li>Providing configuration info whether global node authentication is enabled;</li>
+ *     <li>Keeping and propagating all authenticated security subjects;</li>
+ *     <li>Providing configuration info whether security mode is enabled at all;</li>
+ *     <li>Handling expired sessions;</li>
+ *     <li>Providing configuration info whether sandbox is enabled;</li>
+ *     <li>Keeping and propagating authenticated security subject for thin clients;</li>
+ *     <li>Keeping and propagating authenticated security contexts for nodes and thin clients;</li>
+ *     <li>Authorizing specific operations (cache put, task execute, so on) when session security context is set.</li>
+ * </ul>
  */
 public interface GridSecurityProcessor extends GridProcessor {
     /**
@@ -76,6 +87,16 @@ public interface GridSecurityProcessor extends GridProcessor {
     public SecuritySubject authenticatedSubject(UUID subjId) throws IgniteCheckedException;
 
     /**
+     * Gets security context for authenticated nodes and thin clients.
+     *
+     * @param subjId Security subject id.
+     * @return Security context or null if not found.
+     */
+    public default SecurityContext securityContext(UUID subjId) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Authorizes grid operation.
      *
      * @param name Cache name or task class name.
@@ -83,7 +104,7 @@ public interface GridSecurityProcessor extends GridProcessor {
      * @param securityCtx Optional security context.
      * @throws SecurityException If security check failed.
      */
-    public void authorize(String name, SecurityPermission perm, @Nullable SecurityContext securityCtx)
+    public void authorize(String name, SecurityPermission perm, SecurityContext securityCtx)
         throws SecurityException;
 
     /**
@@ -95,6 +116,21 @@ public interface GridSecurityProcessor extends GridProcessor {
 
     /**
      * @return GridSecurityProcessor is enable.
+     * @deprecated To determine the security mode use {@link IgniteSecurity#enabled()}.
      */
+    @Deprecated
     public boolean enabled();
+
+    /**
+     * This method is called before an attempt to do any secure operation using given context.
+     *
+     * Implementation can check if a context still valid, refresh internal state or do some other
+     * implementation specific things.
+     *
+     * @param secCtx Security context.
+     * @throws SecurityException If a context is no longer valid.
+     */
+    public default void touch(SecurityContext secCtx) throws SecurityException {
+        // No-op.
+    }
 }

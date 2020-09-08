@@ -42,7 +42,7 @@ import static org.apache.ignite.ml.math.util.MatrixUtil.elementWiseTimes;
 /**
  * Class encapsulating logic of multilayer perceptron.
  */
-public class MultilayerPerceptron implements IgniteModel<Matrix, Matrix>, SmoothParametrized<MultilayerPerceptron>,
+public final class MultilayerPerceptron implements IgniteModel<Matrix, Matrix>, SmoothParametrized<MultilayerPerceptron>,
     Serializable {
     /**
      * This MLP architecture.
@@ -571,13 +571,13 @@ public class MultilayerPerceptron implements IgniteModel<Matrix, Matrix>, Smooth
     /** {@inheritDoc} */
     @Override public String toString(boolean pretty) {
         StringBuilder builder = new StringBuilder("MultilayerPerceptron [\n");
-        if(below != null)
+        if (below != null)
             builder.append("below = \n").append(below.toString(pretty)).append("\n\n");
         builder.append("layers = [").append(pretty ? "\n" : "");
-        for(int i = 0; i < layers.size(); i++) {
+        for (int i = 0; i < layers.size(); i++) {
             MLPLayer layer = layers.get(i);
             builder.append("\tlayer").append(i).append(" = [\n");
-            if(layer.biases != null)
+            if (layer.biases != null)
                 builder.append("\t\tbias = ").append(Tracer.asAscii(layer.biases, "%.4f", false)).append("\n");
             String matrix = Tracer.asAscii(layer.weights, "%.4f").replaceAll("\n", "\n\t\t\t");
             builder.append("\t\tweights = [\n\t\t\t").append(matrix).append("\n\t\t]");

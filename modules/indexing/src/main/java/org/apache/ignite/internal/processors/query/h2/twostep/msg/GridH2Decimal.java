@@ -22,10 +22,10 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.h2.value.Value;
-import org.h2.value.ValueDecimal;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueDecimal;
 
-import static org.h2.util.StringUtils.convertBytesToHex;
+import static org.gridgain.internal.h2.util.StringUtils.convertBytesToHex;
 
 /**
  * H2 Decimal.
@@ -48,7 +48,7 @@ public class GridH2Decimal extends GridH2ValueMessage {
      * @param val Value.
      */
     public GridH2Decimal(Value val) {
-        assert val.getType() == Value.DECIMAL : val.getType();
+        assert val.getType().getValueType() == Value.DECIMAL : val.getType();
 
         BigDecimal x = val.getBigDecimal();
 

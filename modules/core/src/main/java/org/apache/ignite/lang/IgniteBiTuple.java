@@ -199,8 +199,7 @@ public class IgniteBiTuple<V1, V2> implements Map<V1, V2>, Map.Entry<V1, V2>,
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override
-    public V2 put(V1 key, V2 val) {
+    @Nullable @Override public V2 put(V1 key, V2 val) {
         V2 old = containsKey(key) ? val2 : null;
 
         set(key, val);
@@ -252,6 +251,15 @@ public class IgniteBiTuple<V1, V2> implements Map<V1, V2>, Map.Entry<V1, V2>,
         return isEmpty() ?
             Collections.<Entry<V1,V2>>emptySet() :
             Collections.<Entry<V1, V2>>singleton(this);
+    }
+
+    /**
+     * Convert tuple to array.
+     *
+     * @return Array with two elements from the tuple.
+     */
+    public Object[] toArray() {
+        return new Object[]{val1, val2};
     }
 
     /** {@inheritDoc} */

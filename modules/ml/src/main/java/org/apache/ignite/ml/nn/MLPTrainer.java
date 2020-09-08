@@ -108,7 +108,7 @@ public class MLPTrainer<P extends Serializable> extends MultiLabelDatasetTrainer
     }
 
     /** {@inheritDoc} */
-    @Override public <K, V> MultilayerPerceptron fit(DatasetBuilder<K, V> datasetBuilder,
+    @Override public <K, V> MultilayerPerceptron fitWithInitializedDeployingContext(DatasetBuilder<K, V> datasetBuilder,
                                                      Preprocessor<K, V> extractor) {
         return updateModel(null, datasetBuilder, extractor);
     }
@@ -119,13 +119,14 @@ public class MLPTrainer<P extends Serializable> extends MultiLabelDatasetTrainer
                                                                 Preprocessor<K, V> extractor) {
 
         assert archSupplier != null;
-        assert loss!= null;
-        assert updatesStgy!= null;
+        assert loss != null;
+        assert updatesStgy != null;
 
         try (Dataset<EmptyContext, SimpleLabeledDatasetData> dataset = datasetBuilder.build(
             envBuilder,
             new EmptyContextBuilder<>(),
-            new SimpleLabeledDatasetDataBuilder<>(extractor)
+            new SimpleLabeledDatasetDataBuilder<>(extractor),
+            learningEnvironment()
         )) {
             MultilayerPerceptron mdl;
             if (lastLearnedMdl != null)
@@ -327,7 +328,7 @@ public class MLPTrainer<P extends Serializable> extends MultiLabelDatasetTrainer
      * @param locIterations The parameter value.
      * @return Model with the maximal number of local iterations before synchronization.
      */
-    public MLPTrainer<P>  withLocIterations(int locIterations) {
+    public MLPTrainer<P> withLocIterations(int locIterations) {
         this.locIterations = locIterations;
         return this;
     }
@@ -347,7 +348,7 @@ public class MLPTrainer<P extends Serializable> extends MultiLabelDatasetTrainer
      * @param seed The parameter value.
      * @return Model with the multilayer perceptron model initializer.
      */
-    public MLPTrainer<P>  withSeed(long seed) {
+    public MLPTrainer<P> withSeed(long seed) {
         this.seed = seed;
         return this;
     }

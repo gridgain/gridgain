@@ -633,6 +633,8 @@ public abstract class GridCacheSetAbstractSelfTest extends IgniteCollectionAbstr
 
         startGrid(gridCount());
 
+        awaitPartitionMapExchange();
+
         try {
             IgniteSet<Integer> set1 = grid(0).set(SET_NAME, null);
 
@@ -650,10 +652,13 @@ public abstract class GridCacheSetAbstractSelfTest extends IgniteCollectionAbstr
             stopGrid(gridCount());
         }
 
-        for (int i = 0; i < gridCount(); i++) {
-            IgniteSet<Integer> set = grid(i).set(SET_NAME, null);
+        // Stopping a node will cause data loss with zero backups.
+        if (colCfg.getBackups() != 0) {
+            for (int i = 0; i < gridCount(); i++) {
+                IgniteSet<Integer> set = grid(i).set(SET_NAME, null);
 
-            assertSetContent(set, ITEMS);
+                assertSetContent(set, ITEMS);
+            }
         }
     }
 
@@ -691,7 +696,7 @@ public abstract class GridCacheSetAbstractSelfTest extends IgniteCollectionAbstr
 
         final int THREADS_PER_NODE = 5;
         final int KEY_RANGE = 10_000;
-        final int ITERATIONS = 3000;
+        final int ITERATIONS = GridTestUtils.SF.applyLB(2000, 100);
 
         for (int i = 0; i < gridCount(); i++) {
             final int idx = i;
@@ -1045,7 +1050,7 @@ public abstract class GridCacheSetAbstractSelfTest extends IgniteCollectionAbstr
      * Test that non collocated sets are stored in a separated cache.
      */
     @Test
-    public void testCacheReuse()  {
+    public void testCacheReuse() {
         testCacheReuse(false);
     }
 

@@ -18,35 +18,71 @@ package org.apache.ignite.internal.stat;
 
 import java.lang.management.ManagementFactory;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collection;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.internal.stat.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
+import static org.apache.ignite.internal.metric.IoStatisticsHolderIndex.HASH_PK_IDX_NAME;
 
 /**
  * Test of local node IO statistics MX bean.
  */
+@RunWith(Parameterized.class)
 public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstractTest {
     /** */
-    private static IgniteEx ignite;
+    public static final String CACHE_1_NAME = "cache1";
+
+    /** */
+    public static final String CACHE_2_NAME = "cache2";
+
+    /** */
+    @Parameterized.Parameter
+    public CacheAtomicityMode atomicity1;
+
+    /** */
+    @Parameterized.Parameter(1)
+    public CacheAtomicityMode atomicity2;
+
+    /** */
+    @Parameterized.Parameters(name = "Cache 1 = {0}, Cache 2 = {1}")
+    public static Collection<Object[]> parameters() {
+        return Arrays.asList(
+            new Object[] {CacheAtomicityMode.TRANSACTIONAL, CacheAtomicityMode.TRANSACTIONAL},
+            new Object[] {CacheAtomicityMode.ATOMIC, CacheAtomicityMode.ATOMIC},
+            new Object[] {CacheAtomicityMode.TRANSACTIONAL, CacheAtomicityMode.ATOMIC},
+            new Object[] {CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL}
+        );
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         final IgniteConfiguration cfg = super.getConfiguration(name);
 
-        final CacheConfiguration cCfg = new CacheConfiguration()
-            .setName(DEFAULT_CACHE_NAME);
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
 
-        cfg.setCacheConfiguration(cCfg);
+        dsCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            .setMaxSize(256 * 1024L * 1024L).setName("default"));
+
+        dsCfg.setDataRegionConfigurations(new DataRegionConfiguration()
+            .setPersistenceEnabled(true).setMaxSize(256 * 1024 * 1024).setName("persistent"));
+
+        cfg.setDataStorageConfiguration(dsCfg);
 
         return cfg;
     }
@@ -55,7 +91,20 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        ignite = startGrid(0);
+        cleanPersistenceDir();
+
+        Ignite ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        stopAllGrids(true);
+
+        cleanPersistenceDir();
     }
 
     /**
@@ -64,140 +113,196 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
      * @throws Exception In case of failure.
      */
     @Test
-    public void testIndexBasic() throws Exception {
+    public void testExistingCachesMetrics() throws Exception {
         IoStatisticsMetricsMXBean bean = ioStatMXBean();
 
-        IoStatisticsManager ioStatMgr = ignite.context().ioStats();
+        final CacheConfiguration cCfg1 = new CacheConfiguration()
+            .setName(CACHE_1_NAME)
+            .setDataRegionName("default")
+            .setAtomicityMode(atomicity1)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(1));
 
-        Assert.assertEquals(ioStatMgr.startTime().toEpochSecond(), bean.getStartTime());
+        final CacheConfiguration cCfg2 = new CacheConfiguration()
+            .setName(CACHE_2_NAME)
+            .setDataRegionName("persistent")
+            .setAtomicityMode(atomicity2)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(1));
 
-        Assert.assertEquals(ioStatMgr.startTime().format(DateTimeFormatter.ISO_DATE_TIME), bean.getStartTimeLocal());
+        try {
+            ignite(0).getOrCreateCaches(Arrays.asList(cCfg1, cCfg2));
 
-        bean.reset();
+            IoStatisticsManager ioStatMgr = ignite(0).context().ioStats();
 
-        Assert.assertEquals(ioStatMgr.startTime().toEpochSecond(), bean.getStartTime());
+            Assert.assertEquals(ioStatMgr.startTime().toEpochSecond(), bean.getStartTime());
 
-        Assert.assertEquals(ioStatMgr.startTime().format(DateTimeFormatter.ISO_DATE_TIME), bean.getStartTimeLocal());
+            Assert.assertEquals(ioStatMgr.startTime().format(DateTimeFormatter.ISO_DATE_TIME), bean.getStartTimeLocal());
 
-        int cnt = 100;
+            bean.reset();
 
-        populateCache(cnt);
+            Assert.assertEquals(ioStatMgr.startTime().toEpochSecond(), bean.getStartTime());
 
-        long idxLeafLogicalCnt = bean.getIndexLeafLogicalReads(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            Assert.assertEquals(ioStatMgr.startTime().format(DateTimeFormatter.ISO_DATE_TIME), bean.getStartTimeLocal());
 
-        Assert.assertEquals(cnt, idxLeafLogicalCnt);
+            // Check that in initial state all metrics are zero.
+            assertEquals(0, (long)bean.getIndexLeafLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getCacheGroupLogicalReads(CACHE_1_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
 
-        long idxLeafPhysicalCnt = bean.getIndexLeafPhysicalReads(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            assertEquals(0, (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
 
-        Assert.assertEquals(0, idxLeafPhysicalCnt);
+            int cnt = 500;
 
-        long idxInnerLogicalCnt = bean.getIndexInnerLogicalReads(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            populateCaches(0, cnt);
 
-        Assert.assertEquals(0, idxInnerLogicalCnt);
+            bean.reset();
 
-        long idxInnerPhysicalCnt = bean.getIndexInnerPhysicalReads(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            readCaches(0, cnt);
 
-        Assert.assertEquals(0, idxInnerPhysicalCnt);
+            // 1 of the reads will get resolved from the inner page.
+            int off = 1;
 
-        Long aggregatedIdxLogicalReads = bean.getIndexLogicalReads(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            assertEquals(cnt - off, (long)bean.getIndexLeafLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(cnt, (long)bean.getIndexInnerLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt - off, (long)bean.getIndexLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            // Each data page is touched twice - one during index traversal and second
+            assertEquals(2 * cnt, (long)bean.getCacheGroupLogicalReads(CACHE_1_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
 
-        Assert.assertNotNull(aggregatedIdxLogicalReads);
+            assertEquals(cnt - off, (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt - off, (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt, (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
 
-        Assert.assertEquals(aggregatedIdxLogicalReads.longValue(), idxLeafLogicalCnt + idxLeafPhysicalCnt +
-            idxInnerLogicalCnt + idxInnerPhysicalCnt);
+            Assert.assertEquals("HASH_INDEX cache1.HASH_PK [LOGICAL_READS_LEAF=" + (cnt - off) +
+                    ", LOGICAL_READS_INNER=" + cnt + ", " +
+                "PHYSICAL_READS_INNER=0, PHYSICAL_READS_LEAF=0]",
+                bean.getIndexStatistics(CACHE_1_NAME, HASH_PK_IDX_NAME));
 
-        Long aggregatedIdxPhysicalReads = bean.getIndexPhysicalReads(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            Assert.assertEquals("HASH_INDEX cache2.HASH_PK [LOGICAL_READS_LEAF=" + (cnt - off) +
+                    ", LOGICAL_READS_INNER=" + cnt + ", " +
+                "PHYSICAL_READS_INNER=0, PHYSICAL_READS_LEAF=0]",
+                bean.getIndexStatistics(CACHE_2_NAME, HASH_PK_IDX_NAME));
 
-        Assert.assertNotNull(aggregatedIdxPhysicalReads);
+            // Check that logical reads keep growing.
+            readCaches(0, cnt);
 
-        Assert.assertEquals(0, aggregatedIdxPhysicalReads.longValue());
+            assertEquals(2 * (cnt - off), (long)bean.getIndexLeafLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt, (long)bean.getIndexInnerLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * (2 * cnt - off), (long)bean.getIndexLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * (2 * cnt), (long)bean.getCacheGroupLogicalReads(CACHE_1_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
 
-        String formatted = bean.getIndexStatistics(DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME);
+            assertEquals(2 * (cnt - off), (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * (2 * cnt - off), (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * (2 * cnt), (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
 
-        Assert.assertEquals("HASH_INDEX default.HASH_PK [LOGICAL_READS_LEAF=100, LOGICAL_READS_INNER=0, " +
-            "PHYSICAL_READS_INNER=0, PHYSICAL_READS_LEAF=0]", formatted);
+            // Force physical reads
+            ignite(0).cluster().active(false);
+            ignite(0).cluster().active(true);
 
-        String unexistedStats = bean.getIndexStatistics("unknownCache", "unknownIdx");
+            bean.reset();
 
-        Assert.assertEquals("SORTED_INDEX unknownCache.unknownIdx []", unexistedStats);
+            assertEquals(0, (long)bean.getIndexLeafLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLogicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_1_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getCacheGroupLogicalReads(CACHE_1_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_1_NAME));
+
+            assertEquals(0, (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(0, (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
+            assertEquals(0, (long)bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
+
+            readCaches(0, cnt);
+
+            assertEquals(cnt - off, (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            // We had a split, so now we have 2 leaf pages...
+            assertEquals(2, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            // And 1 inner page
+            assertEquals(1, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt - off, (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(3, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt, (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
+
+            Long physReads = bean.getCacheGroupPhysicalReads(CACHE_2_NAME);
+            // For sure should overflow 2 data pages.
+            assertTrue(physReads > 2);
+
+            // Check that metrics keep growing. Logical reads will increase, physycal reads will be the same.
+            readCaches(0, cnt);
+
+            assertEquals(2 * (cnt - off), (long)bean.getIndexLeafLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            // We had a split, so now we have 2 leaf pages...
+            assertEquals(2, (long)bean.getIndexLeafPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * cnt, (long)bean.getIndexInnerLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            // And 1 inner page
+            assertEquals(1, (long)bean.getIndexInnerPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * (2 * cnt - off), (long)bean.getIndexLogicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(3, (long)bean.getIndexPhysicalReads(CACHE_2_NAME, HASH_PK_IDX_NAME));
+            assertEquals(2 * (2 * cnt), (long)bean.getCacheGroupLogicalReads(CACHE_2_NAME));
+            assertEquals(physReads, bean.getCacheGroupPhysicalReads(CACHE_2_NAME));
+        }
+        finally {
+            ignite(0).destroyCache(CACHE_1_NAME);
+            ignite(0).destroyCache(CACHE_2_NAME);
+        }
     }
 
     /**
-     * Simple test JMX bean for caches IO stats.
-     *
-     * @throws Exception In case of failure.
-     */
-    @Test
-    public void testCacheBasic() throws Exception {
-        IoStatisticsMetricsMXBean bean = ioStatMXBean();
-
-        IoStatisticsManager ioStatMgr = ignite.context().ioStats();
-
-        Assert.assertEquals(ioStatMgr.startTime().toEpochSecond(), bean.getStartTime());
-
-        Assert.assertEquals(ioStatMgr.startTime().format(DateTimeFormatter.ISO_DATE_TIME), bean.getStartTimeLocal());
-
-        bean.reset();
-
-        Assert.assertEquals(ioStatMgr.startTime().toEpochSecond(), bean.getStartTime());
-
-        Assert.assertEquals(ioStatMgr.startTime().format(DateTimeFormatter.ISO_DATE_TIME), bean.getStartTimeLocal());
-
-        int cnt = 100;
-
-        warmUpMemmory(bean, cnt);
-
-        populateCache(cnt);
-
-        Long cacheLogicalReadsCnt = bean.getCacheGroupLogicalReads(DEFAULT_CACHE_NAME);
-
-        Assert.assertNotNull(cacheLogicalReadsCnt);
-
-        Assert.assertEquals(cnt, cacheLogicalReadsCnt.longValue());
-
-        Long cachePhysicalReadsCnt = bean.getCacheGroupPhysicalReads(DEFAULT_CACHE_NAME);
-
-        Assert.assertNotNull(cachePhysicalReadsCnt);
-
-        Assert.assertEquals(0, cachePhysicalReadsCnt.longValue());
-
-        String formatted = bean.getCacheGroupStatistics(DEFAULT_CACHE_NAME);
-
-        Assert.assertEquals("CACHE_GROUP default [LOGICAL_READS=100, PHYSICAL_READS=0]", formatted);
-
-        String unexistedStats = bean.getCacheGroupStatistics("unknownCache");
-
-        Assert.assertEquals("CACHE_GROUP unknownCache []", unexistedStats);
-    }
-
-    /**
-     * Warm up memmory to allocate partitions cache pages related to inserting keys.
-     *
-     * @param bean JMX bean.
      * @param cnt Number of inserting elements.
      */
-    private void warmUpMemmory(IoStatisticsMetricsMXBean bean, int cnt) {
-        populateCache(cnt);
+    private void populateCaches(int start, int cnt) {
+        for (int i = start; i < cnt; i++) {
+            ignite(0).cache(CACHE_1_NAME).put(i, i);
 
-        clearCache(cnt);
-
-        bean.reset();
+            ignite(0).cache(CACHE_2_NAME).put(i, i);
+        }
     }
 
     /**
      * @param cnt Number of inserting elements.
      */
-    private void populateCache(int cnt) {
-        for (int i = 0; i < cnt; i++)
-            ignite.cache(DEFAULT_CACHE_NAME).put(i, i);
-    }
+    private void readCaches(int start, int cnt) {
+        for (int i = start; i < cnt; i++) {
+            ignite(0).cache(CACHE_1_NAME).get(i);
 
-    /**
-     * @param cnt Number of removing elements.
-     */
-    private void clearCache(int cnt) {
-        for (int i = 0; i < cnt; i++)
-            ignite.cache(DEFAULT_CACHE_NAME).remove(i);
+            ignite(0).cache(CACHE_2_NAME).get(i);
+        }
     }
 
     /**

@@ -18,6 +18,7 @@ package org.apache.ignite.examples.computegrid;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -37,6 +38,7 @@ import org.apache.ignite.compute.ComputeTaskContinuousMapper;
 import org.apache.ignite.compute.ComputeTaskNoResultCache;
 import org.apache.ignite.examples.ExampleNodeStartup;
 import org.apache.ignite.resources.TaskContinuousMapperResource;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Demonstrates usage of continuous mapper. With continuous mapper
@@ -98,7 +100,7 @@ public class ComputeContinuousMapperExample {
         private final AtomicInteger totalChrCnt = new AtomicInteger(0);
 
         /** {@inheritDoc} */
-        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> nodes, String phrase) {
+        @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> nodes, String phrase) {
             if (phrase == null || phrase.isEmpty())
                 throw new IgniteException("Phrase is empty.");
 
@@ -109,8 +111,8 @@ public class ComputeContinuousMapperExample {
             sendWord();
 
             // Since we have sent at least one job, we are allowed to return
-            // 'null' from map method.
-            return null;
+            // empty hashmap from map method.
+            return new HashMap<>();
         }
 
         /** {@inheritDoc} */

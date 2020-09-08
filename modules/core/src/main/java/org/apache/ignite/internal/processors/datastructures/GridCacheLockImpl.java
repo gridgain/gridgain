@@ -633,8 +633,9 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
                             }
                             catch (Exception e) {
                                 if (interruptAll) {
-                                    log.info("Node is stopped (or lock is broken in non-failover safe mode)," +
-                                        " aborting transaction.");
+                                    if (log.isInfoEnabled())
+                                        log.info("Node is stopped (or lock is broken in non-failover safe mode)," +
+                                            " aborting transaction.");
 
                                     // Abort this attempt to synchronize queue and start another one,
                                     // that will return immediately.
@@ -704,7 +705,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
                                 if (val.isFair() && newVal == 0) {
                                     UUID rmvdNode = val.getNodes().removeFirst();
 
-                                    assert(thisNode.equals(rmvdNode));
+                                    assert (thisNode.equals(rmvdNode));
                                 }
 
                                 // Get global condition queue.
@@ -924,7 +925,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
                     lastCondition = name;
 
-                    long result =  obj.awaitNanos(nanosTimeout);
+                    long result = obj.awaitNanos(nanosTimeout);
 
                     sync.validate(true);
 
@@ -1109,7 +1110,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
                 sync.release(0);
             }
 
-        } finally{
+        } finally {
             updateLock.unlock();
         }
     }
@@ -1156,8 +1157,11 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     @Override public void lock() {
         ctx.kernalContext().gateway().readLock();
 
-        try{
+        try {
             initializeReentrantLock();
+
+            if (sync == null)
+                throw new IgniteCheckedException("Failed to find reentrant lock with given name: " + name);
 
             sync.lock();
 
@@ -1200,7 +1204,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     @Override public boolean tryLock() {
         ctx.kernalContext().gateway().readLock();
 
-        try{
+        try {
             initializeReentrantLock();
 
             boolean result = sync.tryAcquire(1, false);
@@ -1221,7 +1225,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     @Override public boolean tryLock(long timeout, TimeUnit unit) throws IgniteInterruptedException {
         ctx.kernalContext().gateway().readLock();
 
-        try{
+        try {
             initializeReentrantLock();
 
             boolean result = sync.tryAcquireNanos(1, unit.toNanos(timeout));
@@ -1248,7 +1252,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     @Override public void unlock() {
         ctx.kernalContext().gateway().readLock();
 
-        try{
+        try {
             initializeReentrantLock();
 
             // Validate before release.
@@ -1272,7 +1276,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     @Override public IgniteCondition getOrCreateCondition(String name) {
         ctx.kernalContext().gateway().readLock();
 
-        try{
+        try {
             initializeReentrantLock();
 
             IgniteCondition result = sync.newCondition(name);
@@ -1291,7 +1295,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public int getHoldCount() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.getHoldCount();
@@ -1303,7 +1307,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public boolean isHeldByCurrentThread() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.isHeldExclusively();
@@ -1315,7 +1319,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public boolean isLocked() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.isLocked();
@@ -1327,7 +1331,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public boolean hasQueuedThreads() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.hasQueuedThreads();
@@ -1339,7 +1343,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public boolean hasQueuedThread(Thread thread) {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.isQueued(thread);
@@ -1351,7 +1355,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public boolean hasWaiters(IgniteCondition condition) {
-        try{
+        try {
             initializeReentrantLock();
 
             AbstractQueuedSynchronizer.ConditionObject c = sync.conditionMap.get(condition.name());
@@ -1368,7 +1372,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public int getWaitQueueLength(IgniteCondition condition) {
-        try{
+        try {
             initializeReentrantLock();
 
             AbstractQueuedSynchronizer.ConditionObject c = sync.conditionMap.get(condition.name());
@@ -1384,7 +1388,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     }
 
     @Override public boolean isFailoverSafe() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.failoverSafe;
@@ -1395,7 +1399,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     }
 
     @Override public boolean isFair() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.fair;
@@ -1407,7 +1411,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public boolean isBroken() {
-        try{
+        try {
             initializeReentrantLock();
 
             return sync.isBroken();

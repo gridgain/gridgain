@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-spring</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -109,10 +109,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>${h2.version}</version>
-            <scope>test</scope>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-h2</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -120,6 +119,20 @@
             <artifactId>ignite-core</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.gridgain</groupId>
+            <artifactId>ignite-tools</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>${commons.dbcp.version}</version>
             <scope>test</scope>
         </dependency>
 

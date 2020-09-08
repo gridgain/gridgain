@@ -36,6 +36,7 @@ import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
@@ -88,6 +89,7 @@ public class GridIoManagerSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-12661")
     public void testSendIfOneOfNodesIsLocalAndTopicIsEnum() throws Exception {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
@@ -103,6 +105,7 @@ public class GridIoManagerSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://issues.apache.org/jira/browse/IGNITE-12661")
     public void testSendUserMessageThinVersionIfOneOfNodesIsLocal() throws Exception {
         Object msg = new Object();
 
@@ -122,56 +125,6 @@ public class GridIoManagerSelfTest extends GridCommonAbstractTest {
 
         verify(ioMgr).sendToGridTopic(argThat(new IsEqualCollection(rmtNodes)), eq(GridTopic.TOPIC_COMM_USER),
             any(GridIoUserMessage.class), eq(GridIoPolicy.PUBLIC_POOL));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSendUserMessageUnorderedThickVersionIfOneOfNodesIsLocal() throws Exception {
-        Object msg = new Object();
-
-        GridIoManager ioMgr = spy(new TestGridIoManager(ctx));
-
-        try {
-            ioMgr.sendUserMessage(F.asList(locNode, rmtNode), msg, GridTopic.TOPIC_IGFS, false, 123L, false);
-        }
-        catch (IgniteCheckedException ignored) {
-            // No-op. We are using mocks so real sending is impossible.
-        }
-
-        verify(ioMgr).sendToGridTopic(eq(locNode), eq(GridTopic.TOPIC_COMM_USER), any(GridIoUserMessage.class),
-            eq(GridIoPolicy.PUBLIC_POOL));
-
-        Collection<? extends ClusterNode> rmtNodes = F.view(F.asList(rmtNode), F.remoteNodes(locNode.id()));
-
-        verify(ioMgr).sendToGridTopic(argThat(new IsEqualCollection(rmtNodes)), eq(GridTopic.TOPIC_COMM_USER),
-            any(GridIoUserMessage.class), eq(GridIoPolicy.PUBLIC_POOL));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSendUserMessageOrderedThickVersionIfOneOfNodesIsLocal() throws Exception {
-        Object msg = new Object();
-
-        GridIoManager ioMgr = spy(new TestGridIoManager(ctx));
-
-        try {
-            ioMgr.sendUserMessage(F.asList(locNode, rmtNode), msg, GridTopic.TOPIC_IGFS, true, 123L, false);
-        }
-        catch (Exception ignored) {
-            // No-op. We are using mocks so real sending is impossible.
-        }
-
-        verify(ioMgr).sendOrderedMessageToGridTopic(
-            argThat(new IsEqualCollection(F.asList(locNode, rmtNode))),
-            eq(GridTopic.TOPIC_COMM_USER),
-            any(GridIoUserMessage.class),
-            eq(GridIoPolicy.PUBLIC_POOL),
-            eq(123L),
-            false);
     }
 
     /**

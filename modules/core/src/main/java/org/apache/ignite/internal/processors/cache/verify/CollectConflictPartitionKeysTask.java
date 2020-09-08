@@ -44,7 +44,10 @@ import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 
 /**
  *
@@ -60,7 +63,7 @@ public class CollectConflictPartitionKeysTask extends ComputeTaskAdapter<Partiti
     private IgniteLogger log;
 
     /** {@inheritDoc} */
-    @Nullable @Override public Map<? extends ComputeJob, ClusterNode> map(
+    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(
         List<ClusterNode> subgrid, PartitionKey partKey) throws IgniteException {
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
@@ -203,9 +206,9 @@ public class CollectConflictPartitionKeysTask extends ComputeTaskAdapter<Partiti
                 long updateCntrAfter = part.updateCounter();
 
                 if (updateCntrBefore != updateCntrAfter) {
-                    throw new IgniteException("Cluster is not idle: update counter of partition " + partKey.toString() +
-                        " changed during hash calculation [before=" + updateCntrBefore +
-                        ", after=" + updateCntrAfter + "]");
+                    throw new GridNotIdleException(GRID_NOT_IDLE_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                        ", grpId=" + grpCtx.groupId() + ", partId=" + part.id() + "] changed during hash calculation " +
+                        "[before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
                 }
             }
             catch (IgniteCheckedException e) {

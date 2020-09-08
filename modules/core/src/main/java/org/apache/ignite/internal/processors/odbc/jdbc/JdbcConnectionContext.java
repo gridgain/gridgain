@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,9 +33,11 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
+import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
 
@@ -60,17 +63,23 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.7.0: adds maximum length for columns feature.*/
     static final ClientListenerProtocolVersion VER_2_7_0 = ClientListenerProtocolVersion.create(2, 7, 0);
 
-    /** Version 2.8.0: adds query id in order to implement cancel feature, affinity awareness support: IEP-23.*/
+    /** Version 2.8.0: adds query id in order to implement cancel feature, Partition Awareness support: IEP-23.*/
     static final ClientListenerProtocolVersion VER_2_8_0 = ClientListenerProtocolVersion.create(2, 8, 0);
 
+    /** Version 2.8.1: adds query memory quotas.*/
+    static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
+
+    /** Version 2.8.2: adds features flags support.*/
+    static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
+    /** Version 2.8.3: adds user attributes.*/
+    static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_0;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_3;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
-
-    /** Session. */
-    private final GridNioSession ses;
 
     /** Shutdown busy lock. */
     private final GridSpinBusyLock busyLock;
@@ -87,11 +96,16 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Request handler. */
     private JdbcRequestHandler handler = null;
 
+    /** Current protocol context. */
+    private JdbcProtocolContext protoCtx;
+
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
 
     static {
         SUPPORTED_VERS.add(CURRENT_VER);
+        SUPPORTED_VERS.add(VER_2_8_2);
+        SUPPORTED_VERS.add(VER_2_8_1);
         SUPPORTED_VERS.add(VER_2_8_0);
         SUPPORTED_VERS.add(VER_2_7_0);
         SUPPORTED_VERS.add(VER_2_5_0);
@@ -103,17 +117,16 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
     /**
      * Constructor.
-     *  @param ctx Kernal Context.
-     * @param ses Session.
+     * @param ctx Kernal Context.
+     * @param ses Client's NIO session.
      * @param busyLock Shutdown busy lock.
-     * @param connId
+     * @param connId Connection ID.
      * @param maxCursors Maximum allowed cursors.
      */
     public JdbcConnectionContext(GridKernalContext ctx, GridNioSession ses, GridSpinBusyLock busyLock, long connId,
         int maxCursors) {
-        super(ctx, connId);
+        super(ctx, ses, connId);
 
-        this.ses = ses;
         this.busyLock = busyLock;
         this.maxCursors = maxCursors;
 
@@ -131,9 +144,10 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     }
 
     /** {@inheritDoc} */
-    @Override public void initializeFromHandshake(ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
+    @Override public void initializeFromHandshake(GridNioSession ses,
+        ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
         throws IgniteCheckedException {
-        assert SUPPORTED_VERS.contains(ver): "Unsupported JDBC protocol version.";
+        assert SUPPORTED_VERS.contains(ver) : "Unsupported JDBC protocol version.";
 
         boolean distributedJoins = reader.readBoolean();
         boolean enforceJoinOrder = reader.readBoolean();
@@ -166,11 +180,38 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         }
 
-
         Boolean dataPageScanEnabled = null;
+        Integer updateBatchSize = null;
+        long maxMemory = 0L;
+        EnumSet<JdbcThinFeature> features = EnumSet.noneOf(JdbcThinFeature.class);
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
-            dataPageScanEnabled = nullableBooleanFromByte(reader.readByte());
+        try {
+            if (ver.compareTo(VER_2_8_0) >= 0) {
+                dataPageScanEnabled = nullableBooleanFromByte(reader.readByte());
+
+                updateBatchSize = JdbcUtils.readNullableInteger(reader);
+
+                if (ver.compareTo(VER_2_8_1) >= 0) {
+                    if (reader.readBoolean())
+                        maxMemory = reader.readLong();
+                }
+            }
+
+            if (ver.compareTo(VER_2_8_2) >= 0) {
+                byte[] cliFeatures = reader.readByteArray();
+
+                features = JdbcThinFeature.enumSet(cliFeatures);
+            }
+
+            if (ver.compareTo(VER_2_8_3) >= 0)
+                userAttrs = reader.readMap();
+        }
+        catch (Exception ex) {
+            if (ver.compareTo(VER_2_8_0) != 0)
+                throw ex;
+
+            // TODO: GG-25595 remove when version 8.7.X support ends
+        }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
             String user = null;
@@ -186,10 +227,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 throw new IgniteCheckedException("Handshake error: " + e.getMessage(), e);
             }
 
-            actx = authenticate(user, passwd);
+            actx = authenticate(ses.certificates(), user, passwd);
         }
 
-        parser = new JdbcMessageParser(ctx, ver);
+        protoCtx = new JdbcProtocolContext(ver, features, null, false, true);
+
+        initClientDescriptor("jdbc-thin");
+
+        parser = new JdbcMessageParser(ctx, protoCtx);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {
@@ -204,9 +249,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         };
 
-        handler = new JdbcRequestHandler(busyLock, sender, maxCursors, distributedJoins, enforceJoinOrder,
+        if (maxMemory != 0L && securityContext() != null) {
+            try (OperationSecurityContext op = ctx.security().withContext(securityContext())) {
+                ctx.security().authorize(SecurityPermission.SET_QUERY_MEMORY_QUOTA);
+            }
+        }
+
+        handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
             collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, nestedTxMode,
-            dataPageScanEnabled, actx, ver, this);
+            dataPageScanEnabled, updateBatchSize, actx, ver, this);
 
         handler.start();
     }
@@ -247,5 +298,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             return changed ? newVer : null;
         }
+    }
+
+    /**
+     * @return Binary context.
+     */
+    public JdbcProtocolContext protocolContext() {
+        return protoCtx;
     }
 }

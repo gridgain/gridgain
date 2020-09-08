@@ -41,6 +41,7 @@ public class BinaryClassificationMetrics extends AbstractMetrics<BinaryClassific
     {
         metric = BinaryClassificationMetricValues::accuracy;
     }
+
     /**
      * Calculates binary metrics values.
      *
@@ -75,8 +76,7 @@ public class BinaryClassificationMetrics extends AbstractMetrics<BinaryClassific
             else if (truth == negativeClsLb && prediction == negativeClsLb) tn++;
             else if (truth == negativeClsLb && prediction == positiveClsLb) fp++;
 
-
-            if(enableROCAUC) {
+            if (enableROCAUC) {
                 queue.add(new Pair<>(prediction, truth));
 
                 if (truth == positiveClsLb)
@@ -91,7 +91,6 @@ public class BinaryClassificationMetrics extends AbstractMetrics<BinaryClassific
 
         if (enableROCAUC)
             rocauc = ROCAUC.calculateROCAUC(queue, pos, neg, positiveClsLb);
-
 
         return new BinaryClassificationMetricValues(tp, tn, fp, fn, rocauc);
     }
@@ -122,10 +121,9 @@ public class BinaryClassificationMetrics extends AbstractMetrics<BinaryClassific
 
     /** */
     public BinaryClassificationMetrics withEnablingROCAUC(boolean enableROCAUC) {
-        this.enableROCAUC = this.enableROCAUC;
+        this.enableROCAUC = enableROCAUC;
         return this;
     }
-
 
     /** */
     public boolean isROCAUCenabled() {

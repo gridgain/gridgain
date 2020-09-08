@@ -42,6 +42,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
@@ -133,7 +134,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
      * @param r Runnable.
      * @param expCode Error code.
      */
-    static void assertSqlException(DynamicIndexAbstractBasicSelfTest.RunnableX r, int expCode) {
+    static void assertSqlException(Runnable r, int expCode) {
         try {
             try {
                 r.run();
@@ -155,7 +156,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
             fail("Unexpected exception: " + e);
         }
 
-        fail(IgniteSQLException.class.getSimpleName() +  " is not thrown.");
+        fail(IgniteSQLException.class.getSimpleName() + " is not thrown.");
     }
 
     /**
@@ -431,7 +432,7 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
      * @param node Node.
      * @return Query processor.
      */
-    static GridQueryProcessor queryProcessor(Ignite node) {
+    public static GridQueryProcessor queryProcessor(Ignite node) {
         return queryProcessor((IgniteEx)node);
     }
 
@@ -553,10 +554,22 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
 
     /**
      * Destroy SQL cache on given node.
+     *
      * @param node Node to create cache on.
+     * @throws IgniteCheckedException if failed.
      */
     protected void destroySqlCache(Ignite node) throws IgniteCheckedException {
-        ((IgniteEx)node).context().cache().dynamicDestroyCache(CACHE_NAME, true, true, false, null).get();
+        destroySqlCacheFuture(node).get();
+    }
+
+    /**
+     * Starting destroy SQL cache with return of future.
+     *
+     * @param node Node to create cache on.
+     * @return Future that will be completed when cache is destroyed.
+     */
+    protected IgniteInternalFuture<Boolean> destroySqlCacheFuture(Ignite node) {
+        return ((IgniteEx)node).context().cache().dynamicDestroyCache(CACHE_NAME, true, true, false, null);
     }
 
     /**
@@ -661,17 +674,5 @@ public abstract class AbstractSchemaSelfTest extends AbstractIndexingCommonTest 
         public String field() {
             return field;
         }
-    }
-
-    /**
-     * Runnable which can throw checked exceptions.
-     */
-    protected interface RunnableX {
-        /**
-         * Do run.
-         *
-         * @throws Exception If failed.
-         */
-        public void run() throws Exception;
     }
 }

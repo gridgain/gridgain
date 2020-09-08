@@ -18,31 +18,32 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.engine.Session;
-import org.h2.index.BaseIndex;
-import org.h2.index.Cursor;
-import org.h2.index.Index;
-import org.h2.index.IndexCondition;
-import org.h2.index.IndexType;
-import org.h2.index.SingleRowCursor;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.result.SortOrder;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableBase;
-import org.h2.table.TableFilter;
-import org.h2.table.TableType;
-import org.h2.value.Value;
-import org.h2.value.ValueInt;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.BaseIndex;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexCondition;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.index.SingleRowCursor;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.Table;
+import org.gridgain.internal.h2.table.TableBase;
+import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.table.TableType;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueInt;
 
 /**
  * Meta table.
@@ -59,7 +60,7 @@ public class GridH2MetaTable extends TableBase {
 
     /** */
     private final Set<Session> fakeExclusiveSet = Collections.newSetFromMap(
-        new ConcurrentHashMap<Session,Boolean>());
+        new ConcurrentHashMap<>());
 
     /**
      * @param data Data.
@@ -71,10 +72,10 @@ public class GridH2MetaTable extends TableBase {
         assert cols.size() == 4 : cols;
 
         Column id = cols.get(ID);
-        assert "ID".equals(id.getName()) && id.getType() == Value.INT : cols;
+        assert "ID".equals(id.getName()) && id.getType().getValueType() == Value.INT : cols;
         assert id.getColumnId() == ID;
 
-        index = new MetaIndex();
+        index = new MetaIndex(this, 0, data.tableName, null, IndexType.createNonUnique(true));
     }
 
     /** {@inheritDoc} */
@@ -201,8 +202,8 @@ public class GridH2MetaTable extends TableBase {
     }
 
     /** {@inheritDoc} */
-    @Override public long getRowCountApproximation() {
-        return index.getRowCountApproximation();
+    @Override public long getRowCountApproximation(Session ses) {
+        return index.getRowCountApproximation(ses);
     }
 
     /** {@inheritDoc} */
@@ -221,6 +222,12 @@ public class GridH2MetaTable extends TableBase {
     private static class MetaIndex extends BaseIndex {
         /** */
         private final ConcurrentMap<ValueInt, Row> rows = new ConcurrentHashMap<>();
+
+        /** */
+        public MetaIndex(Table newTable, int id, String name, IndexColumn[] newIndexColumns,
+            IndexType newIndexType) {
+            super(newTable, id, name, newIndexColumns, newIndexType);
+        }
 
         /** {@inheritDoc} */
         @Override public void checkRename() {
@@ -264,7 +271,7 @@ public class GridH2MetaTable extends TableBase {
 
         /** {@inheritDoc} */
         @Override public double getCost(Session session, int[] masks, TableFilter[] filters,
-            int filter, SortOrder sortOrder, HashSet<Column> cols) {
+            int filter, SortOrder sortOrder, AllColumnsForPlan cols) {
             if ((masks[ID] & IndexCondition.EQUALITY) == IndexCondition.EQUALITY)
                 return 1;
 
@@ -302,7 +309,7 @@ public class GridH2MetaTable extends TableBase {
         }
 
         /** {@inheritDoc} */
-        @Override public long getRowCountApproximation() {
+        @Override public long getRowCountApproximation(Session ses) {
             return getRowCount(null);
         }
 

@@ -28,12 +28,13 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessa
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowRangeBounds;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.h2.index.Cursor;
-import org.h2.index.IndexLookupBatch;
-import org.h2.result.SearchRow;
-import org.h2.util.DoneFuture;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.util.DoneFuture;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
 
 import javax.cache.CacheException;
 import java.util.ArrayList;
@@ -149,12 +150,12 @@ public class DistributedLookupBatch implements IndexLookupBatch {
 
     /** {@inheritDoc} */
     @SuppressWarnings({"ForLoopReplaceableByForEach", "IfMayBeConditional"})
-    @Override public boolean addSearchRows(SearchRow firstRow, SearchRow lastRow) {
+    @Override public boolean addSearchRows(Session ses, SearchRow firstRow, SearchRow lastRow) {
         if (joinCtx == null || findCalled) {
             if (joinCtx == null) {
                 // It is the first call after query begin (may be after reuse),
                 // reinitialize query context and result.
-                QueryContext qctx = qryCtxRegistry.getThreadLocal();
+                QueryContext qctx = H2Utils.context(ses);
 
                 res = new ArrayList<>();
 
@@ -253,6 +254,7 @@ public class DistributedLookupBatch implements IndexLookupBatch {
      */
     private boolean equal(Value v1, Value v2) {
         return v1 == v2 || (v1 != null && v2 != null &&
+            v1 != ValueNull.INSTANCE && v2 != ValueNull.INSTANCE &&
             v1.compareTypeSafe(v2, idx.getDatabase().getCompareMode()) == 0);
     }
 

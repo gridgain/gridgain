@@ -27,27 +27,43 @@ Creating NuGet package:
 
 <package >
     <metadata>
-        <id>Apache.Ignite.Log4Net</id>
-        <title>Apache Ignite log4net Logger</title>
+        <id>GridGain.Ignite.Log4Net</id>
+        <title>GridGain Ignite log4net Logger</title>
         <!-- -->
         <version>$version$</version>
-        <authors>Apache Ignite</authors>
-        <owners>Apache Software Foundation</owners>
-        <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
-        <projectUrl>https://ignite.apache.org/</projectUrl>
-        <iconUrl>https://ignite.apache.org/images/logo_ignite_32_32.png</iconUrl>
+        <authors>GridGain</authors>
+        <owners>GridGain</owners>
+        <license type="file">LICENSE</license>
+        <projectUrl>https://gridgain.com/</projectUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>log4net Logger for Apache Ignite</description>
-        <releaseNotes></releaseNotes>
+        <description>log4net Logger for GridGain Ignite</description>
         <copyright>Copyright 2019</copyright>
-        <tags>Apache Ignite In-Memory Distributed Computing SQL NoSQL LINQ Grid Map Reduce Cache log4net logger</tags>
+        <tags>GridGain Ignite In-Memory Distributed Computing SQL NoSQL LINQ Grid Map Reduce Cache log4net logger</tags>
+        <repository type="git" url="https://github.com/gridgain/gridgain.git" />
+        
         <dependencies>
-            <dependency id="Apache.Ignite" version="[$version$]" />
-            <dependency id="log4net" version="[2.0.0, 3.0.0)" />
-        </dependencies>    
+            <group targetFramework=".NETFramework4.0">
+                <dependency id="GridGain.Ignite" version="[$version$]" />
+                <dependency id="log4net" version="[2.0.0, 3.0.0)" />
+            </group>
+            <group targetFramework=".NETStandard2.0">
+                <dependency id="GridGain.Ignite" version="[$version$]" />
+                <dependency id="log4net" version="[2.0.6, 3.0.0)" />
+            </group>
+        </dependencies>
     </metadata>
     <files>
 	    <file src="bin\$configuration$\Apache.Ignite.Log4Net.dll" target="lib\net40" />
 		<file src="bin\$configuration$\Apache.Ignite.Log4Net.xml" target="lib\net40" />
+
+        <file src="bin\$configuration$\Apache.Ignite.Log4Net.dll" target="lib\netstandard2.0" />
+        <file src="bin\$configuration$\Apache.Ignite.Log4Net.xml" target="lib\netstandard2.0" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="LICENSE" />
     </files>
 </package>

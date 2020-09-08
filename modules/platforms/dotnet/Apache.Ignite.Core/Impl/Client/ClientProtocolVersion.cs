@@ -105,16 +105,52 @@ namespace Apache.Ignite.Core.Impl.Client
             return obj is ClientProtocolVersion && Equals((ClientProtocolVersion) obj);
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Equality operator.
+        /// </summary>
         public static bool operator ==(ClientProtocolVersion left, ClientProtocolVersion right)
         {
             return left.Equals(right);
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Inequality operator.
+        /// </summary>
         public static bool operator !=(ClientProtocolVersion left, ClientProtocolVersion right)
         {
             return !left.Equals(right);
+        }
+
+        /// <summary>
+        /// Less-than operator.
+        /// </summary>
+        public static bool operator <(ClientProtocolVersion left, ClientProtocolVersion right)
+        {
+            return left.CompareTo(right) < 0;
+        }
+
+        /// <summary>
+        /// Less-or-equal-than operator.
+        /// </summary>
+        public static bool operator <=(ClientProtocolVersion left, ClientProtocolVersion right)
+        {
+            return left.CompareTo(right) <= 0;
+        }
+
+        /// <summary>
+        /// Greater-than operator.
+        /// </summary>
+        public static bool operator >(ClientProtocolVersion left, ClientProtocolVersion right)
+        {
+            return left.CompareTo(right) > 0;
+        }
+
+        /// <summary>
+        /// Greater-or-equal-than operator.
+        /// </summary>
+        public static bool operator >=(ClientProtocolVersion left, ClientProtocolVersion right)
+        {
+            return left.CompareTo(right) >= 0;
         }
 
         /** <inheritdoc /> */

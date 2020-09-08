@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
@@ -262,7 +263,7 @@ public class GridMarshallerMappingProcessor extends GridProcessorAdapter {
                     if (origNodeId.equals(ctx.localNodeId())) {
                         GridFutureAdapter<MappingExchangeResult> fut = mappingExchangeSyncMap.get(msg.mappingItem());
 
-                        assert fut != null: msg;
+                        assert fut != null : msg;
 
                         fut.onDone(MappingExchangeResult.createFailureResult(
                                 duplicateMappingException(msg.mappingItem(), msg.conflictingClassName())));
@@ -303,7 +304,7 @@ public class GridMarshallerMappingProcessor extends GridProcessorAdapter {
             final MarshallerMappingItem item = msg.getMappingItem();
             marshallerCtx.onMappingAccepted(item);
 
-            closProc.runLocalSafe(new Runnable() {
+            closProc.runLocalSafe(new GridPlainRunnable() {
                 @Override public void run() {
                     for (MappingUpdatedListener lsnr : mappingUpdatedLsnrs)
                         lsnr.mappingUpdated(item.platformId(), item.typeId(), item.className());

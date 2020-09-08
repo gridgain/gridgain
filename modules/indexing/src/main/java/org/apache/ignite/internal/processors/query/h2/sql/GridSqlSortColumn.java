@@ -18,10 +18,10 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.List;
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.result.SortOrder;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.Table;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.Table;
 
 /**
  * Sort order for ORDER BY clause.
