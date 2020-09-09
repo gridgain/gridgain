@@ -83,7 +83,7 @@ import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgrade;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -327,7 +327,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
-    RollingUpgradeProcessor rollingUpgradeProc;
+    RollingUpgrade rollingUpgradeProc;
 
     /** */
     @GridToStringExclude
@@ -700,8 +700,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             txDrProc = (TransactionalDrProcessor)comp;
         else if (comp instanceof DiagnosticProcessor)
             diagnosticProcessor = (DiagnosticProcessor)comp;
-        else if (comp instanceof RollingUpgradeProcessor)
-            rollingUpgradeProc = (RollingUpgradeProcessor)comp;
+        else if (comp instanceof RollingUpgrade)
+            rollingUpgradeProc = (RollingUpgrade)comp;
         else if (comp instanceof DurableBackgroundTasksProcessor)
             durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
         else if (comp instanceof FlowProcessor)
@@ -1284,7 +1284,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public RollingUpgradeProcessor rollingUpgrade() {
+    @Override public RollingUpgrade rollingUpgrade() {
         return rollingUpgradeProc;
     }
 
