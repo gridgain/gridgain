@@ -27,7 +27,6 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -72,7 +71,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
 
         // Execute.
         IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
-            .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "zxc_")));
+            .executeFlow("asd", new FlowTaskTransferObject("string", "zxc_"));
 
         // Execution result is wrapped in FlowTaskTransferObject.
         FlowTaskTransferObject res = fut.get();
@@ -101,7 +100,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
         IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
-            .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
+            .executeFlow("asd", new FlowTaskTransferObject("string", "qwe_"));
 
         assertThrows(log, () -> fut.get(), IgniteException.class, "qwe not allowed");
     }
@@ -122,7 +121,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         ignite.context().flowProcessor().addFlow("asd", flow, false);
 
         IgniteFuture<FlowTaskTransferObject> fut = ignite.context().flowProcessor()
-            .executeFlow("asd", new FlowTaskTransferObject(new IgniteBiTuple<>("string", "qwe_")));
+            .executeFlow("asd", new FlowTaskTransferObject("string", "qwe_"));
 
         FlowTaskTransferObject res = fut.get();
 
@@ -200,7 +199,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         }
 
         @Override public FlowTaskTransferObject result(Integer integer) {
-            return new FlowTaskTransferObject(new IgniteBiTuple<>("int", integer));
+            return new FlowTaskTransferObject("int", integer);
         }
 
         @Override public IgnitePredicate<ClusterNode> nodeFilter() {
@@ -259,7 +258,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         }
 
         @Override public FlowTaskTransferObject result(Integer r) {
-            return new FlowTaskTransferObject(new IgniteBiTuple<>("int", r));
+            return new FlowTaskTransferObject("int", r);
         }
 
         @Override public IgnitePredicate<ClusterNode> nodeFilter() {
@@ -315,7 +314,7 @@ public class TaskFlowTest extends GridCommonAbstractTest {
         }
 
         @Override public FlowTaskTransferObject result(String r) {
-            return new FlowTaskTransferObject(new IgniteBiTuple<>("str", r));
+            return new FlowTaskTransferObject("str", r);
         }
 
         @Override public IgnitePredicate<ClusterNode> nodeFilter() {

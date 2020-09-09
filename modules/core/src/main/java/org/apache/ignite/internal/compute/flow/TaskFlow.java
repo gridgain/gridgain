@@ -28,14 +28,15 @@ public class TaskFlow implements Serializable {
     /**
      * Constructor.
      *
-     * @param rootElement
+     * @param rootElement Root element.
      */
     public TaskFlow(FlowElement rootElement) {
         this.rootElement = rootElement;
     }
 
     /**
-     * @return Returns a root element.
+     * @return Returns a root element of this flow. Flow execution starts with execution of root element,
+     * and it's reducer result (see {@link FlowElement#reducer()}) will be result of flow execution.
      */
     public FlowElement rootElement() {
         return rootElement;

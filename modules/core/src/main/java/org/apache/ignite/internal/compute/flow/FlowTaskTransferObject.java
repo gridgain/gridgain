@@ -17,16 +17,19 @@ package org.apache.ignite.internal.compute.flow;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.ignite.lang.IgniteBiTuple;
 
+/**
+ * Wrapper for task parameters and results that is transferred in flow between tasks. It stores the data
+ * that should be transferred, and if the task has failed with exception, it stores the exception.
+ */
 public class FlowTaskTransferObject {
     private final Map<String, Object> data;
 
     private final Throwable exception;
 
-    public FlowTaskTransferObject(IgniteBiTuple<String, Object> data) {
+    public FlowTaskTransferObject(String key, Object value) {
         this.data = new HashMap<>();
-        this.data.put(data.getKey(), data.getValue());
+        this.data.put(key, value);
         this.exception = null;
     }
 
@@ -40,14 +43,29 @@ public class FlowTaskTransferObject {
         this.exception = exception;
     }
 
+    /**
+     * Data that should be transferred between tasks.
+     *
+     * @return Data.
+     */
     public Map<String, Object> data() {
         return data;
     }
 
+    /**
+     * Flag of successfullness of the task execution.
+     *
+     * @return Whether is successfull.
+     */
     public boolean successfull() {
         return exception == null;
     }
 
+    /**
+     * Returns an exception that task execution failed with, if it did.
+     *
+     * @return Exception.
+     */
     public Throwable exception() {
         return exception;
     }

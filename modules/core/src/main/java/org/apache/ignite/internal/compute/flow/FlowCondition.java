@@ -18,5 +18,9 @@ package org.apache.ignite.internal.compute.flow;
 import java.io.Serializable;
 import java.util.function.Predicate;
 
+/**
+ * Allows to determine if the flow task should be executed or not, depending on the result of previous task
+ * execution.
+ */
 public interface FlowCondition extends Predicate<FlowTaskTransferObject>, Serializable {
 }

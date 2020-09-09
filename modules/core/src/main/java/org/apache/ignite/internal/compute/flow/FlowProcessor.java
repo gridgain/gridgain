@@ -23,6 +23,9 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.lang.IgniteFuture;
 
+/**
+ * Flow processor.
+ */
 public class FlowProcessor extends GridProcessorAdapter {
     private final Map<String, TaskFlow> flows = new ConcurrentHashMap<>();
     /**
@@ -32,18 +35,42 @@ public class FlowProcessor extends GridProcessorAdapter {
         super(ctx);
     }
 
+    /**
+     * Add new flow to metastorage.
+     *
+     * @param name Name of the flow.
+     * @param flow Flow.
+     * @param replaceExisting Whether to replace existing.
+     */
     public void addFlow(String name, TaskFlow flow, boolean replaceExisting) {
         flows.put(name, flow);
     }
 
+    /**
+     * Remove flow from metastorage.
+     *
+     * @param name Name of the flow.
+     */
     public void removeFlow(String name) {
         flows.remove(name);
     }
 
+    /**
+     * Get flow by name.
+     *
+     * @param name Name of the flow.
+     */
     public TaskFlow flow(String name) {
         return flows.get(name);
     }
 
+    /**
+     * Execute flow.
+     *
+     * @param name Name of the flow.
+     * @param initialParams Initial parameters. These parameters will be passed as a parameters for root element task.
+     * @return Flow execution result.
+     */
     public IgniteFuture<FlowTaskTransferObject> executeFlow(String name, FlowTaskTransferObject initialParams) {
         TaskFlow flow = flow(name);
 

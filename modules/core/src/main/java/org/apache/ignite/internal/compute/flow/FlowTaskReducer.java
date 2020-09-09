@@ -18,5 +18,8 @@ package org.apache.ignite.internal.compute.flow;
 import java.io.Serializable;
 import org.apache.ignite.lang.IgniteReducer;
 
+/**
+ * Allows to reduce results of all child tasks.
+ */
 public interface FlowTaskReducer extends IgniteReducer<FlowTaskTransferObject, FlowTaskTransferObject>, Serializable {
 }
