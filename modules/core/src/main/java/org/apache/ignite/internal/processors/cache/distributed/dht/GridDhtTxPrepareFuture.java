@@ -81,7 +81,6 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.GridLeanSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
@@ -924,16 +923,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         if (prepErr == null) {
             if (tx.needReturnValue() || tx.nearOnOriginatingNode() || tx.hasInterceptor())
                 addDhtValues(res);
-
-            GridCacheVersion min = tx.minVersion();
-
-            if (tx.needsCompletedVersions()) {
-                IgnitePair<Collection<GridCacheVersion>> versPair = cctx.tm().versions(min);
-
-                res.completedVersions(versPair.get1(), versPair.get2());
-            }
-
-            res.pending(localDhtPendingVersions(tx.writeEntries(), min));
 
             tx.implicitSingleResult(ret);
         }

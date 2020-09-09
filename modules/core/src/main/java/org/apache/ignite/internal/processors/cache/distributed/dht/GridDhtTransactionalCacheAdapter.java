@@ -48,7 +48,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -82,7 +81,6 @@ import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.GridLeanSet;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridClosureException;
-import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.C2;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -173,12 +171,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         ctx.io().addCacheHandler(ctx.cacheId(), GridNearUnlockRequest.class, new CI2<UUID, GridNearUnlockRequest>() {
             @Override public void apply(UUID nodeId, GridNearUnlockRequest req) {
                 processNearUnlockRequest(nodeId, req);
-            }
-        });
-
-        ctx.io().addCacheHandler(ctx.cacheId(), GridDhtUnlockRequest.class, new CI2<UUID, GridDhtUnlockRequest>() {
-            @Override public void apply(UUID nodeId, GridDhtUnlockRequest req) {
-                processDhtUnlockRequest(nodeId, req);
             }
         });
 
@@ -689,17 +681,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             if (releaseAll && !cancelled)
                 U.warn(log, "Sender node left grid in the midst of lock acquisition (locks have been released).");
         }
-    }
-
-    /**
-     * @param nodeId Node ID.
-     * @param req Request.
-     */
-    private void processDhtUnlockRequest(UUID nodeId, GridDhtUnlockRequest req) {
-        clearLocks(nodeId, req);
-
-        if (isNearEnabled(cacheCfg))
-            near().clearLocks(nodeId, req);
     }
 
     /**
@@ -1407,14 +1388,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 clienRemapVer != null);
 
             if (err == null) {
-                res.pending(localDhtPendingVersions(entries, mappedVer));
-
-                // We have to add completed versions for cases when nearLocal and remote transactions
-                // execute concurrently.
-                IgnitePair<Collection<GridCacheVersion>> versPair = ctx.tm().versions(req.version());
-
-                res.completedVersions(versPair.get1(), versPair.get2());
-
                 int i = 0;
 
                 for (ListIterator<GridCacheEntryEx> it = entries.listIterator(); it.hasNext(); ) {
@@ -1618,60 +1591,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
     }
 
     /**
-     * @param nodeId Node ID.
-     * @param req Request.
-     */
-    private void clearLocks(UUID nodeId, GridDistributedUnlockRequest req) {
-        assert nodeId != null;
-
-        List<KeyCacheObject> keys = req.keys();
-
-        if (keys != null) {
-            for (KeyCacheObject key : keys) {
-                while (true) {
-                    GridDistributedCacheEntry entry = peekExx(key);
-
-                    if (entry == null)
-                        // Nothing to unlock.
-                        break;
-
-                    try {
-                        entry.doneRemote(
-                            req.version(),
-                            req.version(),
-                            null,
-                            null,
-                            null,
-                            /*system invalidate*/false);
-
-                        // Note that we don't reorder completed versions here,
-                        // as there is no point to reorder relative to the version
-                        // we are about to remove.
-                        if (entry.removeLock(req.version())) {
-                            if (log.isDebugEnabled())
-                                log.debug("Removed lock [lockId=" + req.version() + ", key=" + key + ']');
-                        }
-                        else {
-                            if (log.isDebugEnabled())
-                                log.debug("Received unlock request for unknown candidate " +
-                                    "(added to cancelled locks set): " + req);
-                        }
-
-                        entry.touch();
-
-                        break;
-                    }
-                    catch (GridCacheEntryRemovedException ignored) {
-                        if (log.isDebugEnabled())
-                            log.debug("Received remove lock request for removed entry (will retry) [entry=" +
-                                entry + ", req=" + req + ']');
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * @param nodeId Sender ID.
      * @param req Request.
      */
@@ -1854,11 +1773,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             }
         }
 
-        IgnitePair<Collection<GridCacheVersion>> versPair = ctx.tm().versions(ver);
-
-        Collection<GridCacheVersion> committed = versPair.get1();
-        Collection<GridCacheVersion> rolledback = versPair.get2();
-
         // Backups.
         for (Map.Entry<ClusterNode, List<KeyCacheObject>> entry : dhtMap.entrySet()) {
             ClusterNode n = entry.getKey();
@@ -1879,8 +1793,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 if (keyBytes != null)
                     for (KeyCacheObject key : keyBytes)
                         req.addNearKey(key);
-
-                req.completedVersions(committed, rolledback);
 
                 ctx.io().send(n, req, ctx.ioPolicy());
             }
@@ -1908,8 +1820,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                 try {
                     for (KeyCacheObject key : keyBytes)
                         req.addNearKey(key);
-
-                    req.completedVersions(committed, rolledback);
 
                     ctx.io().send(n, req, ctx.ioPolicy());
                 }
