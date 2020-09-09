@@ -32,7 +32,7 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <jcloud.version>2.0.0</jcloud.version>
+        <jcloud.version>2.2.1</jcloud.version>
     </properties>
 
     <dependencies>
@@ -46,18 +46,6 @@
             <groupId>org.apache.jclouds</groupId>
             <artifactId>jclouds-allcompute</artifactId>
             <version>${jcloud.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.jclouds.labs</groupId>
-            <artifactId>google-compute-engine</artifactId>
-            <version>1.9.3</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.jclouds.labs</groupId>
-            <artifactId>docker</artifactId>
-            <version>1.9.3</version>
         </dependency>
 
         <dependency>
