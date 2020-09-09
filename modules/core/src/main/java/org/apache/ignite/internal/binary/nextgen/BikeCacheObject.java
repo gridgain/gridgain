@@ -59,7 +59,9 @@ public class BikeCacheObject implements CacheObject {
     }
 
     @Override public int putValue(long addr) throws IgniteCheckedException {
-        return CacheObjectAdapter.putValue(addr, CacheObject.TYPE_BIKE, bike.data(), 0);
+        byte[] data = bike.data();
+
+        return CacheObjectAdapter.putValue(addr, CacheObject.TYPE_BIKE, data, 0, data.length);
     }
 
     @Override public boolean putValue(ByteBuffer buf, int off, int len) throws IgniteCheckedException {
