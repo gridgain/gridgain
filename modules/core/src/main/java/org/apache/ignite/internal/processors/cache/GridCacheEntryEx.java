@@ -1229,4 +1229,6 @@ public interface GridCacheEntryEx {
      *
      */
     public void touch();
+
+    List<GridCacheMvccCandidate> mvccAllLocal();
 }

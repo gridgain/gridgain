@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxRemoteAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxRemoteStateImpl;
@@ -61,6 +62,8 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
 
     /** Owned versions. */
     private Map<IgniteTxKey, GridCacheVersion> owned;
+
+    private GridDhtTxPrepareRequest req;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -112,7 +115,8 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
         int txSize,
         @Nullable UUID subjId,
         int taskNameHash,
-        @Nullable String txLbl
+        @Nullable String txLbl,
+        GridDhtTxPrepareRequest req
     ) throws IgniteCheckedException {
         super(
             ctx,
@@ -153,6 +157,8 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
         assert topVer != null && topVer.topologyVersion() > 0 : topVer;
 
         topologyVersion(topVer);
+
+        this.req = req;
     }
 
     /**
@@ -449,6 +455,6 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return GridToStringBuilder.toString(GridNearTxRemote.class, this, "super", super.toString());
+        return GridToStringBuilder.toString(GridNearTxRemote.class, this, "req", req, "super", super.toString());
     }
 }

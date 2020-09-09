@@ -2119,7 +2119,8 @@ public class IgniteTxHandler {
                     req.txSize(),
                     req.subjectId(),
                     req.taskNameHash(),
-                    req.txLabel()
+                    req.txLabel(),
+                    req
                 );
 
                 tx.writeVersion(req.writeVersion());

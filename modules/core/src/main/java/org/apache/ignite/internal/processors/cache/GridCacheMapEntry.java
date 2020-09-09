@@ -4879,7 +4879,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /**
      * @return All MVCC local and non near candidates.
      */
-    @SuppressWarnings("ForLoopReplaceableByForEach")
+    @Override @SuppressWarnings("ForLoopReplaceableByForEach")
     @Nullable public final List<GridCacheMvccCandidate> mvccAllLocal() {
         lockEntry();
 

@@ -38,9 +38,12 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheFilterFailedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
@@ -462,8 +465,39 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
-                            if (log.isInfoEnabled() && near())
-                                log.info("DBG: Transaction does not own lock for entry (will wait) [entry=" + entry + ", ver=" + ver + ", xidVer=" + xidVer +
+                            List<GridCacheMvccCandidate> locs = entry.mvccAllLocal();
+                            if (near() && locs != null) {
+                                int part = entry.partition();
+
+                                GridCacheEntryInfo info = entry.info();
+
+                                if (info != null) {
+                                    DynamicCacheDescriptor desc = cctx.cache().cacheDescriptor(info.cacheId());
+
+                                    if (desc != null) {
+                                        CacheGroupContext grpCtx = cctx.cache().cacheGroup(desc.groupId());
+
+                                        GridDhtPartitionTopology top = grpCtx.topology();
+                                        AffinityTopologyVersion affinityTopVer = top.readyTopologyVersion();
+                                        log.info("DBG: locPart=" + top.localPartition(part) +
+                                            ", topVer=" + affinityTopVer +
+                                            ", pendingTopVer=" + top.lastTopologyChangeVersion() +
+                                            ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
+                                            ", owners=" + U.nodeIds(top.owners(part, affinityTopVer)) +
+                                            ", locNodeId=" + cctx.localNodeId() +
+                                            ", entry=" + entry +
+                                            ", txTopVer=" + topologyVersion() +
+                                            ", tx=" + this + ']');
+                                    }
+                                    else
+                                        log.info("DBG: desc is null");
+                                }
+                                else
+                                    log.info("DBG: info is null");
+                            }
+
+                            if (log.isDebugEnabled())
+                                log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +
                                     ", tx=" + this + ']');
 
                             return;
@@ -472,16 +506,13 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         break; // While.
                     }
                     catch (GridCacheEntryRemovedException ignore) {
-                        if (log.isInfoEnabled() && near())
-                            log.info("DBG: Got removed entry while committing (will retry): " + txEntry);
+                        if (log.isDebugEnabled())
+                            log.debug("Got removed entry while committing (will retry): " + txEntry);
 
                         try {
                             txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), topologyVersion()));
                         }
                         catch (GridDhtInvalidPartitionException e) {
-                            if (log.isInfoEnabled() && near())
-                                log.info("DBG: Got GridDhtInvalidPartitionException: " + txEntry);
-
                             break;
                         }
                     }
