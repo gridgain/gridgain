@@ -79,6 +79,8 @@ import org.apache.ignite.internal.managers.systemview.walker.BaselineNodeAttribu
 import org.apache.ignite.internal.managers.systemview.walker.CachePagesListViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.ClientConnectionAttributeViewWalker;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.service.DummyService;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -103,6 +105,7 @@ import org.apache.ignite.spi.systemview.view.ComputeTaskView;
 import org.apache.ignite.spi.systemview.view.ConfigurationView;
 import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
 import org.apache.ignite.spi.systemview.view.FiltrableSystemView;
+import org.apache.ignite.spi.systemview.view.MetastorageView;
 import org.apache.ignite.spi.systemview.view.PagesListView;
 import org.apache.ignite.spi.systemview.view.ScanQueryView;
 import org.apache.ignite.spi.systemview.view.ServiceView;
@@ -137,10 +140,12 @@ import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CAC
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId;
 import static org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl.BINARY_METADATA_VIEW;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.METASTORE_VIEW;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.DATA_REGION_PAGE_LIST_VIEW;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
 import static org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor.BASELINE_NODE_ATTRIBUTES_SYS_VIEW;
 import static org.apache.ignite.internal.processors.continuous.GridContinuousProcessor.CQ_SYS_VIEW;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl.DISTRIBUTED_METASTORE_VIEW;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_DS_GROUP_NAME;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_VOLATILE_DS_GROUP_NAME;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.LATCHES_VIEW;
@@ -1861,6 +1866,70 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                         assertTrue(meta.fields().contains(field.getName()));
                 }
             }
+        }
+    }
+
+    /** */
+    @Test
+    public void testMetastorage() throws Exception {
+        cleanPersistenceDir();
+
+        try (IgniteEx ignite = startGrid(getConfiguration().setDataStorageConfiguration(
+                new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                        new DataRegionConfiguration().setPersistenceEnabled(true)
+                )))) {
+            ignite.cluster().state(ClusterState.ACTIVE);
+
+            IgniteCacheDatabaseSharedManager db = ignite.context().cache().context().database();
+
+            SystemView<MetastorageView> metaStoreView = ignite.context().systemView().view(METASTORE_VIEW);
+
+            assertNotNull(metaStoreView);
+
+            String name = "test-key";
+            String val = "test-value";
+
+            db.checkpointReadLock();
+
+            try {
+                db.metaStorage().write(name, val);
+            } finally {
+                db.checkpointReadUnlock();
+            }
+
+            MetastorageView testKey = F.find(metaStoreView, null,
+                    (IgnitePredicate<? super MetastorageView>)view -> name.equals(view.name()) && val.equals(view.value()));
+
+            assertNotNull(testKey);
+        }
+    }
+
+    /** */
+    @Test
+    public void testDistributedMetastorage() throws Exception {
+        cleanPersistenceDir();
+
+        try (IgniteEx ignite = startGrid(getConfiguration().setDataStorageConfiguration(
+                new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                        new DataRegionConfiguration().setPersistenceEnabled(true)
+                )))) {
+            ignite.cluster().state(ClusterState.ACTIVE);
+
+            DistributedMetaStorage dms = ignite.context().distributedMetastorage();
+
+            SystemView<MetastorageView> metaStoreView = ignite.context().systemView().view(DISTRIBUTED_METASTORE_VIEW);
+
+            assertNotNull(metaStoreView);
+
+            String name = "test-distributed-key";
+            String val = "test-distributed-value";
+
+            dms.write(name, val);
+
+            MetastorageView testKey = F.find(metaStoreView, null,
+                    (IgnitePredicate<? super MetastorageView>)view -> name.equals(view.name()) && val.equals(view.value()));
+
+            assertNotNull(testKey);
         }
     }
 

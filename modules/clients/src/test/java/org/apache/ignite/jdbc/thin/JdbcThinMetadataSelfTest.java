@@ -453,7 +453,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_COUNTDOWNLATCHES",
                 sysSchemaName() + ".DS_SEMAPHORES",
                 sysSchemaName() + ".DS_REENTRANTLOCKS",
-                sysSchemaName() + ".BINARY_METADATA"
+                sysSchemaName() + ".BINARY_METADATA",
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE"
         ));
 
         testGetTables(new String[] {"VIEW"}, expViews);
@@ -1117,7 +1118,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".BINARY_METADATA.TYPE_ID.null.10",
                 sysSchemaName() + ".BINARY_METADATA.IS_ENUM.null.1",
                 sysSchemaName() + ".BINARY_METADATA.FIELDS_COUNT.null.10",
-                sysSchemaName() + ".BINARY_METADATA.TYPE_NAME.null.2147483647"
+                sysSchemaName() + ".BINARY_METADATA.TYPE_NAME.null.2147483647",
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE.NAME.null.2147483647",
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE.VALUE.null.2147483647"
             ));
 
             expectedCols.addAll(Arrays.asList(
