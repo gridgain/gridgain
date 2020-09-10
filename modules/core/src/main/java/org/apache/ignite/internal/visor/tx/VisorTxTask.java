@@ -58,7 +58,6 @@ import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteClosure;
-import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
@@ -606,12 +605,6 @@ public class VisorTxTask extends VisorMultiNodeTask<VisorTxTaskArg, Map<ClusterN
 
             if (tx.isRollbackOnly() || tx.state() == COMMITTING || tx.state() == COMMITTED)
                 return new GridFinishedFuture<>();
-
-            if (tx.state() == TransactionState.PREPARED)
-                remote.doneRemote(tx.xidVersion(),
-                    Collections.<GridCacheVersion>emptyList(),
-                    Collections.<GridCacheVersion>emptyList(),
-                    Collections.<GridCacheVersion>emptyList());
 
             return tx.rollbackAsync();
         }

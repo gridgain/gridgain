@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -148,8 +147,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         // No reordering happens.
         checkOrder(cands, ver1, ver5, ver3);
 
-        entry.doneRemote(ver3);
-
         checkDone(entry.candidate(ver3));
 
         entry.addRemote(node1, 2, ver2, true);
@@ -162,12 +159,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         // Check order.
         checkOrder(cands, ver1, ver5, ver3, ver2);
-
-        entry.orderCompleted(
-            new GridCacheVersion(1, 2, 0, 0),
-            Arrays.asList(new GridCacheVersion(1, 3, 4, 0), ver2, new GridCacheVersion(1, 5, 6, 0)),
-            Collections.<GridCacheVersion>emptyList()
-        );
 
         cands = entry.remoteMvccSnapshot();
 
@@ -183,8 +174,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkRemote(entry.candidate(ver3), ver3, true, true);
         checkRemote(entry.candidate(ver5), ver5, false, false);
 
-        entry.doneRemote(ver5);
-
         checkDone(entry.candidate(ver5));
 
         entry.addRemote(node1, 4, ver4, true);
@@ -198,8 +187,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         // Check order.
         checkOrder(cands, ver1, ver2, ver5, ver3, ver4);
 
-        entry.orderCompleted(ver3, Arrays.asList(ver2, ver5), Collections.<GridCacheVersion>emptyList());
-
         cands = entry.remoteMvccSnapshot();
 
         info(cands);
@@ -210,8 +197,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         assert entry.anyOwner() == null;
 
-        entry.doneRemote(ver1);
-
         checkRemoteOwner(entry.anyOwner(), ver1);
 
         entry.removeLock(ver1);
@@ -219,8 +204,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert entry.remoteMvccSnapshot().size() == 4;
 
         assert entry.anyOwner() == null;
-
-        entry.doneRemote(ver2);
 
         checkRemoteOwner(entry.anyOwner(), ver2);
 
@@ -241,8 +224,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         assert entry.remoteMvccSnapshot().size() == 1;
 
         assert entry.anyOwner() == null;
-
-        entry.doneRemote(ver4);
 
         checkRemoteOwner(entry.anyOwner(), ver4);
 
@@ -541,8 +522,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         List<GridCacheVersion> committed = Arrays.asList(ver4, ver7);
         List<GridCacheVersion> rolledback = Arrays.asList(ver6);
 
-        entry.orderCompleted(ver2, committed, rolledback);
-
         assert !entry.lockedBy(ver6);
 
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver4, ver7, ver2, ver3, ver5, ver8);
@@ -588,8 +567,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> committed = Arrays.asList(ver4, ver6, ver2);
 
-        entry.orderCompleted(ver2, committed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver4, ver6, ver2, ver3, ver5, ver7);
 
         checkRemote(entry.candidate(ver1), ver1, false, false);
@@ -631,11 +608,7 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> completed = Arrays.asList(ver4, ver6);
 
-        entry.orderCompleted(ver2, completed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver4, ver6, ver2, ver3, ver5, ver7);
-
-        entry.orderCompleted(ver4, completed, Collections.<GridCacheVersion>emptyList());
 
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver6, ver4, ver2, ver3, ver5, ver7);
 
@@ -675,8 +648,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         entry.addRemote(node1, 5, ver5, false);
 
         List<GridCacheVersion> committed = Arrays.asList(ver6, ver7);
-
-        entry.orderCompleted(ver4, committed, Collections.<GridCacheVersion>emptyList());
 
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver2, ver3, ver4, ver5);
 
@@ -718,8 +689,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> committed = Arrays.asList(ver4, ver6, ver3);
 
-        entry.orderCompleted(ver1, committed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver3, ver4, ver6, ver1, ver2, ver5, ver7);
 
         checkRemote(entry.candidate(ver1), ver1, false, false);
@@ -759,8 +728,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> committed = Arrays.asList(ver6, ver7);
 
-        entry.orderCompleted(ver1, committed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver2, ver3, ver4, ver5);
 
         // Nothing set to owner since there is no change.
@@ -798,8 +765,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         entry.addRemote(node1, 5, ver5, false);
 
         List<GridCacheVersion> committed = Arrays.asList(ver6, ver7);
-
-        entry.orderCompleted(ver5, committed, Collections.<GridCacheVersion>emptyList());
 
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver2, ver3, ver4, ver5);
 
@@ -841,8 +806,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> committed = Arrays.asList(ver6, ver4);
 
-        entry.orderCompleted(ver2, committed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver4, ver6, ver3, ver5, ver7);
 
         checkRemote(entry.candidate(ver1), ver1, false, false);
@@ -880,8 +843,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> committed = Arrays.asList(ver6, ver5, ver7);
 
-        entry.orderCompleted(ver2, committed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver3, ver4);
 
         checkRemote(entry.candidate(ver1), ver1, false, false);
@@ -918,8 +879,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         entry.addRemote(node2, 7, ver7, true);
 
         List<GridCacheVersion> committed = Arrays.asList(ver4, ver6, ver3);
-
-        entry.orderCompleted(ver1, committed, Collections.<GridCacheVersion>emptyList());
 
         checkOrder(entry.remoteMvccSnapshot(), ver3, ver4, ver6, ver2, ver5, ver7);
 
@@ -961,8 +920,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         List<GridCacheVersion> committed = Arrays.asList(ver2, ver3);
 
-        entry.orderCompleted(ver1, committed, Collections.<GridCacheVersion>emptyList());
-
         checkOrder(entry.remoteMvccSnapshot(), ver2, ver3, ver4, ver5, ver6, ver7);
 
         checkRemote(entry.candidate(ver2), ver2, true, false);
@@ -1000,8 +957,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         entry.addRemote(node2, 4, ver4, true);
 
         List<GridCacheVersion> committed = Arrays.asList(ver6, ver7);
-
-        entry.orderCompleted(ver5, committed, Collections.<GridCacheVersion>emptyList());
 
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver2, ver3, ver4);
 
@@ -1059,12 +1014,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver5, ver3);
         checkOrder(entry.localCandidates(), ver2, ver4);
 
-        entry.orderCompleted(
-            ver2 /*local version.*/,
-            Arrays.asList(new GridCacheVersion(1, 1, 2, 0), ver3, new GridCacheVersion(1, 5, 6, 0)),
-            Collections.<GridCacheVersion>emptyList()
-        );
-
         // Done ver3.
         checkOrder(entry.remoteMvccSnapshot(), ver1, ver3, ver5);
         checkOrder(entry.localCandidates(), ver2, ver4);
@@ -1083,8 +1032,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
 
         assert entry.anyOwner() == null;
 
-        entry.doneRemote(ver1);
-
         checkRemoteOwner(entry.anyOwner(), ver1);
 
         entry.removeLock(ver1);
@@ -1092,8 +1039,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         checkOrder(entry.remoteMvccSnapshot(), ver3, ver5);
 
         assert entry.anyOwner() == null;
-
-        entry.doneRemote(ver3);
 
         checkRemoteOwner(entry.anyOwner(), ver3);
 
@@ -1125,8 +1070,6 @@ public class GridCacheMvccSelfTest extends GridCommonAbstractTest {
         c5.setOwner();
 
         assert entry.anyOwner() == null;
-
-        entry.doneRemote(ver5);
 
         checkRemoteOwner(entry.anyOwner(), ver5);
 

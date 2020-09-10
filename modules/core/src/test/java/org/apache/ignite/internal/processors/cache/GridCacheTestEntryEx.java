@@ -216,28 +216,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /**
-     * Moves completed candidates right before the base one. Note that
-     * if base is not found, then nothing happens and {@code false} is
-     * returned.
-     *
-     * @param baseVer Base version.
-     * @param committedVers Committed versions relative to base.
-     * @param rolledbackVers Rolled back versions relative to base.
-     */
-    void orderCompleted(GridCacheVersion baseVer,
-        Collection<GridCacheVersion> committedVers, Collection<GridCacheVersion> rolledbackVers) {
-        mvcc.orderCompleted(baseVer, committedVers, rolledbackVers);
-    }
-
-    /**
-     * @param ver Version.
-     */
-    void doneRemote(GridCacheVersion ver) {
-        mvcc.doneRemote(ver, Collections.<GridCacheVersion>emptyList(),
-            Collections.<GridCacheVersion>emptyList(), Collections.<GridCacheVersion>emptyList());
-    }
-
-    /**
      * @param baseVer Base version.
      * @param owned Owned.
      */

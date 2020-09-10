@@ -278,34 +278,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
         txState.clearEntry(key);
     }
 
-    /**
-     * @param baseVer Base version.
-     * @param committedVers Committed versions.
-     * @param rolledbackVers Rolled back versions.
-     * @param pendingVers Pending versions.
-     *
-     * @throws GridDhtInvalidPartitionException If partition was invalidated.
-     */
-    @Override public void doneRemote(GridCacheVersion baseVer,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers,
-        Collection<GridCacheVersion> pendingVers
-    ) throws GridDhtInvalidPartitionException {
-        Map<IgniteTxKey, IgniteTxEntry> readMap = txState.readMap();
-
-        if (readMap != null && !readMap.isEmpty()) {
-            for (IgniteTxEntry txEntry : readMap.values())
-                doneRemote(txEntry, baseVer, committedVers, rolledbackVers, pendingVers);
-        }
-
-        Map<IgniteTxKey, IgniteTxEntry> writeMap = txState.writeMap();
-
-        if (writeMap != null && !writeMap.isEmpty()) {
-            for (IgniteTxEntry txEntry : writeMap.values())
-                doneRemote(txEntry, baseVer, committedVers, rolledbackVers, pendingVers);
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public void setPartitionUpdateCounters(long[] cntrs) {
         if (writeMap() != null && !writeMap().isEmpty() && cntrs != null && cntrs.length > 0) {
@@ -315,46 +287,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                 txEntry.updateCounter(cntrs[i]);
 
                 ++i;
-            }
-        }
-    }
-
-    /**
-     * Adds completed versions to an entry.
-     *
-     * @param txEntry Entry.
-     * @param baseVer Base version for completed versions.
-     * @param committedVers Completed versions relative to base version.
-     * @param rolledbackVers Rolled back versions relative to base version.
-     * @param pendingVers Pending versions.
-     *
-     * @throws GridDhtInvalidPartitionException If entry partition was invalidated.
-     */
-    private void doneRemote(IgniteTxEntry txEntry,
-        GridCacheVersion baseVer,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers,
-        Collection<GridCacheVersion> pendingVers
-    ) throws GridDhtInvalidPartitionException {
-        while (true) {
-            GridDistributedCacheEntry entry = (GridDistributedCacheEntry)txEntry.cached();
-
-            try {
-                // Handle explicit locks.
-                GridCacheVersion doneVer = txEntry.explicitVersion() != null ? txEntry.explicitVersion() : xidVer;
-
-                entry.doneRemote(doneVer, baseVer, pendingVers, committedVers, rolledbackVers, isSystemInvalidate());
-
-                break;
-            }
-            catch (GridCacheEntryRemovedException ignored) {
-                assert entry.obsoleteVersion() != null;
-
-                if (log.isDebugEnabled())
-                    log.debug("Replacing obsolete entry in remote transaction [entry=" + entry + ", tx=" + this + ']');
-
-                // Replace the entry.
-                txEntry.cached(txEntry.context().cache().entryEx(txEntry.key(), topologyVersion()));
             }
         }
     }
@@ -983,11 +915,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                 return null;
             }
-
-            doneRemote(xidVersion(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList());
 
             commitRemoteTx();
         }

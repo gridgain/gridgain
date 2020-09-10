@@ -496,7 +496,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         assertEquals(2, rmtCands.size());
         assertEquals(ver1, rmtCands.iterator().next().version());
 
-        entry.orderCompleted(nearVer2, Arrays.asList(ver3), empty());
         entry.readyNearLocal(nearVer2, ver2, empty(), empty(), Arrays.asList(ver1));
 
         nearLocCands = entry.localCandidates();
@@ -542,7 +541,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         assertEquals(2, rmtCands.size());
         assertEquals(ver1, rmtCands.iterator().next().version());
 
-        entry.orderCompleted(nearVer2, empty(), empty());
         entry.readyNearLocal(nearVer2, ver2, empty(), empty(), empty());
 
         nearLocCands = entry.localCandidates();
@@ -588,7 +586,6 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         assertEquals(2, rmtCands.size());
         assertEquals(ver1, rmtCands.iterator().next().version());
 
-        entry.orderCompleted(nearVer2, empty(), empty());
         entry.readyNearLocal(nearVer2, ver2, empty(), empty(), Arrays.asList(ver1));
 
         rmtCands = entry.remoteMvccSnapshot();

@@ -36,19 +36,6 @@ public interface IgniteTxRemoteEx extends IgniteInternalTx {
     public void rollbackRemoteTx();
 
     /**
-     * @param baseVer Base version.
-     * @param committedVers Committed version.
-     * @param rolledbackVers Rolled back version.
-     * @param pendingVers Pending versions.
-     *
-     * @throws GridDhtInvalidPartitionException If partition was invalidated.
-     */
-    public void doneRemote(GridCacheVersion baseVer,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers,
-        Collection<GridCacheVersion> pendingVers) throws GridDhtInvalidPartitionException;
-
-    /**
      * @param cntrs Partition update indexes.
      */
     public void setPartitionUpdateCounters(long[] cntrs);
