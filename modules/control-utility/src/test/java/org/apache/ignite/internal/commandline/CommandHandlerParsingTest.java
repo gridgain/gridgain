@@ -53,6 +53,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
+import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
@@ -378,12 +379,21 @@ public class CommandHandlerParsingTest {
                     args = parseArgs(asList(cmdL.text(), "test_tag"));
                 else if (cmdL == SET_STATE)
                     args = parseArgs(asList(cmdL.text(), "ACTIVE"));
+                else if(cmdL == ROLLING_UPGRADE)
+                    args = parseArgs(asList(cmdL.text(), "start"));
                 else
                     args = parseArgs(asList(cmdL.text()));
 
             checkCommonParametersCorrectlyParsed(cmdL, args, false);
 
             switch (cmdL) {
+                case ROLLING_UPGRADE: {
+                    args = parseArgs(asList(cmdL.text(), "start", "--yes"));
+
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                    break;
+                }
                 case DEACTIVATE: {
                     args = parseArgs(asList(cmdL.text(), "--yes"));
 
