@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -70,6 +71,8 @@ public class RowCountTableStatisticsSurvivesNodeRestartTest extends TableStatist
 
         for (int i = 0; i < SMALL_SIZE; i++)
             runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
+
+        updateStatistics("SMALL", "BIG");
     }
 
     /** {@inheritDoc} */
@@ -81,10 +84,25 @@ public class RowCountTableStatisticsSurvivesNodeRestartTest extends TableStatist
         cleanPersistenceDir();
     }
 
+    @Test
+    @Ignore
+    public void singleTableStatSurvivesRestart() throws Exception {
+        String sql = "select * from small i1 where c >= 9 and b > 10";
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, sql, new String[1][]);
+
+        stopGrid(0);
+
+        startGrid(0);
+
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, sql, new String[1][]);
+        // TODO after implementing view add some tests to check partition statistics reloading
+    }
+
     /**
      *
      */
     @Test
+    @Ignore
     public void statisticsSurvivesRestart() throws Exception {
         String sql = "SELECT COUNT(*) FROM t1 JOIN t2 ON t1.c = t2.c " +
             "WHERE t1.b >= 0 AND t2.b >= 0";

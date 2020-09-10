@@ -19,6 +19,10 @@ package org.apache.ignite.internal.processors.query.h2.opt.statistics;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+
+import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 import net.agkn.hll.HLL;
@@ -47,12 +51,18 @@ public class ColumnStatisticsCollector {
     /** Maximum value. */
     private Value max = null;
 
+    /** Total vals in column. */
+    private long total = 0;
+
+    /** Total size of all non nulls values (in bytes).*/
+    private long size = 0;
+
     //private final NavigableMap<Value, Long> valFreq;
 
     /** Column value comparator. */
     private final Comparator<Value> comp;
 
-    /** */
+    /** Null values counter. */
     private long nullsCnt;
 
 
@@ -64,14 +74,47 @@ public class ColumnStatisticsCollector {
         hash = Hashing.murmur3_128(seed);
     }
 
+    /**
+     * Try to fix unexpected behaviour of base Value class.
+     *
+     * @param value value to convert
+     * @return byte array
+     */
+    private byte[] getBytes(Value value) {
+        switch (value.getValueType()) {
+            case Value.STRING:
+                String strValue = value.getString();
+                return strValue.getBytes(StandardCharsets.UTF_8);
+            case Value.BOOLEAN:
+                return value.getBoolean() ? new byte[]{1} : new byte[]{0} ;
+            case Value.DECIMAL:
+            case Value.DOUBLE:
+            case Value.FLOAT:
+                return value.getBigDecimal().unscaledValue().toByteArray();
+            case Value.TIME:
+                return BigInteger.valueOf(value.getTime().getTime()).toByteArray();
+            case Value.DATE:
+                return BigInteger.valueOf(value.getDate().getTime()).toByteArray();
+            case Value.TIMESTAMP:
+                return BigInteger.valueOf(value.getTimestamp().getTime()).toByteArray();
+            default:
+                return value.getBytes();
+        }
+
+    }
+
     public void add(Value val) {
+        total++;
+
+
         if (isNull((val))) {
             nullsCnt++;
 
             return;
         }
-
-        long valHash = hash.hashBytes(val.getBytes()).asLong();
+        byte bytes[] = getBytes(val);
+        size += bytes.length;
+        long valHash = hash.hashBytes(bytes).asLong();
         hll.addRaw(valHash);
 
         if (null == min || comp.compare(val, min) < 0)
@@ -85,81 +128,21 @@ public class ColumnStatisticsCollector {
         return v == null || v.getType().getValueType() == Value.NULL;
     }
 
-    /*private byte[] getBytes(Value v) {
-        switch (v.getType().getValueType()) {
-            case Value.NULL:
-                throw new IllegalArgumentException();
-
-            case Value.BOOLEAN:
-                return v.getBytes();
-
-            case Value.BYTE:
-                return new GridH2Byte(v);
-
-            case Value.SHORT:
-                return new GridH2Short(v);
-
-            case Value.INT:
-                return new GridH2Integer(v);
-
-            case Value.LONG:
-                return new GridH2Long(v);
-
-            case Value.DECIMAL:
-                return new GridH2Decimal(v);
-
-            case Value.DOUBLE:
-                return new GridH2Double(v);
-
-            case Value.FLOAT:
-                return new GridH2Float(v);
-
-            case Value.DATE:
-                return new GridH2Date(v);
-
-            case Value.TIME:
-                return new GridH2Time(v);
-
-            case Value.TIMESTAMP:
-                return new GridH2Timestamp(v);
-
-            case Value.BYTES:
-                return new GridH2Bytes(v);
-
-            case Value.STRING:
-            case Value.STRING_FIXED:
-            case Value.STRING_IGNORECASE:
-                return new GridH2String(v);
-
-            case Value.ROW: // Intentionally converts Value.ROW to GridH2Array to preserve compatibility
-            case Value.ARRAY:
-                return new GridH2Array(v);
-
-            case Value.JAVA_OBJECT:
-                if (v instanceof GridH2ValueCacheObject)
-                    return new GridH2CacheObject((GridH2ValueCacheObject)v);
-
-                return new GridH2JavaObject(v);
-
-            case Value.UUID:
-                return new GridH2Uuid(v);
-
-            case Value.GEOMETRY:
-                return new GridH2Geometry(v);
-
-            default:
-                throw new IllegalStateException("Unsupported H2 type: " + v.getType());
-        }
-    }*/
-
-    public ColumnStatistics finish(long totalRows) {
-        int nulls = nullsPercent(nullsCnt, totalRows);
+    /**
+     * Get total column statistics.
+     *
+     * @return aggregated column statistics.
+     */
+    public ColumnStatistics finish() {
+        int nulls = nullsPercent(nullsCnt, total);
 
         int cardinality = 0;
 
-        cardinality = cardinalityPercent(nullsCnt, totalRows, hll.cardinality());
+        cardinality = cardinalityPercent(nullsCnt, total, hll.cardinality());
 
-        return new ColumnStatistics(min, max, nulls, cardinality, hll.toBytes());
+        int averageSize = (total - nullsCnt > 0) ? (int) (size / (total - nullsCnt)) : 0;
+
+        return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
     }
 
     private static int nullsPercent(long nullsCnt, long totalRows) {
@@ -181,12 +164,11 @@ public class ColumnStatisticsCollector {
     /**
      * Aggregate specified (partition or local) column statistics into (local or global) single one.
      *
-     * @param comp
-     * @param totalRows
-     * @param partStats
-     * @return
+     * @param comp value comparator.
+     * @param partStats column statistics by partitions.
+     * @return column statistics for all partitions.
      */
-    public static ColumnStatistics aggregate(Comparator<Value> comp, long totalRows, List<ColumnStatistics> partStats) {
+    public static ColumnStatistics aggregate(Comparator<Value> comp, List<ColumnStatistics> partStats) {
 
         HashFunction hash = Hashing.murmur3_128(seed);
         Hasher hasher = hash.newHasher();
@@ -195,13 +177,23 @@ public class ColumnStatisticsCollector {
 
         Value min = null;
         Value max = null;
+
+        // Total number of nulls
         long nullsCnt = 0;
+
+        // Total values (null and not null) counter)
+        long total = 0;
+
+        // Total size in bytes
+        long totalSize = 0;
 
         for(ColumnStatistics partStat : partStats) {
             HLL partHll = HLL.fromBytes(partStat.raw());
             hll.union(partHll);
 
-            nullsCnt += partStat.nulls();
+            total += partStat.total();
+            nullsCnt += (partStat.total() * partStat.nulls()) / 100;
+            totalSize += (long)partStat.size() * (partStat.total() * (double)(100 - partStat.nulls()) / 100);
 
             if (min == null || (partStat.min() != null && comp.compare(partStat.min(), min) < 0))
                 min = partStat.min();
@@ -210,7 +202,9 @@ public class ColumnStatisticsCollector {
                 max = partStat.max();
         }
 
-        return new ColumnStatistics(min, max, nullsPercent(nullsCnt, totalRows),
-                cardinalityPercent(nullsCnt, totalRows, hll.cardinality()), hll.toBytes());
+        int averageSize = (total - nullsCnt > 0) ? (int)(totalSize / (total - nullsCnt)) : 0;
+
+        return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
+                cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes());
     }
 }

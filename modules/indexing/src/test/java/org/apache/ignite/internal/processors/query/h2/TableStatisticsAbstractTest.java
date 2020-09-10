@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -48,8 +50,31 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     }
 
     /**
+     * Compare different index used for the given query.
+     *
+     * @param grid qrid to run queries on.
+     * @param optimal array of optimal indexes
+     * @param sql Query with placeholders to hint indexes (i1, i2, ...)
+     * @param indexes arrays of indexes to put into placeholders.
+     */
+    protected void checkOptimalPlanChosenForDifferentIndexes(Ignite grid, String[] optimal, String sql, String[][] indexes) {
+        int size = -1;
+        for(String[] idxs : indexes) {
+            if (size == -1)
+                size = (idxs == null) ? 0 : idxs.length;
+
+            assert idxs == null || idxs.length == size;
+        }
+        sql = replaceIndexHintPlaceholders(sql, indexes);
+        String actual[] = runLocalExplainIdx(grid, sql);
+
+        assertTrue("got " + Arrays.asList(actual) + " expected " + Arrays.asList(optimal), Arrays.equals(actual, optimal));
+    }
+
+    /**
      * Compares different orders of joins for the given query.
      *
+     * @param grid qrid to run queries on.
      * @param sql Query.
      * @param tbls Table names.
      */
@@ -93,6 +118,28 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
             log.info(res);
 
         assertTrue(res, cntStats <= cntNoStats);
+    }
+
+    /**
+     * Run specified query with EXPLAIN and return array of used indexes.
+     *
+     * @param grid grid where query should be executed.
+     * @param sql query to explain.
+     * @return array of selected indexes.
+     */
+    protected String[] runLocalExplainIdx(Ignite grid, String sql) {
+        List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("EXPLAIN " + sql).setLocal(true))
+                .getAll();
+        String explainRes = (String)res.get(0).get(0);
+
+        // Extract scan count from EXPLAIN ANALYZE with regex: return all numbers after "scanCount: ".
+        Matcher m = Pattern.compile(".*\\/\\*.+?\\.(\\w+):.*\\R*.*\\R*.*\\R*.*\\R*\\*\\/.*").matcher(explainRes);
+        //".*\\/\\*.+?\\.(\\w+).*\\/.*").matcher(explainRes);
+        List<String> result = new ArrayList<>();
+        while(m.find()) {
+            result.add(m.group(1).trim());
+        }
+        return result.toArray(new String[result.size()]);
     }
 
     /**
@@ -143,6 +190,36 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
     }
 
     /**
+     * Replaces index hint placeholder like "i1", "i2" with specified index names in the ISQL query.
+     *
+     * @param sql
+     * @param idxs
+     * @return
+     */
+    private static String replaceIndexHintPlaceholders(String sql, String[][] idxs) {
+        assert !sql.contains("i0");
+
+        int i = 0;
+
+        for (String idx[] : idxs) {
+            String idxPlaceHolder = "i" + (++i);
+
+            assert sql.contains(idxPlaceHolder);
+
+            if (idx != null && idx.length > 0) {
+                String idxStr = "USE INDEX (" +String.join(",", idx) + ")";
+                sql = sql.replaceAll(idxPlaceHolder,  idxStr);
+            } else
+                sql = sql.replaceAll(idxPlaceHolder, "");
+
+        }
+
+        assert !sql.contains("i" + (i + 1));
+
+        return sql;
+    }
+
+    /**
      * Replaces table placeholders like "t1", "t2" and others with actual table names in the SQL query.
      *
      * @param sql Sql query.
@@ -167,4 +244,30 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
         return sql;
     }
 
+
+    /**
+     * Update statistics on specified objects in PUBLIC schema.
+     *
+     * @param table table where to update statistics, just to require al least one name
+     * @param tables tables where to update statistics.
+     */
+    protected void updateStatistics(String table, String ... tables) {
+        List<String> allTbls = new ArrayList<>();
+        allTbls.add(table);
+        if (null != tables) {
+                allTbls.addAll(Arrays.asList(tables));
+        }
+
+        try {
+            for (String tbl : allTbls) {
+                for (Ignite node : G.allGrids()) {
+                    IgniteH2Indexing indexing = ((IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing());
+                    indexing.collectObjectStatistics("PUBLIC", tbl.toUpperCase());
+                }
+            }
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteException(ex);
+        }
+    }
 }

@@ -213,7 +213,7 @@ public class Constants {
      * to avoid using the wrong or no index if the table
      * contains no rows _currently_ (when preparing the statement)
      */
-    public static final int COST_ROW_OFFSET = 1000;
+    public static final int COST_ROW_OFFSET = 10;
 
     /**
      * The number of milliseconds after which to check for a deadlock if locking

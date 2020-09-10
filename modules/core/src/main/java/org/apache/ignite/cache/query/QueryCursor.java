@@ -24,6 +24,15 @@ import java.util.List;
  */
 public interface QueryCursor<T> extends Iterable<T>, AutoCloseable {
     /**
+     * Closes all resources related to this cursor. If the query execution is in progress
+     * (which is possible in case of invoking from another thread), a cancel will be attempted.
+     * Sequential calls to this method have no effect.
+     * <p>
+     * Note: don't forget to close query cursors. Not doing so may lead to various resource leaks.
+     */
+    @Override public void close();
+
+    /**
      * Gets all query results and stores them in the collection.
      * Use this method when you know in advance that query result is
      * relatively small and will not cause memory utilization issues.
@@ -34,13 +43,4 @@ public interface QueryCursor<T> extends Iterable<T>, AutoCloseable {
      * @return List containing all query results.
      */
     public List<T> getAll();
-
-    /**
-     * Closes all resources related to this cursor. If the query execution is in progress
-     * (which is possible in case of invoking from another thread), a cancel will be attempted.
-     * Sequential calls to this method have no effect.
-     * <p>
-     * Note: don't forget to close query cursors. Not doing so may lead to various resource leaks.
-     */
-    @Override public void close();
 }

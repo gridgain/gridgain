@@ -174,7 +174,7 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
                 long rowsCnt0 = rowsCnt;
 
                 Map<String, ColumnStatistics> colStats = colStatsCollectors.stream().collect(Collectors.toMap(
-                        csc -> csc.col().getName(), csc -> csc.finish(rowsCnt0)
+                        csc -> csc.col().getName(), csc -> csc.finish()
                 ));
 
 
@@ -194,15 +194,13 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
                                                       Collection<ObjectPartitionStatistics> tblPartStats) {
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedColumns.length);
-        Map<Column, Long> colRowCounter = new HashMap<>(selectedColumns.length);
-        for(Column col : selectedColumns) {
+        long rowCnt = 0;
+        for(Column col : selectedColumns)
             colPartStats.put(col, new ArrayList<>());
-            colRowCounter.put(col, 0L);
-        }
 
         QueryTable tblId = tbl.identifier();
 
-        for (ObjectPartitionStatistics partStat : tblPartStats)
+        for (ObjectPartitionStatistics partStat : tblPartStats) {
             for (Column col : selectedColumns) {
                 ColumnStatistics colPartStat = partStat.columnStatistics(col.getName());
                 if (colPartStat != null) {
@@ -210,17 +208,18 @@ public class SqlStatisticsManagerImpl implements SqlStatisticsManager {
                         v.add(colPartStat);
                         return v;
                     });
-                    colRowCounter.compute(col, (k, v) -> v + partStat.rowCount());
                 }
             }
+            rowCnt += partStat.rowCount();
+        }
 
         Map<String, ColumnStatistics> colStats = new HashMap<>(selectedColumns.length);
         for(Column col : selectedColumns) {
-            colStats.put(col.getName(), ColumnStatisticsCollector.aggregate(
-                    tbl::compareValues, colRowCounter.get(col), colPartStats.get(col)));
+            ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
+            colStats.put(col.getName(), stat);
         }
 
-        long rowCnt = colRowCounter.values().stream().max(Long::compare).orElse(0L);
+
 
         ObjectStatistics tblStats = new ObjectStatistics(rowCnt, colStats);
 

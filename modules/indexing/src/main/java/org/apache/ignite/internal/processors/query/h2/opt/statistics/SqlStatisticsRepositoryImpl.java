@@ -180,7 +180,6 @@ public class SqlStatisticsRepositoryImpl implements SqlStatisticsRepository {
     @Override
     public ObjectStatistics getLocalStatistics(QueryTable tbl, boolean tryLoad) {
         // TODO tryLoad
-
         return localStats == null ? null : localStats.get(tbl);
     }
 

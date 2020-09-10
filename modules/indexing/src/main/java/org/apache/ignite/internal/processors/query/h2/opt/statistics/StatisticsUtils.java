@@ -16,14 +16,14 @@ public class StatisticsUtils {
         GridH2ValueMessage msgMin = stat.min() == null ? null : GridH2ValueMessageFactory.toMessage(stat.min());
         GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
-        return new StatsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.raw());
+        return new StatsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(), stat.total(), stat.size(), stat.raw());
     }
 
     public static ColumnStatistics toColumnStatistics(StatsColumnData data) throws IgniteCheckedException {
         Value min = data.min().value(null);
         Value max = data.max().value(null);
 
-        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(), data.rawData());
+        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(), data.total(), data.size(), data.rawData());
     }
 
 

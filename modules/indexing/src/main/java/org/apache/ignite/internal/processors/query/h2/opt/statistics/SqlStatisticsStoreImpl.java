@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -40,7 +41,11 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
 
     private final GridKernalContext ctx;
     private SqlStatisticsRepository repository;
-    private ReadWriteMetastorage metastore;
+    private volatile ReadWriteMetastorage metastore;
+
+    // TODO remove with new serialization
+    private AtomicBoolean inited = new AtomicBoolean(false);
+    private AtomicBoolean initing = new AtomicBoolean(false);
 
     /**
      * Constructor.
@@ -121,6 +126,7 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
         return META_PART_STAT_PREFIX + META_SEPARATOR + schema + META_SEPARATOR + tblName + META_SEPARATOR;
     }
 
+
     @Override
     public void onReadyForRead(ReadOnlyMetastorage metastorage) throws IgniteCheckedException {
 
@@ -138,7 +144,6 @@ public class SqlStatisticsStoreImpl implements SqlStatisticsStore, MetastorageLi
                 log.debug("Local statistics for table " + tbl + " loaded");
             }
         },true);
-
 
     }
 

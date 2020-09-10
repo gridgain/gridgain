@@ -29,6 +29,12 @@ public class StatsColumnData implements Message {
     /** Percent of distinct values in column (except nulls). */
     private int cardinality;
 
+    /** Total vals in column. */
+    private long total;
+
+    /** Average size, for variable size values (in bytes). */
+    private int size;
+
     /** TBD */
     private byte[] rawData;
 
@@ -46,13 +52,18 @@ public class StatsColumnData implements Message {
      * @param max max value in column.
      * @param nulls percent of null values in column.
      * @param cardinality percent of distinct values in column.
+     * @param total total vals in column.
+     * @param size average size, for variable size types (in bytes).
      * @param rawData raw data to make statistics agпregadate.
      */
-    public StatsColumnData(GridH2ValueMessage min, GridH2ValueMessage max, int nulls, int cardinality, byte[] rawData) {
+    public StatsColumnData(GridH2ValueMessage min, GridH2ValueMessage max, int nulls, int cardinality, long total,
+                           int size, byte[] rawData) {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
         this.cardinality = cardinality;
+        this.total = total;
+        this.size = size;
         this.rawData = rawData;
     }
 
@@ -84,6 +95,19 @@ public class StatsColumnData implements Message {
         return cardinality;
     }
 
+    /**
+     * @return
+     */
+    public long total() {
+        return total;
+    }
+
+    /**
+     * @return
+     */
+    public int size() {
+        return size;
+    }
 
     /**
      * @return
@@ -106,31 +130,43 @@ public class StatsColumnData implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeMessage("max", max))
+                if (!writer.writeInt("cardinality", cardinality))
                     return false;
 
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeMessage("min", min))
+                if (!writer.writeMessage("max", max))
                     return false;
 
                 writer.incrementState();
 
             case 2:
-                if (!writer.writeInt("nulls", nulls))
+                if (!writer.writeMessage("min", min))
                     return false;
 
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeByteArray("rawData", rawData))
+                if (!writer.writeInt("nulls", nulls))
                     return false;
 
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeInt("selectivity", cardinality))
+                if (!writer.writeByteArray("rawData", rawData))
+                    return false;
+
+                writer.incrementState();
+
+            case 5:
+                if (!writer.writeInt("size", size))
+                    return false;
+
+                writer.incrementState();
+
+            case 6:
+                if (!writer.writeLong("total", total))
                     return false;
 
                 writer.incrementState();
@@ -149,7 +185,7 @@ public class StatsColumnData implements Message {
 
         switch (reader.state()) {
             case 0:
-                max = reader.readMessage("max");
+                cardinality = reader.readInt("cardinality");
 
                 if (!reader.isLastRead())
                     return false;
@@ -157,7 +193,7 @@ public class StatsColumnData implements Message {
                 reader.incrementState();
 
             case 1:
-                min = reader.readMessage("min");
+                max = reader.readMessage("max");
 
                 if (!reader.isLastRead())
                     return false;
@@ -165,7 +201,7 @@ public class StatsColumnData implements Message {
                 reader.incrementState();
 
             case 2:
-                nulls = reader.readInt("nulls");
+                min = reader.readMessage("min");
 
                 if (!reader.isLastRead())
                     return false;
@@ -173,7 +209,7 @@ public class StatsColumnData implements Message {
                 reader.incrementState();
 
             case 3:
-                rawData = reader.readByteArray("rawData");
+                nulls = reader.readInt("nulls");
 
                 if (!reader.isLastRead())
                     return false;
@@ -181,7 +217,23 @@ public class StatsColumnData implements Message {
                 reader.incrementState();
 
             case 4:
-                cardinality = reader.readInt("selectivity");
+                rawData = reader.readByteArray("rawData");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 5:
+                size = reader.readInt("size");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 6:
+                total = reader.readLong("total");
 
                 if (!reader.isLastRead())
                     return false;
@@ -195,12 +247,12 @@ public class StatsColumnData implements Message {
 
     @Override
     public short directType() {
-        return TYPE_CODE;
+        return 0;
     }
 
     @Override
     public byte fieldsCount() {
-        return 5;
+        return 7;
     }
 
     @Override

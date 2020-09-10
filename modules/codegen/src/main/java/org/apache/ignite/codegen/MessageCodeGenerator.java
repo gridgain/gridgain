@@ -171,7 +171,7 @@ public class MessageCodeGenerator {
         if (args != null && args.length > 0)
             srcDir = args[0];
 
-        MessageCodeGenerator gen = new MessageCodeGenerator(srcDir);
+        MessageCodeGenerator gen = new MessageCodeGenerator(INDEXING_SRC_DIR);
 
         gen.generateAndWrite(StatsKey.class);
         gen.generateAndWrite(StatsColumnData.class);

@@ -35,6 +35,12 @@ public class ColumnStatistics {
      * are the same. */
     private final int cardinality;
 
+    /** Total number of vals in column. */
+    private final long total;
+
+    /** Average size in bytes, for variable size only. */
+    private final int size;
+
     private final byte[] raw;
 
     /**
@@ -42,34 +48,67 @@ public class ColumnStatistics {
      *
      * @param min min value in column or {@code null}.
      * @param max max value in column or {@code null}.
-     * @param nulls percent of null values in column
-     * @param cardinality percent of unique value in column
+     * @param nulls percent of null values in column.
+     * @param cardinality percent of unique value in column.
+     * @param total total number of values in column.
+     * @param size average size in bytes, for variable size only.
      * @param raw raw data to aggregate statistics.
      */
-    public ColumnStatistics(Value min, Value max, int nulls, int cardinality, byte[] raw) {
+    public ColumnStatistics(Value min, Value max, int nulls, int cardinality, long total, int size, byte[] raw) {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
         this.cardinality = cardinality;
+        this.total = total;
+        this.size = size;
         this.raw = raw;
     }
 
+    /**
+     * @return min value in column.
+     */
     public Value min() {
         return min;
     }
 
+    /**
+     * @return max value in column.
+     */
     public Value max() {
         return max;
     }
 
+    /**
+     * @return percent of null values.
+     */
     public int nulls() {
         return nulls;
     }
 
+    /**
+     * @return percent of unique not null values.
+     */
     public int cardinality() {
         return cardinality;
     }
 
+    /**
+     * @return total number of values in column.
+     */
+    public long total() {
+        return total;
+    }
+
+    /**
+     * @return average size in bytes, for variable size only.
+     */
+    public int size() {
+        return size;
+    }
+
+    /**
+     * @return raw value needed to aggregate statistics.
+     */
     public byte[] raw() {
         return raw;
     }

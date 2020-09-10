@@ -248,6 +248,8 @@ import org.apache.ignite.internal.processors.query.h2.QueryDataPageScanTest;
 import org.apache.ignite.internal.processors.query.h2.QueryParserMetricsHolderSelfTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsSurvivesNodeRestartTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.h2.StatisticCollectionTest;
+import org.apache.ignite.internal.processors.query.h2.ValueDistributionTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.h2.sql.BaseH2CompareQueryTest;
 import org.apache.ignite.internal.processors.query.h2.sql.ExplainSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.GridQueryParsingTest;
@@ -643,6 +645,9 @@ import org.junit.runners.Suite;
     // Table statistics.
     RowCountTableStatisticsUsageTest.class,
     RowCountTableStatisticsSurvivesNodeRestartTest.class,
+    StatisticCollectionTest.class,
+    ValueDistributionTableStatisticsUsageTest.class,
+
 
     SqlViewExporterSpiTest.class
 
