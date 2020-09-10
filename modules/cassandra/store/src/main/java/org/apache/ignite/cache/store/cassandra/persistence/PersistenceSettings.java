@@ -547,6 +547,6 @@ public abstract class PersistenceSettings<F extends PojoField> implements Serial
             return enriched;
         }
         else
-            return null;
+            return Collections.emptyList();
     }
 }
