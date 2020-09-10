@@ -4872,7 +4872,18 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /**
      * @return MVCC.
      */
-    @Nullable protected final GridCacheMvcc mvccExtras() {
+    @Override @Nullable public final GridCacheMvcc mvccExtras2() {
+        lockEntry();
+
+        try {
+            return mvccExtras();
+        }
+        finally {
+            unlockEntry();
+        }
+    }
+
+    @Nullable protected GridCacheMvcc mvccExtras() {
         return extras != null ? extras.mvcc() : null;
     }
 

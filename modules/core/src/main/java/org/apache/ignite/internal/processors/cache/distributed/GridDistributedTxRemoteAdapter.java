@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxRemote;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
@@ -447,6 +448,37 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
         }
     }
 
+    private void dump(GridCacheEntryEx entry) {
+        int part = entry.partition();
+
+        GridCacheEntryInfo info = entry.info();
+
+        if (info != null) {
+            DynamicCacheDescriptor desc = cctx.cache().cacheDescriptor(info.cacheId());
+
+            if (desc != null) {
+                CacheGroupContext grpCtx = cctx.cache().cacheGroup(desc.groupId());
+
+                GridDhtPartitionTopology top = grpCtx.topology();
+                AffinityTopologyVersion affinityTopVer = top.readyTopologyVersion();
+                log.info("DBG: locPart=" + top.localPartition(part) +
+                    ", topVer=" + affinityTopVer +
+                    ", pendingTopVer=" + top.lastTopologyChangeVersion() +
+                    ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
+                    ", owners=" + U.nodeIds(top.owners(part, affinityTopVer)) +
+                    ", locNodeId=" + cctx.localNodeId() +
+                    ", entry=" + entry +
+                    ", txTopVer=" + topologyVersion() +
+                    ", req=" + ((GridNearTxRemote)this).req +
+                    ", tx=" + this + ']');
+            }
+            else
+                log.info("DBG: desc is null");
+        }
+        else
+            log.info("DBG: info is null");
+    }
+
     /**
      * @throws IgniteCheckedException If commit failed.
      */
@@ -465,36 +497,8 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
-                            List<GridCacheMvccCandidate> locs = entry.mvccAllLocal();
-                            if (near() && locs != null) {
-                                int part = entry.partition();
-
-                                GridCacheEntryInfo info = entry.info();
-
-                                if (info != null) {
-                                    DynamicCacheDescriptor desc = cctx.cache().cacheDescriptor(info.cacheId());
-
-                                    if (desc != null) {
-                                        CacheGroupContext grpCtx = cctx.cache().cacheGroup(desc.groupId());
-
-                                        GridDhtPartitionTopology top = grpCtx.topology();
-                                        AffinityTopologyVersion affinityTopVer = top.readyTopologyVersion();
-                                        log.info("DBG: locPart=" + top.localPartition(part) +
-                                            ", topVer=" + affinityTopVer +
-                                            ", pendingTopVer=" + top.lastTopologyChangeVersion() +
-                                            ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
-                                            ", owners=" + U.nodeIds(top.owners(part, affinityTopVer)) +
-                                            ", locNodeId=" + cctx.localNodeId() +
-                                            ", entry=" + entry +
-                                            ", txTopVer=" + topologyVersion() +
-                                            ", tx=" + this + ']');
-                                    }
-                                    else
-                                        log.info("DBG: desc is null");
-                                }
-                                else
-                                    log.info("DBG: info is null");
-                            }
+                            if (near() && (entry.mvccAllLocal() != null || entry.mvccExtras2() == null))
+                                dump(entry);
 
                             if (log.isDebugEnabled())
                                 log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +

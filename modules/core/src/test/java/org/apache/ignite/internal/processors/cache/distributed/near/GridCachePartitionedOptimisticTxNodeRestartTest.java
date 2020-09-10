@@ -301,6 +301,8 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         TestRecordingCommunicationSpi.spi(owner).stopBlock();
 
+        fut.get();
+
 //        System.out.println();
 //
 //        final List<DiscoveryEvent> mergedEvts = new ArrayList<>();

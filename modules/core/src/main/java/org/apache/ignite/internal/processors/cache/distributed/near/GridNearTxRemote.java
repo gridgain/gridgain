@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxRemoteSt
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridLeanMap;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -63,7 +64,8 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
     /** Owned versions. */
     private Map<IgniteTxKey, GridCacheVersion> owned;
 
-    private GridDhtTxPrepareRequest req;
+    @GridToStringExclude
+    public GridDhtTxPrepareRequest req;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -455,6 +457,6 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return GridToStringBuilder.toString(GridNearTxRemote.class, this, "req", req, "super", super.toString());
+        return GridToStringBuilder.toString(GridNearTxRemote.class, this, "super", super.toString());
     }
 }
