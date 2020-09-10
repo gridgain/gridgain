@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import org.apache.ignite.internal.util.nio.GridNioSession;
+
 /**
  * Client listener message parser.
  */
@@ -32,9 +34,10 @@ public interface ClientListenerMessageParser {
      * Encode response to byte array.
      *
      * @param resp Response.
+     * @param ses Nio session.
      * @return Message.
      */
-    ClientListenerResponseBuffer encode(ClientListenerResponse resp);
+    Object encode(ClientListenerResponse resp, GridNioSession ses);
 
     /**
      * Decode command type. Allows to recognize the command (message type) without decoding the entire message.

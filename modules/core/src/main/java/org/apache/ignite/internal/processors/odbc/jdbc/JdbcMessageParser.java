@@ -21,7 +21,6 @@ import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryThreadLocalContext;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
@@ -29,7 +28,7 @@ import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProce
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
-import org.apache.ignite.internal.processors.odbc.ClientListenerResponseBuffer;
+import org.apache.ignite.internal.util.nio.GridNioSession;
 
 /**
  * JDBC message parser.
@@ -85,20 +84,19 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
         return JdbcRequest.readRequest(reader, protoCtx);
     }
 
-    /** {@inheritDoc}
-     * @return*/
-    @Override public ClientListenerResponseBuffer encode(ClientListenerResponse msg) {
+    /** {@inheritDoc} */
+    @Override public byte[] encode(ClientListenerResponse msg, GridNioSession ses) {
         assert msg != null;
 
         assert msg instanceof JdbcResponse;
 
         JdbcResponse res = (JdbcResponse)msg;
 
-        ClientListenerResponseBuffer buffer = new ClientListenerResponseBuffer(binCtx, INIT_CAP);
+        BinaryWriterExImpl writer = createWriter(INIT_CAP);
 
-        res.writeBinary(buffer.getPayloadWriter(), protoCtx);
+        res.writeBinary(writer, protoCtx);
 
-        return buffer;
+        return writer.array();
     }
 
     /** {@inheritDoc} */

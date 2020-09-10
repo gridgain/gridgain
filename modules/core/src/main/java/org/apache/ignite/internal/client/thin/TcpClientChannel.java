@@ -47,6 +47,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
 import javax.cache.configuration.Factory;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -56,6 +57,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.client.ClientAuthenticationException;
 import org.apache.ignite.client.ClientAuthorizationException;
@@ -94,12 +96,12 @@ import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_5_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_0;
 import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_7_1;
-import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
-import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
-import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.USER_ATTRIBUTES;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.AUTHORIZATION;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.BITMAP_FEATURES;
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.PARTITION_AWARENESS;
+import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.USER_ATTRIBUTES;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 
 /**
  * Implements {@link ClientChannel} over TCP.
@@ -314,7 +316,7 @@ class TcpClientChannel implements ClientChannel {
             receiverThread = new Thread(() -> {
                 try {
                     while (!closed())
-                        processNextMessage();
+                        processNextMessageNonBlocking();
                 }
                 catch (Throwable e) {
                     close(e);
@@ -325,6 +327,125 @@ class TcpClientChannel implements ClientChannel {
 
             receiverThread.start();
         }
+    }
+
+    /**
+     * Process next message from the input stream and complete corresponding future.
+     */
+    private void processNextMessageNonBlocking() throws ClientProtocolError, ClientConnectionException {
+        int msgSize = readIntNonBlocking();
+
+        if (msgSize <= 0)
+            throw new ClientProtocolError(String.format("Invalid message size: %s", msgSize));
+
+        long bytesReadOnStartMsg = dataInput.totalBytesRead();
+
+        long resId = readLongNonBlocking();
+
+        int status = 0;
+
+        ClientOperation notificationOp = null;
+
+        BinaryInputStream resIn;
+
+        if (protocolCtx.isFeatureSupported(PARTITION_AWARENESS)) {
+            short flags = readShortNonBlocking();
+
+            if ((flags & ClientFlag.AFFINITY_TOPOLOGY_CHANGED) != 0) {
+                long topVer = readLongNonBlocking();
+                int minorTopVer = readIntNonBlocking();
+
+                srvTopVer = new AffinityTopologyVersion(topVer, minorTopVer);
+
+                for (Consumer<ClientChannel> lsnr : topChangeLsnrs)
+                    lsnr.accept(this);
+            }
+
+            if ((flags & ClientFlag.NOTIFICATION) != 0) {
+                short notificationCode = readShortNonBlocking();
+
+                notificationOp = ClientOperation.fromCode(notificationCode);
+
+                if (notificationOp == null || !notificationOp.isNotification())
+                    throw new ClientProtocolError(String.format("Unexpected notification code [%d]", notificationCode));
+            }
+
+            if ((flags & ClientFlag.ERROR) != 0)
+                status = readIntNonBlocking();
+        }
+        else
+            status = readIntNonBlocking();
+
+        int hdrSize = (int)(dataInput.totalBytesRead() - bytesReadOnStartMsg);
+
+        byte[] res = null;
+        Exception err = null;
+
+        if (status == 0) {
+            if (msgSize > hdrSize)
+                res = readBytesNonBlocking(msgSize - hdrSize);
+        }
+        else {
+            resIn = new BinaryHeapInputStream(readBytesNonBlocking(msgSize - hdrSize));
+
+            String errMsg = new BinaryReaderExImpl(null, resIn, null, true).readString();
+
+            err = status == ClientStatus.SECURITY_VIOLATION
+                ? new ClientAuthorizationException(errMsg)
+                : new ClientServerError(errMsg, status, resId);
+        }
+
+        if (notificationOp == null) { // Respone received.
+            ClientRequestFuture pendingReq = pendingReqs.get(resId);
+
+            if (pendingReq == null)
+                throw new ClientProtocolError(String.format("Unexpected response ID [%s]", resId));
+
+            pendingReq.onDone(res, err);
+        }
+        else { // Notification received.
+            for (NotificationListener lsnr : notificationLsnrs)
+                lsnr.acceptNotification(this, notificationOp, resId, res, err);
+        }
+    }
+
+    private int readIntNonBlocking() {
+        while (true) {
+            if (dataInput.available() >= Integer.BYTES)
+                return dataInput.readInt();
+        }
+    }
+
+    private long readLongNonBlocking() {
+        while (true) {
+            if (dataInput.available() >= Long.BYTES)
+                return dataInput.readLong();
+        }
+    }
+
+    private short readShortNonBlocking() {
+        while (true) {
+            if (dataInput.available() >= Short.BYTES)
+                return dataInput.readShort();
+        }
+    }
+
+    private byte[] readBytesNonBlocking(int len) {
+        byte[] res = new byte[len];
+        int offset = 0;
+
+        while (offset < len) {
+            if (dataInput.available() == 0)
+                continue;
+
+            int toRead = Math.min(dataInput.available(), len - offset);
+
+            dataInput.read(res, offset, toRead);
+
+            offset += toRead;
+        }
+
+        return res;
     }
 
     /**
@@ -632,6 +753,43 @@ class TcpClientChannel implements ClientChannel {
          */
         public ByteCountingDataInput(InputStream in) {
             this.in = in;
+        }
+
+        /** */
+        public int available()throws ClientConnectionException {
+            try {
+                return in.available();
+            }
+            catch (IOException e) {
+                throw handleIOError(e);
+            }
+        }
+
+        /**
+         * Read bytes from the input stream to the buffer.
+         *
+         * @param bytes Bytes buffer.
+         * @param len Length.
+         */
+        public void read(byte[] bytes, int offset, int len) throws ClientConnectionException {
+            int bytesNum;
+            int readBytesNum = 0;
+
+            while (readBytesNum < len) {
+                try {
+                    bytesNum = in.read(bytes, offset + readBytesNum, len - readBytesNum);
+                }
+                catch (IOException e) {
+                    throw handleIOError(e);
+                }
+
+                if (bytesNum < 0)
+                    throw handleIOError(null);
+
+                readBytesNum += bytesNum;
+            }
+
+            totalBytesRead += readBytesNum;
         }
 
         /**

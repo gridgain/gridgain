@@ -105,4 +105,10 @@ public class BinaryMemoryAllocatorChunk {
     public boolean isAcquired() {
         return acquired;
     }
+
+    /** */
+    public void reset() {
+        if (data != null)
+            release(data, maxMsgSize);
+    }
 }

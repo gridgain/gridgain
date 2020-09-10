@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.ThinClientConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
@@ -357,7 +358,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      * @param notification Notification.
      */
     public void notifyClient(ClientNotification notification) {
-        ses.send(parser.encode(notification));
+        ses.send(parser.encode(notification, ses));
     }
 
     /**

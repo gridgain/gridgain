@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.odbc.odbc;
 
 import java.util.HashSet;
 import java.util.Set;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
@@ -28,7 +29,6 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
-import org.apache.ignite.internal.processors.odbc.ClientListenerResponseBuffer;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -158,9 +158,7 @@ public class OdbcConnectionContext extends ClientListenerAbstractConnectionConte
                     if (log.isDebugEnabled())
                         log.debug("Async response: [resp=" + resp.status() + ']');
 
-                    ClientListenerResponseBuffer outMsg = parser.encode(resp);
-
-                    ses.send(outMsg);
+                    ses.send(parser.encode(resp, ses));
                 }
             }
         };

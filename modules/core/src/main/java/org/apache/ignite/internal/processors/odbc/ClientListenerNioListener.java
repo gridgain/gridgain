@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.odbc;
 
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.BinaryConfiguration;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
+import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
@@ -207,9 +209,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                             ", resp=" + resp.status() + ']');
                     }
 
-                    ClientListenerResponseBuffer outMsg = parser.encode(resp);
-
-                    GridNioFuture<?> fut = ses.send(outMsg);
+                    GridNioFuture<?> fut = ses.send(parser.encode(resp, ses));
 
                     fut.listen(f -> {
                         if (f.error() == null)
@@ -227,7 +227,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
             U.error(log, "Failed to process client request [req=" + req + ']', e);
 
-            ses.send(parser.encode(handler.handleException(e, req)));
+            ses.send(parser.encode(handler.handleException(e, req), ses));
 
             if (e instanceof Error)
                 throw (Error)e;
@@ -314,9 +314,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         ClientListenerProtocolVersion ver = ClientListenerProtocolVersion.create(verMajor, verMinor, verMaintenance);
 
-        ClientListenerResponseBuffer buffer = new ClientListenerResponseBuffer(null, 32);
-
-        BinaryWriterExImpl writer = buffer.getPayloadWriter();
+        BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(8), null, null);
 
         byte clientType = reader.readByte();
 
@@ -375,7 +373,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 writer.writeInt(ClientStatus.FAILED);
         }
 
-        ses.send(buffer);
+        ses.send(writer.array());
     }
 
     /**
