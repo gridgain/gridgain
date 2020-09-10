@@ -38,17 +38,17 @@ public class DistributedTransactionConfiguration {
         "Transactions parameter '%s' was changed from '%s' to '%s'";
 
     /** */
-    private static final long dfltLongOpsDumpTimeout =
+    private final long dfltLongOpsDumpTimeout =
         getLong(IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, DFLT_LONG_OPERATIONS_DUMP_TIMEOUT);
 
     /** */
-    private static final long dfltLongTransactionTimeDumpThreshold =
+    private final long dfltLongTransactionTimeDumpThreshold =
         getLong(IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD, 0);
 
     /**
      * The coefficient for samples of completed transactions that will be dumped in log.
      */
-    private static final double dfltTransactionTimeDumpSamplesCoefficient =
+    private final double dfltTransactionTimeDumpSamplesCoefficient =
         getFloat(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_COEFFICIENT, 0.0f);
 
     /**
@@ -56,11 +56,11 @@ public class DistributedTransactionConfiguration {
      * {@link #transactionTimeDumpSamplesCoefficient} is above <code>0.0</code>. Must be integer value
      * greater than <code>0</code>.
      */
-    private static final int dfltLongTransactionTimeDumpSamplesPerSecondLimit =
+    private final int dfltLongTransactionTimeDumpSamplesPerSecondLimit =
         getInteger(IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT, 5);
 
     /** Collisions dump interval. */
-    private static final int dfltCollisionsDumpInterval =
+    private final int dfltCollisionsDumpInterval =
         IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL, 1000);
 
     /**
@@ -119,6 +119,8 @@ public class DistributedTransactionConfiguration {
                     transactionTimeDumpSamplesCoefficient.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     longTransactionTimeDumpSamplesPerSecondLimit.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
                     collisionsDumpInterval.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
+                    longOperationsDumpTimeout.addListener(longOperationsDumpTimeoutListener);
+                    collisionsDumpInterval.addListener(collisionsDumpIntervalListener);
 
                     dispatcher.registerProperties(txOwnerDumpRequestsAllowed, longOperationsDumpTimeout,
                             longTransactionTimeDumpThreshold, transactionTimeDumpSamplesCoefficient,
@@ -126,16 +128,12 @@ public class DistributedTransactionConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    System.out.println("onReadyToWrite longOperationsDumpTimeout " + dfltLongOpsDumpTimeout);
                     setDefaultValue(longOperationsDumpTimeout, dfltLongOpsDumpTimeout, log);
                     setDefaultValue(longTransactionTimeDumpThreshold, dfltLongTransactionTimeDumpThreshold, log);
                     setDefaultValue(transactionTimeDumpSamplesCoefficient, dfltTransactionTimeDumpSamplesCoefficient, log);
                     setDefaultValue(longTransactionTimeDumpSamplesPerSecondLimit, dfltLongTransactionTimeDumpSamplesPerSecondLimit, log);
                     setDefaultValue(collisionsDumpInterval, dfltCollisionsDumpInterval, log);
                     setDefaultValue(txOwnerDumpRequestsAllowed, dfltTxOwnerDumpRequestsAllowed, log);
-
-                    longOperationsDumpTimeout.addListener(longOperationsDumpTimeoutListener);
-                    collisionsDumpInterval.addListener(collisionsDumpIntervalListener);
                 }
             }
         );
@@ -165,7 +163,7 @@ public class DistributedTransactionConfiguration {
     /**
      * @param longTransactionTimeDumpThreshold Value of threshold timeout in milliseconds.
      */
-    public GridFutureAdapter<?> updateLongTransactionTimeDumpThreshold(long longTransactionTimeDumpThreshold) throws IgniteCheckedException {
+    public GridFutureAdapter<?> updateLongTransactionTimeDumpThresholdAsync(long longTransactionTimeDumpThreshold) throws IgniteCheckedException {
         return this.longTransactionTimeDumpThreshold.propagateAsync(longTransactionTimeDumpThreshold);
     }
 
@@ -180,10 +178,13 @@ public class DistributedTransactionConfiguration {
      *
      */
     public Long longTransactionTimeDumpThreshold() {
-        return longTransactionTimeDumpThreshold.get();
+        return longTransactionTimeDumpThreshold.getOrDefault(dfltLongTransactionTimeDumpThreshold);
     }
 
-    public GridFutureAdapter<?> updatetransactionTimeDumpSamplesCoefficient(double longTransactionTimeDumpThreshold) throws IgniteCheckedException {
+    /**
+     *
+     */
+    public GridFutureAdapter<?> updatetransactionTimeDumpSamplesCoefficientAsync(double longTransactionTimeDumpThreshold) throws IgniteCheckedException {
         return this.transactionTimeDumpSamplesCoefficient.propagateAsync(longTransactionTimeDumpThreshold);
     }
 
@@ -198,10 +199,13 @@ public class DistributedTransactionConfiguration {
      *
      */
     public Double transactionTimeDumpSamplesCoefficient() {
-        return transactionTimeDumpSamplesCoefficient.get();
+        return transactionTimeDumpSamplesCoefficient.getOrDefault(dfltTransactionTimeDumpSamplesCoefficient);
     }
 
-    public GridFutureAdapter<?> updateLongTransactionTimeDumpSamplesPerSecondLimit(int limit) throws IgniteCheckedException {
+    /**
+     *
+     */
+    public GridFutureAdapter<?> updateLongTransactionTimeDumpSamplesPerSecondLimitAsync(int limit) throws IgniteCheckedException {
         return this.longTransactionTimeDumpSamplesPerSecondLimit.propagateAsync(limit);
     }
 
@@ -219,7 +223,10 @@ public class DistributedTransactionConfiguration {
         return longTransactionTimeDumpSamplesPerSecondLimit.getOrDefault(dfltLongTransactionTimeDumpSamplesPerSecondLimit);
     }
 
-    public GridFutureAdapter<?> updateCollisionsDumpInterval(int limit) throws IgniteCheckedException {
+    /**
+     *
+     */
+    public GridFutureAdapter<?> updateCollisionsDumpIntervalAsync(int limit) throws IgniteCheckedException {
         return this.collisionsDumpInterval.propagateAsync(limit);
     }
 
@@ -237,7 +244,10 @@ public class DistributedTransactionConfiguration {
         return collisionsDumpInterval.getOrDefault(dfltCollisionsDumpInterval);
     }
 
-    public GridFutureAdapter<?> updateTxOwnerDumpRequestsAllowed(boolean allowed) throws IgniteCheckedException {
+    /**
+     *
+     */
+    public GridFutureAdapter<?> updateTxOwnerDumpRequestsAllowedAsync(boolean allowed) throws IgniteCheckedException {
         return this.txOwnerDumpRequestsAllowed.propagateAsync(allowed);
     }
 
@@ -252,7 +262,6 @@ public class DistributedTransactionConfiguration {
      *
      */
     public Boolean txOwnerDumpRequestsAllowed() {
-        return txOwnerDumpRequestsAllowed.get();
+        return txOwnerDumpRequestsAllowed.getOrDefault(dfltTxOwnerDumpRequestsAllowed);
     }
-
 }

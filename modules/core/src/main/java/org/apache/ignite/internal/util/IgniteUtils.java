@@ -224,6 +224,7 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.io.GridFilenameUtils;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryNativeLoader;
@@ -247,15 +248,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
-import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.lang.IgniteClosure;
-import org.apache.ignite.lang.IgniteFutureCancelledException;
-import org.apache.ignite.lang.IgniteFutureTimeoutException;
-import org.apache.ignite.lang.IgniteOutClosure;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.lang.IgniteProductVersion;
-import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.lang.*;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.PluginProvider;
@@ -12333,7 +12326,7 @@ public abstract class IgniteUtils {
      * @param srvrsOnly Broadcast only on server nodes.
      * @param nodeFilter Node filter.
      */
-    public static void broadcastToNodesWithFilter(
+    public static IgniteFuture<Void> broadcastToNodesWithFilterAsync(
         GridKernalContext kctx,
         IgniteRunnable job,
         boolean srvrsOnly,
@@ -12347,11 +12340,11 @@ public abstract class IgniteUtils {
         ClusterGroup grp = cl.forPredicate(nodeFilter);
 
         if (grp.nodes().isEmpty())
-            return;
+            return new IgniteFinishedFutureImpl<>();
 
         IgniteCompute compute = kctx.grid().compute(grp);
 
-        compute.broadcast(job);
+        return compute.broadcastAsync(job);
     }
 
     /**

@@ -19,23 +19,15 @@ package org.apache.ignite.internal;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
-import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -56,9 +48,6 @@ import static org.apache.ignite.testframework.LogListener.matches;
  *
  */
 public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
-    /** Prefix of key for distributed meta storage. */
-    private static final String DIST_CONF_PREFIX = "distrConf-";
-
     /** Listener log messages. */
     private static ListeningTestLogger testLog;
 
@@ -71,8 +60,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
 
         testLog = new ListeningTestLogger(false, log);
     }
-
-
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -141,7 +128,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "60000")
     public void testLongOperationsDumpTimeoutPositive() throws Exception {
-        System.out.println("IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT=" + System.getProperty(IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT));
         checkLongOperationsDumpTimeoutViaTxMxBean(60_000, 100, 10_000, true);
     }
 
@@ -153,7 +139,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
     public void testLongOperationsDumpTimeoutZero() throws Exception {
-        System.out.println("IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT=" + System.getProperty(IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT));
         checkLongOperationsDumpTimeoutViaTxMxBean(100, 0, 1_000, false);
     }
 
@@ -165,7 +150,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
     public void testLongOperationsDumpTimeoutNegative() throws Exception {
-        System.out.println("IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT=" + System.getProperty(IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT));
         checkLongOperationsDumpTimeoutViaTxMxBean(100, -1, 1_000, false);
     }
 
@@ -179,7 +163,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
     public void testChangeLongOperationsDumpTimeoutOnImmutableCluster() throws Exception {
         Map<IgniteEx, TransactionsMXBean> allNodes = new HashMap<>();
-        Map<IgniteEx, List<CountDownLatch>> updateLatches = new HashMap<>();
 
         for (int i = 0; i < 2; i++)
             allNodes.put(startGrid(i), txMXBean(i));
@@ -189,38 +172,16 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         for (int i = 2; i < 4; i++)
             allNodes.put(startGrid(i), txMXBean(i));
 
-        allNodes.keySet().forEach(ignite -> updateLatches.put(ignite, F.asList(new CountDownLatch(1), new CountDownLatch(1))));
-
         //check for default value
         checkLongOperationsDumpTimeoutViaTxMxBean(allNodes, 100L);
-
-        allNodes.forEach((igniteEx, bean) -> {
-            igniteEx.context().distributedMetastorage().listen(
-                    (key) -> key.startsWith(DIST_CONF_PREFIX),
-                    (String key, Serializable oldVal, Serializable newVal) -> {
-                        if ((long) newVal == 200)
-                            updateLatches.get(igniteEx).get(0).countDown();
-                        if ((long) newVal == 300)
-                            updateLatches.get(igniteEx).get(1).countDown();
-                    });
-        });
 
         //check update value via server node
         long newTimeout = 200L;
         updateLongOperationsDumpTimeoutViaTxMxBean(allNodes, node -> !node.configuration().isClientMode(), newTimeout);
-        for (List<CountDownLatch> list : updateLatches.values()) {
-            CountDownLatch countDownLatch = list.get(0);
-            countDownLatch.await(100, TimeUnit.MILLISECONDS);
-        }
-        checkLongOperationsDumpTimeoutViaTxMxBean(allNodes, newTimeout);
 
         //check update value via client node
         newTimeout = 300L;
         updateLongOperationsDumpTimeoutViaTxMxBean(allNodes, node -> node.configuration().isClientMode(), newTimeout);
-        for (List<CountDownLatch> list : updateLatches.values()) {
-            CountDownLatch countDownLatch = list.get(1);
-            countDownLatch.await(100, TimeUnit.MILLISECONDS);
-        }
         checkLongOperationsDumpTimeoutViaTxMxBean(allNodes, newTimeout);
     }
 
@@ -249,7 +210,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         node1 = singletonMap(startGrid(1), txMXBean(1));
 
         //check that new value after restart
-        long defTimeout = 100L;
         checkLongOperationsDumpTimeoutViaTxMxBean(node0, newTimeout);
         checkLongOperationsDumpTimeoutViaTxMxBean(node1, newTimeout);
 
@@ -258,7 +218,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
 
         Map<IgniteEx, TransactionsMXBean> node2 = singletonMap(startGrid(2), txMXBean(2));
 
-        //check that default value in new node
+        //check that last value in new node
         checkLongOperationsDumpTimeoutViaTxMxBean(node0, newTimeout);
         checkLongOperationsDumpTimeoutViaTxMxBean(node1, newTimeout);
         checkLongOperationsDumpTimeoutViaTxMxBean(node2, newTimeout);
@@ -315,8 +275,6 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     ) throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        DistributedMetaStorage a  = ignite.context().distributedMetastorage();
-
         TransactionsMXBean txMXBean = txMXBean(0);
 
         assertEquals(defTimeout, txMXBean.getLongOperationsDumpTimeout());
@@ -329,18 +287,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
         testLog.registerListener(lrtLogLsnr);
         testLog.registerListener(txLogLsnr);
 
-        CountDownLatch latch = new CountDownLatch(1);
-
-        ignite.context().distributedMetastorage().listen(
-                (key) -> key.startsWith(DIST_CONF_PREFIX),
-                (String key, Serializable oldVal, Serializable newVal) -> {
-                    if ((long) newVal == newTimeout)
-                        latch.countDown();
-                });
-
         txMXBean.setLongOperationsDumpTimeout(newTimeout);
-
-        latch.await(100, TimeUnit.MILLISECONDS);
 
         assertEquals(newTimeout, ignite.context().cache().context().tm().longOperationsDumpTimeout());
 
