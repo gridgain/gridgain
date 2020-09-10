@@ -22,17 +22,16 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryThreadLocalContext;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
-import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
+import org.apache.ignite.internal.processors.odbc.ClientListenerResponseBuffer;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -249,17 +248,18 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
         return params;
     }
 
-    /** {@inheritDoc} */
-    @Override public byte[] encode(ClientListenerResponse msg0) {
+    /** {@inheritDoc}
+     * @return*/
+    @Override public ClientListenerResponseBuffer encode(ClientListenerResponse msg0) {
         assert msg0 != null;
 
         assert msg0 instanceof OdbcResponse;
 
         OdbcResponse msg = (OdbcResponse)msg0;
 
-        // Creating new binary writer
-        BinaryWriterExImpl writer = new BinaryWriterExImpl(marsh.context(), new BinaryHeapOutputStream(INIT_CAP),
-            BinaryThreadLocalContext.get().schemaHolder(), null);
+        ClientListenerResponseBuffer buffer = new ClientListenerResponseBuffer(marsh.context(), INIT_CAP);
+
+        BinaryWriterExImpl writer = buffer.getPayloadWriter();
 
         // Writing status.
         if (ver.compareTo(OdbcConnectionContext.VER_2_1_5) < 0) {
@@ -271,13 +271,13 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
         if (msg.status() != ClientListenerResponse.STATUS_SUCCESS) {
             writer.writeString(msg.error());
 
-            return writer.array();
+            return buffer;
         }
 
         Object res0 = msg.response();
 
         if (res0 == null)
-            return writer.array();
+            return buffer;
         else if (res0 instanceof OdbcQueryExecuteResult) {
             OdbcQueryExecuteResult res = (OdbcQueryExecuteResult) res0;
 
@@ -409,7 +409,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
         else
             assert false : "Should not reach here.";
 
-        return writer.array();
+        return buffer;
     }
 
     /**

@@ -1212,6 +1212,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         else
             return executeClearTask(keys, false).chain(new CX1<IgniteInternalFuture<?>, Object>() {
                 @Override public Object applyx(IgniteInternalFuture<?> fut) throws IgniteCheckedException {
+                    fut.get();
+
                     executeClearTask(keys, true).get();
 
                     return null;

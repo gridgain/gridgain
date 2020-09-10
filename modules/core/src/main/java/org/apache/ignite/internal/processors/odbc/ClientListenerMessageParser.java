@@ -34,7 +34,7 @@ public interface ClientListenerMessageParser {
      * @param resp Response.
      * @return Message.
      */
-    byte[] encode(ClientListenerResponse resp);
+    ClientListenerResponseBuffer encode(ClientListenerResponse resp);
 
     /**
      * Decode command type. Allows to recognize the command (message type) without decoding the entire message.

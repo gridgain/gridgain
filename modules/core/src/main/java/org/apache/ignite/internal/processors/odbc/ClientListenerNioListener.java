@@ -34,7 +34,6 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
-import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
@@ -208,7 +207,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                             ", resp=" + resp.status() + ']');
                     }
 
-                    byte[] outMsg = parser.encode(resp);
+                    ClientListenerResponseBuffer outMsg = parser.encode(resp);
 
                     GridNioFuture<?> fut = ses.send(outMsg);
 
@@ -315,7 +314,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         ClientListenerProtocolVersion ver = ClientListenerProtocolVersion.create(verMajor, verMinor, verMaintenance);
 
-        BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(8), null, null);
+        ClientListenerResponseBuffer buffer = new ClientListenerResponseBuffer(null, 32);
+
+        BinaryWriterExImpl writer = buffer.getPayloadWriter();
 
         byte clientType = reader.readByte();
 
@@ -374,7 +375,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 writer.writeInt(ClientStatus.FAILED);
         }
 
-        ses.send(writer.array());
+        ses.send(buffer);
     }
 
     /**

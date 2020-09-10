@@ -23,7 +23,6 @@ import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_HANDSHAKE_TIMEOUT_TASK;
 
@@ -75,18 +74,9 @@ public class ClientListenerBufferedParser implements GridNioParser {
 
     /** {@inheritDoc} */
     @Override public ByteBuffer encode(GridNioSession ses, Object msg) throws IOException, IgniteCheckedException {
-        byte[] msg0 = (byte[])msg;
+        ClientListenerResponseBuffer msg0 = (ClientListenerResponseBuffer)msg;
 
-        ByteBuffer res = ByteBuffer.allocate(msg0.length + 4);
-
-        res.order(ByteOrder.LITTLE_ENDIAN);
-
-        res.putInt(msg0.length);
-        res.put(msg0);
-
-        res.flip();
-
-        return res;
+        return msg0.asByteBuffer();
     }
 
     /** {@inheritDoc} */

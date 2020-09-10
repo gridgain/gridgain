@@ -16,16 +16,15 @@
 
 package org.apache.ignite.internal.processors.platform.client;
 
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
-import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
+import org.apache.ignite.internal.processors.odbc.ClientListenerResponseBuffer;
 import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeGetRequest;
 import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeNameGetRequest;
 import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeNamePutRequest;
@@ -478,19 +477,17 @@ public class ClientMessageParser implements ClientListenerMessageParser {
             "Invalid request op code: " + opCode);
     }
 
-    /** {@inheritDoc} */
-    @Override public byte[] encode(ClientListenerResponse resp) {
+    /** {@inheritDoc}
+     * @return*/
+    @Override public ClientListenerResponseBuffer encode(ClientListenerResponse resp) {
         assert resp != null;
-
-        BinaryHeapOutputStream outStream = new BinaryHeapOutputStream(32);
-
-        BinaryRawWriterEx writer = marsh.writer(outStream);
-
         assert resp instanceof ClientOutgoingMessage : "Unexpected response type: " + resp.getClass();
 
-        ((ClientOutgoingMessage)resp).encode(ctx, writer);
+        ClientListenerResponseBuffer buffer = new ClientListenerResponseBuffer(marsh.context(), 1024);
 
-        return outStream.arrayCopy();
+        ((ClientOutgoingMessage)resp).encode(ctx, buffer.getPayloadWriter());
+
+        return buffer;
     }
 
     /** {@inheritDoc} */
