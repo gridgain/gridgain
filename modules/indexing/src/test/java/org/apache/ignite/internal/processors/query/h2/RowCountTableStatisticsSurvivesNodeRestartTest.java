@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -48,7 +50,9 @@ public class RowCountTableStatisticsSurvivesNodeRestartTest extends TableStatist
     @Override protected void beforeTest() throws Exception {
         cleanPersistenceDir();
 
-        startGridsMultiThreaded(1);
+        //startGridsMultiThreaded(1);
+        startGrid(0);
+        grid(0).cluster().state(ClusterState.ACTIVE);
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
@@ -85,15 +89,15 @@ public class RowCountTableStatisticsSurvivesNodeRestartTest extends TableStatist
     }
 
     @Test
-    @Ignore
     public void singleTableStatSurvivesRestart() throws Exception {
         String sql = "select * from small i1 where c >= 9 and b > 10";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, sql, new String[1][]);
 
         stopGrid(0);
 
-        startGrid(0);
 
+        startGrid(0);
+        U.setCurrentIgniteName("h2.RowCountTableStatisticsSurvivesNodeRestartTest0");
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"SMALL_C"}, sql, new String[1][]);
         // TODO after implementing view add some tests to check partition statistics reloading
     }
