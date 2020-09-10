@@ -72,11 +72,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
     /** Cancel counter. For testing purposes only. */
     public static final AtomicLong CANCEL_COUNTER = new AtomicLong(0);
 
-    /** Default number of selectors. */
-    private static final int DFLT_SELECTOR_CNT = Math.max(4, Runtime.getRuntime().availableProcessors() / 2);
-
     /** Default TCP direct buffer flag. */
-    private static final boolean DFLT_TCP_DIRECT_BUF = false;
+    private static final boolean DFLT_TCP_DIRECT_BUF = true;
 
     /** Busy lock. */
     private final GridSpinBusyLock busyLock = new GridSpinBusyLock();
@@ -148,13 +145,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
                 long idleTimeout = cliConnCfg.getIdleTimeout();
 
-                int selectorCnt = DFLT_SELECTOR_CNT;
-
-                String selectorCntStr = System.getenv("GG_THIN_SELECTOR_CNT");
-                if (selectorCntStr != null)
-                    selectorCnt = Integer.parseInt(selectorCntStr);
-
-                System.out.println("Thin client selector count = " + selectorCnt);
+                int selectorCnt = cliConnCfg.getSelectorCount();
 
                 for (int port = cliConnCfg.getPort(); port <= portTo && port <= 65535; port++) {
                     try {
@@ -167,7 +158,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .igniteInstanceName(ctx.igniteInstanceName())
                             .serverName("client-listener")
                             .tcpNoDelay(cliConnCfg.isTcpNoDelay())
-                            .directBuffer(true)
+                            .directBuffer(DFLT_TCP_DIRECT_BUF)
                             .byteOrder(ByteOrder.nativeOrder())
                             .socketSendBufferSize(cliConnCfg.getSocketSendBufferSize())
                             .socketReceiveBufferSize(cliConnCfg.getSocketReceiveBufferSize())
