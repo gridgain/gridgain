@@ -166,43 +166,145 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxFourNodesNoBackups() throws Throwable {
-        super.testRestartWithTxFourNodesNoBackups();
+        super.testRestartWithTxEightNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxFourNodesOneBackups() throws Throwable {
-        super.testRestartWithTxFourNodesOneBackups();
+        super.testRestartWithTxEightNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxSixNodesTwoBackups() throws Throwable {
-        super.testRestartWithTxSixNodesTwoBackups();
+        super.testRestartWithTxEightNodesTwoBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxFourNodesTwoBackups() throws Throwable {
-        super.testRestartWithTxFourNodesTwoBackups();
+        super.testRestartWithTxFourNodesOneBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTenNodesTwoBackups() throws Throwable {
-        super.testRestartWithTxTenNodesTwoBackups();
+        super.testRestartWithTxFourNodesOneBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesNoBackups() throws Throwable {
-        super.testRestartWithTxTwoNodesNoBackups();
+        super.testRestartWithTxFourNodesOneBackups();
     }
 
     /** {@inheritDoc} */
     @Test
     @Override public void testRestartWithTxTwoNodesOneBackup() throws Throwable {
-        super.testRestartWithTxTwoNodesOneBackup();
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_1() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxFourNodesNoBackups_1() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxFourNodesOneBackups_1() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxSixNodesTwoBackups_1() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxFourNodesTwoBackups_1() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxTenNodesTwoBackups_1() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxTwoNodesNoBackups_1() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxTwoNodesOneBackup_1() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+
+
+
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxEightNodesTwoBackups_2() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxFourNodesNoBackups_2() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxFourNodesOneBackups_2() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxSixNodesTwoBackups_2() throws Throwable {
+        super.testRestartWithTxEightNodesTwoBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxFourNodesTwoBackups_2() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxTenNodesTwoBackups_2() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxTwoNodesNoBackups_2() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    public void testRestartWithTxTwoNodesOneBackup_2() throws Throwable {
+        super.testRestartWithTxFourNodesOneBackups();
     }
 
 //    @Test
@@ -323,6 +425,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
     }
 
     @Test
+    @Ignore
     public void testZzz() throws Exception {
         backups = 2;
         nodeCnt = 5;

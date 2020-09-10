@@ -299,11 +299,11 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         }
 
         if (!assignments.isEmpty()) {
-            ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
-
             assert exchFut == null || !exchFut.rebalanced() :
                 "Unexpected rebalance on rebalanced cluster " +
                     "[top=" + topVer + ", grp=" + grp.groupId() + ", assignments=" + assignments + "]";
+
+            ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
         }
 
         return assignments;
