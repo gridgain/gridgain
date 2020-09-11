@@ -26,7 +26,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     using Apache.Ignite.Core.Impl.Binary;
     using System.Linq;
     using Apache.Ignite.Core.Client.Compute;
+    using Apache.Ignite.Core.Client.Services;
     using Apache.Ignite.Core.Impl.Client.Compute;
+    using Apache.Ignite.Core.Impl.Client.Services;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
@@ -74,7 +76,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="ignite">Ignite.</param>
         /// <param name="projection">Projection.</param>
         /// <param name="predicate">Predicate.</param>
-        private ClientClusterGroup(IgniteClient ignite, 
+        private ClientClusterGroup(IgniteClient ignite,
             ClientClusterGroupProjection projection, Func<IClientClusterNode, bool> predicate = null)
         {
             Debug.Assert(ignite != null);
@@ -140,6 +142,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         public IComputeClient GetCompute()
         {
             return new ComputeClient(_ignite, ComputeClientFlags.None, TimeSpan.Zero, this);
+        }
+
+        /** <inheritDoc /> */
+        public IServicesClient GetServices()
+        {
+            return new ServicesClient(_ignite, this);
         }
 
         /// <summary>
@@ -212,7 +220,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 
             var nodeIds = new Guid[nodesCount];
             var stream = ((BinaryReader) reader).Stream;
-            
+
             for (int i = 0; i < nodesCount; i++)
             {
                 nodeIds[i] = BinaryUtils.ReadGuid(stream);
@@ -257,7 +265,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                     unknownNodes.Add(nodeId);
                 }
             }
-            
+
             if (unknownNodes.Count > 0)
             {
                 RequestRemoteNodesDetails(unknownNodes);
@@ -278,7 +286,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                     BinaryUtils.WriteGuid(id, ctx.Stream);
                 }
             };
-            
+
             Func<ClientResponseContext, bool> readFunc = ctx =>
             {
                 var cnt = ctx.Stream.ReadInt();

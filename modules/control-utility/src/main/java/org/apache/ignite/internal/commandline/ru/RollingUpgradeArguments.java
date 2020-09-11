@@ -24,9 +24,6 @@ public class RollingUpgradeArguments {
     /** */
     private final RollingUpgradeSubCommands subcommand;
 
-    /** */
-    private final boolean forcedMode;
-
     /**
      * Creates a new instance of RollingUpgradeArguments.
      *
@@ -34,7 +31,6 @@ public class RollingUpgradeArguments {
      */
     public RollingUpgradeArguments(Builder builder) {
         subcommand = builder.cmd;
-        forcedMode = builder.forcedMode;
     }
 
     /**
@@ -42,13 +38,6 @@ public class RollingUpgradeArguments {
      */
     public RollingUpgradeSubCommands command() {
         return subcommand;
-    }
-
-    /**
-     * @return {@code true} if strict mode enabled.
-     */
-    public boolean isForcedMode() {
-        return RollingUpgradeSubCommands.ENABLE == subcommand && forcedMode;
     }
 
     /** {@inheritDoc} */
@@ -61,24 +50,11 @@ public class RollingUpgradeArguments {
         /** */
         private final RollingUpgradeSubCommands cmd;
 
-        /** */
-        private boolean forcedMode;
-
         /**
          * Creates a new instance of builder.
          */
         public Builder(RollingUpgradeSubCommands cmd) {
             this.cmd = cmd;
-        }
-
-        /**
-         * @param forcedMode {@code true} if forced mode should be enabled.
-         * @return This instance for chaining.
-         */
-        public Builder withForcedMode(boolean forcedMode) {
-            this.forcedMode = forcedMode;
-
-            return this;
         }
 
         /**
