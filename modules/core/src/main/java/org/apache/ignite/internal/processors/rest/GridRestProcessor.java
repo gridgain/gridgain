@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.authentication.AuthorizationContext
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskResultBean;
 import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.auth.AuthenticationCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.beforeStart.NodeStateBeforeStartCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridBaselineCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeClusterStateCommandHandler;
@@ -61,6 +62,7 @@ import org.apache.ignite.internal.processors.rest.handlers.user.UserActionComman
 import org.apache.ignite.internal.processors.rest.handlers.version.GridVersionCommandHandler;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestProtocol;
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
@@ -229,7 +231,11 @@ public class GridRestProcessor extends GridProcessorAdapter {
      * @return Future.
      */
     private IgniteInternalFuture<GridRestResponse> handleRequest(final GridRestRequest req) {
-        if (startLatch.getCount() > 0) {
+        if (req instanceof GridRestNodeStateBeforeStartRequest) {
+            if (startLatch.getCount() == 0)
+                return new GridFinishedFuture<>(new IgniteCheckedException("Node has already started."));
+        }
+        else if (startLatch.getCount() > 0) {
             try {
                 startLatch.await();
             }
@@ -556,6 +562,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             addHandler(new UserActionCommandHandler(ctx));
             addHandler(new GridBaselineCommandHandler(ctx));
             addHandler(new MemoryMetricsCommandHandler(ctx));
+            addHandler(new NodeStateBeforeStartCommandHandler(ctx));
 
             // Start protocols.
             startTcpProtocol();
@@ -578,6 +585,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
                         ctx.addNodeAttribute(key, p.getValue());
                     }
                 }
+
+                proto.onProcessorStart();
             }
         }
     }
