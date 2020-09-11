@@ -383,7 +383,7 @@ public class CycleDetectingLockFactory {
          * with an example stack trace. Locks are weakly keyed to allow proper garbage collection when
          * they are no longer referenced.
          */
-        final Map<LockGraphNode, ExampleStackTrace> allowedPriorLocks =
+        final Map<LockGraphNode, String> allowedPriorLocks =
             // originally here was new MapMaker().weakKeys().makeMap();
             new ConcurrentHashMap<>();
 
@@ -466,7 +466,7 @@ public class CycleDetectingLockFactory {
             // a path from the acquiredLock to this.
             Set<LockGraphNode> seen = Collections.newSetFromMap(new IdentityHashMap<>());
 
-            ExampleStackTrace path = acquiredLock.findPathTo(this, seen);
+            String path = acquiredLock.findPathTo(this, seen);
 
             if (path == null) {
                 // this can be safely acquired after the acquiredLock.
@@ -477,12 +477,12 @@ public class CycleDetectingLockFactory {
                 // condition efficiently without _introducing_ deadlock is probably
                 // tricky. For now, just accept the race condition---missing a warning
                 // now and then is still better than having no deadlock detection.
-                allowedPriorLocks.put(acquiredLock, new ExampleStackTrace(acquiredLock, this));
+                allowedPriorLocks.put(acquiredLock, new String(acquiredLock.lockName + "-> " + this.lockName));
             } else {
                 // Unsafe acquisition order detected. Create and cache a
                 // PotentialDeadlockException.
                 PotentialDeadlockException exception =
-                    new PotentialDeadlockException(acquiredLock, this, path);
+                    new PotentialDeadlockException(acquiredLock, this, null);
                 disallowedPriorLocks.put(acquiredLock, exception);
                 policy.handlePotentialDeadlock(exception);
             }
@@ -495,26 +495,26 @@ public class CycleDetectingLockFactory {
          * @return If a path was found, a chained {@link ExampleStackTrace} illustrating the path to the
          *     {@code lock}, or {@code null} if no path was found.
          */
-        private ExampleStackTrace findPathTo(LockGraphNode node, Set<LockGraphNode> seen) {
+        private String findPathTo(LockGraphNode node, Set<LockGraphNode> seen) {
             if (!seen.add(this))
                 return null; // Already traversed this node.
 
-            ExampleStackTrace found = allowedPriorLocks.get(node);
+            String found = allowedPriorLocks.get(node);
 
             if (found != null)
                 return found; // Found a path ending at the node!
 
             // Recurse the edges.
-            for (Entry<LockGraphNode, ExampleStackTrace> entry : allowedPriorLocks.entrySet()) {
+            for (Entry<LockGraphNode, String> entry : allowedPriorLocks.entrySet()) {
                 LockGraphNode preAcquiredLock = entry.getKey();
                 found = preAcquiredLock.findPathTo(node, seen);
                 if (found != null) {
                     // One of this node's allowedPriorLocks found a path. Prepend an
                     // ExampleStackTrace(preAcquiredLock, this) to the returned chain of
                     // ExampleStackTraces.
-                    ExampleStackTrace path = new ExampleStackTrace(preAcquiredLock, this);
-                    path.setStackTrace(entry.getValue().getStackTrace());
-                    path.initCause(found);
+                    String path = preAcquiredLock.lockName + "->" + this.lockName;
+                    //path.setStackTrace(entry.getValue().getStackTrace());
+                    //path.initCause(found);
                     return path;
                 }
             }
