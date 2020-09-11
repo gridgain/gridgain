@@ -465,7 +465,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                     ", topVer=" + affinityTopVer +
                     ", pendingTopVer=" + top.lastTopologyChangeVersion() +
                     ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
-                    ", owners=" + U.nodeIds(top.owners(part, affinityTopVer)) +
+                    ", owners=" + U.nodeIds(top.nodes(part, affinityTopVer)) +
                     ", locNodeId=" + cctx.localNodeId() +
                     ", entry=" + entry +
                     ", txTopVer=" + topologyVersion() +

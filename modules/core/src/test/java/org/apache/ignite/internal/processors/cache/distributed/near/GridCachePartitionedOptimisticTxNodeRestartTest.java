@@ -344,7 +344,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 //    }
 
     @Test
-    @Ignore
+    //@Ignore
     public void testZzz3() throws Exception {
         backups = 1;
         nodeCnt = 4;
@@ -372,8 +372,8 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         assert cand != -1;
 
-        try (Transaction tx = grid(crd.name()).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-            IgniteCache<Object, Object> nearCache = grid(crd.name()).cache(CACHE_NAME);
+        try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
 
             nearCache.put(cand, 0);
 
@@ -384,7 +384,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         IgniteEx owner = (IgniteEx) grid(nodes.iterator().next());
 
-        TestRecordingCommunicationSpi.spi(owner).blockMessages(GridDhtTxPrepareRequest.class, crd.name());
+        TestRecordingCommunicationSpi.spi(owner).blockMessages(GridDhtTxFinishRequest.class, crd.name());
 
         int finalCand = cand;
         IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
@@ -401,9 +401,48 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         TestRecordingCommunicationSpi.spi(owner).waitForBlocked();
 
-        TestRecordingCommunicationSpi.spi(owner).stopBlock();
+        Collection<IgniteInternalTx> txs = crd.context().cache().context().tm().activeTransactions();
+        GridNearTxRemote rmtTx = (GridNearTxRemote) txs.iterator().next();
 
-        fut.get();
+        IgniteInternalFuture fut2 = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+                    IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
+
+                    nearCache.put(finalCand, 0);
+
+                    TransactionProxyImpl p = (TransactionProxyImpl) tx;
+                    p.tx().prepare(true);
+                } catch (Throwable t) {
+                    fail(X.getFullStackTrace(t));
+                }
+            }
+        });
+
+        doSleep(1000);
+
+        List<ClusterNode> nodes0 = new ArrayList<>(crd.cluster().nodes());
+
+        nodes0.removeAll(nodes);
+        nodes0.remove(crd.localNode());
+
+        ClusterNode toStop = nodes0.get(0);
+
+        IgniteInternalFuture fut3 = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                grid(toStop).close();
+            }
+        });
+
+        doSleep(1000);
+
+        Collection<IgniteInternalTx> txs2 = crd.context().cache().context().tm().activeTransactions();
+
+        System.out.println();
+
+        //TestRecordingCommunicationSpi.spi(owner).stopBlock();
+
+        //fut.get();
 
 //        System.out.println();
 //
