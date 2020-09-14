@@ -20,14 +20,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.cache.event.CacheEntryEvent;
@@ -1296,7 +1289,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
      * @param part Partition.
      * @return Event buffer.
      */
-    private CacheContinuousQueryEventBuffer partitionBuffer(final GridCacheContext cctx, int part) {
+    CacheContinuousQueryEventBuffer partitionBuffer(final GridCacheContext cctx, int part) {
         CacheContinuousQueryEventBuffer buf = entryBufs.get(part);
 
         if (buf == null) {
@@ -1431,26 +1424,42 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
                         routineId,
                         t.get1());
 
+                    Set<UUID> sentToNodes = t.get2().size() > 1 ? new HashSet<>() : null;
+
+
                     for (AffinityTopologyVersion topVer : t.get2()) {
-                        for (ClusterNode node : ctx.discovery().cacheGroupAffinityNodes(cctx.groupId(), topVer)) {
-                            if (!node.isLocal() && cctx.discovery().alive(nodeId)) {
-                                try {
-                                    cctx.io().send(node, msg, GridIoPolicy.SYSTEM_POOL);
-                                }
-                                catch (ClusterTopologyCheckedException ignored) {
-                                    IgniteLogger log = ctx.log(CU.CONTINUOUS_QRY_LOG_CATEGORY);
+                        if (topVer == null)
+                            topVer = AffinityTopologyVersion.NONE;
 
-                                    if (log.isDebugEnabled())
-                                        log.debug("Failed to send acknowledge message, node left " +
-                                            "[msg=" + msg + ", node=" + node + ']');
-                                }
-                                catch (IgniteCheckedException e) {
-                                    IgniteLogger log = ctx.log(CU.CONTINUOUS_QRY_LOG_CATEGORY);
+                        try {
+                            for (ClusterNode node : ctx.discovery().cacheGroupAffinityNodes(cctx.groupId(), topVer)) {
+                                if (!node.isLocal() && cctx.discovery().alive(nodeId)) {
+                                    // Try to send the same message only once per node.
+                                    if (sentToNodes != null && !sentToNodes.add(nodeId))
+                                        continue;
 
-                                    U.error(log, "Failed to send acknowledge message " +
-                                        "[msg=" + msg + ", node=" + node + ']', e);
+                                    try {
+                                        cctx.io().send(node, msg, GridIoPolicy.SYSTEM_POOL);
+                                    } catch (ClusterTopologyCheckedException ignored) {
+                                        IgniteLogger log = ctx.log(CU.CONTINUOUS_QRY_LOG_CATEGORY);
+
+                                        if (log.isDebugEnabled())
+                                            log.debug("Failed to send acknowledge message, node left " +
+                                                    "[msg=" + msg + ", node=" + node + ']');
+                                    } catch (IgniteCheckedException e) {
+                                        IgniteLogger log = ctx.log(CU.CONTINUOUS_QRY_LOG_CATEGORY);
+
+                                        U.error(log, "Failed to send acknowledge message " +
+                                                "[msg=" + msg + ", node=" + node + ']', e);
+                                    }
                                 }
                             }
+                        }
+                        catch (Throwable t) {
+                            U.warn(log, "Failed to send acknowledge message [msg=" + msg +
+                                    ", topVer=" + topVer + ']', t);
+
+                            throw t;
                         }
                     }
                 }
