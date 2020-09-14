@@ -17,13 +17,13 @@
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
 import org.apache.ignite.internal.GridKernalContext;
-import org.h2.command.dml.AllColumnsForPlan;
-import org.h2.engine.Session;
-import org.h2.index.Index;
-import org.h2.index.IndexType;
-import org.h2.result.SortOrder;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableFilter;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableFilter;
 
 /**
  * H2 {@link Index} adapter for {@link UnsortedReducer}.

@@ -71,6 +71,40 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testChooseCorrectIndexByOrderByExpression() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL0 INT, VAL1 INT, VAL2 VARCHAR)");
+        sql("CREATE INDEX IDX_VAL0 ON TEST(VAL0)");
+        sql("CREATE INDEX IDX_VAL0_VAL1 ON TEST(VAL0, VAL1)");
+
+        String plan = null;
+        plan = (String)execute(new SqlFieldsQuery(
+            "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
+            "WHERE VAL0 = 0 " +
+            "ORDER BY VAL0, VAL1").setLocal(true)
+        ).getAll().get(0).get(0);
+
+        assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
+
+        plan = (String)execute(new SqlFieldsQuery(
+            "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
+            "WHERE VAL0 = 0 " +
+            "ORDER BY 1, 2").setLocal(true)
+        ).getAll().get(0).get(0);
+
+        assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
+
+        plan = (String)execute(new SqlFieldsQuery(
+            "EXPLAIN SELECT VAL0, VAL1, VAL2 FROM TEST " +
+                "WHERE VAL0 = 0 " +
+                "ORDER BY VAL0, VAL1")
+        ).getAll().get(0).get(0);
+
+        assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
@@ -78,5 +112,13 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
         return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setArgs(args), false);
+    }
+
+    /**
+     * @param qry Query.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
+        return grid(0).context().query().querySqlFields(qry, false);
     }
 }

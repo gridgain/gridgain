@@ -38,7 +38,7 @@ import org.junit.Test;
  */
 public abstract class CacheStoreSessionListenerAbstractSelfTest extends GridCommonAbstractTest implements Serializable {
     /** */
-    protected static final String URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    protected static final String URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** */
     protected static final AtomicInteger loadCacheCnt = new AtomicInteger();

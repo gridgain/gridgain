@@ -60,7 +60,7 @@ import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
  */
 public class CacheJdbcPojoWriteBehindStoreWithCoalescingTest extends GridCommonAbstractTest {
     /** */
-    private static final String DFLT_CONN_URL = "jdbc:h2:mem:TestDatabase;DB_CLOSE_DELAY=-1";
+    private static final String DFLT_CONN_URL = "jdbc:gg-h2:mem:TestDatabase;DB_CLOSE_DELAY=-1";
 
     /** */
     private boolean isHangOnWriteAll = false;
@@ -102,7 +102,7 @@ public class CacheJdbcPojoWriteBehindStoreWithCoalescingTest extends GridCommonA
     public TestJdbcPojoDataSourceFactory getDataSourceFactory() {
         TestJdbcPojoDataSourceFactory testJdbcPojoDataSourceFactory = new TestJdbcPojoDataSourceFactory();
 
-        testJdbcPojoDataSourceFactory.setURL("jdbc:h2:mem:TestDatabase;DB_CLOSE_DELAY=-1");
+        testJdbcPojoDataSourceFactory.setURL("jdbc:gg-h2:mem:TestDatabase;DB_CLOSE_DELAY=-1");
 
         testJdbcPojoDataSourceFactory.setUserName("sa");
 

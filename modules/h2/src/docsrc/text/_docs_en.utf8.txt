@@ -182,7 +182,7 @@ Updatable Views
  By default, views are not updatable. To make a view updatable, use an "instead of" trigger as follows: 
 
 @advanced_1061_p
- Update the base table(s) within the trigger as required. For details, see the sample application <code>org.h2.samples.UpdatableView</code>. 
+ Update the base table(s) within the trigger as required. For details, see the sample application <code>org.gridgain.internal.h2.samples.UpdatableView</code>.
 
 @advanced_1062_h2
 Transaction Isolation
@@ -209,7 +209,7 @@ Read Committed
  To enable, execute the SQL statement <code>SET LOCK_MODE 3</code>
 
 @advanced_1070_li
- or append <code>;LOCK_MODE=3</code> to the database URL: <code>jdbc:h2:~/test;LOCK_MODE=3</code> 
+ or append <code>;LOCK_MODE=3</code> to the database URL: <code>jdbc:gg-h2:~/test;LOCK_MODE=3</code>
 
 @advanced_1071_b
 Serializable
@@ -218,7 +218,7 @@ Serializable
  Both read locks and write locks are kept until the transaction commits. To enable, execute the SQL statement <code>SET LOCK_MODE 1</code>
 
 @advanced_1073_li
- or append <code>;LOCK_MODE=1</code> to the database URL: <code>jdbc:h2:~/test;LOCK_MODE=1</code> 
+ or append <code>;LOCK_MODE=1</code> to the database URL: <code>jdbc:gg-h2:~/test;LOCK_MODE=1</code>
 
 @advanced_1074_b
 Read Uncommitted
@@ -230,7 +230,7 @@ Read Uncommitted
  To enable, execute the SQL statement <code>SET LOCK_MODE 0</code>
 
 @advanced_1077_li
- or append <code>;LOCK_MODE=0</code> to the database URL: <code>jdbc:h2:~/test;LOCK_MODE=0</code> 
+ or append <code>;LOCK_MODE=0</code> to the database URL: <code>jdbc:gg-h2:~/test;LOCK_MODE=0</code>
 
 @advanced_1078_p
  When using the isolation level 'serializable', dirty reads, non-repeatable reads, and phantom reads are prohibited. 
@@ -332,7 +332,7 @@ Start a second TCP server pointing to the second directory. This will simulate a
 Use the <code>CreateCluster</code> tool to initialize clustering. This will automatically create a new, empty database if it does not exist. Run the tool on the command line: 
 
 @advanced_1111_li
-You can now connect to the databases using an application or the H2 Console using the JDBC URL <code>jdbc:h2:tcp://localhost:9101,localhost:9102/~/test</code> 
+You can now connect to the databases using an application or the H2 Console using the JDBC URL <code>jdbc:gg-h2:tcp://localhost:9101,localhost:9102/~/test</code>
 
 @advanced_1112_li
 If you stop a server (by killing the process), you will notice that the other machine continues to work, and therefore the database is still accessible. 
@@ -518,7 +518,7 @@ Starting the Server
  By default, only connections from localhost are allowed. To allow remote connections, use <code>-pgAllowOthers</code> when starting the server. 
 
 @advanced_1173_p
- To map an ODBC database name to a different JDBC database name, use the option <code>-key</code> when starting the server. Please note only one mapping is allowed. The following will map the ODBC database named <code>TEST</code> to the database URL <code>jdbc:h2:~/data/test;cipher=aes</code>: 
+ To map an ODBC database name to a different JDBC database name, use the option <code>-key</code> when starting the server. Please note only one mapping is allowed. The following will map the ODBC database named <code>TEST</code> to the database URL <code>jdbc:gg-h2:~/data/test;cipher=aes</code>:
 
 @advanced_1174_h3
 ODBC Configuration
@@ -713,7 +713,7 @@ Durability
 Durability Problems
 
 @advanced_1238_p
- Complete durability means all committed transaction survive a power failure. Some databases claim they can guarantee durability, but such claims are wrong. A durability test was run against H2, HSQLDB, PostgreSQL, and Derby. All of those databases sometimes lose committed transactions. The test is included in the H2 download, see <code>org.h2.test.poweroff.Test</code>. 
+ Complete durability means all committed transaction survive a power failure. Some databases claim they can guarantee durability, but such claims are wrong. A durability test was run against H2, HSQLDB, PostgreSQL, and Derby. All of those databases sometimes lose committed transactions. The test is included in the H2 download, see <code>org.gridgain.internal.h2.test.poweroff.Test</code>.
 
 @advanced_1239_h3
 Ways to (Not) Achieve Durability
@@ -734,7 +734,7 @@ rws
 : in addition to <code>rwd</code>, every update to the metadata is written synchronously.
 
 @advanced_1245_p
- A test (<code>org.h2.test.poweroff.TestWrite</code>) with one of those modes achieves around 50 thousand write operations per second. Even when the operating system write buffer is disabled, the write rate is around 50 thousand operations per second. This feature does not force changes to disk because it does not flush all buffers. The test updates the same byte in the file again and again. If the hard drive was able to write at this rate, then the disk would need to make at least 50 thousand revolutions per second, or 3 million RPM (revolutions per minute). There are no such hard drives. The hard drive used for the test is about 7200 RPM, or about 120 revolutions per second. There is an overhead, so the maximum write rate must be lower than that. 
+ A test (<code>org.gridgain.internal.h2.test.poweroff.TestWrite</code>) with one of those modes achieves around 50 thousand write operations per second. Even when the operating system write buffer is disabled, the write rate is around 50 thousand operations per second. This feature does not force changes to disk because it does not flush all buffers. The test updates the same byte in the file again and again. If the hard drive was able to write at this rate, then the disk would need to make at least 50 thousand revolutions per second, or 3 million RPM (revolutions per minute). There are no such hard drives. The hard drive used for the test is about 7200 RPM, or about 120 revolutions per second. There is an overhead, so the maximum write rate must be lower than that.
 
 @advanced_1246_p
  Calling <code>fsync</code> flushes the buffers. There are two ways to do that in Java: 
@@ -764,7 +764,7 @@ FileChannel.force()
 Running the Durability Test
 
 @advanced_1255_p
- To test the durability / non-durability of this and other databases, you can use the test application in the package <code>org.h2.test.poweroff</code>. Two computers with network connection are required to run this test. One computer just listens, while the test application is run (and power is cut) on the other computer. The computer with the listener application opens a TCP/IP port and listens for an incoming connection. The second computer first connects to the listener, and then created the databases and starts inserting records. The connection is set to 'autocommit', which means after each inserted record a commit is performed automatically. Afterwards, the test computer notifies the listener that this record was inserted successfully. The listener computer displays the last inserted record number every 10 seconds. Now, switch off the power manually, then restart the computer, and run the application again. You will find out that in most cases, none of the databases contains all the records that the listener computer knows about. For details, please consult the source code of the listener and test application. 
+ To test the durability / non-durability of this and other databases, you can use the test application in the package <code>org.gridgain.internal.h2.test.poweroff</code>. Two computers with network connection are required to run this test. One computer just listens, while the test application is run (and power is cut) on the other computer. The computer with the listener application opens a TCP/IP port and listens for an incoming connection. The second computer first connects to the listener, and then created the databases and starts inserting records. The connection is set to 'autocommit', which means after each inserted record a commit is performed automatically. Afterwards, the test computer notifies the listener that this record was inserted successfully. The listener computer displays the last inserted record number every 10 seconds. Now, switch off the power manually, then restart the computer, and run the application again. You will find out that in most cases, none of the databases contains all the records that the listener computer knows about. For details, please consult the source code of the listener and test application.
 
 @advanced_1256_h2
 Using the Recover Tool
@@ -875,7 +875,7 @@ Passwords: Using Char Arrays instead of Strings
 Passing the User Name and/or Password in the URL
 
 @advanced_1292_p
- Instead of passing the user name as a separate parameter as in <code> Connection conn = DriverManager. getConnection("jdbc:h2:~/test", "sa", "123"); </code> the user name (and/or password) can be supplied in the URL itself: <code> Connection conn = DriverManager. getConnection("jdbc:h2:~/test;USER=sa;PASSWORD=123"); </code> The settings in the URL override the settings passed as a separate parameter. 
+ Instead of passing the user name as a separate parameter as in <code> Connection conn = DriverManager. getConnection("jdbc:gg-h2:~/test", "sa", "123"); </code> the user name (and/or password) can be supplied in the URL itself: <code> Connection conn = DriverManager. getConnection("jdbc:gg-h2:~/test;USER=sa;PASSWORD=123"); </code> The settings in the URL override the settings passed as a separate parameter.
 
 @advanced_1293_h2
 Password Hash
@@ -1163,10 +1163,10 @@ nioMemLZF:
  stores compressed data outside of the VM's heap - useful for large memory DBs without incurring GC costs. Use "nioMemLZF:12:" to tweak the % of blocks that are stored uncompressed. If you size this to your working set correctly, compressed storage is roughly the same performance as uncompressed. The default value is 1%. 
 
 @advanced_1388_p
- As an example, to use the the <code>nio</code> file system, use the following database URL: <code>jdbc:h2:nio:~/test</code>. 
+ As an example, to use the the <code>nio</code> file system, use the following database URL: <code>jdbc:gg-h2:nio:~/test</code>.
 
 @advanced_1389_p
- To register a new file system, extend the classes <code>org.h2.store.fs.FilePath, FileBase</code>, and call the method <code>FilePath.register</code> before using it. 
+ To register a new file system, extend the classes <code>org.gridgain.internal.h2.store.fs.FilePath, FileBase</code>, and call the method <code>FilePath.register</code> before using it.
 
 @advanced_1390_p
  For input streams (but not for random access files), URLs may be used in addition to the registered file systems. Example: <code>jar:file:///c:/temp/example.zip!/org/example/nested.csv</code>. To read a stream from the classpath, use the prefix <code>classpath:</code>, as in <code>classpath:/org/h2/samples/newsfeed.sql</code>. 
@@ -1190,7 +1190,7 @@ Split File System
  (second block) 
 
 @advanced_1397_p
- More physical files (<code>*.2.part, *.3.part</code>) are automatically created / deleted if needed. The maximum physical file size of a block is 2^30 bytes, which is also called 1 GiB or 1 GB. However this can be changed if required, by specifying the block size in the file name. The file name format is: <code>split:&lt;x&gt;:&lt;fileName&gt;</code> where the file size per block is 2^x. For 1 MiB block sizes, use x = 20 (because 2^20 is 1 MiB). The following file name means the logical file is split into 1 MiB blocks: <code>split:20:test.h2.db</code>. An example database URL for this case is <code>jdbc:h2:split:20:~/test</code>. 
+ More physical files (<code>*.2.part, *.3.part</code>) are automatically created / deleted if needed. The maximum physical file size of a block is 2^30 bytes, which is also called 1 GiB or 1 GB. However this can be changed if required, by specifying the block size in the file name. The file name format is: <code>split:&lt;x&gt;:&lt;fileName&gt;</code> where the file size per block is 2^x. For 1 MiB block sizes, use x = 20 (because 2^20 is 1 MiB). The following file name means the logical file is split into 1 MiB blocks: <code>split:20:test.h2.db</code>. An example database URL for this case is <code>jdbc:gg-h2:split:20:~/test</code>.
 
 @advanced_1398_h2
 Database Upgrade
@@ -1217,16 +1217,16 @@ dbName.index.db
  by default. Also, the temporary script will be written to the database directory instead of a temporary directory. Both defaults can be customized via 
 
 @advanced_1406_code
-org.h2.upgrade.DbUpgrade.setDeleteOldDb(boolean)
+org.gridgain.internal.h2.upgrade.DbUpgrade.setDeleteOldDb(boolean)
 
 @advanced_1407_code
-org.h2.upgrade.DbUpgrade.setScriptInTmpDir(boolean)
+org.gridgain.internal.h2.upgrade.DbUpgrade.setScriptInTmpDir(boolean)
 
 @advanced_1408_p
  prior opening a database connection. 
 
 @advanced_1409_p
- Since version 1.2.140 it is possible to let the old h2 classes (v 1.2.128) connect to the database. The automatic upgrade .jar file must be present, and the URL must start with <code>jdbc:h2v1_1:</code> (the JDBC driver class is <code>org.h2.upgrade.v1_1.Driver</code>). If the database should automatically connect using the old version if a database with the old format exists (without upgrade), and use the new version otherwise, then append <code>;NO_UPGRADE=TRUE</code> to the database URL. Please note the old driver did not process the system property <code>"h2.baseDir"</code> correctly, so that using this setting is not supported when upgrading. 
+ Since version 1.2.140 it is possible to let the old h2 classes (v 1.2.128) connect to the database. The automatic upgrade .jar file must be present, and the URL must start with <code>jdbc:h2v1_1:</code> (the JDBC driver class is <code>org.gridgain.internal.h2.upgrade.v1_1.Driver</code>). If the database should automatically connect using the old version if a database with the old format exists (without upgrade), and use the new version otherwise, then append <code>;NO_UPGRADE=TRUE</code> to the database URL. Please note the old driver did not process the system property <code>"h2.baseDir"</code> correctly, so that using this setting is not supported when upgrading.
 
 @advanced_1410_h2
 Java Objects Serialization
@@ -1244,7 +1244,7 @@ Java Objects Serialization
  At system level set the system property <code>h2.javaObjectSerializer</code> with the Fully Qualified Name of the <code>JavaObjectSerializer</code> interface implementation. It will be used over the entire JVM session to (de)serialize java objects being stored in column of type OTHER. Example <code>h2.javaObjectSerializer=com.acme.SerializerClassName</code>. 
 
 @advanced_1415_li
- At database level execute the SQL statement <code>SET JAVA_OBJECT_SERIALIZER 'com.acme.SerializerClassName'</code> or append <code>;JAVA_OBJECT_SERIALIZER='com.acme.SerializerClassName'</code> to the database URL: <code>jdbc:h2:~/test;JAVA_OBJECT_SERIALIZER='com.acme.SerializerClassName'</code>. 
+ At database level execute the SQL statement <code>SET JAVA_OBJECT_SERIALIZER 'com.acme.SerializerClassName'</code> or append <code>;JAVA_OBJECT_SERIALIZER='com.acme.SerializerClassName'</code> to the database URL: <code>jdbc:gg-h2:~/test;JAVA_OBJECT_SERIALIZER='com.acme.SerializerClassName'</code>.
 
 @advanced_1416_p
  Please note that this SQL statement can only be executed before any tables are defined. 
@@ -1289,7 +1289,7 @@ Limits and Limitations
 Database file size limit: 4 TB (using the default page size of 2 KB) or higher (when using a larger page size). This limit is including CLOB and BLOB data. 
 
 @advanced_1430_li
-The maximum file size for FAT or FAT32 file systems is 4 GB. That means when using FAT or FAT32, the limit is 4 GB for the data. This is the limitation of the file system. The database does provide a workaround for this problem, it is to use the file name prefix <code>split:</code>. In that case files are split into files of 1 GB by default. An example database URL is: <code>jdbc:h2:split:~/test</code>. 
+The maximum file size for FAT or FAT32 file systems is 4 GB. That means when using FAT or FAT32, the limit is 4 GB for the data. This is the limitation of the file system. The database does provide a workaround for this problem, it is to use the file name prefix <code>split:</code>. In that case files are split into files of 1 GB by default. An example database URL is: <code>jdbc:gg-h2:split:~/test</code>.
 
 @advanced_1431_li
 The maximum number of rows per table is 2^64. 
@@ -1460,7 +1460,7 @@ Filesystem abstraction.
 JDBC Driver
 
 @architecture_1024_p
- The JDBC driver implementation lives in <code>org.h2.jdbc, org.h2.jdbcx</code> 
+ The JDBC driver implementation lives in <code>org.gridgain.internal.h2.jdbc, org.gridgain.internal.h2.jdbcx</code>
 
 @architecture_1025_h2
 Connection/session management
@@ -1475,25 +1475,25 @@ Package
 Description
 
 @architecture_1029_td
-org.h2.engine.Database
+org.gridgain.internal.h2.engine.Database
 
 @architecture_1030_td
 the root/global class
 
 @architecture_1031_td
-org.h2.engine.SessionInterface
+org.gridgain.internal.h2.engine.SessionInterface
 
 @architecture_1032_td
 abstracts over the differences between embedded and remote sessions
 
 @architecture_1033_td
-org.h2.engine.Session
+org.gridgain.internal.h2.engine.Session
 
 @architecture_1034_td
 local/embedded session
 
 @architecture_1035_td
-org.h2.engine.SessionRemote
+org.gridgain.internal.h2.engine.SessionRemote
 
 @architecture_1036_td
 remote session
@@ -1502,7 +1502,7 @@ remote session
 Parser
 
 @architecture_1038_p
- The parser lives in <code>org.h2.command.Parser</code>. It uses a straightforward recursive-descent design. 
+ The parser lives in <code>org.gridgain.internal.h2.command.Parser</code>. It uses a straightforward recursive-descent design.
 
 @architecture_1039_p
  See Wikipedia <a href="http://en.wikipedia.org/wiki/Recursive_descent_parser">Recursive-descent parser</a> page. 
@@ -1520,13 +1520,13 @@ Package
 Description
 
 @architecture_1044_td
-org.h2.command.ddl
+org.gridgain.internal.h2.command.ddl
 
 @architecture_1045_td
 Commands that modify schema data structures
 
 @architecture_1046_td
-org.h2.command.dml
+org.gridgain.internal.h2.command.dml
 
 @architecture_1047_td
 Commands that modify data
@@ -1547,13 +1547,13 @@ Package
 Description
 
 @architecture_1053_td
-org.h2.table
+org.gridgain.internal.h2.table
 
 @architecture_1054_td
 Implementations of different kinds of tables
 
 @architecture_1055_td
-org.h2.index
+org.gridgain.internal.h2.index
 
 @architecture_1056_td
 Implementations of different kinds of indices
@@ -1574,7 +1574,7 @@ Undo log, redo log, and transactions layer
 B-tree engine and page-based storage allocation.
 
 @architecture_1062_p
- The primary package of interest is <code>org.h2.store</code>. 
+ The primary package of interest is <code>org.gridgain.internal.h2.store</code>.
 
 @architecture_1063_p
  This implements a storage mechanism which allocates pages of storage (typically 2k in size) and also implements a b-tree over those pages to allow fast retrieval and update. 
@@ -1583,7 +1583,7 @@ B-tree engine and page-based storage allocation.
 Filesystem abstraction.
 
 @architecture_1065_p
- The primary class of interest is <code>org.h2.store.FileStore</code>. 
+ The primary class of interest is <code>org.gridgain.internal.h2.store.FileStore</code>.
 
 @architecture_1066_p
  This implements an abstraction of a random-access file. This allows the higher layers to treat in-memory vs. on-disk vs. zip-file databases the same. 
@@ -1922,16 +1922,16 @@ Generating Railroad Diagrams
  The railroad diagrams of the <a href="grammar.html">SQL grammar</a> are HTML, formatted as nested tables. The diagrams are generated as follows: 
 
 @build_1111_li
-The BNF parser (<code>org.h2.bnf.Bnf</code>) reads and parses the BNF from the file <code>help.csv</code>. 
+The BNF parser (<code>org.gridgain.internal.h2.bnf.Bnf</code>) reads and parses the BNF from the file <code>help.csv</code>.
 
 @build_1112_li
-The page parser (<code>org.h2.server.web.PageParser</code>) reads the template HTML file and fills in the diagrams. 
+The page parser (<code>org.gridgain.internal.h2.server.web.PageParser</code>) reads the template HTML file and fills in the diagrams.
 
 @build_1113_li
 The rail images (one straight, four junctions, two turns) are generated using a simple Java application. 
 
 @build_1114_p
- To generate railroad diagrams for other grammars, see the package <code>org.h2.jcr</code>. This package is used to generate the SQL-2 railroad diagrams for the JCR 2.0 specification. 
+ To generate railroad diagrams for other grammars, see the package <code>org.gridgain.internal.h2.jcr</code>. This package is used to generate the SQL-2 railroad diagrams for the JCR 2.0 specification.
 
 @changelog_1000_h1
 Change Log
@@ -2003,7 +2003,7 @@ PR #586: remove extra tx preparation
 PR #568: Implement MetaData.getColumns() for synonyms. 
 
 @changelog_1023_li
-Issue #581: org.h2.tools.RunScript assumes -script parameter is part of protocol 
+Issue #581: org.gridgain.internal.h2.tools.RunScript assumes -script parameter is part of protocol
 
 @changelog_1024_li
 Fix a deadlock in the TransactionStore 
@@ -2096,7 +2096,7 @@ Version 1.4.195 (2017-04-23)
 Lazy query execution support. 
 
 @changelog_1054_li
-Added API for handling custom data types (System property "h2.customDataTypesHandler", API org.h2.api.CustomDataTypesHandler). 
+Added API for handling custom data types (System property "h2.customDataTypesHandler", API org.gridgain.internal.h2.api.CustomDataTypesHandler).
 
 @changelog_1055_li
 Added support for invisible columns. 
@@ -2645,7 +2645,7 @@ MVStore: updates that affected many rows were were slow in some cases if there w
 Using "runscript" with autocommit disabled could result in a lock timeout on the internal table "SYS". 
 
 @changelog_1237_li
-Issue 603: there was a memory leak when using H2 in a web application. Apache Tomcat logged an error message: "The web application ... created a ThreadLocal with key of type [org.h2.util.DateTimeUtils$1]". 
+Issue 603: there was a memory leak when using H2 in a web application. Apache Tomcat logged an error message: "The web application ... created a ThreadLocal with key of type [org.gridgain.internal.h2.util.DateTimeUtils$1]".
 
 @changelog_1238_li
 When using the MVStore, running a SQL script generate by the Recover tool from a PageStore file failed with a strange error message (NullPointerException), now a clear error message is shown. 
@@ -2687,7 +2687,7 @@ Fix bug in MVStore when creating lots of temporary tables, where we could run ou
 Add support for PostgreSQL STRING_AGG function. Patch by Fred Aquiles. 
 
 @changelog_1251_li
-Fix bug in "jdbc:h2:nioMemFS" isRoot() function. Also, the page size was increased to 64 KB. 
+Fix bug in "jdbc:gg-h2:nioMemFS" isRoot() function. Also, the page size was increased to 64 KB.
 
 @changelog_1252_h2
 Version 1.4.186 Beta (2015-03-02)
@@ -3053,19 +3053,19 @@ Database URLs
 Embedded
 
 @cheatSheet_1018_code
-jdbc:h2:~/test
+jdbc:gg-h2:~/test
 
 @cheatSheet_1019_p
  'test' in the user home directory
 
 @cheatSheet_1020_code
-jdbc:h2:/data/test
+jdbc:gg-h2:/data/test
 
 @cheatSheet_1021_p
  'test' in the directory /data
 
 @cheatSheet_1022_code
-jdbc:h2:test
+jdbc:gg-h2:test
 
 @cheatSheet_1023_p
  in the current(!) working directory
@@ -3074,13 +3074,13 @@ jdbc:h2:test
 In-Memory
 
 @cheatSheet_1025_code
-jdbc:h2:mem:test
+jdbc:gg-h2:mem:test
 
 @cheatSheet_1026_p
  multiple connections in one process
 
 @cheatSheet_1027_code
-jdbc:h2:mem:
+jdbc:gg-h2:mem:
 
 @cheatSheet_1028_p
  unnamed private; one connection
@@ -3089,13 +3089,13 @@ jdbc:h2:mem:
 Server Mode
 
 @cheatSheet_1030_code
-jdbc:h2:tcp://localhost/~/test
+jdbc:gg-h2:tcp://localhost/~/test
 
 @cheatSheet_1031_p
  user home dir
 
 @cheatSheet_1032_code
-jdbc:h2:tcp://localhost//data/test
+jdbc:gg-h2:tcp://localhost//data/test
 
 @cheatSheet_1033_p
  absolute dir
@@ -3104,19 +3104,19 @@ jdbc:h2:tcp://localhost//data/test
 Server start
 
 @cheatSheet_1035_p
-:<code>java -cp *.jar org.h2.tools.Server</code> 
+:<code>java -cp *.jar org.gridgain.internal.h2.tools.Server</code>
 
 @cheatSheet_1036_a
 Settings
 
 @cheatSheet_1037_code
-jdbc:h2:..;MODE=MySQL
+jdbc:gg-h2:..;MODE=MySQL
 
 @cheatSheet_1038_a
 compatibility (or HSQLDB,...)
 
 @cheatSheet_1039_code
-jdbc:h2:..;TRACE_LEVEL_FILE=3
+jdbc:gg-h2:..;TRACE_LEVEL_FILE=3
 
 @cheatSheet_1040_a
 log to *.trace.db
@@ -3140,7 +3140,7 @@ Hibernate
 TopLink and Glassfish
 
 @cheatSheet_1047_p
- Datasource class: <code>org.h2.jdbcx.JdbcDataSource</code>
+ Datasource class: <code>org.gridgain.internal.h2.jdbcx.JdbcDataSource</code>
 
 @cheatSheet_1048_code
 oracle.toplink.essentials.platform.
@@ -3332,13 +3332,13 @@ How to Create a New Database?
 How to Connect to a Database?
 
 @faq_1035_p
- The database driver is <code>org.h2.Driver</code>, and the database URL starts with <code>jdbc:h2:</code>. To connect to a database using JDBC, use the following code: 
+ The database driver is <code>org.gridgain.internal.h2.Driver</code>, and the database URL starts with <code>jdbc:gg-h2:</code>. To connect to a database using JDBC, use the following code:
 
 @faq_1036_h3
 Where are the Database Files Stored?
 
 @faq_1037_p
- When using database URLs like <code>jdbc:h2:~/test</code>, the database is stored in the user directory. For Windows, this is usually <code>C:\Documents and Settings\&lt;userName&gt;</code> or <code>C:\Users\&lt;userName&gt;</code>. If the base directory is not set (as in <code>jdbc:h2:./test</code>), the database files are stored in the directory where the application is started (the current working directory). When using the H2 Console application from the start menu, this is <code>&lt;Installation Directory&gt;/bin</code>. The base directory can be set in the database URL. A fixed or relative path can be used. When using the URL <code>jdbc:h2:file:./data/sample</code>, the database is stored in the directory <code>data</code> (relative to the current working directory). The directory is created automatically if it does not yet exist. It is also possible to use the fully qualified directory name (and for Windows, drive name). Example: <code>jdbc:h2:file:C:/data/test</code> 
+ When using database URLs like <code>jdbc:gg-h2:~/test</code>, the database is stored in the user directory. For Windows, this is usually <code>C:\Documents and Settings\&lt;userName&gt;</code> or <code>C:\Users\&lt;userName&gt;</code>. If the base directory is not set (as in <code>jdbc:gg-h2:./test</code>), the database files are stored in the directory where the application is started (the current working directory). When using the H2 Console application from the start menu, this is <code>&lt;Installation Directory&gt;/bin</code>. The base directory can be set in the database URL. A fixed or relative path can be used. When using the URL <code>jdbc:gg-h2:file:./data/sample</code>, the database is stored in the directory <code>data</code> (relative to the current working directory). The directory is created automatically if it does not yet exist. It is also possible to use the fully qualified directory name (and for Windows, drive name). Example: <code>jdbc:gg-h2:file:C:/data/test</code>
 
 @faq_1038_h3
 What is the Size Limit (Maximum Size) of a Database?
@@ -4349,31 +4349,31 @@ URL Format and Examples
 Embedded (local) connection
 
 @features_1288_td
- jdbc:h2:[file:][&lt;path&gt;]&lt;databaseName&gt;
+ jdbc:gg-h2:[file:][&lt;path&gt;]&lt;databaseName&gt;
 
 @features_1289_td
- jdbc:h2:~/test
+ jdbc:gg-h2:~/test
 
 @features_1290_td
- jdbc:h2:file:/data/sample
+ jdbc:gg-h2:file:/data/sample
 
 @features_1291_td
- jdbc:h2:file:C:/data/sample (Windows only)
+ jdbc:gg-h2:file:C:/data/sample (Windows only)
 
 @features_1292_a
 In-memory (private)
 
 @features_1293_td
-jdbc:h2:mem:
+jdbc:gg-h2:mem:
 
 @features_1294_a
 In-memory (named)
 
 @features_1295_td
- jdbc:h2:mem:&lt;databaseName&gt;
+ jdbc:gg-h2:mem:&lt;databaseName&gt;
 
 @features_1296_td
- jdbc:h2:mem:test_mem 
+ jdbc:gg-h2:mem:test_mem
 
 @features_1297_a
 Server mode (remote connections)
@@ -4382,16 +4382,16 @@ Server mode (remote connections)
  using TCP/IP
 
 @features_1299_td
- jdbc:h2:tcp://&lt;server&gt;[:&lt;port&gt;]/[&lt;path&gt;]&lt;databaseName&gt;
+ jdbc:gg-h2:tcp://&lt;server&gt;[:&lt;port&gt;]/[&lt;path&gt;]&lt;databaseName&gt;
 
 @features_1300_td
- jdbc:h2:tcp://localhost/~/test
+ jdbc:gg-h2:tcp://localhost/~/test
 
 @features_1301_td
- jdbc:h2:tcp://dbserv:8084/~/sample
+ jdbc:gg-h2:tcp://dbserv:8084/~/sample
 
 @features_1302_td
- jdbc:h2:tcp://localhost/mem:test
+ jdbc:gg-h2:tcp://localhost/mem:test
 
 @features_1303_a
 Server mode (remote connections)
@@ -4400,142 +4400,142 @@ Server mode (remote connections)
  using TLS
 
 @features_1305_td
- jdbc:h2:ssl://&lt;server&gt;[:&lt;port&gt;]/&lt;databaseName&gt;
+ jdbc:gg-h2:ssl://&lt;server&gt;[:&lt;port&gt;]/&lt;databaseName&gt;
 
 @features_1306_td
- jdbc:h2:ssl://localhost:8085/~/sample; 
+ jdbc:gg-h2:ssl://localhost:8085/~/sample;
 
 @features_1307_a
 Using encrypted files
 
 @features_1308_td
- jdbc:h2:&lt;url&gt;;CIPHER=AES
+ jdbc:gg-h2:&lt;url&gt;;CIPHER=AES
 
 @features_1309_td
- jdbc:h2:ssl://localhost/~/test;CIPHER=AES
+ jdbc:gg-h2:ssl://localhost/~/test;CIPHER=AES
 
 @features_1310_td
- jdbc:h2:file:~/secure;CIPHER=AES
+ jdbc:gg-h2:file:~/secure;CIPHER=AES
 
 @features_1311_a
 File locking methods
 
 @features_1312_td
- jdbc:h2:&lt;url&gt;;FILE_LOCK={FILE|SOCKET|NO}
+ jdbc:gg-h2:&lt;url&gt;;FILE_LOCK={FILE|SOCKET|NO}
 
 @features_1313_td
- jdbc:h2:file:~/private;CIPHER=AES;FILE_LOCK=SOCKET
+ jdbc:gg-h2:file:~/private;CIPHER=AES;FILE_LOCK=SOCKET
 
 @features_1314_a
 Only open if it already exists
 
 @features_1315_td
- jdbc:h2:&lt;url&gt;;IFEXISTS=TRUE
+ jdbc:gg-h2:&lt;url&gt;;IFEXISTS=TRUE
 
 @features_1316_td
- jdbc:h2:file:~/sample;IFEXISTS=TRUE
+ jdbc:gg-h2:file:~/sample;IFEXISTS=TRUE
 
 @features_1317_a
 Don't close the database when the VM exits
 
 @features_1318_td
- jdbc:h2:&lt;url&gt;;DB_CLOSE_ON_EXIT=FALSE 
+ jdbc:gg-h2:&lt;url&gt;;DB_CLOSE_ON_EXIT=FALSE
 
 @features_1319_a
 Execute SQL on connection
 
 @features_1320_td
- jdbc:h2:&lt;url&gt;;INIT=RUNSCRIPT FROM '~/create.sql'
+ jdbc:gg-h2:&lt;url&gt;;INIT=RUNSCRIPT FROM '~/create.sql'
 
 @features_1321_td
- jdbc:h2:file:~/sample;INIT=RUNSCRIPT FROM '~/create.sql'\;RUNSCRIPT FROM '~/populate.sql'
+ jdbc:gg-h2:file:~/sample;INIT=RUNSCRIPT FROM '~/create.sql'\;RUNSCRIPT FROM '~/populate.sql'
 
 @features_1322_a
 User name and/or password
 
 @features_1323_td
- jdbc:h2:&lt;url&gt;[;USER=&lt;username&gt;][;PASSWORD=&lt;value&gt;]
+ jdbc:gg-h2:&lt;url&gt;[;USER=&lt;username&gt;][;PASSWORD=&lt;value&gt;]
 
 @features_1324_td
- jdbc:h2:file:~/sample;USER=sa;PASSWORD=123
+ jdbc:gg-h2:file:~/sample;USER=sa;PASSWORD=123
 
 @features_1325_a
 Debug trace settings
 
 @features_1326_td
- jdbc:h2:&lt;url&gt;;TRACE_LEVEL_FILE=&lt;level 0..3&gt;
+ jdbc:gg-h2:&lt;url&gt;;TRACE_LEVEL_FILE=&lt;level 0..3&gt;
 
 @features_1327_td
- jdbc:h2:file:~/sample;TRACE_LEVEL_FILE=3
+ jdbc:gg-h2:file:~/sample;TRACE_LEVEL_FILE=3
 
 @features_1328_a
 Ignore unknown settings
 
 @features_1329_td
- jdbc:h2:&lt;url&gt;;IGNORE_UNKNOWN_SETTINGS=TRUE
+ jdbc:gg-h2:&lt;url&gt;;IGNORE_UNKNOWN_SETTINGS=TRUE
 
 @features_1330_a
 Custom file access mode
 
 @features_1331_td
- jdbc:h2:&lt;url&gt;;ACCESS_MODE_DATA=rws
+ jdbc:gg-h2:&lt;url&gt;;ACCESS_MODE_DATA=rws
 
 @features_1332_a
 Database in a zip file
 
 @features_1333_td
- jdbc:h2:zip:&lt;zipFileName&gt;!/&lt;databaseName&gt;
+ jdbc:gg-h2:zip:&lt;zipFileName&gt;!/&lt;databaseName&gt;
 
 @features_1334_td
- jdbc:h2:zip:~/db.zip!/test 
+ jdbc:gg-h2:zip:~/db.zip!/test
 
 @features_1335_a
 Compatibility mode
 
 @features_1336_td
- jdbc:h2:&lt;url&gt;;MODE=&lt;databaseType&gt;
+ jdbc:gg-h2:&lt;url&gt;;MODE=&lt;databaseType&gt;
 
 @features_1337_td
- jdbc:h2:~/test;MODE=MYSQL 
+ jdbc:gg-h2:~/test;MODE=MYSQL
 
 @features_1338_a
 Auto-reconnect
 
 @features_1339_td
- jdbc:h2:&lt;url&gt;;AUTO_RECONNECT=TRUE
+ jdbc:gg-h2:&lt;url&gt;;AUTO_RECONNECT=TRUE
 
 @features_1340_td
- jdbc:h2:tcp://localhost/~/test;AUTO_RECONNECT=TRUE 
+ jdbc:gg-h2:tcp://localhost/~/test;AUTO_RECONNECT=TRUE
 
 @features_1341_a
 Automatic mixed mode
 
 @features_1342_td
- jdbc:h2:&lt;url&gt;;AUTO_SERVER=TRUE
+ jdbc:gg-h2:&lt;url&gt;;AUTO_SERVER=TRUE
 
 @features_1343_td
- jdbc:h2:~/test;AUTO_SERVER=TRUE 
+ jdbc:gg-h2:~/test;AUTO_SERVER=TRUE
 
 @features_1344_a
 Page size
 
 @features_1345_td
- jdbc:h2:&lt;url&gt;;PAGE_SIZE=512
+ jdbc:gg-h2:&lt;url&gt;;PAGE_SIZE=512
 
 @features_1346_a
 Changing other settings
 
 @features_1347_td
- jdbc:h2:&lt;url&gt;;&lt;setting&gt;=&lt;value&gt;[;&lt;setting&gt;=&lt;value&gt;...]
+ jdbc:gg-h2:&lt;url&gt;;&lt;setting&gt;=&lt;value&gt;[;&lt;setting&gt;=&lt;value&gt;...]
 
 @features_1348_td
- jdbc:h2:file:~/sample;TRACE_LEVEL_SYSTEM_OUT=3
+ jdbc:gg-h2:file:~/sample;TRACE_LEVEL_SYSTEM_OUT=3
 
 @features_1349_h2
 Connecting to an Embedded (Local) Database
 
 @features_1350_p
- The database URL for connecting to a local database is <code>jdbc:h2:[file:][&lt;path&gt;]&lt;databaseName&gt;</code>. The prefix <code>file:</code> is optional. If no or only a relative path is used, then the current working directory is used as a starting point. The case sensitivity of the path and database name depend on the operating system, however it is recommended to use lowercase letters only. The database name must be at least three characters long (a limitation of <code>File.createTempFile</code>). The database name must not contain a semicolon. To point to the user home directory, use <code>~/</code>, as in: <code>jdbc:h2:~/test</code>. 
+ The database URL for connecting to a local database is <code>jdbc:gg-h2:[file:][&lt;path&gt;]&lt;databaseName&gt;</code>. The prefix <code>file:</code> is optional. If no or only a relative path is used, then the current working directory is used as a starting point. The case sensitivity of the path and database name depend on the operating system, however it is recommended to use lowercase letters only. The database name must be at least three characters long (a limitation of <code>File.createTempFile</code>). The database name must not contain a semicolon. To point to the user home directory, use <code>~/</code>, as in: <code>jdbc:gg-h2:~/test</code>.
 
 @features_1351_h2
 In-Memory Databases
@@ -4544,16 +4544,16 @@ In-Memory Databases
  For certain use cases (for example: rapid prototyping, testing, high performance operations, read-only databases), it may not be required to persist data, or persist changes to the data. This database supports the in-memory mode, where the data is not persisted. 
 
 @features_1353_p
- In some cases, only one connection to a in-memory database is required. This means the database to be opened is private. In this case, the database URL is <code>jdbc:h2:mem:</code> Opening two connections within the same virtual machine means opening two different (private) databases. 
+ In some cases, only one connection to a in-memory database is required. This means the database to be opened is private. In this case, the database URL is <code>jdbc:gg-h2:mem:</code> Opening two connections within the same virtual machine means opening two different (private) databases.
 
 @features_1354_p
- Sometimes multiple connections to the same in-memory database are required. In this case, the database URL must include a name. Example: <code>jdbc:h2:mem:db1</code>. Accessing the same database using this URL only works within the same virtual machine and class loader environment. 
+ Sometimes multiple connections to the same in-memory database are required. In this case, the database URL must include a name. Example: <code>jdbc:gg-h2:mem:db1</code>. Accessing the same database using this URL only works within the same virtual machine and class loader environment.
 
 @features_1355_p
- To access an in-memory database from another process or from another computer, you need to start a TCP server in the same process as the in-memory database was created. The other processes then need to access the database over TCP/IP or TLS, using a database URL such as: <code>jdbc:h2:tcp://localhost/mem:db1</code>. 
+ To access an in-memory database from another process or from another computer, you need to start a TCP server in the same process as the in-memory database was created. The other processes then need to access the database over TCP/IP or TLS, using a database URL such as: <code>jdbc:gg-h2:tcp://localhost/mem:db1</code>.
 
 @features_1356_p
- By default, closing the last connection to a database closes the database. For an in-memory database, this means the content is lost. To keep the database open, add <code>;DB_CLOSE_DELAY=-1</code> to the database URL. To keep the content of an in-memory database as long as the virtual machine is alive, use <code>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1</code>. 
+ By default, closing the last connection to a database closes the database. For an in-memory database, this means the content is lost. To keep the database open, add <code>;DB_CLOSE_DELAY=-1</code> to the database URL. To keep the content of an in-memory database as long as the virtual machine is alive, use <code>jdbc:gg-h2:mem:test;DB_CLOSE_DELAY=-1</code>.
 
 @features_1357_h2
 Database Files Encryption
@@ -4634,7 +4634,7 @@ Delayed Database Closing
  Usually, a database is closed when the last connection to it is closed. In some situations this slows down the application, for example when it is not possible to keep at least one connection open. The automatic closing of a database can be delayed or disabled with the SQL statement <code>SET DB_CLOSE_DELAY &lt;seconds&gt;</code>. The parameter &lt;seconds&gt; specifies the number of seconds to keep a database open after the last connection to it was closed. The following statement will keep a database open for 10 seconds after the last connection was closed: 
 
 @features_1383_p
- The value -1 means the database is not closed automatically. The value 0 is the default and means the database is closed when the last connection is closed. This setting is persistent and can be set by an administrator only. It is possible to set the value in the database URL: <code>jdbc:h2:~/test;DB_CLOSE_DELAY=10</code>. 
+ The value -1 means the database is not closed automatically. The value 0 is the default and means the database is closed when the last connection is closed. This setting is persistent and can be set by an administrator only. It is possible to set the value in the database URL: <code>jdbc:gg-h2:~/test;DB_CLOSE_DELAY=10</code>.
 
 @features_1384_h3
 Don't Close a Database when the VM Exits
@@ -4898,7 +4898,7 @@ Compatibility
  All database engines behave a little bit different. Where possible, H2 supports the ANSI SQL standard, and tries to be compatible to other databases. There are still a few differences however: 
 
 @features_1471_p
- In MySQL text columns are case insensitive by default, while in H2 they are case sensitive. However H2 supports case insensitive columns as well. To create the tables with case insensitive texts, append <code>IGNORECASE=TRUE</code> to the database URL (example: <code>jdbc:h2:~/test;IGNORECASE=TRUE</code>). 
+ In MySQL text columns are case insensitive by default, while in H2 they are case sensitive. However H2 supports case insensitive columns as well. To create the tables with case insensitive texts, append <code>IGNORECASE=TRUE</code> to the database URL (example: <code>jdbc:gg-h2:~/test;IGNORECASE=TRUE</code>).
 
 @features_1472_h3
 Compatibility Modes
@@ -4910,7 +4910,7 @@ Compatibility Modes
 DB2 Compatibility Mode
 
 @features_1475_p
- To use the IBM DB2 mode, use the database URL <code>jdbc:h2:~/test;MODE=DB2</code> or the SQL statement <code>SET MODE DB2</code>. 
+ To use the IBM DB2 mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=DB2</code> or the SQL statement <code>SET MODE DB2</code>.
 
 @features_1476_li
 For aliased columns, <code>ResultSetMetaData.getColumnName()</code> returns the alias name and <code>getTableName()</code> returns <code>null</code>. 
@@ -4928,7 +4928,7 @@ Support the pseudo-table SYSIBM.SYSDUMMY1.
 Derby Compatibility Mode
 
 @features_1481_p
- To use the Apache Derby mode, use the database URL <code>jdbc:h2:~/test;MODE=Derby</code> or the SQL statement <code>SET MODE Derby</code>. 
+ To use the Apache Derby mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=Derby</code> or the SQL statement <code>SET MODE Derby</code>.
 
 @features_1482_li
 For aliased columns, <code>ResultSetMetaData.getColumnName()</code> returns the alias name and <code>getTableName()</code> returns <code>null</code>. 
@@ -4946,7 +4946,7 @@ Support the pseudo-table SYSIBM.SYSDUMMY1.
 HSQLDB Compatibility Mode
 
 @features_1487_p
- To use the HSQLDB mode, use the database URL <code>jdbc:h2:~/test;MODE=HSQLDB</code> or the SQL statement <code>SET MODE HSQLDB</code>. 
+ To use the HSQLDB mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=HSQLDB</code> or the SQL statement <code>SET MODE HSQLDB</code>.
 
 @features_1488_li
 For aliased columns, <code>ResultSetMetaData.getColumnName()</code> returns the alias name and <code>getTableName()</code> returns <code>null</code>. 
@@ -4964,7 +4964,7 @@ Text can be concatenated using '+'.
 MS SQL Server Compatibility Mode
 
 @features_1493_p
- To use the MS SQL Server mode, use the database URL <code>jdbc:h2:~/test;MODE=MSSQLServer</code> or the SQL statement <code>SET MODE MSSQLServer</code>. 
+ To use the MS SQL Server mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=MSSQLServer</code> or the SQL statement <code>SET MODE MSSQLServer</code>.
 
 @features_1494_li
 For aliased columns, <code>ResultSetMetaData.getColumnName()</code> returns the alias name and <code>getTableName()</code> returns <code>null</code>. 
@@ -4985,7 +4985,7 @@ Text can be concatenated using '+'.
 MySQL Compatibility Mode
 
 @features_1500_p
- To use the MySQL mode, use the database URL <code>jdbc:h2:~/test;MODE=MySQL</code> or the SQL statement <code>SET MODE MySQL</code>. 
+ To use the MySQL mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=MySQL</code> or the SQL statement <code>SET MODE MySQL</code>.
 
 @features_1501_li
 When inserting data, if a column is defined to be <code>NOT NULL</code> and <code>NULL</code> is inserted, then a 0 (or empty string, or the current timestamp for timestamp columns) value is used. Usually, this operation is not allowed and an exception is thrown. 
@@ -5009,7 +5009,7 @@ Concatenating <code>NULL</code> with another value results in the other value.
 Oracle Compatibility Mode
 
 @features_1508_p
- To use the Oracle mode, use the database URL <code>jdbc:h2:~/test;MODE=Oracle</code> or the SQL statement <code>SET MODE Oracle</code>. 
+ To use the Oracle mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=Oracle</code> or the SQL statement <code>SET MODE Oracle</code>.
 
 @features_1509_li
 For aliased columns, <code>ResultSetMetaData.getColumnName()</code> returns the alias name and <code>getTableName()</code> returns <code>null</code>. 
@@ -5027,7 +5027,7 @@ Empty strings are treated like <code>NULL</code> values.
 PostgreSQL Compatibility Mode
 
 @features_1514_p
- To use the PostgreSQL mode, use the database URL <code>jdbc:h2:~/test;MODE=PostgreSQL</code> or the SQL statement <code>SET MODE PostgreSQL</code>. 
+ To use the PostgreSQL mode, use the database URL <code>jdbc:gg-h2:~/test;MODE=PostgreSQL</code> or the SQL statement <code>SET MODE PostgreSQL</code>.
 
 @features_1515_li
 For aliased columns, <code>ResultSetMetaData.getColumnName()</code> returns the alias name and <code>getTableName()</code> returns <code>null</code>. 
@@ -5066,7 +5066,7 @@ Automatic Mixed Mode
  The application that opens the first connection to the database uses the embedded mode, which is faster than the server mode. Therefore the main application should open the database first if possible. The first connection automatically starts a server on a random port. This server allows remote connections, however only to this database (to ensure that, the client reads <code>.lock.db</code> file and sends the the random key that is stored there to the server). When the first connection is closed, the server stops. If other (remote) connections are still open, one of them will then start a server (auto-reconnect is enabled automatically). 
 
 @features_1527_p
- All processes need to have access to the database files. If the first connection is closed (the connection that started the server), open transactions of other connections will be rolled back (this may not be a problem if you don't disable autocommit). Explicit client/server connections (using <code>jdbc:h2:tcp://</code> or <code>ssl://</code>) are not supported. This mode is not supported for in-memory databases. 
+ All processes need to have access to the database files. If the first connection is closed (the connection that started the server), open transactions of other connections will be rolled back (this may not be a problem if you don't disable autocommit). Explicit client/server connections (using <code>jdbc:gg-h2:tcp://</code> or <code>ssl://</code>) are not supported. This mode is not supported for in-memory databases.
 
 @features_1528_p
  Here is an example how to use this mode. Application 1 and 2 are not necessarily started on the same computer, but they need to have access to the database files. Application 1 and 2 are typically two different processes (however they could run within the same process). 
@@ -5243,7 +5243,7 @@ Function Data Type Mapping
  Functions that accept non-nullable parameters such as <code>int</code> will not be called if one of those parameters is <code>NULL</code>. Instead, the result of the function is <code>NULL</code>. If the function should be called if a parameter is <code>NULL</code>, you need to use <code>java.lang.Integer</code> instead. 
 
 @features_1586_p
- SQL types are mapped to Java classes and vice-versa as in the JDBC API. For details, see <a href="datatypes.html">Data Types</a>. There are a few special cases: <code>java.lang.Object</code> is mapped to <code>OTHER</code> (a serialized object). Therefore, <code>java.lang.Object</code> can not be used to match all SQL types (matching all SQL types is not supported). The second special case is <code>Object[]</code>: arrays of any class are mapped to <code>ARRAY</code>. Objects of type <code>org.h2.value.Value</code> (the internal value class) are passed through without conversion. 
+ SQL types are mapped to Java classes and vice-versa as in the JDBC API. For details, see <a href="datatypes.html">Data Types</a>. There are a few special cases: <code>java.lang.Object</code> is mapped to <code>OTHER</code> (a serialized object). Therefore, <code>java.lang.Object</code> can not be used to match all SQL types (matching all SQL types is not supported). The second special case is <code>Object[]</code>: arrays of any class are mapped to <code>ARRAY</code>. Objects of type <code>org.gridgain.internal.h2.value.Value</code> (the internal value class) are passed through without conversion.
 
 @features_1587_h3
 Functions That Require a Connection
@@ -5279,10 +5279,10 @@ Using a Function as a Table
 Pluggable or User-Defined Tables
 
 @features_1598_p
- For situations where you need to expose other data-sources to the SQL engine as a table, there are "pluggable tables". For some examples, have a look at the code in <code>org.h2.test.db.TestTableEngines</code>. 
+ For situations where you need to expose other data-sources to the SQL engine as a table, there are "pluggable tables". For some examples, have a look at the code in <code>org.gridgain.internal.h2.test.db.TestTableEngines</code>.
 
 @features_1599_p
- In order to create your own TableEngine, you need to implement the <code>org.h2.api.TableEngine</code> interface e.g. something like this: 
+ In order to create your own TableEngine, you need to implement the <code>org.gridgain.internal.h2.api.TableEngine</code> interface e.g. something like this:
 
 @features_1600_p
  and then create the table from SQL like this: 
@@ -5303,7 +5303,7 @@ Pluggable or User-Defined Tables
 Triggers
 
 @features_1606_p
- This database supports Java triggers that are called before or after a row is updated, inserted or deleted. Triggers can be used for complex consistency checks, or to update related data in the database. It is also possible to use triggers to simulate materialized views. For a complete sample application, see <code>src/test/org/h2/samples/TriggerSample.java</code>. A Java trigger must implement the interface <code>org.h2.api.Trigger</code>. The trigger class must be available in the classpath of the database engine (when using the server mode, it must be in the classpath of the server). 
+ This database supports Java triggers that are called before or after a row is updated, inserted or deleted. Triggers can be used for complex consistency checks, or to update related data in the database. It is also possible to use triggers to simulate materialized views. For a complete sample application, see <code>src/test/org/h2/samples/TriggerSample.java</code>. A Java trigger must implement the interface <code>org.gridgain.internal.h2.api.Trigger</code>. The trigger class must be available in the classpath of the database engine (when using the server mode, it must be in the classpath of the server).
 
 @features_1607_p
  The connection can be used to query or update data in other tables. The trigger then needs to be defined in the database: 
@@ -5312,7 +5312,7 @@ Triggers
  The trigger can be used to veto a change by throwing a <code>SQLException</code>. 
 
 @features_1609_p
- As an alternative to implementing the <code>Trigger</code> interface, an application can extend the abstract class <code>org.h2.tools.TriggerAdapter</code>. This will allows to use the <code>ResultSet</code> interface within trigger implementations. In this case, only the <code>fire</code> method needs to be implemented: 
+ As an alternative to implementing the <code>Trigger</code> interface, an application can extend the abstract class <code>org.gridgain.internal.h2.tools.TriggerAdapter</code>. This will allows to use the <code>ResultSet</code> interface within trigger implementations. In this case, only the <code>fire</code> method needs to be implemented:
 
 @features_1610_h2
 Compacting a Database
@@ -5321,19 +5321,19 @@ Compacting a Database
  Empty space in the database file re-used automatically. When closing the database, the database is automatically compacted for up to 200 milliseconds by default. To compact more, use the SQL statement SHUTDOWN COMPACT. However re-creating the database may further reduce the database size because this will re-build the indexes. Here is a sample function to do this: 
 
 @features_1612_p
- See also the sample application <code>org.h2.samples.Compact</code>. The commands <code>SCRIPT / RUNSCRIPT</code> can be used as well to create a backup of a database and re-build the database from the script. 
+ See also the sample application <code>org.gridgain.internal.h2.samples.Compact</code>. The commands <code>SCRIPT / RUNSCRIPT</code> can be used as well to create a backup of a database and re-build the database from the script.
 
 @features_1613_h2
 Cache Settings
 
 @features_1614_p
- The database keeps most frequently used data in the main memory. The amount of memory used for caching can be changed using the setting <code>CACHE_SIZE</code>. This setting can be set in the database connection URL (<code>jdbc:h2:~/test;CACHE_SIZE=131072</code>), or it can be changed at runtime using <code>SET CACHE_SIZE size</code>. The size of the cache, as represented by <code>CACHE_SIZE</code> is measured in KB, with each KB being 1024 bytes. This setting has no effect for in-memory databases. For persistent databases, the setting is stored in the database and re-used when the database is opened the next time. However, when opening an existing database, the cache size is set to at most half the amount of memory available for the virtual machine (Runtime.getRuntime().maxMemory()), even if the cache size setting stored in the database is larger; however the setting stored in the database is kept. Setting the cache size in the database URL or explicitly using <code>SET CACHE_SIZE</code> overrides this value (even if larger than the physical memory). To get the current used maximum cache size, use the query <code>SELECT * FROM INFORMATION_SCHEMA.SETTINGS WHERE NAME = 'info.CACHE_MAX_SIZE'</code> 
+ The database keeps most frequently used data in the main memory. The amount of memory used for caching can be changed using the setting <code>CACHE_SIZE</code>. This setting can be set in the database connection URL (<code>jdbc:gg-h2:~/test;CACHE_SIZE=131072</code>), or it can be changed at runtime using <code>SET CACHE_SIZE size</code>. The size of the cache, as represented by <code>CACHE_SIZE</code> is measured in KB, with each KB being 1024 bytes. This setting has no effect for in-memory databases. For persistent databases, the setting is stored in the database and re-used when the database is opened the next time. However, when opening an existing database, the cache size is set to at most half the amount of memory available for the virtual machine (Runtime.getRuntime().maxMemory()), even if the cache size setting stored in the database is larger; however the setting stored in the database is kept. Setting the cache size in the database URL or explicitly using <code>SET CACHE_SIZE</code> overrides this value (even if larger than the physical memory). To get the current used maximum cache size, use the query <code>SELECT * FROM INFORMATION_SCHEMA.SETTINGS WHERE NAME = 'info.CACHE_MAX_SIZE'</code>
 
 @features_1615_p
  An experimental scan-resistant cache algorithm "Two Queue" (2Q) is available. To enable it, append <code>;CACHE_TYPE=TQ</code> to the database URL. The cache might not actually improve performance. If you plan to use it, please run your own test cases first. 
 
 @features_1616_p
- Also included is an experimental second level soft reference cache. Rows in this cache are only garbage collected on low memory. By default the second level cache is disabled. To enable it, use the prefix <code>SOFT_</code>. Example: <code>jdbc:h2:~/test;CACHE_TYPE=SOFT_LRU</code>. The cache might not actually improve performance. If you plan to use it, please run your own test cases first. 
+ Also included is an experimental second level soft reference cache. Rows in this cache are only garbage collected on low memory. By default the second level cache is disabled. To enable it, use the prefix <code>SOFT_</code>. Example: <code>jdbc:gg-h2:~/test;CACHE_TYPE=SOFT_LRU</code>. The cache might not actually improve performance. If you plan to use it, please run your own test cases first.
 
 @features_1617_p
  To get information about page reads and writes, and the current caching algorithm in use, call <code>SELECT * FROM INFORMATION_SCHEMA.SETTINGS</code>. The number of pages read / written is listed. 
@@ -9308,7 +9308,7 @@ ms
  HSQLDB uses in-memory tables by default while H2 uses persistent tables. The HSQLDB version included in PolePosition does not support changing this, so you need to replace <code>poleposition-0.20/lib/hsqldb.jar</code> with a newer version (for example <code>hsqldb-1.8.0.7.jar</code>), and then use the setting <code>hsqldb.connecturl=jdbc:hsqldb:file:data/hsqldb/dbbench2;hsqldb.default_table_type=cached;sql.enforce_size=true</code> in the file <code>Jdbc.properties</code>. 
 
 @performance_1391_li
-HSQLDB keeps the database open between tests, while H2 closes the database (losing all the cache). To change that, use the database URL <code>jdbc:h2:file:data/h2/dbbench;DB_CLOSE_DELAY=-1</code> 
+HSQLDB keeps the database open between tests, while H2 closes the database (losing all the cache). To change that, use the database URL <code>jdbc:gg-h2:file:data/h2/dbbench;DB_CLOSE_DELAY=-1</code>
 
 @performance_1392_li
 The amount of cache memory is quite important, specially for the PolePosition test. Unfortunately, the PolePosition test does not take this into account. 
@@ -9506,7 +9506,7 @@ Analyze First
 Database Profiling
 
 @performance_1457_p
- The <code>ConvertTraceFile</code> tool generates SQL statement statistics at the end of the SQL script file. The format used is similar to the profiling data generated when using <code>java -Xrunhprof</code>. For this to work, the trace level needs to be 2 or higher (<code>TRACE_LEVEL_FILE=2</code>). The easiest way to set the trace level is to append the setting to the database URL, for example: <code>jdbc:h2:~/test;TRACE_LEVEL_FILE=2</code> or <code>jdbc:h2:tcp://localhost/~/test;TRACE_LEVEL_FILE=2</code>. As an example, execute the the following script using the H2 Console: 
+ The <code>ConvertTraceFile</code> tool generates SQL statement statistics at the end of the SQL script file. The format used is similar to the profiling data generated when using <code>java -Xrunhprof</code>. For this to work, the trace level needs to be 2 or higher (<code>TRACE_LEVEL_FILE=2</code>). The easiest way to set the trace level is to append the setting to the database URL, for example: <code>jdbc:gg-h2:~/test;TRACE_LEVEL_FILE=2</code> or <code>jdbc:gg-h2:tcp://localhost/~/test;TRACE_LEVEL_FILE=2</code>. As an example, execute the the following script using the H2 Console:
 
 @performance_1458_p
  After running the test case, convert the <code>.trace.db</code> file using the <code>ConvertTraceFile</code> tool. The trace file is located in the same directory as the database file. 
@@ -9719,7 +9719,7 @@ SET UNDO_LOG 0
  (disable the session undo log) 
 
 @performance_1528_p
- These options can be set in the database URL: <code>jdbc:h2:~/test;LOG=0;CACHE_SIZE=65536;LOCK_MODE=0;UNDO_LOG=0</code>. Most of those options are not recommended for regular use, that means you need to reset them after use. 
+ These options can be set in the database URL: <code>jdbc:gg-h2:~/test;LOG=0;CACHE_SIZE=65536;LOCK_MODE=0;UNDO_LOG=0</code>. Most of those options are not recommended for regular use, that means you need to reset them after use.
 
 @performance_1529_p
  If you have to import a lot of rows, use a PreparedStatement or use CSV import. Please note that <code>CREATE TABLE(...) ... AS SELECT ...</code> is faster than <code>CREATE TABLE(...); INSERT INTO ... SELECT ...</code>. 
@@ -9743,10 +9743,10 @@ Embedding H2 in an Application
 Add the <code>h2*.jar</code> to the classpath (H2 does not have any dependencies) 
 
 @quickstart_1006_li
-Use the JDBC driver class: <code>org.h2.Driver</code> 
+Use the JDBC driver class: <code>org.gridgain.internal.h2.Driver</code>
 
 @quickstart_1007_li
-The database URL <code>jdbc:h2:~/test</code> opens the database <code>test</code> in your user home directory 
+The database URL <code>jdbc:gg-h2:~/test</code> opens the database <code>test</code> in your user home directory
 
 @quickstart_1008_li
 A new database is automatically created 
@@ -10835,7 +10835,7 @@ Support reading sequences using DatabaseMetaData.getTables(null, null, null, new
 Add option to enable TCP_NODELAY using Socket.setTcpNoDelay(true). 
 
 @roadmap_1337_li
-Maybe disallow = within database names (jdbc:h2:mem:MODE=DB2 means database name MODE=DB2). 
+Maybe disallow = within database names (jdbc:gg-h2:mem:MODE=DB2 means database name MODE=DB2).
 
 @roadmap_1338_li
 Fast alter table add column. 
@@ -11786,7 +11786,7 @@ webSSL
 : use encrypted TLS (HTTPS) connections. 
 
 @tutorial_1130_p
- In addition to those settings, the properties of the last recently used connection are listed in the form <code>&lt;number&gt;=&lt;name&gt;|&lt;driver&gt;|&lt;url&gt;|&lt;user&gt;</code> using the escape character <code>\</code>. Example: <code>1=Generic H2 (Embedded)|org.h2.Driver|jdbc\:h2\:~/test|sa</code> 
+ In addition to those settings, the properties of the last recently used connection are listed in the form <code>&lt;number&gt;=&lt;name&gt;|&lt;driver&gt;|&lt;url&gt;|&lt;user&gt;</code> using the escape character <code>\</code>. Example: <code>1=Generic H2 (Embedded)|org.gridgain.internal.h2.Driver|jdbc\:h2\:~/test|sa</code>
 
 @tutorial_1131_h2
 Connecting to a Database using JDBC
@@ -11795,7 +11795,7 @@ Connecting to a Database using JDBC
  To connect to a database, a Java application first needs to load the database driver, and then get a connection. A simple way to do that is using the following code: 
 
 @tutorial_1133_p
- This code first loads the driver (<code>Class.forName(...)</code>) and then opens a connection (using <code>DriverManager.getConnection()</code>). The driver name is <code>"org.h2.Driver"</code>. The database URL always needs to start with <code>jdbc:h2:</code> to be recognized by this database. The second parameter in the <code>getConnection()</code> call is the user name (<code>sa</code> for System Administrator in this example). The third parameter is the password. In this database, user names are not case sensitive, but passwords are. 
+ This code first loads the driver (<code>Class.forName(...)</code>) and then opens a connection (using <code>DriverManager.getConnection()</code>). The driver name is <code>"org.gridgain.internal.h2.Driver"</code>. The database URL always needs to start with <code>jdbc:gg-h2:</code> to be recognized by this database. The second parameter in the <code>getConnection()</code> call is the user name (<code>sa</code> for System Administrator in this example). The third parameter is the password. In this database, user names are not case sensitive, but passwords are.
 
 @tutorial_1134_h2
 Creating New Databases
@@ -11831,10 +11831,10 @@ Connecting to the TCP Server
  To remotely connect to a database using the TCP server, use the following driver and database URL: 
 
 @tutorial_1145_li
-JDBC driver class: <code>org.h2.Driver</code> 
+JDBC driver class: <code>org.gridgain.internal.h2.Driver</code>
 
 @tutorial_1146_li
-Database URL: <code>jdbc:h2:tcp://localhost/~/test</code> 
+Database URL: <code>jdbc:gg-h2:tcp://localhost/~/test</code>
 
 @tutorial_1147_p
  For details about the database URL, see also in Features. Please note that you can't connection with a web browser to this URL. You can only connect using a H2 client (over JDBC). 
@@ -11870,7 +11870,7 @@ Using Hibernate
 Using TopLink and Glassfish
 
 @tutorial_1158_p
- To use H2 with Glassfish (or Sun AS), set the Datasource Classname to <code>org.h2.jdbcx.JdbcDataSource</code>. You can set this in the GUI at Application Server - Resources - JDBC - Connection Pools, or by editing the file <code>sun-resources.xml</code>: at element <code>jdbc-connection-pool</code>, set the attribute <code>datasource-classname</code> to <code>org.h2.jdbcx.JdbcDataSource</code>. 
+ To use H2 with Glassfish (or Sun AS), set the Datasource Classname to <code>org.gridgain.internal.h2.jdbcx.JdbcDataSource</code>. You can set this in the GUI at Application Server - Resources - JDBC - Connection Pools, or by editing the file <code>sun-resources.xml</code>: at element <code>jdbc-connection-pool</code>, set the attribute <code>datasource-classname</code> to <code>org.gridgain.internal.h2.jdbcx.JdbcDataSource</code>.
 
 @tutorial_1159_p
  The H2 database is compatible with HSQLDB and PostgreSQL. To take advantage of H2 specific features, use the <code>H2Platform</code>. The source code of this platform is included in H2 at <code>src/tools/oracle/toplink/essentials/platform/database/DatabasePlatform.java.txt</code>. You will need to copy this file to your application, and rename it to .java. To enable it, change the following setting in persistence.xml: 
@@ -11945,7 +11945,7 @@ Using a Servlet Listener to Start and Stop a Database
  Add the h2*.jar file to your web application, and add the following snippet to your web.xml file (between the <code>context-param</code> and the <code>filter</code> section): 
 
 @tutorial_1183_p
- For details on how to access the database, see the file <code>DbStarter.java</code>. By default this tool opens an embedded connection using the database URL <code>jdbc:h2:~/test</code>, user name <code>sa</code>, and password <code>sa</code>. If you want to use this connection within your servlet, you can access as follows: 
+ For details on how to access the database, see the file <code>DbStarter.java</code>. By default this tool opens an embedded connection using the database URL <code>jdbc:gg-h2:~/test</code>, user name <code>sa</code>, and password <code>sa</code>. If you want to use this connection within your servlet, you can access as follows:
 
 @tutorial_1184_code
 DbStarter
@@ -12101,7 +12101,7 @@ Online Backup
  The resulting backup is transactionally consistent, meaning the consistency and atomicity rules apply. 
 
 @tutorial_1235_p
- The <code>Backup</code> tool (<code>org.h2.tools.Backup</code>) can not be used to create a online backup; the database must not be in use while running this program. 
+ The <code>Backup</code> tool (<code>org.gridgain.internal.h2.tools.Backup</code>) can not be used to create a online backup; the database must not be in use while running this program.
 
 @tutorial_1236_p
  Creating a backup by copying the database files while the database is running is not supported, except if the file systems support creating snapshots. With other file systems, it can't be guaranteed that the data is copied in the right order. 
@@ -12230,10 +12230,10 @@ Start OpenOffice Base
 Connect to an existing database; select [JDBC]; [Next] 
 
 @tutorial_1278_li
-Example datasource URL: <code>jdbc:h2:~/test</code> 
+Example datasource URL: <code>jdbc:gg-h2:~/test</code>
 
 @tutorial_1279_li
-JDBC driver class: <code>org.h2.Driver</code> 
+JDBC driver class: <code>org.gridgain.internal.h2.Driver</code>
 
 @tutorial_1280_p
  Now you can access the database stored in the current users home directory. 
@@ -12266,10 +12266,10 @@ Click [File], [New], [Database].
 Select [Connect to existing database] and the select [JDBC]. Click next. 
 
 @tutorial_1290_li
-Example datasource URL: <code>jdbc:h2:~/test</code> 
+Example datasource URL: <code>jdbc:gg-h2:~/test</code>
 
 @tutorial_1291_li
-JDBC driver class: <code>org.h2.Driver</code> 
+JDBC driver class: <code>org.gridgain.internal.h2.Driver</code>
 
 @tutorial_1292_p
  Another solution to use H2 in NeoOffice is: 
@@ -12395,7 +12395,7 @@ Error Code Incompatibility
 OSGi
 
 @tutorial_1333_p
- The standard H2 jar can be dropped in as a bundle in an OSGi container. H2 implements the JDBC Service defined in OSGi Service Platform Release 4 Version 4.2 Enterprise Specification. The H2 Data Source Factory service is registered with the following properties: <code>OSGI_JDBC_DRIVER_CLASS=org.h2.Driver</code> and <code>OSGI_JDBC_DRIVER_NAME=H2 JDBC Driver</code>. The <code>OSGI_JDBC_DRIVER_VERSION</code> property reflects the version of the driver as is. 
+ The standard H2 jar can be dropped in as a bundle in an OSGi container. H2 implements the JDBC Service defined in OSGi Service Platform Release 4 Version 4.2 Enterprise Specification. The H2 Data Source Factory service is registered with the following properties: <code>OSGI_JDBC_DRIVER_CLASS=org.gridgain.internal.h2.Driver</code> and <code>OSGI_JDBC_DRIVER_NAME=H2 JDBC Driver</code>. The <code>OSGI_JDBC_DRIVER_VERSION</code> property reflects the version of the driver as is.
 
 @tutorial_1334_p
  The following standard configuration properties are supported: <code>JDBC_USER, JDBC_PASSWORD, JDBC_DESCRIPTION, JDBC_DATASOURCE_NAME, JDBC_NETWORK_PROTOCOL, JDBC_URL, JDBC_SERVER_NAME, JDBC_PORT_NUMBER</code>. Any other standard property will be rejected. Non-standard properties will be passed on to H2 in the connection URL. 
@@ -12404,7 +12404,7 @@ OSGi
 Java Management Extension (JMX)
 
 @tutorial_1336_p
- Management over JMX is supported, but not enabled by default. To enable JMX, append <code>;JMX=TRUE</code> to the database URL when opening the database. Various tools support JMX, one such tool is the <code>jconsole</code>. When opening the <code>jconsole</code>, connect to the process where the database is open (when using the server mode, you need to connect to the server process). Then go to the <code>MBeans</code> section. Under <code>org.h2</code> you will find one entry per database. The object name of the entry is the database short name, plus the path (each colon is replaced with an underscore character). 
+ Management over JMX is supported, but not enabled by default. To enable JMX, append <code>;JMX=TRUE</code> to the database URL when opening the database. Various tools support JMX, one such tool is the <code>jconsole</code>. When opening the <code>jconsole</code>, connect to the process where the database is open (when using the server mode, you need to connect to the server process). Then go to the <code>MBeans</code> section. Under <code>org.gridgain.internal.h2</code> you will find one entry per database. The object name of the entry is the database short name, plus the path (each colon is replaced with an underscore character).
 
 @tutorial_1337_p
  The following attributes and operations are supported: 

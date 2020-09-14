@@ -27,7 +27,7 @@ import org.apache.ignite.cache.store.jdbc.dialect.JdbcDialect;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.h2.jdbcx.JdbcDataSource;
+import org.gridgain.internal.h2.jdbcx.JdbcDataSource;
 import org.junit.Ignore;
 import org.junit.Test;
 

@@ -18,13 +18,13 @@ package org.apache.ignite.internal.processors.query.h2.sql;
 
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.h2.expression.Expression;
-import org.h2.table.Column;
-import org.h2.value.TypeInfo;
-import org.h2.value.Value;
-import org.h2.value.ValueBoolean;
-import org.h2.value.ValueDouble;
-import org.h2.value.ValueLong;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.TypeInfo;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueBoolean;
+import org.gridgain.internal.h2.value.ValueDouble;
+import org.gridgain.internal.h2.value.ValueLong;
 
 /**
  * SQL Data type based on H2.

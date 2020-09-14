@@ -19,9 +19,9 @@ package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 import java.util.Comparator;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
-import org.h2.table.Column;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
 import org.jetbrains.annotations.Nullable;
 
 /**

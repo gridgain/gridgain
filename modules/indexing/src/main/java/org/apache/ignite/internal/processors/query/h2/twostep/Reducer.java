@@ -21,9 +21,9 @@ import java.util.Set;
 import java.util.UUID;
 import javax.cache.CacheException;
 import org.apache.ignite.cluster.ClusterNode;
-import org.h2.index.Cursor;
-import org.h2.index.Index;
-import org.h2.result.SearchRow;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.result.SearchRow;
 import org.jetbrains.annotations.Nullable;
 
 /**
