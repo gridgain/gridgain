@@ -133,10 +133,11 @@ import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_TX_COLLISIONS_DUMP;
 import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_DISTRIBUTED_PROPERTIES;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
-import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_TX_COLLISIONS_DUMP;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
@@ -2915,10 +2916,17 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void setTxOwnerDumpRequestsAllowedDistributed(boolean allowed) {
         try {
-            GridFutureAdapter<?> fut = distrCfg.updateTxOwnerDumpRequestsAllowedAsync(allowed);
+            IgnitePredicate<ClusterNode> nodeFilter =
+                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING);
 
-            IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                    && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING);
+            GridFutureAdapter<?> fut = null;
+
+            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
+                fut = distrCfg.updateTxOwnerDumpRequestsAllowedAsync(allowed);
+
+                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_OWNER_THREAD_DUMP_PROVIDING);
+            }
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
@@ -2927,7 +2935,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            fut.get();
+            if (fut != null) {
+                fut.get();
+            }
+
             computeFut.get();
         }
         catch (IgniteCheckedException e) {
@@ -2948,10 +2959,17 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert threshold >= 0 : "Threshold timeout must be greater than or equal to 0.";
 
         try {
-            GridFutureAdapter<?> fut = distrCfg.updateLongTransactionTimeDumpThresholdAsync(threshold);
+            IgnitePredicate<ClusterNode> nodeFilter =
+                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
 
-            IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                    && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            GridFutureAdapter<?> fut = null;
+
+            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
+                fut = distrCfg.updateLongTransactionTimeDumpThresholdAsync(threshold);
+
+                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            }
 
             IgniteFuture<Void> computeFuture = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
@@ -2960,7 +2978,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            fut.get();
+            if (fut != null) {
+                fut.get();
+            }
+
             computeFuture.get();
         }
         catch (IgniteCheckedException e) {
@@ -2978,10 +2999,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert coefficient >= 0.0 && coefficient <= 1.0 : "Percentage value must be between 0.0 and 1.0 inclusively.";
 
         try {
-            GridFutureAdapter<?> fut = distrCfg.updatetransactionTimeDumpSamplesCoefficientAsync(coefficient);
+            IgnitePredicate<ClusterNode> nodeFilter =
+                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            GridFutureAdapter<?> fut = null;
 
-            IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                    && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
+                fut = distrCfg.updatetransactionTimeDumpSamplesCoefficientAsync(coefficient);
+
+                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            }
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
@@ -2990,7 +3017,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            fut.get();
+            if (fut != null) {
+                fut.get();
+            }
+
             computeFut.get();
         }
         catch (IgniteCheckedException e) {
@@ -3009,10 +3039,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert limit > 0 : "Limit value must be greater than 0.";
 
         try{
-            GridFutureAdapter<?> fut = distrCfg.updateLongTransactionTimeDumpSamplesPerSecondLimitAsync(limit);
+            IgnitePredicate<ClusterNode> nodeFilter =
+                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            GridFutureAdapter<?> fut = null;
 
-            IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                    && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
+                fut = distrCfg.updateLongTransactionTimeDumpSamplesPerSecondLimitAsync(limit);
+
+                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, LRT_SYSTEM_USER_TIME_DUMP_SETTINGS);
+            }
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
@@ -3021,7 +3057,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            fut.get();
+            if (fut != null) {
+                fut.get();
+            }
+
             computeFut.get();
         }
         catch (IgniteCheckedException e) {
@@ -3050,10 +3089,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void longOperationsDumpTimeoutDistributed(long longOpsDumpTimeout) {
         try {
-            GridFutureAdapter<?> fut = distrCfg.updateLongOperationsDumpTimeoutAsync(longOpsDumpTimeout);
+            IgnitePredicate<ClusterNode> nodeFilter =
+                    node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT);
+            GridFutureAdapter<?> fut = null;
 
-            IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                    && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT);
+            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
+                fut = distrCfg.updateLongOperationsDumpTimeoutAsync(longOpsDumpTimeout);
+
+                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT);
+            }
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
@@ -3062,7 +3107,10 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            fut.get();
+            if (fut != null) {
+                fut.get();
+            }
+
             computeFut.get();
         }
         catch (IgniteCheckedException e) {
@@ -3087,11 +3135,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @param collisionsDumpInterval New collisions dump interval or negative for disabling.
      */
     public void collisionsDumpIntervalDistributed(int collisionsDumpInterval) {
-        try {
-            GridFutureAdapter<?> fut = distrCfg.updateCollisionsDumpIntervalAsync(collisionsDumpInterval);
+        IgnitePredicate<ClusterNode> nodeFilter = node -> IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_TX_COLLISIONS_DUMP);
+        GridFutureAdapter<?> fut = null;
 
-            IgnitePredicate<ClusterNode> nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
-                    && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_TX_COLLISIONS_DUMP);
+        try {
+            if (IgniteFeatures.allNodesSupport(cctx.kernalContext(), DISTRIBUTED_METASTORAGE)) {
+                fut = distrCfg.updateCollisionsDumpIntervalAsync(collisionsDumpInterval);
+
+                nodeFilter = node -> !IgniteFeatures.nodeSupports(cctx.kernalContext(), node, TRANSACTION_DISTRIBUTED_PROPERTIES)
+                        && IgniteFeatures.nodeSupports(cctx.kernalContext(), node, DISTRIBUTED_TX_COLLISIONS_DUMP);
+            }
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
@@ -3100,9 +3153,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     nodeFilter
             );
 
-            fut.get();
-            computeFut.get();
+            if (fut != null) {
+                fut.get();
+            }
 
+            computeFut.get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

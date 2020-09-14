@@ -12337,7 +12337,7 @@ public abstract class IgniteUtils {
         if (srvrsOnly)
             cl = cl.forServers();
 
-        ClusterGroup grp = cl.forPredicate(nodeFilter);
+        ClusterGroup grp = nodeFilter != null ? cl.forPredicate(nodeFilter) : cl;
 
         if (grp.nodes().isEmpty())
             return new IgniteFinishedFutureImpl<>();
