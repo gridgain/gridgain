@@ -15,12 +15,17 @@
  */
 package org.apache.ignite.internal.processors.ru;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.processors.GridProcessor;
+
 import static org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult.Result.FAIL;
 
 /**
  * Defines public API for Rolling Upgrade process.
  */
-public interface RollingUpgrade {
+public interface RollingUpgradeProcessor extends GridProcessor {
     /**
      * Enables or disables rolling upgrade mode.
      *
@@ -44,8 +49,7 @@ public interface RollingUpgrade {
             false,
             null,
             null,
-            new byte[0]
-        );
+            new HashSet<>(Arrays.asList(IgniteFeatures.values())));
     }
 
     /**
