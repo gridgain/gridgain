@@ -554,9 +554,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
                 if (updated) {
-                    if (toState == MOVING && ctx.igniteInstanceName().endsWith("0") && id == 1)
-                        movingEx = new Exception();
-
                     assert toState != EVICTED || reservations() == 0 : this;
 
                     try {
@@ -587,6 +584,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
             if (updated) {
+                if (toState == MOVING && ctx.igniteInstanceName().endsWith("0") && id == 1)
+                    movingEx = new Exception();
+
                 assert toState != EVICTED || reservations() == 0 : this;
 
                 if (log.isDebugEnabled())

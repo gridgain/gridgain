@@ -35,6 +35,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheAffinitySharedManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
@@ -315,11 +316,11 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
                 tmp.append("Unexpected rebalance on rebalanced cluster [top=").append(topVer).append(", grp=").append(grp.groupId()).append(", assignments=").append(assignments);
 
-                Set<Integer> waitGrps = ctx.kernalContext().cache().context().affinity().waitGroups();
+                CacheAffinitySharedManager<Object, Object>.WaitRebalanceInfo info = ctx.kernalContext().cache().context().affinity().waitInfo();
 
                 Collection<UUID> owners = F.nodeIds(grp.topology().owners(badP, topVer));
                 tmp.append(", owners=").append(owners);
-                tmp.append(", waitGrps=").append(waitGrps);
+                tmp.append(", waitInfo=").append(info == null ? "NA": info.topVer);
                 GridDhtLocalPartition obj = grp.topology().localPartition(badP);
                 tmp.append(", locPart=").append(obj);
 

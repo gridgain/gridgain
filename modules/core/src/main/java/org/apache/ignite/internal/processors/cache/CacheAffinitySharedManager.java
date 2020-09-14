@@ -306,6 +306,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         msg = affinityChangeMessage(waitInfo);
 
                         waitInfo = null;
+
+                        if (cctx.igniteInstanceName().endsWith("0"))
+                            log.info("DBG: 3 " + waitInfo);
                     }
                 }
             }
@@ -329,6 +332,12 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 return Collections.emptySet();
 
             return new HashSet<>(waitInfo.waitGrps.keySet());
+        }
+    }
+
+    public WaitRebalanceInfo waitInfo() {
+        synchronized (mux) {
+            return waitInfo;
         }
     }
 
@@ -1985,6 +1994,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         synchronized (mux) {
             this.waitInfo = null;
+
+            if (cctx.igniteInstanceName().endsWith("0")) {
+                log.info("DBG: 2 " + waitInfo);
+            }
         }
 
         return true;
@@ -2246,6 +2259,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         synchronized (mux) {
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
+
+            if (cctx.igniteInstanceName().endsWith("0"))
+                log.info("DBG: 4 " + waitInfo);
         }
     }
 
@@ -2597,7 +2613,12 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         synchronized (mux) {
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
+
+            if (cctx.igniteInstanceName().endsWith("0"))
+                log.info("DBG: " + waitInfo);
         }
+
+
 
         return assignment;
     }
@@ -2907,9 +2928,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * Tracks rebalance state on coordinator.
      * After all partitions are rebalanced the current affinity is switched to ideal.
      */
-    class WaitRebalanceInfo {
+    public class WaitRebalanceInfo {
         /** */
-        private final AffinityTopologyVersion topVer;
+        public final AffinityTopologyVersion topVer;
 
         /** */
         private final Map<Integer, Set<Integer>> waitGrps = new ConcurrentHashMap<>();
@@ -2960,7 +2981,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps + ']';
+            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps.size() + ']';
         }
     }
 
