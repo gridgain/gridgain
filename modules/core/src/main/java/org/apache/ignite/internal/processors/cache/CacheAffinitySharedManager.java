@@ -2462,6 +2462,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             new WaitRebalanceInfo(fut.exchangeId().topologyVersion()) :
             new WaitRebalanceInfo(fut.context().events().lastServerEventVersion());
 
+        // TODO rename, might be not alive.
         final Collection<ClusterNode> aliveNodes = fut.context().events().discoveryCache().serverNodes();
 
         final Map<Integer, Map<Integer, List<T>>> assignment = new ConcurrentHashMap<>();
@@ -2528,7 +2529,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         GridDhtPartitionState state = top.partitionState(newPrimary.id(), p);
 
                         if (aliveNodes.contains(curPrimary)) {
-                            if (state != OWNING) {
+                            if (state != OWNING) { // TODO duplication.
                                 newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
                                     p,
                                     curPrimary,
@@ -2570,8 +2571,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         }
                     }
 
+                    boolean tmp = !owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p);
+
+                    if (cctx.igniteInstanceName().endsWith("0") && top.groupId() == CU.cacheId("TEST_CACHE"))
+                        log.info("DBG: owners=" + F.nodeIds(owners) + ", newNodes=" + F.nodeIds(newNodes) + ", newNodes0" + F.nodeIds(newNodes0) + ", lostParts=" + top.lostPartitions() + ", topVer=" + topVer + ", tmp=" + tmp);
+
                     // This will happen if no primary is changed but some backups still need to be rebalanced.
-                    if (!owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p))
+
+                    if (tmp)
                         waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
 
                     if (newNodes0 != null) {
@@ -2615,10 +2622,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
 
             if (cctx.igniteInstanceName().endsWith("0"))
-                log.info("DBG: " + waitInfo);
+                log.info("DBG: " + waitInfo + " " + topVer);
         }
-
-
 
         return assignment;
     }
