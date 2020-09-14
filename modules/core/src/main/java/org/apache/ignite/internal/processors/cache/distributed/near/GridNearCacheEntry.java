@@ -566,6 +566,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 mvccExtras(mvcc);
             }
 
+            addNearLocal2Lock(mvcc);
+
             GridCacheMvccCandidate c = mvcc.localCandidateByThreadOrVer(locId, threadId, ver);
 
             if (c != null)
@@ -597,6 +599,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             checkCallbacks(emptyBefore, emptyAfter);
 
             val = this.val;
+
+            addNearLocal2Unlock(mvcc);
 
             if (emptyAfter)
                 mvccExtras(null);
@@ -663,6 +667,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             GridCacheMvcc mvcc = mvccExtras();
 
             if (mvcc != null) {
+                removeLockLock(mvcc);
+
                 prev = mvcc.allOwners();
 
                 boolean emptyBefore = mvcc.isEmpty();
@@ -691,6 +697,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 boolean emptyAfter = mvcc.isEmpty();
 
                 checkCallbacks(emptyBefore, emptyAfter);
+
+                removeLockUnlock(mvcc);
 
                 if (emptyAfter)
                     mvccExtras(null);
@@ -802,4 +810,37 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     @Override public String toString() {
         return toStringWithTryLock(() -> S.toString(GridNearCacheEntry.class, this, "super", super.toString()));
     }
+
+    protected void addNearLocal2Lock(GridCacheMvcc mvcc) {
+
+    }
+
+    protected void addNearLocal2Unlock(GridCacheMvcc mvcc) {
+        track("addLocal", mvcc.toString());
+    }
+
+    @Override protected void addRemote2Lock(GridCacheMvcc mvcc) {
+
+    }
+
+    @Override protected void addRemote2Unlock(GridCacheMvcc mvcc) {
+        track("addRemote", mvcc.toString());
+    }
+
+    @Override protected void removeLockLock(GridCacheMvcc mvcc) {
+
+    }
+
+    @Override protected void removeLockUnlock(GridCacheMvcc mvcc) {
+        track("removeLock", mvcc.toString());
+    }
+
+    @Override protected void doneRemoteLock(GridCacheMvcc mvcc) {
+    }
+
+    @Override protected void doneRemoteUnlock(GridCacheMvcc mvcc) {
+        track("doneRemote", mvcc.toString());
+    }
+
+
 }

@@ -20,23 +20,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import javax.cache.Cache;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
@@ -45,17 +39,13 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheAbstractNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -66,7 +56,6 @@ import org.junit.Test;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 
 /**
@@ -344,7 +333,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 //    }
 
     @Test
-    //@Ignore
+    @Ignore
     public void testZzz3() throws Exception {
         backups = 1;
         nodeCnt = 4;
@@ -409,36 +398,51 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
                 try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
                     IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
 
-                    nearCache.put(finalCand, 0);
+                    nearCache.put(finalCand, 2);
 
                     TransactionProxyImpl p = (TransactionProxyImpl) tx;
                     p.tx().prepare(true);
+
+                    tx.commit();
                 } catch (Throwable t) {
                     fail(X.getFullStackTrace(t));
                 }
             }
         });
 
-        doSleep(1000);
+        //doSleep(1000);
 
-        List<ClusterNode> nodes0 = new ArrayList<>(crd.cluster().nodes());
+        TestRecordingCommunicationSpi.spi(owner).stopBlock();
 
-        nodes0.removeAll(nodes);
-        nodes0.remove(crd.localNode());
+        //doSleep(1000);
 
-        ClusterNode toStop = nodes0.get(0);
+        Object v1 = crd.cache(CACHE_NAME).get(finalCand);
+        Object v2 = owner.cache(CACHE_NAME).get(finalCand);
 
-        IgniteInternalFuture fut3 = GridTestUtils.runAsync(new Runnable() {
-            @Override public void run() {
-                grid(toStop).close();
-            }
-        });
-
-        doSleep(1000);
-
-        Collection<IgniteInternalTx> txs2 = crd.context().cache().context().tm().activeTransactions();
+        GridKernalContextImpl ctx = (GridKernalContextImpl) grid(0).context();
+        ctx.dump(finalCand, log);
 
         System.out.println();
+
+
+//        List<ClusterNode> nodes0 = new ArrayList<>(crd.cluster().nodes());
+//
+//        nodes0.removeAll(nodes);
+//        nodes0.remove(crd.localNode());
+//
+//        ClusterNode toStop = nodes0.get(0);
+//
+//        IgniteInternalFuture fut3 = GridTestUtils.runAsync(new Runnable() {
+//            @Override public void run() {
+//                grid(toStop).close();
+//            }
+//        });
+//
+//        doSleep(1000);
+//
+//        Collection<IgniteInternalTx> txs2 = crd.context().cache().context().tm().activeTransactions();
+//
+//        System.out.println();
 
         //TestRecordingCommunicationSpi.spi(owner).stopBlock();
 
@@ -594,5 +598,13 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         assertTrue(nonTxIgnite.context().cache().context().tm().activeTransactions().isEmpty());
 
         return nonTxIgnite;
+    }
+
+    @Override protected long getTestTimeout() {
+        return super.getTestTimeout() * 10000;
+    }
+
+    @Override protected long getPartitionMapExchangeTimeout() {
+        return super.getPartitionMapExchangeTimeout() * 10000;
     }
 }

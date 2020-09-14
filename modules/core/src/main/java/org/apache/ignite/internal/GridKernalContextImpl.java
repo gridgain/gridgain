@@ -29,6 +29,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -1295,5 +1298,19 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridKernalContextImpl.class, this);
+    }
+
+    public final ConcurrentMap<Object, ConcurrentLinkedQueue<Object[]>> hist = new ConcurrentHashMap<>();
+
+    public void dump(Integer key, IgniteLogger log) {
+        StringBuilder b = new StringBuilder();
+        b.append("node=" + igniteInstanceName() + ", key=" + key + "\n");
+
+        ConcurrentLinkedQueue<Object[]> q = hist.getOrDefault(key, new ConcurrentLinkedQueue<>());
+
+        for (Object[] h : q)
+            b.append("       op=" + h[0] + ", trace=" + h[1] + ", stack=" + X.getFullStackTrace((Throwable) h[2]) + "\n");
+
+        log.info(b.toString());
     }
 }

@@ -32,6 +32,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -497,8 +498,12 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
-                            if (near() && (entry.mvccAllLocal() != null || entry.mvccExtras2() == null))
+                            if (near() && (entry.mvccAllLocal() != null || entry.mvccExtras2() == null)) {
                                 dump(entry);
+
+                                GridKernalContextImpl kctx = (GridKernalContextImpl) cctx.kernalContext();
+                                kctx.dump(entry.key().value(entry.context().cacheObjectContext(), false), log);
+                            }
 
                             if (log.isDebugEnabled())
                                 log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +
