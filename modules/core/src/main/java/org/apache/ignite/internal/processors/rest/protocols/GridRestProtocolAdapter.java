@@ -193,4 +193,9 @@ public abstract class GridRestProtocolAdapter implements GridRestProtocol {
     @Override public void onKernalStart() {
         // No-op.
     }
+
+    /** {@inheritDoc} */
+    @Override public void onProcessorStart() {
+        // No-op.
+    }
 }
