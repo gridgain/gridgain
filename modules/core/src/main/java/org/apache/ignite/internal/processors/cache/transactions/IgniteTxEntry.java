@@ -601,6 +601,10 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     public void cached(GridCacheEntryEx entry) {
         assert entry == null || entry.context() == ctx : "Invalid entry assigned to tx entry [txEntry=" + this +
             ", entry=" + entry +
+            ", name0=" + entry.context().name() +
+            ", name=" + ctx.name() +
+            ", ctxNear0=" + entry.context().isNear() +
+            ", ctxDht0=" + entry.context().isDht() +
             ", ctxNear=" + ctx.isNear() +
             ", ctxDht=" + ctx.isDht() + ']';
 

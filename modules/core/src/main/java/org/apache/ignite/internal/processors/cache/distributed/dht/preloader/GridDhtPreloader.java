@@ -18,7 +18,11 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -47,6 +51,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
@@ -299,9 +304,47 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         }
 
         if (!assignments.isEmpty()) {
-            assert exchFut == null || !exchFut.rebalanced() :
-                "Unexpected rebalance on rebalanced cluster " +
-                    "[top=" + topVer + ", grp=" + grp.groupId() + ", assignments=" + assignments + "]";
+            boolean ok = exchFut == null || !exchFut.rebalanced();
+
+            if (!ok) {
+                StringBuilder tmp = new StringBuilder();
+
+                Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> ass = assignments.entrySet().iterator().next();
+
+                Integer badP = ass.getValue().partitions().fullSet().iterator().next();
+
+                tmp.append("Unexpected rebalance on rebalanced cluster [top=").append(topVer).append(", grp=").append(grp.groupId()).append(", assignments=").append(assignments);
+
+                Set<Integer> waitGrps = ctx.kernalContext().cache().context().affinity().waitGroups();
+
+                Collection<UUID> owners = F.nodeIds(grp.topology().owners(badP, topVer));
+                tmp.append(", owners=").append(owners);
+                tmp.append(", waitGrps=").append(waitGrps);
+                GridDhtLocalPartition obj = grp.topology().localPartition(badP);
+                tmp.append(", locPart=").append(obj);
+
+                if (obj != null)
+                    tmp.append(", movingEx=").append(obj.movingEx != null ? X.getFullStackTrace(obj.movingEx) : "NA");
+
+                NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions();
+
+                int i = 5;
+
+                Iterator<AffinityTopologyVersion> iter = toCheck.descendingIterator();
+
+                while(--i >= 0 && iter.hasNext()) {
+                    AffinityTopologyVersion aff0 = iter.next();
+
+                    Collection<UUID> affOwners = F.nodeIds(grp.affinity().cachedAffinity(aff0).get(badP));
+                    tmp.append(", ver=" + aff0);
+                    tmp.append(", affOwners=").append(affOwners);
+                    tmp.append("\n");
+                }
+
+                tmp.append("]");
+
+                throw new AssertionError(tmp);
+            }
 
             ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
         }

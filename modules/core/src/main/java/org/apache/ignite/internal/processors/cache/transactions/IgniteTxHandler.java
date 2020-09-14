@@ -1797,8 +1797,8 @@ public class IgniteTxHandler {
                             tx.addWrite(entry, ctx.deploy().globalLoader());
 
                             // Entry will be invalidated if a partition was already moved to RENTING.
-                            if (locPart.state() == RENTING)
-                                continue;
+//                            if (locPart.state() == RENTING)
+//                                continue;
 
                             if (txCounters != null) {
                                 Long cntr = txCounters.generateNextCounter(entry.cacheId(), part);

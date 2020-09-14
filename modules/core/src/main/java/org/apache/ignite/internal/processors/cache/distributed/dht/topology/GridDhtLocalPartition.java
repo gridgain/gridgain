@@ -539,6 +539,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             restoreState(toState);
     }
 
+    public Exception movingEx;
+
     /**
      * @param state Current aggregated value.
      * @param toState State to switch to.
@@ -552,6 +554,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
                 if (updated) {
+                    if (toState == MOVING && ctx.igniteInstanceName().endsWith("0") && id == 1)
+                        movingEx = new Exception();
+
                     assert toState != EVICTED || reservations() == 0 : this;
 
                     try {
