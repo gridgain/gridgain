@@ -324,8 +324,13 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 GridDhtLocalPartition obj = grp.topology().localPartition(badP);
                 tmp.append(", locPart=").append(obj);
 
-                if (obj != null)
-                    tmp.append(", movingEx=").append(obj.movingEx != null ? X.getFullStackTrace(obj.movingEx) : "NA");
+                if (obj != null) {
+                    tmp.append("\n");
+                    for (Object ooo : obj.q) {
+                        Object[] tmp1 = (Object[]) ooo;
+                        tmp.append(", state=").append(tmp1[0]).append(", stack=").append(X.getFullStackTrace((Throwable) tmp1[1])).append("\n");
+                    }
+                }
 
                 NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions();
 

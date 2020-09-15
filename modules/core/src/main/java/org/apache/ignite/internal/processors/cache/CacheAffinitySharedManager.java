@@ -2574,7 +2574,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     boolean tmp = !owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p);
 
                     if (cctx.igniteInstanceName().endsWith("0") && top.groupId() == CU.cacheId("TEST_CACHE"))
-                        log.info("DBG: owners=" + F.nodeIds(owners) + ", newNodes=" + F.nodeIds(newNodes) + ", newNodes0" + F.nodeIds(newNodes0) + ", lostParts=" + top.lostPartitions() + ", topVer=" + topVer + ", tmp=" + tmp);
+                        log.info("DBG: locPart=" + top.localPartition(p) + ", topVer=" + topVer + ", tmp=" + tmp + ", state=" + top.partitionState(cctx.localNodeId(), p));
 
                     // This will happen if no primary is changed but some backups still need to be rebalanced.
 

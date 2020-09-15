@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -539,7 +540,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             restoreState(toState);
     }
 
-    public Exception movingEx;
+    public ConcurrentLinkedQueue q = new ConcurrentLinkedQueue();
+
 
     /**
      * @param state Current aggregated value.
@@ -584,8 +586,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
             if (updated) {
-                if (toState == MOVING && ctx.igniteInstanceName().endsWith("0") && id == 1)
-                    movingEx = new Exception();
+                if (ctx.igniteInstanceName().endsWith("0") && id == 1)
+                    q.add(new Object[] {toState, new Exception()});
 
                 assert toState != EVICTED || reservations() == 0 : this;
 
