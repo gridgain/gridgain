@@ -1194,6 +1194,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return (firstDiscoEvt.type() == EVT_NODE_LEFT || firstDiscoEvt.type() == EVT_NODE_FAILED) &&
             !firstDiscoEvt.eventNode().isClient() &&
             top != null &&
+            !cctx.kernalContext().state().inMemoryClusterWithoutBlt() &&
             top.consistentIds().contains(firstDiscoEvt.eventNode().consistentId());
     }
 
