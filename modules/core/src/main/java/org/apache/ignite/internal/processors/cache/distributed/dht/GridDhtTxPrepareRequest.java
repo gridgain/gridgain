@@ -414,6 +414,8 @@ public class GridDhtTxPrepareRequest extends GridDistributedTxPrepareRequest {
                 else {
                     e.context(cacheCtx);
 
+                    e.b3 = true;
+
                     e.unmarshal(ctx, true, ldr);
                 }
             }

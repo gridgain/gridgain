@@ -220,6 +220,15 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     @GridToStringExclude
     private transient @Nullable GridAbsClosureX cqNotifyC;
 
+    @GridDirectTransient
+    public volatile boolean b1;
+
+    @GridDirectTransient
+    public volatile boolean b2;
+
+    @GridDirectTransient
+    public volatile boolean b3;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -606,7 +615,12 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
             ", ctxNear0=" + entry.context().isNear() +
             ", ctxDht0=" + entry.context().isDht() +
             ", ctxNear=" + ctx.isNear() +
-            ", ctxDht=" + ctx.isDht() + ']';
+            ", ctxDht=" + ctx.isDht() +
+            ", b1=" + b1 +
+            ", b2=" + b2 +
+            ", b3=" + b3 +
+            ", part=" + ctx.group().topology().localPartition(entry.partition()) +
+            ']';
 
         this.entry = entry;
     }
@@ -954,9 +968,14 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
                 throw new CacheInvalidStateException(
                     "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
 
-            if (cacheCtx.isNear() && !near)
+            boolean b1 = cacheCtx.isNear();
+
+            this.b1 = b1;
+            this.b2 = near;
+
+            if (b1 && !near)
                 cacheCtx = cacheCtx.near().dht().context();
-            else if (!cacheCtx.isNear() && near)
+            else if (!b1 && near)
                 cacheCtx = cacheCtx.dht().near().context();
 
             this.ctx = cacheCtx;
@@ -966,7 +985,7 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
 
         if (coctx == null)
             throw new CacheInvalidStateException(
-                    "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
+                "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
 
         // Unmarshal transform closure anyway if it exists.
         if (transformClosBytes != null && entryProcessorsCol == null)

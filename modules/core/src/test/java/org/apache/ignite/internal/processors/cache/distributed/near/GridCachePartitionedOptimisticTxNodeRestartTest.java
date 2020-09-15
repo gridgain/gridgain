@@ -30,6 +30,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -39,14 +40,18 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheAbstractNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -56,11 +61,13 @@ import org.junit.Test;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 
 /**
  * Test node restart.
  */
+@WithSystemProperty(key = "IGNITE_DIAGNOSTIC_ENABLED", value = "false")
 public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAbstractNodeRestartSelfTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -351,8 +358,10 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         int cand = -1;
 
+        IgniteEx grid1 = grid(1);
+
         for (int p = 0; p < partitions; p++) {
-            if (!crd.affinity(CACHE_NAME).isPrimaryOrBackup(crd.cluster().localNode(), p)) {
+            if (!crd.affinity(CACHE_NAME).isPrimaryOrBackup(grid1.cluster().localNode(), p)) {
                 cand = p;
 
                 break;
@@ -361,110 +370,49 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         assert cand != -1;
 
-        try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-            IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
+        // Create near reader on grid1.
+        try (Transaction tx = grid1.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> nearCache = grid1.cache(CACHE_NAME);
 
             nearCache.put(cand, 0);
 
             tx.commit();
         }
 
-        Collection<ClusterNode> nodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(cand);
+        TestRecordingCommunicationSpi.spi(grid(0)).blockMessages(GridDhtPartitionsFullMessage.class, grid(1).name());
 
-        IgniteEx owner = (IgniteEx) grid(nodes.iterator().next());
+        final List<DiscoveryEvent> mergedEvts = new ArrayList<>();
 
-        TestRecordingCommunicationSpi.spi(owner).blockMessages(GridDhtTxFinishRequest.class, crd.name());
+        mergeExchangeWaitVersion(crd, 6, mergedEvts);
+
+        stopGrid(getTestIgniteInstanceName(2), true, false);
+        stopGrid(getTestIgniteInstanceName(3), true, false);
+
+        TestRecordingCommunicationSpi.spi(grid(0)).waitForBlocked();
+
+        Collection<ClusterNode> owners = grid(0).affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(cand);
+
+        assertEquals(grid(0).localNode(), owners.iterator().next());
 
         int finalCand = cand;
-        IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
+        IgniteInternalFuture<?> fut = multithreadedAsync(new Runnable() {
             @Override public void run() {
-                try (Transaction tx = owner.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-                    IgniteCache<Object, Object> colocatedCache = owner.cache(CACHE_NAME);
+                // Create near reader on grid1.
+                try (Transaction tx = grid(0).transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+                    IgniteCache<Object, Object> dhtCache = grid(0).cache(CACHE_NAME);
 
-                    colocatedCache.put(finalCand, 1);
+                    dhtCache.put(finalCand, 1);
 
                     tx.commit();
                 }
             }
-        });
+        }, 1);
 
-        TestRecordingCommunicationSpi.spi(owner).waitForBlocked();
+        TestRecordingCommunicationSpi.spi(grid(0)).stopBlock();
 
-        Collection<IgniteInternalTx> txs = crd.context().cache().context().tm().activeTransactions();
-        GridNearTxRemote rmtTx = (GridNearTxRemote) txs.iterator().next();
+        fut.get();
 
-        IgniteInternalFuture fut2 = GridTestUtils.runAsync(new Runnable() {
-            @Override public void run() {
-                try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
-                    IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
-
-                    nearCache.put(finalCand, 2);
-
-                    TransactionProxyImpl p = (TransactionProxyImpl) tx;
-                    p.tx().prepare(true);
-
-                    tx.commit();
-                } catch (Throwable t) {
-                    fail(X.getFullStackTrace(t));
-                }
-            }
-        });
-
-        //doSleep(1000);
-
-        TestRecordingCommunicationSpi.spi(owner).stopBlock();
-
-        //doSleep(1000);
-
-        Object v1 = crd.cache(CACHE_NAME).get(finalCand);
-        Object v2 = owner.cache(CACHE_NAME).get(finalCand);
-
-        GridKernalContextImpl ctx = (GridKernalContextImpl) grid(0).context();
-        ctx.dump(finalCand, log);
-
-        System.out.println();
-
-
-//        List<ClusterNode> nodes0 = new ArrayList<>(crd.cluster().nodes());
-//
-//        nodes0.removeAll(nodes);
-//        nodes0.remove(crd.localNode());
-//
-//        ClusterNode toStop = nodes0.get(0);
-//
-//        IgniteInternalFuture fut3 = GridTestUtils.runAsync(new Runnable() {
-//            @Override public void run() {
-//                grid(toStop).close();
-//            }
-//        });
-//
-//        doSleep(1000);
-//
-//        Collection<IgniteInternalTx> txs2 = crd.context().cache().context().tm().activeTransactions();
-//
-//        System.out.println();
-
-        //TestRecordingCommunicationSpi.spi(owner).stopBlock();
-
-        //fut.get();
-
-//        System.out.println();
-//
-//        final List<DiscoveryEvent> mergedEvts = new ArrayList<>();
-//
-//        mergeExchangeWaitVersion(crd, 8, mergedEvts);
-//
-//        stopGrid(getTestIgniteInstanceName(2), true, false);
-//        stopGrid(getTestIgniteInstanceName(3), true, false);
-//
-//        awaitPartitionMapExchange();
-
-        // 1 Block near prep
-        // remove 2 nodes
-        // unblock near prep
-        // check if a tx created
-
-        System.out.println();
+        doSleep(100000);
     }
 
     @Test
