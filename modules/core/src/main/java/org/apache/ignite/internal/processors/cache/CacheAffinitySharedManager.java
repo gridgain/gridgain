@@ -2512,6 +2512,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     List<ClusterNode> owners = top.owners(p, topVer);
 
+                    // Remove non-affinity (temporary) owners, as they can go renting state in any moment.
+                    owners.retainAll(curNodes);
+
                     // It is essential that curPrimary node has partition in OWNING state.
                     if (!owners.isEmpty() && !owners.contains(curPrimary))
                         curPrimary = owners.get(0);
