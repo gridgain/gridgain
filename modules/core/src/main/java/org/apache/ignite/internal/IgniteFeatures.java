@@ -19,7 +19,6 @@ package org.apache.ignite.internal;
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
-import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
@@ -213,7 +212,7 @@ public enum IgniteFeatures {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
             if (status.enabled() && !status.forcedModeEnabled())
-                return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
+                return status.supportedFeatures().contains(feature);
         }
 
         return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
@@ -255,8 +254,8 @@ public enum IgniteFeatures {
         if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
-                return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
+            if (status.enabled() && !status.forcedModeEnabled())
+                return status.supportedFeatures().contains(feature);
         }
 
         for (ClusterNode next : nodes) {
@@ -337,8 +336,12 @@ public enum IgniteFeatures {
             if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
+            //Disable new rolling upgrade
+            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
+                continue;
+
             // Add only when indexing is enabled.
-            if (INDEXING == value && (ctx.query() == null || !ctx.query().moduleEnabled()))
+            if (INDEXING == value && !ctx.query().moduleEnabled())
                 continue;
 
             // Add only when tracing is enabled.
