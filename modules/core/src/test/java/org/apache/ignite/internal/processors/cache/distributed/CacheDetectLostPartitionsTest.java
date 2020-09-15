@@ -66,12 +66,14 @@ public class CacheDetectLostPartitionsTest extends GridCommonAbstractTest {
         checkCache(client.cache(TEST_CACHE_NAME + 2));
     }
 
+    /** */
     private CacheConfiguration<Object, Object> getCacheConfig(String cacheName) {
         return new CacheConfiguration<>(cacheName)
                 .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_SAFE);
     }
 
-    private void checkCache(IgniteCache cache) {
+    /** */
+    private void checkCache(IgniteCache<Object, Object> cache) {
         assertFalse(cache.lostPartitions().isEmpty());
 
         GridTestUtils.assertThrows(null, () -> cache.get(1),
