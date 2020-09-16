@@ -607,9 +607,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         if (!ok) {
             GridDhtCacheEntry entry0 = (GridDhtCacheEntry) entry;
 
-            GridKernalContextImpl kctx = (GridKernalContextImpl) ctx.kernalContext();
-            kctx.dump(entry.key().value(entry.context().cacheObjectContext(), false), kctx.log(getClass()));
-
             String err = "Invalid entry assigned to tx entry [txEntry=" + this +
                 ", entry=" + entry0 +
                 ", name0=" + entry0.context().name() +
@@ -619,7 +616,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
                 ", ctxNear=" + ctx.isNear() +
                 ", ctxDht=" + ctx.isDht() +
                 ", part=" + ctx.group().topology().localPartition(entry0.partition()) +
-                ", err=" + (entry0.bad == null ? "NA" : X.getFullStackTrace(((GridDhtCacheEntry) entry).bad)) +
                 ']';
 
             throw new AssertionError(err);

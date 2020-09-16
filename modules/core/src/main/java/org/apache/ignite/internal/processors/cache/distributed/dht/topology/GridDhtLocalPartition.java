@@ -981,8 +981,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     if (state() == MOVING && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
                         continue;
 
-                    if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
-                        hld = cacheMapHolder(ctx.cacheContext(row.cacheId()));
+                    if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId())) {
+                        GridCacheContext cacheCtx = ctx.cacheContext(row.cacheId());
+
+                        if (cacheCtx.isNear())
+                            cacheCtx = cacheCtx.near().dht().context();
+
+                        hld = cacheMapHolder(cacheCtx);
+                    }
 
                     assert hld != null;
 

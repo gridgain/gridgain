@@ -75,9 +75,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
     @GridToStringExclude
     private final GridDhtLocalPartition locPart;
 
-    /** */
-    public final Exception bad;
-
     /**
      * @param ctx Cache context.
      * @param topVer Topology version at the time of creation (if negative, then latest topology is assumed).
@@ -89,8 +86,6 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
         KeyCacheObject key
     ) {
         super(ctx, key);
-
-        bad = ctx.isNear() ? new Exception() : null;
 
         // Record this entry with partition.
         int p = cctx.affinity().partition(key);
