@@ -16,9 +16,13 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.Collections;
 import java.util.List;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.junit.Test;
 
@@ -105,6 +109,31 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testQ() {
+        grid(0).createCache(new CacheConfiguration("INT2")
+            .setSqlSchema("PUBLIC")
+            .setQueryEntities(Collections.singleton(
+                new QueryEntity(TestKey2Integers.class, Value.class)
+                    .setTableName("TEST2INT")
+                )
+            )
+        );
+
+        grid(0).createCache(new CacheConfiguration("INT8")
+            .setSqlSchema("PUBLIC")
+            .setQueryEntities(Collections.singleton(
+                new QueryEntity(TestKey8Integers.class, Value.class)
+                    .setTableName("TEST8INT")
+                )
+            )
+        );
+
+        System.out.println("asd");
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
@@ -120,5 +149,113 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      */
     private FieldsQueryCursor<List<?>> execute(SqlFieldsQuery qry) {
         return grid(0).context().query().querySqlFields(qry, false);
+    }
+
+    public static class TestKey2Integers {
+        /** */
+        @QuerySqlField
+        private final int id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        /** */
+        public TestKey2Integers(int key) {
+            this.id0 = 0;
+            this.id1 = key;
+        }
+    }
+
+    /** */
+    public static class TestKeyHugeStringAndInteger {
+        /** Prefix. */
+        private static final String PREFIX = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+        /** */
+        @QuerySqlField
+        private final String id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        /** */
+        public TestKeyHugeStringAndInteger(int key) {
+            this.id0 = PREFIX + key;
+            this.id1 = key;
+        }
+    }
+
+    /** */
+    public static class TestKey8Integers {
+        /** */
+        @QuerySqlField
+        private final int id0;
+
+        @QuerySqlField
+        private final int id1;
+
+        @QuerySqlField
+        private final int id2;
+
+        @QuerySqlField
+        private final int id3;
+
+        @QuerySqlField
+        private final int id4;
+
+        @QuerySqlField
+        private final int id5;
+
+        @QuerySqlField
+        private final int id6;
+
+        @QuerySqlField
+        private final int id7;
+
+        /** */
+        public TestKey8Integers(int key) {
+            this.id0 = 0;
+            this.id1 = key / 100_000;
+            this.id2 = key / 10_000;
+            this.id3 = key / 1_000;
+            this.id4 = key / 1000;
+            this.id5 = key / 100;
+            this.id6 = key / 10;
+            this.id7 = key;
+        }
+    }
+
+    /** */
+    public static class Value {
+        /** */
+        @QuerySqlField
+        private final int valInt;
+
+        @QuerySqlField
+        private final String valStr;
+
+        /** */
+        public Value(int key) {
+            this.valInt = key;
+            this.valStr = "val_str" + key;
+        }
+    }
+
+    /** */
+    public static class ValueIndexed {
+        /** */
+        @QuerySqlField(index = true)
+        private final int valInt;
+
+        @QuerySqlField(index = true)
+        private final String valStr;
+
+        /** */
+        public ValueIndexed(int key) {
+            this.valInt = key;
+            this.valStr = "val_str" + key;
+        }
     }
 }
