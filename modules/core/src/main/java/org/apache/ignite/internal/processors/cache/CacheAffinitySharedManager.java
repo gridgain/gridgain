@@ -306,9 +306,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         msg = affinityChangeMessage(waitInfo);
 
                         waitInfo = null;
-
-                        if (cctx.igniteInstanceName().endsWith("0"))
-                            log.info("DBG: 3 " + waitInfo);
                     }
                 }
             }
@@ -1994,10 +1991,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         synchronized (mux) {
             this.waitInfo = null;
-
-            if (cctx.igniteInstanceName().endsWith("0")) {
-                log.info("DBG: 2 " + waitInfo);
-            }
         }
 
         return true;
@@ -2259,9 +2252,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         synchronized (mux) {
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
-
-            if (cctx.igniteInstanceName().endsWith("0"))
-                log.info("DBG: 4 " + waitInfo);
         }
     }
 
@@ -2574,14 +2564,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         }
                     }
 
-                    boolean tmp = !owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p);
-
-                    if (cctx.igniteInstanceName().endsWith("0") && top.groupId() == CU.cacheId("TEST_CACHE"))
-                        log.info("DBG: locPart=" + top.localPartition(p) + ", topVer=" + topVer + ", tmp=" + tmp + ", state=" + top.partitionState(cctx.localNodeId(), p));
-
                     // This will happen if no primary is changed but some backups still need to be rebalanced.
-
-                    if (tmp)
+                    if (!owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p))
                         waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
 
                     if (newNodes0 != null) {
@@ -2623,9 +2607,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         synchronized (mux) {
             waitInfo = !waitRebalanceInfo.empty() ? waitRebalanceInfo : null;
-
-            if (cctx.igniteInstanceName().endsWith("0"))
-                log.info("DBG: " + waitInfo + " " + topVer);
         }
 
         return assignment;

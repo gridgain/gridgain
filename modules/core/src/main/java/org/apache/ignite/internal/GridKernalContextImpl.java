@@ -1304,12 +1304,12 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     public void dump(Integer key, IgniteLogger log) {
         StringBuilder b = new StringBuilder();
-        b.append("node=" + igniteInstanceName() + ", key=" + key + "\n");
+        b.append("DBG: node=" + igniteInstanceName() + ", key=" + key + "\n");
 
         ConcurrentLinkedQueue<Object[]> q = hist.getOrDefault(key, new ConcurrentLinkedQueue<>());
 
         for (Object[] h : q)
-            b.append("       op=" + h[0] + ", trace=" + h[1] + ", stack=" + X.getFullStackTrace((Throwable) h[2]) + "\n");
+            b.append("DBG:       op=" + h[0] + ", trace=" + h[1] + ", stack=" + X.getFullStackTrace((Throwable) h[2]) + "\n");
 
         log.info(b.toString());
     }

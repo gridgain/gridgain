@@ -27,6 +27,7 @@ import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
+import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteExternalizableExpiryPolicy;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.lang.GridAbsClosureX;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -48,6 +50,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -219,15 +222,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     @GridDirectTransient
     @GridToStringExclude
     private transient @Nullable GridAbsClosureX cqNotifyC;
-
-    @GridDirectTransient
-    public volatile boolean b1;
-
-    @GridDirectTransient
-    public volatile boolean b2;
-
-    @GridDirectTransient
-    public volatile boolean b3;
 
     /**
      * Required by {@link Externalizable}
@@ -608,19 +602,28 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
      * @param entry Cache entry.
      */
     public void cached(GridCacheEntryEx entry) {
-        assert entry == null || entry.context() == ctx : "Invalid entry assigned to tx entry [txEntry=" + this +
-            ", entry=" + entry +
-            ", name0=" + entry.context().name() +
-            ", name=" + ctx.name() +
-            ", ctxNear0=" + entry.context().isNear() +
-            ", ctxDht0=" + entry.context().isDht() +
-            ", ctxNear=" + ctx.isNear() +
-            ", ctxDht=" + ctx.isDht() +
-            ", b1=" + b1 +
-            ", b2=" + b2 +
-            ", b3=" + b3 +
-            ", part=" + ctx.group().topology().localPartition(entry.partition()) +
-            ']';
+        boolean ok = entry == null || entry.context() == ctx;
+
+        if (!ok) {
+            GridDhtCacheEntry entry0 = (GridDhtCacheEntry) entry;
+
+            GridKernalContextImpl kctx = (GridKernalContextImpl) ctx.kernalContext();
+            kctx.dump(entry.key().value(entry.context().cacheObjectContext(), false), kctx.log(getClass()));
+
+            String err = "Invalid entry assigned to tx entry [txEntry=" + this +
+                ", entry=" + entry0 +
+                ", name0=" + entry0.context().name() +
+                ", name=" + ctx.name() +
+                ", ctxNear0=" + entry0.context().isNear() +
+                ", ctxDht0=" + entry0.context().isDht() +
+                ", ctxNear=" + ctx.isNear() +
+                ", ctxDht=" + ctx.isDht() +
+                ", part=" + ctx.group().topology().localPartition(entry0.partition()) +
+                ", err=" + (entry0.bad == null ? "NA" : X.getFullStackTrace(((GridDhtCacheEntry) entry).bad)) +
+                ']';
+
+            throw new AssertionError(err);
+        }
 
         this.entry = entry;
     }
@@ -968,14 +971,9 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
                 throw new CacheInvalidStateException(
                     "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
 
-            boolean b1 = cacheCtx.isNear();
-
-            this.b1 = b1;
-            this.b2 = near;
-
-            if (b1 && !near)
+            if (cacheCtx.isNear() && !near)
                 cacheCtx = cacheCtx.near().dht().context();
-            else if (!b1 && near)
+            else if (!cacheCtx.isNear() && near)
                 cacheCtx = cacheCtx.dht().near().context();
 
             this.ctx = cacheCtx;

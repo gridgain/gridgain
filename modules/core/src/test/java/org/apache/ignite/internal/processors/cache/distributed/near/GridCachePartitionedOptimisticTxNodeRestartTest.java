@@ -533,6 +533,141 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         fut.get();
     }
 
+    @Test
+    @Ignore
+    public void testZzz4() throws Exception {
+        backups = 1;
+        nodeCnt = 4;
+        keyCnt = 10;
+        partitions = 128;
+        rebalancMode = ASYNC;
+        evict = false;
+
+        IgniteEx crd = startGrids(2);
+        awaitPartitionMapExchange(true, true, null);
+
+        startGrid(2);
+        startGrid(3);
+        awaitPartitionMapExchange(true, true, null);
+
+        int cand = -1;
+
+        for (int p = 0; p < partitions; p++) {
+            if (!crd.affinity(CACHE_NAME).isPrimaryOrBackup(crd.cluster().localNode(), p)) {
+                cand = p;
+
+                break;
+            }
+        }
+
+        assert cand != -1;
+
+        try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
+
+            nearCache.put(cand, 0);
+
+            tx.commit();
+        }
+
+        Collection<ClusterNode> nodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(cand);
+
+        IgniteEx owner = (IgniteEx) grid(nodes.iterator().next());
+
+        TestRecordingCommunicationSpi.spi(owner).blockMessages(GridDhtTxFinishRequest.class, crd.name());
+
+        int finalCand = cand;
+        IgniteInternalFuture fut = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                try (Transaction tx = owner.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+                    IgniteCache<Object, Object> colocatedCache = owner.cache(CACHE_NAME);
+
+                    colocatedCache.put(finalCand, 1);
+
+                    tx.commit();
+                }
+            }
+        });
+
+        TestRecordingCommunicationSpi.spi(owner).waitForBlocked();
+
+        Collection<IgniteInternalTx> txs = crd.context().cache().context().tm().activeTransactions();
+        GridNearTxRemote rmtTx = (GridNearTxRemote) txs.iterator().next();
+
+        IgniteInternalFuture fut2 = GridTestUtils.runAsync(new Runnable() {
+            @Override public void run() {
+                try (Transaction tx = crd.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+                    IgniteCache<Object, Object> nearCache = crd.cache(CACHE_NAME);
+
+                    nearCache.put(finalCand, 2);
+
+                    TransactionProxyImpl p = (TransactionProxyImpl) tx;
+                    p.tx().prepare(true);
+
+                    //tx.commit();
+                } catch (Throwable t) {
+                    fail(X.getFullStackTrace(t));
+                }
+            }
+        });
+
+        doSleep(1000);
+
+        TestRecordingCommunicationSpi.spi(owner).stopBlock();
+
+        doSleep(1000);
+
+        Object v1 = crd.cache(CACHE_NAME).get(finalCand);
+        Object v2 = owner.cache(CACHE_NAME).get(finalCand);
+
+        GridKernalContextImpl ctx = (GridKernalContextImpl) grid(0).context();
+        ctx.dump(finalCand, log);
+
+        System.out.println();
+
+
+//        List<ClusterNode> nodes0 = new ArrayList<>(crd.cluster().nodes());
+//
+//        nodes0.removeAll(nodes);
+//        nodes0.remove(crd.localNode());
+//
+//        ClusterNode toStop = nodes0.get(0);
+//
+//        IgniteInternalFuture fut3 = GridTestUtils.runAsync(new Runnable() {
+//            @Override public void run() {
+//                grid(toStop).close();
+//            }
+//        });
+//
+//        doSleep(1000);
+//
+//        Collection<IgniteInternalTx> txs2 = crd.context().cache().context().tm().activeTransactions();
+//
+//        System.out.println();
+
+        //TestRecordingCommunicationSpi.spi(owner).stopBlock();
+
+        //fut.get();
+
+//        System.out.println();
+//
+//        final List<DiscoveryEvent> mergedEvts = new ArrayList<>();
+//
+//        mergeExchangeWaitVersion(crd, 8, mergedEvts);
+//
+//        stopGrid(getTestIgniteInstanceName(2), true, false);
+//        stopGrid(getTestIgniteInstanceName(3), true, false);
+//
+//        awaitPartitionMapExchange();
+
+        // 1 Block near prep
+        // remove 2 nodes
+        // unblock near prep
+        // check if a tx created
+
+        System.out.println();
+    }
+
     private IgniteEx stopNode2(IgniteEx crd, IgniteEx testNode, int k) {
         Collection<ClusterNode> txNodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(k);
         txNodes.add(testNode.localNode());
