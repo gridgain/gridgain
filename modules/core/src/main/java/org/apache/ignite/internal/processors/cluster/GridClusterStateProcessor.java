@@ -1089,7 +1089,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         boolean forceChangeBaselineTopology,
         boolean isAutoAdjust
     ) {
-        BaselineTopology newBlt = (compatibilityMode && !forceChangeBaselineTopology) ?
+        BaselineTopology newBlt = (compatibilityMode && !forceChangeBaselineTopology) || inMemoryClusterWithoutBlt() ?
             null :
             calculateNewBaselineTopology(state, baselineNodes, forceChangeBaselineTopology);
 
@@ -1189,7 +1189,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         DiscoveryDataClusterState curState = globalState;
 
-        if (!curState.transition() && curState.state() == state) {
+        // Should to send always a message from Demon node, because it doesn't get Discovery Data Packege on local join
+        // and doesn't know a cluster state properly.
+        if (!ctx.isDaemon() && !curState.transition() && curState.state() == state) {
             if (!ClusterState.active(state) || inMemoryClusterWithoutBlt() || BaselineTopology.equals(curState.baselineTopology(), blt))
                 return new GridFinishedFuture<>();
         }
