@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.metric.sql;
+package org.apache.ignite.internal.processors.metric.sql;
 
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.function.Predicate;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlAbstractLocalSystemView;
 import org.apache.ignite.spi.metric.Metric;
@@ -28,25 +27,19 @@ import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.result.Row;
 import org.gridgain.internal.h2.result.SearchRow;
 import org.gridgain.internal.h2.value.Value;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Sql view for exporting metrics.
  */
-public class MetricRegistryLocalSystemView extends SqlAbstractLocalSystemView {
+class MetricRegistryLocalSystemView extends SqlAbstractLocalSystemView {
     /** Metric registry. */
     private ReadOnlyMetricManager mreg;
-
-    /** Metric filter. */
-    private @Nullable Predicate<ReadOnlyMetricRegistry> filter;
 
     /**
      * @param ctx Context.
      * @param mreg Metric registry.
-     * @param filter Metric registry filter.
      */
-    public MetricRegistryLocalSystemView(GridKernalContext ctx, ReadOnlyMetricManager mreg,
-        @Nullable Predicate<ReadOnlyMetricRegistry> filter) {
+    MetricRegistryLocalSystemView(GridKernalContext ctx, ReadOnlyMetricManager mreg) {
         super(SqlViewMetricExporterSpi.SYS_VIEW_NAME, "Ignite metrics",
             ctx,
             newColumn("NAME", Value.STRING),
@@ -54,7 +47,6 @@ public class MetricRegistryLocalSystemView extends SqlAbstractLocalSystemView {
             newColumn("DESCRIPTION", Value.STRING));
 
         this.mreg = mreg;
-        this.filter = filter;
     }
 
     /** {@inheritDoc} */
@@ -70,9 +62,6 @@ public class MetricRegistryLocalSystemView extends SqlAbstractLocalSystemView {
             private boolean advance() {
                 while (grps.hasNext()) {
                     ReadOnlyMetricRegistry mreg = grps.next();
-
-                    if (filter != null && !filter.test(mreg))
-                        continue;
 
                     curr = mreg.iterator();
 
