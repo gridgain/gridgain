@@ -363,9 +363,7 @@ public class CheckpointHistory {
 
             Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
 
-            while (iter.hasNext()) {
-                Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp = iter.next();
-
+            for (Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp : earliestCp.entrySet()) {
                 if (grpPartPerCp.getValue() == deletedCpEntry)
                     grpPartPerCp.setValue(oldestCpInHistory);
             }
@@ -478,11 +476,14 @@ public class CheckpointHistory {
      *
      * @param grpId Group id.
      * @param partsCounter Partition mapped to update counter.
+     * @param latestReservedPointer Latest reserved WAL pointer.
+     * @param margin Margin pointer.
      * @return Earliest WAL pointer for group specified.
      */
-    @Nullable public WALPointer searchEarliestWalPointer(
+    @Nullable public FileWALPointer searchEarliestWalPointer(
         int grpId,
         Map<Integer, Long> partsCounter,
+        FileWALPointer latestReservedPointer,
         long margin
     ) throws IgniteCheckedException {
         if (F.isEmpty(partsCounter))
@@ -497,15 +498,11 @@ public class CheckpointHistory {
         for (Long cpTs : checkpoints(true)) {
             CheckpointEntry cpEntry = entry(cpTs);
 
-            while (!F.isEmpty(historyPointerCandidate)) {
-                FileWALPointer ptr = historyPointerCandidate.poll()
-                    .choose(cpEntry, margin, partsCounter);
-
-                if (minPtr == null || ptr.compareTo(minPtr) < 0)
-                    minPtr = ptr;
-            }
+            minPtr = getMinimalPointer(partsCounter, margin, minPtr, historyPointerCandidate, cpEntry);
 
             Iterator<Map.Entry<Integer, Long>> iter = modifiedPartsCounter.entrySet().iterator();
+
+            FileWALPointer ptr = (FileWALPointer)cpEntry.checkpointMark();
 
             while (iter.hasNext()) {
                 Map.Entry<Integer, Long> entry = iter.next();
@@ -514,8 +511,6 @@ public class CheckpointHistory {
 
                 if (foundCntr != null && foundCntr <= entry.getValue()) {
                     iter.remove();
-
-                    FileWALPointer ptr = (FileWALPointer)cpEntry.checkpointMark();
 
                     if (ptr == null) {
                         throw new IgniteCheckedException("Could not find start pointer for partition [part="
@@ -536,8 +531,8 @@ public class CheckpointHistory {
                 }
             }
 
-            if (F.isEmpty(modifiedPartsCounter) && F.isEmpty(historyPointerCandidate))
-                return minPtr;
+            if ((F.isEmpty(modifiedPartsCounter) && F.isEmpty(historyPointerCandidate)) || ptr.compareTo(latestReservedPointer) == 0)
+                break;
         }
 
         if (!F.isEmpty(modifiedPartsCounter)) {
@@ -547,9 +542,31 @@ public class CheckpointHistory {
                 + entry.getKey() + ", partCntrSince=" + entry.getValue() + "]");
         }
 
+        minPtr = getMinimalPointer(partsCounter, margin, minPtr, historyPointerCandidate, null);
+
+        return minPtr;
+    }
+
+    /**
+     * Finds a minimal WAL pointer.
+     *
+     * @param partsCounter Partition mapped to update counter.
+     * @param margin Margin pointer.
+     * @param minPtr Minimal WAL pointer which was determined before.
+     * @param historyPointerCandidate Collection of candidates for a historical WAL pointer.
+     * @param cpEntry Checkpoint entry.
+     * @return Minimal WAL pointer.
+     */
+    private FileWALPointer getMinimalPointer(
+        Map<Integer, Long> partsCounter,
+        long margin,
+        FileWALPointer minPtr,
+        LinkedList<WalPointerCandidate> historyPointerCandidate,
+        CheckpointEntry cpEntry
+    ) {
         while (!F.isEmpty(historyPointerCandidate)) {
             FileWALPointer ptr = historyPointerCandidate.poll()
-                .choose(null, margin, partsCounter);
+                .choose(cpEntry, margin, partsCounter);
 
             if (minPtr == null || ptr.compareTo(minPtr) < 0)
                 minPtr = ptr;
@@ -559,24 +576,25 @@ public class CheckpointHistory {
     }
 
     /**
-     * The class is used for get a pointer with a specific margin. This stores the nearest pointer which covering a
-     * partition counter. It is able to choose between other pointer and this.
+     * The class is used for get a pointer with a specific margin.
+     * This stores the nearest pointer which covering a partition counter.
+     * It is able to choose between other pointer and this.
      */
     private class WalPointerCandidate {
         /** Group id. */
-        private int grpId;
+        private final int grpId;
 
         /** Partition id. */
-        private int part;
+        private final int part;
 
         /** Partition counter. */
-        private long partContr;
+        private final long partContr;
 
         /** WAL pointer. */
-        private FileWALPointer walPntr;
+        private final FileWALPointer walPntr;
 
         /** Partition counter at the moment of WAL pointer. */
-        private long walPntrCntr;
+        private final long walPntrCntr;
 
         /**
          * @param grpId Group id.
@@ -594,8 +612,8 @@ public class CheckpointHistory {
         }
 
         /**
-         * Make a choice between stored WAL pointer and other, getting from checkpoint, with a specific margin. Updates
-         * counter in collection from parameters.
+         * Make a choice between stored WAL pointer and other, getting from checkpoint, with a specific margin.
+         * Updates counter in collection from parameters.
          *
          * @param cpEntry Checkpoint entry.
          * @param margin Margin.

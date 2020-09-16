@@ -280,6 +280,7 @@ namespace Apache.Ignite.Core.Tests.Services
             /** <inheritdoc /> */
             public override int GetHashCode()
             {
+                // ReSharper disable once NonReadonlyMemberInGetHashCode
                 return Id;
             }
 
