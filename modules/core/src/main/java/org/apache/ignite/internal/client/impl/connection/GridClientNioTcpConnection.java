@@ -66,6 +66,7 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientHands
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeMetricsBean;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
@@ -1097,6 +1098,13 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         }
 
         return nodeBuilder.build();
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFutureAdapter<?> messageBeforeStart(Object msg) throws GridClientException {
+        assert msg instanceof GridClientNodeStateBeforeStartRequest;
+
+        return makeRequest((GridClientMessage)msg, new TcpClientFuture<>());
     }
 
     /**
