@@ -6212,7 +6212,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             "'IgniteConfiguration.clientFailureDetectionTimeout' " +
                                             "(consider increasing configuration property) " +
                                             "[timeout=" + spi.clientFailureDetectionTimeout() +
-                                            ", time since client fail in milliseconds: " +
+                                            ", timeSinceClientLivenessCheckFailed: " +
                                             U.nanosToMillis(System.nanoTime() - clientNode.aliveCheckTimeNanos()) +
                                             ", node=" + clientNode + ']');
 
