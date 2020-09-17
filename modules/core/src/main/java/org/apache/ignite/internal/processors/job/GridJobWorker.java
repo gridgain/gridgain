@@ -911,8 +911,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                                 attrBytes,
                                 loc ? attrs : null,
                                 isCancelled(),
-                                retry ? ctx.cache().context().exchange().readyAffinityVersion() : null,
-                                ses.getTaskName());
+                                retry ? ctx.cache().context().exchange().readyAffinityVersion() : null);
 
                             long timeout = ses.getEndTime() - U.currentTimeMillis();
 
