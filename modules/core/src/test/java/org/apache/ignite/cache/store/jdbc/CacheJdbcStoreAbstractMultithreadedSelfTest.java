@@ -65,7 +65,7 @@ public abstract class CacheJdbcStoreAbstractMultithreadedSelfTest<T extends Cach
     private static final String DFLT_MAPPING_CONFIG = "modules/core/src/test/config/store/jdbc/ignite-jdbc-type.xml";
 
     /** Database connection URL. */
-    protected static final String DFLT_CONN_URL = "jdbc:h2:mem:autoCacheStore;DB_CLOSE_DELAY=-1";
+    protected static final String DFLT_CONN_URL = "jdbc:gg-h2:mem:autoCacheStore;DB_CLOSE_DELAY=-1";
 
     /** Number of transactions. */
     private static final int TX_CNT = GridTestUtils.SF.applyLB(200, 20);

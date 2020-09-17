@@ -183,42 +183,42 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Test checks that by default sensitive data is displayed.
-     *
-     * @throws Exception If failed.
+     * Test checks that by default sensitive data is not displayed.
      */
     @Test
-    public void testShowSensitiveDataByDefault() throws Exception {
-        exeWithCheck(null, true, true, identity());
+    public void testSensitiveDataByDefaultMd5() {
+        exeWithCheck(null, true, false, ProcessSensitiveDataUtils::md5);
+    }
+
+    /**
+     * Test checks that by default sensitive data is displayed with argument specified.
+     */
+    @Test
+    public void testShowSensitiveData() {
+        exeWithCheck(ProcessSensitiveData.SHOW, true, true, identity());
     }
 
     /**
      * Test verifies that sensitive data will be hidden.
-     *
-     * @throws Exception If failed.
      */
     @Test
-    public void testHideSensitiveData() throws Exception {
+    public void testHideSensitiveData() {
         exeWithCheck(ProcessSensitiveData.HIDE, false, false, identity());
     }
 
     /**
      * Test verifies that sensitive data should be replaced with hash.
-     *
-     * @throws Exception If failed.
      */
     @Test
-    public void testHashSensitiveData() throws Exception {
+    public void testHashSensitiveData() {
         exeWithCheck(ProcessSensitiveData.HASH, true, false, s -> valueOf(s.hashCode()));
     }
 
     /**
      * Test verifies that sensitive data should be replaced with MD5 hash.
-     *
-     * @throws Exception If failed.
      */
     @Test
-    public void testMd5HashSensitiveData() throws Exception {
+    public void testMd5HashSensitiveData() {
         exeWithCheck(ProcessSensitiveData.MD5, true, false, ProcessSensitiveDataUtils::md5);
     }
 
@@ -229,23 +229,26 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      * @param containsData         Contains or not elements {@link #sensitiveValues} in utility output.
      * @param containsPrefix       Contains or not {@link #SENSITIVE_DATA_VALUE_PREFIX} in utility output.
      * @param converter            Converting elements {@link #sensitiveValues} for checking in utility output.
-     * @throws Exception If failed.
      */
     private void exeWithCheck(
         ProcessSensitiveData processSensitiveData,
         boolean containsData,
         boolean containsPrefix,
         Function<String, String> converter
-    ) throws Exception {
+    ) {
         requireNonNull(converter);
 
         injectTestSystemOut();
 
         List<String> args = new ArrayList<>();
-        args.add("pageSize=" + pageSize);
-        args.add("walDir=" + walDirPath);
-        if (processSensitiveData != null)
-            args.add("processSensitiveData=" + processSensitiveData.name());
+        args.add("--page-size");
+        args.add(String.valueOf(pageSize));
+        args.add("--wal-dir");
+        args.add(walDirPath);
+        if (processSensitiveData != null) {
+            args.add("--include-sensitive");
+            args.add(processSensitiveData.name());
+        }
 
         IgniteWalConverter.main(args.toArray(new String[args.size()]));
 

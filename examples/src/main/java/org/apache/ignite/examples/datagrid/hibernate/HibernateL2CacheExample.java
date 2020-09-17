@@ -82,7 +82,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  */
 public class HibernateL2CacheExample {
     /** JDBC URL for backing database (an H2 in-memory database is used). */
-    private static final String JDBC_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    private static final String JDBC_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** Path to hibernate configuration file (will be resolved from application {@code CLASSPATH}). */
     private static final String HIBERNATE_CFG = "hibernate/example-hibernate-L2-cache.xml";

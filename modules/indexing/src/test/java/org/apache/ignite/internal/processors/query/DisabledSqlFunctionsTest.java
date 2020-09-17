@@ -126,7 +126,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         checkSqlWithDisabledFunction("SELECT MEMORY_FREE()");
         checkSqlWithDisabledFunction("SELECT MEMORY_USED()");
         checkSqlWithDisabledFunction("SELECT LOCK_MODE()");
-        checkSqlWithDisabledFunction("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')");
+        checkSqlWithDisabledFunction("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')");
         checkSqlWithDisabledFunction("SELECT SESSION_ID()");
         checkSqlWithDisabledFunction("SELECT CANCEL_SESSION(1)");
     }
@@ -143,7 +143,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, MEMORY_USED()");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, LOCK_MODE()");
         checkSqlWithDisabledFunction(
-            "INSERT INTO TEST (ID, VAL) SELECT 1, LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')");
+            "INSERT INTO TEST (ID, VAL) SELECT 1, LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, SESSION_ID()");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, CANCEL_SESSION(1)");
     }
@@ -159,7 +159,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         checkSqlWithDisabledFunction("UPDATE TEST SET VAL = MEMORY_FREE()");
         checkSqlWithDisabledFunction("UPDATE TEST SET VAL = MEMORY_USED()");
         checkSqlWithDisabledFunction("UPDATE TEST SET VAL = LOCK_MODE()");
-        checkSqlWithDisabledFunction("UPDATE TEST SET VAL = LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')");
+        checkSqlWithDisabledFunction("UPDATE TEST SET VAL = LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')");
         checkSqlWithDisabledFunction("UPDATE TEST SET VAL = SESSION_ID()");
         checkSqlWithDisabledFunction("UPDATE TEST SET VAL = CANCEL_SESSION(1)");
     }
@@ -175,7 +175,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = MEMORY_FREE()");
         checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = MEMORY_USED()");
         checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = LOCK_MODE()");
-        checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')");
+        checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')");
         checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = SESSION_ID()");
         checkSqlWithDisabledFunction("DELETE FROM TEST WHERE VAL = CANCEL_SESSION(1)");
     }
@@ -193,7 +193,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         sql("SELECT MEMORY_FREE()").getAll();
         sql("SELECT MEMORY_USED()").getAll();
         sql("SELECT LOCK_MODE()").getAll();
-        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
+        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
         sql("SELECT SESSION_ID()").getAll();
         sql("SELECT CANCEL_SESSION(1)").getAll();
     }
@@ -211,7 +211,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         sql("SELECT MEMORY_FREE()").getAll();
         sql("SELECT MEMORY_USED()").getAll();
         sql("SELECT LOCK_MODE()").getAll();
-        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
+        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
         sql("SELECT SESSION_ID()").getAll();
         sql("SELECT CANCEL_SESSION(1)").getAll();
 
@@ -231,7 +231,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         sql("SELECT MEMORY_FREE()").getAll();
         sql("SELECT MEMORY_USED()").getAll();
         sql("SELECT LOCK_MODE()").getAll();
-        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
+        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:gg-h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
         sql("SELECT SESSION_ID()").getAll();
         sql("SELECT CANCEL_SESSION(1)").getAll();
 

@@ -50,11 +50,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.h2.command.Prepared;
-import org.h2.engine.Session;
-import org.h2.message.DbException;
-import org.h2.table.Column;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
