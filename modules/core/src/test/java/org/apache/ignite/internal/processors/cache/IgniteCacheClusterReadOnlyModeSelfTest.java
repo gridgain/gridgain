@@ -512,7 +512,7 @@ public class IgniteCacheClusterReadOnlyModeSelfTest extends IgniteCacheClusterRe
     }
 
     /** */
-    //@Test
+    @Test
     public void testCloseAllowed() {
         performAction((node, cache) -> {
             assertFalse(cache.isClosed());
