@@ -16,43 +16,21 @@
 
 package org.apache.ignite.compatibility.sql.runner;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
-import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The result of query duel.
  */
 public class QueryDuelResult {
-    /**
-     * Status of the particular result. Needed to distinguish fails because
-     * of exception from fails because of increased latency.
-     */
-    public enum Status {
-        /** */
-        SUCCESS,
-
-        /** */
-        VERIFICATION_FAILED,
-
-        /** */
-        ERROR
-    }
+    /** */
+    private final QueryWithParams qry;
 
     /** */
-    private final Status status;
+    private final long baseExecTimeNanos;
 
     /** */
-    private final String qry;
-
-    /** */
-    private final List<Long> baseExecTimeNanos;
-
-    /** */
-    private final List<Long> targetExecTimeNanos;
+    private final long targetExecTimeNanos;
 
     /** */
     private final Exception baseErr;
@@ -61,78 +39,20 @@ public class QueryDuelResult {
     private final Exception targetErr;
 
     /**
-     * @param status Status.
      * @param qry Query.
      * @param baseExecTimeNanos Base execute time nanos.
      * @param targetExecTimeNanos Target execute time nanos.
      * @param baseErr Base err.
      * @param targetErr Target err.
      */
-    private QueryDuelResult(Status status, String qry, List<Long> baseExecTimeNanos, List<Long> targetExecTimeNanos,
+    private QueryDuelResult(QueryWithParams qry, long baseExecTimeNanos, long targetExecTimeNanos,
         Exception baseErr, Exception targetErr) {
-        this.status = status;
         this.qry = qry;
-        this.baseExecTimeNanos = new ArrayList<>(baseExecTimeNanos);
-        this.targetExecTimeNanos = new ArrayList<>(targetExecTimeNanos);
+        this.baseExecTimeNanos = baseExecTimeNanos;
+        this.targetExecTimeNanos = targetExecTimeNanos;
 
         this.baseErr = baseErr;
         this.targetErr = targetErr;
-    }
-
-    /**
-     * Creates successful result for given query and execution times.
-     *
-     * @param qry Query.
-     * @param baseExecTimes Base execute times.
-     * @param targetExecTimes Target execute times.
-     */
-    static QueryDuelResult successfulResult(String qry, List<Long> baseExecTimes, List<Long> targetExecTimes) {
-        assert !F.isEmpty(qry);
-        assert !F.isEmpty(baseExecTimes);
-        assert !F.isEmpty(targetExecTimes);
-
-        return new QueryDuelResult(Status.SUCCESS, qry, baseExecTimes, targetExecTimes, null, null);
-    }
-
-    /**
-     * Creates result with status {@link Status#VERIFICATION_FAILED} for given query and execution times.
-     *
-     * @param qry Query.
-     * @param baseExecTimes Base execute times.
-     * @param targetExecTimes Target execute times.
-     */
-    static QueryDuelResult verificationFailedResult(String qry, List<Long> baseExecTimes, List<Long> targetExecTimes) {
-        assert !F.isEmpty(qry);
-        assert !F.isEmpty(baseExecTimes);
-        assert !F.isEmpty(targetExecTimes);
-
-        return new QueryDuelResult(Status.VERIFICATION_FAILED, qry, baseExecTimes, targetExecTimes, null, null);
-    }
-
-    /**
-     * Creates result with status {@link Status#ERROR} for given query and exceptions.
-     *
-     * @param qry Query.
-     * @param baseErr Base err.
-     * @param targetErr Target err.
-     */
-    static QueryDuelResult failedResult(String qry, Exception baseErr, Exception targetErr) {
-        assert !F.isEmpty(qry) : qry;
-        assert baseErr != null;
-        assert targetErr != null;
-
-        return new QueryDuelResult(Status.ERROR, qry, Collections.emptyList(), Collections.emptyList(),
-            baseErr, targetErr);
-    }
-
-    /**
-     * Returns {@code true} if result could be considered as successful.
-     *
-     * @return {@code true} if result could be considered as successful,
-     * {@code false} otherwise.
-     */
-    public boolean successful() {
-        return status == Status.SUCCESS;
     }
 
     /**
@@ -140,7 +60,7 @@ public class QueryDuelResult {
      *
      * @return Query string.
      */
-    public String query() {
+    public QueryWithParams query() {
         return qry;
     }
 
@@ -149,7 +69,7 @@ public class QueryDuelResult {
      *
      * @return base execution times.
      */
-    public List<Long> baseExecutionTimeNanos() {
+    public long baseExecutionTimeNanos() {
         return baseExecTimeNanos;
     }
 
@@ -158,7 +78,7 @@ public class QueryDuelResult {
      *
      * @return target execution times.
      */
-    public List<Long> targetExecutionTimeNanos() {
+    public long targetExecutionTimeNanos() {
         return targetExecTimeNanos;
     }
 
@@ -202,11 +122,108 @@ public class QueryDuelResult {
     @Override public String toString() {
         return "QueryDuelResult[" +
             "qry='" + qry + '\'' +
-            "status='" + status + '\'' +
-            ", baseExecTimeNanos=" + baseExecTimeNanos +
-            ", targetExecTimeNanos=" + targetExecTimeNanos +
+            ", baseExecTime=" + nanosToMillis(baseExecTimeNanos) + "ms" +
+            ", targetExecTime=" + nanosToMillis(targetExecTimeNanos) + "ms" +
             ", baseErr=" + baseErr +
             ", targetErr=" + targetErr +
             ']';
+    }
+
+    /**
+     * @param nanos Nanoseconds.
+     * @return Millis with precision up to 3 decimals after point.
+     */
+    @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+    private double nanosToMillis(long nanos) {
+        return 1.0 * (nanos / 1000) / 1000;
+    }
+
+    /**
+     * @param qry Query.
+     */
+    public static Builder builder(QueryWithParams qry) {
+        return new Builder(qry);
+    }
+
+    /** */
+    static class Builder {
+        /** */
+        private final QueryWithParams qry;
+
+        /** */
+        private long baseExecTime;
+
+        /** */
+        private long targetExecTime;
+
+        /** */
+        private Exception baseErr;
+
+        /** */
+        private Exception targetErr;
+
+        /**
+         * @param qry Query.
+         */
+        private Builder(QueryWithParams qry) {
+            assert qry != null;
+
+            this.qry = qry;
+        }
+
+        /**
+         * @param time Execution time on base version, in millis.
+         *
+         * @return {@code this} for chaining.
+         */
+        Builder baseExecTime(long time) {
+            assert time >= 0;
+
+            baseExecTime = time;
+
+            return this;
+        }
+
+        /**
+         * @param time Execution time on target version, in millis.
+         *
+         * @return {@code this} for chaining.
+         */
+        Builder targetExecTime(long time) {
+            assert time >= 0;
+
+            targetExecTime = time;
+
+            return this;
+        }
+
+        /**
+         * @param err Error of execution on base version.
+         *
+         * @return {@code this} for chaining.
+         */
+        Builder baseErr(@Nullable Exception err) {
+            baseErr = err;
+
+            return this;
+        }
+
+        /**
+         * @param err Error of execution on target version.
+         *
+         * @return {@code this} for chaining.
+         */
+        Builder targetErr(@Nullable Exception err) {
+            targetErr = err;
+
+            return this;
+        }
+
+        /**
+         * @return Initialised instance of the result.
+         */
+        QueryDuelResult build() {
+            return new QueryDuelResult(qry, baseExecTime, targetExecTime, baseErr, targetErr);
+        }
     }
 }
