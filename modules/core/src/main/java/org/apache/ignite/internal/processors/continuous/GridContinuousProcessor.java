@@ -26,7 +26,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
@@ -133,9 +132,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
     /** */
     private final ConcurrentMap<IgniteUuid, SyncMessageAckFuture> syncMsgFuts = new ConcurrentHashMap<>();
-
-    /** Stopped IDs. */
-    private final Collection<UUID> stopped = new HashSet<>();
 
     /** Lock for stop process. */
     private final Lock stopLock = new ReentrantLock();
@@ -892,12 +888,35 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         long interval,
         boolean autoUnsubscribe,
         @Nullable IgnitePredicate<ClusterNode> prjPred) throws IgniteCheckedException {
+        return startRoutine(UUID.randomUUID(),
+            hnd,
+            locOnly,
+            bufSize,
+            interval,
+            autoUnsubscribe,
+            prjPred);
+    }
+
+    /**
+     * @param routineId Routine id
+     * @param hnd Handler.
+     * @param bufSize Buffer size.
+     * @param interval Time interval.
+     * @param autoUnsubscribe Automatic unsubscribe flag.
+     * @param locOnly Local only flag.
+     * @param prjPred Projection predicate.
+     * @return Future.
+     */
+    private IgniteInternalFuture<UUID> startRoutine(UUID routineId,
+        GridContinuousHandler hnd,
+        boolean locOnly,
+        int bufSize,
+        long interval,
+        boolean autoUnsubscribe,
+        @Nullable IgnitePredicate<ClusterNode> prjPred) throws IgniteCheckedException {
         assert hnd != null;
         assert bufSize > 0;
         assert interval >= 0;
-
-        // Generate ID.
-        final UUID routineId = UUID.randomUUID();
 
         if (ctx.config().isPeerClassLoadingEnabled()) {
             hnd.p2pMarshal(ctx);
@@ -1341,7 +1360,12 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
             if (!locInfo.handler().p2pContextValid(ctx)) {
                 try {
+                    UUID routineId = e.getKey();
+
+                    stopRoutine(routineId);
+
                     IgniteInternalFuture<UUID> fut = startRoutine(
+                        routineId,
                         locInfo.handler().clone(),
                         false,
                         locInfo.bufSize,
@@ -1826,7 +1850,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             stopLock.lock();
 
             try {
-                doRegister = !stopped.remove(routineId) && rmtInfos.putIfAbsent(routineId, info) == null;
+                doRegister = rmtInfos.putIfAbsent(routineId, info) == null;
             }
             finally {
                 stopLock.unlock();
@@ -1944,9 +1968,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             remote = rmtInfos.remove(routineId);
 
             loc = locInfos.remove(routineId);
-
-            if (remote == null)
-                stopped.add(routineId);
         }
         finally {
             stopLock.unlock();
