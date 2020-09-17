@@ -1299,17 +1299,17 @@ public class IgniteIndexReader implements AutoCloseable {
         /** */
         DIR("--dir"),
         /** */
-        PART_CNT("--partCnt"),
+        PART_CNT("--part-cnt"),
         /** */
-        PAGE_SIZE("--pageSize"),
+        PAGE_SIZE("--page-size"),
         /** */
-        PAGE_STORE_VER("--pageStoreVer"),
+        PAGE_STORE_VER("--page-store-ver"),
         /** */
         INDEXES("--indexes"),
         /** */
-        DEST_FILE("--destFile"),
+        DEST_FILE("--dest-file"),
         /** */
-        CHECK_PARTS("--checkParts");
+        CHECK_PARTS("--check-parts");
 
         /** */
         private String arg;

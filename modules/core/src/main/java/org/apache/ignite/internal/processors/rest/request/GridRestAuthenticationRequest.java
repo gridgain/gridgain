@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.warmup;
+package org.apache.ignite.internal.processors.rest.request;
 
-import org.apache.ignite.configuration.WarmUpConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Configuration for {@link SimpleObservableWarmUpStrategy}.
+ * Grid authentication request.
  */
-class SimpleObservableWarmUpConfiguration implements WarmUpConfiguration {
-    // No-op.
+public class GridRestAuthenticationRequest extends GridRestTaskRequest {
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRestAuthenticationRequest.class, this, super.toString());
+    }
 }
