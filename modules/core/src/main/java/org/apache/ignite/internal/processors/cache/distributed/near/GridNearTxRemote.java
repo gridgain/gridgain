@@ -343,8 +343,10 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
 
         GridCacheContext cacheCtx = entry.context();
 
-        if (!cacheCtx.isNear())
-            cacheCtx = cacheCtx.dht().near().context();
+        assert cacheCtx.isNear() : cacheCtx;
+
+//        if (!cacheCtx.isNear())
+//            cacheCtx = cacheCtx.dht().near().context();
 
         GridNearCacheEntry cached = cacheCtx.near().peekExx(entry.key());
 
@@ -354,35 +356,43 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
             return false;
         }
         else {
-            try {
-                cached.unswap();
+            entry.cached(cached);
 
-                CacheObject val = cached.peek();
+            txState.addWriteEntry(entry.txKey(), entry);
 
-                if (val == null && cached.evictInternal(xidVer, null, false)) {
-                    evicted.add(entry.txKey());
+            addExplicit(entry);
 
-                    return false;
-                }
-                else {
-                    // Initialize cache entry.
-                    entry.cached(cached);
+            return true;
 
-                    txState.addWriteEntry(entry.txKey(), entry);
-
-                    addExplicit(entry);
-
-                    return true;
-                }
-            }
-            catch (GridCacheEntryRemovedException ignore) {
-                evicted.add(entry.txKey());
-
-                if (log.isDebugEnabled())
-                    log.debug("Got removed entry when adding to remote transaction (will ignore): " + cached);
-
-                return false;
-            }
+//            try {
+//                cached.unswap();
+//
+//                CacheObject val = cached.peek();
+//
+//                if (val == null && cached.evictInternal(xidVer, null, false)) {
+//                    evicted.add(entry.txKey());
+//
+//                    return false;
+//                }
+//                else {
+//                    // Initialize cache entry.
+//                    entry.cached(cached);
+//
+//                    txState.addWriteEntry(entry.txKey(), entry);
+//
+//                    addExplicit(entry);
+//
+//                    return true;
+//                }
+//            }
+//            catch (GridCacheEntryRemovedException ignore) {
+//                evicted.add(entry.txKey());
+//
+//                if (log.isDebugEnabled())
+//                    log.debug("Got removed entry when adding to remote transaction (will ignore): " + cached);
+//
+//                return false;
+//            }
         }
     }
 
