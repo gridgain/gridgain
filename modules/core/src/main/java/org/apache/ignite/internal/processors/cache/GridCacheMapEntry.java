@@ -232,7 +232,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** Extras */
     @GridToStringInclude
-    private GridCacheEntryExtras extras;
+    protected GridCacheEntryExtras extras;
 
     /** */
     @GridToStringExclude
@@ -4939,7 +4939,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param obsoleteVer Obsolete version.
      * @param ext Extras.
      */
-    private void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
+    protected void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
         extras = (extras != null) ?
             extras.obsoleteVersion(obsoleteVer) :
             obsoleteVer != null ?

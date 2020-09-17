@@ -452,32 +452,20 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     private void dump(GridCacheEntryEx entry) {
         int part = entry.partition();
 
-        GridCacheEntryInfo info = entry.info();
+        CacheGroupContext grpCtx = entry.context().group();
 
-        if (info != null) {
-            DynamicCacheDescriptor desc = cctx.cache().cacheDescriptor(info.cacheId());
-
-            if (desc != null) {
-                CacheGroupContext grpCtx = cctx.cache().cacheGroup(desc.groupId());
-
-                GridDhtPartitionTopology top = grpCtx.topology();
-                AffinityTopologyVersion affinityTopVer = top.readyTopologyVersion();
-                log.info("DBG: locPart=" + top.localPartition(part) +
-                    ", topVer=" + affinityTopVer +
-                    ", pendingTopVer=" + top.lastTopologyChangeVersion() +
-                    ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
-                    ", owners=" + U.nodeIds(top.nodes(part, affinityTopVer)) +
-                    ", locNodeId=" + cctx.localNodeId() +
-                    ", entry=" + entry +
-                    ", txTopVer=" + topologyVersion() +
-                    ", req=" + ((GridNearTxRemote)this).req +
-                    ", tx=" + this + ']');
-            }
-            else
-                log.info("DBG: desc is null");
-        }
-        else
-            log.info("DBG: info is null");
+        GridDhtPartitionTopology top = grpCtx.topology();
+        AffinityTopologyVersion affinityTopVer = top.readyTopologyVersion();
+        log.info("DBG: locPart=" + top.localPartition(part) +
+            ", topVer=" + affinityTopVer +
+            ", pendingTopVer=" + top.lastTopologyChangeVersion() +
+            ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
+            ", owners=" + U.nodeIds(top.nodes(part, affinityTopVer)) +
+            ", locNodeId=" + cctx.localNodeId() +
+            ", entry=" + entry +
+            ", txTopVer=" + topologyVersion() +
+            ", req=" + ((GridNearTxRemote)this).req +
+            ", tx=" + this + ']');
     }
 
     /**
