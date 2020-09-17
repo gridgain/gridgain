@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.odbc.odbc;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
@@ -158,7 +157,7 @@ public class OdbcConnectionContext extends ClientListenerAbstractConnectionConte
                     if (log.isDebugEnabled())
                         log.debug("Async response: [resp=" + resp.status() + ']');
 
-                    ses.send(parser.encode(resp, ses));
+                    ses.send(parser.encode(resp));
                 }
             }
         };

@@ -16,20 +16,18 @@
 
 package org.apache.ignite.internal.processors.platform.client;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
-import org.apache.ignite.internal.binary.streams.BinaryMemoryAllocatorChunk;
+import org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
+import org.apache.ignite.internal.processors.odbc.ClientMessage;
 import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeGetRequest;
 import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeNameGetRequest;
 import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeNamePutRequest;
@@ -81,16 +79,11 @@ import org.apache.ignite.internal.processors.platform.client.compute.ClientExecu
 import org.apache.ignite.internal.processors.platform.client.service.ClientServiceInvokeRequest;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxEndRequest;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxStartRequest;
-import org.apache.ignite.internal.util.nio.GridNioSession;
-import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 
 /**
  * Thin client message parser.
  */
 public class ClientMessageParser implements ClientListenerMessageParser {
-    /** */
-    private static final int CHUNK_META = GridNioSessionMetaKey.nextUniqueKey();
-
     /* General-purpose operations. */
     /** */
     private static final short OP_RESOURCE_CLOSE = 0;
@@ -295,10 +288,10 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     }
 
     /** {@inheritDoc} */
-    @Override public ClientListenerRequest decode(byte[] msg) {
+    @Override public ClientListenerRequest decode(ClientMessage msg) {
         assert msg != null;
 
-        BinaryInputStream inStream = new BinaryHeapInputStream(msg);
+        BinaryInputStream inStream = new BinaryHeapInputStream(msg.payload());
 
         // skipHdrCheck must be true (we have 103 op code).
         BinaryReaderExImpl reader = new BinaryReaderExImpl(marsh.context(), inStream,
@@ -488,40 +481,31 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     }
 
     /** {@inheritDoc} */
-    @Override public Object encode(ClientListenerResponse resp, GridNioSession ses) {
+    @Override public ClientMessage encode(ClientListenerResponse resp) {
         assert resp != null;
-        assert resp instanceof ClientOutgoingMessage : "Unexpected response type: " + resp.getClass();
 
-        BinaryMemoryAllocatorChunk chunk = ses.meta(CHUNK_META);
-        if (chunk == null)
-            ses.addMeta(CHUNK_META, chunk = new BinaryMemoryAllocatorChunk());
-
-        chunk.reset();
-
-        BinaryHeapOutputStream outStream = new BinaryHeapOutputStream(32, chunk);
+        BinaryHeapOutputStream outStream = new BinaryHeapOutputStream(32, BinaryMemoryAllocator.POOLED.chunk());
 
         BinaryRawWriterEx writer = marsh.writer(outStream);
 
-        writer.reserveInt();
-        ((ClientOutgoingMessage)resp).encode(ctx, writer);
-        writer.writeInt(0, outStream.position() - 4);
-        ByteBuffer buff = ByteBuffer.wrap(outStream.array(), 0, outStream.position());
-        buff.order(ByteOrder.LITTLE_ENDIAN);
+        assert resp instanceof ClientOutgoingMessage : "Unexpected response type: " + resp.getClass();
 
-        return buff;
+        ((ClientOutgoingMessage)resp).encode(ctx, writer);
+
+        return new ClientMessage(outStream);
     }
 
     /** {@inheritDoc} */
-    @Override public int decodeCommandType(byte[] msg) {
+    @Override public int decodeCommandType(ClientMessage msg) {
         assert msg != null;
 
-        BinaryInputStream inStream = new BinaryHeapInputStream(msg);
+        BinaryInputStream inStream = new BinaryHeapInputStream(msg.payload());
 
         return inStream.readShort();
     }
 
     /** {@inheritDoc} */
-    @Override public long decodeRequestId(byte[] msg) {
+    @Override public long decodeRequestId(ClientMessage msg) {
         return 0;
     }
 }
