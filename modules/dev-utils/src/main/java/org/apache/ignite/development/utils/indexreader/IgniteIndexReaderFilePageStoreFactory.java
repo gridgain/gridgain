@@ -93,4 +93,18 @@ public interface IgniteIndexReaderFilePageStoreFactory {
 
         return new File(dir, fileName);
     }
+
+    /**
+     * Return page size.
+     *
+     * @return Page size.
+     */
+    int pageSize();
+
+    /**
+     * Return partition count.
+     *
+     * @return Partition count.
+     */
+    int partitionCount();
 }

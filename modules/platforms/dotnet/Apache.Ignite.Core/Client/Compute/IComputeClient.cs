@@ -27,6 +27,11 @@ namespace Apache.Ignite.Core.Client.Compute
     public interface IComputeClient
     {
         /// <summary>
+        /// Gets the cluster group for this <see cref="IComputeClient"/> instance.
+        /// </summary>
+        IClientClusterGroup ClusterGroup { get; }
+
+        /// <summary>
         /// Executes Java task by class name.
         /// </summary>
         /// <param name="taskName">Java task name.</param>
@@ -60,20 +65,20 @@ namespace Apache.Ignite.Core.Client.Compute
         /// <param name="timeout">Timeout.</param>
         /// <returns>New Compute instance with timeout.</returns>
         IComputeClient WithTimeout(TimeSpan timeout);
-        
+
         /// <summary>
         /// Returns a new instance of <see cref="IComputeClient"/> with disabled failover.
         /// When failover is disabled, compute jobs won't be retried in case of node crashes.
         /// </summary>
         /// <returns>New Compute instance with disabled failover.</returns>
         IComputeClient WithNoFailover();
-        
+
         /// <summary>
         /// Returns a new instance of <see cref="IComputeClient"/> with disabled result cache.
         /// </summary>
         /// <returns>New Compute instance with disabled result cache.</returns>
         IComputeClient WithNoResultCache();
-        
+
         /// <summary>
         /// Returns a new instance of <see cref="IComputeClient"/> with binary mode enabled:
         /// Java task argument (on server side) and result (on client side) won't be deserialized.

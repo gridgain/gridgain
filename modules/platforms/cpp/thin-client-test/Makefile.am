@@ -65,6 +65,7 @@ ignite_thin_client_tests_SOURCES = \
         src/test_utils.cpp \
         src/ignite_client_test.cpp \
         src/auth_test.cpp \
+        src/tx_test.cpp \
         src/ssl_test.cpp
 
 run-check: check

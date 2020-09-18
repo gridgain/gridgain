@@ -451,7 +451,10 @@ public final class IgniteSystemProperties {
 
     /**
      * Flag indicating whether validation of keys put to cache should be disabled.
+     *
+     * @deprecated Since 2.7.26. Obsolete because of common use of binary marshaller.
      */
+    @Deprecated
     public static final String IGNITE_CACHE_KEY_VALIDATION_DISABLED = "IGNITE_CACHE_KEY_VALIDATION_DISABLED";
 
     /**
@@ -776,16 +779,6 @@ public final class IgniteSystemProperties {
      * WAL rebalance threshold.
      */
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
-
-    /**
-     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
-     * It is intended for prevent  partition divergence due to reordering in WAL.
-     * <p>
-     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
-     *
-     */
-    public static final String WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE =
-        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE";
 
     /**
      * Prefer historical rebalance if there's enough history regardless off all heuristics.

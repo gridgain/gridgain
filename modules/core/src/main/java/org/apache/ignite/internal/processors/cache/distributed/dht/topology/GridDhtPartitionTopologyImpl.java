@@ -2507,14 +2507,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         // Prevent renting.
         if (part.state() == RENTING) {
-            if (part.reserve()) {
-                part.moving();
-                part.release();
-            }
-            else {
+            if (!part.moving()) {
                 assert part.state() == EVICTED : part;
 
                 part = getOrCreatePartition(p);
+
+                if (part.state() == LOST)
+                    return part;
             }
         }
 
@@ -2793,7 +2792,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean tryEvict(GridDhtLocalPartition part) {
+    @Override public boolean tryFinishEviction(GridDhtLocalPartition part) {
         ctx.database().checkpointReadLock();
 
         try {

@@ -20,6 +20,8 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -45,20 +47,39 @@ public class CacheDetectLostPartitionsTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        IgniteCache<Object, Object> cache = ig.getOrCreateCache(
-            new CacheConfiguration<>(TEST_CACHE_NAME)
-                .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_SAFE)
-        );
+        IgniteCache<Object, Object> cache1 = ig.createCache(getCacheConfig(TEST_CACHE_NAME + 1));
 
-        for (int i = 0; i < 1000; i++)
-            cache.put(i, i);
+        IgniteCache<Object, Object> cache2 = ig.createCache(getCacheConfig(TEST_CACHE_NAME + 2));
+
+        for (int i = 0; i < 1000; i++) {
+            cache1.put(i, i);
+
+            cache2.put(i, i);
+        }
 
         IgniteEx client = startClientGrid(2);
 
         stopGrid(1);
 
-        assertFalse(client.cache(TEST_CACHE_NAME)
-            .lostPartitions()
-            .isEmpty());
+        checkCache(client.cache(TEST_CACHE_NAME + 1));
+
+        checkCache(client.cache(TEST_CACHE_NAME + 2));
+    }
+
+    /** */
+    private CacheConfiguration<Object, Object> getCacheConfig(String cacheName) {
+        return new CacheConfiguration<>(cacheName)
+                .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_SAFE);
+    }
+
+    /** */
+    private void checkCache(IgniteCache<Object, Object> cache) {
+        assertFalse(cache.lostPartitions().isEmpty());
+
+        GridTestUtils.assertThrows(null, () -> cache.get(1),
+                CacheInvalidStateException.class, "partition data has been lost");
+
+        GridTestUtils.assertThrows(null, () -> cache.put(1, 1),
+                CacheInvalidStateException.class, "partition data has been lost");
     }
 }

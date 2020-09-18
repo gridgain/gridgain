@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
@@ -86,13 +87,30 @@ public class CLIArgumentParser {
 
             case "String[]": return val.split(",");
 
-            case "Integer": return Integer.parseInt(val);
+            case "Integer": return wrapNumberFormatException(() -> Integer.parseInt(val), val, Integer.class);
 
-            case "Long": return Long.parseLong(val);
+            case "Long": return wrapNumberFormatException(() -> Long.parseLong(val), val, Long.class);
 
             case "UUID": return UUID.fromString(val);
 
             default: throw new IgniteException("Unsupported argument type: " + type.getName());
+        }
+    }
+
+    /**
+     * Wrap {@link NumberFormatException} to get more user friendly message.
+     *
+     * @param closure Closure that parses number.
+     * @param val String value.
+     * @param expectedType Expected type.
+     * @return Parsed result, if parse had success.
+     */
+    private Object wrapNumberFormatException(Supplier<Object> closure, String val, Class<? extends Number> expectedType) {
+        try {
+            return closure.get();
+        }
+        catch (NumberFormatException e) {
+            throw new NumberFormatException("Can't parse number '" + val + "', expected type: " + expectedType.getName());
         }
     }
 
@@ -107,7 +125,7 @@ public class CLIArgumentParser {
         Object val = parsedArgs.get(arg.name());
 
         if (val == null)
-            return (T)arg.defaultValueSupplier().get();
+            return (T)arg.defaultValueSupplier().apply(this);
         else
             return (T)val;
     }
@@ -143,7 +161,7 @@ public class CLIArgumentParser {
             Object dfltVal = null;
 
             try {
-                dfltVal = arg.defaultValueSupplier().get();
+                dfltVal = arg.defaultValueSupplier().apply(this);
             }
             catch (Exception ignored) {
                 /* No op. */
