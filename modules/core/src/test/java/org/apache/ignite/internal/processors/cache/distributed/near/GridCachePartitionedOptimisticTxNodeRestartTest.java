@@ -36,7 +36,12 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
+import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.GridCacheLocalConcurrentMap;
+import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheAbstractNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
@@ -47,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionProxy
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -303,42 +309,6 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         super.testRestartWithTxFourNodesOneBackups();
     }
 
-//    @Test
-//    public void testZzz2() throws Exception {
-//        backups = 1;
-//        nodeCnt = 4;
-//        keyCnt = 10;
-//        partitions = 128;
-//        rebalancMode = ASYNC;
-//        evict = false;
-//
-//        IgniteEx crd = startGrids(nodeCnt);
-//        awaitPartitionMapExchange(true, true, null);
-//
-//        Set<Integer> notOwning = new TreeSet<>();
-//
-//        for (int p = 0; p < partitions; p++) {
-//            if (!crd.affinity(CACHE_NAME).isPrimaryOrBackup(crd.cluster().localNode(), p))
-//                notOwning.add(p);
-//        }
-//
-//        stopGrid(3);
-//        stopGrid(2);
-//        awaitPartitionMapExchange(true, true, null);
-//
-//        int cand = -1;
-//
-//        for (Integer p : notOwning) {
-//            if (crd.affinity(CACHE_NAME).isPrimary(crd.cluster().localNode(), p)) {
-//                cand = p;
-//
-//                break;
-//            }
-//        }
-//
-//        assert cand != -1;
-//    }
-
     @Test
     @Ignore
     public void testZzz3() throws Exception {
@@ -417,7 +387,7 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
     @Test
     @Ignore
-    public void testZzz() throws Exception {
+    public void testCommitReorderBackup() throws Exception {
         backups = 2;
         nodeCnt = 5;
         keyCnt = 10;
@@ -664,6 +634,66 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         // remove 2 nodes
         // unblock near prep
         // check if a tx created
+
+        System.out.println();
+    }
+
+    @Test
+    @Ignore
+    public void testRemoveReader() throws Exception {
+        backups = 1;
+        nodeCnt = 4;
+        keyCnt = 10;
+        partitions = 128;
+        rebalancMode = ASYNC;
+        evict = false;
+
+        IgniteEx crd = startGrids(4);
+        awaitPartitionMapExchange(true, true, null);
+
+        int cand = -1;
+
+        IgniteEx testNode = grid(0);
+
+        for (int p = 0; p < partitions; p++) {
+            if (!crd.affinity(CACHE_NAME).mapPartitionToPrimaryAndBackups(p).contains(testNode.localNode())) {
+                cand = p;
+
+                break;
+            }
+        }
+
+        assertTrue(String.valueOf(cand), cand != -1);
+
+        // Create reader.
+        try (Transaction tx = testNode.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> nearCache = testNode.cache(CACHE_NAME);
+
+            nearCache.put(cand, 0);
+
+            tx.commit();
+        }
+
+        GridCacheContext<Object, Object> ctx = testNode.context().cache().context().cacheContext(CU.cacheId(CACHE_NAME));
+
+        GridNearTransactionalCache cache = (GridNearTransactionalCache) ctx.cache();
+        assertEquals(1, cache.map().internalSize());
+
+        Collection<ClusterNode> nodes = crd.affinity(CACHE_NAME).mapKeyToPrimaryAndBackups(cand);
+
+        IgniteEx owner = (IgniteEx) grid(nodes.iterator().next());
+
+        try (Transaction tx = owner.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> colocatedCache = owner.cache(CACHE_NAME);
+
+            colocatedCache.put(cand, 1);
+
+            tx.commit();
+        }
+
+        GridCacheLocalConcurrentMap map = (GridCacheLocalConcurrentMap) cache.map();
+
+        Collection<GridCacheMapEntry> entries = map.entries(CU.cacheId(CACHE_NAME));
 
         System.out.println();
     }

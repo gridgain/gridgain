@@ -62,6 +62,7 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -187,8 +188,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             cacheMaps = new IntRWHashMap<>();
         }
         else {
+            GridCacheContext cctx = grp.singleCacheContext();
+
+            if (cctx.isNear())
+                cctx = cctx.near().dht().context();
+
             singleCacheEntryMap = ctx.kernalContext().resource().resolve(
-                new CacheMapHolder(grp.singleCacheContext(), createEntriesMap()));
+                new CacheMapHolder(cctx, createEntriesMap()));
 
             cacheMaps = null;
         }
@@ -281,6 +287,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         if (hld != null)
             return hld;
+
+        if (cctx.isNear())
+            cctx = cctx.near().dht().context();
 
         CacheMapHolder old = cacheMaps.putIfAbsent(cctx.cacheIdBoxed(), hld = ctx.kernalContext().resource().resolve(
             new CacheMapHolder(cctx, createEntriesMap())));
@@ -983,9 +992,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId())) {
                         GridCacheContext cacheCtx = ctx.cacheContext(row.cacheId());
-
-                        if (cacheCtx.isNear())
-                            cacheCtx = cacheCtx.near().dht().context();
 
                         hld = cacheMapHolder(cacheCtx);
                     }
