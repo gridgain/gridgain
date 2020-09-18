@@ -193,12 +193,6 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Partitions page stores, may contains {@code null}. */
     @Nullable private final FilePageStore[] partStores;
 
-    /** Map of errors, pageId -> set of exceptions. */
-    private final Map<Long, List<Throwable>> partStoresErrors = new HashMap<>();
-
-    /** */
-    private final List<Throwable> idxStoreErrors = new ArrayList<>();
-    
     /** Check cache data tree in partition files and it's consistency with indexes. */
     private final boolean checkParts;
 
@@ -240,6 +234,8 @@ public class IgniteIndexReader implements AutoCloseable {
         outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
         outErrStream = outStream;
 
+        List<Throwable> idxStoreErrors = new ArrayList<>();
+
         idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX, idxStoreErrors);
 
         if (isNull(idxStore))
@@ -249,14 +245,18 @@ public class IgniteIndexReader implements AutoCloseable {
 
         partStores = new FilePageStore[partCnt];
 
+        Map<Long, List<Throwable>> partStoresErrors = new HashMap<>();
+
         for (int i = 0; i < partCnt; i++) {
             List<Throwable> errors = new ArrayList<>();
-            
+
             partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA, errors);
 
             if (!errors.isEmpty())
                 partStoresErrors.put((long)i, errors);
         }
+
+        printFileReadingErrors(idxStoreErrors, partStoresErrors);
     }
 
     /**
@@ -449,8 +449,6 @@ public class IgniteIndexReader implements AutoCloseable {
             throw new IgniteException(INDEX_FILE_NAME + " scan problem", e);
         }
 
-        printFileReadingErrors();
-
         if (treeInfo.get() == null)
             printErr("No tree meta info found.");
         else {
@@ -506,7 +504,7 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** */
-    private void printFileReadingErrors() {
+    private void printFileReadingErrors(List<Throwable> idxStoreErrors, Map<Long, List<Throwable>> partStoresErrors) {
         if (!idxStoreErrors.isEmpty()) {
             printErr("Errors detected while reading " + INDEX_FILE_NAME);
 
