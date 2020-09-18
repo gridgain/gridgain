@@ -843,9 +843,9 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         //track("doneRemote", mvcc.toString());
     }
 
-    @Override protected void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
-        super.obsoleteVersionExtras(obsoleteVer, ext);
-
-        track("ove", extras == null ? "NA" : extras.toString());
-    }
+//    @Override protected void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
+//        super.obsoleteVersionExtras(obsoleteVer, ext);
+//
+//        track("ove", extras == null ? "NA" : extras.toString());
+//    }
 }
