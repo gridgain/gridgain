@@ -641,7 +641,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             tx.salvageTx();
 
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled()) // TODO pring short transactio full.
                 log.info("Invalidated transaction because originating node left grid: " + tx.toString());
         }
     }

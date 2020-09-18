@@ -486,6 +486,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
+                            // TODO assert hasCandidate
                             if (near() && (entry.mvccAllLocal() != null || entry.mvccExtras2() == null)) {
                                 dump(entry);
 

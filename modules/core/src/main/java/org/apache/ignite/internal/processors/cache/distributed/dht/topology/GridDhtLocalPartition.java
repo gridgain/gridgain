@@ -543,9 +543,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             restoreState(toState);
     }
 
-    public ConcurrentLinkedQueue q = new ConcurrentLinkedQueue();
-
-
     /**
      * @param state Current aggregated value.
      * @param toState State to switch to.
@@ -589,9 +586,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
             if (updated) {
-                if (ctx.igniteInstanceName().endsWith("0") && id == 1)
-                    q.add(new Object[] {toState, new Exception()});
-
                 assert toState != EVICTED || reservations() == 0 : this;
 
                 if (log.isDebugEnabled())
