@@ -18,7 +18,6 @@ package org.apache.ignite.spi.systemview;
 
 import java.util.function.Predicate;
 import org.apache.ignite.spi.IgniteSpi;
-import org.apache.ignite.spi.systemview.jmx.JmxSystemViewExporterSpi;
 import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.spi.systemview.view.SystemViewRowAttributeWalker;
 
@@ -33,7 +32,6 @@ import org.apache.ignite.spi.systemview.view.SystemViewRowAttributeWalker;
  * @see ReadOnlySystemViewRegistry
  * @see SystemView
  * @see SystemViewRowAttributeWalker
- * @see JmxSystemViewExporterSpi
  */
 public interface SystemViewExporterSpi extends IgniteSpi {
     /**

@@ -130,7 +130,6 @@ import org.apache.ignite.spi.indexing.noop.NoopIndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
-import org.apache.ignite.spi.systemview.jmx.JmxSystemViewExporterSpi;
 import org.apache.ignite.spi.tracing.NoopTracingSpi;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.apache.ignite.thread.IgniteThread;
@@ -2509,21 +2508,6 @@ public class IgnitionEx {
 
             if (cfg.getTracingSpi() == null)
                 cfg.setTracingSpi(new NoopTracingSpi());
-
-            if (F.isEmpty(cfg.getSystemViewExporterSpi())) {
-                if (IgniteComponentType.INDEXING.inClassPath()) {
-                    try {
-                        cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi(),
-                            U.newInstance(SYSTEM_VIEW_SQL_SPI));
-                    }
-                    catch (IgniteCheckedException e) {
-                        throw new IgniteException(e);
-                    }
-
-                }
-                else
-                    cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
-            }
         }
 
         /**

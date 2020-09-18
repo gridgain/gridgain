@@ -31,14 +31,12 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.spi.systemview.SqlViewExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,12 +92,6 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
     private static final String SELECT_RUNNING_QUERIES = "SELECT " + Arrays.stream(RunningQueriesViewField.values())
         .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " +
         QueryUtils.sysSchemaName() + ".SQL_QUERIES ORDER BY START_TIME";
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-                .setSystemViewExporterSpi(new SqlViewExporterSpi());
-    }
 
     /**
      * @return System schema name.
@@ -169,7 +161,6 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
      * Test Query history system view.
      */
     @Test
-    @SuppressWarnings({"ThrowableNotThrown"})
     public void testQueryHistoryMetricsModes() {
         IgniteEx ignite = grid(0);
 

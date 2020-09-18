@@ -33,7 +33,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.spi.systemview.SqlViewExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -109,7 +108,6 @@ public class SqlQuerySystemViewsIntegrationTest extends AbstractIndexingCommonTe
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(defaultCacheConfiguration())
-            .setSystemViewExporterSpi(new SqlViewExporterSpi())
             .setSqlConfiguration(new SqlConfiguration()
                 .setSqlGlobalMemoryQuota("0")
                 .setSqlQueryMemoryQuota("0")

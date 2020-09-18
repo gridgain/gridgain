@@ -40,7 +40,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
-import org.apache.ignite.spi.systemview.jmx.JmxSystemViewExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 
 /**
@@ -99,7 +98,6 @@ public class GridTestKernalContext extends GridKernalContextImpl {
         GridTestUtils.setFieldValue(grid(), "ctx", this);
 
         config().setGridLogger(log);
-        config().setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
         config().setMBeanServer(ManagementFactory.getPlatformMBeanServer());
 
         if (cfg.getMetricExporterSpi() == null || cfg.getMetricExporterSpi().length == 0)
