@@ -256,7 +256,7 @@ class ClientComputeImpl implements ClientCompute, NotificationListener {
         if (op == ClientOperation.COMPUTE_TASK_FINISHED) {
             Object res = payload == null ? null : utils.readObject(new BinaryHeapInputStream(payload), false);
 
-            ClientComputeTask<Object> task = removeTask(ch, rsrcId);
+            ClientComputeTask<Object> task = addTask(ch, rsrcId);
 
             if (task != null) { // If channel is closed concurrently, task is already done with "channel closed" reason.
                 if (err == null)
