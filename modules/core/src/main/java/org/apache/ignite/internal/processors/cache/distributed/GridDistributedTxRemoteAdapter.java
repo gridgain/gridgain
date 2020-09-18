@@ -464,7 +464,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
             ", locNodeId=" + cctx.localNodeId() +
             ", entry=" + entry +
             ", txTopVer=" + topologyVersion() +
-            ", req=" + ((GridNearTxRemote)this).req +
             ", tx=" + this + ']');
     }
 

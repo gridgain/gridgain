@@ -64,9 +64,6 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
     /** Owned versions. */
     private Map<IgniteTxKey, GridCacheVersion> owned;
 
-    @GridToStringExclude
-    public GridDhtTxPrepareRequest req;
-
     /**
      * Empty constructor required for {@link Externalizable}.
      */
@@ -117,8 +114,7 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
         int txSize,
         @Nullable UUID subjId,
         int taskNameHash,
-        @Nullable String txLbl,
-        GridDhtTxPrepareRequest req
+        @Nullable String txLbl
     ) throws IgniteCheckedException {
         super(
             ctx,
@@ -159,8 +155,6 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
         assert topVer != null && topVer.topologyVersion() > 0 : topVer;
 
         topologyVersion(topVer);
-
-        this.req = req;
     }
 
     /**

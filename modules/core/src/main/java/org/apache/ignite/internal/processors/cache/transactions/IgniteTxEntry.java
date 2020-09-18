@@ -616,7 +616,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
                 ", ctxNear=" + ctx.isNear() +
                 ", ctxDht=" + ctx.isDht() +
                 ", part=" + ctx.group().topology().localPartition(entry0.partition()) +
-                ", err=" + (entry0.bad == null ? "NA" : X.getFullStackTrace(((GridDhtCacheEntry) entry).bad)) +
                 ']';
 
             throw new AssertionError(err);
