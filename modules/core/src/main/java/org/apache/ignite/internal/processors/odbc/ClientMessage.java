@@ -160,7 +160,9 @@ public class ClientMessage implements Message, Externalizable {
         // No-op
     }
 
-    /** {@inheritDoc} */
+    /**
+     * @return Message payload.
+     */
     public byte[] payload() {
         if (stream != null) {
             data = stream.arrayCopy();
