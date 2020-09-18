@@ -47,6 +47,9 @@ class SqlViewMetricExporterSpi extends IgniteSpiAdapter implements MetricExporte
     @Override protected void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
         GridKernalContext ctx = ((IgniteEx)ignite()).context();
 
+        if (!(ctx.query().getIndexing() instanceof IgniteH2Indexing))
+            return;
+
         SchemaManager mgr = ((IgniteH2Indexing)ctx.query().getIndexing()).schemaManager();
 
         try {
