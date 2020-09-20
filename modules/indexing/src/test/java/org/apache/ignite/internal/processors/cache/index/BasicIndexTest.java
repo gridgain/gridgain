@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -60,6 +61,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
@@ -287,6 +290,65 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             stopAllGrids();
         }
+    }
+
+    /**
+     * Checks that fields in primary index have correct order.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorrectPkFldsSequence() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
+
+        String tblName = "T1";
+
+        qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+            "CONSTRAINT PK PRIMARY KEY (F1, F2))"), true).getAll();
+
+        List<String> expect = Arrays.asList("F1", "F2");
+
+        checkPkFldSequence(tblName, expect, idx);
+
+        tblName = "T2";
+
+        qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+            "CONSTRAINT PK PRIMARY KEY (F2, F1))"), true).getAll();
+
+        expect = Arrays.asList("F2", "F1");
+
+        checkPkFldSequence(tblName, expect, idx);
+
+        tblName = "T3";
+
+        qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+            "CONSTRAINT PK PRIMARY KEY (F3, F2))"), true).getAll();
+
+        expect = Arrays.asList("F3", "F2");
+
+        checkPkFldSequence(tblName, expect, idx);
+    }
+
+    /**
+     * Fields correctness checker.
+     *
+     * @param tblName Table name.
+     * @param expect Expected fields sequence.
+     * @param idx Indexing.
+     */
+    private void checkPkFldSequence(String tblName, List<String> expect, IgniteH2Indexing idx) {
+        Index pkIdx = idx.schemaManager().dataTable("PUBLIC", tblName.toUpperCase()).getIndex(PK_IDX_NAME);
+
+        List<String> actual = Arrays.stream(pkIdx.getColumns()).map(Column::getName).collect(Collectors.toList());
+
+        if (!expect.equals(actual))
+            throw new AssertionError("Exp: " + expect + ", but was: " + actual);
     }
 
     /**
@@ -551,6 +613,29 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         String plan = res.get(0).get(0).toString();
 
         return idx != null ? plan.contains(idx) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
+    }
+
+    /**
+     *  Checks index usage with correct pk fields enumeration.
+     */
+    @Test
+    public void testCorrectFieldsSequenceInPk() throws Exception {
+        inlineSize = 10;
+
+        srvLog = new ListeningTestLogger(false, log);
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, -2, "FIRST_NAME", "LAST_NAME",
+            "ADDRESS", "LANG");
+
+        assertFalse(checkIdxAlreadyExistLog(
+            qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
+
+        assertTrue(checkIdxAlreadyExistLog(
+            qryProc, "idx2", TEST_TBL_NAME, "LAST_NAME", "FIRST_NAME"));
     }
 
     /**

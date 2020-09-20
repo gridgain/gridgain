@@ -758,12 +758,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public void afterStateRestored(AffinityTopologyVersion topVer) {
-        /** Partition maps are initialized as a part of partition map exchange protocol,
-         * see {@link #beforeExchange(GridDhtPartitionsExchangeFuture, boolean, boolean)}. */
-        for (GridDhtLocalPartition locPart : currentLocalPartitions()) {
-            if (locPart != null && locPart.state() == RENTING)
-                locPart.clearAsync(); // Resume clearing
-        }
+        // No-op. If some partitions are restored in RENTING state clearing will be started after PME.
+        // Otherwise it's possible RENTING will be finished while node2part is not ready and a partition
+        // map will not be updated.
     }
 
     /** {@inheritDoc} */
@@ -2505,16 +2502,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     private GridDhtLocalPartition rebalancePartition(int p, boolean clear, GridDhtPartitionsExchangeFuture exchFut) {
         GridDhtLocalPartition part = getOrCreatePartition(p);
 
+        if (part.state() == LOST)
+            return part;
+
         // Prevent renting.
         if (part.state() == RENTING) {
-            if (part.reserve()) {
-                part.moving();
-                part.release();
-            }
-            else {
+            if (!part.moving()) {
                 assert part.state() == EVICTED : part;
 
                 part = getOrCreatePartition(p);
+
+                if (part.state() == LOST)
+                    return part;
             }
         }
 
@@ -2793,10 +2792,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean tryEvict(GridDhtLocalPartition part) {
+    @Override public boolean tryFinishEviction(GridDhtLocalPartition part) {
         ctx.database().checkpointReadLock();
 
         try {
+            // Write lock protects from concurrent partition creation.
             lock.writeLock().lock();
 
             try {
@@ -2816,7 +2816,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 consistencyCheck();
 
-                // Write lock protects from concurrent partition creation.
                 grp.onPartitionEvicted(part.id());
 
                 try {

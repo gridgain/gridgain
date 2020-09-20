@@ -73,10 +73,10 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
-import org.h2.engine.Session;
-import org.h2.index.Cursor;
-import org.h2.index.Index;
-import org.h2.message.DbException;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Cursor;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.message.DbException;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyMap;

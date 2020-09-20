@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.client.thin;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,6 +56,7 @@ import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryReaderHandles;
 import org.apache.ignite.internal.binary.BinarySchema;
+import org.apache.ignite.internal.binary.BinaryThreadLocalContext;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -504,7 +506,7 @@ final class ClientUtils {
     }
 
     /** Serialize SQL field query to stream. */
-    void write(SqlFieldsQuery qry, BinaryOutputStream out) {
+    void write(SqlFieldsQuery qry, BinaryOutputStream out, ProtocolContext protocolCtx) {
         writeObject(out, qry.getSchema());
         out.writeInt(qry.getPageSize());
         out.writeInt(-1); // do not limit
@@ -517,7 +519,12 @@ final class ClientUtils {
         out.writeBoolean(qry.isEnforceJoinOrder());
         out.writeBoolean(qry.isCollocated());
         out.writeBoolean(qry.isLazy());
-        out.writeLong(qry.getTimeout());
+
+        if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.DEFAULT_QRY_TIMEOUT))
+            out.writeLong(qry.getTimeout());
+        else
+            out.writeLong(Math.max(qry.getTimeout(), 0));
+
         out.writeBoolean(true); // include column names
     }
 
@@ -526,21 +533,33 @@ final class ClientUtils {
         out.writeByteArray(marsh.marshal(obj));
     }
 
+    /**
+     * @param out Output stream.
+     */
+    BinaryRawWriterEx createBinaryWriter(BinaryOutputStream out) {
+        return new BinaryWriterExImpl(marsh.context(), out, BinaryThreadLocalContext.get().schemaHolder(), null);
+    }
+
     /** Read Ignite binary object from input stream. */
     <T> T readObject(BinaryInputStream in, boolean keepBinary) {
+        return readObject(in, keepBinary, null);
+    }
+
+    /** Read Ignite binary object from input stream. */
+    <T> T readObject(BinaryInputStream in, boolean keepBinary, Class<T> clazz) {
         if (keepBinary)
             return (T)marsh.unmarshal(in);
         else {
             BinaryReaderHandles hnds = new BinaryReaderHandles();
 
-            return (T)unwrapBinary(marsh.deserialize(in, hnds), hnds);
+            return (T)unwrapBinary(marsh.deserialize(in, hnds), hnds, clazz);
         }
     }
 
     /**
      * Unwrap binary object.
      */
-    private Object unwrapBinary(Object obj, BinaryReaderHandles hnds) {
+    private Object unwrapBinary(Object obj, BinaryReaderHandles hnds, Class<?> clazz) {
         if (obj instanceof BinaryObjectImpl) {
             BinaryObjectImpl obj0 = (BinaryObjectImpl)obj;
 
@@ -553,7 +572,7 @@ final class ClientUtils {
         else if (BinaryUtils.knownMap(obj))
             return unwrapMap((Map<Object, Object>)obj, hnds);
         else if (obj instanceof Object[])
-            return unwrapArray((Object[])obj, hnds);
+            return unwrapArray((Object[])obj, hnds, clazz);
         else
             return obj;
     }
@@ -565,7 +584,7 @@ final class ClientUtils {
         Collection<Object> col0 = BinaryUtils.newKnownCollection(col);
 
         for (Object obj0 : col)
-            col0.add(unwrapBinary(obj0, hnds));
+            col0.add(unwrapBinary(obj0, hnds, null));
 
         return (col0 instanceof MutableSingletonList) ? U.convertToSingletonList(col0) : col0;
     }
@@ -577,7 +596,7 @@ final class ClientUtils {
         Map<Object, Object> map0 = BinaryUtils.newMap(map);
 
         for (Map.Entry<Object, Object> e : map.entrySet())
-            map0.put(unwrapBinary(e.getKey(), hnds), unwrapBinary(e.getValue(), hnds));
+            map0.put(unwrapBinary(e.getKey(), hnds, null), unwrapBinary(e.getValue(), hnds, null));
 
         return map0;
     }
@@ -585,14 +604,18 @@ final class ClientUtils {
     /**
      * Unwrap array with binary objects.
      */
-    private Object[] unwrapArray(Object[] arr, BinaryReaderHandles hnds) {
+    private Object[] unwrapArray(Object[] arr, BinaryReaderHandles hnds, Class<?> arrayClass) {
         if (BinaryUtils.knownArray(arr))
             return arr;
 
-        Object[] res = new Object[arr.length];
+        Class<?> componentType = arrayClass != null && arrayClass.isArray()
+                ? arrayClass.getComponentType()
+                : arr.getClass().getComponentType();
+
+        Object[] res = (Object[])Array.newInstance(componentType, arr.length);
 
         for (int i = 0; i < arr.length; i++)
-            res[i] = unwrapBinary(arr[i], hnds);
+            res[i] = unwrapBinary(arr[i], hnds, null);
 
         return res;
     }

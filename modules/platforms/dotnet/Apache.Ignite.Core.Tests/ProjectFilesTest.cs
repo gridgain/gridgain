@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Tests
                 .GetFiles("*.csproj", SearchOption.AllDirectories)
                 .Where(x => !x.FullName.ToLower().Contains("dotnetcore") && !x.FullName.Contains("Benchmark"))
                 .ToArray();
-            
+
             Assert.GreaterOrEqual(projFiles.Length, 7);
             CheckFiles(projFiles, x => !x.Contains("ToolsVersion=\"4.0\""), "Invalid csproj files: ");
         }
@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestCsprojReleaseDocs()
         {
-            CheckFiles(GetReleaseCsprojFiles(), x => !GetReleaseSection(x).Contains("DocumentationFile"), 
+            CheckFiles(GetReleaseCsprojFiles(), x => !GetReleaseSection(x).Contains("DocumentationFile"),
                 "Missing XML doc in release mode: ");
         }
 
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestCsprojBuildSettings()
         {
-            CheckFiles(GetReleaseCsprojFiles(), x => GetReleaseSection(x).Contains("DefineConstants"), 
+            CheckFiles(GetReleaseCsprojFiles(), x => GetReleaseSection(x).Contains("DefineConstants"),
                 "Invalid constants in release mode: ");
         }
 
@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestCsprojPdbSettings()
         {
-            CheckFiles(GetReleaseCsprojFiles(), x => !GetReleaseSection(x).Contains("<DebugType>none</DebugType>"), 
+            CheckFiles(GetReleaseCsprojFiles(), x => !GetReleaseSection(x).Contains("<DebugType>none</DebugType>"),
                 "Invalid DebugType in release mode: ");
         }
 
@@ -79,9 +79,61 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestCsprojOptimizeCode()
         {
-            CheckFiles(GetReleaseCsprojFiles(), x => !GetReleaseSection(x).Contains("<Optimize>true</Optimize>"), 
+            CheckFiles(GetReleaseCsprojFiles(), x => !GetReleaseSection(x).Contains("<Optimize>true</Optimize>"),
                 "Invalid optimize setting in release mode: ");
         }
+
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that all .cs files are included in the project.
+        /// </summary>
+        [Test]
+        public void TestAllCsharpFilesAreIncludedInProject()
+        {
+            var projFiles = TestUtils.GetDotNetSourceDir().GetFiles("*.csproj", SearchOption.AllDirectories)
+                .Where(x =>
+                    !x.Name.Contains("DotNetCore") && !x.Name.Contains("Benchmark") && !x.Name.Contains("Examples"));
+
+            var excludedFiles = new[]
+            {
+                "IgnitionStartTest.cs",
+                "Common\\TestFixtureSetUp.cs",
+                "Common\\TestFixtureTearDown.cs",
+                "Client\\Cache\\CacheTestAsyncAwait.cs"
+            };
+
+            Assert.Multiple(() =>
+            {
+                foreach (var projFile in projFiles)
+                {
+                    Assert.IsNotNull(projFile.Directory);
+
+                    var projFileText = File.ReadAllText(projFile.FullName);
+                    var csFiles = projFile.Directory.GetFiles("*.cs", SearchOption.AllDirectories);
+
+                    foreach (var csFile in csFiles)
+                    {
+                        // Csproj uses the same path separator on all platforms.
+                        var csFileRelativePath = Path.GetRelativePath(projFile.Directory.FullName, csFile.FullName)
+                            .Replace(Path.DirectorySeparatorChar, '\\');
+
+                        if (csFileRelativePath.StartsWith("bin\\") ||
+                            csFileRelativePath.StartsWith("obj\\") ||
+                            csFileRelativePath.Contains("DotNetCore") ||
+                            excludedFiles.Contains(csFileRelativePath))
+                        {
+                            continue;
+                        }
+
+                        Assert.IsTrue(
+                            projFileText.Contains(csFileRelativePath),
+                            string.Format("Project file '{0}' should contain file '{1}'", projFile.Name,
+                                csFileRelativePath));
+                    }
+                }
+            });
+        }
+#endif
 
         /// <summary>
         /// Gets the csproj files that go to the release binary package.
@@ -101,7 +153,7 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static string GetReleaseSection(string csproj)
         {
-            return Regex.Match(csproj, @"<PropertyGroup[^>]*Release\|AnyCPU(.*?)<\/PropertyGroup>", 
+            return Regex.Match(csproj, @"<PropertyGroup[^>]*Release\|AnyCPU(.*?)<\/PropertyGroup>",
                 RegexOptions.Singleline).Value;
         }
 
@@ -129,7 +181,7 @@ namespace Apache.Ignite.Core.Tests
             var allowedFiles = new[]
             {
                 "BinaryStringTest.cs",
-                "BinarySelfTest.cs", 
+                "BinarySelfTest.cs",
                 "CacheDmlQueriesTest.cs",
                 "CacheTest.cs"
             };

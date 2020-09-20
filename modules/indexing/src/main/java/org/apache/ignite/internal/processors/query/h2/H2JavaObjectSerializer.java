@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
-import org.h2.api.JavaObjectSerializer;
+import org.gridgain.internal.h2.api.JavaObjectSerializer;
 import org.jetbrains.annotations.NotNull;
 
 /**
