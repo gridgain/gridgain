@@ -18,9 +18,9 @@ package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
 import java.sql.Time;
 import org.apache.ignite.internal.pagemem.PageUtils;
-import org.h2.table.Column;
-import org.h2.value.Value;
-import org.h2.value.ValueTime;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueTime;
 
 /**
  * Inline index column implementation for inlining {@link Time} values.

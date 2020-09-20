@@ -23,8 +23,8 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.h2.value.Value;
-import org.h2.value.ValueNull;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueNull;
 
 /**
  * Used to detect inline object. Because version wasn't upped.

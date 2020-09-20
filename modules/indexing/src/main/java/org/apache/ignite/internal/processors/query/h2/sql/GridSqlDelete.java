@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.sql;
 
-import org.h2.util.StringUtils;
+import org.gridgain.internal.h2.util.StringUtils;
 
 /** */
 public class GridSqlDelete extends GridSqlStatement {

@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -82,9 +81,6 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     private static final int SRVS_NUM = 2;
 
     /** */
-    private boolean clientMode;
-
-    /** */
     private boolean forceClientToSrvConnections;
 
     /** */
@@ -95,6 +91,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         super.beforeTest();
 
         stopAllGrids();
+
+        forceClientToSrvConnections = false;
     }
 
     /** {@inheritDoc} */
@@ -110,16 +108,16 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         cfg.setFailureDetectionTimeout(8_000);
 
-        cfg.setCommunicationSpi(new TestCommunicationSpi());
+        cfg.setCommunicationSpi(
+            new TestCommunicationSpi()
+                .setForceClientToServerConnections(forceClientToSrvConnections)
+        );
 
         if (ccfg != null) {
             cfg.setCacheConfiguration(ccfg);
 
             ccfg = null;
         }
-
-        if (clientMode)
-            cfg.setClientMode(true);
 
         return cfg;
     }
@@ -192,7 +190,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         startGrid(0).cluster().state(ClusterState.ACTIVE);
 
-        startGrid(1, (UnaryOperator<IgniteConfiguration>) cfg -> {
+        startGridWithCfg(1, cfg -> {
             cfg.setClientMode(true);
 
             ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(new TcpDiscoveryVmIpFinder(false)
@@ -250,7 +248,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         for (int i = 0; i < SRVS_NUM; i++) {
             ccfg = cacheConfiguration(CACHE_NAME, ATOMIC);
 
-            startGrid(i, (UnaryOperator<IgniteConfiguration>) cfg -> {
+            startGridWithCfg(i, cfg -> {
                 ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
 
                 log.registerListener(lsnr);
@@ -259,10 +257,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             });
         }
 
-        clientMode = true;
         this.forceClientToSrvConnections = forceClientToSrvConnections;
 
-        startGrid(SRVS_NUM);
+        startClientGrid(SRVS_NUM);
 
         putAndCheckKey();
 
@@ -285,7 +282,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             "Failed to wait for establishing inverse communication connection"
         ).build();
 
-        startGrid(SRVS_NUM - 1, (UnaryOperator<IgniteConfiguration>) cfg -> {
+        startGridWithCfg(SRVS_NUM - 1, cfg -> {
             ListeningTestLogger log = new ListeningTestLogger(false, cfg.getGridLogger());
 
             log.registerListener(lsnr);
@@ -293,10 +290,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             return cfg.setGridLogger(log);
         });
 
-        clientMode = true;
         forceClientToSrvConnections = false;
 
-        IgniteEx client = startGrid(SRVS_NUM);
+        IgniteEx client = startClientGrid(SRVS_NUM);
         ClusterNode clientNode = client.localNode();
 
         IgniteEx srv = grid(SRVS_NUM - 1);
@@ -369,11 +365,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     }
 
     /** */
-    private class TestCommunicationSpi extends TcpCommunicationSpi {
-        {
-            setForceClientToServerConnections(forceClientToSrvConnections);
-        }
-
+    private static class TestCommunicationSpi extends TcpCommunicationSpi {
         /** {@inheritDoc} */
         @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
             if (node.isClient()) {

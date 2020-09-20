@@ -27,7 +27,7 @@
         <property name="show_sql">true</property>
 
         <!-- Database connection settings (private in-memory database). -->
-        <property name="connection.url">jdbc:h2:mem:example;DB_CLOSE_DELAY=-1</property>
+        <property name="connection.url">jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1</property>
 
         <!-- Only validate the database schema on startup in production mode. -->
         <property name="hbm2ddl.auto">update</property>
