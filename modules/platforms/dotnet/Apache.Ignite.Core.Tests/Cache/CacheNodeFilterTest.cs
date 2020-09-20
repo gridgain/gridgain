@@ -235,6 +235,28 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /// <summary>
+        /// Tests that attribute node filter with <code>Null</code>
+        /// Attributes value is not supported.
+        /// </summary>
+        [Test]
+        public void TestAttributeFilterWithNullValues()
+        {
+            TestDelegate action = () =>
+            {
+                var _ = new CacheConfiguration
+                {
+                    NodeFilter = new AttributeNodeFilter
+                    {
+                        Attributes = null
+                    },
+                };
+            };
+            
+            var ex = Assert.Throws<ArgumentNullException>(action);
+            Assert.AreEqual("Value cannot be null.\r\nParameter name: value", ex.Message);
+        }
+
+        /// <summary>
         /// Custom node filter.
         /// </summary>
         public class CustomFilter : IClusterNodeFilter

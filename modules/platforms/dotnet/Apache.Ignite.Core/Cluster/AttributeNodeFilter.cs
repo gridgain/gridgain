@@ -32,16 +32,32 @@ namespace Apache.Ignite.Core.Cluster
     /// </summary>
     public sealed class AttributeNodeFilter : IClusterNodeFilter
     {
+        /** */
+        private IDictionary<string, object> _attributes;
+
         /// <summary>
         /// Attributes dictionary match.
         /// </summary>
-        public IDictionary<string, object> Attributes { get; set; }
+        public IDictionary<string, object> Attributes
+        {
+            get { return _attributes; }
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException("value");
+                }
+
+                _attributes = value;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of <see cref="AttributeNodeFilter"/>.
         /// </summary>
         public AttributeNodeFilter()
         {
+            // No-op.
         }
 
         /// <summary>
@@ -58,7 +74,6 @@ namespace Apache.Ignite.Core.Cluster
                 {attrName, attrValue}
             };
         }
-
 
         /** <inheritdoc /> */
         public bool Invoke(IClusterNode node)
