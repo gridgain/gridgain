@@ -234,9 +234,13 @@ public class IgniteIndexReader implements AutoCloseable {
         outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
         outErrStream = outStream;
 
-        List<Throwable> idxStoreErrors = new ArrayList<>();
+        Map<Integer, List<Throwable>> partStoresErrors = new HashMap<>();
+        List<Throwable> errors = new ArrayList<>();
 
-        idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX, idxStoreErrors);
+        idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX, errors);
+
+        if (!errors.isEmpty())
+            partStoresErrors.put(INDEX_PARTITION, errors);
 
         if (isNull(idxStore))
             throw new IgniteCheckedException(INDEX_FILE_NAME + " file not found");
@@ -245,18 +249,16 @@ public class IgniteIndexReader implements AutoCloseable {
 
         partStores = new FilePageStore[partCnt];
 
-        Map<Long, List<Throwable>> partStoresErrors = new HashMap<>();
-
         for (int i = 0; i < partCnt; i++) {
-            List<Throwable> errors = new ArrayList<>();
+            errors = new ArrayList<>();
 
             partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA, errors);
 
             if (!errors.isEmpty())
-                partStoresErrors.put((long)i, errors);
+                partStoresErrors.put(i, errors);
         }
 
-        printFileReadingErrors(idxStoreErrors, partStoresErrors);
+        printFileReadingErrors(partStoresErrors);
     }
 
     /**
@@ -503,12 +505,20 @@ public class IgniteIndexReader implements AutoCloseable {
         }
     }
 
-    /** */
-    private void printFileReadingErrors(List<Throwable> idxStoreErrors, Map<Long, List<Throwable>> partStoresErrors) {
-        if (!idxStoreErrors.isEmpty()) {
+    /**
+     * Print partitions reading exceptions.
+     *
+     * @param partStoresErrors partitions reading exceptions.
+     */
+    private void printFileReadingErrors(Map<Integer, List<Throwable>> partStoresErrors) {
+        List<Throwable> idxPartErrors = partStoresErrors.get(INDEX_PARTITION);
+
+        if (idxPartErrors != null) {
             printErr("Errors detected while reading " + INDEX_FILE_NAME);
 
-            idxStoreErrors.forEach(err -> printErr(err.getMessage()));
+            idxPartErrors.forEach(err -> printErr(err.getMessage()));
+
+            partStoresErrors.remove(INDEX_PARTITION);
         }
 
         if (!partStoresErrors.isEmpty()) {

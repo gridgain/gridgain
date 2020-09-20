@@ -18,7 +18,7 @@ package org.apache.ignite.development.utils.indexreader;
 
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
@@ -46,7 +46,7 @@ public interface IgniteIndexReaderFilePageStoreFactory {
      * @return New instance of {@link FilePageStore} or {@code null}.
      * @throws IgniteCheckedException If there are errors when creating {@link FilePageStore}.
      */
-    @Nullable FilePageStore createFilePageStore(int partId, byte type, List<Throwable> errors) throws IgniteCheckedException;
+    @Nullable FilePageStore createFilePageStore(int partId, byte type, Collection<Throwable> errors) throws IgniteCheckedException;
 
     /**
      * Creating new {@link FilePageStore} and initializing it.
@@ -61,7 +61,7 @@ public interface IgniteIndexReaderFilePageStoreFactory {
     @Nullable default FilePageStore createFilePageStoreWithEnsure(
         int partId,
         byte type,
-        List<Throwable> errors
+        Collection<Throwable> errors
     ) throws IgniteCheckedException {
         FilePageStore filePageStore = createFilePageStore(partId, type, errors);
 
