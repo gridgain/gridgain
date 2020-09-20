@@ -72,6 +72,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 
 /**
  * Test node restart.
+ * TODO rename touch param in puifobsolete
  */
 @WithSystemProperty(key = "IGNITE_DIAGNOSTIC_ENABLED", value = "false")
 public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAbstractNodeRestartSelfTest {
@@ -695,7 +696,26 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
 
         Collection<GridCacheMapEntry> entries = map.entries(CU.cacheId(CACHE_NAME));
 
-        System.out.println();
+        assertEquals(1, entries.size());
+
+        try (Transaction tx = owner.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> colocatedCache = owner.cache(CACHE_NAME);
+
+            colocatedCache.remove(cand);
+
+            tx.commit();
+        }
+
+        assertEquals(0, entries.size());
+
+        // Will not create near mapping because readers are cleared.
+        try (Transaction tx = owner.transactions().txStart(OPTIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+            IgniteCache<Object, Object> colocatedCache = owner.cache(CACHE_NAME);
+
+            colocatedCache.put(cand, 1);
+
+            tx.commit();
+        }
     }
 
     private IgniteEx stopNode2(IgniteEx crd, IgniteEx testNode, int k) {

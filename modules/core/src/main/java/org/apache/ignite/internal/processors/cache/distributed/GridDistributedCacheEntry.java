@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -886,7 +887,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
             @Override public ConcurrentLinkedQueue<Object[]> apply(Object o) {
                 return new ConcurrentLinkedQueue<Object[]>();
             }
-        }).add(new Object[] {op, detail, new Exception()});
+        }).add(new Object[] {op, detail, new Exception(), new Date()});
     }
 
 
@@ -901,7 +902,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
     }
 
     protected void readyNearLockUnlock(GridCacheMvcc mvcc) {
-        //track("readyNearLock", mvcc.toString());
+        track("readyNearLock", mvcc.toString());
     }
 
     protected void doneRemoteLock(GridCacheMvcc mvcc) {

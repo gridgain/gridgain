@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
+import org.apache.ignite.internal.processors.cache.extras.GridCacheMvccObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
@@ -817,7 +818,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     protected void addNearLocal2Unlock(GridCacheMvcc mvcc) {
-        //track("addLocal", mvcc.toString());
+        track("addLocal", mvcc.toString());
     }
 
     @Override protected void addRemote2Lock(GridCacheMvcc mvcc) {
@@ -825,7 +826,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     @Override protected void addRemote2Unlock(GridCacheMvcc mvcc) {
-        //track("addRemote", mvcc.toString());
+        track("addRemote", mvcc.toString());
     }
 
     @Override protected void removeLockLock(GridCacheMvcc mvcc) {
@@ -833,19 +834,20 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     }
 
     @Override protected void removeLockUnlock(GridCacheMvcc mvcc) {
-        //track("removeLock", mvcc.toString());
+        track("removeLock", mvcc.toString());
     }
 
     @Override protected void doneRemoteLock(GridCacheMvcc mvcc) {
     }
 
     @Override protected void doneRemoteUnlock(GridCacheMvcc mvcc) {
-        //track("doneRemote", mvcc.toString());
+        track("doneRemote", mvcc.toString());
     }
 
     @Override protected void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
         super.obsoleteVersionExtras(obsoleteVer, ext);
 
-        track("ove", extras == null ? "NA" : extras.toString());
+        if (extras != null && extras instanceof GridCacheMvccObsoleteEntryExtras)
+            track("ove", extras.toString());
     }
 }

@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheEntryExtras;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheMvccEntryExtras;
+import org.apache.ignite.internal.processors.cache.extras.GridCacheMvccObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheObsoleteEntryExtras;
 import org.apache.ignite.internal.processors.cache.extras.GridCacheTtlEntryExtras;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -4604,6 +4605,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
     }
 
+    public boolean mvcced;
+
     /** {@inheritDoc} */
     @Override public boolean evictInternal(
         GridCacheVersion obsoleteVer,
@@ -4632,6 +4635,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return false;
 
                     if (!hasReaders() && markObsolete0(obsoleteVer, false, null)) {
+                        if (extras instanceof GridCacheMvccObsoleteEntryExtras)
+                            mvcced = true;
+
                         // Nullify value after swap.
                         value(null);
 

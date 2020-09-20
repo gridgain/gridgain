@@ -22,7 +22,10 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.ObjectStreamException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -1306,10 +1309,12 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         StringBuilder b = new StringBuilder();
         b.append("DBG: node=" + igniteInstanceName() + ", key=" + key + "\n");
 
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
         ConcurrentLinkedQueue<Object[]> q = hist.getOrDefault(key, new ConcurrentLinkedQueue<>());
 
         for (Object[] h : q)
-            b.append("DBG:       op=" + h[0] + ", trace=" + h[1] + ", stack=" + X.getFullStackTrace((Throwable) h[2]) + "\n");
+            b.append("DBG:       op=" + h[0] + ", trace=" + h[1] + ", ts=" + sdf.format((Date)h[3])+ ", stack=" + X.getFullStackTrace((Throwable) h[2]) + "\n");
 
         log.info(b.toString());
     }

@@ -21,17 +21,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
+import org.apache.ignite.internal.processors.cache.GridCacheLocalConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxRemoteAdapter;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxRemoteStateImpl;
@@ -350,43 +353,47 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
             return false;
         }
         else {
-            entry.cached(cached);
+//            entry.cached(cached);
+//
+//            txState.addWriteEntry(entry.txKey(), entry);
+//
+//            addExplicit(entry);
+//
+//            return true;
 
-            txState.addWriteEntry(entry.txKey(), entry);
+            try {
+                cached.unswap(); // TODO call is NOOP for near cache, can be removed.
 
-            addExplicit(entry);
+                CacheObject val = cached.peek();
 
-            return true;
+                if (val == null && cached.evictInternal(xidVer, null, false)) {
+                    if (cached.mvcced) {
+                        log.info("DBG: txx=" + this);
+                    }
 
-//            try {
-//                cached.unswap();
-//
-//                CacheObject val = cached.peek();
-//
-//                if (val == null && cached.evictInternal(xidVer, null, false)) {
-//                    evicted.add(entry.txKey());
-//
-//                    return false;
-//                }
-//                else {
-//                    // Initialize cache entry.
-//                    entry.cached(cached);
-//
-//                    txState.addWriteEntry(entry.txKey(), entry);
-//
-//                    addExplicit(entry);
-//
-//                    return true;
-//                }
-//            }
-//            catch (GridCacheEntryRemovedException ignore) {
-//                evicted.add(entry.txKey());
-//
-//                if (log.isDebugEnabled())
-//                    log.debug("Got removed entry when adding to remote transaction (will ignore): " + cached);
-//
-//                return false;
-//            }
+                    evicted.add(entry.txKey());
+
+                    return false;
+                }
+                else {
+                    // Initialize cache entry.
+                    entry.cached(cached);
+
+                    txState.addWriteEntry(entry.txKey(), entry);
+
+                    addExplicit(entry);
+
+                    return true;
+                }
+            }
+            catch (GridCacheEntryRemovedException ignore) {
+                evicted.add(entry.txKey());
+
+                if (log.isDebugEnabled())
+                    log.debug("Got removed entry when adding to remote transaction (will ignore): " + cached);
+
+                return false;
+            }
         }
     }
 
