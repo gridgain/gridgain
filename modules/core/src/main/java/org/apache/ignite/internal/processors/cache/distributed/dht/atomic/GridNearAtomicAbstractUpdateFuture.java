@@ -419,7 +419,7 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
 
         for (KeyCacheObject key : keys0) {
             try {
-                keys.add(cctx.cacheObjectContext().unwrapBinaryIfNeeded(key, keepBinary, false));
+                keys.add(cctx.cacheObjectContext().unwrapBinaryIfNeeded(key, keepBinary, false, null));
             }
             catch (BinaryInvalidTypeException e) {
                 keys.add(cctx.toCacheKeyObject(key));

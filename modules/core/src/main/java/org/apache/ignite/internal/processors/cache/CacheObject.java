@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.jetbrains.annotations.Nullable;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  *
@@ -43,6 +44,18 @@ public interface CacheObject extends Message {
      * @return Value.
      */
     @Nullable public <T> T value(CacheObjectValueContext ctx, boolean cpy);
+
+    /**
+     * Deserializes a value from an internal representation.
+     *
+     * @param ctx Context.
+     * @param cpy If {@code true} need to copy value.
+     * @param ldr Class loader, if it is {@code null}, default class loader will be used.
+     * @return Value.
+     */
+    default @Nullable public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr){
+        throw new NotImplementedException();
+    }
 
     /**
      * @param ctx Context.

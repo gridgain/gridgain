@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.GridJobSessionImpl;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
@@ -127,6 +128,9 @@ public abstract class CacheDistributedGetFutureAdapter<K, V>
     /** */
     protected final boolean recovery;
 
+    /** Class loader which will be used for deserialization of entries on a distributed task. */
+    protected final ClassLoader deploymentLdr;
+
     /** */
     protected Map<AffinityTopologyVersion, Map<Integer, Set<ClusterNode>>> invalidNodes = Collections.emptyMap();
 
@@ -174,6 +178,7 @@ public abstract class CacheDistributedGetFutureAdapter<K, V>
         this.needVer = needVer;
         this.keepCacheObjects = keepCacheObjects;
         this.recovery = recovery;
+        this.deploymentLdr = deserializeBinary ? U.jobDeploymentClassLoader(cctx.kernalContext()) : null;
 
         futId = IgniteUuid.randomUuid();
     }

@@ -1240,7 +1240,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         GridCacheContext cctx = entry.context();
 
         try {
-            Object key = cctx.unwrapBinaryIfNeeded(entry.key(), entry.keepBinary(), false);
+            Object key = cctx.unwrapBinaryIfNeeded(entry.key(), entry.keepBinary(), false, null);
 
             assert key != null : entry.key();
 
@@ -1256,7 +1256,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             CacheObject cacheVal = entryEx != null ? entryEx.rawGet() : null;
 
-            Object val = cacheVal != null ? cctx.unwrapBinaryIfNeeded(cacheVal, entry.keepBinary(), false) : null;
+            Object val = cacheVal != null ? cctx.unwrapBinaryIfNeeded(cacheVal, entry.keepBinary(), false, null) : null;
 
             if (val != null) {
                 if (S.includeSensitive())

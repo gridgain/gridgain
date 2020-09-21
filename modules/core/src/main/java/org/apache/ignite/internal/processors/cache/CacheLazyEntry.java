@@ -144,7 +144,7 @@ public class CacheLazyEntry<K, V> extends CacheInterceptorEntry<K, V> {
      */
     public V getValue(boolean keepBinary) {
         if (val == null)
-            val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true);
+            val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true, null);
 
         return val;
     }

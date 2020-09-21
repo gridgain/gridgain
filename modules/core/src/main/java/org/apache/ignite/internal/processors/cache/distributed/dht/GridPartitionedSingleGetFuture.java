@@ -151,6 +151,9 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
     /** */
     protected final MvccSnapshot mvccSnapshot;
 
+    /** Class loader which will be used for deserialization of entries on a distributed task. */
+    protected final ClassLoader deploymentLdr;
+
     /** Post processing closure. */
     private volatile BackupPostProcessingClosure postProcessingClos;
 
@@ -222,6 +225,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
         this.recovery = recovery;
         this.topVer = topVer;
         this.mvccSnapshot = mvccSnapshot;
+        this.deploymentLdr = deserializeBinary ? U.jobDeploymentClassLoader(cctx.kernalContext()) : null;
 
         this.txLbl = txLbl;
 
@@ -789,7 +793,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                     postProcessingClos.apply(val, ver);
 
                 if (!keepCacheObjects) {
-                    Object res = cctx.unwrapBinaryIfNeeded(val, !deserializeBinary);
+                    Object res = cctx.unwrapBinaryIfNeeded(val, !deserializeBinary, true, deploymentLdr);
 
                     onDone(needVer ? new EntryGetResult(res, ver) : res);
                 }

@@ -1517,7 +1517,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                                         key,
                                         e.cached().rawGet(),
                                         e.keepBinary()),
-                                    cacheCtx.cacheObjectContext().unwrapBinaryIfNeeded(val, e.keepBinary(), false));
+                                    cacheCtx.cacheObjectContext().unwrapBinaryIfNeeded(val, e.keepBinary(), false, null));
 
                                 if (interceptorVal == null)
                                     continue;

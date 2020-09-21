@@ -569,7 +569,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                         ver,
                         0,
                         0,
-                        needVer);
+                        needVer,
+                        deploymentLdr);
 
                     return true;
                 }
@@ -652,7 +653,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                     false,
                     needVer ? info.version() : null,
                     0,
-                    0);
+                    0,
+                    deploymentLdr);
             }
 
             return map;

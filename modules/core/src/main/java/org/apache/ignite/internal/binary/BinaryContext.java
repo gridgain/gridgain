@@ -662,7 +662,8 @@ public class BinaryContext {
             if (userType && !ldr.equals(sysLdr) && (desc = descriptorForTypeId(true, typeId, sysLdr, registerMeta)) != null)
                 return desc;
 
-            throw new BinaryInvalidTypeException(e);
+            throw new BinaryInvalidTypeException("Exception was caught [thread=" + Thread.currentThread().getName()
+                + ", instance=" + igniteCfg.getIgniteInstanceName() + ']', e);
         }
         catch (IgniteCheckedException e) {
             // Class might have been loaded by default class loader.

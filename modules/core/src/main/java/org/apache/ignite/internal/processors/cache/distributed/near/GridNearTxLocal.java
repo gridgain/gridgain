@@ -2316,7 +2316,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             K keyVal = (K)
                                 (keepCacheObjects ? cacheKey :
                                     cacheCtx.cacheObjectContext().unwrapBinaryIfNeeded(cacheKey, !deserializeBinary,
-                                        true));
+                                        true, null));
 
                             if (retMap.containsKey(keyVal))
                                 // We already have a return value.
@@ -2394,7 +2394,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                             readVer,
                                             0,
                                             0,
-                                            needVer);
+                                            needVer,
+                                            null);
 
                                         if (readVer != null)
                                             txEntry.entryReadVersion(readVer);
@@ -2484,7 +2485,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
                             K keyVal = (K)(keepCacheObjects ? cacheKey
                                 : cacheCtx.cacheObjectContext()
-                                .unwrapBinaryIfNeeded(cacheKey, !deserializeBinary, false));
+                                .unwrapBinaryIfNeeded(cacheKey, !deserializeBinary, false, null));
 
                             if (retMap.containsKey(keyVal))
                                 it.remove();
@@ -2626,7 +2627,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                             }
 
                             cacheCtx.addResult(map, key, val, skipVals, keepCacheObjects, deserializeBinary, false,
-                                ver, 0, 0);
+                                ver, 0, 0, null);
                         }
                     }
                     else {
@@ -2692,7 +2693,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         readVer,
                                         0,
                                         0,
-                                        needVer);
+                                        needVer,
+                                        null);
                                 }
                                 else
                                     missed.put(key, txEntry.cached().version());
@@ -2772,7 +2774,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                         readVer,
                                         0,
                                         0,
-                                        needVer);
+                                        needVer,
+                                        null);
                                 }
                                 else
                                     missed.put(key, ver);
@@ -4849,7 +4852,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     false,
                                     needVer ? loadVer : null,
                                     0,
-                                    0);
+                                    0,
+                                    null);
                             }
                         }
                         else {
@@ -4873,7 +4877,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     false,
                                     needVer ? loadVer : null,
                                     0,
-                                    0);
+                                    0,
+                                    null);
                             }
                         }
                     }

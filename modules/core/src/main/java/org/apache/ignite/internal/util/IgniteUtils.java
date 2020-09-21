@@ -7787,6 +7787,20 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Returns a job's deployment class loder or {@code null}.
+     *
+     * @param ctx Kernal context.
+     * @return Deployment class loader or {@code null}.
+     */
+    public static ClassLoader jobDeploymentClassLoader(GridKernalContext ctx) {
+        if (ctx == null || ctx.job() == null || ctx.job().currSess.get() == null ||
+            ctx.job().currSess.get().deployment() == null)
+            return null;
+
+        return ctx.job().currSess.get().deployment().classLoader();
+    }
+
+    /**
      * Formats passed date with specified pattern.
      *
      * @param date Date to format.

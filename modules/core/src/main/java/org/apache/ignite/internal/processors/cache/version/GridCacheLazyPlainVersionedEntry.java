@@ -101,7 +101,7 @@ public class GridCacheLazyPlainVersionedEntry<K, V> extends GridCachePlainVersio
      */
     public V value(boolean keepBinary) {
         if (val == null)
-            val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true);
+            val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true, null);
 
         return val;
     }

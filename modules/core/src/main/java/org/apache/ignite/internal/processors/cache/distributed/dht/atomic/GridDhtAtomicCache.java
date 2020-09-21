@@ -866,7 +866,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                         if (invokeRes.result() != null)
                             res = CacheInvokeResult.fromResult((T)ctx.unwrapBinaryIfNeeded(invokeRes.result(),
-                                keepBinary, false));
+                                keepBinary, false, null));
                     }
 
                     return res;
@@ -1490,7 +1490,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     row.version(),
                                     0,
                                     0,
-                                    needVer);
+                                    needVer,
+                                    deserializeBinary ? U.jobDeploymentClassLoader(ctx.kernalContext()) : null);
 
                                 if (evt) {
                                     ctx.events().readEvent(key,
@@ -1574,7 +1575,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                             ver,
                                             0,
                                             0,
-                                            needVer);
+                                            needVer,
+                                            deserializeBinary ? U.jobDeploymentClassLoader(ctx.kernalContext()) : null);
                                     }
                                 }
                                 else
@@ -2396,7 +2398,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                             ctx.unwrapBinaryIfNeeded(
                                 updated,
                                 req.keepBinary(),
-                                false));
+                                false,
+                                null));
 
                         if (val == null)
                             continue;

@@ -417,7 +417,8 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                                 row.version(),
                                 0,
                                 0,
-                                needVer);
+                                needVer,
+                                null);
 
                             if (ctx.statisticsEnabled() && !skipVals)
                                 metrics0().onRead(true);
@@ -499,7 +500,8 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                                             true,
                                             null,
                                             0,
-                                            0);
+                                            0,
+                                            null);
                                     }
                                     else
                                         success = false;
