@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -142,6 +143,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** Entry lock time awaiting. */
     private static final long ENTRY_LOCK_TIMEOUT = getLong(ENTRY_LOCK_TIMEOUT_ENV, 1000);
+
+    /** Locks. */
+    static ThreadLocal<ConcurrentHashMap<GridCacheMapEntry, Long>> locks = ThreadLocal.withInitial(ConcurrentHashMap::new);
 
     /** */
     private static final byte IS_DELETED_MASK = 0x01;
@@ -2901,7 +2905,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public final boolean obsolete() {
-        lockEntry();
+        lockEntry(true);
 
         try {
             return obsoleteVersionExtras() != null;
@@ -5098,7 +5102,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void lockEntry() {
+        lockEntry(false);
+    }
+
+    @Override public void lockEntry(boolean nestedLocksAllowed) {
+        ConcurrentHashMap<GridCacheMapEntry, Long> map = locks.get();
+
+        if (!nestedLocksAllowed) {
+            if (!map.isEmpty()) {
+                if (!map.containsKey(this)) {
+                    if ((cctx.cacheId() != CU.UTILITY_CACHE_GROUP_ID))
+                        throw new RuntimeException("Nested locks are not allowed");
+                }
+            }
+        }
         lock.lock();
+
+        map.merge(this, 1L, Long::sum);
     }
 
     /** {@inheritDoc} */
@@ -5116,6 +5136,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /** {@inheritDoc} */
     @Override public void unlockEntry() {
         lock.unlock();
+
+        ConcurrentHashMap<GridCacheMapEntry, Long> map = locks.get();
+
+        if (map.get(this) == 1L)
+            map.remove(this);
+        else
+            map.merge(this, -1L, Long::sum);
     }
 
     /**
