@@ -24,7 +24,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_MARSHAL_BUFFERS_PE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MARSHAL_BUFFERS_RECHECK;
 
 /**
- * Thread-local memory allocator.
+ * On-heap memory allocator.
  */
 public abstract class BinaryMemoryAllocator {
     /** Buffer size re-check frequency. */
@@ -33,10 +33,10 @@ public abstract class BinaryMemoryAllocator {
     /** */
     private static final int POOL_SIZE = Integer.getInteger(IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE, 32);
 
-    /** Memory allocator instance. */
-    public static final BinaryMemoryAllocator INSTANCE = new ThreadLocalAllocator();
+    /** Thread local allocator instance. */
+    public static final BinaryMemoryAllocator THREAD_LOCAL = new ThreadLocalAllocator();
 
-    /** Memory allocator instance. */
+    /** Pooled allocator instance. */
     public static final BinaryMemoryAllocator POOLED = new PooledAllocator();
 
     /** */
