@@ -902,7 +902,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
     }
 
     protected void readyNearLockUnlock(GridCacheMvcc mvcc) {
-        track("readyNearLock", mvcc.toString());
+        //track("readyNearLock", mvcc.toString());
     }
 
     protected void doneRemoteLock(GridCacheMvcc mvcc) {
