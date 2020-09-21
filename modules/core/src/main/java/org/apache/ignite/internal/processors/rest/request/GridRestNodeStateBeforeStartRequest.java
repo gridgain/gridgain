@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.internal.processors.rest.request;
 
-import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Tests for key check for near cache.
+ * Request to manage and obtain information about node before its start.
  */
-public class GridCacheKeyCheckNearEnabledSelfTest extends GridCacheKeyCheckSelfTest {
+public class GridRestNodeStateBeforeStartRequest extends GridRestRequest {
     /** {@inheritDoc} */
-    @Override protected NearCacheConfiguration nearConfiguration() {
-        return new NearCacheConfiguration();
+    @Override public String toString() {
+        return S.toString(GridRestNodeStateBeforeStartRequest.class, this, super.toString());
     }
 }

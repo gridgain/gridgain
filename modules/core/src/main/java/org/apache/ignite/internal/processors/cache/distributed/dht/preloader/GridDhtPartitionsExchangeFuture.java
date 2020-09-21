@@ -1194,6 +1194,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return (firstDiscoEvt.type() == EVT_NODE_LEFT || firstDiscoEvt.type() == EVT_NODE_FAILED) &&
             !firstDiscoEvt.eventNode().isClient() &&
             top != null &&
+            !cctx.kernalContext().state().inMemoryClusterWithoutBlt() &&
             top.consistentIds().contains(firstDiscoEvt.eventNode().consistentId());
     }
 
@@ -2632,6 +2633,19 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * @param grp Cache group.
+     */
+    public void validate(CacheGroupContext grp) {
+        if (grpValidRes == null)
+            grpValidRes = new ConcurrentHashMap<>();
+
+        CacheGroupValidation valRes = validateCacheGroup(grp, events().lastEvent().topologyNodes());
+
+        if (!valRes.isValid() || valRes.hasLostPartitions())
+            grpValidRes.put(grp.groupId(), valRes);
+    }
+
+    /**
      * Updates the {@link GridMetricManager#PME_OPS_BLOCKED_DURATION_HISTOGRAM} and {@link
      * GridMetricManager#PME_DURATION_HISTOGRAM} metrics if needed.
      *
@@ -3495,7 +3509,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             long maxCntr = maxCntrObj != null ? maxCntrObj.cnt : 0;
 
             NavigableSet<Long> nonMaxCntrs = e.getValue().headSet(maxCntr, false)
-                //Empty partition cannot be rebalanced by history effectively.
+                // Empty partition cannot be rebalanced by history effectively.
                 .tailSet(0L, false);
 
             // If minimal counter equals maximum then historical supplier does not necessary.

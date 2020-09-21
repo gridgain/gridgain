@@ -218,9 +218,6 @@ public class GridCacheAttributes implements Serializable {
         if (nearCfg == null)
             return null;
 
-        if (enrichment != null && enrichment.nearCacheConfigurationEnrichment() != null)
-            return enrichment.nearCacheConfigurationEnrichment().getFieldClassName("nearEvictPlcFactory");
-
         return className(nearCfg.getNearEvictionPolicyFactory());
     }
 
@@ -375,6 +372,9 @@ public class GridCacheAttributes implements Serializable {
      * @return Interceptor class name.
      */
     public String interceptorClassName() {
+        if (enrichment != null && enrichment.hasField("interceptor"))
+            return enrichment.getFieldClassName("interceptor");
+
         return className(ccfg.getInterceptor());
     }
 

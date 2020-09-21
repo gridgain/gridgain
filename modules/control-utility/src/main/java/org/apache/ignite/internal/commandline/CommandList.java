@@ -72,6 +72,9 @@ public enum CommandList {
     /** */
     METADATA("--meta", new MetadataCommand()),
 
+    /** Warm-up command. */
+    WARM_UP("--warm-up", new WarmUpCommand()),
+
     /** */
     PROPERTY("--property", new PropertyCommand());
 
