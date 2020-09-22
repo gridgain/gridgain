@@ -29,7 +29,7 @@ public class MessageWaitingLogListener extends LogListener {
     private final String expMsg;
 
     /** Callback. */
-    private final CountDownLatch latch= new CountDownLatch(1);
+    private final CountDownLatch latch = new CountDownLatch(1);
 
     /**
      * Constructor.
