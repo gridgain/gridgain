@@ -2905,7 +2905,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public final boolean obsolete() {
-        lockEntry(true);
+        lockEntry(false);
 
         try {
             return obsoleteVersionExtras() != null;
@@ -5145,6 +5145,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             map.merge(this, -1L, Long::sum);
     }
 
+    /** {@inheritDoc} */
+    public void unlockEntryForToString() {
+        lock.unlock();
+    }
+
     /**
      * This method would obtain read lock for continuous query listener setup. This
      * is to prevent race condition between entry update and continuous query setup.
@@ -5203,7 +5208,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 return dfltToStr.get();
             }
             finally {
-                unlockEntry();
+                unlockEntryForToString();
             }
         }
         else {
