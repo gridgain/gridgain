@@ -176,7 +176,6 @@ public class DistributedEnumProperty<T extends Enum> implements DistributedChang
         return (str) -> {
             T t = enumVals.get(str.toLowerCase());
 
-
             if (t == null) {
                 throw new IllegalArgumentException("Unknown value for enum property " +
                     "[value=" + str + ']');
