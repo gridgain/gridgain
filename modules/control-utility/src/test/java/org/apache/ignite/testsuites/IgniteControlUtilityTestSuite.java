@@ -95,6 +95,8 @@ import org.junit.runners.Suite;
     GridCommandHandlerInterruptCommandTest.class,
     GridCommandHandlerMetadataTest.class,
     GridCommandHandlerGetCacheSizeTest.class,
+
+    GridCommandHandlerPropertiesTest.class,
 })
 public class IgniteControlUtilityTestSuite {
 }
