@@ -37,8 +37,8 @@ import org.apache.ignite.client.ClientClusterGroup;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -54,8 +54,8 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
     /** Channel. */
     protected final ReliableChannel ch;
 
-    /** Binary marshaller. */
-    protected final ClientBinaryMarshaller marsh;
+    /** Marshaller utils. */
+    protected final ClientUtils utils;
 
     /** Projection filters. */
     private final ProjectionFilters projectionFilters;
@@ -74,7 +74,8 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
      */
     ClientClusterGroupImpl(ReliableChannel ch, ClientBinaryMarshaller marsh) {
         this.ch = ch;
-        this.marsh = marsh;
+
+        utils = new ClientUtils(marsh);
 
         projectionFilters = ProjectionFilters.FULL_PROJECTION;
     }
@@ -82,10 +83,10 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
     /**
      *
      */
-    private ClientClusterGroupImpl(ReliableChannel ch, ClientBinaryMarshaller marsh,
+    private ClientClusterGroupImpl(ReliableChannel ch, ClientUtils utils,
         ProjectionFilters projectionFilters) {
         this.ch = ch;
-        this.marsh = marsh;
+        this.utils = utils;
         this.projectionFilters = projectionFilters;
     }
 
@@ -229,7 +230,7 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
      */
     private ClientClusterGroupImpl forProjectionFilters(ProjectionFilters projectionFilters) {
         return this.projectionFilters == projectionFilters ? this :
-            new ClientClusterGroupImpl(ch, marsh, projectionFilters);
+            new ClientClusterGroupImpl(ch, utils, projectionFilters);
     }
 
     /** {@inheritDoc} */
@@ -299,8 +300,7 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
                     if (!req.clientChannel().protocolCtx().isFeatureSupported(ProtocolBitmaskFeature.CLUSTER_GROUPS))
                         throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.CLUSTER_GROUPS);
 
-                    try (BinaryWriterExImpl writer = new BinaryWriterExImpl(marsh.context(), req.out(), null,
-                        null)) {
+                    try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
                         writer.writeLong(cachedTopVer);
 
                         projectionFilters.write(writer);
@@ -384,8 +384,7 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
                     }
                 },
                 res -> {
-                    try (BinaryReaderExImpl reader = new BinaryReaderExImpl(marsh.context(), res.in(), null,
-                        true)) {
+                    try (BinaryReaderExImpl reader = utils.createBinaryReader(res.in())) {
                         int nodesCnt = reader.readInt();
 
                         Collection<ClusterNode> nodes = new ArrayList<>();
@@ -765,7 +764,7 @@ class ClientClusterGroupImpl implements ClientClusterGroup {
         /**
          * @param writer Writer.
          */
-        void write(BinaryWriterExImpl writer) {
+        void write(BinaryRawWriterEx writer) {
             int size = (attrs == null ? 0 : attrs.size()) + (nodeType == null ? 0 : 1);
 
             writer.writeInt(size);
