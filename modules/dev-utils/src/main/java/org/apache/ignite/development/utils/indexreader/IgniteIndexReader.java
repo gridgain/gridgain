@@ -20,8 +20,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,7 +41,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -64,6 +68,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageP
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
@@ -84,6 +90,9 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.READ;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
@@ -94,12 +103,15 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.optionalArg;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.CHECK_PARTS;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST_FILE;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DIR;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.FILE_MASK;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.INDEXES;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_SIZE;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_STORE_VER;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PART_CNT;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.TRANSFORM;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -109,8 +121,12 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getCrc;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getPageId;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.setCrc;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc.calcCrc;
 import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
@@ -162,11 +178,14 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Partition count. */
     private final int partCnt;
 
-    /** Index name filter, if {@code null} then is not used. */
-    @Nullable private final Predicate<String> idxFilter;
+    /** Names of index trees to process. If {@code null}, all are used. */
+    @Nullable private final Set<String> indexes;
 
     /** Output strean. */
     private final PrintStream outStream;
+
+    /** Error output stream. */
+    private final PrintStream outErrStream;
 
     /** Page store of {@link FilePageStoreManager#INDEX_FILE_NAME}. */
     @Nullable private final FilePageStore idxStore;
@@ -192,23 +211,28 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Constructor.
      *
-     * @param idxFilter Index name filter, if {@code null} then is not used.
+     * @param pageSize Page size.
+     * @param partCnt Partition count.
+     * @param indexes Names of index trees to process. If {@code null}, all are used.
      * @param checkParts Check cache data tree in partition files and it's consistency with indexes.
-     * @param outStream {@link PrintStream} for print report, if {@code null} then will be used {@link System#out}.
+     * @param outputStream Stream for print report.
      * @throws IgniteCheckedException If failed.
      */
     public IgniteIndexReader(
-        @Nullable Predicate<String> idxFilter,
+        int pageSize,
+        int partCnt,
+        @Nullable String[] indexes,
         boolean checkParts,
-        @Nullable PrintStream outStream,
+        @Nullable OutputStream outputStream,
         IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
     ) throws IgniteCheckedException {
-        pageSize = filePageStoreFactory.pageSize();
-        partCnt = filePageStoreFactory.partitionCount();
+        this.pageSize = pageSize;
+        this.partCnt = partCnt;
         this.checkParts = checkParts;
-        this.idxFilter = idxFilter;
+        this.indexes = isNull(indexes) ? null : new HashSet<>(asList(indexes));
 
-        this.outStream = isNull(outStream) ? System.out : outStream;
+        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
+        outErrStream = outStream;
 
         idxStore = filePageStoreFactory.createFilePageStoreWithEnsure(INDEX_PARTITION, FLAG_IDX);
 
@@ -223,6 +247,22 @@ public class IgniteIndexReader implements AutoCloseable {
             partStores[i] = filePageStoreFactory.createFilePageStoreWithEnsure(i, FLAG_DATA);
     }
 
+    /**
+     * Constructor.
+     *
+     * @param pageSize Page size.
+     * @param outputStream Stream for print report.
+     */
+    public IgniteIndexReader(int pageSize, OutputStream outputStream) {
+        this.pageSize = pageSize;
+        partCnt = 0;
+        checkParts = false;
+        idxFilter = null;
+        outStream = isNull(outputStream) ? System.out : new PrintStream(outputStream);
+        idxStore = null;
+        partStores = null;
+    }
+
     /** */
     private void print(String s) {
         outStream.println(s);
@@ -230,7 +270,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private void printErr(String s) {
-        outStream.println(ERROR_PREFIX + s);
+        outErrStream.println(ERROR_PREFIX + s);
     }
 
     /** */
@@ -249,10 +289,10 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         if (caption != null)
-            outStream.println(prefix + ERROR_PREFIX + caption);
+            outErrStream.println(prefix + ERROR_PREFIX + caption);
 
         errors.forEach((k, v) -> {
-            outStream.println(prefix + ERROR_PREFIX + format(elementFormatPtrn, k.toString()));
+            outErrStream.println(prefix + ERROR_PREFIX + format(elementFormatPtrn, k.toString()));
 
             v.forEach(e -> {
                 if (printTrace)
@@ -277,7 +317,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         e.printStackTrace(new PrintStream(os));
 
-        outStream.println(os.toString());
+        outErrStream.println(os.toString());
     }
 
     /** */
@@ -377,7 +417,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 pageClasses.compute(io.getClass(), (k, v) -> v == null ? 1 : v + 1);
 
                 if (!(io instanceof PageMetaIO || io instanceof PagesListMetaIO)) {
-                    if (idxFilter == null) {
+                    if (indexes == null) {
                         if ((io instanceof BPlusMetaIO || io instanceof BPlusInnerIO)
                                 && !pageIds.contains(pageId)
                                 && pageListsInfo.get() != null
@@ -424,7 +464,7 @@ public class IgniteIndexReader implements AutoCloseable {
         print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(a -> a).sum());
         print("Total errors occurred during sequential scan: " + errors.size());
 
-        if (idxFilter != null)
+        if (indexes != null)
             print("Orphan pages were not reported due to --indexes filter.");
 
         print("Note that some pages can be occupied by meta info, tracking info, etc., so total page count can differ " +
@@ -697,6 +737,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         print("Comparing traversals detected " + errors.size() + " errors.");
         print("------------------");
+
     }
 
     /** */
@@ -855,7 +896,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             IndexStorageImpl.IndexItem idxItem = (IndexStorageImpl.IndexItem)item;
 
-            if (nonNull(idxFilter) && !idxFilter.test(idxItem.nameString()))
+            if (indexes != null && !indexes.contains(idxItem.nameString()))
                 return;
 
             TreeTraversalInfo treeTraversalInfo =
@@ -1279,16 +1320,22 @@ public class IgniteIndexReader implements AutoCloseable {
             p.get(PAGE_STORE_VER.arg())
         );
 
-        String[] idxArr = p.get(INDEXES.arg());
-        Set<String> idxSet = isNull(idxArr) ? null : new HashSet<>(asList(idxArr));
-
-        try (IgniteIndexReader reader = new IgniteIndexReader(
-            isNull(idxSet) ? null : idxSet::contains,
-            p.get(CHECK_PARTS.arg()),
-            isNull(destStream) ? null : new PrintStream(destFile),
-            filePageStoreFactory
-        )) {
-            reader.readIdx();
+        if (p.get(TRANSFORM.arg())) {
+            try (IgniteIndexReader reader = new IgniteIndexReader(pageSize, destStream)) {
+                reader.transform(dir, p.get(DEST.arg()), p.get(FILE_MASK.arg()), filePageStoreFactory);
+            }
+        }
+        else {
+            try (IgniteIndexReader reader = new IgniteIndexReader(
+                pageSize,
+                p.get(PART_CNT.arg()),
+                p.get(INDEXES.arg()),
+                p.get(CHECK_PARTS.arg()),
+                destStream,
+                filePageStoreFactory
+            )) {
+                reader.readIdx();
+            }
         }
     }
 
