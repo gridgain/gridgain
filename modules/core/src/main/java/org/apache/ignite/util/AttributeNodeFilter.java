@@ -111,7 +111,7 @@ public class AttributeNodeFilter implements IgnitePredicate<ClusterNode> {
      *
      * @return Attributes collection.
      */
-    public Map<String, Object> getAttrs(){
+    public Map<String, Object> getAttrs() {
         return new HashMap<>(attrs);
     }
 }

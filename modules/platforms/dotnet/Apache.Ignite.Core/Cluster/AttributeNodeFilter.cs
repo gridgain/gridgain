@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Cluster
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Common;
 
@@ -38,6 +39,7 @@ namespace Apache.Ignite.Core.Cluster
         /// <summary>
         /// Attributes dictionary match.
         /// </summary>
+        [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public IDictionary<string, object> Attributes
         {
             get { return _attributes; }
