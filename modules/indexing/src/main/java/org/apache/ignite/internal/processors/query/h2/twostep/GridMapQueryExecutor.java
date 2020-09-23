@@ -567,7 +567,8 @@ public class GridMapQueryExecutor {
             if (reserved != null)
                 reserved.release();
 
-            trace.close();
+            if (trace != null)
+                trace.close();
         }
     }
 
@@ -699,7 +700,8 @@ public class GridMapQueryExecutor {
 
             nodeResults.removeUpdate(reqId);
 
-            trace.close();
+            if (trace != null)
+                trace.close();
         }
     }
 
