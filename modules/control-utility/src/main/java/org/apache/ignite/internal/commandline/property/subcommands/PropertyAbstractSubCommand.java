@@ -78,7 +78,7 @@ public abstract class PropertyAbstractSubCommand<
             printResult(res, log);
         }
         catch (Throwable e) {
-            log.severe("Failed to execute metadata command='" + name() + "'");
+            log.severe("Failed to execute property command='" + name() + "'");
             log.severe(CommandLogger.errorMessage(e));
 
             throw e;
