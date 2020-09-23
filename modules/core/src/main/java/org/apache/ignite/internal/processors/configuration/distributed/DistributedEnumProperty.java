@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.configuration.distributed;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -152,7 +153,7 @@ public class DistributedEnumProperty<T extends Enum> implements DistributedChang
 
         if (t == null) {
             throw new IllegalArgumentException("Unknown value for enum property " +
-                "[value=" + str + ", name=" + internal.getName());
+                "[value=" + str + ", name=" + internal.getName() + ']');
         }
 
         return t;
@@ -161,5 +162,27 @@ public class DistributedEnumProperty<T extends Enum> implements DistributedChang
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DistributedEnumProperty.class, this);
+    }
+
+    /**
+     * @param clsEnum
+     * @param <T>
+     * @return
+     */
+    public static <T extends Enum> Function<String, T> parseEnum(Class<T> clsEnum) {
+        final Map<String, T> enumVals = Arrays.stream(clsEnum.getEnumConstants())
+            .collect(Collectors.toMap(e -> e.name().toLowerCase(), e -> e));
+
+        return (str) -> {
+            T t = enumVals.get(str.toLowerCase());
+
+
+            if (t == null) {
+                throw new IllegalArgumentException("Unknown value for enum property " +
+                    "[value=" + str + ']');
+            }
+
+            return t;
+        };
     }
 }
