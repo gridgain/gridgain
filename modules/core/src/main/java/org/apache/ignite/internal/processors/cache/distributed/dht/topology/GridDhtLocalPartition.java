@@ -16,16 +16,19 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -62,9 +65,10 @@ import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.util.deque.FastSizeDeque;
@@ -996,11 +1000,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     if (state() == MOVING && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
                         continue;
 
-                    if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId())) {
-                        GridCacheContext cacheCtx = ctx.cacheContext(row.cacheId());
-
-                        hld = cacheMapHolder(cacheCtx);
-                    }
+                    if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
+                        hld = cacheMapHolder(ctx.cacheContext(row.cacheId()));
 
                     assert hld != null;
 
@@ -1392,5 +1393,45 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         @Override public String toString() {
             return S.toString(RemovedEntryHolder.class, this);
         }
+    }
+
+    /**
+     * Collects detailed info about the partition.
+     *
+     * @param buf Buffer.
+     */
+    public void dumpDebugInfo(SB buf) {
+        GridDhtPartitionTopology top = grp.topology();
+        AffinityTopologyVersion topVer = top.readyTopologyVersion();
+
+        if (!topVer.initialized()) {
+            buf.a(toString());
+
+            return;
+        }
+
+        final int limit = 3;
+
+        buf.a("[topVer=").a(topVer);
+        buf.a(", lastChangeTopVer=").a(top.lastTopologyChangeVersion());
+        buf.a(", waitRebalance=").a(ctx.kernalContext().cache().context().affinity().waitRebalance(grp.groupId(), id));
+        buf.a(", nodes=").a(F.nodeIds(top.nodes(id, topVer)).stream().limit(limit).collect(Collectors.toList()));
+        buf.a(", locPart=").a(toString());
+
+        NavigableSet<AffinityTopologyVersion> versions = grp.affinity().cachedVersions();
+
+        int i = 5;
+
+        Iterator<AffinityTopologyVersion> iter = versions.descendingIterator();
+
+        while(--i >= 0 && iter.hasNext()) {
+            AffinityTopologyVersion topVer0 = iter.next();
+            buf.a(", ver").a(i).a('=').a(topVer0);
+
+            Collection<UUID> nodeIds = F.nodeIds(grp.affinity().cachedAffinity(topVer0).get(id));
+            buf.a(", affOwners").a(i).a('=').a(nodeIds.stream().limit(limit).collect(Collectors.toList()));
+        }
+
+        buf.a(']');
     }
 }

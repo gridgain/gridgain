@@ -233,7 +233,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** Extras */
     @GridToStringInclude
-    protected GridCacheEntryExtras extras;
+    private GridCacheEntryExtras extras;
 
     /** */
     @GridToStringExclude
@@ -4605,8 +4605,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
     }
 
-    public boolean mvcced;
-
     /** {@inheritDoc} */
     @Override public boolean evictInternal(
         GridCacheVersion obsoleteVer,
@@ -4635,9 +4633,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return false;
 
                     if (!hasReaders() && markObsolete0(obsoleteVer, false, null)) {
-                        if (extras instanceof GridCacheMvccObsoleteEntryExtras)
-                            mvcced = true;
-
                         // Nullify value after swap.
                         value(null);
 
@@ -4878,25 +4873,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /**
      * @return MVCC.
      */
-    @Override @Nullable public final GridCacheMvcc mvccExtras2() {
-        lockEntry();
-
-        try {
-            return mvccExtras();
-        }
-        finally {
-            unlockEntry();
-        }
-    }
-
-    @Nullable protected GridCacheMvcc mvccExtras() {
+    @Nullable protected final GridCacheMvcc mvccExtras() {
         return extras != null ? extras.mvcc() : null;
     }
 
     /**
      * @return All MVCC local and non near candidates.
      */
-    @Override @SuppressWarnings("ForLoopReplaceableByForEach")
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     @Nullable public final List<GridCacheMvccCandidate> mvccAllLocal() {
         lockEntry();
 
@@ -4945,7 +4929,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param obsoleteVer Obsolete version.
      * @param ext Extras.
      */
-    protected void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
+    private void obsoleteVersionExtras(@Nullable GridCacheVersion obsoleteVer, GridCacheObsoleteEntryExtras ext) {
         extras = (extras != null) ?
             extras.obsoleteVersion(obsoleteVer) :
             obsoleteVer != null ?

@@ -22,19 +22,13 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.ObjectStreamException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -1301,21 +1295,5 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridKernalContextImpl.class, this);
-    }
-
-    public final ConcurrentMap<Object, ConcurrentLinkedQueue<Object[]>> hist = new ConcurrentHashMap<>();
-
-    public void dump(Integer key, IgniteLogger log) {
-        StringBuilder b = new StringBuilder();
-        b.append("DBG: node=" + igniteInstanceName() + ", key=" + key + "\n");
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-
-        ConcurrentLinkedQueue<Object[]> q = hist.getOrDefault(key, new ConcurrentLinkedQueue<>());
-
-        for (Object[] h : q)
-            b.append("DBG:       op=" + h[0] + ", trace=" + h[1] + ", ts=" + sdf.format((Date)h[3])+ ", stack=" + X.getFullStackTrace((Throwable) h[2]) + "\n");
-
-        log.info(b.toString());
     }
 }

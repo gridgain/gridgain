@@ -27,7 +27,6 @@ import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridDirectTransient;
-import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
@@ -50,7 +49,6 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -607,6 +605,7 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         if (!ok) {
             GridDhtCacheEntry entry0 = (GridDhtCacheEntry) entry;
 
+            // TODO print debug entry
             String err = "Invalid entry assigned to tx entry [txEntry=" + this +
                 ", entry=" + entry0 +
                 ", name0=" + entry0.context().name() +

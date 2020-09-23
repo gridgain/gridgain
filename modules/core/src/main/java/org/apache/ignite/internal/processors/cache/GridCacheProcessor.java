@@ -517,6 +517,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         grp.metrics().remove();
 
+        sharedCtx.evict().cleanupRemovedGroup(grp.groupId());
+
         cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
 

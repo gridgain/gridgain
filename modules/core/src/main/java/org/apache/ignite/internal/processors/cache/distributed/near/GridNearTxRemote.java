@@ -21,19 +21,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
-import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
-import org.apache.ignite.internal.processors.cache.GridCacheLocalConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxRemoteAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
@@ -41,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxRemoteSt
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridLeanMap;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
-import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -340,10 +335,7 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
 
         GridCacheContext cacheCtx = entry.context();
 
-        assert cacheCtx.isNear() : cacheCtx;
-
-//        if (!cacheCtx.isNear())
-//            cacheCtx = cacheCtx.dht().near().context();
+        assert cacheCtx.isNear() : entry;
 
         GridNearCacheEntry cached = cacheCtx.near().peekExx(entry.key());
 
@@ -353,24 +345,12 @@ public class GridNearTxRemote extends GridDistributedTxRemoteAdapter {
             return false;
         }
         else {
-//            entry.cached(cached);
-//
-//            txState.addWriteEntry(entry.txKey(), entry);
-//
-//            addExplicit(entry);
-//
-//            return true;
-
             try {
-                cached.unswap(); // TODO call is NOOP for near cache, can be removed.
+                // Unswap is no-op for near cache.
 
                 CacheObject val = cached.peek();
 
                 if (val == null && cached.evictInternal(xidVer, null, false)) {
-                    if (cached.mvcced) {
-                        log.info("DBG: txx=" + this);
-                    }
-
                     evicted.add(entry.txKey());
 
                     return false;

@@ -2004,14 +2004,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         Map<IgniteTxKey, Collection<GridCacheMvccCandidate>> locks =
                             cctx.mvcc().unfinishedLocks(exchId.topologyVersion());
 
-                        for (Map.Entry<IgniteTxKey, Collection<GridCacheMvccCandidate>> e : locks.entrySet()) {
+                        for (Map.Entry<IgniteTxKey, Collection<GridCacheMvccCandidate>> e : locks.entrySet())
                             U.warn(log, "Awaited locked entry [key=" + e.getKey() + ", mvcc=" + e.getValue() + ']');
-
-                            GridKernalContextImpl kctx = (GridKernalContextImpl) cctx.kernalContext();
-                            KeyCacheObject key = e.getKey().key();
-                            GridCacheContext<Object, Object> ctx = kctx.cache().context().cacheContext(e.getKey().cacheId());
-                            kctx.dump(key.value(ctx.cacheObjectContext(), false), log);
-                        }
 
                         nextDumpTime = U.currentTimeMillis() + nextDumpTimeout(dumpCnt++, waitTimeout);
 
@@ -2019,7 +2013,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             U.dumpThreads(log);
                     }
 
-                    // Sometimes FinishLockFuture is not rechecked causing stale removed candidates.
+                    // Sometimes FinishLockFuture is not rechecked causing frozen PME.
                     cctx.mvcc().recheckPendingLocks();
                 }
                 finally {

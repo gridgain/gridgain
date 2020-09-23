@@ -332,9 +332,15 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
     }
 
-    public WaitRebalanceInfo waitInfo() {
+    /**
+     * @param grpId Group id.
+     * @param partId Partition id.
+     *
+     * @return {@code True} if this node waits for the partition rebalance.
+     */
+    public boolean waitRebalance(int grpId, int partId) {
         synchronized (mux) {
-            return waitInfo;
+            return waitInfo != null && waitInfo.waitGrps.getOrDefault(grpId, Collections.emptySet()).contains(partId);
         }
     }
 
@@ -2566,7 +2572,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         }
                     }
 
-                    // This will happen if no primary is changed but some backups still need to be rebalanced.
+                    // This will happen if no primary has changed but some backups still need to be rebalanced.
                     if (!owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p))
                         waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
 
@@ -2919,9 +2925,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * Tracks rebalance state on coordinator.
      * After all partitions are rebalanced the current affinity is switched to ideal.
      */
-    public class WaitRebalanceInfo {
+    class WaitRebalanceInfo {
         /** */
-        public final AffinityTopologyVersion topVer;
+        private final AffinityTopologyVersion topVer;
 
         /** */
         private final Map<Integer, Set<Integer>> waitGrps = new ConcurrentHashMap<>();
@@ -2956,7 +2962,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         /**
-         * Adds a partition to wait set.
+         * Adds a partition to wait set. A same group processing should be bound to a same thread.
          *
          * @param grpId Group ID.
          * @param part Partition.
@@ -2972,7 +2978,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps.size() + ']';
+            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps.keySet() + ']';
         }
     }
 

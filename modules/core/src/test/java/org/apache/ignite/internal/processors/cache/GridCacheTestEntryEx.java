@@ -980,12 +980,4 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     @Override public void touch() {
         context().evicts().touch(this);
     }
-
-    @Override public List<GridCacheMvccCandidate> mvccAllLocal() {
-        return null;
-    }
-
-    @Override public GridCacheMvcc mvccExtras2() {
-        return null;
-    }
 }

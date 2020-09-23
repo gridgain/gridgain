@@ -1864,7 +1864,8 @@ public class IgniteTxHandler {
                                                 entry.readValue(val);
 
                                             break;
-                                        } catch (GridCacheEntryRemovedException ignored) {
+                                        }
+                                        catch (GridCacheEntryRemovedException ignored) {
                                             if (log.isDebugEnabled())
                                                 log.debug("Got entry removed exception, will retry: " + entry.txKey());
 

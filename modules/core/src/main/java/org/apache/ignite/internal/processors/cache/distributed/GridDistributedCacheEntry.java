@@ -19,12 +19,8 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Function;
-import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheLockCandidates;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -66,7 +62,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
     private void refreshRemotes() {
         GridCacheMvcc mvcc = mvccExtras();
 
-        rmts = mvcc == null ? Collections.<GridCacheMvccCandidate>emptyList() : mvcc.remoteCandidates();
+        rmts = mvcc == null ? Collections.emptyList() : mvcc.remoteCandidates();
     }
 
     /**
@@ -254,79 +250,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         checkOwnerChanged(prev, owner, val);
     }
 
-    public void addRemote2(
-        UUID nodeId,
-        @Nullable UUID otherNodeId,
-        long threadId,
-        GridCacheVersion ver,
-        boolean tx,
-        boolean implicitSingle,
-        @Nullable GridCacheVersion owned
-    ) throws GridDistributedLockCancelledException, GridCacheEntryRemovedException {
-        CacheLockCandidates prev;
-        CacheLockCandidates owner;
-
-        CacheObject val;
-
-        lockEntry();
-
-        try {
-            // Check removed locks prior to obsolete flag.
-            checkRemoved(ver);
-
-            checkObsolete();
-
-            GridCacheMvcc mvcc = mvccExtras();
-
-            if (mvcc == null) {
-                mvcc = new GridCacheMvcc(cctx);
-
-                mvccExtras(mvcc);
-            }
-
-            addRemote2Lock(mvcc);
-
-            prev = mvcc.allOwners();
-
-            boolean emptyBefore = mvcc.isEmpty();
-
-            mvcc.addRemote(
-                this,
-                nodeId,
-                otherNodeId,
-                threadId,
-                ver,
-                tx,
-                implicitSingle,
-                /*near-local*/false
-            );
-
-            if (owned != null)
-                mvcc.markOwned(ver, owned);
-
-            owner = mvcc.allOwners();
-
-            boolean emptyAfter = mvcc.isEmpty();
-
-            checkCallbacks(emptyBefore, emptyAfter);
-
-            val = this.val;
-
-            refreshRemotes();
-
-            addRemote2Unlock(mvcc);
-
-            if (emptyAfter)
-                mvccExtras(null);
-        }
-        finally {
-            unlockEntry();
-        }
-
-        // This call must be outside of synchronization.
-        checkOwnerChanged(prev, owner, val);
-    }
-
     /**
      * Removes all lock candidates for node.
      *
@@ -457,8 +380,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
         try {
             GridCacheMvcc mvcc = mvccExtras();
 
-            removeLockLock(mvcc);
-
             doomed = mvcc == null ? null : mvcc.candidate(ver);
 
             if (doomed == null)
@@ -482,8 +403,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                     refreshRemotes();
 
                 checkCallbacks(emptyBefore, emptyAfter);
-
-                removeLockUnlock(mvcc);
 
                 if (emptyAfter)
                     mvccExtras(null);
@@ -627,8 +546,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
             GridCacheMvcc mvcc = mvccExtras();
 
             if (mvcc != null) {
-                readyNearLockLock(mvcc);
-
                 prev = mvcc.allOwners();
 
                 boolean emptyBefore = mvcc.isEmpty();
@@ -640,8 +557,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 boolean emptyAfter = mvcc.isEmpty();
 
                 checkCallbacks(emptyBefore, emptyAfter);
-
-                readyNearLockUnlock(mvcc);
 
                 if (emptyAfter)
                     mvccExtras(null);
@@ -690,8 +605,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
             GridCacheMvcc mvcc = mvccExtras();
 
             if (mvcc != null) {
-                doneRemoteLock(mvcc);
-
                 prev = mvcc.allOwners();
 
                 boolean emptyBefore = mvcc.isEmpty();
@@ -715,8 +628,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 boolean emptyAfter = mvcc.isEmpty();
 
                 checkCallbacks(emptyBefore, emptyAfter);
-
-                doneRemoteUnlock(mvcc);
 
                 if (emptyAfter)
                     mvccExtras(null);
@@ -800,7 +711,7 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 read) != null;
 
         try {
-            addRemote2(
+            addRemote(
                 tx.nodeId(),
                 tx.otherNodeId(),
                 tx.threadId(),
@@ -877,45 +788,5 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
     /** {@inheritDoc} */
     @Override public String toString() {
         return toStringWithTryLock(() -> S.toString(GridDistributedCacheEntry.class, this, super.toString()));
-    }
-
-    protected void track(String op, String detail) {
-        Object key = key().value(cctx.cacheObjectContext(), false);
-
-        GridKernalContextImpl ker = (GridKernalContextImpl) cctx.kernalContext();
-        ker.hist.computeIfAbsent(key, new Function<Object, ConcurrentLinkedQueue<Object[]>>() {
-            @Override public ConcurrentLinkedQueue<Object[]> apply(Object o) {
-                return new ConcurrentLinkedQueue<Object[]>();
-            }
-        }).add(new Object[] {op, detail, new Exception(), new Date()});
-    }
-
-
-    protected void addRemote2Lock(GridCacheMvcc mvcc) {
-    }
-
-    protected void addRemote2Unlock(GridCacheMvcc mvcc) {
-
-    }
-
-    protected void readyNearLockLock(GridCacheMvcc mvcc) {
-    }
-
-    protected void readyNearLockUnlock(GridCacheMvcc mvcc) {
-        //track("readyNearLock", mvcc.toString());
-    }
-
-    protected void doneRemoteLock(GridCacheMvcc mvcc) {
-    }
-
-    protected void doneRemoteUnlock(GridCacheMvcc mvcc) {
-    }
-
-    protected void removeLockLock(GridCacheMvcc mvcc) {
-
-    }
-
-    protected void removeLockUnlock(GridCacheMvcc mvcc) {
-
     }
 }

@@ -18,11 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -35,7 +31,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheAffinitySharedManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
@@ -52,7 +47,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
@@ -305,43 +300,23 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         }
 
         if (!assignments.isEmpty()) {
-            boolean ok = exchFut == null || !exchFut.rebalanced();
+            if (exchFut != null && exchFut.rebalanced()) {
+                GridDhtPartitionDemandMessage first = assignments.values().iterator().next();
 
-            if (!ok) {
-                StringBuilder tmp = new StringBuilder();
+                GridDhtLocalPartition locPart = grp.topology().localPartition(first.partitions().all().iterator().next());
 
-                Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> ass = assignments.entrySet().iterator().next();
+                SB buf = new SB(1024);
 
-                Integer badP = ass.getValue().partitions().fullSet().iterator().next();
+                buf.a("Unexpected rebalance on rebalanced cluster: assignments=");
+                buf.a(assignments);
+                buf.a(", firstPart=");
 
-                tmp.append("Unexpected rebalance on rebalanced cluster [top=").append(topVer).append(", grp=").append(grp.groupId()).append(", assignments=").append(assignments);
+                if (locPart != null)
+                    locPart.dumpDebugInfo(buf);
+                else
+                    buf.a("NA");
 
-                CacheAffinitySharedManager<Object, Object>.WaitRebalanceInfo info = ctx.kernalContext().cache().context().affinity().waitInfo();
-
-                Collection<UUID> owners = F.nodeIds(grp.topology().owners(badP, topVer));
-                tmp.append(", owners=").append(owners);
-                tmp.append(", waitInfo=").append(info == null ? "NA": info.topVer);
-                GridDhtLocalPartition obj = grp.topology().localPartition(badP);
-                tmp.append(", locPart=").append(obj);
-
-                NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions();
-
-                int i = 5;
-
-                Iterator<AffinityTopologyVersion> iter = toCheck.descendingIterator();
-
-                while(--i >= 0 && iter.hasNext()) {
-                    AffinityTopologyVersion aff0 = iter.next();
-
-                    Collection<UUID> affOwners = F.nodeIds(grp.affinity().cachedAffinity(aff0).get(badP));
-                    tmp.append(", ver=" + aff0);
-                    tmp.append(", affOwners=").append(affOwners);
-                    tmp.append("\n");
-                }
-
-                tmp.append("]");
-
-                throw new AssertionError(tmp);
+                throw new AssertionError(buf.toString());
             }
 
             ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());

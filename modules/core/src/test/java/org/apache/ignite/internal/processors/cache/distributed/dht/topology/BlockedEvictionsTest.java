@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -270,9 +271,9 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         // Group eviction context should remain in map. TODO leak ?
         Map evictionGroupsMap = U.field(mgr, "evictionGroupsMap");
 
-        assertEquals(1, evictionGroupsMap.size());
+        assertEquals("Group context must be cleaned up", 0, evictionGroupsMap.size());
 
-        IgniteCache<Object, Object> cache = grid(0).getOrCreateCache(cacheConfiguration());
+        grid(0).getOrCreateCache(cacheConfiguration());
 
         assertEquals(0, evictionGroupsMap.size());
 
@@ -425,8 +426,13 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
                             return new GridDhtLocalPartitionSyncEviction(ctx, grp, id, recovery, mode, l1, l2) {
                                 /** */
                                 @Override protected void sync() {
-                                    if (holder.get() == id)
+                                    if (holder.get() == id) {
+                                        SB sb = new SB();
+                                        dumpDebugInfo(sb);
+
+
                                         super.sync();
+                                    }
                                 }
                             };
                         }

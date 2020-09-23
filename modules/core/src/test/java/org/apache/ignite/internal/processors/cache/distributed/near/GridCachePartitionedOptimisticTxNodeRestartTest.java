@@ -591,8 +591,8 @@ public class GridCachePartitionedOptimisticTxNodeRestartTest extends GridCacheAb
         Object v1 = crd.cache(CACHE_NAME).get(finalCand);
         Object v2 = owner.cache(CACHE_NAME).get(finalCand);
 
-        GridKernalContextImpl ctx = (GridKernalContextImpl) grid(0).context();
-        ctx.dump(finalCand, log);
+//        GridKernalContextImpl ctx = (GridKernalContextImpl) grid(0).context();
+//        ctx.dump(finalCand, log);
 
         System.out.println();
 

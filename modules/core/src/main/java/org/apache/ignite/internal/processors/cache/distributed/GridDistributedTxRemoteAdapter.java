@@ -32,7 +32,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -41,10 +40,8 @@ import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
-import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheFilterFailedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
@@ -58,7 +55,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxRemote;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
@@ -485,13 +481,9 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
-                            // TODO assert hasCandidate
-                            if (near() && (entry.mvccAllLocal() != null || entry.mvccExtras2() == null)) {
-                                dump(entry);
-
-                                GridKernalContextImpl kctx = (GridKernalContextImpl) cctx.kernalContext();
-                                kctx.dump(entry.key().value(entry.context().cacheObjectContext(), false), log);
-                            }
+                            // TODO print debug entry
+                            assert entry.hasLockCandidate(ver) :
+                                "Expecting a candidate: ver=" + ver + ", entry=" + entry;
 
                             if (log.isDebugEnabled())
                                 log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +
