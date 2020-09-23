@@ -451,7 +451,10 @@ public final class IgniteSystemProperties {
 
     /**
      * Flag indicating whether validation of keys put to cache should be disabled.
+     *
+     * @deprecated Since 2.7.26. Obsolete because of common use of binary marshaller.
      */
+    @Deprecated
     public static final String IGNITE_CACHE_KEY_VALIDATION_DISABLED = "IGNITE_CACHE_KEY_VALIDATION_DISABLED";
 
     /**
@@ -778,14 +781,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
-     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
-     * It is intended for prevent  partition divergence due to reordering in WAL.
-     * <p>
-     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
-     *
+     * Prefer historical rebalance if there's enough history regardless off all heuristics.
+     * This property is intended for integration or performance tests.
+     * Default is {@code false}.
      */
-    public static final String WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE =
-        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE";
+    public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
     /** Ignite page memory concurrency level. */
     public static final String IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL = "IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL";
@@ -1071,6 +1071,7 @@ public final class IgniteSystemProperties {
     /**
      * Number of concurrent operation for evict partitions.
      */
+    @Deprecated
     public static final String IGNITE_EVICTION_PERMITS = "IGNITE_EVICTION_PERMITS";
 
     /**
@@ -1265,7 +1266,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED = "IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED";
 
     /**
-     * Defines factory class for H2 LocalResult (see org.h2.result.LocalResult).
+     * Defines factory class for H2 LocalResult (see org.gridgain.internal.h2.result.LocalResult).
      */
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
@@ -1390,14 +1391,6 @@ public final class IgniteSystemProperties {
      */
     @IgniteExperimental
     public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
-
-    /**
-     * Time threshold (in milliseconds) of rebalance after which partition
-     * distribution will be present in rebalance statistics.
-     * Default value is {@code 10} min.
-     */
-    public static final String IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD =
-        "IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD";
 
     /**
      * Choose the index cost function. May be used to compatibility with old version

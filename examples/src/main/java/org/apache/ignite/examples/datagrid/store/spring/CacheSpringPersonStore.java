@@ -27,7 +27,7 @@ import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.examples.model.Person;
 import org.apache.ignite.lang.IgniteBiInClosure;
-import org.h2.jdbcx.JdbcConnectionPool;
+import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -40,7 +40,7 @@ import org.springframework.jdbc.core.RowMapper;
 public class CacheSpringPersonStore extends CacheStoreAdapter<Long, Person> {
     /** Data source. */
     public static final DataSource DATA_SRC =
-        JdbcConnectionPool.create("jdbc:h2:tcp://localhost/mem:ExampleDb", "sa", "");
+        JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", "");
 
     /** Spring JDBC template. */
     private JdbcTemplate jdbcTemplate;

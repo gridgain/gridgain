@@ -32,10 +32,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientClusterGroup;
 import org.apache.ignite.client.ClientCompute;
@@ -43,7 +41,6 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskName;
-import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.ThinClientConfiguration;
@@ -53,15 +50,13 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * Checks compute grid funtionality of thin client.
  */
-public class ComputeTaskTest extends GridCommonAbstractTest {
+public class ComputeTaskTest extends AbstractThinClientTest {
     /** Grids count. */
     private static final int GRIDS_CNT = 4;
 
@@ -79,19 +74,8 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName).setClientConnectorConfiguration(
             new ClientConnectorConfiguration().setThinClientConfiguration(
                 new ThinClientConfiguration().setMaxActiveComputeTasksPerConnection(
-                    getTestIgniteInstanceIndex(igniteInstanceName) <= 1 ? ACTIVE_TASKS_LIMIT : 0)));
-    }
-
-    /**
-     *
-     */
-    private IgniteClient startClient(int... gridIdxs) {
-        String[] addrs = new String[gridIdxs.length];
-
-        for (int i = 0; i < gridIdxs.length; i++)
-            addrs[i] = "127.0.0.1:" + (ClientConnectorConfiguration.DFLT_PORT + gridIdxs[i]);
-
-        return Ignition.startClient(new ClientConfiguration().setAddresses(addrs));
+                    getTestIgniteInstanceIndex(igniteInstanceName) <= 1 ? ACTIVE_TASKS_LIMIT : 0)))
+            .setClientMode(getTestIgniteInstanceIndex(igniteInstanceName) == 3);
     }
 
     /** {@inheritDoc} */
@@ -117,7 +101,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
             T2<UUID, Set<UUID>> val = client.compute().execute(TestTask.class.getName(), null);
 
             assertEquals(nodeId(0), val.get1());
-            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
         }
     }
 
@@ -144,7 +128,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
             T2<UUID, Set<UUID>> val = client.compute().execute(TEST_TASK_NAME, null);
 
             assertEquals(nodeId(0), val.get1());
-            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
         }
     }
 
@@ -173,7 +157,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             assertTrue(fut.isDone());
             assertEquals(nodeId(0), val.get1());
-            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
         }
     }
 
@@ -190,7 +174,8 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             fut.cancel(true);
 
-            assertTrue(((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty());
+            assertTrue(GridTestUtils.waitForCondition(
+                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
 
             assertTrue(fut.isCancelled());
             assertTrue(fut.isDone());
@@ -249,9 +234,24 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             assertEquals(nodeId(0), val.get1());
             assertEquals(nodeIds(1, 2), val.get2());
+
+            // Compute on client node defined explicitly.
+            grp = client.cluster().forNodeIds(nodeIds(3));
+
+            val = client.compute(grp).execute(TestTask.class.getName(), null);
+
+            assertEquals(nodeId(0), val.get1());
+            assertEquals(nodeIds(3), val.get2());
+
+            // Compute on all nodes (clients + servers).
+            grp = client.cluster();
+
+            val = client.compute(grp).execute(TestTask.class.getName(), null);
+
+            assertEquals(nodeId(0), val.get1());
+            assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().nodes())), val.get2());
         }
     }
-
 
     /**
      *
@@ -326,7 +326,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             compute.execute(TestTask.class.getName(), null);
 
-            assertEquals(1, compute.activeTaskFutures().size());
+            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTaskFutures().size() == 1, TIMEOUT));
 
             assertTrue(fut1.isDone());
 
@@ -342,7 +342,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
             fut3.get(TIMEOUT, TimeUnit.MILLISECONDS);
 
-            assertTrue(compute.activeTaskFutures().isEmpty());
+            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTaskFutures().isEmpty(), TIMEOUT));
         }
     }
 
@@ -464,7 +464,6 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-12845")
     public void testExecuteTaskConcurrentLoad() throws Exception {
         try (IgniteClient client = startClient(0)) {
             int threadsCnt = 20;
@@ -479,7 +478,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
             GridTestUtils.runMultiThreaded(
                 () -> {
                     int threadIdx = threadIdxs.incrementAndGet();
-                    
+
                     Random rnd = new Random();
 
                     try {
@@ -487,16 +486,21 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
 
                         for (int i = 0; i < iterations; i++) {
                             int nodeIdx = rnd.nextInt(GRIDS_CNT);
-                            
+
                             cache.put(threadIdx, i);
-                            
+
                             ClientCompute compute = client.compute(client.cluster().forNodeId(nodeId(nodeIdx)));
-                            
+
                             Future<T2<UUID, Set<UUID>>> fut = compute.executeAsync(TestTask.class.getName(), null);
-                            
+
+                            boolean cancelled = (i % 3 == 0) && fut.cancel(true);
+
                             assertEquals((Integer)i, cache.get(threadIdx));
 
-                            assertEquals(nodeIds(nodeIdx), fut.get().get2());
+                            if (cancelled)
+                                assertTrue(fut.isCancelled());
+                            else
+                                assertEquals(nodeIds(nodeIdx), fut.get().get2());
                         }
                     }
                     catch (ExecutionException e) {
@@ -507,10 +511,11 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
                     catch (InterruptedException | BrokenBarrierException ignore) {
                         // No-op.
                     }
-                    
+
                 }, threadsCnt, "run-task-async");
 
-            assertTrue(((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty());
+            assertTrue(GridTestUtils.waitForCondition(
+                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
         }
     }
 
@@ -531,7 +536,7 @@ public class ComputeTaskTest extends GridCommonAbstractTest {
     /**
      *
      */
-    private void dropAllThinClientConnections() throws Exception {
+    private void dropAllThinClientConnections() {
         for (Ignite ignite : G.allGrids()) {
             ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
                 ClientProcessorMXBean.class, ClientListenerProcessor.class);

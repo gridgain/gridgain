@@ -25,8 +25,8 @@ import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.command.Prepared;
-import org.h2.engine.Session;
+import org.gridgain.internal.h2.command.Prepared;
+import org.gridgain.internal.h2.engine.Session;
 
 /**
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.

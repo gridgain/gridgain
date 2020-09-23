@@ -216,7 +216,6 @@ public class IgniteCompatibilityNodeRunner extends IgniteNodeRunner {
      * @throws IOException In case of an error.
      * @see #storeToFile(IgniteInClosure, String)
      */
-    @SuppressWarnings("unchecked")
     public static <T> IgniteInClosure<T> readClosureFromFileAndDelete(String fileName) throws IOException {
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(fileName), StandardCharsets.UTF_8)) {
             return (IgniteInClosure<T>)new XStream().fromXML(reader);

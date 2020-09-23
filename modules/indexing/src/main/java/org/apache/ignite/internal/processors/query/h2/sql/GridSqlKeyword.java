@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import java.util.Collections;
-import org.h2.expression.ValueExpression;
+import org.gridgain.internal.h2.expression.ValueExpression;
 
 /** Keyword (like DEFAULT). */
 public final class GridSqlKeyword extends GridSqlElement {

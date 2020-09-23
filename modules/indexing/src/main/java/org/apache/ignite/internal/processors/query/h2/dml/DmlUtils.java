@@ -51,11 +51,11 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
-import org.h2.util.LocalDateTimeUtils;
-import org.h2.value.Value;
-import org.h2.value.ValueDate;
-import org.h2.value.ValueTime;
-import org.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueDate;
+import org.gridgain.internal.h2.value.ValueTime;
+import org.gridgain.internal.h2.value.ValueTimestamp;
 
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.DUPLICATE_KEY;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.createJdbcSqlException;

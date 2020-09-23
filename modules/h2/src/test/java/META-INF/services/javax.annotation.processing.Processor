@@ -1,1 +1,1 @@
-org.h2.test.ap.TestAnnotationProcessor
+org.gridgain.internal.h2.test.ap.TestAnnotationProcessor
