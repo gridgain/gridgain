@@ -165,9 +165,9 @@ public class DistributedEnumProperty<T extends Enum> implements DistributedChang
     }
 
     /**
-     * @param clsEnum
-     * @param <T>
-     * @return
+     * @param clsEnum Enum class.
+     * @param <T> Enum class type.
+     * @return Function to parse enum value.
      */
     public static <T extends Enum> Function<String, T> parseEnum(Class<T> clsEnum) {
         final Map<String, T> enumVals = Arrays.stream(clsEnum.getEnumConstants())
