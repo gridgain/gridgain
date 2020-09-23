@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
@@ -127,7 +128,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
         }
 
         assertEquals(
-            EXIT_CODE_INVALID_ARGUMENTS,
+            EXIT_CODE_UNEXPECTED_ERROR,
             execute(
                 "--property", "set",
                 "--name", "sql.defaultQueryTimeout",

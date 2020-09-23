@@ -71,7 +71,9 @@ public class DistributedSqlConfiguration {
     );
 
     /** Value of cluster time zone. */
-    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sql.timeZone");
+    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>(
+        "sql.timeZone",
+        TimeZone::getTimeZone);
 
     /** Query timeout. */
     private final SimpleDistributedProperty<Integer> dfltQueryTimeout = new SimpleDistributedProperty<>(

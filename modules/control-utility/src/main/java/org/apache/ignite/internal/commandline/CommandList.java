@@ -20,6 +20,7 @@ import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
 import org.apache.ignite.internal.commandline.meta.MetadataCommand;
+import org.apache.ignite.internal.commandline.property.PropertyCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
