@@ -268,6 +268,9 @@ public class CacheGroupDescriptor {
      * @param cacheCfg Cache config.
      */
     public void config(CacheConfiguration cacheCfg) {
+        if (cacheCfg == null)
+            throw new NullPointerException("Cache configuration can't be null.");
+
         this.cacheCfg = cacheCfg;
     }
 
