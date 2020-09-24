@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
@@ -442,4 +443,14 @@ public interface GridDhtPartitionTopology {
      * @param updateRebalanceVer {@code True} if need check rebalance state.
      */
     public void onExchangeDone(GridDhtPartitionsExchangeFuture fut, AffinityAssignment assignment, boolean updateRebalanceVer);
+
+    /**
+     * Rents a partition and updates a partition map if the partition was switched to RENTING.
+     * Should not be called under topology write lock.
+     *
+     * @param p Partition ID.
+     *
+     * @return The future which is completed when a partition is evicted.
+     */
+    public IgniteInternalFuture<?> rent(int p);
 }

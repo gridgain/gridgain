@@ -690,7 +690,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             return rent;
         }
 
-        // Store current topology version to check on partition release.
+        // Store current topology version to check on reservation release.
         delayedRentingTopVer = ctx.exchange().readyAffinityVersion().topologyVersion();
 
         if (tryInvalidateGroupReservations() && getReservations(state0) == 0 && casState(state0, RENTING)) {
@@ -710,7 +710,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     public void tryContinueClearing() {
         if (delayedRentingTopVer != 0 &&
             delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
-            rent();
+            group().topology().rent(id);
     }
 
     /**

@@ -36,6 +36,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -60,6 +61,7 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -3196,6 +3198,44 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         }
 
         return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> rent(int p) {
+        ctx.database().checkpointReadLock();
+
+        try {
+            lock.writeLock().lock();
+
+            try {
+                GridDhtLocalPartition locPart = localPartition(p);
+
+                GridDhtPartitionState state0 = locPart.state();
+
+                if (locPart == null || state0 == EVICTED)
+                    return new GridFinishedFuture<>();
+
+                IgniteInternalFuture<?> fut = locPart.rent();
+
+                GridDhtPartitionState state = locPart.state();
+
+                if (state == RENTING && state != state0) {
+                    long updateSeq = this.updateSeq.incrementAndGet();
+
+                    updateLocal(p, state0, updateSeq, readyTopVer);
+
+                    ctx.exchange().scheduleResendPartitions();
+                }
+
+                return fut;
+            }
+            finally {
+                lock.writeLock().unlock();
+            }
+        }
+        finally {
+            ctx.database().checkpointReadUnlock();
+        }
     }
 
     /**
