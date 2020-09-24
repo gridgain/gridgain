@@ -251,9 +251,10 @@ namespace Apache.Ignite.Core.Tests.Cache
                     },
                 };
             };
-            
+
             var ex = Assert.Throws<ArgumentNullException>(action);
-            Assert.AreEqual("Value cannot be null.\r\nParameter name: value", ex.Message);
+            Assert.AreEqual("Value cannot be null." +
+                            Environment.NewLine + "Parameter name: value", ex.Message);
         }
 
         /// <summary>
