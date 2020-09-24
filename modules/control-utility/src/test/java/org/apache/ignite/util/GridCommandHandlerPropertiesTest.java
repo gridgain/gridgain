@@ -18,6 +18,7 @@ package org.apache.ignite.util;
 
 import java.io.Serializable;
 import java.util.Set;
+import java.util.TimeZone;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
@@ -133,5 +134,26 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
                 "--val", "invalidVal"
             )
         );
+    }
+
+    /**
+     * Check the set command fro property 'sql.timeZone'.
+     * Steps:
+     */
+    @Test
+    public void testPropertyTimeZone() {
+        TimeZone newVal = TimeZone.getTimeZone("PST");
+
+        assertEquals(EXIT_CODE_OK, execute("--property", "set", "--name", "sql.timeZone", "--val",
+            newVal.getID()));
+
+        for (Ignite ign : G.allGrids()) {
+            assertEquals(
+                "Invalid time zone on node: " + ign.name(),
+                newVal,
+                ((IgniteH2Indexing)((IgniteEx)ign).context().query().getIndexing())
+                    .distributedConfiguration().timeZone()
+            );
+        }
     }
 }
