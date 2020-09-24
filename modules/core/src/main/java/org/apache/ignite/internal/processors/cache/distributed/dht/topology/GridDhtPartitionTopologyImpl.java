@@ -61,7 +61,6 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -3201,21 +3200,25 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<?> rent(int p) {
+    @Override public boolean rent(int p) {
         ctx.database().checkpointReadLock();
 
         try {
             lock.writeLock().lock();
 
             try {
+                // Do not rent if PME in progress, will be rented later if applicable.
+                if (lastTopChangeVer.after(readyTopVer))
+                    return false;
+
                 GridDhtLocalPartition locPart = localPartition(p);
 
                 GridDhtPartitionState state0 = locPart.state();
 
-                if (locPart == null || state0 == EVICTED)
-                    return new GridFinishedFuture<>();
+                if (locPart == null || state0 == RENTING || state0 == EVICTED || partitionLocalNode(p, readyTopVer))
+                    return false;
 
-                IgniteInternalFuture<?> fut = locPart.rent();
+                locPart.rent();
 
                 GridDhtPartitionState state = locPart.state();
 
@@ -3227,7 +3230,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     ctx.exchange().scheduleResendPartitions();
                 }
 
-                return fut;
+                return true;
             }
             finally {
                 lock.writeLock().unlock();

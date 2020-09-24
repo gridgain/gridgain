@@ -159,7 +159,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** Set if failed to move partition to RENTING state due to reservations, to be checked when
      * reservation is released. */
-    private volatile long delayedRentingTopVer;
+    private volatile boolean delayedRenting;
 
     /** */
     private final AtomicReference<GridFutureAdapter<?>> finishFutRef = new AtomicReference<>();
@@ -690,16 +690,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             return rent;
         }
 
-        // Store current topology version to check on reservation release.
-        delayedRentingTopVer = ctx.exchange().readyAffinityVersion().topologyVersion();
-
         if (tryInvalidateGroupReservations() && getReservations(state0) == 0 && casState(state0, RENTING)) {
-            delayedRentingTopVer = 0;
-
-            // Evict asynchronously, as the 'rent' method may be called
-            // from within write locks on local partition.
+            // Evict asynchronously, as the 'rent' method may be called from within write locks on local partition.
             clearAsync();
         }
+        else
+            delayedRenting = true;
 
         return rent;
     }
@@ -708,8 +704,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * Continue clearing if it was delayed before due to reservation and topology version not changed.
      */
     public void tryContinueClearing() {
-        if (delayedRentingTopVer != 0 &&
-            delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
+        if (delayedRenting)
             group().topology().rent(id);
     }
 

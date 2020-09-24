@@ -148,15 +148,20 @@ public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstrac
                     @Override public boolean apply() {
                         GridDhtLocalPartition locPart = top.localPartition(p);
 
-                        long delayedRentingTopVer = U.field(locPart, "delayedRentingTopVer");
-
-                        return delayedRentingTopVer > 0;
+                        return U.field(locPart, "delayedRenting");
                     }
                 }, 5_000));
             }
         }
 
         grpR.release();
+
+        // Necessary to guaranatee call to rent().
+        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                return top.readyTopologyVersion().equals(top.lastTopologyChangeVersion());
+            }
+        }, 5_000));
 
         assertEquals(clientAfter, grpR.reserve());
 

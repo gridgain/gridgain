@@ -446,11 +446,10 @@ public interface GridDhtPartitionTopology {
 
     /**
      * Rents a partition and updates a partition map if the partition was switched to RENTING.
-     * Should not be called under topology write lock.
      *
      * @param p Partition ID.
      *
-     * @return The future which is completed when a partition is evicted.
+     * @return {@code True} if the partition was switched to RENTING.
      */
-    public IgniteInternalFuture<?> rent(int p);
+    public boolean rent(int p);
 }
