@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.OdbcConfiguration;
 import org.apache.ignite.configuration.SqlConnectorConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -72,17 +73,14 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
     /** Cancel counter. For testing purposes only. */
     public static final AtomicLong CANCEL_COUNTER = new AtomicLong(0);
 
-    /** Default number of selectors. */
-    private static final int DFLT_SELECTOR_CNT = Math.min(4, Runtime.getRuntime().availableProcessors());
-
     /** Default TCP direct buffer flag. */
-    private static final boolean DFLT_TCP_DIRECT_BUF = false;
+    private static final boolean DFLT_TCP_DIRECT_BUF = true;
 
     /** Busy lock. */
     private final GridSpinBusyLock busyLock = new GridSpinBusyLock();
 
     /** TCP Server. */
-    private GridNioServer<byte[]> srv;
+    private GridNioServer<ClientMessage> srv;
 
     /** Executor service. */
     private ExecutorService execSvc;
@@ -148,14 +146,16 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
                 long idleTimeout = cliConnCfg.getIdleTimeout();
 
+                int selectorCnt = cliConnCfg.getSelectorCount();
+
                 for (int port = cliConnCfg.getPort(); port <= portTo && port <= 65535; port++) {
                     try {
-                        GridNioServer<byte[]> srv0 = GridNioServer.<byte[]>builder()
+                        srv = GridNioServer.<ClientMessage>builder()
                             .address(hostAddr)
                             .port(port)
                             .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg))
                             .logger(log)
-                            .selectorCount(DFLT_SELECTOR_CNT)
+                            .selectorCount(selectorCnt)
                             .igniteInstanceName(ctx.igniteInstanceName())
                             .serverName("client-listener")
                             .tcpNoDelay(cliConnCfg.isTcpNoDelay())
@@ -164,11 +164,10 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .socketSendBufferSize(cliConnCfg.getSocketSendBufferSize())
                             .socketReceiveBufferSize(cliConnCfg.getSocketReceiveBufferSize())
                             .filters(filters)
-                            .directMode(false)
+                            .directMode(true)
+                            .writerFactory(ses -> new DirectMessageWriter((byte)1))
                             .idleTimeout(idleTimeout > 0 ? idleTimeout : Long.MAX_VALUE)
                             .build();
-
-                        srv = srv0;
 
                         ctx.ports().registerPort(port, IgnitePortProtocol.TCP, getClass());
 
@@ -272,14 +271,14 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                 ClientListenerConnectionContext connCtx = ses.meta(ClientListenerNioListener.CONN_CTX_META_KEY);
 
                 if (connCtx != null && connCtx.parser() != null && connCtx.handler().isCancellationSupported()) {
-                    byte[] inMsg;
+                    ClientMessage inMsg;
 
                     int cmdType;
 
                     long reqId;
 
                     try {
-                        inMsg = (byte[])msg;
+                        inMsg = (ClientMessage)msg;
 
                         cmdType = connCtx.parser().decodeCommandType(inMsg);
 
@@ -309,7 +308,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             }
         };
 
-        GridNioFilter codecFilter = new GridNioCodecFilter(new ClientListenerBufferedParser(), log, false);
+        GridNioFilter codecFilter = new GridNioCodecFilter(new ClientListenerNioMessageParser(log), log, true);
 
         if (cliConnCfg.isSslEnabled()) {
             Factory<SSLContext> sslCtxFactory = cliConnCfg.isUseIgniteSslContextFactory() ?
@@ -322,7 +321,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxFactory.create(),
                 true, ByteOrder.nativeOrder(), log);
 
-            sslFilter.directMode(false);
+            sslFilter.directMode(true);
 
             boolean auth = cliConnCfg.isSslClientAuth();
 
