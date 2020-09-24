@@ -123,7 +123,7 @@ namespace ignite
             return ostr;
         }
 
-        unsigned GetRandSeed()
+        IGNITE_IMPORT_EXPORT unsigned GetRandSeed()
         {
             timespec ts;
 
