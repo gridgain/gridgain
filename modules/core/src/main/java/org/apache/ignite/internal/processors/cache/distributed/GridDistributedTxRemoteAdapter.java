@@ -481,10 +481,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         // If locks haven't been acquired yet, keep waiting.
                         if (!entry.lockedBy(ver)) {
-                            // TODO print debug entry
-                            assert entry.hasLockCandidate(ver) || state() == COMMITTED :
-                                "Expecting a candidate: ver=" + ver + ", entry=" + entry + ", tx=" + CU.txString(this);
-
                             if (log.isDebugEnabled())
                                 log.debug("Transaction does not own lock for entry (will wait) [entry=" + entry +
                                     ", tx=" + this + ']');
