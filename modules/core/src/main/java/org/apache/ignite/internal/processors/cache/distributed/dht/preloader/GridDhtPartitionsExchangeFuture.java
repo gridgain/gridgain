@@ -2012,6 +2012,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
 
                     // Sometimes FinishLockFuture is not rechecked causing frozen PME.
+                    // Will recheck every 50 milliseconds.
                     cctx.mvcc().recheckPendingLocks();
                 }
                 finally {

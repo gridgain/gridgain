@@ -426,13 +426,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
                             return new GridDhtLocalPartitionSyncEviction(ctx, grp, id, recovery, mode, l1, l2) {
                                 /** */
                                 @Override protected void sync() {
-                                    if (holder.get() == id) {
-                                        SB sb = new SB();
-                                        dumpDebugInfo(sb);
-
-
+                                    if (holder.get() == id)
                                         super.sync();
-                                    }
                                 }
                             };
                         }
