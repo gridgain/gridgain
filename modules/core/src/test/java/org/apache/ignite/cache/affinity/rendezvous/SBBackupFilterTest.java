@@ -36,10 +36,6 @@ public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelf
     protected AffinityFunction affinityFunctionWithAffinityBackupFilter(String attributeName) {
         RendezvousAffinityFunction aff = new RendezvousAffinityFunction(false);
 
-        String[] stringArray = new String[1];
-
-        stringArray[0] = attributeName;
-
         aff.setAffinityBackupFilter(new ClusterNodeAttributeColocatedBackupFilter(attributeName));
 
         return aff;
