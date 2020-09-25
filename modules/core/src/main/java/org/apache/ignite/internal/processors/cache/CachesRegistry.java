@@ -76,6 +76,7 @@ public class CachesRegistry {
         Map<Integer, CacheGroupDescriptor> groupDescriptors,
         Map<String, DynamicCacheDescriptor> cacheDescriptors
     ) {
+        log.info("N@I");
         unregisterAll();
 
         return registerAllCachesAndGroups(groupDescriptors.values(), cacheDescriptors.values());
@@ -88,6 +89,7 @@ public class CachesRegistry {
      * @return Previously registered cache group or {@code null} otherwise.
      */
     private CacheGroupDescriptor registerGroup(CacheGroupDescriptor grpDesc) {
+        log.info("N@R@"+grpDesc.groupId());
         return registeredGrps.put(grpDesc.groupId(), grpDesc);
     }
 
@@ -108,6 +110,8 @@ public class CachesRegistry {
      * @return Unregistered cache group or {@code null} if group doesn't exist.
      */
     public CacheGroupDescriptor unregisterGroup(int grpId) {
+        log.info("N@U@"+grpId);
+
         return registeredGrps.remove(grpId);
     }
 
@@ -206,6 +210,8 @@ public class CachesRegistry {
      *
      */
     public void unregisterAll() {
+        log.info("N@C");
+
         registeredGrps.clear();
 
         registeredCaches.clear();
