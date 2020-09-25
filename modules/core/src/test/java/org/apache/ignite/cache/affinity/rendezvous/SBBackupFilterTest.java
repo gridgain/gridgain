@@ -49,20 +49,22 @@ public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelf
     protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration ic = super.getConfiguration(igniteInstanceName);
         //TODO: fix [0]
-        ic.getCacheConfiguration()[0].setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC);
+        CacheConfiguration cacheCfg = ic.getCacheConfiguration()[0];
+        cacheCfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC);
+        cacheCfg.setBackups(4);
         return ic;
     }
 
     @Test
     @Override
     public void testPartitionDistributionWithAffinityBackupFilter() throws Exception {
-        backups = 3;
+        int nodes = 4;
 
         int CACHE_SIZE = 100000;
 
         try {
 
-            startGrids(backups + 1);
+            startGrids(nodes);
 
             grid(0).cluster().active(true);
 
@@ -97,6 +99,45 @@ public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelf
             assertStatePartitions(0, GridDhtPartitionState.OWNING);
             assertStatePartitions(3, GridDhtPartitionState.OWNING);
 
+
+            startGrid(1);
+            startGrid(2);
+
+            awaitPartitionMapExchange();
+
+            assertStatePartitions(0, GridDhtPartitionState.OWNING);
+            assertStatePartitions(1, GridDhtPartitionState.OWNING);
+            assertStatePartitions(2, GridDhtPartitionState.OWNING);
+            assertStatePartitions(3, GridDhtPartitionState.OWNING);
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    @Test
+    public void testPartitionDistributionWithAffinityBackupFilterSB() throws Exception {
+        int nodes = 40;
+
+        int CACHE_SIZE = 400000;
+
+        try {
+
+            startGrids(nodes);
+
+            grid(0).cluster().active(true);
+
+            for (int j = 0; j < CACHE_SIZE; j++)
+                grid(0).cache(DEFAULT_CACHE_NAME).put(j, "Value" + j);
+
+            awaitPartitionMapExchange();
+
+            stopGrid(0);
+            stopGrid(3);
+
+            awaitPartitionMapExchange();
+
+            log.info("Test lost partitions");
 
             startGrid(1);
             startGrid(2);
