@@ -18,7 +18,6 @@
 package org.apache.ignite.internal.client.thin;
 
 import java.util.function.Function;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -118,7 +117,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with 0 backups.
      */
     @Test
-    public void testPartitionedCache0Backups() {
+    public void testPartitionedCache0Backups() throws Exception {
         testApplicableCache(PART_CACHE_0_BACKUPS_NAME, i -> i);
     }
 
@@ -126,7 +125,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with 1 backups.
      */
     @Test
-    public void testPartitionedCache1Backups() {
+    public void testPartitionedCache1Backups() throws Exception {
         testApplicableCache(PART_CACHE_1_BACKUPS_NAME, i -> i);
     }
 
@@ -134,7 +133,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with 3 backups.
      */
     @Test
-    public void testPartitionedCache3Backups() {
+    public void testPartitionedCache3Backups() throws Exception {
         testApplicableCache(PART_CACHE_3_BACKUPS_NAME, i -> i);
     }
 
