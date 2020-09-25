@@ -1,19 +1,27 @@
 package org.apache.ignite.cache.affinity.rendezvous;
 
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.affinity.AffinityFunctionBackupFilterAbstractSelfTest;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.F;
+import org.junit.Test;
+
+import java.util.Collection;
+import java.util.Objects;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
 public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelfTest {
-
-    private int backups = 1;
 
     @Override
     protected AffinityFunction affinityFunction() {
@@ -39,23 +47,76 @@ public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelf
 
     @Override
     protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        CacheConfiguration cacheCfg = defaultCacheConfiguration();
+        IgniteConfiguration ic = super.getConfiguration(igniteInstanceName);
+        //TODO: fix [0]
+        ic.getCacheConfiguration()[0].setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC);
+        return ic;
+    }
 
-        cacheCfg.setCacheMode(PARTITIONED);
-        cacheCfg.setBackups(3);
+    @Test
+    @Override
+    public void testPartitionDistributionWithAffinityBackupFilter() throws Exception {
+        backups = 3;
 
-        cacheCfg.setAffinity(affinityFunctionWithAffinityBackupFilter("AFF_CELL"));
+        int CACHE_SIZE = 100000;
 
-        cacheCfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC);
-        cacheCfg.setRebalanceMode(SYNC);
-        cacheCfg.setAtomicityMode(TRANSACTIONAL);
+        try {
 
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+            startGrids(backups + 1);
 
-        cfg.setCacheConfiguration(cacheCfg);
-        cfg.setUserAttributes(F.asMap("AFF_CELL", "cell_0"));
+            grid(0).cluster().active(true);
 
-        return cfg;
+            for (int j = 0; j < CACHE_SIZE; j++)
+                grid(0).cache(DEFAULT_CACHE_NAME).put(j, "Value" + j);
+
+            awaitPartitionMapExchange();
+
+            stopGrid(0);
+            stopGrid(3);
+
+            awaitPartitionMapExchange();
+
+            log.info("Test lost partitions");
+
+            assertStatePartitions(2, GridDhtPartitionState.OWNING);
+            assertStatePartitions(1, GridDhtPartitionState.OWNING);
+
+            startGrid(0);
+            startGrid(3);
+
+            awaitPartitionMapExchange();
+
+            assertStatePartitions(0, GridDhtPartitionState.OWNING);
+            assertStatePartitions(1, GridDhtPartitionState.OWNING);
+            assertStatePartitions(2, GridDhtPartitionState.OWNING);
+            assertStatePartitions(3, GridDhtPartitionState.OWNING);
+
+            stopGrid(1);
+            stopGrid(2);
+
+            assertStatePartitions(0, GridDhtPartitionState.OWNING);
+            assertStatePartitions(3, GridDhtPartitionState.OWNING);
+
+
+            startGrid(1);
+            startGrid(2);
+
+            awaitPartitionMapExchange();
+
+            assertStatePartitions(0, GridDhtPartitionState.OWNING);
+            assertStatePartitions(1, GridDhtPartitionState.OWNING);
+            assertStatePartitions(2, GridDhtPartitionState.OWNING);
+            assertStatePartitions(3, GridDhtPartitionState.OWNING);
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    private void assertStatePartitions(int idx, GridDhtPartitionState state) {
+        assertTrue(Objects.requireNonNull(
+                grid(idx).cachex(DEFAULT_CACHE_NAME)).context().topology().localPartitions().stream().allMatch(
+                p -> p.state() == state));
     }
 
 }

@@ -41,7 +41,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
  */
 public abstract class AffinityFunctionBackupFilterAbstractSelfTest extends GridCommonAbstractTest {
     /** Split attribute name. */
-    private static final String SPLIT_ATTRIBUTE_NAME = "split-attribute";
+    private static final String SPLIT_ATTRIBUTE_NAME = "AFF_CELL";
 
     /** Split attribute value. */
     private String splitAttrVal;
@@ -50,7 +50,7 @@ public abstract class AffinityFunctionBackupFilterAbstractSelfTest extends GridC
     public static final String FIRST_NODE_GROUP = "A";
 
     /** Backup count. */
-    private int backups = 1;
+    public int backups = 1;
 
     /** Test backup filter. */
     protected static final IgniteBiPredicate<ClusterNode, ClusterNode> backupFilter =
