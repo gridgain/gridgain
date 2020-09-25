@@ -2706,61 +2706,64 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         // Wait until all evictions are finished.
         grpsToStop.forEach(t -> sharedCtx.evict().onCacheGroupStopped(t.get1()));
 
-        if (!exchActions.cacheStopRequests().isEmpty())
-            removeOffheapListenerAfterCheckpoint(grpsToStop);
-
         Map<Integer, List<ExchangeActions.CacheActionData>> cachesToStop = exchActions.cacheStopRequests().stream()
                 .collect(Collectors.groupingBy(action -> action.descriptor().groupId()));
 
+        if (!exchActions.cacheStopRequests().isEmpty())
+            removeOffheapListenerAfterCheckpoint(grpsToStop);
+
+        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop)
+            stopCacheGroup(grp.get1().groupId());
+
         try {
             doInParallel(
-                    parallelismLvl,
-                    sharedCtx.kernalContext().getSystemExecutorService(),
-                    cachesToStop.entrySet(),
-                    cachesToStopByGrp -> {
-                        CacheGroupContext gctx = cacheGrps.get(cachesToStopByGrp.getKey());
+                parallelismLvl,
+                sharedCtx.kernalContext().getSystemExecutorService(),
+                cachesToStop.entrySet(),
+                cachesToStopByGrp -> {
+                    CacheGroupContext gctx = cacheGrps.get(cachesToStopByGrp.getKey());
 
-                        if (gctx != null)
-                            gctx.preloader().pause();
+                    if (gctx != null)
+                        gctx.preloader().pause();
 
-                        try {
-                            if (gctx != null) {
-                                final String msg = "Failed to wait for topology update, cache group is stopping.";
+                    try {
+                        if (gctx != null) {
+                            final String msg = "Failed to wait for topology update, cache group is stopping.";
 
-                                // If snapshot operation in progress we must throw CacheStoppedException
-                                // for correct cache proxy restart. For more details see
-                                // IgniteCacheProxy.cacheException()
-                                gctx.affinity().cancelFutures(new CacheStoppedException(msg));
-                            }
-
-                            for (ExchangeActions.CacheActionData action: cachesToStopByGrp.getValue()) {
-                                stopGateway(action.request());
-
-                                context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
-
-                                // TTL manager has to be unregistered before the checkpointReadLock is acquired.
-                                GridCacheAdapter<?, ?> cache = caches.get(action.request().cacheName());
-
-                                if (cache != null)
-                                    cache.context().ttl().unregister();
-
-                                sharedCtx.database().checkpointReadLock();
-
-                                try {
-                                    prepareCacheStop(action.request().cacheName(), action.request().destroy());
-                                }
-                                finally {
-                                    sharedCtx.database().checkpointReadUnlock();
-                                }
-                            }
-                        }
-                        finally {
-                            if (gctx != null)
-                                gctx.preloader().resume();
+                            // If snapshot operation in progress we must throw CacheStoppedException
+                            // for correct cache proxy restart. For more details see
+                            // IgniteCacheProxy.cacheException()
+                            gctx.affinity().cancelFutures(new CacheStoppedException(msg));
                         }
 
-                        return null;
+                        for (ExchangeActions.CacheActionData action : cachesToStopByGrp.getValue()) {
+                            stopGateway(action.request());
+
+                            context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
+
+                            // TTL manager has to be unregistered before the checkpointReadLock is acquired.
+                            GridCacheAdapter<?, ?> cache = caches.get(action.request().cacheName());
+
+                            if (cache != null)
+                                cache.context().ttl().unregister();
+
+                            sharedCtx.database().checkpointReadLock();
+
+                            try {
+                                prepareCacheStop(action.request().cacheName(), action.request().destroy());
+                            }
+                            finally {
+                                sharedCtx.database().checkpointReadUnlock();
+                            }
+                        }
                     }
+                    finally {
+                        if (gctx != null)
+                            gctx.preloader().resume();
+                    }
+
+                    return null;
+                }
             );
         }
         catch (IgniteCheckedException e) {
@@ -2770,9 +2773,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             throw new IgniteException(msg, e);
         }
-
-        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop)
-            stopCacheGroup(grp.get1().groupId());
 
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);

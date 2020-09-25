@@ -128,6 +128,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         pause();
 
         try {
+            if (stopped)
+                return;
+
             if (supplier != null)
                 supplier.stop();
 
