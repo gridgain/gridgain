@@ -14,36 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.binary.streams;
+namespace Apache.Ignite.Core.Tests.Client.Cache
+{
+    /// <summary>
+    /// Tests client transactions for single node.
+    /// </summary>
+    public class CacheClientLocalTxTest : CacheClientAbstractTxTest
+    {
+        /// <summary>
+        ///  Initializes a new instance of the <see cref="CacheClientLocalTxTest"/> class.
+        /// </summary>
+        public CacheClientLocalTxTest() : base(1, false)
+        {
+            // No-op.
+        }
 
-/**
- * Memory allocator chunk.
- */
-public interface BinaryMemoryAllocatorChunk {
-    /**
-     * Allocate.
-     *
-     * @param size Desired size.
-     * @return Data.
-     */
-    public byte[] allocate(int size);
-
-    /**
-     * Reallocate.
-     *
-     * @param data Old data.
-     * @param size Size.
-     * @return New data.
-     */
-    public byte[] reallocate(byte[] data, int size);
-
-    /**
-     * Shrinks array size if needed.
-     */
-    public void release(byte[] data, int maxMsgSize);
-
-    /**
-     * @return {@code True} if acquired.
-     */
-    public boolean isAcquired();
+        /** <inhertiDoc /> */
+        protected override string GetCacheName()
+        {
+            return "local_" + base.GetCacheName();
+        }
+    }
 }
