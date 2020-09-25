@@ -56,12 +56,13 @@ public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelf
     public void testPartitionDistributionWithAffinityBackupFilter() throws Exception {
         int nodes = 4;
 
-        int CACHE_SIZE = 100000;
+        int CACHE_SIZE = 10000;
 
         try {
 
             startGrids(nodes);
 
+            grid(0).cluster().baselineAutoAdjustEnabled(false);
             grid(0).cluster().active(true);
 
             for (int j = 0; j < CACHE_SIZE; j++)
