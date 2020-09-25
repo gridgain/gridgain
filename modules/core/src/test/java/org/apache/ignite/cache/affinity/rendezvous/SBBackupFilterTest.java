@@ -122,6 +122,7 @@ public class SBBackupFilterTest extends AffinityFunctionBackupFilterAbstractSelf
 
             startGrids(nodes);
 
+            grid(0).cluster().baselineAutoAdjustEnabled(false);
             grid(0).cluster().active(true);
 
             for (int j = 0; j < CACHE_SIZE; j++)
