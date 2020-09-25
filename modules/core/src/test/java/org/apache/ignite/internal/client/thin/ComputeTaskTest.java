@@ -32,7 +32,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientCache;
@@ -52,7 +51,6 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -176,7 +174,8 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
             fut.cancel(true);
 
-            assertTrue(((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty());
+            assertTrue(GridTestUtils.waitForCondition(
+                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
 
             assertTrue(fut.isCancelled());
             assertTrue(fut.isDone());
@@ -327,7 +326,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
             compute.execute(TestTask.class.getName(), null);
 
-            assertEquals(1, compute.activeTaskFutures().size());
+            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTaskFutures().size() == 1, TIMEOUT));
 
             assertTrue(fut1.isDone());
 
@@ -343,7 +342,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
             fut3.get(TIMEOUT, TimeUnit.MILLISECONDS);
 
-            assertTrue(compute.activeTaskFutures().isEmpty());
+            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTaskFutures().isEmpty(), TIMEOUT));
         }
     }
 
@@ -465,7 +464,6 @@ public class ComputeTaskTest extends AbstractThinClientTest {
      *
      */
     @Test
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-12845")
     public void testExecuteTaskConcurrentLoad() throws Exception {
         try (IgniteClient client = startClient(0)) {
             int threadsCnt = 20;
@@ -480,7 +478,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             GridTestUtils.runMultiThreaded(
                 () -> {
                     int threadIdx = threadIdxs.incrementAndGet();
-                    
+
                     Random rnd = new Random();
 
                     try {
@@ -488,16 +486,21 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
                         for (int i = 0; i < iterations; i++) {
                             int nodeIdx = rnd.nextInt(GRIDS_CNT);
-                            
+
                             cache.put(threadIdx, i);
-                            
+
                             ClientCompute compute = client.compute(client.cluster().forNodeId(nodeId(nodeIdx)));
-                            
+
                             Future<T2<UUID, Set<UUID>>> fut = compute.executeAsync(TestTask.class.getName(), null);
-                            
+
+                            boolean cancelled = (i % 3 == 0) && fut.cancel(true);
+
                             assertEquals((Integer)i, cache.get(threadIdx));
 
-                            assertEquals(nodeIds(nodeIdx), fut.get().get2());
+                            if (cancelled)
+                                assertTrue(fut.isCancelled());
+                            else
+                                assertEquals(nodeIds(nodeIdx), fut.get().get2());
                         }
                     }
                     catch (ExecutionException e) {
@@ -508,10 +511,11 @@ public class ComputeTaskTest extends AbstractThinClientTest {
                     catch (InterruptedException | BrokenBarrierException ignore) {
                         // No-op.
                     }
-                    
+
                 }, threadsCnt, "run-task-async");
 
-            assertTrue(((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty());
+            assertTrue(GridTestUtils.waitForCondition(
+                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
         }
     }
 
@@ -532,7 +536,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
     /**
      *
      */
-    private void dropAllThinClientConnections() throws Exception {
+    private void dropAllThinClientConnections() {
         for (Ignite ignite : G.allGrids()) {
             ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
                 ClientProcessorMXBean.class, ClientListenerProcessor.class);

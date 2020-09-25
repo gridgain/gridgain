@@ -83,6 +83,7 @@ import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
+import org.apache.ignite.spi.systemview.SystemViewExporterSpi;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.Nullable;
@@ -456,6 +457,9 @@ public class IgniteConfiguration {
     /** Tracing SPI. */
     private TracingSpi tracingSpi;
 
+    /** System view exporter SPI. */
+    private SystemViewExporterSpi[] sysViewExporterSpi;
+
     /** Cache configurations. */
     private CacheConfiguration[] cacheCfg;
 
@@ -646,6 +650,7 @@ public class IgniteConfiguration {
         encryptionSpi = cfg.getEncryptionSpi();
         metricExporterSpi = cfg.getMetricExporterSpi();
         tracingSpi = cfg.getTracingSpi();
+        sysViewExporterSpi = cfg.getSystemViewExporterSpi();
 
         commFailureRslvr = cfg.getCommunicationFailureResolver();
 
@@ -2416,8 +2421,8 @@ public class IgniteConfiguration {
      * Sets fully configured instances of {@link MetricExporterSpi}.
      *
      * @param metricExporterSpi Fully configured instances of {@link MetricExporterSpi}.
-     * @see IgniteConfiguration#getMetricExporterSpi()
      * @return {@code this} for chaining.
+     * @see IgniteConfiguration#getMetricExporterSpi()
      */
     public IgniteConfiguration setMetricExporterSpi(MetricExporterSpi... metricExporterSpi) {
         this.metricExporterSpi = metricExporterSpi;
@@ -2426,7 +2431,20 @@ public class IgniteConfiguration {
     }
 
     /**
-     * Gets fully configured monitoring SPI implementations.
+     * Sets fully configured instances of {@link SystemViewExporterSpi}.
+     *
+     * @param sysViewExporterSpi Fully configured instances of {@link SystemViewExporterSpi}.
+     * @return {@code this} for chaining.
+     * @see IgniteConfiguration#getSystemViewExporterSpi()
+     */
+    public IgniteConfiguration setSystemViewExporterSpi(SystemViewExporterSpi... sysViewExporterSpi) {
+        this.sysViewExporterSpi = sysViewExporterSpi;
+
+        return this;
+    }
+
+    /**
+     * Gets fully configured metric SPI implementations.
      *
      * @return Metric exporter SPI implementations.
      */
@@ -2453,6 +2471,15 @@ public class IgniteConfiguration {
      */
     public TracingSpi getTracingSpi() {
         return tracingSpi;
+    }
+
+    /**
+     * Gets fully configured system view SPI implementations.
+     *
+     * @return System view exporter SPI implementations.
+     */
+    public SystemViewExporterSpi[] getSystemViewExporterSpi() {
+        return sysViewExporterSpi;
     }
 
     /**

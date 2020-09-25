@@ -2570,14 +2570,18 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             span.end();
 
+            if (err == null) {
+                updateDurationHistogram(System.currentTimeMillis() - initTime);
+
+                cctx.exchange().clusterRebalancedMetric().value(rebalanced);
+            }
+
             if (log.isInfoEnabled()) {
                 log.info("Completed partition exchange [localNode=" + cctx.localNodeId() +
                         ", exchange=" + (log.isDebugEnabled() ? this : shortInfo()) + ", topVer=" + topologyVersion() + "]");
 
                 if (err == null) {
                     timeBag.finishGlobalStage("Exchange done");
-
-                    updateDurationHistogram(System.currentTimeMillis() - initTime);
 
                     // Collect all stages timings.
                     List<String> timings = timeBag.stagesTimings();
@@ -3940,7 +3944,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             GridDhtPartitionsFullMessage msg = createPartitionsMessage(true,
                 minVer.compareToIgnoreTimestamp(PARTIAL_COUNTERS_MAP_SINCE) >= 0);
 
-            if (!cctx.affinity().rebalanceRequired())
+            if (!cctx.affinity().rebalanceRequired() && !deactivateCluster())
                 msg.rebalanced(true);
 
             if (exchCtx.mergeExchanges()) {
