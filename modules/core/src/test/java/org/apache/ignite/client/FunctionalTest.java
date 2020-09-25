@@ -713,7 +713,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                     fail();
                 }
-                catch (ClientServerError ignored) {
+                catch (ClientException ignored) {
                     // No op
                 }
             }
