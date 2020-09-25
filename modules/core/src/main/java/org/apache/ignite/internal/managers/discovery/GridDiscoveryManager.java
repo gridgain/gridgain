@@ -177,6 +177,8 @@ import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.NOOP;
  * Discovery SPI manager.
  */
 public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
+    private volatile CountDownLatch isChangeStateInProgress;
+
     /** */
     private static final String PREFIX = "Topology snapshot";
 
@@ -604,12 +606,16 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
+                        isChangeStateInProgress = new CountDownLatch(1);
+
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
                             (ChangeGlobalStateMessage)customMsg,
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
+                        U.awaitQuiet(isChangeStateInProgress);//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
                         ctx.state().onStateFinishMessage((ChangeGlobalStateFinishMessage)customMsg);
 
                         Snapshot snapshot = topSnap.get();
@@ -2599,6 +2605,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         }
 
         return null;
+    }
+
+    public void changeStateFinished() {
+        isChangeStateInProgress.countDown();
     }
 
     /** Worker for network segment checks. */
