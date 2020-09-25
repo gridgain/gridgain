@@ -39,7 +39,6 @@ import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -329,7 +328,7 @@ class ClientComputeImpl implements ClientCompute, NotificationListener {
                 "client not supported by server node (" + ch.clientChannel().serverNodeId() + ')');
         }
 
-        try (BinaryRawWriterEx w = new BinaryWriterExImpl(marsh.context(), ch.out(), null, null)) {
+        try (BinaryRawWriterEx w = utils.createBinaryWriter(ch.out())) {
             if (nodeIds == null) // Include all nodes.
                 w.writeInt(0);
             else {
