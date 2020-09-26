@@ -60,6 +60,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
+import org.apache.ignite.internal.managers.systemview.walker.ComputeTaskViewWalker;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
@@ -80,6 +81,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.spi.systemview.view.ComputeTaskView;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -104,6 +106,12 @@ import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKe
  * This class defines task processor.
  */
 public class GridTaskProcessor extends GridProcessorAdapter implements IgniteChangeGlobalStateSupport {
+    /** */
+    public static final String TASKS_VIEW = "tasks";
+
+    /** */
+    public static final String TASKS_VIEW_DESC = "Running compute tasks";
+
     /** Total executed tasks metric name. */
     public static final String TOTAL_EXEC_TASKS = "TotalExecutedTasks";
 
@@ -162,6 +170,11 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         MetricRegistry sysreg = ctx.metric().registry(SYS_METRICS);
 
         execTasks = sysreg.longAdderMetric(TOTAL_EXEC_TASKS, "Total executed tasks.");
+
+        ctx.systemView().registerView(TASKS_VIEW, TASKS_VIEW_DESC,
+            new ComputeTaskViewWalker(),
+            tasks.entrySet(),
+            e -> new ComputeTaskView(e.getKey(), e.getValue()));
 
         isPersistenceEnabled = !ctx.clientNode() && isPersistenceEnabled(ctx.config());
     }
