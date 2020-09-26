@@ -3155,8 +3155,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 changed |= grp.topology().afterExchange(exchFut);
                             }
 
-                            if (!cctx.kernalContext().clientNode() && changed && !hasPendingServerExchange())
+                            if (!cctx.kernalContext().clientNode() && changed && !hasPendingServerExchange()) {
+//                                System.out.println("refresh partitions");
                                 refreshPartitions();
+                            }
                         }
 
                         // Schedule rebalance if force rebalance or force reassign occurs.

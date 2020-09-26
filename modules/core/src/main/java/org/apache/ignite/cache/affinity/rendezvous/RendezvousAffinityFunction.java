@@ -396,6 +396,9 @@ public class RendezvousAffinityFunction implements AffinityFunction, Serializabl
 
         assert res.size() <= primaryAndBackups;
 
+//        if (part == 2)
+//            System.out.println("assign partitions");
+
         return res;
     }
 

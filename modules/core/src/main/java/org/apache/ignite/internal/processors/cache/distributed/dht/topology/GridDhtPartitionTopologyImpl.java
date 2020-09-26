@@ -2179,6 +2179,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 if (recentlyLost != null) {
+                    System.out.println("node2part " + node2part.values().stream().map(GridDhtPartitionMap::toFullString).collect(Collectors.joining()));
                     U.warn(log, "Detected lost partitions [grp=" + grp.cacheOrGroupName()
                         + ", parts=" + S.compact(recentlyLost)
                         + ", plc=" + plc + ", topVer=" + resTopVer + "]");
@@ -2438,7 +2439,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             Collection<UUID> nodeIds = F.nodeIds(nodes);
 
             // If all affinity nodes are owners, then evict partition from local node.
-            if (nodeIds.containsAll(F.nodeIds(affNodes))) {
+            final Collection<UUID> affNodeIds = F.nodeIds(affNodes);
+            if (/*!affNodeIds.isEmpty() && */nodeIds.containsAll(affNodeIds)) {
+                boolean tmp = "default".equals(grp.cacheOrGroupName());//part.id() == 3 || part.id() == 1 || part.id() == 0;
+                if (tmp) {
+                    System.out.println("==============1 " + part + " nodeIds " + nodes + " affNodes " + affNodes);
+//                    for (StackTraceElement stackTraceElement : Thread.currentThread().getStackTrace())
+//                        System.out.println(stackTraceElement);
+                }
+
                 GridDhtPartitionState state0 = part.state();
 
                 IgniteInternalFuture<?> rentFut = part.rent(false);
@@ -2451,16 +2460,22 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 hasEvictedPartitions |= stateChanged;
 
+
+                if (tmp)
+                    System.out.println("affinity " + aff.get(p) + " nodes " + nodes(p, aff.topologyVersion(), OWNING));
+
                 if (stateChanged && log.isDebugEnabled()) {
                     log.debug("Partition has been scheduled for eviction (all affinity nodes are owners) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + part.id() + ", prevState=" + state0 + ", state=" + part.state() + "]");
                 }
             }
-            else {
+            else /*if (!affNodes.isEmpty())*/ {
+                System.out.println("==============2 " + part.id());
                 int ownerCnt = nodeIds.size();
                 int affCnt = affNodes.size();
 
                 if (ownerCnt > affCnt) { //TODO !!! we could loss all owners in such case. Should be fixed by GG-13223
+                    System.out.println("==============3 " + part.id());
                     // Sort by node orders in ascending order.
                     Collections.sort(nodes, CU.nodeComparator(true));
 

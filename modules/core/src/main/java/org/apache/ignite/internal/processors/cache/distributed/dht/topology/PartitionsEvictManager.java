@@ -268,6 +268,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + partByReasonStr + ']');
                     });
 
+                    for (StackTraceElement stackTraceElement : Thread.currentThread().getStackTrace())
+                        System.out.println(stackTraceElement);
+
                     log.info("Partitions have been scheduled for eviction: " + evictPartJoiner);
 
                     logEvictPartByGrps.clear();
