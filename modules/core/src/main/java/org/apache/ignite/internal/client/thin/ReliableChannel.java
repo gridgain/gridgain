@@ -29,6 +29,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -87,7 +88,11 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     private final ExecutorService asyncRunner = Executors.newSingleThreadExecutor(
         new ThreadFactory() {
             @Override public Thread newThread(@NotNull Runnable r) {
-                return new Thread(r, ASYNC_RUNNER_THREAD_NAME);
+                Thread thread = new Thread(r, ASYNC_RUNNER_THREAD_NAME);
+
+                thread.setDaemon(true);
+
+                return thread;
             }
         }
     );
@@ -99,7 +104,7 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     private final AtomicBoolean affinityUpdateInProgress = new AtomicBoolean();
 
     /** Channel is closed. */
-    private boolean closed;
+    private volatile boolean closed;
 
     /** Fail (disconnect) listeners. */
     private final ArrayList<Runnable> chFailLsnrs = new ArrayList<>();
@@ -157,10 +162,17 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
     @Override public synchronized void close() {
         closed = true;
 
+        asyncRunner.shutdown();
+
+        try {
+            asyncRunner.awaitTermination(EXECUTOR_SHUTDOWN_TIMEOUT, TimeUnit.MILLISECONDS);
+        }
+        catch (InterruptedException ignore) {
+            // No-op.
+        }
+
         for (ClientChannelHolder hld : channels)
             hld.closeChannel();
-
-        asyncRunner.shutdown();
     }
 
     /**
@@ -560,8 +572,8 @@ final class ReliableChannel implements AutoCloseable, NotificationListener {
                     scheduledChannelsReinit.set(false);
 
                     for (ClientChannelHolder hld : channels) {
-                        if (scheduledChannelsReinit.get())
-                            return; // New reinit task scheduled.
+                        if (scheduledChannelsReinit.get() || closed)
+                            return; // New reinit task scheduled or channel is closed.
 
                         try {
                             hld.getOrCreateChannel(true);
