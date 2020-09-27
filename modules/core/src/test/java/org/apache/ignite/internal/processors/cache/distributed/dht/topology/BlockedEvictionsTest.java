@@ -72,7 +72,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setRebalanceThreadPoolSize(ThreadLocalRandom.current().nextInt(4) + 1);
+        cfg.setRebalanceThreadPoolSize(ThreadLocalRandom.current().nextInt(3) + 2);
         cfg.setSystemThreadPoolSize(sysPoolSize);
         cfg.setConsistentId(igniteInstanceName);
 
