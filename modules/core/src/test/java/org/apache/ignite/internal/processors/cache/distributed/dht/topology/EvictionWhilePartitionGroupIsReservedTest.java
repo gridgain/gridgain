@@ -156,12 +156,9 @@ public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstrac
 
         grpR.release();
 
-        // Necessary to guaranatee call to rent().
-        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override public boolean apply() {
-                return top.readyTopologyVersion().equals(top.lastTopologyChangeVersion());
-            }
-        }, 5_000));
+        // Necessary to guaranatee a call to rent().
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            top.readyTopologyVersion().equals(top.lastTopologyChangeVersion()), 5_000));
 
         assertEquals(clientAfter, grpR.reserve());
 

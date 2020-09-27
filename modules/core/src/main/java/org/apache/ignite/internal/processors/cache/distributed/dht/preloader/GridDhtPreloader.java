@@ -307,10 +307,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
                 SB buf = new SB(1024);
 
-                // TODO improve
                 buf.a("Unexpected rebalance on rebalanced cluster: assignments=");
                 buf.a(assignments);
-                buf.a(", firstPart=");
+                buf.a(", locPart=");
 
                 if (locPart != null)
                     locPart.dumpDebugInfo(buf);

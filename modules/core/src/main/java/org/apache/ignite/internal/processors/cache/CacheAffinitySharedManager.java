@@ -2958,7 +2958,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         /**
-         * Adds a partition to wait set. A same group processing should be bound to a same thread.
+         * Adds a partition to wait set.
          *
          * @param grpId Group ID.
          * @param part Partition.

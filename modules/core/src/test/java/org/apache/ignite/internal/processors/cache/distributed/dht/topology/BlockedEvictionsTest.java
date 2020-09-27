@@ -268,7 +268,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         PartitionsEvictManager mgr = grid(0).context().cache().context().evict();
 
-        // Group eviction context should remain in map. TODO leak ?
+        // Group eviction context should remain in map.
         Map evictionGroupsMap = U.field(mgr, "evictionGroupsMap");
 
         assertEquals("Group context must be cleaned up", 0, evictionGroupsMap.size());

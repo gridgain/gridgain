@@ -128,7 +128,7 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
             cfg.setAutoActivationEnabled(false);
 
         cfg.setDataStorageConfiguration(
-            new DataStorageConfiguration().setWalSegmentSize(4 * 1024 * 1024).setDefaultDataRegionConfiguration(
+            new DataStorageConfiguration().setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
                     .setPersistenceEnabled(true)
                     .setMaxSize(100L * 1024 * 1024)

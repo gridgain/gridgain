@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteExternalizableExpiryPolicy;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.lang.GridAbsClosureX;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -600,25 +599,10 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
      * @param entry Cache entry.
      */
     public void cached(GridCacheEntryEx entry) {
-        boolean ok = entry == null || entry.context() == ctx;
-
-        if (!ok) {
-            GridDhtCacheEntry entry0 = (GridDhtCacheEntry) entry;
-
-            // TODO print debug entry
-            String err = "Invalid entry assigned to tx entry [txEntry=" + this +
-                ", entry=" + entry0 +
-                ", name0=" + entry0.context().name() +
-                ", name=" + ctx.name() +
-                ", ctxNear0=" + entry0.context().isNear() +
-                ", ctxDht0=" + entry0.context().isDht() +
-                ", ctxNear=" + ctx.isNear() +
-                ", ctxDht=" + ctx.isDht() +
-                ", part=" + ctx.group().topology().localPartition(entry0.partition()) +
-                ']';
-
-            throw new AssertionError(err);
-        }
+        assert entry == null || entry.context() == ctx : "Invalid entry assigned to tx entry [txEntry=" + this +
+            ", entry=" + entry +
+            ", ctxNear=" + ctx.isNear() +
+            ", ctxDht=" + ctx.isDht() + ']';
 
         this.entry = entry;
     }
