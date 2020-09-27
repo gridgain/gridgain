@@ -118,7 +118,8 @@ import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMess
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.BooleanMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -179,11 +180,13 @@ import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVer
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap.PARTIAL_COUNTERS_MAP_SINCE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture.nextDumpTimeout;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.DFLT_PRELOAD_RESEND_TIMEOUT;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLUSTER_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION_HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION_HISTOGRAM;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.REBALANCED;
 import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FUTURE;
 
 /**
@@ -291,13 +294,16 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     private final List<PartitionsExchangeAware> exchangeAwareComps = new CopyOnWriteArrayList<>();
 
     /** Histogram of PME durations. */
-    private volatile HistogramMetric durationHistogram;
+    private volatile HistogramMetricImpl durationHistogram;
 
     /** Histogram of blocking PME durations. */
-    private volatile HistogramMetric blockingDurationHistogram;
+    private volatile HistogramMetricImpl blockingDurationHistogram;
 
     /** Delay before rebalancing code is start executing after exchange completion. For tests only. */
     private volatile long rebalanceDelay;
+
+    /** Metric that shows whether cluster is in fully rebalanced state. */
+    private volatile BooleanMetricImpl rebalanced;
 
     /** */
     private final boolean bltForInMemoryCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
@@ -522,6 +528,12 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         durationHistogram = mreg.findMetric(PME_DURATION_HISTOGRAM);
         blockingDurationHistogram = mreg.findMetric(PME_OPS_BLOCKED_DURATION_HISTOGRAM);
+
+        MetricRegistry clusterReg = cctx.kernalContext().metric().registry(CLUSTER_METRICS);
+
+        rebalanced = clusterReg.booleanMetric(REBALANCED,
+            "True if the cluster has achieved fully rebalanced state. Note that an inactive cluster always has" +
+            " this metric in False regardless of the real partitions state.");
     }
 
     /**
@@ -2961,13 +2973,18 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /** @return Histogram of PME durations metric. */
-    public HistogramMetric durationHistogram() {
+    public HistogramMetricImpl durationHistogram() {
         return durationHistogram;
     }
 
     /** @return Histogram of blocking PME durations metric. */
-    public HistogramMetric blockingDurationHistogram() {
+    public HistogramMetricImpl blockingDurationHistogram() {
         return blockingDurationHistogram;
+    }
+
+    /** @return Metric that shows whether cluster is in fully rebalanced state. */
+    public BooleanMetricImpl clusterRebalancedMetric() {
+        return rebalanced;
     }
 
     /**

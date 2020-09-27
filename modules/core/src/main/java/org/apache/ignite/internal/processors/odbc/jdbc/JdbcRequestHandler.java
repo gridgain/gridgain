@@ -1646,4 +1646,9 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     private static boolean isClientPartitionAwarenessApplicable(boolean partResRequested, PartitionResult partRes) {
         return partResRequested && (partRes == null || partRes.isClientPartitionAwarenessApplicable());
     }
+
+    /** {@inheritDoc} */
+    @Override public ClientListenerProtocolVersion protocolVersion() {
+        return protocolVer;
+    }
 }

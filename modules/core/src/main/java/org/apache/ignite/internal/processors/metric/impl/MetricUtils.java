@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.metric.impl;
 
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.spi.metric.HistogramMetric;
 
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 
@@ -38,26 +40,6 @@ public class MetricUtils {
     public static final char HISTOGRAM_NAME_DIVIDER = '_';
 
     /**
-     * Example - metric registry name - "io.statistics.PRIMARY_KEY_IDX".
-     * root = io - JMX tree root.
-     * subName = statistics.PRIMARY_KEY_IDX - bean name.
-     *
-     * @param regName Metric registry name.
-     * @return Parsed names parts.
-     */
-    public static MetricName parse(String regName) {
-        int firstDot = regName.indexOf('.');
-
-        if (firstDot == -1)
-            return new MetricName(null, regName);
-
-        String grp = regName.substring(0, firstDot);
-        String beanName = regName.substring(firstDot + 1);
-
-        return new MetricName(grp, beanName);
-    }
-
-    /**
      * Builds metric name. Each parameter will separated by '.' char.
      *
      * @param names Metric name parts.
@@ -71,6 +53,19 @@ public class MetricUtils {
             return names[0];
 
         return String.join(SEPARATOR, names);
+    }
+
+    /**
+     * Splits full metric name to registry name and metric name.
+     *
+     * @param name Full metric name.
+     * @return Array consist of registry name and metric name.
+     */
+    public static T2<String, String> fromFullName(String name) {
+        return new T2<>(
+            name.substring(0, name.lastIndexOf(SEPARATOR)),
+            name.substring(name.lastIndexOf(SEPARATOR) + 1)
+        );
     }
 
     /**
@@ -166,40 +161,5 @@ public class MetricUtils {
         names[bounds.length] = name + HISTOGRAM_NAME_DIVIDER + min + INF;
 
         return names;
-    }
-
-    /**
-     * Parsed metric registry name parts.
-     *
-     * Example - metric registry name - "io.statistics.PRIMARY_KEY_IDX".
-     * root = io - JMX tree root.
-     * subName = statistics.PRIMARY_KEY_IDX - bean name.
-     */
-    public static class MetricName {
-        /** JMX group name. */
-        private String root;
-
-        /** JMX bean name. */
-        private String subName;
-
-        /** */
-        MetricName(String root, String subName) {
-            this.root = root;
-            this.subName = subName;
-        }
-
-        /**
-         * @return JMX group name.
-         */
-        public String root() {
-            return root;
-        }
-
-        /**
-         * @return JMX bean name.
-         */
-        public String subName() {
-            return subName;
-        }
     }
 }
