@@ -290,7 +290,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     private Serializable consistentId;
 
     /** */
-    private volatile Map<UUID, CountDownLatch> changeStatesInProgress = new HashMap<>();
+    private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
     /** @param ctx Context. */
     public GridDiscoveryManager(GridKernalContext ctx) {
@@ -628,10 +628,15 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
-                        CountDownLatch changeStateLatch = changeStatesInProgress.remove(((ChangeGlobalStateFinishMessage)customMsg).requestId());
+                        UUID reqId = ((ChangeGlobalStateFinishMessage)customMsg).requestId();
 
-                        if (changeStateLatch != null)
+                        CountDownLatch changeStateLatch = changeStatesInProgress.get(((ChangeGlobalStateFinishMessage)customMsg).requestId());
+
+                        if (changeStateLatch != null) {
                             U.awaitQuiet(changeStateLatch);
+
+                            changeStatesInProgress.remove(reqId);
+                        }
 
                         ctx.state().onStateFinishMessage((ChangeGlobalStateFinishMessage)customMsg);
 
