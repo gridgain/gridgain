@@ -38,7 +38,6 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -443,24 +442,6 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
             throw e;
         }
-    }
-
-    private void dump(GridCacheEntryEx entry) {
-        int part = entry.partition();
-
-        CacheGroupContext grpCtx = entry.context().group();
-
-        GridDhtPartitionTopology top = grpCtx.topology();
-        AffinityTopologyVersion affinityTopVer = top.readyTopologyVersion();
-        log.info("DBG: locPart=" + top.localPartition(part) +
-            ", topVer=" + affinityTopVer +
-            ", pendingTopVer=" + top.lastTopologyChangeVersion() +
-            ", aff=" + U.nodeIds(grpCtx.affinity().assignments(affinityTopVer).get(part)) +
-            ", owners=" + U.nodeIds(top.nodes(part, affinityTopVer)) +
-            ", locNodeId=" + cctx.localNodeId() +
-            ", entry=" + entry +
-            ", txTopVer=" + topologyVersion() +
-            ", tx=" + this + ']');
     }
 
     /**

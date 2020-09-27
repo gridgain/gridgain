@@ -274,7 +274,6 @@ public abstract class GridNearTxPrepareFutureAdapter extends
                 // Register DHT version.
                 m.dhtVersion(res.dhtVersion(), writeVer);
 
-                // TODO updating same mapping twice WTF ?
                 GridDistributedTxMapping map = tx.mappings().get(nodeId);
 
                 if (map != null)
