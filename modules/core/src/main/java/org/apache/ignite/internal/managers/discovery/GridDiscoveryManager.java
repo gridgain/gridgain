@@ -179,8 +179,6 @@ import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.NOOP;
  * Discovery SPI manager.
  */
 public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
-    private volatile CountDownLatch isChangeStateInProgress;
-
     /** */
     private static final String PREFIX = "Topology snapshot";
 
@@ -290,6 +288,9 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
     /** Local node compatibility consistent ID. */
     private Serializable consistentId;
+
+    /** */
+    private volatile Map<UUID, CountDownLatch> changeStatesInProgress = new HashMap<>();
 
     /** @param ctx Context. */
     public GridDiscoveryManager(GridKernalContext ctx) {
@@ -619,7 +620,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
-                        isChangeStateInProgress = new CountDownLatch(1);
+                        changeStatesInProgress.put(((ChangeGlobalStateMessage)customMsg).requestId(), new CountDownLatch(1));
 
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
@@ -627,7 +628,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
-                        U.awaitQuiet(isChangeStateInProgress);//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                        CountDownLatch changeStateLatch = changeStatesInProgress.remove(((ChangeGlobalStateFinishMessage)customMsg).requestId());
+
+                        if (changeStateLatch != null)
+                            U.awaitQuiet(changeStateLatch);
 
                         ctx.state().onStateFinishMessage((ChangeGlobalStateFinishMessage)customMsg);
 
@@ -2620,8 +2624,12 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         return null;
     }
 
-    public void changeStateFinished() {
-        isChangeStateInProgress.countDown();
+    /** */
+    public void changeStateFinished(UUID reqId) {
+        CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
+
+        if (changeStateLatch != null)
+            changeStateLatch.countDown();
     }
 
     /** Worker for network segment checks. */
