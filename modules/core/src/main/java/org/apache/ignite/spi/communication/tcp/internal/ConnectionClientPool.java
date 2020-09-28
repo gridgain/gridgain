@@ -85,7 +85,7 @@ public class ConnectionClientPool {
     private final IgniteLogger log;
 
     /** Statistics. */
-    private final TcpCommunicationMetricsListener metricsLsnr;
+    private final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier;
 
     /** Local node supplier. */
     private final Supplier<ClusterNode> locNodeSupplier;
@@ -125,7 +125,7 @@ public class ConnectionClientPool {
      * @param cfg Config.
      * @param attrs Attributes.
      * @param log Logger.
-     * @param metricsLsnr Metrics listener.
+     * @param metricLsnrSupplier Metrics listener supplier.
      * @param locNodeSupplier Local node supplier.
      * @param nodeGetter Node getter.
      * @param msgFormatterSupplier Message formatter supplier.
@@ -140,7 +140,7 @@ public class ConnectionClientPool {
         TcpCommunicationConfiguration cfg,
         AttributeNames attrs,
         IgniteLogger log,
-        TcpCommunicationMetricsListener metricsLsnr,
+        Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier,
         Supplier<ClusterNode> locNodeSupplier,
         Function<UUID, ClusterNode> nodeGetter,
         Supplier<MessageFormatter> msgFormatterSupplier,
@@ -154,7 +154,7 @@ public class ConnectionClientPool {
         this.cfg = cfg;
         this.attrs = attrs;
         this.log = log;
-        this.metricsLsnr = metricsLsnr;
+        this.metricLsnrSupplier = metricLsnrSupplier;
         this.locNodeSupplier = locNodeSupplier;
         this.nodeGetter = nodeGetter;
         this.msgFormatterSupplier = msgFormatterSupplier;
@@ -515,7 +515,7 @@ public class ConnectionClientPool {
             try {
                 client = new GridShmemCommunicationClient(
                     connIdx,
-                    metricsLsnr.metricRegistry(),
+                    metricLsnrSupplier.get().metricRegistry(),
                     port,
                     timeoutHelper.nextTimeoutChunk(cfg.connectionTimeout()),
                     log,

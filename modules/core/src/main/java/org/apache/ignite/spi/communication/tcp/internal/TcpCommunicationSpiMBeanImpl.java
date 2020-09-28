@@ -18,6 +18,8 @@ package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
+
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiMBeanAdapter;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
@@ -28,7 +30,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMBean;
  */
 public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implements TcpCommunicationSpiMBean {
     /** Statistics. */
-    private final TcpCommunicationMetricsListener metricsLsnr;
+    private final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier;
 
     /** Config. */
     private final TcpCommunicationConfiguration cfg;
@@ -39,12 +41,12 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
     /** {@inheritDoc} */
     public TcpCommunicationSpiMBeanImpl(
         IgniteSpiAdapter spiAdapter,
-        TcpCommunicationMetricsListener metricsLsnr,
+        Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier,
         TcpCommunicationConfiguration cfg,
         ClusterStateProvider stateProvider
     ) {
         super(spiAdapter);
-        this.metricsLsnr = metricsLsnr;
+        this.metricLsnrSupplier = metricLsnrSupplier;
         this.cfg = cfg;
         this.stateProvider = stateProvider;
     }
@@ -166,42 +168,42 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
-        return metricsLsnr.sentMessagesCount();
+        return metricLsnrSupplier.get().sentMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
-        return metricsLsnr.sentBytesCount();
+        return metricLsnrSupplier.get().sentBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
-        return metricsLsnr.receivedMessagesCount();
+        return metricLsnrSupplier.get().receivedMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
-        return metricsLsnr.receivedBytesCount();
+        return metricLsnrSupplier.get().receivedBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public Map<String, Long> getReceivedMessagesByType() {
-        return metricsLsnr.receivedMessagesByType();
+        return metricLsnrSupplier.get().receivedMessagesByType();
     }
 
     /** {@inheritDoc} */
     @Override public Map<UUID, Long> getReceivedMessagesByNode() {
-        return metricsLsnr.receivedMessagesByNode();
+        return metricLsnrSupplier.get().receivedMessagesByNode();
     }
 
     /** {@inheritDoc} */
     @Override public Map<String, Long> getSentMessagesByType() {
-        return metricsLsnr.sentMessagesByType();
+        return metricLsnrSupplier.get().sentMessagesByType();
     }
 
     /** {@inheritDoc} */
     @Override public Map<UUID, Long> getSentMessagesByNode() {
-        return metricsLsnr.sentMessagesByNode();
+        return metricLsnrSupplier.get().sentMessagesByNode();
     }
 
     /** {@inheritDoc} */
