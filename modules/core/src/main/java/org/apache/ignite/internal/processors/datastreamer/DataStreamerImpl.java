@@ -2069,7 +2069,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                 }
             }
 
-            f.onDone(null, err);
+//            f.onDone(null, err);
 
             if (log.isDebugEnabled())
                 log.debug("Finished future [fut=" + f + ", reqId=" + res.requestId() + ", err=" + err + ']');
