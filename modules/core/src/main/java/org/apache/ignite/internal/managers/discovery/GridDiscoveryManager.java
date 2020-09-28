@@ -620,7 +620,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
-                        changeStatesInProgress.put(((ChangeGlobalStateMessage)customMsg).requestId(), new CountDownLatch(1));
+                        if (!localNode().isDaemon())
+                            changeStatesInProgress.put(((ChangeGlobalStateMessage)customMsg).requestId(), new CountDownLatch(1));
 
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
@@ -2630,7 +2631,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     }
 
     /** */
-    public void changeStateFinished(UUID reqId) {
+    public void finishChangeState(UUID reqId) {
         CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
 
         if (changeStateLatch != null)
