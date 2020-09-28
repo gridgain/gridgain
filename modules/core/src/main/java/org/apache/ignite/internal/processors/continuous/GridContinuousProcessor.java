@@ -521,7 +521,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                 try {
                     if (!hnd.p2pContextValid(ctx))
                         continue;
-                } catch (IgniteCheckedException ex) {
+                }
+                catch (IgniteCheckedException ex) {
                     U.warn(log, "Failed to validate continuous handler: " + ex);
 
                     continue;
