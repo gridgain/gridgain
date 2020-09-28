@@ -16,6 +16,6 @@
 
 /**
  * <!-- Package description. -->
- * Contains {@link org.apache.ignite.spi.systemview.view.SystemView} clases that exists in Ignite.
+ * Contains system view implementations.
  */
 package org.apache.ignite.spi.systemview.view;
