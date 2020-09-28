@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.configuration.distributed;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -162,7 +163,6 @@ public class DistributedConfigurationProcessor extends GridProcessorAdapter impl
      */
     public List<DistributedChangeableProperty<Serializable>> properties() {
         return props.values().stream()
-            .filter(p -> p instanceof DistributedChangeableProperty)
             .map(p -> (DistributedChangeableProperty<Serializable>)p)
             .collect(Collectors.toList());
     }

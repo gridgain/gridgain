@@ -80,7 +80,7 @@ public class PropertyTask extends VisorMultiNodeTask<PropertyArgs, PropertyOpera
                 ignite.context().distributedConfiguration().property(arg.name());
 
             if (prop == null)
-                throw new IllegalArgumentException("Property doesn't not exist [name=" + arg.name() + ']');
+                throw new IllegalArgumentException("Property doesn't exist [name=" + arg.name() + ']');
 
             switch (arg.action()) {
                 case GET:

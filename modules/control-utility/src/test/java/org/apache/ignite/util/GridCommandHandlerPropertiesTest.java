@@ -78,7 +78,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     }
 
     /**
-     * Check the set command fro property 'sql.disabledFunctions'.
+     * Check the set command for property 'sql.disabledFunctions'.
      * Steps:
      */
     @Test
@@ -104,7 +104,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     }
 
     /**
-     * Check the set command fro property 'sql.defaultQueryTimeout'.
+     * Check the set command for property 'sql.defaultQueryTimeout'.
      * Steps:
      */
     @Test
@@ -137,7 +137,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     }
 
     /**
-     * Check the set command fro property 'sql.timeZone'.
+     * Check the set command for property 'sql.timeZone'.
      * Steps:
      */
     @Test
