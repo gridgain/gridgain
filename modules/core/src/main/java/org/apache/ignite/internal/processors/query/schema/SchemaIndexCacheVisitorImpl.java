@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.schema;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -101,6 +102,10 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
         cctx.cache().metrics0().resetIndexRebuildKeyProcessed();
 
+        beforeExecute();
+
+        AtomicInteger partsCnt = new AtomicInteger(locParts.size());
+
         AtomicBoolean stop = new AtomicBoolean();
 
         GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> buildIdxCompoundFut =
@@ -109,7 +114,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         for (GridDhtLocalPartition locPart : locParts) {
             GridWorkerFuture<SchemaIndexCacheStat> workerFut = new GridWorkerFuture<>();
 
-            GridWorker worker = new SchemaIndexCachePartitionWorker(cctx, locPart, stop, cancel, clo, workerFut);
+            GridWorker worker = new SchemaIndexCachePartitionWorker(cctx, locPart, stop, cancel, clo, workerFut, partsCnt);
 
             workerFut.setWorker(worker);
             buildIdxCompoundFut.add(workerFut);
@@ -181,6 +186,14 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         }
 
         return res.toString();
+    }
+
+    /**
+     * This method is called before creating or rebuilding indexes.
+     * Used only for test.
+     */
+    protected void beforeExecute() {
+        // No-op.
     }
 
     /** {@inheritDoc} */

@@ -21,6 +21,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOF
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.mxbean.MetricsMxBean;
 
 /**
  * Configures Apache Ignite Persistent store.
@@ -429,7 +430,9 @@ public class PersistentStoreConfiguration implements Serializable {
      * hits will be tracked. Default value is {@link #DFLT_RATE_TIME_INTERVAL_MILLIS}.
      *
      * @return Time interval in milliseconds.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public long getRateTimeInterval() {
         return rateTimeInterval;
     }
@@ -439,7 +442,9 @@ public class PersistentStoreConfiguration implements Serializable {
      * hits will be tracked.
      *
      * @param rateTimeInterval Time interval in milliseconds.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public PersistentStoreConfiguration setRateTimeInterval(long rateTimeInterval) {
         this.rateTimeInterval = rateTimeInterval;
 
@@ -451,7 +456,9 @@ public class PersistentStoreConfiguration implements Serializable {
      * Default value is {@link #DFLT_SUB_INTERVALS}.
      *
      * @return The number of sub-intervals for history tracking.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public int getSubIntervals() {
         return subIntervals;
     }
@@ -460,7 +467,9 @@ public class PersistentStoreConfiguration implements Serializable {
      * Sets the number of sub-intervals to split the {@link #getRateTimeInterval()} into to track the update history.
      *
      * @param subIntervals The number of sub-intervals for history tracking.
+     * @deprecated Use {@link MetricsMxBean#configureHitRateMetric(String, long)} instead.
      */
+    @Deprecated
     public PersistentStoreConfiguration setSubIntervals(int subIntervals) {
         this.subIntervals = subIntervals;
 

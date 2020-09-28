@@ -18,6 +18,7 @@ package org.apache.ignite.internal.client.thin;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import javax.cache.configuration.Factory;
 import javax.net.ssl.SSLContext;
 import org.apache.ignite.client.SslMode;
@@ -88,12 +89,16 @@ final class ClientChannelConfiguration {
     /** Reconnect retries within period (for throttling). */
     private final int reconnectThrottlingRetries;
 
+    /** Executor for async operations continuations. */
+    private final Executor asyncContinuationExecutor;
+
     /** User attributes. */
-    private Map<String, String> userAttrs;
+    private final Map<String, String> userAttrs;
 
     /**
      * Constructor.
      */
+    @SuppressWarnings("UnnecessaryThis")
     ClientChannelConfiguration(ClientConfiguration cfg, InetSocketAddress addr) {
         this.sslMode = cfg.getSslMode();
         this.tcpNoDelay = cfg.isTcpNoDelay();
@@ -116,6 +121,7 @@ final class ClientChannelConfiguration {
         this.reconnectThrottlingRetries = cfg.getReconnectThrottlingRetries();
         this.addr = addr;
         this.userAttrs = cfg.getUserAttributes();
+        this.asyncContinuationExecutor = cfg.getAsyncContinuationExecutor();
     }
 
     /**
@@ -262,6 +268,14 @@ final class ClientChannelConfiguration {
      * @return User attributes.
      */
     public Map<String, String> getUserAttributes() {
+        //noinspection AssignmentOrReturnOfFieldWithMutableType
         return userAttrs;
+    }
+
+    /**
+     * @return Async continuation executor.
+     */
+    public Executor getAsyncContinuationExecutor() {
+        return asyncContinuationExecutor;
     }
 }

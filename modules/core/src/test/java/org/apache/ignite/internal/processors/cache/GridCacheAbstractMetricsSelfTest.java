@@ -43,17 +43,17 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.metric.Metric;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Cache metrics test.
@@ -618,6 +618,29 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         assertEquals(values.size(), cache.localMetrics().getCachePuts());
     }
 
+    /** @throws Exception If failed. */
+    @Test
+    public void testPutAllAsyncAvgTime() throws Exception {
+        IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        assertEquals(0.0, cache.localMetrics().getAveragePutTime(), 0.0);
+        assertEquals(0, cache.localMetrics().getCachePuts());
+
+        Map<Integer, Integer> values = new HashMap<>();
+
+        values.put(1, 1);
+        values.put(2, 2);
+        values.put(3, 3);
+
+        IgniteFuture<Void> fut = cache.putAllAsync(values);
+
+        fut.get();
+
+        assertTrue(waitForCondition(() -> cache.localMetrics().getAveragePutTime() > 0, 30_000));
+
+        assertEquals(values.size(), cache.localMetrics().getCachePuts());
+    }
+
     /**
      * @throws Exception If failed.
      */
@@ -1040,7 +1063,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         // Avoid reloading from store.
         storeStgy.removeFromStore(key);
 
-        assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicateX() {
+        assertTrue(waitForCondition(new GridAbsPredicateX() {
             @Override public boolean applyx() {
                 try {
                     if (c.get(key) != null)
@@ -1406,7 +1429,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     public void testGetTime() {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        HistogramMetric m = metric("GetTime");
+        HistogramMetricImpl m = metric("GetTime");
 
         assertTrue(Arrays.stream(m.value()).allMatch(v -> v == 0));
 
@@ -1424,7 +1447,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     public void testPutTime() {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        HistogramMetric m = metric("PutTime");
+        HistogramMetricImpl m = metric("PutTime");
 
         assertTrue(Arrays.stream(m.value()).allMatch(v -> v == 0));
 
@@ -1438,7 +1461,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     public void testRemoveTime() {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        HistogramMetric m = metric("RemoveTime");
+        HistogramMetricImpl m = metric("RemoveTime");
 
         assertTrue(Arrays.stream(m.value()).allMatch(v -> v == 0));
 
