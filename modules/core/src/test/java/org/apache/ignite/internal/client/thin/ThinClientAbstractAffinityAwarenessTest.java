@@ -59,7 +59,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
     /** Partitioned with custom affinity cache name. */
     protected static final String PART_CUSTOM_AFFINITY_CACHE_NAME = "partitioned_custom_affinity_cache";
 
-    /** Name of a partitioned cache with 0 backups. */
+    /* Name of a partitioned cache with 0 backups. */
     protected static final String PART_CACHE_0_BACKUPS_NAME = "partitioned_0_backup_cache";
 
     /** Name of a partitioned cache with 1 backups. */
@@ -109,9 +109,9 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
                 new CacheKeyConfiguration(TestAnnotatedAffinityKey.class));
 
         CacheConfiguration ccfg3 = new CacheConfiguration()
-            .setName(PART_CACHE_0_BACKUPS_NAME)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setBackups(0);
+                .setName(PART_CACHE_0_BACKUPS_NAME)
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setBackups(0);
 
         CacheConfiguration ccfg4 = new CacheConfiguration()
                 .setName(PART_CACHE_1_BACKUPS_NAME)

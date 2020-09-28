@@ -32,7 +32,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -73,9 +76,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeoutException;
-
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -88,6 +89,7 @@ import static org.junit.Assert.assertArrayEquals;
  */
 public class FunctionalTest extends GridCommonAbstractTest {
     /** Per test timeout */
+    @SuppressWarnings("deprecation")
     @Rule
     public Timeout globalTimeout = new Timeout((int) GridTestUtils.DFLT_TEST_TIMEOUT);
 
@@ -186,7 +188,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 .setEagerTtl(false)
                 .setGroupName("FunctionalTest")
                 .setDefaultLockTimeout(12345)
-                .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_ALL)
+                .setPartitionLossPolicy(PartitionLossPolicy.READ_WRITE_SAFE)
                 .setReadFromBackup(true)
                 .setRebalanceBatchSize(67890)
                 .setRebalanceBatchesPrefetchCount(102938)
@@ -217,7 +219,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 )
                     .setExpiryPolicy(new PlatformExpiryPolicy(10, 20, 30));
 
-            ClientCache cache = client.createCache(cacheCfg);
+            ClientCache<Object, Object> cache = client.createCache(cacheCfg);
 
             assertEquals(CACHE_NAME, cache.getName());
 
@@ -575,6 +577,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
     public void testClientFailsOnStart() {
         ClientConnectionException expEx = null;
 
+        //noinspection EmptyTryBlock
         try (IgniteClient ignored = Ignition.startClient(getClientConfiguration())) {
             // No-op.
         }
@@ -595,6 +598,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             expEx
         );
     }
+
 
     /**
      * Test PESSIMISTIC REPEATABLE_READ tx holds lock and other tx should be timed out.
@@ -625,44 +629,35 @@ public class FunctionalTest extends GridCommonAbstractTest {
             );
             cache.put(0, "value0");
 
-            CyclicBarrier barrier = new CyclicBarrier(2);
+            Future<?> fut;
 
             try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, isolation)) {
-                Thread t = new Thread(() -> {
+                assertEquals("value0", cache.get(0));
+
+                CyclicBarrier barrier = new CyclicBarrier(2);
+
+                fut = ForkJoinPool.commonPool().submit(() -> {
                     try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
                         cache.put(0, "value2");
-
-                        // Should block.
                         tx2.commit();
-
-                        // Should not get here.
-                        fail();
-                    } catch (ClientServerError ex) {
-                        assertEquals(ClientStatus.TX_TIMED_OUT, ex.getCode());
-                    } catch (Exception ex) {
-                        // Should not get here.
-                        fail();
                     } finally {
                         try {
                             barrier.await(2000, TimeUnit.MILLISECONDS);
-                        } catch (TimeoutException | InterruptedException | BrokenBarrierException ignore) {
+                        } catch (Throwable ignore) {
                             // No-op.
                         }
                     }
                 });
 
-                assertEquals("value0", cache.get(0));
-
-                t.start();
-
                 barrier.await(2000, TimeUnit.MILLISECONDS);
-
-                t.join();
 
                 tx.commit();
             }
 
             assertEquals("value0", cache.get(0));
+
+            assertThrowsAnyCause(null, fut::get, ClientException.class,
+                    "Failed to acquire lock within provided timeout");
         }
     }
 
@@ -683,39 +678,28 @@ public class FunctionalTest extends GridCommonAbstractTest {
             final CountDownLatch latch = new CountDownLatch(1);
 
             try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
-                Thread t = new Thread(() -> {
+                assertEquals("value0", cache.get(0));
+
+                Future<?> fut = ForkJoinPool.commonPool().submit(() -> {
                     try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
                         cache.put(0, "value2");
-
-                        // Should block.
                         tx2.commit();
-                    }
-                    catch (Exception ex) {
-                        fail();
                     }
                     finally {
                         latch.countDown();
                     }
                 });
 
-                assertEquals("value0", cache.get(0));
-
-                t.start();
-
                 latch.await();
 
                 cache.put(0, "value1");
 
-                t.join();
+                fut.get();
 
-                try {
+                assertThrowsAnyCause(null, () -> {
                     tx.commit();
-
-                    fail();
-                }
-                catch (ClientException ignored) {
-                    // No op
-                }
+                    return null;
+                }, ClientException.class, "read/write conflict");
             }
 
             assertEquals("value2", cache.get(0));
@@ -736,34 +720,20 @@ public class FunctionalTest extends GridCommonAbstractTest {
             );
             cache.put(0, "value0");
 
-            final CountDownLatch latch = new CountDownLatch(1);
-
             try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
-                Thread t = new Thread(() -> {
-                    try {
-                        assertEquals("value0", cache.get(0));
-
-                        cache.put(0, "value2");
-
-                        assertEquals("value2", cache.get(0));
-                    }
-                    catch (Exception ex) {
-                        fail();
-                    }
-                    finally {
-                        latch.countDown();
-                    }
-                });
-
                 assertEquals("value0", cache.get(0));
 
                 cache.put(0, "value1");
 
-                t.start();
+                Future<?> f = ForkJoinPool.commonPool().submit(() -> {
+                    assertEquals("value0", cache.get(0));
 
-                latch.await();
+                    cache.put(0, "value2");
 
-                t.join();
+                    assertEquals("value2", cache.get(0));
+                });
+
+                f.get();
 
                 tx.commit();
             }
@@ -1011,7 +981,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 cache.put(0, "value18");
 
-                Thread t = new Thread(() -> {
+                Future<?> fut = ForkJoinPool.commonPool().submit(() -> {
                     try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                         cache.put(1, "value19");
 
@@ -1032,8 +1002,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
                     }
                 });
 
-                t.start();
-
                 barrier.await();
 
                 assertEquals("value9", cache.get(1));
@@ -1046,14 +1014,14 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 assertEquals("value19", cache.get(1));
 
-                t.join();
+                fut.get();
             }
 
             // Test transaction usage by different threads.
             try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                 cache.put(0, "value20");
 
-                Thread t = new Thread(() -> {
+                ForkJoinPool.commonPool().submit(() -> {
                     // Implicit transaction started here.
                     cache.put(1, "value21");
 
@@ -1073,11 +1041,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
                     tx.close();
 
                     assertEquals("value18", cache.get(0));
-                });
-
-                t.start();
-
-                t.join();
+                }).get();
 
                 assertEquals("value21", cache.get(1));
 
@@ -1096,11 +1060,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 // Start implicit transaction after explicit transaction has been closed by another thread.
                 cache.put(0, "value22");
 
-                t = new Thread(() -> assertEquals("value22", cache.get(0)));
-
-                t.start();
-
-                t.join();
+                ForkJoinPool.commonPool().submit(() -> assertEquals("value22", cache.get(0))).get();
 
                 // New explicit transaction can be started after current transaction has been closed by another thread.
                 try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
@@ -1151,11 +1111,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             // Test that implicit transaction started after commit of previous one without closing.
             cache.put(0, "value24");
 
-            Thread t = new Thread(() -> assertEquals("value24", cache.get(0)));
-
-            t.start();
-
-            t.join();
+            ForkJoinPool.commonPool().submit(() -> assertEquals("value24", cache.get(0))).get();
         }
     }
 
