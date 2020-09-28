@@ -51,7 +51,6 @@ public class IoStatisticsHolderNoOp implements IoStatisticsHolder {
         return 0;
     }
 
-
     /** {@inheritDoc} */
     @Override public Map<String, Long> logicalReadsMap() {
         return Collections.emptyMap();
@@ -65,5 +64,10 @@ public class IoStatisticsHolderNoOp implements IoStatisticsHolder {
     /** {@inheritDoc} */
     @Override public void resetStatistics() {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public String metricRegistryName() {
+        return null;
     }
 }

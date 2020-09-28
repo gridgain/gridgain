@@ -77,6 +77,8 @@ import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -3829,6 +3831,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
                 //No-op.
             }
         });
+        iCfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
 
         BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), iCfg, new NullLogger());
 
@@ -3837,6 +3840,8 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         MarshallerContextTestImpl marshCtx = new MarshallerContextTestImpl(null, excludedClasses);
 
         GridTestKernalContext kernCtx = new GridTestKernalContext(log, iCfg);
+
+        kernCtx.add(new GridSystemViewManager(kernCtx));
         kernCtx.add(new GridDiscoveryManager(kernCtx));
 
         marshCtx.onMarshallerProcessorStarted(kernCtx, null);
