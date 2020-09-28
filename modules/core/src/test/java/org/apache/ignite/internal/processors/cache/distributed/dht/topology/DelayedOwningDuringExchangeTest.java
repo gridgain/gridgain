@@ -1,9 +1,25 @@
+/*
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -37,7 +53,8 @@ public class DelayedOwningDuringExchangeTest extends GridCommonAbstractTest {
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).setCacheMode(CacheMode.PARTITIONED).
+        cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
+            setCacheMode(CacheMode.PARTITIONED).
             setBackups(0).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
 
@@ -140,15 +157,13 @@ public class DelayedOwningDuringExchangeTest extends GridCommonAbstractTest {
 
         IgniteEx joined = startGrid(nodes);
 
-        waitForReadyTopology(top0, new AffinityTopologyVersion(nodes + 1, 1));
-
         GridDhtPartitionTopology top1 = joined.cachex(DEFAULT_CACHE_NAME).context().topology();
 
-        List<ClusterNode> nodes0 = top0.nodes(p0, new AffinityTopologyVersion(nodes + 1, 1));
-        assertEquals(2, nodes0.size());
+        assertTrue(GridTestUtils.waitForCondition(
+            () -> top0.nodes(p0, new AffinityTopologyVersion(nodes + 1, 1)).size() == 2, 5_000));
 
-        List<ClusterNode> nodes1 = top1.nodes(p0, new AffinityTopologyVersion(nodes + 1, 1));
-        assertEquals(2, nodes1.size());
+        assertTrue(GridTestUtils.waitForCondition(
+            () -> top1.nodes(p0, new AffinityTopologyVersion(nodes + 1, 1)).size() == 2, 5_000));
 
         Collection<ClusterNode> affOwners = testGrid.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(p0);
         assertEquals(1, affOwners.size());

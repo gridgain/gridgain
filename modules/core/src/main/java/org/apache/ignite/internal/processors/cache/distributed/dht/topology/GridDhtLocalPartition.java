@@ -1419,7 +1419,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         Iterator<AffinityTopologyVersion> iter = versions.descendingIterator();
 
-        while(--i >= 0 && iter.hasNext()) {
+        while (--i >= 0 && iter.hasNext()) {
             AffinityTopologyVersion topVer0 = iter.next();
             buf.a(", ver").a(i).a('=').a(topVer0);
 
