@@ -34,10 +34,8 @@ Building and running benchmarks using Docker
 1. Go to modules/platforms/cpp
 $ cd modules/platforms/cpp
 
-2. Edit benchmarks/odbc-sql/Dockerfile if needed (to change arguments)
+2. Run the following command (from modules/platforms/cpp) to build docker image:
+$ docker build -f benchmarks/<benchmark_name>/Dockerfile --tag <benchmark_tag> .
 
-3. Run the following command (from modules/platforms/cpp) to build docker image:
-$ docker build -f benchmarks/odbc-sql/Dockerfile --tag odbc-sql .
-
-4. Run the following command to run docker image (from anywhere):
-$ docker run odbc-sql
+3. Run the following command to run docker image (from anywhere):
+$ docker run <benchmark_tag> [options]
