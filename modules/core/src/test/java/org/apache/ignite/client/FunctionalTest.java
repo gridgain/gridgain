@@ -599,7 +599,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
         );
     }
 
-
     /**
      * Test PESSIMISTIC REPEATABLE_READ tx holds lock and other tx should be timed out.
      */
