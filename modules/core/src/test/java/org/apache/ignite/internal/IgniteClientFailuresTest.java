@@ -183,6 +183,43 @@ public class IgniteClientFailuresTest extends GridCommonAbstractTest {
         assertFalse(logRes.contains(EXCHANGE_WORKER_BLOCKED_MSG));
     }
 
+    /**
+     * Test verifies that correct messages are printed into coordinator's log when client fails.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCoordinatorMessagesOnClientFail() throws Exception {
+        GridStringLogger strLog = new GridStringLogger(false, new GridTestLog4jLogger());
+
+        strLog.logLength(1024 * 1024);
+
+        inMemoryLog = strLog;
+
+        IgniteEx crd = startGrid(0);
+
+        inMemoryLog = null;
+
+        startGrid(1);
+        startGrid(2);
+
+        IgniteEx client = startGrid("client");
+
+        breakClient(client);
+
+        final IgniteClusterEx cl = crd.cluster();
+
+        boolean waitRes = GridTestUtils.waitForCondition(() -> (cl.topology(cl.topologyVersion()).size() == 3),
+            20_000);
+
+        assertTrue(waitRes);
+
+        String logRes = strLog.toString();
+
+        assertTrue(logRes.contains("Client node failed liveness check. Node: "));
+        assertTrue(logRes.contains("timeSinceClientLivenessCheckFailed: "));
+    }
+
     /** */
     private void checkCacheOperations(IgniteCache cache) {
         for (int i = 0; i < 100; i++)
