@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLo
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtLockRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnlockRequest;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -206,67 +205,6 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
         fut.init(topVer);
 
         return fut;
-    }
-
-    /**
-     * @param nodeId Node ID.
-     * @param req Request.
-     */
-    public void clearLocks(UUID nodeId, GridDhtUnlockRequest req) {
-        assert nodeId != null;
-
-        GridCacheVersion obsoleteVer = ctx.cache().nextVersion();
-
-        List<KeyCacheObject> keys = req.nearKeys();
-
-        if (keys != null) {
-            AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
-
-            for (KeyCacheObject key : keys) {
-                while (true) {
-                    GridDistributedCacheEntry entry = peekExx(key);
-
-                    try {
-                        if (entry != null) {
-                            entry.doneRemote(
-                                req.version(),
-                                req.version(),
-                                null,
-                                req.committedVersions(),
-                                req.rolledbackVersions(),
-                                /*system invalidate*/false);
-
-                            // Note that we don't reorder completed versions here,
-                            // as there is no point to reorder relative to the version
-                            // we are about to remove.
-                            if (entry.removeLock(req.version())) {
-                                if (log.isDebugEnabled())
-                                    log.debug("Removed lock [lockId=" + req.version() + ", key=" + key + ']');
-
-                                // Try to evict near entry dht-mapped locally.
-                                evictNearEntry(entry, obsoleteVer, topVer);
-                            }
-                            else {
-                                if (log.isDebugEnabled())
-                                    log.debug("Received unlock request for unknown candidate " +
-                                        "(added to cancelled locks set): " + req);
-                            }
-
-                            entry.touch();
-                        }
-                        else if (log.isDebugEnabled())
-                            log.debug("Received unlock request for entry that could not be found: " + req);
-
-                        break;
-                    }
-                    catch (GridCacheEntryRemovedException ignored) {
-                        if (log.isDebugEnabled())
-                            log.debug("Received remove lock request for removed entry (will retry) [entry=" + entry +
-                                ", req=" + req + ']');
-                    }
-                }
-            }
-        }
     }
 
     /**

@@ -17,10 +17,10 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
+import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -82,7 +83,7 @@ public final class GridCacheMvcc {
 
     /** Remote queue. */
     @GridToStringInclude
-    private LinkedList<GridCacheMvccCandidate> rmts;
+    private IgnitePair<GridCacheMvccCandidate> rmts;
 
     /**
      * @param cctx Cache context.
@@ -127,9 +128,13 @@ public final class GridCacheMvcc {
         if (rmts != null) {
             assert !rmts.isEmpty();
 
-            GridCacheMvccCandidate first = rmts.getFirst();
+            GridCacheMvccCandidate firstCandidate = rmts.get1();
 
-            return first.used() && first.owner() ? first : null;
+            // TODO: 28.09.20 fisrtCandidate.used() returns false. Investigate.
+//            assert firstCandidate.used() && firstCandidate.owner();
+            assert firstCandidate.owner();
+
+            return firstCandidate;
         }
 
         return null;
@@ -215,6 +220,20 @@ public final class GridCacheMvcc {
 
         return null;
     }
+
+    @Nullable private GridCacheMvccCandidate candidateRemote(GridCacheVersion ver) {
+        assert ver != null;
+
+        if (rmts != null) {
+            if (rmts.get1().version().equals(ver))
+                return rmts.get1();
+            else if (rmts.get2() != null && rmts.get2().version().equals(ver))
+                return rmts.get2();
+        }
+
+        return null;
+    }
+
 
     /**
      *
@@ -369,24 +388,28 @@ public final class GridCacheMvcc {
         else {
             assert !cand.serializable() && !cand.read() : cand;
 
-            if (rmts == null)
-                rmts = new LinkedList<>();
-
             assert !cand.owner() || localOwners() == null : "Cannot have local and remote owners " +
                 "at the same time [cand=" + cand + ", locs=" + locs + ", rmts=" + rmts + ']';
 
-            GridCacheMvccCandidate cur = candidate(rmts, cand.version());
+            if (rmts == null) {
+                rmts = new IgnitePair<>();
 
-            // For existing candidates, we only care about owners and keys.
-            if (cur != null) {
-                if (cand.owner())
-                    cur.setOwner();
+                cand.setOwner();
 
-                return true;
+                rmts.set1(cand);
+            } else {
+                assert rmts.size() == 1;
+
+                rmts.set2(cand);
+
+                try {
+                    cand.latch.await();
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                    assert false;
+                }
             }
-
-            // Either list is empty or candidate is last.
-            rmts.add(cand);
         }
 
         return true;
@@ -399,9 +422,9 @@ public final class GridCacheMvcc {
     private void remove0(GridCacheVersion ver, boolean preferLoc) {
         if (preferLoc) {
             if (!remove0(locs, ver))
-                remove0(rmts, ver);
+                remove0Remote(ver);
         }
-        else if (!remove0(rmts, ver))
+        else if (!remove0Remote(ver))
             remove0(locs, ver);
 
         if (locs != null && locs.isEmpty())
@@ -439,6 +462,38 @@ public final class GridCacheMvcc {
         return false;
     }
 
+    private boolean remove0Remote(GridCacheVersion ver) {
+        if (rmts != null) {
+            GridCacheMvccCandidate candidateToRemove;
+
+            if (rmts.get2() != null && rmts.get2().version().equals(ver)) {
+                candidateToRemove = rmts.get2();
+
+                candidateToRemove.setUsed();
+                candidateToRemove.setRemoved();
+
+                rmts.set2(null);
+
+            } else if (rmts.get1().version().equals(ver)) {
+                candidateToRemove = rmts.get1();
+
+                candidateToRemove.setUsed();
+                candidateToRemove.setRemoved();
+
+                rmts.set1(null);
+
+                reassignRemote();
+            } else {
+                // TODO: 28.09.20 TMP we should never get here.
+                assert false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      *
      * @param exclude Versions to exclude form check.
@@ -465,106 +520,11 @@ public final class GridCacheMvcc {
             if (F.isEmpty(exclude))
                 return false;
 
-            for (GridCacheMvccCandidate cand : rmts)
-                if (!U.containsObjectArray(exclude, cand.version()))
-                    return false;
+            return U.containsObjectArray(exclude, rmts.get1()) &&
+                (rmts.get2() == null || U.containsObjectArray(exclude, rmts.get2()));
         }
 
         return true;
-    }
-
-    /**
-     * Moves completed candidates right before the base one. Note that
-     * if base is not found, then nothing happens and {@code false} is
-     * returned.
-     *
-     * @param baseVer Base version.
-     * @param committedVers Committed versions relative to base.
-     * @param rolledbackVers Rolled back versions relative to base.
-     */
-    public void orderCompleted(GridCacheVersion baseVer,
-        Collection<GridCacheVersion> committedVers, Collection<GridCacheVersion> rolledbackVers) {
-        assert baseVer != null;
-
-        if (rmts != null && !F.isEmpty(committedVers)) {
-            Deque<GridCacheMvccCandidate> mvAfter = null;
-
-            int maxIdx = -1;
-
-            for (ListIterator<GridCacheMvccCandidate> it = rmts.listIterator(rmts.size()); it.hasPrevious(); ) {
-                GridCacheMvccCandidate cur = it.previous();
-
-                if (!cur.version().equals(baseVer) && committedVers.contains(cur.version())) {
-                    cur.setOwner();
-
-                    assert localOwners() == null || localOwner().nearLocal() : "Cannot not have local owner and " +
-                        "remote completed transactions at the same time [baseVer=" + baseVer +
-                        ", committedVers=" + committedVers +
-                        ", rolledbackVers=" + rolledbackVers +
-                        ", localOwner=" + localOwner() +
-                        ", locs=" + locs +
-                        ", rmts=" + rmts + ']';
-
-                    if (maxIdx < 0)
-                        maxIdx = it.nextIndex();
-                }
-                else if (maxIdx >= 0 && cur.version().isGreaterEqual(baseVer)) {
-                    if (--maxIdx >= 0) {
-                        if (mvAfter == null)
-                            mvAfter = new LinkedList<>();
-
-                        it.remove();
-
-                        mvAfter.addFirst(cur);
-                    }
-                }
-
-                // If base is completed, then set it to owner too.
-                if (!cur.owner() && cur.version().equals(baseVer) && committedVers.contains(cur.version()))
-                    cur.setOwner();
-            }
-
-            if (maxIdx >= 0 && mvAfter != null) {
-                ListIterator<GridCacheMvccCandidate> it = rmts.listIterator(maxIdx + 1);
-
-                for (GridCacheMvccCandidate cand : mvAfter)
-                    it.add(cand);
-            }
-
-            // Remove rolled back versions.
-            if (!F.isEmpty(rolledbackVers)) {
-                for (Iterator<GridCacheMvccCandidate> it = rmts.iterator(); it.hasNext(); ) {
-                    GridCacheMvccCandidate cand = it.next();
-
-                    if (rolledbackVers.contains(cand.version())) {
-                        cand.setUsed(); // Mark as used to be consistent, even though we are about to remove it.
-
-                        it.remove();
-                    }
-                }
-
-                if (rmts.isEmpty())
-                    rmts = null;
-            }
-        }
-    }
-
-    /**
-     * Puts owned versions in front of base.
-     *
-     * @param baseVer Base version.
-     * @param owned Owned list.
-     */
-    public void markOwned(GridCacheVersion baseVer, GridCacheVersion owned) {
-        if (owned == null)
-            return;
-
-        if (rmts != null) {
-            GridCacheMvccCandidate baseCand = candidate(rmts, baseVer);
-
-            if (baseCand != null)
-                baseCand.ownerVersion(owned);
-        }
     }
 
     /**
@@ -884,85 +844,26 @@ public final class GridCacheMvcc {
                 }
             }
 
-            // Mark all remote candidates with less version as owner unless it is pending.
-            if (rmts != null) {
-                for (GridCacheMvccCandidate rmt : rmts) {
-                    GridCacheVersion rmtVer = rmt.version();
-
-                    if (rmtVer.isLess(mappedVer)) {
-                        if (!pending.contains(rmtVer) &&
-                            !mappedVer.equals(rmt.ownerVersion()))
-                            rmt.setOwner();
-                    }
-                    else {
-                        // Remote version is greater, so need to check if it was committed or rolled back.
-                        if (committedVers.contains(rmtVer) || rolledBackVers.contains(rmtVer))
-                            rmt.setOwner();
-                    }
-                }
-            }
+            // TODO: 28.09.20 Investigate.
+//            // Mark all remote candidates with less version as owner unless it is pending.
+//            if (rmts != null) {
+//                for (GridCacheMvccCandidate rmt : rmts) {
+//                    GridCacheVersion rmtVer = rmt.version();
+//
+//                    if (rmtVer.isLess(mappedVer)) {
+//                        if (!pending.contains(rmtVer) &&
+//                            !mappedVer.equals(rmt.ownerVersion()))
+//                            rmt.setOwner();
+//                    }
+//                    else {
+//                        // Remote version is greater, so need to check if it was committed or rolled back.
+//                        if (committedVers.contains(rmtVer) || rolledBackVers.contains(rmtVer))
+//                            rmt.setOwner();
+//                    }
+//                }
+//            }
 
             reassign();
-        }
-
-        return allOwners();
-    }
-
-    /**
-     * Sets remote candidate to done.
-     *
-     * @param ver Version.
-     * @param pending Pending versions.
-     * @param committed Committed versions.
-     * @param rolledback Rolledback versions.
-     * @return Lock owner.
-     */
-    @Nullable public CacheLockCandidates doneRemote(
-        GridCacheVersion ver,
-        Collection<GridCacheVersion> pending,
-        Collection<GridCacheVersion> committed,
-        Collection<GridCacheVersion> rolledback) {
-        assert ver != null;
-
-        if (log.isDebugEnabled())
-            log.debug("Setting remote candidate to done [mvcc=" + this + ", ver=" + ver + "]");
-
-        // Check remote candidate.
-        GridCacheMvccCandidate cand = candidate(rmts, ver);
-
-        if (cand != null) {
-            assert rmts != null;
-            assert !rmts.isEmpty();
-            assert !cand.local() : "Remote candidate is marked as local: " + cand;
-            assert !cand.nearLocal() : "Remote candidate is marked as near local: " + cand;
-
-            cand.setOwner();
-            cand.setUsed();
-
-            List<GridCacheMvccCandidate> mvAfter = null;
-
-            for (ListIterator<GridCacheMvccCandidate> it = rmts.listIterator(); it.hasNext(); ) {
-                GridCacheMvccCandidate c = it.next();
-
-                assert !c.nearLocal() : "Remote candidate marked as near local: " + c;
-
-                if (c == cand) {
-                    if (mvAfter != null)
-                        for (GridCacheMvccCandidate mv : mvAfter)
-                            it.add(mv);
-
-                    break;
-                }
-                else if (!committed.contains(c.version()) && !rolledback.contains(c.version()) &&
-                    pending.contains(c.version())) {
-                    it.remove();
-
-                    if (mvAfter == null)
-                        mvAfter = new LinkedList<>();
-
-                    mvAfter.add(c);
-                }
-            }
         }
 
         return allOwners();
@@ -978,33 +879,20 @@ public final class GridCacheMvcc {
     public void salvageRemote(GridCacheVersion ver, boolean near) {
         assert ver != null;
 
-        GridCacheMvccCandidate cand = candidate(rmts, ver);
+        if (rmts != null && rmts.get2() != null) {
+            GridCacheMvccCandidate candidateToSalvage = rmts.get2();
 
-        if (cand != null) {
-            assert rmts != null;
-            assert !rmts.isEmpty();
+            IgniteInternalTx tx = near ? cctx.tm().nearTx(candidateToSalvage.version()) :
+                cctx.tm().tx(candidateToSalvage.version());
 
-            for (Iterator<GridCacheMvccCandidate> iter = rmts.iterator(); iter.hasNext(); ) {
-                GridCacheMvccCandidate rmt = iter.next();
+            if (tx != null) {
+                tx.systemInvalidate(true);
 
-                // For salvaged candidate doneRemote will be called explicitly.
-                if (rmt == cand)
-                    break;
-
-                // Only Near and DHT remote candidates should be released.
-                assert !rmt.nearLocal();
-
-                IgniteInternalTx tx = near ? cctx.tm().nearTx(rmt.version()) : cctx.tm().tx(rmt.version());
-
-                if (tx != null) {
-                    tx.systemInvalidate(true);
-
-                    rmt.setOwner();
-                    rmt.setUsed();
-                }
-                else
-                    iter.remove();
+                candidateToSalvage.setOwner();
+                candidateToSalvage.setUsed();
             }
+            else
+                rmts.set2(null);
         }
     }
 
@@ -1014,17 +902,8 @@ public final class GridCacheMvcc {
     private void reassign() {
         GridCacheMvccCandidate firstRmt = null;
 
-        if (rmts != null) {
-            for (GridCacheMvccCandidate cand : rmts) {
-                if (firstRmt == null)
-                    firstRmt = cand;
-
-                // If there is a remote owner, then local cannot be an owner,
-                // so no reassignment happens.
-                if (cand.owner())
-                    return;
-            }
-        }
+        if (rmts != null)
+            reassignRemote();
 
         if (locs != null) {
             boolean first = true;
@@ -1157,6 +1036,18 @@ public final class GridCacheMvcc {
         }
     }
 
+    private void reassignRemote() {
+        if (rmts.get1() == null && rmts.get2() != null) {
+            rmts.swap();
+
+            rmts.get1().setOwner();
+
+            rmts.get1().latch.countDown();
+
+            // TODO: 28.09.20 Critical issue here, release lock on sendingPrepareResponse or send listener notification.
+        }
+    }
+
     /**
      * @param cand Candidate to check.
      * @return First predecessor that is owner or is not used.
@@ -1243,14 +1134,23 @@ public final class GridCacheMvcc {
      */
     @Nullable public CacheLockCandidates removeExplicitNodeCandidates(UUID nodeId) {
         if (rmts != null) {
-            for (Iterator<GridCacheMvccCandidate> it = rmts.iterator(); it.hasNext(); ) {
-                GridCacheMvccCandidate cand = it.next();
+            if (!rmts.get2().tx() && (nodeId.equals(rmts.get2().nodeId()) || nodeId.equals(rmts.get2().otherNodeId()))) {
+                rmts.get2().setUsed(); // Mark as used to be consistent.
+                rmts.get2().setRemoved();
 
-                if (!cand.tx() && (nodeId.equals(cand.nodeId()) || nodeId.equals(cand.otherNodeId()))) {
-                    cand.setUsed(); // Mark as used to be consistent.
-                    cand.setRemoved();
+                rmts.set2(null);
+            }
 
-                    it.remove();
+            if (!rmts.get1().tx() && (nodeId.equals(rmts.get1().nodeId()) || nodeId.equals(rmts.get1().otherNodeId()))) {
+                rmts.get1().setUsed(); // Mark as used to be consistent.
+                rmts.get1().setRemoved();
+
+                rmts.set1(null);
+
+                if (rmts.get2() != null) {
+                    reassignRemote();
+
+                    return rmts.get1();
                 }
             }
 
@@ -1258,25 +1158,7 @@ public final class GridCacheMvcc {
                 rmts = null;
         }
 
-        if (locs != null) {
-            for (Iterator<GridCacheMvccCandidate> it = locs.iterator(); it.hasNext(); ) {
-                GridCacheMvccCandidate cand = it.next();
-
-                if (!cand.tx() && nodeId.equals(cand.otherNodeId()) && cand.dhtLocal()) {
-                    cand.setUsed(); // Mark as used to be consistent.
-                    cand.setRemoved();
-
-                    it.remove();
-                }
-            }
-
-            if (locs.isEmpty())
-                locs = null;
-        }
-
-        reassign();
-
-        return allOwners();
+        return null;
     }
 
     /**
@@ -1289,7 +1171,7 @@ public final class GridCacheMvcc {
         GridCacheMvccCandidate cand = candidate(locs, ver);
 
         if (cand == null)
-            cand = candidate(rmts, ver);
+            cand = candidateRemote(ver);
 
         return cand;
     }
@@ -1311,10 +1193,13 @@ public final class GridCacheMvcc {
      * @return Remote candidate.
      */
     @Nullable GridCacheMvccCandidate remoteCandidate(UUID nodeId, long threadId) {
-        if (rmts != null)
-            for (GridCacheMvccCandidate c : rmts)
-                if (c.nodeId().equals(nodeId) && c.isHeldByThread(threadId))
-                    return c;
+        if (rmts != null) {
+            if (rmts.get1().nodeId().equals(nodeId) && rmts.get1().isHeldByThread(threadId))
+                return rmts.get1();
+
+            if (rmts.get2() != null && rmts.get2().nodeId().equals(nodeId) && rmts.get2().isHeldByThread(threadId))
+                return rmts.get2();
+        }
 
         return null;
     }
@@ -1394,7 +1279,26 @@ public final class GridCacheMvcc {
      * @return Collection of remote candidates.
      */
     public List<GridCacheMvccCandidate> remoteCandidates(GridCacheVersion... excludeVers) {
-        return candidates(rmts, false, true, excludeVers);
+        // TODO: 28.09.20 Optimize: first of all check usages, optimize method itself and also check whether it's possible to have reentries in rmts.
+        if (rmts == null)
+            return Collections.emptyList();
+
+        assert !rmts.isEmpty();
+
+        if (F.isEmpty(excludeVers))
+            return rmts.get2() == null ?  Collections.singletonList(rmts.get1()) :  Arrays.asList(rmts.get1(), rmts.get2());
+
+
+
+        List<GridCacheMvccCandidate> cands = new ArrayList<>(rmts.size());
+
+        if ((!rmts.get1().reentry()) && !U.containsObjectArray(excludeVers, rmts.get1().version()))
+            cands.add(rmts.get1());
+
+        if (rmts.get2() != null && ((!rmts.get1().reentry()) && !U.containsObjectArray(excludeVers, rmts.get1().version())))
+            cands.add(rmts.get2());
+
+        return cands;
     }
 
     /**

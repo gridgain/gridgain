@@ -2357,15 +2357,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         // Transactions participating in recovery can be finished only by recovery consensus.
         assert tx.finalizationStatus() == RECOVERY_FINISH : tx;
 
-        if (tx instanceof IgniteTxRemoteEx) {
-            IgniteTxRemoteEx rmtTx = (IgniteTxRemoteEx)tx;
-
-            rmtTx.doneRemote(tx.xidVersion(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList(),
-                Collections.<GridCacheVersion>emptyList());
-        }
-
         if (commit)
             tx.commitAsync().listen(new CommitListener(tx));
         else if (!tx.local())

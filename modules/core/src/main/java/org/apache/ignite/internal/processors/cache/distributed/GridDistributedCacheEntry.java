@@ -226,9 +226,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 /*near-local*/false
             );
 
-            if (owned != null)
-                mvcc.markOwned(ver, owned);
-
             owner = mvcc.allOwners();
 
             boolean emptyAfter = mvcc.isEmpty();
@@ -553,77 +550,6 @@ public class GridDistributedCacheEntry extends GridCacheMapEntry {
                 owner = mvcc.readyNearLocal(ver, mapped, committed, rolledBack, pending);
 
                 assert owner == null || owner.candidate(0).owner() : "Owner flag is not set for owner: " + owner;
-
-                boolean emptyAfter = mvcc.isEmpty();
-
-                checkCallbacks(emptyBefore, emptyAfter);
-
-                if (emptyAfter)
-                    mvccExtras(null);
-            }
-
-            val = this.val;
-        }
-        finally {
-            unlockEntry();
-        }
-
-        // This call must be made outside of synchronization.
-        checkOwnerChanged(prev, owner, val);
-    }
-
-    /**
-     *
-     * @param lockVer Done version.
-     * @param baseVer Base version.
-     * @param pendingVers Pending versions that are less than lock version.
-     * @param committedVers Completed versions for reordering.
-     * @param rolledbackVers Rolled back versions for reordering.
-     * @param sysInvalidate Flag indicating if this entry is done from invalidated transaction (in case of tx
-     *      salvage). In this case all locks before salvaged lock will marked as used and corresponding
-     *      transactions will be invalidated.
-     * @throws GridCacheEntryRemovedException If entry has been removed.
-     */
-    public void doneRemote(
-        GridCacheVersion lockVer,
-        GridCacheVersion baseVer,
-        @Nullable Collection<GridCacheVersion> pendingVers,
-        Collection<GridCacheVersion> committedVers,
-        Collection<GridCacheVersion> rolledbackVers,
-        boolean sysInvalidate
-    ) throws GridCacheEntryRemovedException {
-        CacheLockCandidates prev = null;
-        CacheLockCandidates owner = null;
-
-        CacheObject val;
-
-        lockEntry();
-
-        try {
-            checkObsolete();
-
-            GridCacheMvcc mvcc = mvccExtras();
-
-            if (mvcc != null) {
-                prev = mvcc.allOwners();
-
-                boolean emptyBefore = mvcc.isEmpty();
-
-                // Order completed versions.
-                if (!F.isEmpty(committedVers) || !F.isEmpty(rolledbackVers)) {
-                    mvcc.orderCompleted(lockVer, committedVers, rolledbackVers);
-
-                    if (!baseVer.equals(lockVer))
-                        mvcc.orderCompleted(baseVer, committedVers, rolledbackVers);
-                }
-
-                if (sysInvalidate && baseVer != null)
-                    mvcc.salvageRemote(baseVer, isNear());
-
-                owner = mvcc.doneRemote(lockVer,
-                    maskNull(pendingVers),
-                    maskNull(committedVers),
-                    maskNull(rolledbackVers));
 
                 boolean emptyAfter = mvcc.isEmpty();
 

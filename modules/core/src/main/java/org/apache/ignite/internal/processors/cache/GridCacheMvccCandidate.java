@@ -23,7 +23,10 @@ import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
@@ -119,6 +122,9 @@ public class GridCacheMvccCandidate implements Externalizable,
 
     /** */
     private GridCacheVersion serOrder;
+
+    // TODO: 28.09.20 Implement properly.
+    public CountDownLatch latch = new CountDownLatch(1);
 
     /**
      * Empty constructor required by {@link Externalizable}.

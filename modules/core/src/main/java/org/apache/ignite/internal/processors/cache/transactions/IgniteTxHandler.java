@@ -1284,6 +1284,8 @@ public class IgniteTxHandler {
                     req.deployInfo() != null);
             }
 
+
+
             if (req.onePhaseCommit()) {
                 IgniteInternalFuture completeFut;
 
@@ -1470,9 +1472,6 @@ public class IgniteTxHandler {
                     tx.systemInvalidate(true);
                 tx.mvccSnapshot(req.mvccSnapshot());
 
-                // Complete remote candidates.
-                tx.doneRemote(req.baseVersion(), null, null, null);
-
                 tx.setPartitionUpdateCounters(
                     req.partUpdateCounters() != null ? req.partUpdateCounters().array() : null);
 
@@ -1482,7 +1481,6 @@ public class IgniteTxHandler {
                 if (tx.dht() && req.updateCounters() != null)
                     tx.txCounters(true).updateCounters(req.updateCounters());
 
-                tx.doneRemote(req.baseVersion(), null, null, null);
                 tx.mvccSnapshot(req.mvccSnapshot());
                 tx.rollbackRemoteTx();
             }
@@ -1522,9 +1520,6 @@ public class IgniteTxHandler {
             tx.commitVersion(req.writeVersion());
             tx.invalidate(req.isInvalidate());
             tx.mvccSnapshot(req.mvccSnapshot());
-
-            // Complete remote candidates.
-            tx.doneRemote(req.version(), null, null, null);
 
             tx.commitRemoteTx();
         }

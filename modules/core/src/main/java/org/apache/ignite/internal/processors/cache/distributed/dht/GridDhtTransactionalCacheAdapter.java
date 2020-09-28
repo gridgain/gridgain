@@ -48,7 +48,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
-import org.apache.ignite.internal.processors.cache.distributed.GridDistributedUnlockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -173,12 +172,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         ctx.io().addCacheHandler(ctx.cacheId(), GridNearUnlockRequest.class, new CI2<UUID, GridNearUnlockRequest>() {
             @Override public void apply(UUID nodeId, GridNearUnlockRequest req) {
                 processNearUnlockRequest(nodeId, req);
-            }
-        });
-
-        ctx.io().addCacheHandler(ctx.cacheId(), GridDhtUnlockRequest.class, new CI2<UUID, GridDhtUnlockRequest>() {
-            @Override public void apply(UUID nodeId, GridDhtUnlockRequest req) {
-                processDhtUnlockRequest(nodeId, req);
             }
         });
 
@@ -689,17 +682,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             if (releaseAll && !cancelled)
                 U.warn(log, "Sender node left grid in the midst of lock acquisition (locks have been released).");
         }
-    }
-
-    /**
-     * @param nodeId Node ID.
-     * @param req Request.
-     */
-    private void processDhtUnlockRequest(UUID nodeId, GridDhtUnlockRequest req) {
-        clearLocks(nodeId, req);
-
-        if (isNearEnabled(cacheCfg))
-            near().clearLocks(nodeId, req);
     }
 
     /**
@@ -1615,60 +1597,6 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         }
 
         return lessPending;
-    }
-
-    /**
-     * @param nodeId Node ID.
-     * @param req Request.
-     */
-    private void clearLocks(UUID nodeId, GridDistributedUnlockRequest req) {
-        assert nodeId != null;
-
-        List<KeyCacheObject> keys = req.keys();
-
-        if (keys != null) {
-            for (KeyCacheObject key : keys) {
-                while (true) {
-                    GridDistributedCacheEntry entry = peekExx(key);
-
-                    if (entry == null)
-                        // Nothing to unlock.
-                        break;
-
-                    try {
-                        entry.doneRemote(
-                            req.version(),
-                            req.version(),
-                            null,
-                            null,
-                            null,
-                            /*system invalidate*/false);
-
-                        // Note that we don't reorder completed versions here,
-                        // as there is no point to reorder relative to the version
-                        // we are about to remove.
-                        if (entry.removeLock(req.version())) {
-                            if (log.isDebugEnabled())
-                                log.debug("Removed lock [lockId=" + req.version() + ", key=" + key + ']');
-                        }
-                        else {
-                            if (log.isDebugEnabled())
-                                log.debug("Received unlock request for unknown candidate " +
-                                    "(added to cancelled locks set): " + req);
-                        }
-
-                        entry.touch();
-
-                        break;
-                    }
-                    catch (GridCacheEntryRemovedException ignored) {
-                        if (log.isDebugEnabled())
-                            log.debug("Received remove lock request for removed entry (will retry) [entry=" +
-                                entry + ", req=" + req + ']');
-                    }
-                }
-            }
-        }
     }
 
     /**
