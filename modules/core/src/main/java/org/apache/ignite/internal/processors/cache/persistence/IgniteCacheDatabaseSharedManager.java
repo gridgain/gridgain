@@ -966,7 +966,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Clean checkpoint directory {@code GridCacheDatabaseSharedManager#cpDir}. The operation
+     * Clean checkpoint directory
+     * {@link CheckpointMarkersStorage#cpDir}. The operation
      * is necessary when local node joined to baseline topology with different consistentId.
      */
     public void cleanupCheckpointDirectory() throws IgniteCheckedException {
