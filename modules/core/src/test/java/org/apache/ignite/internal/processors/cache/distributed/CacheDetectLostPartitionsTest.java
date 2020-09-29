@@ -61,8 +61,16 @@ public class CacheDetectLostPartitionsTest extends GridCommonAbstractTest {
 
         stopGrid(1);
 
-        checkCache(client.cache(TEST_CACHE_NAME + 1));
+        cache1 = client.cache(TEST_CACHE_NAME + 1);
+        checkCache(cache1);
 
+        cache2 = client.cache(TEST_CACHE_NAME + 2);
+        checkCache(cache2);
+
+        cache1.close();
+        cache2.close();
+
+        checkCache(client.cache(TEST_CACHE_NAME + 1));
         checkCache(client.cache(TEST_CACHE_NAME + 2));
     }
 

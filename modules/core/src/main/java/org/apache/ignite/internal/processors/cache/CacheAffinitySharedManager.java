@@ -626,20 +626,18 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     -1,
                     false);
 
+                GridDhtPartitionsExchangeFuture exchFut = context().exchange().lastFinishedFuture();
+
                 GridClientPartitionTopology clientTop = cctx.exchange().clearClientTopology(grp.groupId());
 
-                Set<Integer> lostParts = null;
-
-                if (clientTop != null)
-                    lostParts = clientTop.lostPartitions();
+                Set<Integer> lostParts = clientTop == null ? null : clientTop.lostPartitions();
 
                 grp.topology().update(topVer, partMap, null, Collections.emptySet(), null, null, null, lostParts);
 
-                if (clientTop != null) {
-                    GridDhtPartitionsExchangeFuture excFut = context().exchange().lastFinishedFuture();
+                if (clientTop == null)
+                    grp.topology().detectLostPartitions(topVer, exchFut);
 
-                    excFut.validate(grp);
-                }
+                exchFut.validate(grp);
 
                 topFut.validate(grp, discoCache.allNodes());
             }
