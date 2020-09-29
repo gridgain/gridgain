@@ -149,6 +149,7 @@ import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.active;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_FAILURE_DETECTION_TIMEOUT;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_RECONNECTED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -289,7 +290,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     /** Local node compatibility consistent ID. */
     private Serializable consistentId;
 
-    /** */
+    /** Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress*/
     private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
     /** @param ctx Context. */
@@ -620,12 +621,14 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
-                        if (!localNode().isDaemon())
-                            changeStatesInProgress.put(((ChangeGlobalStateMessage)customMsg).requestId(), new CountDownLatch(1));
+                        ChangeGlobalStateMessage stateChangeMsg = (ChangeGlobalStateMessage)customMsg;
+
+                        if (ctx.clientNode())
+                            changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
 
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
-                            (ChangeGlobalStateMessage)customMsg,
+                            stateChangeMsg,
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
@@ -633,8 +636,19 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                         CountDownLatch changeStateLatch = changeStatesInProgress.get(((ChangeGlobalStateFinishMessage)customMsg).requestId());
 
-                        if (changeStateLatch != null) {
-                            U.awaitQuiet(changeStateLatch);
+                        if (ctx.clientNode() && changeStateLatch != null) {
+                            boolean awaited = true;
+
+                            try {
+                                awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+                            }
+                            catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+
+                            if (!awaited)
+                                log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+                                    "before ChangeGlobalStateMessage was processed.");
 
                             changeStatesInProgress.remove(reqId);
                         }
@@ -2631,7 +2645,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     }
 
     /** */
-    public void finishChangeState(UUID reqId) {
+    public void setChangeStateMessageWasProcessed(UUID reqId) {
         CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
 
         if (changeStateLatch != null)
