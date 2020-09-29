@@ -744,7 +744,9 @@ public abstract class Table extends SchemaObjectBase {
             AllColumnsForPlan allColumnsSet, boolean isEquiJoined) {
         PlanItem item = new PlanItem();
         item.setIndex(getScanIndex(session));
-        item.cost = item.getIndex().getCost(session, null, filters, filter, null, allColumnsSet);
+        item.cost = item.getIndex().getCost(session, null, filters, filter, sortOrder, allColumnsSet);
+        // TODO how about ru and compatibility here?
+        // item.cost = item.getIndex().getCost(session, null, filters, filter, null, allColumnsSet);
         Trace t = session.getTrace();
         if (t.isDebugEnabled()) {
             t.debug("Table      :     potential plan item cost {0} index {1}",
