@@ -23,12 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.AffinityFunction;
@@ -42,7 +37,7 @@ import org.apache.ignite.internal.jdbc.thin.AffinityCache;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinPartitionResultDescriptor;
 import org.apache.ignite.internal.jdbc.thin.QualifiedSQLQuery;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.query.QueryHistoryMetrics;
+import org.apache.ignite.internal.processors.query.QueryHistory;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashMap;
@@ -57,7 +52,6 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 /**
  * Jdbc thin Partition Awareness test.
  */
-@SuppressWarnings({"ThrowableNotThrown"})
 public class JdbcThinPartitionAwarenessSelfTest extends JdbcThinAbstractSelfTest {
     /** URL. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1:10800..10802?partitionAwareness=true";
@@ -732,7 +726,7 @@ public class JdbcThinPartitionAwarenessSelfTest extends JdbcThinAbstractSelfTest
         int nonEmptyMetricsCntr = 0;
         int qryExecutionsCntr = 0;
         for (int i = 0; i < NODES_CNT; i++) {
-            Collection<QueryHistoryMetrics> metrics = ((IgniteH2Indexing)grid(i).context().query().getIndexing())
+            Collection<QueryHistory> metrics = ((IgniteH2Indexing)grid(i).context().query().getIndexing())
                 .runningQueryManager().queryHistoryMetrics().values();
 
             if (!metrics.isEmpty()) {

@@ -333,6 +333,18 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
+     * @param grpId Group id.
+     * @param partId Partition id.
+     *
+     * @return {@code True} if this node waits for the partition rebalance.
+     */
+    public boolean waitRebalance(int grpId, int partId) {
+        synchronized (mux) {
+            return waitInfo != null && waitInfo.waitGrps.getOrDefault(grpId, Collections.emptySet()).contains(partId);
+        }
+    }
+
+    /**
      * @return {@code true} if rebalance expected.
      */
     public boolean rebalanceRequired() {
@@ -2459,7 +2471,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             new WaitRebalanceInfo(fut.exchangeId().topologyVersion()) :
             new WaitRebalanceInfo(fut.context().events().lastServerEventVersion());
 
-        final Collection<ClusterNode> aliveNodes = fut.context().events().discoveryCache().serverNodes();
+        final Collection<ClusterNode> evtNodes = fut.context().events().discoveryCache().serverNodes();
 
         final Map<Integer, Map<Integer, List<T>>> assignment = new ConcurrentHashMap<>();
 
@@ -2491,7 +2503,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     List<ClusterNode> newNodes = newAssignment.get(p);
                     List<ClusterNode> curNodes = curAssignment.get(p);
 
-                    assert aliveNodes.containsAll(newNodes) : "Invalid new assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
+                    assert evtNodes.containsAll(newNodes) : "Invalid new assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
                         ", nodes=" + newNodes +
                         ", topVer=" + fut.context().events().discoveryCache().version() +
                         ", evts=" + fut.context().events().events() + "]";
@@ -2501,7 +2513,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     List<ClusterNode> newNodes0 = null;
 
-                    assert newPrimary == null || aliveNodes.contains(newPrimary) : "Invalid new primary [" +
+                    assert newPrimary == null || evtNodes.contains(newPrimary) : "Invalid new primary [" +
                         "grp=" + desc.cacheOrGroupName() +
                         ", node=" + newPrimary +
                         ", topVer=" + topVer + ']';
@@ -2517,14 +2529,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         newNodes0 = new ArrayList<>(curNodes.size());
 
                         for (ClusterNode node : curNodes) {
-                            if (aliveNodes.contains(node))
+                            if (evtNodes.contains(node))
                                 newNodes0.add(node);
                         }
                     }
                     else if (curPrimary != null && !curPrimary.equals(newPrimary)) {
                         GridDhtPartitionState state = top.partitionState(newPrimary.id(), p);
 
-                        if (aliveNodes.contains(curPrimary)) {
+                        if (evtNodes.contains(curPrimary)) {
                             if (state != OWNING) {
                                 newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
                                     p,
@@ -2539,7 +2551,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                                     ClusterNode curNode = curNodes.get(i);
 
                                     if (top.partitionState(curNode.id(), p) == OWNING &&
-                                        aliveNodes.contains(curNode)) {
+                                        evtNodes.contains(curNode)) {
                                         newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
                                             p,
                                             curNode,
@@ -2552,7 +2564,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                                 if (newNodes0 == null) {
                                     for (ClusterNode owner : owners) {
-                                        if (aliveNodes.contains(owner)) {
+                                        if (evtNodes.contains(owner)) {
                                             newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
                                                 p,
                                                 owner,
@@ -2567,12 +2579,12 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                         }
                     }
 
-                    // This will happen if no primary is changed but some backups still need to be rebalanced.
+                    // This will happen if no primary has changed but some backups still need to be rebalanced.
                     if (!owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p))
                         waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
 
                     if (newNodes0 != null) {
-                        assert aliveNodes.containsAll(newNodes0) : "Invalid late assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
+                        assert evtNodes.containsAll(newNodes0) : "Invalid late assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
                             ", nodes=" + newNodes +
                             ", topVer=" + fut.context().events().discoveryCache().version() +
                             ", evts=" + fut.context().events().events() + "]";
@@ -2973,7 +2985,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps + ']';
+            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps.keySet() + ']';
         }
     }
 
