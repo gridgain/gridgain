@@ -45,15 +45,21 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.FILE_WAL_POINTER_SIZE;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.CRC_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.REC_TYPE_SIZE;
 import static org.apache.ignite.internal.util.typedef.X.cause;
 
 /**
- *
+ * Tests correctness of exception message when WAL is corrupted.
  */
 public class WalCorruptionTest extends GridCommonAbstractTest {
+    /** Size of memory recovery record. */
+    private static final int MEMORY_RECOVERY_RECORD_PLAIN_SIZE = 8;
+
+    /** Size of init new page record. */
+    private static final int INIT_NEW_PAGE_RECORD_PLAIN_SIZE = 24;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
@@ -104,31 +110,40 @@ public class WalCorruptionTest extends GridCommonAbstractTest {
 
         stopGrid(0);
 
-        // Corrupt first record in file after header and record's necessary attributes.
+        int walPtrSerializedSize = FileWALPointer.POINTER_SIZE;
+
+        int secondRecordPos = HEADER_RECORD_SIZE + REC_TYPE_SIZE + walPtrSerializedSize + MEMORY_RECOVERY_RECORD_PLAIN_SIZE + CRC_SIZE;
+
+        // Corrupt second record in file.
         try (RandomAccessFile raf = new RandomAccessFile(wal, "rw")) {
-            raf.seek(HEADER_RECORD_SIZE + REC_TYPE_SIZE + FILE_WAL_POINTER_SIZE + 1);
+            raf.seek(secondRecordPos + REC_TYPE_SIZE + walPtrSerializedSize + 1);
 
             raf.write("a".getBytes());
         }
 
         try (WALIterator stIt = walIterator(walPath, ignite.context().config().getDataStorageConfiguration().getPageSize())) {
-            while (stIt.hasNextX())
-                stIt.nextX();
-        }
-        catch (Exception e) {
-            IgniteDataIntegrityViolationException ex = cause(e, IgniteDataIntegrityViolationException.class);
+            stIt.next();
 
-            if (ex != null) {
-                assertTrue(ex.getMessage().matches("val: [-0-9]{1,11}, writtenCrc: [-0-9]{1,11}, crcStartPos: [0-9]{1,9}, crcEndPos: [0-9]{1,9}"));
-
-                return;
+            try {
+                stIt.next();
             }
-            else{
-                fail("Test failed with wrong exception: " + e);
-            }
-        }
+            catch (Exception e) {
+                IgniteDataIntegrityViolationException ex = cause(e, IgniteDataIntegrityViolationException.class);
 
-        fail("Test passed without expected exception.");
+                if (ex != null) {
+                    assertTrue(ex.getMessage().matches("val: [-0-9]{1,11}, writtenCrc: [-0-9]{1,11}, " +
+                        "crcStartPos: " + secondRecordPos +
+                        ", crcEndPos: " + (secondRecordPos + REC_TYPE_SIZE + walPtrSerializedSize + INIT_NEW_PAGE_RECORD_PLAIN_SIZE)));
+
+                    return;
+                }
+                else {
+                    fail("Test failed with wrong exception: " + e);
+                }
+            }
+
+            fail("Test passed without expected exception.");
+        }
     }
 
     /** */
@@ -169,7 +184,7 @@ public class WalCorruptionTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
+     * Test WAL iterator.
      */
     private static class StandaloneWalRecordsIteratorTest extends StandaloneWalRecordsIterator {
         /** */
