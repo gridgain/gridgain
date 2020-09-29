@@ -634,25 +634,27 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
-                        UUID reqId = finishStateChangeMsg.requestId();
+                        if (ctx.clientNode()) {
+                            UUID reqId = finishStateChangeMsg.requestId();
 
-                        CountDownLatch changeStateLatch = changeStatesInProgress.get(finishStateChangeMsg.requestId());
+                            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
 
-                        if (ctx.clientNode() && changeStateLatch != null) {
-                            boolean awaited = true;
+                            if (changeStateLatch != null) {
+                                boolean awaited = true;
 
-                            try {
-                                awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+                                try {
+                                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+                                }
+                                catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+
+                                if (!awaited)
+                                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+                                        "before ChangeGlobalStateMessage was processed.");
+
+                                changeStatesInProgress.remove(reqId);
                             }
-                            catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                            }
-
-                            if (!awaited)
-                                log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                                    "before ChangeGlobalStateMessage was processed.");
-
-                            changeStatesInProgress.remove(reqId);
                         }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);
