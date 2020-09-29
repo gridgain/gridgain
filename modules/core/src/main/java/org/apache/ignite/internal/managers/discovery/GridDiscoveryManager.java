@@ -632,9 +632,11 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
-                        UUID reqId = ((ChangeGlobalStateFinishMessage)customMsg).requestId();
+                        ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
-                        CountDownLatch changeStateLatch = changeStatesInProgress.get(((ChangeGlobalStateFinishMessage)customMsg).requestId());
+                        UUID reqId = finishStateChangeMsg.requestId();
+
+                        CountDownLatch changeStateLatch = changeStatesInProgress.get(finishStateChangeMsg.requestId());
 
                         if (ctx.clientNode() && changeStateLatch != null) {
                             boolean awaited = true;
@@ -653,7 +655,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             changeStatesInProgress.remove(reqId);
                         }
 
-                        ctx.state().onStateFinishMessage((ChangeGlobalStateFinishMessage)customMsg);
+                        ctx.state().onStateFinishMessage(finishStateChangeMsg);
 
                         Snapshot snapshot = topSnap.get();
 
