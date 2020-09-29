@@ -91,6 +91,9 @@ public class CheckpointTimeoutLock {
      * @throws IgniteException If failed.
      */
     public void checkpointReadLock() {
+        if (checkpointReadWriteLock.isWriteLockHeldByCurrentThread())
+            return;
+
         long timeout = checkpointReadLockTimeout;
 
         long start = U.currentTimeMillis();
@@ -127,7 +130,10 @@ public class CheckpointTimeoutLock {
                     if (checkpointReadWriteLock.getReadHoldCount() > 1 || safeToUpdatePageMemories() || checkpointer.runner() == null)
                         break;
                     else {
-                        CheckpointProgress pages = checkpointer.scheduleCheckpoint(0, "too many dirty pages");
+                        //If the checkpoint is triggered outside of the lock,
+                        // it could cause the checkpoint to fire again for the same reason
+                        // (due to a data race between collecting dirty pages and triggering the checkpoint)
+                        CheckpointProgress checkpoint = checkpointer.scheduleCheckpoint(0, "too many dirty pages");
 
                         checkpointReadWriteLock.readUnlock();
 
@@ -135,7 +141,7 @@ public class CheckpointTimeoutLock {
                             failCheckpointReadLock();
 
                         try {
-                            pages
+                            checkpoint
                                 .futureFor(LOCK_RELEASED)
                                 .getUninterruptibly();
                         }
