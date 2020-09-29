@@ -369,7 +369,8 @@ public class HLL implements Cloneable {
                 if(sparseProbabilisticStorage.size() > sparseThreshold) {
                     initializeStorage(HLLType.FULL);
                     for(final int registerIndex : sparseProbabilisticStorage.keySet()) {
-                        final byte registerValue = sparseProbabilisticStorage.get(registerIndex);
+                        Byte registerValueByte = sparseProbabilisticStorage.get(registerIndex);
+                        final byte registerValue = (registerValueByte == null) ? 0 : registerValueByte;
                         probabilisticStorage.setMaxRegister(registerIndex, registerValue);
                     }
                     sparseProbabilisticStorage = null;
@@ -425,7 +426,8 @@ public class HLL implements Cloneable {
         // NOTE:  no +1 as in paper since 0-based indexing
         final int j = (int)(rawValue & mBitsMask);
 
-        final byte currentValue = sparseProbabilisticStorage.get(j);
+        Byte currentValueByte = sparseProbabilisticStorage.get(j);
+        final byte currentValue = (currentValueByte == null) ? 0 : currentValueByte;
         if(p_w > currentValue) {
             sparseProbabilisticStorage.put(j, p_w);
         }
@@ -543,7 +545,8 @@ public class HLL implements Cloneable {
         double sum = 0;
         int numberOfZeroes = 0/*"V" in the paper*/;
         for(int j=0; j<m; j++) {
-            final long register = sparseProbabilisticStorage.get(j);
+            Byte registerByte = sparseProbabilisticStorage.get(j);
+            final long register = (registerByte == null) ? 0 : registerByte;
 
             sum += 1.0 / (1L << register);
             if(register == 0L) numberOfZeroes++;
