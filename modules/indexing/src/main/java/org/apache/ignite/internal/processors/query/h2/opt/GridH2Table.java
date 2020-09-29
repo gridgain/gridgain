@@ -54,6 +54,8 @@ import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -463,6 +465,17 @@ public class GridH2Table extends TableBase {
      */
     public boolean isCacheLazy() {
         return cacheInfo.cacheContext() == null;
+    }
+
+    public ObjectStatistics tableStatistics() {
+        // TODO get without typecast
+        try {
+            IgniteStatisticsManager statManager = cacheInfo.cacheContext().kernalContext().query().getIndexing().statsManager();
+            return statManager.getLocalStatistics(identifier.schema(), identifier.table());
+        } catch (NullPointerException e) {
+            // TODO remove try/catch
+            return null;
+        }
     }
 
     /**
@@ -1251,6 +1264,7 @@ public class GridH2Table extends TableBase {
      * Refreshes table stats if they are outdated.
      */
     private void refreshStatsIfNeeded() {
+        // TODO remove?
         TableStatistics stats = tblStats;
 
         long statsTotalRowCnt = stats.totalRowCount();

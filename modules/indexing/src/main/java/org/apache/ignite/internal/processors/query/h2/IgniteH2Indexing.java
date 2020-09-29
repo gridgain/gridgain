@@ -158,6 +158,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisito
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.sql.command.SqlCommand;
 import org.apache.ignite.internal.sql.command.SqlCommitTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
@@ -322,6 +323,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Query message listener. */
     private GridMessageListener qryLsnr;
 
+    /** Statistic manager. */
+    private IgniteStatisticsManager statsManager;
     /**
      * @return Kernal context.
      */
@@ -2204,6 +2207,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         schemaMgr = new SchemaManager(ctx, connections());
         schemaMgr.start(ctx.config().getSqlConfiguration().getSqlSchemas());
 
+        statsManager = new IgniteStatisticsManagerImpl(ctx, schemaMgr);
+
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
 
@@ -3338,6 +3343,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     @Override
     public IgniteStatisticsManager statsManager() {
-        return null;
+        return statsManager;
     }
 }

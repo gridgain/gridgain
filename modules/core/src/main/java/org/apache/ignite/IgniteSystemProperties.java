@@ -1402,8 +1402,9 @@ public final class IgniteSystemProperties {
      * .
      * The possible values:
      *         - "LAST",
+     *         - "COMPATIBLE_8_7_28"
      *         - "COMPATIBLE_8_7_12",
-     *         - COMPATIBLE_8_7_6
+     *         - "COMPATIBLE_8_7_6"
      *
      * The last cost function is used by default.
      */
