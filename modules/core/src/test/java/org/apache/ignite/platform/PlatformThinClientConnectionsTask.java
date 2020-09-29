@@ -29,7 +29,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -62,8 +62,8 @@ public class PlatformThinClientConnectionsTask extends ComputeTaskAdapter<Object
 
         /** {@inheritDoc} */
         @Nullable @Override public String[] execute() {
-            ClientProcessorMXBean bean = GridAbstractTest.getMxBean(igniteInstanceName, "Clients",
-                    ClientListenerProcessor.class, ClientProcessorMXBean.class);
+            ClientProcessorMXBean bean = GridCommonAbstractTest.getMxBean(igniteInstanceName, "Clients",
+                    ClientListenerProcessor.class.getSimpleName(), ClientProcessorMXBean.class);
 
             List<String> connections = bean.getConnections();
 
