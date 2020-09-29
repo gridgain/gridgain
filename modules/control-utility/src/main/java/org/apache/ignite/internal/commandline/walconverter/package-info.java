@@ -13,16 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
 
 /**
- * Test suite for dev utils.
+ * <!-- Package description. -->
+ * Contains development utilities for Ignite useful for PDS artifacts analysis.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-})
-public class DevUtilsTestSuite {
-}
+package org.apache.ignite.internal.commandline.walconverter;

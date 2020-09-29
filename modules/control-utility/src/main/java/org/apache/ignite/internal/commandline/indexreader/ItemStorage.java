@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
-
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.internal.commandline.indexreader;
 
 /**
- * Test suite for dev utils.
+ * This class is used for index tree traversal to store each tree's items. It's useful to have different storage
+ * logic for different trees. See implementations of this interface for more info.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-})
-public class DevUtilsTestSuite {
+interface ItemStorage<T> extends Iterable<T> {
+    /** */
+    void add(T item);
+
+    /** */
+    boolean contains(T item);
+
+    /** */
+    long size();
 }
