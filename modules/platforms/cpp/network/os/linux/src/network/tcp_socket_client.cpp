@@ -24,6 +24,8 @@
 #include <cstring>
 
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 #include <ignite/common/concurrent.h>
 
@@ -34,6 +36,23 @@ namespace ignite
 {
     namespace network
     {
+        /**
+         * Shuffle addresses randomly.
+         * @param addrsIn Addresses.
+         * @return Randomly shuffled addresses.
+         */
+        std::vector<addrinfo*> ShuffleAddresses(addrinfo* addrsIn)
+        {
+            std::vector<addrinfo*> res;
+
+            for (addrinfo *it = addrsIn; it != NULL; it = it->ai_next)
+                res.push_back(it);
+
+            std::random_shuffle(res.begin(), res.end());
+
+            return res;
+        }
+
         TcpSocketClient::TcpSocketClient() :
             socketHandle(SOCKET_ERROR),
             blocking(true)
@@ -65,17 +84,21 @@ namespace ignite
             if (res != 0)
                 ThrowNetworkError("Can not resolve host: " + std::string(hostname) + ":" + strPort);
 
+            std::vector<addrinfo*> shuffled = ShuffleAddresses(result);
+
             std::string lastErrorMsg = "Failed to resolve host";
             bool isTimeout = false;
 
             // Attempt to connect to an address until one succeeds
-            for (addrinfo *it = result; it != NULL; it = it->ai_next)
+            for (std::vector<addrinfo*>::iterator it = shuffled.begin(); it != shuffled.end(); ++it)
             {
+                addrinfo* addr = *it;
+
                 lastErrorMsg = "Failed to establish connection with the host";
                 isTimeout = false;
 
                 // Create a SOCKET for connecting to server
-                socketHandle = socket(it->ai_family, it->ai_socktype, it->ai_protocol);
+                socketHandle = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 
                 if (socketHandle == SOCKET_ERROR)
                 {
@@ -87,7 +110,7 @@ namespace ignite
                 TrySetOptions();
 
                 // Connect to server.
-                res = connect(socketHandle, it->ai_addr, static_cast<int>(it->ai_addrlen));
+                res = connect(socketHandle, addr->ai_addr, static_cast<int>(addr->ai_addrlen));
                 if (SOCKET_ERROR == res)
                 {
                     int lastError = errno;
