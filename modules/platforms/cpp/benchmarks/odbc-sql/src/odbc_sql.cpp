@@ -51,7 +51,8 @@ class OdbcSqlBenchmark : public benchmark::OdbcBenchmark
 {
 public:
     OdbcSqlBenchmark(boost::shared_ptr<const ConfigType> cfg) :
-        OdbcBenchmark(cfg)
+        OdbcBenchmark(cfg),
+        loadLock(false)
     {
         // No-op.
     }
@@ -61,8 +62,69 @@ public:
         // No-op.
     }
 
+    /**
+     * Try lock cache for data load.
+     * @return @c true if locked successfully and @c false if already locked.
+     */
+    bool TryLockDataLoad()
+    {
+        try
+        {
+            if (config->cacheName == "PUBLIC")
+            {
+                odbc_utils::ExecuteNoFetch(dbc, "CREATE TABLE PUBLIC.BenchLock (id int primary key)");
+            }
+            else
+            {
+                std::stringstream query;
+                int32_t lKey = config->cacheRangeBegin - 1;
+
+                query << "INSERT INTO " << fullTableName << " (_key, id) VALUES (" << lKey << ", " << lKey << ')';
+
+                odbc_utils::ExecuteNoFetch(dbc, query.str());
+            }
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    /**
+     * Unlock cache data load.
+     */
+    void UnlockDataLoad()
+    {
+        try
+        {
+            if (config->cacheName == "PUBLIC")
+            {
+                odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE PUBLIC.BenchLock (id int primary key)");
+            }
+            else
+            {
+                std::stringstream query;
+                int32_t lKey = config->cacheRangeBegin - 1;
+
+                query << "DELETE FROM " << fullTableName << " WHERE _key=" << lKey;
+
+                odbc_utils::ExecuteNoFetch(dbc, query.str());
+            }
+        }
+        catch (...)
+        {
+            // No-op.
+        }
+    }
+
     virtual void LoadData()
     {
+        loadLock = TryLockDataLoad();
+
+        if (!loadLock)
+            return;
+
         if (config->cacheName == "PUBLIC")
         {
             odbc_utils::ExecuteNoFetch(dbc, "DROP TABLE IF EXISTS PUBLIC.Person");
@@ -121,6 +183,14 @@ public:
         selectQuery.assign(selectQuery0.begin(), selectQuery0.end());
 
         persons.reserve(1024);
+    }
+
+    virtual void CleanUp()
+    {
+        if (loadLock)
+            UnlockDataLoad();
+
+        OdbcBenchmark::CleanUp();
     }
 
     virtual void DoAction()
@@ -196,6 +266,9 @@ private:
 
     /** Array for fetched values. */
     std::vector<Person> persons;
+
+    /** Lock. */
+    bool loadLock;
 };
 
 class OdbcSqlBenchmarkFactory : public benchmark::BenchmarkFactory<OdbcSqlBenchmark>
