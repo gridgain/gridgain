@@ -32,7 +32,7 @@ public class ChangeBackupFilterTest extends GridCommonAbstractTest {
     public static final String MEM_REGION_NAME = "mem";
 
     private boolean startWithCache = false;
-    private boolean startWithCacheAnotherBackupFilter = false;
+    private boolean startWithAnotherBackupFilter = false;
 
     private String cell;
 
@@ -50,7 +50,7 @@ public class ChangeBackupFilterTest extends GridCommonAbstractTest {
 
             IgniteBiPredicate<ClusterNode, List<ClusterNode>> affBackupFilter = null;
 
-            if(startWithCacheAnotherBackupFilter)
+            if(startWithAnotherBackupFilter)
                 affBackupFilter = new ClusterNodeAttributeFakeBackupFilter();
             else
                 affBackupFilter = new ClusterNodeAttributeColocatedBackupFilter(CELL_ATTR);
@@ -117,7 +117,7 @@ public class ChangeBackupFilterTest extends GridCommonAbstractTest {
 
         log.info("Start with another filter");
 
-        startWithCacheAnotherBackupFilter = true;
+        startWithAnotherBackupFilter = true;
 
         cell = "1";
 
@@ -129,7 +129,7 @@ public class ChangeBackupFilterTest extends GridCommonAbstractTest {
         ignite2_c2 = startGrid(2);
         ignite3_c2 = startGrid(3);
 
-        log.info("Activate with another filter");
+        log.info("Activate another filter");
 
         ignite0_c1.cluster().active(true);
 
@@ -205,11 +205,24 @@ public class ChangeBackupFilterTest extends GridCommonAbstractTest {
     }
 
     private static class ClusterNodeAttributeFakeBackupFilter implements IgniteBiPredicate<ClusterNode, List<ClusterNode>> {
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 2L;
 
         @Override
         public boolean apply(ClusterNode clusterNode, List<ClusterNode> clusterNodes) {
+            log.debug("ClusterNodeAttributeFakeBackupFilter::apply");
+
             return false;
+        }
+
+    }
+
+    private static class ClusterNodeAttributeAllBackupFilter implements IgniteBiPredicate<ClusterNode, List<ClusterNode>> {
+        private static final long serialVersionUID = 3L;
+
+        @Override
+        public boolean apply(ClusterNode clusterNode, List<ClusterNode> clusterNodes) {
+            log.debug("ClusterNodeAttributeAllBackupFilter::apply");
+            return true;
         }
 
     }
@@ -224,6 +237,8 @@ public class ChangeBackupFilterTest extends GridCommonAbstractTest {
 
         @Override
         public boolean apply(ClusterNode candidate, List<ClusterNode> previouslySelected) {
+            log.debug("ClusterNodeAttributeColocatedBackupFilter::apply");
+
             Iterator var3 = previouslySelected.iterator();
 
             if (candidate.attribute(this.attributeName) == null)
