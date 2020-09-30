@@ -30,29 +30,14 @@
 #include <ignite/common/concurrent.h>
 
 #include <ignite/ignite_error.h>
+
 #include "network/tcp_socket_client.h"
+#include "network/internal_utils.h"
 
 namespace ignite
 {
     namespace network
     {
-        /**
-         * Shuffle addresses randomly.
-         * @param addrsIn Addresses.
-         * @return Randomly shuffled addresses.
-         */
-        std::vector<addrinfo*> ShuffleAddresses(addrinfo* addrsIn)
-        {
-            std::vector<addrinfo*> res;
-
-            for (addrinfo *it = addrsIn; it != NULL; it = it->ai_next)
-                res.push_back(it);
-
-            std::random_shuffle(res.begin(), res.end());
-
-            return res;
-        }
-
         TcpSocketClient::TcpSocketClient() :
             socketHandle(SOCKET_ERROR),
             blocking(true)
@@ -84,7 +69,7 @@ namespace ignite
             if (res != 0)
                 ThrowNetworkError("Can not resolve host: " + std::string(hostname) + ":" + strPort);
 
-            std::vector<addrinfo*> shuffled = ShuffleAddresses(result);
+            std::vector<addrinfo*> shuffled = internal_utils::ShuffleAddresses(result);
 
             std::string lastErrorMsg = "Failed to resolve host";
             bool isTimeout = false;

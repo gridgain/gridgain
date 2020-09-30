@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _IGNITE_NETWORK_UTILS
-#define _IGNITE_NETWORK_UTILS
+#ifndef _IGNITE_NETWORK_INTERNAL_UTILS
+#define _IGNITE_NETWORK_INTERNAL_UTILS
 
 #include <set>
 #include <string>
@@ -26,16 +26,28 @@ namespace ignite
 {
     namespace network
     {
-        namespace utils
+        namespace internal_utils
         {
             /**
-             * Get set of local addresses.
+             * Shuffle addresses randomly.
              *
-             * @param addrs Addresses set.
+             * @param addrsIn Addresses.
+             * @return Randomly shuffled addresses.
              */
-            void GetLocalAddresses(std::set<std::string>& addrs);
+            template<typename Addrinfo>
+            std::vector<Addrinfo*> ShuffleAddresses(Addrinfo* addrsIn)
+            {
+                std::vector<Addrinfo*> res;
+
+                for (Addrinfo *it = addrsIn; it != NULL; it = it->ai_next)
+                    res.push_back(it);
+
+                std::random_shuffle(res.begin(), res.end());
+
+                return res;
+            }
         }
     }
 }
 
-#endif //_IGNITE_NETWORK_UTILS
+#endif //_IGNITE_NETWORK_INTERNAL_UTILS
