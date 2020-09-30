@@ -1244,19 +1244,19 @@ public class IgniteIndexReader implements AutoCloseable {
         AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
         List<CLIArgument> argsConfiguration = asList(
-            CLIArgument.mandatoryArg(
+            mandatoryArg(
                     DIR.arg(),
                     "partition directory, where " + INDEX_FILE_NAME + " and (optionally) partition files are located.",
                     String.class
             ),
-            CLIArgument.optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
-            CLIArgument.optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
-            CLIArgument.optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
-            CLIArgument.optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
+            optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
+            optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
+            optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
+            optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
                 "without spaces, other index trees will be skipped.", String[].class, () -> null),
-            CLIArgument.optionalArg(DEST_FILE.arg(),
+            optionalArg(DEST_FILE.arg(),
                     "file to print the report to (by default report is printed to console).", String.class, () -> null),
-            CLIArgument.optionalArg(CHECK_PARTS.arg(),
+            optionalArg(CHECK_PARTS.arg(),
                     "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
         );
 
