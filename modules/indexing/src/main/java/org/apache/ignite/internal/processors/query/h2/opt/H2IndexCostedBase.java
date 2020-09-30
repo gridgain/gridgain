@@ -104,7 +104,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 break;
 
             default:
-                constFunc = this::getCostRangeIndex_8_7_28;
+                constFunc = this::getCostRangeIndex_Last;
 
                 break;
         }
@@ -113,10 +113,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to dispatch cost function on new and old versions.
      */
-    protected long costRangeIndex(int[] masks, long rowCount,
+    protected long costRangeIndex(Session ses, int[] masks, long rowCount,
         TableFilter[] filters, int filter, SortOrder sortOrder,
         boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
-        return constFunc.getCostRangeIndex(masks, rowCount, filters, filter, sortOrder, isScanIndex, allColumnsSet);
+        return constFunc.getCostRangeIndex(ses, masks, rowCount, filters, filter, sortOrder, isScanIndex, allColumnsSet);
     }
 
     /**
@@ -131,7 +131,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to support  compatibility with old version.
      */
-    private long getCostRangeIndex_8_7_28(int[] masks, long rowCount,
+    private long getCostRangeIndex_8_7_28(Session ses, int[] masks, long rowCount,
                                           TableFilter[] filters, int filter, SortOrder sortOrder,
                                           boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         rowCount += Constants.COST_ROW_OFFSET;
@@ -322,7 +322,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /** Re-implement {@link BaseIndex#getCostRangeIndex} to support compatibility with versions
      * between 8.7.8 and 8.7.12.
      */
-    protected final long getCostRangeIndex_8_7_12(int[] masks, long rowCount,
+    protected final long getCostRangeIndex_8_7_12(Session ses, int[] masks, long rowCount,
         TableFilter[] filters, int filter, SortOrder sortOrder,
         boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         rowCount += Constants.COST_ROW_OFFSET;
@@ -503,7 +503,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /**
      * Re-implement {@link BaseIndex#getCostRangeIndex} to suppor  compatibility with versions 8.7.6 and older.
      */
-    private final long getCostRangeIndex_8_7_6(int[] masks, long rowCount,
+    private final long getCostRangeIndex_8_7_6(Session ses, int[] masks, long rowCount,
         TableFilter[] filters, int filter, SortOrder sortOrder,
         boolean isScanIndex, AllColumnsForPlan allColumnsSet) {
         // Compatibility with old version without statistics.
@@ -671,7 +671,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * Cost function.
          * See more: {@link BaseIndex#getCostRangeIndex}.
          */
-        long getCostRangeIndex(int[] masks, long rowCount,
+        long getCostRangeIndex(Session ses, int[] masks, long rowCount,
             TableFilter[] filters, int filter, SortOrder sortOrder,
             boolean isScanIndex, AllColumnsForPlan allColumnsSet);
     }
@@ -783,10 +783,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                         break;
                     }
+                    else if (isNullFilter(ses, column, filter)) {
+                        if (colStats != null)
+                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost - (i > 0 ? 1 : 0));
+                    }
                     else if (isNotNullFilter(ses, column, filter)) {
-                        if (colStats != null) {
+                        if (colStats != null)
                             rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost - (i > 0 ? 1 : 0));
-                        }
                     }
                     break;
                 }

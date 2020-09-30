@@ -65,13 +65,6 @@ public class IgniteStatisticsManagerImpl implements  IgniteStatisticsManager {
         return statsRepos;
     }
 
-    public void start() {
-        statsRepos.start();
-        //ctx.io().addMessageListener(topic, this);
-        //ctx.io().addMessageListener(GridTopic.TOPIC_QUERY, );
-    }
-
-
     @Override
     public ObjectStatistics getLocalStatistics(String schemaName, String objName) {
         return statsRepos.getLocalStatistics(new QueryTable(schemaName, objName), true);
