@@ -207,4 +207,12 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @param grpId Group id.
      */
     public boolean disabled(int grpId);
+
+    /**
+     * Getting local WAL segment size.
+     *
+     * @param idx Absolute segment index.
+     * @return Segment size, {@code -1} if size is unknown.
+     */
+    long segmentSize(long idx);
 }

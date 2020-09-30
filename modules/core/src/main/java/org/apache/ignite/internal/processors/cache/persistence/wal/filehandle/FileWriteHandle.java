@@ -27,7 +27,6 @@ import org.jetbrains.annotations.Nullable;
  * File write handle.
  */
 public interface FileWriteHandle {
-
     /**
      * @return Version of serializer.
      */

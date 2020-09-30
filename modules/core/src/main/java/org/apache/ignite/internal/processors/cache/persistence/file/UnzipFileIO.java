@@ -21,7 +21,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.Enumeration;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 /**
@@ -43,20 +45,24 @@ public class UnzipFileIO extends AbstractFileIO {
     private long totalBytesRead = 0;
 
     /**
+     * Constructor.
+     *
      * @param zip Compressed file.
      */
     public UnzipFileIO(File zip) throws IOException {
         zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zip)));
 
-        ZipEntry entry = zis.getNextEntry();
+        try (ZipFile zipFile = new ZipFile(zip)) {
+            Enumeration<? extends ZipEntry> zipEntries = zipFile.entries();
 
-        if (entry == null) {
-            close();
+            if (!zipEntries.hasMoreElements()) {
+                close();
 
-            throw new IOException("Failed to read entry from compressed file: " + zip.getCanonicalPath());
+                throw new IOException("Failed to read entry from compressed file: " + zip.getCanonicalPath());
+            }
+
+            size = zipEntries.nextElement().getSize();
         }
-
-        size = entry.getSize();
     }
 
     /** {@inheritDoc} */
