@@ -69,7 +69,6 @@ public interface FileInput extends ByteBufferBackedDataInput {
         /** */
         private FileInput delegate;
 
-
         /** */
         private long calcStartPos = -1;
 
