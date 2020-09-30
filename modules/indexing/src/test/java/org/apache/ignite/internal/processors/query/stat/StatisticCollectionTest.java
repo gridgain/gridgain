@@ -165,7 +165,7 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, isNullSql, hints);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_COL_INDEX"}, isNullSql, wrongHints);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, isNullSql, wrongHints);
 
         // TODO implement is not null check when optimizer will able to properly handle such condition
 
@@ -175,21 +175,21 @@ public class StatisticCollectionTest extends TableStatisticsAbstractTest {
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, sql, hints);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_COL_INDEX"}, sql, wrongHints);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sql, wrongHints);
 
         String sqlMoreCond = sql + " and col_no_index = 213";
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, sqlMoreCond, noHints);
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, sqlMoreCond, hints);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_COL_INDEX"}, sqlMoreCond, wrongHints);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, sqlMoreCond, wrongHints);
 
         String descSql = sql + String.format(" order by col_%s desc", name);
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, descSql, noHints);
 
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_" + name}, descSql, hints);
 
-        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"DTYPES_COL_INDEX"}, descSql, wrongHints);
+        checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{}, descSql, wrongHints);
 
         String descNoIndexSql = sql + " order by col_no_index desc";
 
