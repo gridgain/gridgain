@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.testframework;
 
 import java.util.concurrent.CountDownLatch;
@@ -29,7 +30,7 @@ public class MessageWaitingLogListener extends LogListener {
     private final String expMsg;
 
     /** Callback. */
-    private final CountDownLatch latch = new CountDownLatch(1);
+    private final CountDownLatch latch;
 
     /**
      * Constructor.
@@ -37,7 +38,19 @@ public class MessageWaitingLogListener extends LogListener {
      * @param expMsg Regexp for message that triggers callback.
      */
     public MessageWaitingLogListener(String expMsg) {
+        this(expMsg, 1);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param expMsg Regexp for message that triggers callback.
+     * @param msgCnt Count of messages to wait.
+     */
+    public MessageWaitingLogListener(String expMsg, int msgCnt) {
         this.expMsg = expMsg;
+
+        latch = new CountDownLatch(msgCnt);
     }
 
     /** {@inheritDoc} */
