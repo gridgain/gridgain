@@ -74,6 +74,15 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      */
     @Nullable public abstract <F> F field(int fieldId) throws BinaryObjectException;
 
+    /**
+     * Gets field value and ignore value if it is a recursive link.
+     *
+     * @param fieldId Field ID.
+     * @return Field value or null if the field is handle (recursive link).
+     * @throws org.apache.ignite.binary.BinaryObjectException In case of any other error.
+     */
+    @Nullable public abstract <F> F fieldNoHandle(int fieldId) throws BinaryObjectException;
+
     /** {@inheritDoc} */
     @Override public int enumOrdinal() throws BinaryObjectException {
         throw new BinaryObjectException("Object is not enum.");
