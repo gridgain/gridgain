@@ -308,7 +308,6 @@ public class GridCacheRawVersionedEntry<K, V> extends DataStreamerEntry implemen
         }
 
         assert key != null;
-        assert !(val != null && valBytes != null);
 
         return reader.afterMessageRead(GridCacheRawVersionedEntry.class);
     }
@@ -316,7 +315,6 @@ public class GridCacheRawVersionedEntry<K, V> extends DataStreamerEntry implemen
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         assert key != null;
-        assert !(val != null && valBytes != null);
 
         writer.setBuffer(buf);
 
