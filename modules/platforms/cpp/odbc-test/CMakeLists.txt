@@ -26,7 +26,7 @@ endif()
 
 find_package(ODBC REQUIRED)
 
-include_directories(include ../odbc/include ../network/include ${ODBC_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${JNI_INCLUDE_DIRS})
+include_directories(include ../odbc/include ../network/include ../network/src ${ODBC_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${JNI_INCLUDE_DIRS})
 
 set(SOURCES src/teamcity/teamcity_boost.cpp
         src/teamcity/teamcity_messages.cpp
