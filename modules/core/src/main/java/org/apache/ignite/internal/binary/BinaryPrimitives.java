@@ -373,4 +373,35 @@ public abstract class BinaryPrimitives {
 
         return Double.longBitsToDouble(val);
     }
+
+    public static int writeVarlong(byte[] arr, int off, long val) {
+        int pos = off;
+
+        while ((val & ~0x7f) != 0) {
+            arr[pos++] = (byte)(val | 0x80);
+            val >>>= 7;
+        }
+
+        arr[pos++] = (byte)val;
+
+        return pos - off;
+    }
+
+    public static long readVarlong(byte[] arr, int off) {
+        long x = arr[off++];
+
+        if (x >= 0)
+            return x;
+
+        x &= 0x7f;
+
+        // TODO GG-14923 Bounds check.
+        for (int s = 7;; s += 7) {
+            long b = arr[off++];
+            x |= (b & 0x7f) << s;
+
+            if (b >= 0)
+                return x;
+        }
+    }
 }

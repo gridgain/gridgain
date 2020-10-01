@@ -34,16 +34,16 @@ public class BikeTuple {
 
     public Object attr(int i, Class<?> type, int intType) {
         // t0d0 worth adding special method for extracting needed subset of columns
-        int nOff = nullsOffset();
+        int nullsOff = nullsOffset();
 
         int nullChunkPos = i >>> 3;
-        byte nullChunk = data[nOff + 1 + nullChunkPos];
+        byte nullChunk = data[nullsOff + 1 + nullChunkPos];
         int posInChunk = i % 8;
 
         if (((nullChunk >>> posInChunk) & 1) == 0)
             return null;
 
-        int lenOff = nOff + data[nOff] & 0xFF;
+        int lenOff = nullsOff + data[nullsOff] & 0xFF;
 
         int off = lenOff + BinaryPrimitives.readShort(data, lenOff);
 
@@ -53,7 +53,7 @@ public class BikeTuple {
         int j = 0;
         while (j < nullChunkPos) {
             byte chunk;
-            if ((chunk = data[nOff + 1 + j]) != -1) {
+            if ((chunk = data[nullsOff + 1 + j]) != -1) {
                 // search for nulls before
                 nonNullsBefore -= NTBL[chunk & 0xFF];
             }
