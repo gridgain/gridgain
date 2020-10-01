@@ -17,10 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
-import org.h2.command.dml.AllColumnsForPlan;
-import org.h2.engine.Session;
-import org.h2.result.SortOrder;
-import org.h2.table.TableFilter;
+import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.result.SortOrder;
+import org.gridgain.internal.h2.table.TableFilter;
 import org.jetbrains.annotations.Nullable;
 
 /**

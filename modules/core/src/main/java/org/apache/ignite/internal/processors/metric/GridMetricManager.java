@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.metric;
 
+import java.io.Serializable;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -35,33 +36,55 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteComponentType;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.metric.HistogramMetric;
+import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
+import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
+import static org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage.longKeysSupported;
+import static org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage.isSupported;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.fromFullName;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.util.IgniteUtils.notifyListeners;
 
 /**
- * This manager should provide {@link ReadOnlyMetricRegistry} for each configured {@link MetricExporterSpi}.
+ * This manager should provide {@link ReadOnlyMetricManager} for each configured {@link MetricExporterSpi}.
  *
  * @see MetricExporterSpi
  * @see MetricRegistry
  */
-public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> implements ReadOnlyMetricRegistry {
+public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> implements ReadOnlyMetricManager {
+    /** Class name for a SQL view metrics exporter. */
+    public static final String SQL_SPI = "org.apache.ignite.internal.processors.metric.sql.SqlViewMetricExporterSpi";
+
     /** */
     public static final String ACTIVE_COUNT_DESC = "Approximate number of threads that are actively executing tasks.";
 
@@ -114,8 +137,14 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** System metrics prefix. */
     public static final String SYS_METRICS = "sys";
 
+    /** Ignite node metrics prefix. */
+    public static final String IGNITE_METRICS = "ignite";
+
     /** Partition map exchange metrics prefix. */
     public static final String PME_METRICS = "pme";
+
+    /** Cluster metrics prefix. */
+    public static final String CLUSTER_METRICS = "cluster";
 
     /** Transaction metrics prefix. */
     public static final String TX_METRICS = "tx";
@@ -162,6 +191,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Histogram of blocking PME durations metric name. */
     public static final String PME_OPS_BLOCKED_DURATION_HISTOGRAM = "CacheOperationsBlockedDurationHistogram";
 
+    /** Whether cluster is in fully rebalanced state metric name. */
+    public static final String REBALANCED = "Rebalanced";
+
     /** JVM interface to memory consumption info */
     private static final MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
 
@@ -177,14 +209,26 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** */
     private static final Collection<GarbageCollectorMXBean> gc = ManagementFactory.getGarbageCollectorMXBeans();
 
+    /** Prefix for {@link HitRateMetric} configuration property name. */
+    public static final String HITRATE_CFG_PREFIX = metricName("metrics", "hitrate");
+
+    /** Prefix for {@link HistogramMetric} configuration property name. */
+    public static final String HISTOGRAM_CFG_PREFIX = metricName("metrics", "histogram");
+
     /** Registered metrics registries. */
-    private final ConcurrentHashMap<String, MetricRegistry> registries = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ReadOnlyMetricRegistry> registries = new ConcurrentHashMap<>();
 
     /** Metric registry creation listeners. */
-    private final List<Consumer<MetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
+    private final List<Consumer<ReadOnlyMetricRegistry>> metricRegCreationLsnrs = new CopyOnWriteArrayList<>();
 
     /** Metric registry remove listeners. */
-    private final List<Consumer<MetricRegistry>> metricRegRemoveLsnrs = new CopyOnWriteArrayList<>();
+    private final List<Consumer<ReadOnlyMetricRegistry>> metricRegRemoveLsnrs = new CopyOnWriteArrayList<>();
+
+    /** Read-only metastorage. */
+    private volatile ReadableDistributedMetaStorage roMetastorage;
+
+    /** Metastorage with the write access. */
+    private volatile DistributedMetaStorage metastorage;
 
     /** Metrics update worker. */
     private GridTimeoutProcessor.CancelableTask metricsUpdateTask;
@@ -205,7 +249,26 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param ctx Kernal context.
      */
     public GridMetricManager(GridKernalContext ctx) {
-        super(ctx, ctx.config().getMetricExporterSpi());
+        super(ctx, ((Supplier<MetricExporterSpi[]>)() -> {
+            MetricExporterSpi[] spi = ctx.config().getMetricExporterSpi();
+
+            if (!IgniteComponentType.INDEXING.inClassPath())
+                return spi;
+
+            MetricExporterSpi[] spiWithSql = new MetricExporterSpi[spi != null ? spi.length + 1 : 1];
+
+            if (!F.isEmpty(spi))
+                System.arraycopy(spi, 0, spiWithSql, 0, spi.length);
+
+            try {
+                spiWithSql[spiWithSql.length - 1] = U.newInstance(SQL_SPI);
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+
+            return spiWithSql;
+        }).get());
 
         ctx.addNodeAttribute(ATTR_PHY_RAM, totalSysMemory());
 
@@ -241,7 +304,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     }
 
     /** {@inheritDoc} */
-    @Override protected void onKernalStart0() throws IgniteCheckedException {
+    @Override protected void onKernalStart0() {
         metricsUpdateTask = ctx.timeout().schedule(new MetricsUpdater(), METRICS_UPDATE_FREQ, METRICS_UPDATE_FREQ);
     }
 
@@ -251,6 +314,38 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             spi.setMetricRegistry(this);
 
         startSpi();
+
+        ctx.internalSubscriptionProcessor().registerDistributedMetastorageListener(
+            new DistributedMetastorageLifecycleListener() {
+                /** {@inheritDoc} */
+                @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                    roMetastorage = metastorage;
+
+                    try {
+                        metastorage.iterate(HITRATE_CFG_PREFIX, (name, val) -> onHitRateConfigChanged(
+                            name.substring(HITRATE_CFG_PREFIX.length() + 1), (Long) val));
+
+                        metastorage.iterate(HISTOGRAM_CFG_PREFIX, (name, val) -> onHistogramConfigChanged(
+                            name.substring(HISTOGRAM_CFG_PREFIX.length() + 1), (long[]) val));
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+
+                    metastorage.listen(n -> n.startsWith(HITRATE_CFG_PREFIX),
+                        (name, oldVal, newVal) -> onHitRateConfigChanged(
+                            name.substring(HITRATE_CFG_PREFIX.length() + 1), (Long) newVal));
+
+                    metastorage.listen(n -> n.startsWith(HISTOGRAM_CFG_PREFIX),
+                        (name, oldVal, newVal) -> onHistogramConfigChanged(
+                            name.substring(HISTOGRAM_CFG_PREFIX.length() + 1), (long[]) newVal));
+                }
+
+                /** {@inheritDoc} */
+                @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
+                    GridMetricManager.this.metastorage = metastorage;
+                }
+            });
     }
 
     /** {@inheritDoc} */
@@ -268,10 +363,13 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @return Group of metrics.
      */
     public MetricRegistry registry(String name) {
-        return registries.computeIfAbsent(name, n -> {
-            MetricRegistry mreg = new MetricRegistry(name, name, log);
+        return (MetricRegistry)registries.computeIfAbsent(name, n -> {
+            MetricRegistry mreg = new MetricRegistry(name, name,
+                mname -> readFromMetastorage(metricName(HITRATE_CFG_PREFIX, mname)),
+                mname -> readFromMetastorage(metricName(HISTOGRAM_CFG_PREFIX, mname)),
+                log);
 
-            notifyListeners(mreg, metricRegCreationLsnrs);
+            notifyListeners(mreg, metricRegCreationLsnrs, log);
 
             return mreg;
         });
@@ -280,22 +378,41 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /**
      * @return Registries snapshot.
      */
-    public Map<String, MetricRegistry> registries() {
+    public Map<String, ReadOnlyMetricRegistry> registries() {
         return registries;
     }
 
+    /**
+     * Reads value from {@link #roMetastorage}.
+     *
+     * @param key Key.
+     * @param <T> Key type.
+     * @return Value or {@code null} if not found.
+     */
+    private <T extends Serializable> T readFromMetastorage(String key) {
+        if (roMetastorage == null)
+            return null;
+
+        try {
+            return roMetastorage.read(key);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
     /** {@inheritDoc} */
-    @NotNull @Override public Iterator<MetricRegistry> iterator() {
+    @NotNull @Override public Iterator<ReadOnlyMetricRegistry> iterator() {
         return registries.values().iterator();
     }
 
     /** {@inheritDoc} */
-    @Override public void addMetricRegistryCreationListener(Consumer<MetricRegistry> lsnr) {
+    @Override public void addMetricRegistryCreationListener(Consumer<ReadOnlyMetricRegistry> lsnr) {
         metricRegCreationLsnrs.add(lsnr);
     }
 
     /** {@inheritDoc} */
-    @Override public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr) {
+    @Override public void addMetricRegistryRemoveListener(Consumer<ReadOnlyMetricRegistry> lsnr) {
         metricRegRemoveLsnrs.add(lsnr);
     }
 
@@ -305,26 +422,152 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      * @param regName Metric registry name.
      */
     public void remove(String regName) {
-        MetricRegistry mreg = registries.remove(regName);
+        ReadOnlyMetricRegistry mreg = registries.remove(regName);
 
-        if (mreg != null)
-            notifyListeners(mreg, metricRegRemoveLsnrs);
+        if (mreg == null)
+            return;
+
+        notifyListeners(mreg, metricRegRemoveLsnrs, log);
+
+        DistributedMetaStorage metastorage0 = metastorage;
+
+        if (metastorage0 == null)
+            return;
+
+        if (isSupported(ctx) && longKeysSupported(ctx) && (metastorage != null)) {
+            try {
+                GridCompoundFuture opsFut = new GridCompoundFuture<>();
+
+                for (Metric m : mreg) {
+                    if (m instanceof HitRateMetric)
+                        opsFut.add(metastorage.removeAsync(metricName(HITRATE_CFG_PREFIX, m.name())));
+                    else if (m instanceof HistogramMetric)
+                        opsFut.add(metastorage.removeAsync(metricName(HISTOGRAM_CFG_PREFIX, m.name())));
+                }
+
+                opsFut.markInitialized();
+                opsFut.get();
+            }
+            catch (NodeStoppingException ignored) {
+                // No-op.
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
     }
 
     /**
-     * @param t Consumed object.
-     * @param lsnrs Listeners.
-     * @param <T> Type of consumed object.
+     * Change {@link HitRateMetric} configuration if it exists.
+     *
+     * @param name Metric name.
+     * @param rateTimeInterval New rate time interval.
+     * @throws IgniteCheckedException If write of configuration failed.
+     * @see HitRateMetric#reset(long, int)
      */
-    private <T> void notifyListeners(T t, List<Consumer<T>> lsnrs) {
-        for (Consumer<T> lsnr : lsnrs) {
-            try {
-                lsnr.accept(t);
-            }
-            catch (Exception e) {
-                U.warn(log, "Metric listener error", e);
-            }
+    public void configureHitRate(String name, long rateTimeInterval) throws IgniteCheckedException {
+        A.notNullOrEmpty(name, "name");
+        A.ensure(rateTimeInterval > 0, "rateTimeInterval should be positive");
+        A.notNull(metastorage, "Metastorage not ready. Node not started?");
+
+        if (ctx.isStopping())
+            throw new NodeStoppingException("Operation has been cancelled (node is stopping)");
+
+        metastorage.write(metricName(HITRATE_CFG_PREFIX, name), rateTimeInterval);
+    }
+
+    /**
+     * Stores {@link HistogramMetric} configuration in metastorage.
+     *
+     * @param name Metric name.
+     * @param bounds New bounds.
+     * @throws IgniteCheckedException If write of configuration failed.
+     */
+    public void configureHistogram(String name, long[] bounds) throws IgniteCheckedException {
+        A.notNullOrEmpty(name, "name");
+        A.notEmpty(bounds, "bounds");
+        A.notNull(metastorage, "Metastorage not ready. Node not started?");
+
+        if (ctx.isStopping())
+            throw new NodeStoppingException("Operation has been cancelled (node is stopping)");
+
+        metastorage.write(metricName(HISTOGRAM_CFG_PREFIX, name), bounds);
+    }
+
+    /**
+     * Change {@link HitRateMetric} instance configuration.
+     *
+     * @param name Metric name.
+     * @param rateTimeInterval New rateTimeInterval.
+     * @see HistogramMetricImpl#reset(long[])
+     */
+    private void onHitRateConfigChanged(String name, @Nullable Long rateTimeInterval) {
+        if (rateTimeInterval == null)
+            return;
+
+        A.ensure(rateTimeInterval > 0, "rateTimeInterval should be positive");
+
+        HitRateMetric m = find(name, HitRateMetric.class);
+
+        if (m == null)
+            return;
+
+        m.reset(rateTimeInterval);
+    }
+
+    /**
+     * Change {@link HistogramMetric} instance configuration.
+     *
+     * @param name Metric name.
+     * @param bounds New bounds.
+     */
+    private void onHistogramConfigChanged(String name, @Nullable long[] bounds) {
+        if (bounds == null)
+            return;
+
+        HistogramMetricImpl m = find(name, HistogramMetricImpl.class);
+
+        if (m == null)
+            return;
+
+        m.reset(bounds);
+    }
+
+    /**
+     * @param name Metric name.
+     * @param type Metric type.
+     * @return Metric.
+     */
+    private <T extends Metric> T find(String name, Class<T> type) {
+        A.notNull(name, "name");
+
+        T2<String, String> splitted = fromFullName(name);
+
+        MetricRegistry mreg = (MetricRegistry)registries.get(splitted.get1());
+
+        if (mreg == null) {
+            if (log.isInfoEnabled())
+                log.info("Metric registry not found[registry=" + splitted.get1() + ']');
+
+            return null;
         }
+
+        Metric m = mreg.findMetric(splitted.get2());
+
+        if (m == null) {
+            if (log.isInfoEnabled())
+                log.info("Metric not found[registry=" + splitted.get1() + ", metricName=" + splitted.get2() + ']');
+
+            return null;
+        }
+
+        if (!m.getClass().isAssignableFrom(type)) {
+            log.error("Metric '" + name + "' has wrong type[type=" + m.getClass().getSimpleName() + ']');
+
+            return null;
+        }
+
+        return (T) m;
     }
 
     /**
@@ -379,6 +622,8 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         monitorExecutor("GridSchemaExecutor", schemaExecSvc);
         monitorExecutor("GridRebalanceExecutor", rebalanceExecSvc);
 
+        monitorStripedPool("GridDataStreamExecutor", dataStreamExecSvc);
+
         if (idxExecSvc != null)
             monitorExecutor("GridIndexingExecutor", idxExecSvc);
 
@@ -387,7 +632,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         if (stripedExecSvc != null) {
             // Striped executor uses a custom adapter.
-            monitorStripedPool(stripedExecSvc);
+            monitorStripedPool("StripedExecutor", stripedExecSvc);
         }
 
         if (customExecSvcs != null) {
@@ -452,17 +697,18 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /**
      * Creates a MetricSet for an stripped executor.
      *
+     * @param name name of the bean to register
      * @param svc Executor.
      */
-    private void monitorStripedPool(StripedExecutor svc) {
-        MetricRegistry mreg = registry(metricName(THREAD_POOLS, "StripedExecutor"));
+    private void monitorStripedPool(String name, StripedExecutor svc) {
+        MetricRegistry mreg = registry(metricName(THREAD_POOLS, name));
 
         mreg.register("DetectStarvation",
             svc::detectStarvation,
             "True if possible starvation in striped pool is detected.");
 
         mreg.register("StripesCount",
-            svc::stripes,
+            svc::stripesCount,
             "Stripes count.");
 
         mreg.register("Shutdown",

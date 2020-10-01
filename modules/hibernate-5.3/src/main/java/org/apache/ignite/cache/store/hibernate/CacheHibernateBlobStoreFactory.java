@@ -52,7 +52,7 @@ import org.hibernate.SessionFactory;
  *           &lt;bean class=&quot;org.springframework.orm.hibernate3.LocalSessionFactoryBean&quot;&gt;
  *               &lt;property name=&quot;hibernateProperties&quot;&gt;
  *                   &lt;value&gt;
- *                       connection.url=jdbc:h2:mem:
+ *                       connection.url=jdbc:gg-h2:mem:
  *                       show_sql=true
  *                       hbm2ddl.auto=true
  *                       hibernate.dialect=org.hibernate.dialect.H2Dialect
@@ -80,7 +80,7 @@ import org.hibernate.SessionFactory;
  *             &lt;bean class=&quot;org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean&quot;&gt;
  *                 &lt;property name=&quot;hibernateProperties&quot;&gt;
  *                     &lt;value&gt;
- *                         connection.url=jdbc:h2:mem:
+ *                         connection.url=jdbc:gg-h2:mem:
  *                         show_sql=true
  *                         hbm2ddl.auto=true
  *                         hibernate.dialect=org.hibernate.dialect.H2Dialect
@@ -106,7 +106,7 @@ import org.hibernate.SessionFactory;
  *         class=&quot;org.apache.ignite.cache.store.hibernate.CacheHibernateBlobStoreFactory&quot;&gt;
  *         &lt;property name=&quot;hibernateProperties&quot;&gt;
  *             &lt;props&gt;
- *                 &lt;prop key=&quot;connection.url&quot;&gt;jdbc:h2:mem:&lt;/prop&gt;
+ *                 &lt;prop key=&quot;connection.url&quot;&gt;jdbc:gg-h2:mem:&lt;/prop&gt;
  *                 &lt;prop key=&quot;hbm2ddl.auto&quot;&gt;update&lt;/prop&gt;
  *                 &lt;prop key=&quot;show_sql&quot;&gt;true&lt;/prop&gt;
  *             &lt;/props&gt;

@@ -42,4 +42,9 @@ public interface BinaryReaderHandlesHolder {
      * @return Handles.
      */
     public BinaryReaderHandles handles();
+
+    /**
+     * @return {@code true} if the handles (links) must be ignored.
+     */
+    public boolean ignoreHandle();
 }

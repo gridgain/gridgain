@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -27,8 +28,9 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.store.GridCacheWriteBehindStore;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
@@ -180,20 +182,23 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Number of currently clearing partitions for rebalancing. */
     private final AtomicLongMetric rebalanceClearingPartitions;
 
+    /** Number of currently evicting non-affinity partitions. Not available in the old metrics framework. */
+    private final AtomicLongMetric evictingPartitions;
+
     /** Get time. */
-    private final HistogramMetric getTime;
+    private final HistogramMetricImpl getTime;
 
     /** Put time. */
-    private final HistogramMetric putTime;
+    private final HistogramMetricImpl putTime;
 
     /** Remove time. */
-    private final HistogramMetric rmvTime;
+    private final HistogramMetricImpl rmvTime;
 
     /** Commit time. */
-    private final HistogramMetric commitTime;
+    private final HistogramMetricImpl commitTime;
 
     /** Rollback time. */
-    private final HistogramMetric rollbackTime;
+    private final HistogramMetricImpl rollbackTime;
 
     /** Cache metrics. */
     @GridToStringExclude
@@ -210,6 +215,9 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** Tx collisions info. */
     private volatile Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> txKeyCollisionInfo;
+
+    /** Number of keys processed during index rebuilding. */
+    private final LongAdderMetric idxRebuildKeyProcessed;
 
     /**
      * Creates cache metrics.
@@ -346,7 +354,19 @@ public class CacheMetricsImpl implements CacheMetrics {
             20);
 
         rebalanceClearingPartitions = mreg.longMetric("RebalanceClearingPartitionsLeft",
-            "Number of partitions need to be cleared before actual rebalance start.");
+            "The number of partitions need to be cleared before actual rebalance start.");
+
+        evictingPartitions = mreg.longMetric("EvictingPartitionsLeft",
+            "The number of non-affinity partitions scheduled for eviction.");
+
+        mreg.register("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
+            "True if index rebuild is in progress.");
+
+        mreg.register("IsIndexRebuildInProgress", () -> {
+            IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+
+            return fut != null && !fut.isDone();
+        }, "True if index rebuild is in progress.");
 
         getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
 
@@ -361,6 +381,9 @@ public class CacheMetricsImpl implements CacheMetrics {
         mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
             "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric shows " +
             "corresponding keys.");
+
+        idxRebuildKeyProcessed = mreg.longAdderMetric("IndexRebuildKeyProcessed",
+            "Number of keys processed during index rebuilding.");
     }
 
     /**
@@ -676,6 +699,8 @@ public class CacheMetricsImpl implements CacheMetrics {
             delegate.clear();
 
         txKeyCollisionInfo = null;
+
+        idxRebuildKeyProcessed.reset();
     }
 
     /** {@inheritDoc} */
@@ -860,7 +885,8 @@ public class CacheMetricsImpl implements CacheMetrics {
             delegate.onRead(isHit);
     }
 
-    /** Set callback for tx key collisions detection.
+    /**
+     * Set callback for tx key collisions detection.
      *
      * @param coll Key collisions info holder.
      */
@@ -1391,12 +1417,29 @@ public class CacheMetricsImpl implements CacheMetrics {
         return rebalanceClearingPartitions.value();
     }
 
-    /**
-     * Sets clearing partitions number.
-     * @param partitions Partitions number.
-     */
-    public void rebalanceClearingPartitions(int partitions) {
-        rebalanceClearingPartitions.value(partitions);
+    /** */
+    public long evictingPartitionsLeft() {
+        return evictingPartitions.value();
+    }
+
+    /** */
+    public void incrementRebalanceClearingPartitions() {
+        rebalanceClearingPartitions.increment();
+    }
+
+    /** */
+    public void decrementRebalanceClearingPartitions() {
+        rebalanceClearingPartitions.decrement();
+    }
+
+    /** */
+    public void incrementEvictingPartitions() {
+        evictingPartitions.increment();
+    }
+
+    /** */
+    public void decrementEvictingPartitions() {
+        evictingPartitions.decrement();
     }
 
     /**
@@ -1489,6 +1532,32 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         if (delegate != null)
             delegate.onOffHeapEvict();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isIndexRebuildInProgress() {
+        IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+
+        return fut != null && !fut.isDone();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getIndexRebuildKeysProcessed() {
+        return idxRebuildKeyProcessed.value();
+    }
+
+    /** Reset metric - number of keys processed during index rebuilding. */
+    public void resetIndexRebuildKeyProcessed() {
+        idxRebuildKeyProcessed.reset();
+    }
+
+    /**
+     * Increase number of keys processed during index rebuilding.
+     *
+     * @param val Number of processed keys.
+     */
+    public void addIndexRebuildKeyProcessed(long val) {
+        idxRebuildKeyProcessed.add(val);
     }
 
     /** {@inheritDoc} */

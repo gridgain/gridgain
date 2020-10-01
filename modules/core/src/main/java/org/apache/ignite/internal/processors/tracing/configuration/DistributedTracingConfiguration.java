@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.tracing.configuration;
 
 import java.util.HashMap;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
@@ -35,7 +36,7 @@ public class DistributedTracingConfiguration
      * Constructor.
      */
     public DistributedTracingConfiguration() {
-        super(TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY);
+        super(TRACING_CONFIGURATION_DISTRIBUTED_METASTORE_KEY, null);
     }
 
     /**
@@ -44,5 +45,10 @@ public class DistributedTracingConfiguration
      */
     public static DistributedTracingConfiguration detachedProperty() {
         return new DistributedTracingConfiguration();
+    }
+
+    /** {@inheritDoc} */
+    @Override public HashMap<TracingConfigurationCoordinates, TracingConfigurationParameters> parse(String str) {
+        throw new IgniteException("Please use the '--tracing-configuration' command to modify the tracing configuration");
     }
 }

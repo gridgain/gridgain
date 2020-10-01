@@ -113,7 +113,7 @@
         <exclude within="org.eclipse.jetty..*"/>
 
         <!-- H2 Database Engine libs. -->
-        <exclude within="org.h2..*"/>
+        <exclude within="org.gridgain.internal.h2..*"/>
 
         <!-- Cron4J libs. -->
         <exclude within="it.sauronsoftware.cron4j..*"/>
@@ -259,7 +259,7 @@
         <exclude within="org.eclipse.jetty..*"/>
 
         <!-- H2 Database Engine libs. -->
-        <exclude within="org.h2..*"/>
+        <exclude within="org.gridgain.internal.h2..*"/>
 
         <!-- Cron4J libs. -->
         <exclude within="it.sauronsoftware.cron4j..*"/>

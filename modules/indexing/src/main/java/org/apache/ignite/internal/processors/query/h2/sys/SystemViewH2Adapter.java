@@ -19,17 +19,17 @@ package org.apache.ignite.internal.processors.query.h2.sys;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlSystemView;
-import org.h2.command.ddl.CreateTableData;
-import org.h2.engine.Session;
-import org.h2.index.Index;
-import org.h2.index.IndexType;
-import org.h2.message.DbException;
-import org.h2.result.Row;
-import org.h2.result.SearchRow;
-import org.h2.table.Column;
-import org.h2.table.IndexColumn;
-import org.h2.table.TableBase;
-import org.h2.table.TableType;
+import org.gridgain.internal.h2.command.ddl.CreateTableData;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.index.IndexType;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.TableBase;
+import org.gridgain.internal.h2.table.TableType;
 
 /**
  * System H2 table over a view.
@@ -66,17 +66,19 @@ public class SystemViewH2Adapter extends TableBase {
         indexes = new ArrayList<>();
         indexes.add(scanIdx);
 
-        for (String index : view.getIndexes()) {
-            String[] indexedCols = index.split(",");
+        if (view.getIndexes() != null) {
+            for (String index : view.getIndexes()) {
+                String[] indexedCols = index.split(",");
 
-            Column[] cols = new Column[indexedCols.length];
+                Column[] cols = new Column[indexedCols.length];
 
-            for (int i = 0; i < indexedCols.length; i++)
-                cols[i] = getColumn(indexedCols[i]);
+                for (int i = 0; i < indexedCols.length; i++)
+                    cols[i] = getColumn(indexedCols[i]);
 
-            SqlSystemIndex idx = new SqlSystemIndex(this, cols);
+                SqlSystemIndex idx = new SqlSystemIndex(this, cols);
 
-            indexes.add(idx);
+                indexes.add(idx);
+            }
         }
     }
 
@@ -148,7 +150,7 @@ public class SystemViewH2Adapter extends TableBase {
 
     /** {@inheritDoc} */
     @Override public long getRowCountApproximation(Session ses) {
-        return view.getRowCount();
+        return view.getRowCountApproximation();
     }
 
     /** {@inheritDoc} */

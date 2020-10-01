@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.sql;
 
 import org.apache.ignite.internal.util.typedef.F;
-import org.h2.expression.aggregate.AggregateType;
+import org.gridgain.internal.h2.expression.aggregate.AggregateType;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.AVG;

@@ -97,6 +97,11 @@ public class IoStatisticsHolderQuery implements IoStatisticsHolder {
         physicalReadCtr.reset();
     }
 
+    /** {@inheritDoc} */
+    @Override public String metricRegistryName() {
+        return null;
+    }
+
     /**
      * @return Query id.
      */
