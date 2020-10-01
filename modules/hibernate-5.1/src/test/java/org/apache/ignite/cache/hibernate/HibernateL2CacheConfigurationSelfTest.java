@@ -74,7 +74,7 @@ public class HibernateL2CacheConfigurationSelfTest extends GridCommonAbstractTes
     public static final String QUERY_CACHE = "org.hibernate.cache.internal.StandardQueryCache";
 
     /** */
-    public static final String CONNECTION_URL = "jdbc:h2:mem:example;DB_CLOSE_DELAY=-1";
+    public static final String CONNECTION_URL = "jdbc:gg-h2:mem:example;DB_CLOSE_DELAY=-1";
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {

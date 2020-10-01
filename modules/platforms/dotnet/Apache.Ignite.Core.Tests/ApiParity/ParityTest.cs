@@ -81,6 +81,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "enableStatistics")]
         public static void CheckMissingJavaInterfaceMethodRegex(string text, string expected)
         {
+            // ReSharper disable once RedundantEnumerableCastCall
             string methodName = JavaInterfaceMethodRegex.Matches(text)
                 .OfType<Match>()
                 .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
@@ -93,8 +94,8 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// <summary>
         /// Tests the configuration parity.
         /// </summary>
-        public static void CheckConfigurationParity(string javaFilePath, 
-            Type type, 
+        public static void CheckConfigurationParity(string javaFilePath,
+            Type type,
             IEnumerable<string> excludedProperties = null,
             IEnumerable<string> knownMissingProperties = null,
             Dictionary<string, string> knownMappings = null)
@@ -113,8 +114,8 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// <summary>
         /// Tests the configuration parity.
         /// </summary>
-        public static void CheckInterfaceParity(string javaFilePath, 
-            Type type, 
+        public static void CheckInterfaceParity(string javaFilePath,
+            Type type,
             IEnumerable<string> excludedMembers = null,
             IEnumerable<string> knownMissingMembers = null,
             Dictionary<string, string> knownMappings = null)
@@ -171,8 +172,8 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// <summary>
         /// Checks the parity.
         /// </summary>
-        private static void CheckParity(Type type, IEnumerable<string> knownMissingMembers, 
-            IDictionary<string, string> knownMappings, IEnumerable<string> javaMethods, 
+        private static void CheckParity(Type type, IEnumerable<string> knownMissingMembers,
+            IDictionary<string, string> knownMappings, IEnumerable<string> javaMethods,
             IDictionary<string, MemberInfo> dotNetMembers)
         {
             var missingMembers = javaMethods
@@ -216,6 +217,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         {
             var text = File.ReadAllText(path);
 
+            // ReSharper disable once RedundantEnumerableCastCall
             return JavaPropertyRegex.Matches(text)
                 .OfType<Match>()
                 .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
@@ -231,6 +233,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         {
             var text = File.ReadAllText(path);
 
+            // ReSharper disable once RedundantEnumerableCastCall
             return JavaInterfaceMethodRegex.Matches(text)
                 .OfType<Match>()
                 .Where(m => string.IsNullOrWhiteSpace(m.Groups[1].Value))
@@ -241,13 +244,13 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// <summary>
         /// Gets the name variants for a property.
         /// </summary>
-        private static IEnumerable<string> GetNameVariants(string javaPropertyName, 
+        private static IEnumerable<string> GetNameVariants(string javaPropertyName,
             IDictionary<string, string> knownMappings)
         {
             yield return javaPropertyName;
-            
+
             yield return "get" + javaPropertyName;
-            
+
             yield return "is" + javaPropertyName;
 
             yield return javaPropertyName.Replace("PoolSize", "ThreadPoolSize");
@@ -258,7 +261,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             }
 
             string map;
-
             if (knownMappings != null && knownMappings.TryGetValue(javaPropertyName, out map))
             {
                 yield return map;

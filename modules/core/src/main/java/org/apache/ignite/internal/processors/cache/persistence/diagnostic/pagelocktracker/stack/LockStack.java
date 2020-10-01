@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagel
 
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageMetaInfoStore;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTracker;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.MemoryCalculator;
 
 /**
  * Abstract page lock stack.
@@ -44,7 +44,7 @@ public class LockStack extends PageLockTracker<PageLockStackSnapshot> {
 
     /** {@inheritDoc} */
     @Override public void onWriteUnlock0(int structureId, long pageId, long page, long pageAddr) {
-        pop(WRITE_UNLOCK, structureId, pageId, page, pageAddr);
+        pop(WRITE_UNLOCK, structureId, pageId);
     }
 
     /** {@inheritDoc} */
@@ -54,7 +54,7 @@ public class LockStack extends PageLockTracker<PageLockStackSnapshot> {
 
     /** {@inheritDoc} */
     @Override public void onReadUnlock0(int structureId, long pageId, long page, long pageAddr) {
-        pop(READ_UNLOCK, structureId, pageId, page, pageAddr);
+        pop(READ_UNLOCK, structureId, pageId);
     }
 
     /**
@@ -101,7 +101,7 @@ public class LockStack extends PageLockTracker<PageLockStackSnapshot> {
      * @param pageId Page id.
      * @param op Operation type.
      */
-    private void pop(int op, int structureId, long pageId, long pageAddrHeader, long pageAddr) {
+    private void pop(int op, int structureId, long pageId) {
         if (!validateOperation(structureId, pageId, op))
             return;
 

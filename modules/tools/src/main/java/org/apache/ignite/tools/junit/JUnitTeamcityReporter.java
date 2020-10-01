@@ -16,6 +16,15 @@
 
 package org.apache.ignite.tools.junit;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import org.junit.Ignore;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
@@ -28,48 +37,186 @@ import org.junit.runner.notification.RunListener;
  */
 public class JUnitTeamcityReporter extends RunListener {
     /** */
+    private static final long FLUSH_THRESHOLD = 5 * 60 * 1000;
+
+    /** */
     public static volatile String suite;
 
     /** */
-    @Override public void testAssumptionFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[testIgnored name='%s' message='%s']",
-            testName(failure.getDescription()), escapeForTeamcity(failure.getMessage())));
+    private final Path reportDir;
+
+    /** */
+    private final XMLOutputFactory outputFactory;
+
+    /** */
+    private String prevSuite;
+
+    /** */
+    private String prevTestCls;
+
+    /** */
+    private long prevFlush;
+
+    /** */
+    private FileOutputStream curStream;
+
+    /** */
+    private XMLStreamWriter curXmlStream;
+
+    /** */
+    public JUnitTeamcityReporter() throws IOException {
+        reportDir = Files.createTempDirectory("ignite-tools-junit-reports");
+        outputFactory = XMLOutputFactory.newInstance();
     }
 
     /** */
-    @Override public void testStarted(Description desc) {
-        System.out.println(String.format("##teamcity[testStarted name='%s' captureStandardOutput='false']", testName(desc)));
+    @Override public synchronized void testAssumptionFailure(Failure failure) {
+        if (curXmlStream == null)
+            testStarted(failure.getDescription());
+
+        try {
+            curXmlStream.writeStartElement("skipped");
+
+            if (failure.getMessage() != null)
+                curXmlStream.writeAttribute("message", failure.getMessage());
+
+            curXmlStream.writeEndElement();
+        }
+        catch (XMLStreamException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /** */
-    @Override public void testFinished(Description desc) {
-        System.out.println(String.format("##teamcity[testFinished name='%s']", testName(desc)));
+    @Override public synchronized void testStarted(Description desc) {
+        if (!desc.getClassName().equals(prevTestCls))
+            System.out.println(String.format("##teamcity[progressMessage 'Running %s']",
+                escapeForTeamcity(desc.getClassName())));
+
+        try {
+            if (afterFlush(desc.getClassName())) {
+                prevSuite = suite;
+                prevFlush = System.currentTimeMillis();
+
+                curStream = new FileOutputStream(reportDir.resolve(fileName()).toFile());
+
+                curXmlStream = outputFactory.createXMLStreamWriter(curStream);
+
+                curXmlStream.writeStartDocument();
+                curXmlStream.writeStartElement("testsuite");
+                curXmlStream.writeAttribute("version", "3.0");
+                curXmlStream.writeAttribute("name", suite != null ? suite : desc.getClassName());
+            }
+
+            prevTestCls = desc.getClassName();
+
+            curXmlStream.writeStartElement("testcase");
+            curXmlStream.writeAttribute("name", desc.getMethodName() != null ? desc.getMethodName() : "");
+            curXmlStream.writeAttribute("classname", desc.getClassName());
+
+            // Avoid doubling of run time after the surefire-generated full report is ingested:
+            curXmlStream.writeAttribute("time", "0");
+        }
+        catch (XMLStreamException | FileNotFoundException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /** */
-    @Override public void testFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[testFailed name='%s' message='%s' details='%s']",
-            testName(failure.getDescription()),
-            escapeForTeamcity(failure.getException() == null ? "null" : failure.getException().getMessage()),
-            escapeForTeamcity(X.getFullStackTrace(failure.getException()))));
+    @Override public synchronized void testFinished(Description desc) {
+        if (curXmlStream == null)
+            testStarted(desc);
+
+        try {
+            curXmlStream.writeEndElement();
+        }
+        catch (XMLStreamException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /** */
-    @Override public void testIgnored(Description desc) {
+    @Override public synchronized void testFailure(Failure failure) {
+        if (curXmlStream == null)
+            testStarted(failure.getDescription());
+
+        try {
+            curXmlStream.writeStartElement("failure");
+
+            if (failure.getException() != null && failure.getException().getMessage() != null)
+                curXmlStream.writeAttribute("type", failure.getException().getMessage());
+
+            if (failure.getMessage() != null)
+                curXmlStream.writeCData(failure.getMessage());
+
+            curXmlStream.writeEndElement();
+
+            if (failure.getException() != null) {
+                curXmlStream.writeStartElement("system-out");
+                curXmlStream.writeCData(X.getFullStackTrace(failure.getException()));
+                curXmlStream.writeEndElement();
+            }
+        }
+        catch (XMLStreamException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    /** */
+    @Override public synchronized void testIgnored(Description desc) {
+        testStarted(desc);
+
         Ignore annotation = desc.getAnnotation(Ignore.class);
 
-        System.out.println(String.format("##teamcity[testIgnored name='%s' message='%s']", testName(desc),
-            escapeForTeamcity(annotation == null ? null : annotation.value())));
+        try {
+            curXmlStream.writeStartElement("skipped");
+
+            if (annotation != null)
+                curXmlStream.writeAttribute("message", annotation.value());
+
+            curXmlStream.writeEndElement();
+        }
+        catch (XMLStreamException ex) {
+            throw new RuntimeException(ex);
+        }
+
+        testFinished(desc);
     }
 
     /** */
-    private String testName(final Description desc) {
-        String res = desc.getClassName() + "." + desc.getMethodName();
+    private boolean afterFlush(String testCls) {
+        if (curStream == null)
+            return true;
 
-        if (suite != null && !suite.equals(desc.getClassName()))
-            res = suite + ": " + res;
+        if ((prevSuite == null ? suite != null : !prevSuite.equals(suite)) ||
+            (prevTestCls == null ? testCls != null : !prevTestCls.equals(testCls)) ||
+            (System.currentTimeMillis() - prevFlush) > FLUSH_THRESHOLD) {
+            try {
+                curXmlStream.writeEndElement();
+                curXmlStream.writeEndDocument();
+                curXmlStream.close();
+                curStream.close();
+            }
+            catch (XMLStreamException | IOException ex) {
+                throw new RuntimeException(ex);
+            }
 
-        return escapeForTeamcity(res);
+            File report = reportDir.resolve(fileName()).toFile();
+
+            assert report.exists();
+
+            System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
+                escapeForTeamcity(report.getAbsolutePath())));
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /** */
+    private String fileName() {
+        return "test-" + prevSuite + prevFlush + ".xml";
     }
 
     /** */

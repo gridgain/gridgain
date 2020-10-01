@@ -34,9 +34,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -59,6 +59,7 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -314,48 +315,64 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         }
     }
 
-
     /**
      * @throws Exception If failed.
      */
     @Test
     public void testGetAllView() throws Exception {
-        List<String> expViews = Arrays.asList(
+        Set<String> expViews = new HashSet<>(Arrays.asList(
             "BASELINE_NODES",
             "CACHES",
             "CACHE_GROUPS",
             "INDEXES",
             "LOCAL_CACHE_GROUPS_IO",
-            "LOCAL_SQL_QUERY_HISTORY",
-            "LOCAL_SQL_RUNNING_QUERIES",
+            "SQL_QUERIES_HISTORY",
+            "SQL_QUERIES",
+            "SCAN_QUERIES",
             "NODES",
             "NODE_ATTRIBUTES",
             "NODE_METRICS",
             "SCHEMAS",
-            "TABLES"
-        );
+            "TABLES",
+            "TASKS",
+            "JOBS",
+            "CLIENT_CONNECTIONS",
+            "TRANSACTIONS",
+            "VIEWS",
+            "TABLE_COLUMNS",
+            "VIEW_COLUMNS",
+            "CONTINUOUS_QUERIES",
+            "STRIPED_THREADPOOL_QUEUE",
+            "DATASTREAM_THREADPOOL_QUEUE",
+            "CACHE_GROUP_PAGE_LISTS",
+            "METRICS"
+        ));
+
+        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))
+            expViews.add("SERVICES");
+
+        Set<String> actViews = new HashSet<>();
 
         try (Connection conn = DriverManager.getConnection(BASE_URL)) {
             DatabaseMetaData meta = conn.getMetaData();
 
             ResultSet rs = meta.getTables(null, null, "%", new String[]{"VIEW"});
 
-            for (String viewName : expViews) {
-                assertTrue(rs.next());
-
+            while (rs.next()) {
                 assertEquals("VIEW", rs.getString("TABLE_TYPE"));
 
                 assertEquals(JdbcUtils.CATALOG_NAME, rs.getString("TABLE_CAT"));
 
                 assertEquals(QueryUtils.sysSchemaName(), rs.getString("TABLE_SCHEM"));
 
-                assertEquals(viewName, rs.getString("TABLE_NAME"));
+                actViews.add(rs.getString("TABLE_NAME"));
             }
 
             assertFalse(rs.next());
+
+            assertEquals(expViews, actViews);
         }
     }
-
 
     /**
      * @throws Exception If failed.
@@ -431,6 +448,21 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             assertIsEmpty(meta.getSuperTables(invalidCat, "%", "%"));
             assertIsEmpty(meta.getSchemas(invalidCat, null));
             assertIsEmpty(meta.getPseudoColumns(invalidCat, null, "%", ""));
+        }
+    }
+
+    /**
+     * Check JDBC support flags.
+     */
+    @Test
+    public void testCheckSupports() throws SQLException {
+        try (Connection conn = DriverManager.getConnection(BASE_URL)) {
+            DatabaseMetaData meta = conn.getMetaData();
+
+            assertTrue(meta.supportsANSI92EntryLevelSQL());
+            assertTrue(meta.supportsAlterTableWithAddColumn());
+            assertTrue(meta.supportsAlterTableWithDropColumn());
+            assertTrue(meta.nullPlusNonNullIsNull());
         }
     }
 

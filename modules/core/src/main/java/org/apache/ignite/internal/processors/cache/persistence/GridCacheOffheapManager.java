@@ -120,9 +120,15 @@ import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
  * Used when persistence enabled.
  */
 public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl implements DbCheckpointListener {
-    /** Margin for historical rebalance on atomic cache. */
-    public final long walAtomicCacheMargin = IgniteSystemProperties.getLong(
-        IgniteSystemProperties.WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE, 5);
+    /**
+     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
+     * It is intended for prevent  partition divergence due to reordering in WAL.
+     * <p>
+     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
+     *
+     */
+    private final long walAtomicCacheMargin = IgniteSystemProperties.getLong(
+        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE", 5);
 
     /**
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind
@@ -1039,6 +1045,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (grp.mvccEnabled()) // TODO IGNITE-7384
             return super.historicalIterator(partCntrs, missing);
 
+        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
+
+        FileWALPointer latestReservedPointer = (FileWALPointer)database.latestWalPointerReservedForPreloading();
+
+        if (latestReservedPointer == null)
+            throw new IgniteHistoricalIteratorException("Historical iterator wasn't created, because WAL isn't reserved.");
+
         Map<Integer, Long> partsCounters = new HashMap<>();
 
         for (int i = 0; i < partCntrs.size(); i++) {
@@ -1048,10 +1061,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             partsCounters.put(p, initCntr);
         }
 
-        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager)grp.shared().database();
+        FileWALPointer minPtr = database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
+            partsCounters, latestReservedPointer, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
 
-        FileWALPointer minPtr = (FileWALPointer)database.checkpointHistory().searchEarliestWalPointer(grp.groupId(),
-            partsCounters, grp.hasAtomicCaches() ? walAtomicCacheMargin : 0L);
+        assert latestReservedPointer.compareTo(minPtr) <= 0
+            : "Historical iterator tries to iterate WAL out of reservation [cache=" + grp.cacheOrGroupName()
+            + ", reservedPointer=" + database.latestWalPointerReservedForPreloading()
+            + ", historicalPointer=" + minPtr + ']';
 
         try {
             WALIterator it = grp.shared().wal().replay(minPtr);
@@ -1267,7 +1283,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                 rebalancedCntrs[i] = updatedPartCntr.get(p);
 
-                partMap.setInitialUpdateCounterAt(i, rebalancedCntrs[i]);
+                partMap.initialUpdateCounterAt(i, rebalancedCntrs[i]);
             }
 
             reservePartitions();
@@ -2770,19 +2786,24 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c,
             int amount
         ) throws IgniteCheckedException {
-            GridDhtLocalPartition part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
+            GridDhtLocalPartition part = null;
 
-            // Skip non-owned partitions.
-            if (part == null || part.state() != OWNING)
-                return 0;
+            if (!grp.isLocal()) {
+                part = cctx.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
+
+                // Skip non-owned partitions.
+                if (part == null || part.state() != OWNING)
+                    return 0;
+            }
 
             cctx.shared().database().checkpointReadLock();
+
             try {
-                if (!part.reserve())
+                if (part != null && !part.reserve())
                     return 0;
 
                 try {
-                    if (part.state() != OWNING)
+                    if (part != null && part.state() != OWNING)
                         return 0;
 
                     long now = U.currentTimeMillis();
@@ -2828,7 +2849,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return cleared;
                 }
                 finally {
-                    part.release();
+                    if (part != null)
+                        part.release();
                 }
             }
             finally {

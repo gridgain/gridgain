@@ -206,6 +206,15 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     }
 
     /** {@inheritDoc} */
+    @Override public <F> @Nullable F fieldNoHandle(int fieldId) throws BinaryObjectException {
+        return (F) reader(new BinaryReaderHandles() {
+            @Override public boolean ignoreHandle() {
+                return true;
+            }
+        }, false).unmarshalField(fieldId);
+    }
+
+    /** {@inheritDoc} */
     @Override public BinarySerializedFieldComparator createFieldComparator() {
         int schemaOff = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
 
@@ -414,6 +423,21 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     }
 
     /** {@inheritDoc} */
+    @Nullable @Override public <T> T deserialize(@Nullable ClassLoader ldr) throws BinaryObjectException {
+        if (ldr == null)
+            return deserialize();
+
+        GridBinaryMarshaller.USE_CACHE.set(Boolean.FALSE);
+
+        try {
+            return (T)reader(null, ldr, true).deserialize();
+        }
+        finally {
+            GridBinaryMarshaller.USE_CACHE.set(Boolean.TRUE);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public <T> T deserialize() throws BinaryObjectException {
         return (T)deserializeValue();
     }
@@ -513,14 +537,28 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
      * @return Reader.
      */
     private BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, boolean forUnmarshal) {
+        return reader(rCtx, ctx.configuration().getClassLoader(), forUnmarshal);
+    }
+
+    /**
+     * Create new reader for this object.
+     *
+     * @param rCtx Reader context.
+     * @param ldr Class loader.
+     * @param forUnmarshal {@code True} if reader is needed to unmarshal object.
+     * @return Reader.
+     */
+    private BinaryReaderExImpl reader(@Nullable BinaryReaderHandles rCtx, @Nullable ClassLoader ldr,
+        boolean forUnmarshal) {
         BinaryOffheapInputStream stream = new BinaryOffheapInputStream(ptr, size, false);
 
         stream.position(start);
 
         return new BinaryReaderExImpl(ctx,
             stream,
-            ctx.configuration().getClassLoader(),
+            ldr,
             rCtx,
+            false,
             forUnmarshal);
     }
 }

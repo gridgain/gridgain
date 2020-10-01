@@ -104,6 +104,7 @@
         <module>modules/hibernate-5.3</module>
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
+        <module>modules/control-utility</module>
     </modules>
 
     <profiles>

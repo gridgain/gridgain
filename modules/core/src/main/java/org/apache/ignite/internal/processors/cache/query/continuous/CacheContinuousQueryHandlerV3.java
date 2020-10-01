@@ -101,7 +101,7 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override protected IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer() {
+    @Override public IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer() {
         if (rmtTrans == null && rmtTransFactory != null)
             rmtTrans = rmtTransFactory.create();
 
@@ -109,7 +109,7 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     }
 
     /** {@inheritDoc} */
-    @Override protected EventListener<?> localTransformedEventListener() {
+    @Override public EventListener<?> localTransformedEventListener() {
         return locTransLsnr;
     }
 
@@ -158,6 +158,11 @@ public class CacheContinuousQueryHandlerV3<K, V> extends CacheContinuousQueryHan
     @Override public boolean isMarshalled() {
         return super.isMarshalled() &&
             (rmtTransFactory == null || U.isGrid(rmtTransFactory.getClass()) || rmtTransFactoryDep != null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean p2pContextValid(GridKernalContext ctx) throws IgniteCheckedException {
+        return super.p2pContextValid(ctx) && (rmtTransFactoryDep == null || rmtTransFactoryDep.isValid(ctx));
     }
 
     /** {@inheritDoc} */

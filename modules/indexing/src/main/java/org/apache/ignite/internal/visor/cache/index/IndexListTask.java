@@ -31,11 +31,9 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
-import org.h2.index.Index;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_GROUP_NAME;
 
 /**
  * Task that collects indexes information.
@@ -44,6 +42,9 @@ import static org.apache.ignite.internal.commandline.cache.CacheCommands.EMPTY_G
 public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexListInfoContainer>> {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** Empty group name. */
+    public static final String EMPTY_GROUP_NAME = "no_group";
 
     /** {@inheritDoc} */
     @Override protected IndexListJob job(IndexListTaskArg arg) {

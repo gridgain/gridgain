@@ -71,9 +71,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
-import org.h2.api.ErrorCode;
-import org.h2.jdbc.JdbcResultSet;
-import org.h2.value.Value;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.jdbc.JdbcResultSet;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -207,6 +207,10 @@ public class GridMapQueryExecutor {
 
         final Object[] params = req.parameters();
 
+        final int timeout = req.timeout() > 0 || req.explicitTimeout()
+            ? req.timeout()
+            : (int)h2.distributedConfiguration().defaultQueryTimeout();
+
         for (int i = 1; i < segments; i++) {
             assert !F.isEmpty(cacheIds);
 
@@ -229,7 +233,7 @@ public class GridMapQueryExecutor {
                             distributedJoins,
                             enforceJoinOrder,
                             false,
-                            req.timeout(),
+                            timeout,
                             params,
                             lazy,
                             req.mvccSnapshot(),
@@ -258,7 +262,7 @@ public class GridMapQueryExecutor {
             distributedJoins,
             enforceJoinOrder,
             replicated,
-            req.timeout(),
+            timeout,
             params,
             lazy,
             req.mvccSnapshot(),
@@ -611,9 +615,11 @@ public class GridMapQueryExecutor {
                 fldsQry.setArgs(req.parameters());
 
             fldsQry.setEnforceJoinOrder(req.isFlagSet(GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER));
-            fldsQry.setTimeout(req.timeout(), TimeUnit.MILLISECONDS);
             fldsQry.setPageSize(req.pageSize());
             fldsQry.setLocal(true);
+
+            if (req.timeout() > 0 || req.explicitTimeout())
+                fldsQry.setTimeout(req.timeout(), TimeUnit.MILLISECONDS);
 
             boolean local = true;
 

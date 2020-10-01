@@ -138,8 +138,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
                 var task = client.GetCompute().ExecuteJavaTaskAsync<object>(TestTask, (long) 10000);
                 ignite.Dispose();
 
-                var ex = Assert.Throws<AggregateException>(() => task.Wait()).GetInnermostException();
-                StringAssert.StartsWith("Task cancelled due to stopping of the grid", ex.Message);
+                Assert.Throws<AggregateException>(() => task.Wait());
             }
             finally
             {
@@ -315,12 +314,14 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
             var nodeIds = Client.GetCluster().GetNodes().Select(n => n.Id).ToArray();
 
             CollectionAssert.AreEquivalent(nodeIds, getProjection(Client.GetCompute()));
+            Assert.AreSame(Client.GetCluster(), Client.GetCompute().ClusterGroup);
 
             // One node.
             var nodeId = nodeIds[1];
             var proj = Client.GetCluster().ForPredicate(n => n.Id == nodeId);
 
             Assert.AreEqual(new[]{nodeId}, getProjection(proj.GetCompute()));
+            Assert.AreEqual(new[]{nodeId}, proj.GetCompute().ClusterGroup.GetNodes().Select(n => n.Id));
 
             // Two nodes.
             proj = Client.GetCluster().ForPredicate(n => n.Id != nodeId);
@@ -409,7 +410,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
         [Test]
         public void TestExecuteJavaTaskAsyncMultithreaded()
         {
-            var count = 10000;
+            var count = 5000;
             var compute = Client.GetCompute().WithKeepBinary();
             var cache = Client.GetOrCreateCache<int, int>(TestUtils.TestName);
             cache[1] = 1;
@@ -511,7 +512,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
         {
             return new IgniteClientConfiguration(base.GetClientConfiguration())
             {
-                SocketTimeout = TimeSpan.FromSeconds(3),
+                SocketTimeout = TimeSpan.FromSeconds(5),
                 EnablePartitionAwareness = false
             };
         }

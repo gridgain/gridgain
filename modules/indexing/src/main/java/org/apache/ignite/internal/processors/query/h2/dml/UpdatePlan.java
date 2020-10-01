@@ -41,7 +41,7 @@ import org.apache.ignite.internal.util.GridCloseableIteratorAdapterEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.h2.table.Column;
+import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.dml.UpdateMode.BULK_LOAD;

@@ -63,7 +63,8 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_WAL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.LOCK_RELEASED;
 
@@ -400,10 +401,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
      * Change local WAL state before exchange is done. This method will disable WAL for groups without partitions
      * in OWNING state if such feature is enabled.
      *
-     * @param topVer Topology version.
      * @param fut Exchange future.
      */
-    public void disableGroupDurabilityForPreloading(AffinityTopologyVersion topVer, GridDhtPartitionsExchangeFuture fut) {
+    public void disableGroupDurabilityForPreloading(GridDhtPartitionsExchangeFuture fut) {
         if (fut.changedBaseline()
             && cctx.tm().pendingTxsTracker().enabled()
             || !IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, true))
@@ -411,29 +411,22 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
 
         Collection<CacheGroupContext> grpContexts = cctx.cache().cacheGroups();
 
-        List<String> names = new ArrayList<>(grpContexts.size());
-
         for (CacheGroupContext grp : grpContexts) {
-            if (grp.isLocal() || !grp.affinityNode() || !grp.persistenceEnabled() || !grp.localWalEnabled())
+            if (grp.isLocal() || !grp.affinityNode() || !grp.persistenceEnabled() || !grp.localWalEnabled()
+                || !grp.rebalanceEnabled() || !grp.shared().isRebalanceEnabled())
                 continue;
 
             List<GridDhtLocalPartition> locParts = grp.topology().localPartitions();
 
-            boolean hasOwning = false;
+            int cnt = 0;
 
             for (GridDhtLocalPartition locPart : locParts) {
-                if (locPart.state() == OWNING) {
-                    hasOwning = true;
-
-                    break;
-                }
+                if (locPart.state() == MOVING || locPart.state() == RENTING)
+                    cnt++;
             }
 
-            if (!hasOwning && !locParts.isEmpty()) {
+            if (!locParts.isEmpty() && cnt == locParts.size())
                 grp.localWalEnabled(false, true);
-
-                names.add(grp.cacheOrGroupName());
-            }
         }
     }
 

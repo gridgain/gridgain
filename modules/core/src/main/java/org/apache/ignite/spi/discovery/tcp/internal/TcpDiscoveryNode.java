@@ -59,7 +59,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTE
 public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements IgniteClusterNode,
     Comparable<TcpDiscoveryNode>, Externalizable {
     /** */
-    public static final ThreadLocal<Boolean> RESOLVE_ADDRESSES = ThreadLocal.withInitial(() -> false);
+    public static final ThreadLocal<Boolean> RESOLVE_ADDRESSES = ThreadLocal.withInitial(() -> true);
 
     /** */
     private static final long serialVersionUID = 0L;
@@ -184,7 +184,6 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
         Serializable consistentId)
     {
         assert id != null;
-        assert !F.isEmpty(addrs);
         assert metricsProvider != null;
         assert ver != null;
 
@@ -524,6 +523,13 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
      */
     public boolean clientAliveTimeSet() {
         return aliveCheckTimeNanos != 0;
+    }
+
+    /**
+     * @return Time in nanoseconds before which client is considered alive.
+     */
+    public long aliveCheckTimeNanos() {
+        return aliveCheckTimeNanos;
     }
 
     /**
